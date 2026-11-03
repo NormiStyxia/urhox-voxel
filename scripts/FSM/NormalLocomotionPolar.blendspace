@@ -1,0 +1,114 @@
+{
+    "_animationPaths": {
+        "uuid://HIPCWSBd61v8PRI972Yksxzh": "站立待机",
+        "uuid://HhyjGZvHN9uF8lRsGnN_J7jc": "向前行走",
+        "uuid://D1ZQufismDgjXSoKZLIPS0Ed": "向后行走",
+        "uuid://E20NmRUGYWU3kHiXsgMpK6M9": "向左行走",
+        "uuid://FqnAEeCLvzfAfmj8w1mLT5wN": "向右行走",
+        "uuid://FshxoWge4mzIJ-wmBu0GK6Vs": "向前跑步",
+        "uuid://GbEQ4Yfi36owuXgXwLH-q9n-": "向后跑步",
+        "uuid://H3wCCfEG31uakcELQ_6sOJrS": "向左跑步",
+        "uuid://HKwNmWgv0k-oOphSX0ABz_6q": "向右跑步",
+        "uuid://DLO8kXSKOAvRgQuvSroqniST": "左后行走",
+        "uuid://AW0noY07fbyEP4QSo5P1_1bS": "右后行走",
+        "uuid://GJy9ebci-0yfanLphoDuAGZw": "左后跑步",
+        "uuid://FLxJUY-WsVhvt1mUelZZpNX-": "右后跑步"
+    },
+    "type": "BlendSpace2D",
+    "name": "NormalLocomotionPolar",
+    "mode": "polar",
+    "parameterX": "direction",
+    "parameterY": "moveSpeed",
+    "points": [
+        {
+            "x": 0.0,
+            "y": 0.0,
+            "animation": "uuid://HIPCWSBd61v8PRI972Yksxzh",
+            "speed": 1.0
+        },
+        {
+            "x": 0.0,
+            "y": 1.5,
+            "animation": "uuid://HhyjGZvHN9uF8lRsGnN_J7jc",
+            "speed": 1.0
+        },
+        {
+            "x": 0.0,
+            "y": 6.0,
+            "animation": "uuid://FshxoWge4mzIJ-wmBu0GK6Vs",
+            "speed": 1.0
+        },
+        {
+            "x": 180.0,
+            "y": 1.5,
+            "animation": "uuid://D1ZQufismDgjXSoKZLIPS0Ed",
+            "speed": 1.0
+        },
+        {
+            "x": 180.0,
+            "y": 6.0,
+            "animation": "uuid://GbEQ4Yfi36owuXgXwLH-q9n-",
+            "speed": 1.0
+        },
+        {
+            "x": -180.0,
+            "y": 1.5,
+            "animation": "uuid://D1ZQufismDgjXSoKZLIPS0Ed",
+            "speed": 1.0
+        },
+        {
+            "x": -180.0,
+            "y": 6.0,
+            "animation": "uuid://GbEQ4Yfi36owuXgXwLH-q9n-",
+            "speed": 1.0
+        },
+        {
+            "x": 90.0,
+            "y": 1.5,
+            "animation": "uuid://FqnAEeCLvzfAfmj8w1mLT5wN",
+            "speed": 1.0
+        },
+        {
+            "x": 90.0,
+            "y": 6.0,
+            "animation": "uuid://HKwNmWgv0k-oOphSX0ABz_6q",
+            "speed": 1.0
+        },
+        {
+            "x": -90.0,
+            "y": 1.5,
+            "animation": "uuid://E20NmRUGYWU3kHiXsgMpK6M9",
+            "speed": 1.0
+        },
+        {
+            "x": -90.0,
+            "y": 6.0,
+            "animation": "uuid://H3wCCfEG31uakcELQ_6sOJrS",
+            "speed": 1.0
+        },
+        {
+            "x": -91.0,
+            "y": 1.5,
+            "animation": "uuid://DLO8kXSKOAvRgQuvSroqniST",
+            "speed": 1.0
+        },
+        {
+            "x": 91.0,
+            "y": 1.5,
+            "animation": "uuid://AW0noY07fbyEP4QSo5P1_1bS",
+            "speed": 1.0
+        },
+        {
+            "x": -91.0,
+            "y": 6.0,
+            "animation": "uuid://GJy9ebci-0yfanLphoDuAGZw",
+            "speed": 1.0
+        },
+        {
+            "x": 91.0,
+            "y": 6.0,
+            "animation": "uuid://FLxJUY-WsVhvt1mUelZZpNX-",
+            "speed": 1.0
+        }
+    ]
+}

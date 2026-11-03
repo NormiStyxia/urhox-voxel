@@ -1,0 +1,4 @@
+<material>
+    <surfaceshader name="Shaders/BLGL/BlockCharacter.shader" />
+    <surfacetexture name="albedo_map" texture="Textures/Characters/nomi.png" />
+</material>

@@ -1,0 +1,114 @@
+{
+    "_animationPaths": {
+        "uuid://Fr-FWfmJepwZF0R_LPCTQPDI": "步枪站立待机",
+        "uuid://AgKtoXJRWPQMEHMyolGMBXgi": "步枪向前行走",
+        "uuid://Hn9KOc11RM_WV6iSRtXC9KUA": "步枪向后行走",
+        "uuid://HtplQf_YA7vsbnJCL1Pe60ZD": "步枪向左行走",
+        "uuid://B5oewVrH51exgDkQmx3PNkXZ": "步枪向右行走",
+        "uuid://E1kk2aFklf8PKggO8l16aB8S": "步枪向前跑步",
+        "uuid://DuIrMTMHXzKDC0lOnc7pKQjk": "步枪向后跑步",
+        "uuid://BcTlkUzYIhlnBqNKouaqkrdf": "步枪向左跑步",
+        "uuid://BwuQMUHoj2V3S7KyvWParua8": "步枪向右跑步",
+        "uuid://H40bMaKyCgVa1A6t6VcV49HN": "步枪左后行走",
+        "uuid://FcFiWdBXkotXV0YTYsIcjeCD": "步枪右后行走",
+        "uuid://GvrFuc2fcfMk_UfgZnrfOcl7": "步枪左后跑步",
+        "uuid://D42tIa1yzZKhhZgBz2hNmVQA": "步枪右后跑步"
+    },
+    "type": "BlendSpace2D",
+    "name": "RifleLocomotionPolar",
+    "mode": "polar",
+    "parameterX": "direction",
+    "parameterY": "moveSpeed",
+    "points": [
+        {
+            "x": 0.0,
+            "y": 0.0,
+            "animation": "uuid://Fr-FWfmJepwZF0R_LPCTQPDI",
+            "speed": 1.0
+        },
+        {
+            "x": 0.0,
+            "y": 1.5,
+            "animation": "uuid://AgKtoXJRWPQMEHMyolGMBXgi",
+            "speed": 1.0
+        },
+        {
+            "x": 0.0,
+            "y": 6.0,
+            "animation": "uuid://E1kk2aFklf8PKggO8l16aB8S",
+            "speed": 1.0
+        },
+        {
+            "x": 180.0,
+            "y": 1.5,
+            "animation": "uuid://Hn9KOc11RM_WV6iSRtXC9KUA",
+            "speed": 1.0
+        },
+        {
+            "x": 180.0,
+            "y": 6.0,
+            "animation": "uuid://DuIrMTMHXzKDC0lOnc7pKQjk",
+            "speed": 1.0
+        },
+        {
+            "x": -180.0,
+            "y": 1.5,
+            "animation": "uuid://Hn9KOc11RM_WV6iSRtXC9KUA",
+            "speed": 1.0
+        },
+        {
+            "x": -180.0,
+            "y": 6.0,
+            "animation": "uuid://DuIrMTMHXzKDC0lOnc7pKQjk",
+            "speed": 1.0
+        },
+        {
+            "x": 90.0,
+            "y": 1.5,
+            "animation": "uuid://B5oewVrH51exgDkQmx3PNkXZ",
+            "speed": 1.0
+        },
+        {
+            "x": 90.0,
+            "y": 6.0,
+            "animation": "uuid://BwuQMUHoj2V3S7KyvWParua8",
+            "speed": 1.0
+        },
+        {
+            "x": -90.0,
+            "y": 1.5,
+            "animation": "uuid://HtplQf_YA7vsbnJCL1Pe60ZD",
+            "speed": 1.0
+        },
+        {
+            "x": -90.0,
+            "y": 6.0,
+            "animation": "uuid://BcTlkUzYIhlnBqNKouaqkrdf",
+            "speed": 1.0
+        },
+        {
+            "x": -91.0,
+            "y": 1.5,
+            "animation": "uuid://H40bMaKyCgVa1A6t6VcV49HN",
+            "speed": 1.0
+        },
+        {
+            "x": 91.0,
+            "y": 1.5,
+            "animation": "uuid://FcFiWdBXkotXV0YTYsIcjeCD",
+            "speed": 1.0
+        },
+        {
+            "x": -91.0,
+            "y": 6.0,
+            "animation": "uuid://GvrFuc2fcfMk_UfgZnrfOcl7",
+            "speed": 1.0
+        },
+        {
+            "x": 91.0,
+            "y": 6.0,
+            "animation": "uuid://D42tIa1yzZKhhZgBz2hNmVQA",
+            "speed": 1.0
+        }
+    ]
+}

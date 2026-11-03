@@ -1,0 +1,1027 @@
+{
+    "_animationPaths": {
+        "FSM/NormalLocomotionPolar.blendspace": "普通8方向站立移动混合空间",
+        "FSM/CrouchLocomotionPolar.blendspace": "普通8方向蹲下移动混合空间",
+        "FSM/RifleLocomotionPolar.blendspace": "步枪8方向站立移动混合空间",
+        "FSM/RifleCrouchLocomotionPolar.blendspace": "步枪8方向蹲下移动混合空间",
+        "uuid://HtKsAZlvLj2z6gaa-uUwgSNR": "起跳动画",
+        "uuid://DXeeuc1cpg9jcUet7s7HXSSe": "空中滞空动画",
+        "uuid://C2C10UxrN89PqguP2Okn5UFN": "落地动画",
+        "uuid://G5nP6crrRXCR2zaWoRa6AlV_": "步枪站立射击动画",
+        "uuid://HKtDKSYO6-b09L4UAqSsYSs3": "步枪蹲下射击动画",
+        "uuid://EGWfYfsi5tFVWp2x1-MD4_VF": "步枪换弹动画",
+        "uuid://Bcznmcorg6vWe2rwVHE4GssL": "跳舞表情动画",
+        "uuid://Hm8O6cErEVxPtAEi-Ekkz6J2": "悲伤表情动画",
+        "uuid://EG2jgdmuO4kUBOCaWbz5S6i7": "死亡动画",
+        "uuid://G226IVA0dv19mkLSWD9cTHX4": "匕首待机动画（全身）",
+        "uuid://CRR64Ujh8LHwHMqgDNBc-eRI": "匕首攻击动画（上半身）",
+        "uuid://B9bRedFwaa0gqBCXSrM78d0_": "站立转身动画",
+        "uuid://A59HGQm7J9uqTqGNw_rTHNcj": "蹲下转身动画",
+        "uuid://GhEtGSDUUH_sVdYPS04nTpZ8": "步枪站立转身动画",
+        "uuid://EOQhCbvcnvG338MMh8_srq7p": "步枪蹲下转身动画",
+        "FSM/PistolLocomotionPolar.blendspace": "手枪8方向站立移动混合空间",
+        "FSM/PistolCrouchLocomotionPolar.blendspace": "手枪8方向蹲下移动混合空间",
+        "uuid://GZfKQUULtNGuK_KfZy6jOg2b": "手枪站立射击动画",
+        "uuid://G_BxKSTt3QZrfWGGDNDEFCyT": "手枪蹲下射击动画",
+        "uuid://A5gpOeUPJO7SeooSSD-Y8rsI": "手枪换弹动画",
+        "uuid://A8W_uYn9yqHkx8QDzYOvRyMp": "手枪蹲下换弹动画"
+    },
+
+    "name": "UnifiedFSM",
+    "defaultBlendTime": 0.2,
+
+    "boneMasks": {
+        "UpperBody": {
+            "startBone": "Bip001 Spine"
+        },
+        "LowerBody": {
+            "bones": [
+                "Root",
+                "Bip001",
+                "Bip001 Pelvis",
+                "Bip001 L Thigh",
+                "Bip001 L Calf",
+                "Bip001 L Foot",
+                "Bip001 L Toe0",
+                "Bip001 R Thigh",
+                "Bip001 R Calf",
+                "Bip001 R Foot",
+                "Bip001 R Toe0"
+            ]
+        }
+    },
+
+    "parameters": {
+        "moveSpeed": {
+            "type": "float",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 10.0
+        },
+        "direction": {
+            "type": "float",
+            "default": 0.0,
+            "min": -180.0,
+            "max": 180.0
+        },
+        "isGrounded": {
+            "type": "bool",
+            "default": true
+        },
+        "isCrouching": {
+            "type": "bool",
+            "default": false
+        },
+        "weaponType": {
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "max": 10
+        },
+        "jump": {
+            "type": "trigger"
+        },
+        "shoot": {
+            "type": "trigger"
+        },
+        "reload": {
+            "type": "trigger"
+        },
+        "dance": {
+            "type": "trigger"
+        },
+        "sad": {
+            "type": "trigger"
+        },
+        "die": {
+            "type": "trigger"
+        },
+        "isTurning": {
+            "type": "bool",
+            "default": false
+        }
+    },
+
+    "layers": [
+        {
+            "name": "Base",
+            "defaultState": "Locomotion",
+            "states": {
+                "Locomotion": {
+                    "blendSpace": "FSM/NormalLocomotionPolar.blendspace",
+                    "loop": true
+                },
+                "CrouchLocomotion": {
+                    "blendSpace": "FSM/CrouchLocomotionPolar.blendspace",
+                    "loop": true
+                },
+                "RifleLocomotion": {
+                    "blendSpace": "FSM/RifleLocomotionPolar.blendspace",
+                    "loop": true
+                },
+                "RifleCrouchLocomotion": {
+                    "blendSpace": "FSM/RifleCrouchLocomotionPolar.blendspace",
+                    "loop": true
+                },
+                "PistolLocomotion": {
+                    "blendSpace": "FSM/PistolLocomotionPolar.blendspace",
+                    "loop": true
+                },
+                "PistolCrouchLocomotion": {
+                    "blendSpace": "FSM/PistolCrouchLocomotionPolar.blendspace",
+                    "loop": true
+                },
+                "JumpStart": {
+                    "animation": "uuid://HtKsAZlvLj2z6gaa-uUwgSNR",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.1
+                },
+                "JumpAir": {
+                    "animation": "uuid://DXeeuc1cpg9jcUet7s7HXSSe",
+                    "loop": true,
+                    "speed": 1.0
+                },
+                "JumpLanding": {
+                    "animation": "uuid://C2C10UxrN89PqguP2Okn5UFN",
+                    "loop": false,
+                    "speed": 1.0
+                }
+            },
+            "transitions": [
+                {
+                    "from": "*",
+                    "to": "JumpStart",
+                    "condition": "jump and weaponType == 0",
+                    "priority": 10,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "JumpAir",
+                    "condition": "animationFinished and not isGrounded",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "Locomotion",
+                    "condition": "isGrounded and not isCrouching",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "CrouchLocomotion",
+                    "condition": "isGrounded and isCrouching",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "Locomotion",
+                    "to": "JumpAir",
+                    "condition": "not isGrounded and weaponType == 0",
+                    "priority": 5,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "CrouchLocomotion",
+                    "to": "JumpAir",
+                    "condition": "not isGrounded and weaponType == 0",
+                    "priority": 5,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "JumpLanding",
+                    "condition": "isGrounded and stateTime > 0.5",
+                    "priority": 2,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "Locomotion",
+                    "condition": "isGrounded and not isCrouching",
+                    "priority": 1,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "CrouchLocomotion",
+                    "condition": "isGrounded and isCrouching",
+                    "priority": 1,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpLanding",
+                    "to": "Locomotion",
+                    "condition": "(animationFinished or moveSpeed > 0.5) and not isCrouching",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpLanding",
+                    "to": "CrouchLocomotion",
+                    "condition": "(animationFinished or moveSpeed > 0.5) and isCrouching",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "RifleLocomotion",
+                    "condition": "weaponType == 1 and not isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "RifleCrouchLocomotion",
+                    "condition": "weaponType == 1 and isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "RifleLocomotion",
+                    "condition": "weaponType == 1 and not isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "RifleCrouchLocomotion",
+                    "condition": "weaponType == 1 and isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpLanding",
+                    "to": "RifleLocomotion",
+                    "condition": "weaponType == 1 and not isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpLanding",
+                    "to": "RifleCrouchLocomotion",
+                    "condition": "weaponType == 1 and isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Locomotion",
+                    "to": "RifleLocomotion",
+                    "condition": "weaponType == 1",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "RifleLocomotion",
+                    "to": "Locomotion",
+                    "condition": "weaponType != 1",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "CrouchLocomotion",
+                    "to": "RifleCrouchLocomotion",
+                    "condition": "weaponType == 1",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "RifleCrouchLocomotion",
+                    "to": "CrouchLocomotion",
+                    "condition": "weaponType != 1",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "Locomotion",
+                    "to": "CrouchLocomotion",
+                    "condition": "isCrouching and (weaponType == 0 or weaponType == 3)",
+                    "priority": 5,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "CrouchLocomotion",
+                    "to": "Locomotion",
+                    "condition": "not isCrouching and (weaponType == 0 or weaponType == 3)",
+                    "priority": 5,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "RifleLocomotion",
+                    "to": "RifleCrouchLocomotion",
+                    "condition": "isCrouching and weaponType == 1",
+                    "priority": 5,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "RifleCrouchLocomotion",
+                    "to": "RifleLocomotion",
+                    "condition": "not isCrouching and weaponType == 1",
+                    "priority": 5,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "PistolLocomotion",
+                    "condition": "weaponType == 2 and not isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpStart",
+                    "to": "PistolCrouchLocomotion",
+                    "condition": "weaponType == 2 and isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "PistolLocomotion",
+                    "condition": "weaponType == 2 and not isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpAir",
+                    "to": "PistolCrouchLocomotion",
+                    "condition": "weaponType == 2 and isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpLanding",
+                    "to": "PistolLocomotion",
+                    "condition": "weaponType == 2 and not isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "JumpLanding",
+                    "to": "PistolCrouchLocomotion",
+                    "condition": "weaponType == 2 and isCrouching",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Locomotion",
+                    "to": "PistolLocomotion",
+                    "condition": "weaponType == 2",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "PistolLocomotion",
+                    "to": "Locomotion",
+                    "condition": "weaponType != 2",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "CrouchLocomotion",
+                    "to": "PistolCrouchLocomotion",
+                    "condition": "weaponType == 2",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "PistolCrouchLocomotion",
+                    "to": "CrouchLocomotion",
+                    "condition": "weaponType != 2",
+                    "priority": 10,
+                    "blendTime": 0.25
+                },
+                {
+                    "from": "PistolLocomotion",
+                    "to": "PistolCrouchLocomotion",
+                    "condition": "isCrouching and weaponType == 2",
+                    "priority": 5,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "PistolCrouchLocomotion",
+                    "to": "PistolLocomotion",
+                    "condition": "not isCrouching and weaponType == 2",
+                    "priority": 5,
+                    "blendTime": 0.2
+                }
+            ]
+        },
+        {
+            "name": "LowerBody",
+            "boneMask": "LowerBody",
+            "defaultState": "Empty",
+            "states": {
+                "Empty": {
+                    "empty": true
+                },
+                "ArmedJumpStart": {
+                    "animation": "uuid://HtKsAZlvLj2z6gaa-uUwgSNR",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.1
+                },
+                "ArmedJumpAir": {
+                    "animation": "uuid://DXeeuc1cpg9jcUet7s7HXSSe",
+                    "loop": true,
+                    "speed": 1.0
+                },
+                "ArmedJumpLanding": {
+                    "animation": "uuid://C2C10UxrN89PqguP2Okn5UFN",
+                    "loop": false,
+                    "speed": 1.0
+                },
+                "Turn": {
+                    "animation": "uuid://B9bRedFwaa0gqBCXSrM78d0_",
+                    "loop": false,
+                    "speed": 1.0
+                },
+                "CrouchTurn": {
+                    "animation": "uuid://A59HGQm7J9uqTqGNw_rTHNcj",
+                    "loop": false,
+                    "speed": 1.0
+                },
+                "RifleTurn": {
+                    "animation": "uuid://GhEtGSDUUH_sVdYPS04nTpZ8",
+                    "loop": false,
+                    "speed": 1.0
+                },
+                "RifleCrouchTurn": {
+                    "animation": "uuid://EOQhCbvcnvG338MMh8_srq7p",
+                    "loop": false,
+                    "speed": 1.0
+                }
+            },
+            "transitions": [
+                {
+                    "from": "Empty",
+                    "to": "Turn",
+                    "condition": "moveSpeed < 0.1 and isTurning and not isCrouching and isGrounded and weaponType != 1",
+                    "priority": 3,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Turn",
+                    "to": "Empty",
+                    "condition": "(not isTurning and animationFinished) or moveSpeed > 0.1 or isCrouching or not isGrounded or weaponType == 1",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Empty",
+                    "to": "CrouchTurn",
+                    "condition": "moveSpeed < 0.1 and isTurning and isCrouching and isGrounded and weaponType != 1",
+                    "priority": 3,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "CrouchTurn",
+                    "to": "Empty",
+                    "condition": "(not isTurning and animationFinished) or moveSpeed > 0.1 or not isCrouching or not isGrounded or weaponType == 1",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Empty",
+                    "to": "RifleTurn",
+                    "condition": "moveSpeed < 0.1 and isTurning and not isCrouching and isGrounded and weaponType == 1",
+                    "priority": 3,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleTurn",
+                    "to": "Empty",
+                    "condition": "(not isTurning and animationFinished) or moveSpeed > 0.1 or isCrouching or not isGrounded or weaponType != 1",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Empty",
+                    "to": "RifleCrouchTurn",
+                    "condition": "moveSpeed < 0.1 and isTurning and isCrouching and isGrounded and weaponType == 1",
+                    "priority": 3,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleCrouchTurn",
+                    "to": "Empty",
+                    "condition": "(not isTurning and animationFinished) or moveSpeed > 0.1 or not isCrouching or not isGrounded or weaponType != 1",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Empty",
+                    "to": "ArmedJumpStart",
+                    "condition": "jump and weaponType > 0",
+                    "priority": 10,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "ArmedJumpAir",
+                    "to": "ArmedJumpStart",
+                    "condition": "jump",
+                    "priority": 10,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "ArmedJumpLanding",
+                    "to": "ArmedJumpStart",
+                    "condition": "jump",
+                    "priority": 10,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "ArmedJumpStart",
+                    "to": "ArmedJumpAir",
+                    "condition": "animationFinished and not isGrounded",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "ArmedJumpStart",
+                    "to": "Empty",
+                    "condition": "isGrounded",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "Empty",
+                    "to": "ArmedJumpAir",
+                    "condition": "not isGrounded and weaponType > 0 and stateTime > 0.1",
+                    "priority": 5,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "ArmedJumpAir",
+                    "to": "ArmedJumpLanding",
+                    "condition": "isGrounded and stateTime > 0.5",
+                    "priority": 2,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "ArmedJumpAir",
+                    "to": "Empty",
+                    "condition": "isGrounded",
+                    "priority": 1,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "ArmedJumpLanding",
+                    "to": "Empty",
+                    "condition": "animationFinished or moveSpeed > 0.5",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "ArmedJumpStart",
+                    "to": "Empty",
+                    "condition": "weaponType == 0",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "ArmedJumpAir",
+                    "to": "Empty",
+                    "condition": "weaponType == 0",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "ArmedJumpLanding",
+                    "to": "Empty",
+                    "condition": "weaponType == 0",
+                    "priority": 15,
+                    "blendTime": 0.15
+                }
+            ]
+        },
+        {
+            "name": "UpperBody",
+            "boneMask": "UpperBody",
+            "defaultState": "Empty",
+            "states": {
+                "Empty": {
+                    "empty": true
+                },
+                "RifleShoot": {
+                    "animation": "uuid://G5nP6crrRXCR2zaWoRa6AlV_",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.05
+                },
+                "RifleCrouchShoot": {
+                    "animation": "uuid://HKtDKSYO6-b09L4UAqSsYSs3",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.05
+                },
+                "RifleReload": {
+                    "animation": "uuid://EGWfYfsi5tFVWp2x1-MD4_VF",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.15
+                },
+                "PistolShoot": {
+                    "animation": "uuid://GZfKQUULtNGuK_KfZy6jOg2b",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.05
+                },
+                "PistolCrouchShoot": {
+                    "animation": "uuid://G_BxKSTt3QZrfWGGDNDEFCyT",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.05
+                },
+                "PistolReload": {
+                    "animation": "uuid://A5gpOeUPJO7SeooSSD-Y8rsI",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.15
+                },
+                "PistolCrouchReload": {
+                    "animation": "uuid://A8W_uYn9yqHkx8QDzYOvRyMp",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.15
+                },
+                "DaggerIdle": {
+                    "animation": "uuid://G226IVA0dv19mkLSWD9cTHX4",
+                    "loop": true,
+                    "speed": 1.0
+                },
+                "DaggerAttack": {
+                    "animation": "uuid://CRR64Ujh8LHwHMqgDNBc-eRI",
+                    "loop": false,
+                    "speed": 1.0,
+                    "blendTime": 0.1
+                }
+            },
+            "transitions": [
+                {
+                    "from": "Empty",
+                    "to": "RifleShoot",
+                    "condition": "shoot and weaponType == 1 and not isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "Empty",
+                    "to": "RifleCrouchShoot",
+                    "condition": "shoot and weaponType == 1 and isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "Empty",
+                    "to": "RifleReload",
+                    "condition": "reload and weaponType == 1",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleShoot",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.5
+                },
+                {
+                    "from": "RifleCrouchShoot",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.5
+                },
+                {
+                    "from": "RifleReload",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "RifleShoot",
+                    "to": "Empty",
+                    "condition": "weaponType == 0",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleCrouchShoot",
+                    "to": "Empty",
+                    "condition": "weaponType == 0",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleReload",
+                    "to": "Empty",
+                    "condition": "weaponType == 0",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleShoot",
+                    "to": "RifleReload",
+                    "condition": "reload and weaponType == 1",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleCrouchShoot",
+                    "to": "RifleReload",
+                    "condition": "reload and weaponType == 1",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "RifleReload",
+                    "to": "RifleShoot",
+                    "condition": "shoot and weaponType == 1 and not isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "RifleReload",
+                    "to": "RifleCrouchShoot",
+                    "condition": "shoot and weaponType == 1 and isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "RifleShoot",
+                    "to": "RifleCrouchShoot",
+                    "condition": "isCrouching and not animationFinished",
+                    "priority": 3,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "RifleCrouchShoot",
+                    "to": "RifleShoot",
+                    "condition": "not isCrouching and not animationFinished",
+                    "priority": 3,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "Empty",
+                    "to": "PistolShoot",
+                    "condition": "shoot and weaponType == 2 and not isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "Empty",
+                    "to": "PistolCrouchShoot",
+                    "condition": "shoot and weaponType == 2 and isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "Empty",
+                    "to": "PistolReload",
+                    "condition": "reload and weaponType == 2 and not isCrouching",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Empty",
+                    "to": "PistolCrouchReload",
+                    "condition": "reload and weaponType == 2 and isCrouching",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolShoot",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.5
+                },
+                {
+                    "from": "PistolCrouchShoot",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.5
+                },
+                {
+                    "from": "PistolReload",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "PistolCrouchReload",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "PistolShoot",
+                    "to": "Empty",
+                    "condition": "weaponType != 2",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolCrouchShoot",
+                    "to": "Empty",
+                    "condition": "weaponType != 2",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolReload",
+                    "to": "Empty",
+                    "condition": "weaponType != 2",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolCrouchReload",
+                    "to": "Empty",
+                    "condition": "weaponType != 2",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolShoot",
+                    "to": "PistolReload",
+                    "condition": "reload and weaponType == 2",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolCrouchShoot",
+                    "to": "PistolCrouchReload",
+                    "condition": "reload and weaponType == 2",
+                    "priority": 5,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "PistolReload",
+                    "to": "PistolShoot",
+                    "condition": "shoot and weaponType == 2 and not isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "PistolReload",
+                    "to": "PistolCrouchShoot",
+                    "condition": "shoot and weaponType == 2 and isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "PistolCrouchReload",
+                    "to": "PistolCrouchShoot",
+                    "condition": "shoot and weaponType == 2 and isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "PistolCrouchReload",
+                    "to": "PistolShoot",
+                    "condition": "shoot and weaponType == 2 and not isCrouching",
+                    "priority": 10,
+                    "blendTime": 0.05
+                },
+                {
+                    "from": "PistolShoot",
+                    "to": "PistolCrouchShoot",
+                    "condition": "isCrouching and not animationFinished",
+                    "priority": 3,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "PistolCrouchShoot",
+                    "to": "PistolShoot",
+                    "condition": "not isCrouching and not animationFinished",
+                    "priority": 3,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "PistolReload",
+                    "to": "PistolCrouchReload",
+                    "condition": "isCrouching and not animationFinished",
+                    "priority": 3,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "PistolCrouchReload",
+                    "to": "PistolReload",
+                    "condition": "not isCrouching and not animationFinished",
+                    "priority": 3,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "Empty",
+                    "to": "DaggerIdle",
+                    "condition": "weaponType == 3",
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "DaggerIdle",
+                    "to": "Empty",
+                    "condition": "weaponType != 3",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "DaggerIdle",
+                    "to": "DaggerAttack",
+                    "condition": "shoot and weaponType == 3",
+                    "priority": 10,
+                    "blendTime": 0.1
+                },
+                {
+                    "from": "DaggerAttack",
+                    "to": "DaggerIdle",
+                    "condition": "animationFinished and weaponType == 3",
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "DaggerAttack",
+                    "to": "Empty",
+                    "condition": "weaponType != 3",
+                    "priority": 15,
+                    "blendTime": 0.15
+                }
+            ]
+        },
+        {
+            "name": "FullBody",
+            "defaultState": "Empty",
+            "states": {
+                "Empty": {
+                    "empty": true
+                },
+                "Dance": {
+                    "animation": "uuid://Bcznmcorg6vWe2rwVHE4GssL",
+                    "loop": false,
+                    "speed": 1.0
+                },
+                "Sad": {
+                    "animation": "uuid://Hm8O6cErEVxPtAEi-Ekkz6J2",
+                    "loop": false,
+                    "speed": 1.0
+                },
+                "Death": {
+                    "animation": "uuid://EG2jgdmuO4kUBOCaWbz5S6i7",
+                    "loop": false,
+                    "speed": 1.0
+                }
+            },
+            "transitions": [
+                {
+                    "from": "Empty",
+                    "to": "Dance",
+                    "condition": "dance",
+                    "priority": 20,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "Empty",
+                    "to": "Sad",
+                    "condition": "sad",
+                    "priority": 20,
+                    "blendTime": 0.2
+                },
+                {
+                    "from": "*",
+                    "to": "Death",
+                    "condition": "die",
+                    "priority": 100,
+                    "blendTime": 0.3
+                },
+                {
+                    "from": "Dance",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.3
+                },
+                {
+                    "from": "Sad",
+                    "to": "Empty",
+                    "condition": "animationFinished",
+                    "blendTime": 0.3
+                },
+                {
+                    "from": "Dance",
+                    "to": "Empty",
+                    "condition": "moveSpeed > 0.1",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Sad",
+                    "to": "Empty",
+                    "condition": "moveSpeed > 0.1",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Dance",
+                    "to": "Empty",
+                    "condition": "jump",
+                    "priority": 15,
+                    "blendTime": 0.15
+                },
+                {
+                    "from": "Sad",
+                    "to": "Empty",
+                    "condition": "jump",
+                    "priority": 15,
+                    "blendTime": 0.15
+                }
+            ]
+        }
+    ]
+}

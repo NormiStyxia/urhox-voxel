@@ -1,0 +1,7 @@
+<material>
+    <!-- 高清白天天空(项目自带,BC7/ASTC 平台压缩配置见同目录 xml)。
+         标准 Skybox.ktx 是阴天灰调,会把整个白天场景带灰。 -->
+    <technique name="Techniques/DiffSkybox.xml" />
+    <texture unit="diffuse" type="TextureCube" name="Skybox/Realistic_Sky_26.dds" />
+    <cull value="none" />
+</material>

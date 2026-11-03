@@ -1,0 +1,7 @@
+<material>
+    <!-- 海湾水面:无贴图半透平面。体素美术风格下,简单的透蓝比带反射的
+         真水更协调,也不依赖反射视口。 -->
+    <technique name="Techniques/NoTextureAlpha.xml" />
+    <parameter name="MatDiffColor" value="0.10 0.32 0.45 0.62" />
+    <cull value="none" />   <!-- 双面:潜到水下抬头也要看得见水面 -->
+</material>

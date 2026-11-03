@@ -1,0 +1,108 @@
+{
+    "_animationPaths": {
+        "uuid://GXf28Uc5tEOIPiwP0bdjSVB8": "手枪蹲下待机",
+        "uuid://BSou4YQotxXWibd-296Nmjby": "手枪蹲下向前移动",
+        "uuid://APv66XT1g8lLn0nz6ych5PEW": "手枪蹲下向后移动",
+        "uuid://HObFOXvcv68EnUJlmJUsE6iZ": "手枪蹲下向左移动",
+        "uuid://BH34mQL-JNJxoJISxHDh0_Xz": "手枪蹲下向右移动",
+        "uuid://Ef6XGX2gNRGrRHbrw45Spx5b": "手枪蹲下左后移动",
+        "uuid://Gsu5wfZC0BHz-J6S5-Zk_xyU": "手枪蹲下右后移动"
+    },
+    "type": "BlendSpace2D",
+    "name": "PistolCrouchLocomotionPolar",
+    "mode": "polar",
+    "parameterX": "direction",
+    "parameterY": "moveSpeed",
+    "points": [
+        {
+            "x": 0.0,
+            "y": 0.0,
+            "animation": "uuid://GXf28Uc5tEOIPiwP0bdjSVB8",
+            "speed": 1.0
+        },
+        {
+            "x": 0.0,
+            "y": 1.5,
+            "animation": "uuid://BSou4YQotxXWibd-296Nmjby",
+            "speed": 1.0
+        },
+        {
+            "x": 0.0,
+            "y": 6.0,
+            "animation": "uuid://BSou4YQotxXWibd-296Nmjby",
+            "speed": 1.0
+        },
+        {
+            "x": 180.0,
+            "y": 1.5,
+            "animation": "uuid://APv66XT1g8lLn0nz6ych5PEW",
+            "speed": 1.0
+        },
+        {
+            "x": 180.0,
+            "y": 6.0,
+            "animation": "uuid://APv66XT1g8lLn0nz6ych5PEW",
+            "speed": 1.0
+        },
+        {
+            "x": -180.0,
+            "y": 1.5,
+            "animation": "uuid://APv66XT1g8lLn0nz6ych5PEW",
+            "speed": 1.0
+        },
+        {
+            "x": -180.0,
+            "y": 6.0,
+            "animation": "uuid://APv66XT1g8lLn0nz6ych5PEW",
+            "speed": 1.0
+        },
+        {
+            "x": 90.0,
+            "y": 1.5,
+            "animation": "uuid://BH34mQL-JNJxoJISxHDh0_Xz",
+            "speed": 1.0
+        },
+        {
+            "x": 90.0,
+            "y": 6.0,
+            "animation": "uuid://BH34mQL-JNJxoJISxHDh0_Xz",
+            "speed": 1.0
+        },
+        {
+            "x": -90.0,
+            "y": 1.5,
+            "animation": "uuid://HObFOXvcv68EnUJlmJUsE6iZ",
+            "speed": 1.0
+        },
+        {
+            "x": -90.0,
+            "y": 6.0,
+            "animation": "uuid://HObFOXvcv68EnUJlmJUsE6iZ",
+            "speed": 1.0
+        },
+        {
+            "x": -91.0,
+            "y": 1.5,
+            "animation": "uuid://Ef6XGX2gNRGrRHbrw45Spx5b",
+            "speed": 1.0
+        },
+        {
+            "x": -91.0,
+            "y": 6.0,
+            "animation": "uuid://Ef6XGX2gNRGrRHbrw45Spx5b",
+            "speed": 1.0
+        },
+        {
+            "x": 91.0,
+            "y": 1.5,
+            "animation": "uuid://Gsu5wfZC0BHz-J6S5-Zk_xyU",
+            "speed": 1.0
+        },
+        {
+            "x": 91.0,
+            "y": 6.0,
+            "animation": "uuid://Gsu5wfZC0BHz-J6S5-Zk_xyU",
+            "speed": 1.0
+        }
+    ]
+}

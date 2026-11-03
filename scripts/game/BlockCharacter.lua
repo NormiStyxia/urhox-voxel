@@ -1,0 +1,257 @@
+-- ====================================================================
+-- BlockCharacter.lua - 方块拼装角色（Blockbench 数据 → CustomGeometry）
+--
+-- 每根骨骼一个 Node，骨骼上的方块合并成一个 CustomGeometry；动画直接旋转
+-- 骨骼 Node（Minecraft 实体同款程序化动画），不需要 .mdl / .ani 转换。
+--
+-- 数据来自 scripts/game/NomiModelData.lua（art/nomi_ysm/build_nomi.py 生成）。
+-- Blockbench 空间 → UrhoX：z 取反（右手系转左手系，正面 -Z → +Z），
+-- 1 单位 = UNIT 米。
+-- ====================================================================
+
+---@class BlockCharacter
+---@field root Node
+---@field bones table<string, Node>
+---@field basePos table<string, Vector3>
+---@field time number
+---@field phase number
+---@field gait number
+---@field air number
+---@field crouch number
+---@field armed number
+---@field useTimer number
+local M = {}
+M.__index = M
+
+local UNIT = 0.05            -- 头顶约 1.7m，与 config.PLAYER_HEIGHT 对齐
+local MATERIAL = "Materials/Nomi.xml"
+local UV_INSET = 0.01        -- UV 往面内缩一点，避免最近点采样串到相邻像素
+
+---@param v number[]
+---@param pivot number[]
+---@return Vector3
+local function ToLocal(v, pivot)
+    local x, y, z = v[1] or 0, v[2] or 0, v[3] or 0
+    local px, py, pz = pivot[1] or 0, pivot[2] or 0, pivot[3] or 0
+    return Vector3((x - px) * UNIT, (y - py) * UNIT, -(z - pz) * UNIT)
+end
+
+-- 与 Blockbench box UV 一致的六面 UV 矩形 {x1, y1, x2, y2}（UV 单位）
+local function FaceUVs(u, v, w, h, d)
+    return {
+        north = { u + d, v + d, u + d + w, v + d + h },
+        east = { u, v + d, u + d, v + d + h },
+        south = { u + 2 * d + w, v + d, u + 2 * d + 2 * w, v + d + h },
+        west = { u + d + w, v + d, u + 2 * d + w, v + d + h },
+        up = { u + d + w, v + d, u + d, v },
+        down = { u + d + 2 * w, v, u + d + w, v + d },
+    }
+end
+
+-- 每个面按「从外面看过去」的 左上/右上/右下/左下 给出角点（UrhoX 空间），
+-- 顺时针为正面（Urho 默认剔除逆时针）。lo/hi 为盒子最小/最大角。
+local function FaceCorners(face, lo, hi)
+    if face == "north" then -- 角色正面，+Z
+        return Vector3(0, 0, 1), {
+            Vector3(hi.x, hi.y, hi.z), Vector3(lo.x, hi.y, hi.z),
+            Vector3(lo.x, lo.y, hi.z), Vector3(hi.x, lo.y, hi.z) }
+    elseif face == "south" then -- 背面，-Z
+        return Vector3(0, 0, -1), {
+            Vector3(lo.x, hi.y, lo.z), Vector3(hi.x, hi.y, lo.z),
+            Vector3(hi.x, lo.y, lo.z), Vector3(lo.x, lo.y, lo.z) }
+    elseif face == "east" then -- 角色右侧，+X
+        return Vector3(1, 0, 0), {
+            Vector3(hi.x, hi.y, lo.z), Vector3(hi.x, hi.y, hi.z),
+            Vector3(hi.x, lo.y, hi.z), Vector3(hi.x, lo.y, lo.z) }
+    elseif face == "west" then -- 角色左侧，-X
+        return Vector3(-1, 0, 0), {
+            Vector3(lo.x, hi.y, hi.z), Vector3(lo.x, hi.y, lo.z),
+            Vector3(lo.x, lo.y, lo.z), Vector3(lo.x, lo.y, hi.z) }
+    elseif face == "up" then
+        return Vector3(0, 1, 0), {
+            Vector3(hi.x, hi.y, lo.z), Vector3(lo.x, hi.y, lo.z),
+            Vector3(lo.x, hi.y, hi.z), Vector3(hi.x, hi.y, hi.z) }
+    else -- down
+        return Vector3(0, -1, 0), {
+            Vector3(hi.x, lo.y, hi.z), Vector3(lo.x, lo.y, hi.z),
+            Vector3(lo.x, lo.y, lo.z), Vector3(hi.x, lo.y, lo.z) }
+    end
+end
+
+local FACE_ORDER = { "north", "south", "east", "west", "up", "down" }
+
+---@param geom CustomGeometry
+local function EmitCube(geom, cube, pivot, uvW, uvH)
+    local inf = cube.inflate or 0
+    local f, s = cube.from, cube.size
+    -- Blockbench 空间的最小/最大角（含 inflate），换算后 z 翻转，所以要重新取 min/max
+    local a = ToLocal({ f[1] - inf, f[2] - inf, f[3] - inf }, pivot)
+    local b = ToLocal({ f[1] + s[1] + inf, f[2] + s[2] + inf, f[3] + s[3] + inf }, pivot)
+    local lo = Vector3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z))
+    local hi = Vector3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z))
+    local uvs = FaceUVs(cube.uv[1], cube.uv[2], s[1], s[2], s[3])
+    local count = 0
+
+    for _, face in ipairs(FACE_ORDER) do
+        local r = uvs[face]
+        if r[1] ~= r[3] and r[2] ~= r[4] then -- 零面积的面（薄片的侧面）跳过
+            local normal, c = FaceCorners(face, lo, hi)
+            local sx = r[3] > r[1] and UV_INSET or -UV_INSET
+            local sy = r[4] > r[2] and UV_INSET or -UV_INSET
+            local u1, v1 = (r[1] + sx) / uvW, (r[2] + sy) / uvH
+            local u2, v2 = (r[3] - sx) / uvW, (r[4] - sy) / uvH
+            local t = {
+                Vector2(u1, v1), Vector2(u2, v1), Vector2(u2, v2), Vector2(u1, v2),
+            }
+            for _, k in ipairs({ 1, 2, 3, 1, 3, 4 }) do
+                geom:DefineVertex(c[k])
+                geom:DefineNormal(normal)
+                geom:DefineTexCoord(t[k])
+            end
+            count = count + 1
+        end
+    end
+    return count
+end
+
+--- 在 parent 下构建角色。返回带 Update 的角色对象。
+---@param parent Node
+---@param data table
+---@return BlockCharacter
+function M.Create(parent, data)
+    ---@type BlockCharacter
+    local self = setmetatable({}, M)
+    self.root = parent:CreateChild("BlockCharacter")
+    self.bones = {}      ---@type table<string, Node>
+    self.basePos = {}    ---@type table<string, Vector3>
+    self.time = 0.0
+    self.phase = 0.0
+    self.gait = 0.0
+    self.air = 0.0
+    self.crouch = 0.0
+    self.armed = 0.0
+    self.useTimer = 0.0
+
+    local material = cache:GetResource("Material", MATERIAL)
+    if material == nil then
+        print("BlockCharacter: material not found: " .. MATERIAL)
+    end
+
+    local pivots = {}
+    for _, b in ipairs(data.bones) do
+        pivots[b.name] = b.pivot
+        local parentNode = b.parent and self.bones[b.parent] or self.root
+        local parentPivot = b.parent and pivots[b.parent] or { 0, 0, 0 }
+        local node = parentNode:CreateChild(b.name)
+        node.position = ToLocal(b.pivot, parentPivot)
+        self.bones[b.name] = node
+        self.basePos[b.name] = node.position
+    end
+
+    local faces, cubes = 0, 0
+    for _, b in ipairs(data.bones) do
+        local list = {}
+        for _, c in ipairs(data.cubes) do
+            if c.bone == b.name then table.insert(list, c) end
+        end
+        if #list > 0 then
+            local geom = self.bones[b.name]:CreateComponent("CustomGeometry")
+            geom:BeginGeometry(0, TRIANGLE_LIST)
+            for _, c in ipairs(list) do
+                faces = faces + EmitCube(geom, c, b.pivot, data.uvWidth, data.uvHeight)
+                cubes = cubes + 1
+            end
+            geom:Commit()
+            if material ~= nil then geom:SetMaterial(0, material) end
+            geom.castShadows = true
+        end
+    end
+    print(string.format("BlockCharacter: built %d bones, %d cubes, %d faces", #data.bones, cubes, faces))
+    return self
+end
+
+---@param name string
+---@param pitch number 绕 X（正值：骨骼下端往后摆）
+---@param yaw number 绕 Y
+---@param roll number 绕 Z（正值：骨骼下端往 +X 摆）
+function M:SetBone(name, pitch, yaw, roll)
+    local node = self.bones[name]
+    if node == nil then return end
+    node.rotation = Quaternion(pitch, yaw, roll)
+end
+
+function M:TriggerUse()
+    self.useTimer = 0.3
+end
+
+function M:IsUsing()
+    return self.useTimer > 0.0
+end
+
+---@param timeStep number
+---@param s table { moveSpeed, onGround, armed, aiming, crouching, aimPitch }
+function M:Update(timeStep, s)
+    local dt = math.min(timeStep, 0.1)
+    self.time = self.time + dt
+    self.useTimer = math.max(0.0, self.useTimer - dt)
+    local k = 1.0 - math.exp(-10.0 * dt)
+
+    local speed = s.moveSpeed or 0.0
+    local targetGait = s.onGround and Clamp(speed / 5.0, 0.0, 1.7) or 0.0
+    self.gait = Lerp(self.gait, targetGait, k)
+    self.air = Lerp(self.air, s.onGround and 0.0 or 1.0, k)
+    self.crouch = Lerp(self.crouch, s.crouching and 1.0 or 0.0, k)
+    self.armed = Lerp(self.armed, (s.armed or s.aiming) and 1.0 or 0.0, k)
+    self.phase = self.phase + dt * (3.0 + speed * 1.5)
+
+    local t = self.time
+    local g = math.min(self.gait, 1.3)
+    local swing = math.sin(self.phase) * 38.0 * g
+    local idle = 1.0 - math.min(self.gait, 1.0)
+    local breath = math.sin(t * 2.2)
+
+    -- 根节点：走路上下颠、蹲下降低、空中不动
+    local bob = math.abs(math.sin(self.phase)) * 0.035 * g + breath * 0.004 * idle
+    self.bones.root.position = self.basePos.root + Vector3(0.0, bob - self.crouch * 0.12, 0.0)
+
+    -- 腿：前后交替；空中收腿；蹲下前屈
+    local airLegR, airLegL = -28.0 * self.air, 14.0 * self.air
+    self:SetBone("leg_right", -swing + airLegR - self.crouch * 30.0, 0, 0)
+    self:SetBone("leg_left", swing + airLegL - self.crouch * 30.0, 0, 0)
+
+    -- 身体：跑起来前倾，蹲下前倾
+    self:SetBone("body", g * 6.0 + self.crouch * 14.0, math.sin(self.phase) * 4.0 * g, 0)
+
+    -- 手臂：与腿反向摆；A 字外张；空中张开；持械时右手前举
+    local spread = 6.0 + breath * 1.5 * idle + self.air * 30.0
+    local armR = swing * 0.8
+    local armL = -swing * 0.8
+    local use = self.useTimer > 0.0 and (self.useTimer / 0.3) * 25.0 or 0.0
+    armR = Lerp(armR, -80.0 + (s.aimPitch or 0.0) * 0.6 - use, self.armed)
+    if s.aiming then
+        armL = Lerp(armL, -70.0 + (s.aimPitch or 0.0) * 0.6, self.armed)
+    end
+    -- 绕 Z 正转把下端甩向 +X：右臂（+X 侧）取正值外张，左臂取负值
+    self:SetBone("arm_right", armR, 0, spread)
+    self:SetBone("arm_left", armL, 0, -spread)
+
+    -- 头：抵消一点身体前倾，待机时轻微左右看
+    self:SetBone("head", -g * 4.0 - self.crouch * 10.0 + breath * 1.0 * idle,
+        math.sin(t * 0.7) * 6.0 * idle, 0)
+
+    -- 裙摆、斗篷：随速度往后飘，带一点抖动
+    self:SetBone("skirt", g * 5.0 + self.air * 8.0, 0, 0)
+    self:SetBone("cloak", g * 8.0 + self.air * 12.0, 0, 0)
+    for i = 1, 6 do
+        local flutter = math.sin(t * (6.0 + i * 0.7) + i * 1.3) * (3.0 + 9.0 * g)
+        local back = 6.0 + 26.0 * g + 30.0 * self.air
+        self:SetBone("cloak_strip_" .. i, back + flutter, 0, 0)
+    end
+
+    -- 丸子头和丝带：跟着步子晃
+    local sway = math.sin(self.phase * 2.0) * 5.0 * g + math.sin(t * 1.6) * 2.0 * idle
+    self:SetBone("bun_right", sway, 0, 0)
+    self:SetBone("bun_left", -sway, 0, 0)
+end
+
+return M
