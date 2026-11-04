@@ -1,0 +1,26 @@
+{
+  "$schema": "../schemas/project.schema.json",
+  "project_id": "m_hi4f",
+  "author": {
+    "id": "1838934907"
+  },
+  "entry": "main.lua",
+  "version": "1.0.0",
+  "taptap_publish": {
+    "title": "urhox-voxel",
+    "description": "",
+    "category": "casual",
+    "screen_orientation": "landscape",
+    "collection_type": "sce",
+    "trial_note": "",
+    "app_platforms": "1,2",
+    "app_id": 1023130,
+    "developer_id": 411438,
+    "miniapp_id": "tapmcx3epvjxagpvht"
+  },
+  "assets": {
+    "icon": "",
+    "screenshots": [],
+    "promotional_image": ""
+  }
+}
