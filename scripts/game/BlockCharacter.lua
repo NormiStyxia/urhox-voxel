@@ -178,10 +178,15 @@ local VOXEL_NORMAL_AXIS = { 1, 1, 2, 2, 3, 3 }
 
 --- 体素版：数据来自 scripts/game/NomiVoxelData.lua（art/nomi_voxel/voxelize.py 生成）。
 --- 每根骨骼一个 CustomGeometry，颜色写在顶点上；骨骼节点和动画与方块版共用。
+--- variant（可选）：同一份体素数据换一套比例，不另做模型。
+---   scale   = { 骨骼名 = 统一缩放 }（绕骨骼轴心，如头缩小）
+---   stretch = { 骨骼名 = Y 向拉长 }（腿用；整体会抬高，脚仍踩在地上）
+---   widen   = { x =, z =, skip = {骨骼名...} }（身体往中线收窄，skip 里的骨骼不收）
 ---@param parent Node
 ---@param data table
+---@param variant table|nil
 ---@return BlockCharacter
-function M.CreateVoxel(parent, data)
+function M.CreateVoxel(parent, data, variant)
     ---@type BlockCharacter
     local self = setmetatable({}, M)
     self.root = parent:CreateChild("VoxelCharacter")
@@ -197,16 +202,57 @@ function M.CreateVoxel(parent, data)
         print("BlockCharacter: voxel material not found")
     end
 
+    -- 体型收窄（修长版用）：直接改几何和骨骼轴心的位置，不用节点非等比缩放——
+    -- 父节点非等比缩放时子节点一转（摆臂、外套飘）就会剪切变形
+    local wx, wz, zc = 1.0, 1.0, -1.0
+    local widenSkip = {}
+    if variant ~= nil and variant.widen ~= nil then
+        wx, wz = variant.widen.x or 1.0, variant.widen.z or 1.0
+        for _, name in ipairs(variant.widen.skip or {}) do widenSkip[name] = true end
+    end
+    ---@return number, number, number
+    local function Shape(bone, x, y, z)
+        if widenSkip[bone] then return x, y, z end
+        return x * wx, y, zc + (z - zc) * wz
+    end
+
     local pivots = {}
     for _, b in ipairs(data.bones) do
         pivots[b.name] = b.pivot
         local parentNode = b.parent and self.bones[b.parent] or self.root
-        local pp = b.parent and pivots[b.parent] or { 0, 0, 0 }
         local node = parentNode:CreateChild(b.name)
-        node.position = Vector3((b.pivot[1] - pp[1]) * unit, (b.pivot[2] - pp[2]) * unit,
-            (b.pivot[3] - pp[3]) * unit)
+        -- 子骨骼挂点 = 父骨骼形变后的空间里，子骨骼轴心所在的位置
+        local owner = b.parent or b.name
+        local cx, cy, cz = Shape(owner, b.pivot[1], b.pivot[2], b.pivot[3])
+        local px0, py0, pz0 = 0.0, 0.0, 0.0
+        if b.parent then
+            local pp = pivots[b.parent]
+            px0, py0, pz0 = Shape(b.parent, pp[1], pp[2], pp[3])
+        end
+        node.position = Vector3((cx - px0) * unit, (cy - py0) * unit, (cz - pz0) * unit)
         self.bones[b.name] = node
         self.basePos[b.name] = node.position
+    end
+
+    if variant ~= nil then
+        local lift = 0.0
+        for name, sc in pairs(variant.scale or {}) do
+            local node = self.bones[name]
+            if node ~= nil then node.scale = Vector3(sc, sc, sc) end
+        end
+        for name, sy in pairs(variant.stretch or {}) do
+            local node = self.bones[name]
+            if node ~= nil then
+                node.scale = Vector3(1.0, sy, 1.0)
+                -- 腿绕髋部拉长会往下伸，整个角色抬高同样的量，脚还踩在地上
+                lift = math.max(lift, pivots[name][2] * (sy - 1.0) * unit)
+            end
+        end
+        local root = self.bones.root
+        if root ~= nil then
+            root.position = root.position + Vector3(0.0, lift, 0.0)
+            self.basePos.root = root.position
+        end
     end
 
     local palette = {}
@@ -214,11 +260,13 @@ function M.CreateVoxel(parent, data)
         palette[i] = Color(c[1], c[2], c[3], 1.0)
     end
 
-    local total = 0
+    local total, totalTris = 0, 0
     for _, b in ipairs(data.bones) do
-        local quads = data.quads[b.name]
-        if quads ~= nil and #quads > 0 then
-            local px, py, pz = b.pivot[1], b.pivot[2], b.pivot[3]
+        local quads = data.quads[b.name] or {}
+        local hasTris = data.tris ~= nil and data.tris[b.name] ~= nil
+        if #quads > 0 or hasTris then
+            local px, py, pz = Shape(b.name, b.pivot[1], b.pivot[2], b.pivot[3])
+            local bone = b.name
             local geom = self.bones[b.name]:CreateComponent("CustomGeometry")
             geom:BeginGeometry(0, TRIANGLE_LIST)
             for _, q in ipairs(quads) do
@@ -238,8 +286,10 @@ function M.CreateVoxel(parent, data)
                     lo = { u + ox, v + oy, plane + oz }
                     hi = { u + w + ox, v + h + oy, plane + oz }
                 end
-                local vlo = Vector3((lo[1] - px) * unit, (lo[2] - py) * unit, (lo[3] - pz) * unit)
-                local vhi = Vector3((hi[1] - px) * unit, (hi[2] - py) * unit, (hi[3] - pz) * unit)
+                local lx, ly, lz = Shape(bone, lo[1], lo[2], lo[3])
+                local hx, hy, hz = Shape(bone, hi[1], hi[2], hi[3])
+                local vlo = Vector3((lx - px) * unit, (ly - py) * unit, (lz - pz) * unit)
+                local vhi = Vector3((hx - px) * unit, (hy - py) * unit, (hz - pz) * unit)
                 local normal, c = FaceCorners(VOXEL_FACE[dir], vlo, vhi)
                 for _, k in ipairs({ 1, 2, 3, 1, 3, 4 }) do
                     geom:DefineVertex(c[k])
@@ -247,13 +297,33 @@ function M.CreateVoxel(parent, data)
                     geom:DefineColor(color)
                 end
             end
+            -- 斜面三角形（台阶切成的 45° 楔形），顶点已按正面朝外排好
+            local tris = data.tris and data.tris[b.name] or nil
+            if tris ~= nil then
+                for _, t in ipairs(tris) do
+                    local color = palette[t[10]] or Color.WHITE
+                    local p = {}
+                    for n = 0, 2 do
+                        local vx, vy, vz = Shape(bone, t[n * 3 + 1] + ox, t[n * 3 + 2] + oy, t[n * 3 + 3] + oz)
+                        p[n + 1] = Vector3((vx - px) * unit, (vy - py) * unit, (vz - pz) * unit)
+                    end
+                    local normal = (p[2] - p[1]):CrossProduct(p[3] - p[1]):Normalized()
+                    for n = 1, 3 do
+                        geom:DefineVertex(p[n])
+                        geom:DefineNormal(normal)
+                        geom:DefineColor(color)
+                    end
+                end
+                totalTris = totalTris + #tris
+            end
             geom:Commit()
             if material ~= nil then geom:SetMaterial(0, material) end
             geom.castShadows = true
             total = total + #quads
         end
     end
-    print(string.format("BlockCharacter: built voxel character, %d bones, %d quads", #data.bones, total))
+    print(string.format("BlockCharacter: built voxel character, %d bones, %d quads, %d slope tris",
+        #data.bones, total, totalTris))
     return self
 end
 
@@ -328,8 +398,14 @@ function M:Update(timeStep, s)
     self:SetBone("arm_left", armL, 0, -spread)
 
     -- 头：抵消一点身体前倾，待机时轻微左右看
-    self:SetBone("head", -g * 4.0 - self.crouch * 10.0 + breath * 1.0 * idle,
-        math.sin(t * 0.7) * 6.0 * idle, 0)
+    local headYaw = math.sin(t * 0.7) * 6.0 * idle
+    self:SetBone("head", -g * 4.0 - self.crouch * 10.0 + breath * 1.0 * idle, headYaw, 0)
+    -- 肩前发束挂在身体上（不跟头点头，免得扫进肩膀），只跟一半的左右转头
+    self:SetBone("hair_locks", 0, headYaw * 0.5, 0)
+    -- 帽兜：挂在外套上半，跑起来稍微往后掀
+    self:SetBone("hood", g * 5.0 + self.air * 8.0 + math.sin(t * 5.0 + 0.6) * 0.8 * g, 0, 0)
+    -- 背后长发：跟一半转头，跑起来往后飘一点
+    self:SetBone("hair_back", 2.0 + g * 8.0 + self.air * 10.0 + math.sin(t * 4.0) * 1.5 * g, headYaw * 0.5, 0)
 
     -- 裙摆、斗篷：随速度往后飘，带一点抖动
     self:SetBone("skirt", g * 5.0 + self.air * 8.0, 0, 0)

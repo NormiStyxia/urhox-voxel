@@ -327,10 +327,10 @@ function HandleUpdate(eventType, eventData)
             timeName, world.volumeCount)
     else
         statusText.text = string.format(
-            "WASD 移动  Shift 跑  Space 跳  C 蹲伏  F 上车  Q 切换工具  R 换弹  N 昼夜[%s]\n" ..
+            "WASD 移动  Shift 跑  Space 跳  C 蹲伏  F 上车  Q 切换工具  M 体型[%s]  N 昼夜[%s]\n" ..
             "工具[%s/姿态:%s]: 1 炸药  2 散弹枪  3 喷漆  4 喷枪   左键 使用  右键 持械瞄准/普通拖动\n" ..
             "volume %d",
-            timeName, config.TOOL_NAMES[tools.current],
+            player.GetBodyTypeName(), timeName, config.TOOL_NAMES[tools.current],
             player.GetWeaponName(), world.volumeCount)
     end
     local puddleStatus = puddleHandle == 0 and "不可用" or (puddlesEnabled and "开启" or "关闭")
