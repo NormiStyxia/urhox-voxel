@@ -21,6 +21,8 @@
 ---@field armed number
 ---@field useTimer number
 local M = {}
+---@type number|nil 截图验证用的强制移动速度
+M.debugMoveSpeed = nil
 M.__index = M
 
 local UNIT = 0.05            -- 头顶约 1.7m，与 config.PLAYER_HEIGHT 对齐
@@ -170,6 +172,91 @@ function M.Create(parent, data)
     return self
 end
 
+-- 体素 quad 方向 → FaceCorners 的面名（体素数据已是 UrhoX 坐标，不需要翻 z）
+local VOXEL_FACE = { "east", "west", "up", "down", "north", "south" }
+local VOXEL_NORMAL_AXIS = { 1, 1, 2, 2, 3, 3 }
+
+--- 体素版：数据来自 scripts/game/NomiVoxelData.lua（art/nomi_voxel/voxelize.py 生成）。
+--- 每根骨骼一个 CustomGeometry，颜色写在顶点上；骨骼节点和动画与方块版共用。
+---@param parent Node
+---@param data table
+---@return BlockCharacter
+function M.CreateVoxel(parent, data)
+    ---@type BlockCharacter
+    local self = setmetatable({}, M)
+    self.root = parent:CreateChild("VoxelCharacter")
+    self.bones = {}
+    self.basePos = {}
+    self.time, self.phase, self.gait = 0.0, 0.0, 0.0
+    self.air, self.crouch, self.armed, self.useTimer = 0.0, 0.0, 0.0, 0.0
+
+    local unit = data.unit
+    local ox, oy, oz = data.origin[1], data.origin[2], data.origin[3]
+    local material = cache:GetResource("Material", "Materials/NomiVoxel.xml")
+    if material == nil then
+        print("BlockCharacter: voxel material not found")
+    end
+
+    local pivots = {}
+    for _, b in ipairs(data.bones) do
+        pivots[b.name] = b.pivot
+        local parentNode = b.parent and self.bones[b.parent] or self.root
+        local pp = b.parent and pivots[b.parent] or { 0, 0, 0 }
+        local node = parentNode:CreateChild(b.name)
+        node.position = Vector3((b.pivot[1] - pp[1]) * unit, (b.pivot[2] - pp[2]) * unit,
+            (b.pivot[3] - pp[3]) * unit)
+        self.bones[b.name] = node
+        self.basePos[b.name] = node.position
+    end
+
+    local palette = {}
+    for i, c in ipairs(data.palette) do
+        palette[i] = Color(c[1], c[2], c[3], 1.0)
+    end
+
+    local total = 0
+    for _, b in ipairs(data.bones) do
+        local quads = data.quads[b.name]
+        if quads ~= nil and #quads > 0 then
+            local px, py, pz = b.pivot[1], b.pivot[2], b.pivot[3]
+            local geom = self.bones[b.name]:CreateComponent("CustomGeometry")
+            geom:BeginGeometry(0, TRIANGLE_LIST)
+            for _, q in ipairs(quads) do
+                local dir, layer, u, v, w, h = q[1], q[2], q[3], q[4], q[5], q[6]
+                local color = palette[q[7]] or Color.WHITE
+                -- 体素索引 → 体素坐标：x = i + ox, y = j + oy, z = k + oz
+                local lo, hi
+                local axis = VOXEL_NORMAL_AXIS[dir]
+                local plane = layer + ((dir % 2 == 1) and 1 or 0) -- 正方向的面在格子远端
+                if axis == 1 then
+                    lo = { plane + ox, v + oy, u + oz }
+                    hi = { plane + ox, v + h + oy, u + w + oz }
+                elseif axis == 2 then
+                    lo = { u + ox, plane + oy, v + oz }
+                    hi = { u + w + ox, plane + oy, v + h + oz }
+                else
+                    lo = { u + ox, v + oy, plane + oz }
+                    hi = { u + w + ox, v + h + oy, plane + oz }
+                end
+                local vlo = Vector3((lo[1] - px) * unit, (lo[2] - py) * unit, (lo[3] - pz) * unit)
+                local vhi = Vector3((hi[1] - px) * unit, (hi[2] - py) * unit, (hi[3] - pz) * unit)
+                local normal, c = FaceCorners(VOXEL_FACE[dir], vlo, vhi)
+                for _, k in ipairs({ 1, 2, 3, 1, 3, 4 }) do
+                    geom:DefineVertex(c[k])
+                    geom:DefineNormal(normal)
+                    geom:DefineColor(color)
+                end
+            end
+            geom:Commit()
+            if material ~= nil then geom:SetMaterial(0, material) end
+            geom.castShadows = true
+            total = total + #quads
+        end
+    end
+    print(string.format("BlockCharacter: built voxel character, %d bones, %d quads", #data.bones, total))
+    return self
+end
+
 ---@param name string
 ---@param pitch number 绕 X（正值：骨骼下端往后摆）
 ---@param yaw number 绕 Y
@@ -191,6 +278,11 @@ end
 ---@param timeStep number
 ---@param s table { moveSpeed, onGround, armed, aiming, crouching, aimPitch }
 function M:Update(timeStep, s)
+    if M.debugMoveSpeed ~= nil then
+        -- 截图验证用：强制一个移动速度看跑步姿态；正常游戏为 nil
+        s = { moveSpeed = M.debugMoveSpeed, onGround = true, armed = s.armed, aiming = s.aiming,
+              crouching = s.crouching, aimPitch = s.aimPitch }
+    end
     local dt = math.min(timeStep, 0.1)
     self.time = self.time + dt
     self.useTimer = math.max(0.0, self.useTimer - dt)
@@ -242,10 +334,22 @@ function M:Update(timeStep, s)
     -- 裙摆、斗篷：随速度往后飘，带一点抖动
     self:SetBone("skirt", g * 5.0 + self.air * 8.0, 0, 0)
     self:SetBone("cloak", g * 8.0 + self.air * 12.0, 0, 0)
-    for i = 1, 6 do
-        local flutter = math.sin(t * (6.0 + i * 0.7) + i * 1.3) * (3.0 + 9.0 * g)
-        local back = 6.0 + 26.0 * g + 30.0 * self.air
-        self:SetBone("cloak_strip_" .. i, back + flutter, 0, 0)
+    -- 体素版外套：上半从肩部轻微后仰，下摆从腰部往后飘、左右荡（碎条挂在下摆上继续叠加）
+    local wave = math.sin(t * 5.0 + 0.6)
+    self:SetBone("coat_upper", 2.0 + g * 6.0 + self.air * 6.0 + wave * 0.8 * g, 0, 0)
+    self:SetBone("coat_lower", 3.0 + g * 16.0 + self.air * 18.0 + wave * (1.5 + 5.0 * g),
+        math.sin(self.phase) * 3.0 * g, math.sin(self.phase * 0.5 + 0.3) * 2.5 * g)
+    -- 碎条：方块版是 cloak_strip_1..6，体素版是 cloak_strip_r / _l / _b
+    local i = 0
+    for name, _ in pairs(self.bones) do
+        if string.sub(name, 1, 12) == "cloak_strip_" then
+            i = i + 1
+            local flutter = math.sin(t * (6.0 + i * 0.7) + i * 1.3) * (3.0 + 9.0 * g)
+            -- 体素版碎条挂在外套下摆下面，角度会叠加，所以基础量小一些
+            local onCoat = self.bones.coat_lower ~= nil
+            local back = onCoat and (3.0 + 14.0 * g + 18.0 * self.air) or (6.0 + 26.0 * g + 30.0 * self.air)
+            self:SetBone(name, back + flutter, 0, 0)
+        end
     end
 
     -- 丸子头和丝带：跟着步子晃

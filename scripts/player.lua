@@ -1,7 +1,7 @@
 -- ====================================================================
 -- player.lua - 第三人称角色(CharacterComponent + VoxelCharacterController)
 --
--- 外观换成方块拼装角色「诺米」(game/BlockCharacter + game/NomiModelData)，
+-- 外观换成体素角色「诺米」(game/BlockCharacter + game/NomiVoxelData)，
 -- 动画由 BlockCharacter 程序化驱动，不再使用 AnimatedModel / 武器 FSM。
 -- 物理控制器使用 Jolt-backed VoxelCharacterController；驾驶时沿用
 -- VoxelTown 的载具追尾相机。
@@ -10,7 +10,7 @@
 local config = require("config")
 local StateMachine = require("game.StateMachine") -- 只用 WeaponType 常量
 local BlockCharacter = require("game.BlockCharacter")
-local NomiModelData = require("game.NomiModelData")
+local NomiVoxelData = require("game.NomiVoxelData")
 local vehicles = require("vehicles")
 
 local M = {}
@@ -148,7 +148,8 @@ local function CreateCharacter(spawn)
     characterNode.worldPosition = spawn
 
     modelNode = characterNode:CreateChild("ModelNode")
-    nomi = BlockCharacter.Create(modelNode, NomiModelData)
+    -- 体素版（从 Mivo 三视图雕刻）；方块版 BlockCharacter.Create + game.NomiModelData 仍可用
+    nomi = BlockCharacter.CreateVoxel(modelNode, NomiVoxelData)
 
     characterController = characterNode:CreateComponent("VoxelCharacterController")
     characterController:SetHeight(config.PLAYER_HEIGHT)
