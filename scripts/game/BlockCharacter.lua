@@ -29,6 +29,7 @@ M.__index = M
 M.SLENDER = {
     scale = { head = 0.82, hair_locks = 0.85, hair_back = 0.85 },
     stretch = { leg_right = 1.35, leg_left = 1.35 },
+    stretchAnchor = 18,
     widen = { x = 0.85, z = 0.92, skip = { "head" } },
 }
 
@@ -217,8 +218,20 @@ function M.CreateVoxel(parent, data, variant)
         wx, wz = variant.widen.x or 1.0, variant.widen.z or 1.0
         for _, name in ipairs(variant.widen.skip or {}) do widenSkip[name] = true end
     end
+    -- 所有腿长变化烘焙到顶点和关节位置，活动骨骼保持单位缩放。
+    -- 膝是髋的子节点；不能让父节点的 Y 缩放把膝部旋转拉斜。
+    local legShape = {}
+    local lift = 0.0
+    local anchor = variant and variant.stretchAnchor or 18
+    for _, b in ipairs(data.bones) do
+        local sy = variant and variant.stretch and variant.stretch[b.name]
+        legShape[b.name] = sy or (b.parent and legShape[b.parent])
+        if sy then lift = math.max(lift, anchor * (sy - 1.0) * unit) end
+    end
     ---@return number, number, number
     local function Shape(bone, x, y, z)
+        local sy = legShape[bone]
+        if sy then y = anchor + (y - anchor) * sy end
         if widenSkip[bone] then return x, y, z end
         return x * wx, y, zc + (z - zc) * wz
     end
@@ -229,7 +242,7 @@ function M.CreateVoxel(parent, data, variant)
         local parentNode = b.parent and self.bones[b.parent] or self.root
         local node = parentNode:CreateChild(b.name)
         -- 子骨骼挂点 = 父骨骼形变后的空间里，子骨骼轴心所在的位置
-        local owner = b.parent or b.name
+        local owner = b.name
         local cx, cy, cz = Shape(owner, b.pivot[1], b.pivot[2], b.pivot[3])
         local px0, py0, pz0 = 0.0, 0.0, 0.0
         if b.parent then
@@ -242,18 +255,9 @@ function M.CreateVoxel(parent, data, variant)
     end
 
     if variant ~= nil then
-        local lift = 0.0
         for name, sc in pairs(variant.scale or {}) do
             local node = self.bones[name]
             if node ~= nil then node.scale = Vector3(sc, sc, sc) end
-        end
-        for name, sy in pairs(variant.stretch or {}) do
-            local node = self.bones[name]
-            if node ~= nil then
-                node.scale = Vector3(1.0, sy, 1.0)
-                -- 腿绕髋部拉长会往下伸，整个角色抬高同样的量，脚还踩在地上
-                lift = math.max(lift, pivots[name][2] * (sy - 1.0) * unit)
-            end
         end
         local root = self.bones.root
         if root ~= nil then
@@ -388,6 +392,12 @@ function M:Update(timeStep, s)
     self:SetBone("leg_right", -swing + airLegR - self.crouch * 30.0, 0, 0)
     self:SetBone("leg_left", swing + airLegL - self.crouch * 30.0, 0, 0)
 
+    -- 摆动腿收小腿，支撑腿伸直；膝只向后弯，不左右漂移。
+    self:SetBone("shin_right", math.max(0, -math.sin(self.phase)) * 42.0 * g
+        + self.air * 38.0 + self.crouch * 55.0, 0, 0)
+    self:SetBone("shin_left", math.max(0, math.sin(self.phase)) * 42.0 * g
+        + self.air * 30.0 + self.crouch * 55.0, 0, 0)
+
     -- 身体：跑起来前倾，蹲下前倾
     self:SetBone("body", g * 6.0 + self.crouch * 14.0, math.sin(self.phase) * 4.0 * g, 0)
 
@@ -412,15 +422,15 @@ function M:Update(timeStep, s)
     -- 帽兜：挂在外套上半，跑起来稍微往后掀
     self:SetBone("hood", g * 5.0 + self.air * 8.0 + math.sin(t * 5.0 + 0.6) * 0.8 * g, 0, 0)
     -- 背后长发：跟一半转头，跑起来往后飘一点
-    self:SetBone("hair_back", 2.0 + g * 8.0 + self.air * 10.0 + math.sin(t * 4.0) * 1.5 * g, headYaw * 0.5, 0)
+    self:SetBone("hair_back", g * 5.0 + self.air * 6.0 + math.sin(t * 4.0) * 1.5 * g, headYaw * 0.5, 0)
 
     -- 裙摆、斗篷：随速度往后飘，带一点抖动
     self:SetBone("skirt", g * 5.0 + self.air * 8.0, 0, 0)
     self:SetBone("cloak", g * 8.0 + self.air * 12.0, 0, 0)
     -- 体素版外套：上半从肩部轻微后仰，下摆从腰部往后飘、左右荡（碎条挂在下摆上继续叠加）
     local wave = math.sin(t * 5.0 + 0.6)
-    self:SetBone("coat_upper", 2.0 + g * 6.0 + self.air * 6.0 + wave * 0.8 * g, 0, 0)
-    self:SetBone("coat_lower", 3.0 + g * 16.0 + self.air * 18.0 + wave * (1.5 + 5.0 * g),
+    self:SetBone("coat_upper", g * 1.5 + self.air * 2.0, 0, 0)
+    self:SetBone("coat_lower", g * 9.0 + self.air * 12.0 + wave * 2.0 * g,
         math.sin(self.phase) * 3.0 * g, math.sin(self.phase * 0.5 + 0.3) * 2.5 * g)
     -- 碎条：方块版是 cloak_strip_1..6，体素版是 cloak_strip_r / _l / _b
     local i = 0

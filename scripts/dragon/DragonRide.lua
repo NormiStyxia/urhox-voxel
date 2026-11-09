@@ -196,6 +196,8 @@ function R:SeatPose()
     local n = self.nomi
     n:SetBone("leg_right", -58, 0, 22)
     n:SetBone("leg_left", -58, 0, -22)
+    n:SetBone("shin_right", 72, 0, 0)
+    n:SetBone("shin_left", 72, 0, 0)
     n:SetBone("arm_right", -42, 0, 8)
     n:SetBone("arm_left", -42, 0, -8)
     n:SetBone("body", 4, 0, 0)
@@ -205,7 +207,11 @@ function R:AttachToSaddle()
     local saddle = self:SaddleNode()
     local rot = saddle.worldRotation
     self.node.worldRotation = rot
-    self.node.worldPosition = saddle.worldPosition - rot * Vector3(0, self.hipY, 0)
+    -- Use the evaluated hip centre, including root bob and the authored depth offset.
+    -- A fixed height alone left the rider behind/above the saddle after pose changes.
+    local hips = (self.nomi.bones.leg_right.worldPosition + self.nomi.bones.leg_left.worldPosition) * 0.5
+    local localHips = self.node:WorldToLocal(hips)
+    self.node.worldPosition = saddle.worldPosition - rot * localHips
 end
 
 function R:UpdateMount(dt)
