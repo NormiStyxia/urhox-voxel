@@ -14,6 +14,8 @@ local statusLabel = nil
 ---@type Label
 local pauseLabel = nil
 local jointLabels = {}
+---@type Label
+local hintLabel = nil
 
 local function SectionTitle(text)
     return UI.Label { text = text, fontSize = 12, fontWeight = "bold", fontColor = { 150, 200, 255, 255 }, marginTop = 6 }
@@ -133,10 +135,11 @@ function M.Build(ctrl, T)
                         UI.SimpleGrid { columns = 2, gap = 4, children = {
                             Check("骨架 / 关节", T.showSkeleton, function(v) T.showSkeleton = v end),
                             Check("碰撞 / 命中区", T.showHitZones, function(v) T.showHitZones = v end),
-                            Check("翼膜薄片轴", T.showStrips, function(v) T.showStrips = v end),
+                            Check("翼膜控制网", T.showStrips, function(v) T.showStrips = v end),
                             Check("相机跟随", T.cam.follow, function(v) T.cam.follow = v end),
                             Check("落足点", T.showFeet, function(v) T.showFeet = v end),
                             Check("诺米（体型对比）", T.showNomi, function(v) T.showNomi = v end),
+                            Check("玩法模式（诺米骑龙）", T.playMode, function(v) T.SetPlayMode(v) end),
                         } },
 
                         SectionTitle("部位独立测试"),
@@ -168,7 +171,7 @@ function M.Build(ctrl, T)
 
                         SectionTitle("键盘"),
                         UI.Label { whiteSpace = "normal", width = "100%", fontSize = 10, fontColor = { 170, 185, 210, 255 },
-                            text = "W/S 加减速  A/D 转向  Q/E 原地转身  Space 起飞/爬升  C 下降\n" ..
+                            text = "【玩法模式】WASD 移动诺米  Space 跳  Shift 奔跑  靠近龙按 F 骑乘（骑乘时 W 前进 A/D 转向 S 停 Space/F 下龙）\n【调试模式】W/S 加减速  A/D 转向  Q/E 原地转身  Space 起飞/爬升  C 下降\n" ..
                                 "G 滑翔  L 降落  R 咆哮  T 展翼/收翼  P 暂停  N 单步\n" ..
                                 "鼠标右键/左键拖动旋转  滚轮缩放  中键或 Shift+左键平移\n1/2/3/4 正/侧/背/斜视角  F 跟随" },
                     } },
@@ -176,13 +179,23 @@ function M.Build(ctrl, T)
             },
         },
     }
-    UI.SetRoot(UI.Panel { width = "100%", height = "100%", pointerEvents = "box-none", children = { panel } })
+    hintLabel = UI.Label { text = "", fontSize = 18, fontWeight = "bold", fontColor = { 255, 255, 255, 255 }, textAlign = "center" }
+    local hintBar = UI.Panel {
+        position = "absolute", left = 0, right = 0, bottom = 28, alignItems = "center", pointerEvents = "none",
+        children = { UI.Panel { backgroundColor = { 10, 16, 28, 190 }, borderRadius = 8, paddingTop = 8, paddingBottom = 8,
+            paddingLeft = 16, paddingRight = 16, children = { hintLabel } } },
+    }
+    UI.SetRoot(UI.Panel { width = "100%", height = "100%", pointerEvents = "box-none", children = { panel, hintBar } })
 end
 
 function M.Update(ctrl, fps)
     if statusLabel ~= nil then
         statusLabel:SetText(ctrl:Status() .. (fps and string.format("  FPS %.0f", fps) or ""))
     end
+end
+
+function M.SetHint(text)
+    if hintLabel ~= nil then hintLabel:SetText(text or "") end
 end
 
 function M.IsPointerOverUI()

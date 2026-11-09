@@ -84,7 +84,7 @@ local function check()
         local ch = rig.bones.chest
         local sh, el, wr = rig.bones["armU" .. side].worldPosition, rig.bones["armL" .. side].worldPosition, rig.bones["hand" .. side].worldPosition
         local fwd2 = ch.worldRotation * Vector3.FORWARD
-        if grounded and (el - (sh + wr) * 0.5):DotProduct(fwd2) > 0.02 then stats.flip = stats.flip + 1; stats.flipInfo = "elbow" .. side .. "@" .. st end
+        if grounded and ctrl.ikFront > 0.5 and (el - (sh + wr) * 0.5):DotProduct(fwd2) > 0.02 then stats.flip = stats.flip + 1; stats.flipInfo = "elbow" .. side .. "@" .. st end
     end
     -- 关节跳变（单步角度变化）
     for name, node in pairs(rig.bones) do

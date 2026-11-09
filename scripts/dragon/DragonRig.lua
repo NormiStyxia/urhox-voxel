@@ -7,14 +7,14 @@
 --   VoxelVolume（不 Finalize、无物理体，同 VoxelTown 视觉轮/旋翼做法），
 --   由节点层级驱动。
 -- 翅膀：翼根 wing → 前臂 wfore → 腕 whand → 四根指骨 wf1..4（各两节 wfNm），
---   以及挂在前臂上的虚拟后缘指 wf5（翼膜贴体边）。翼膜拆成多块 1 体素厚的扇形
---   薄片，每块的旋转 = 两侧翼骨旋转的球面插值（DragonRig:UpdateMembranes），
---   翼骨收拢时薄片互相叠压，不会撕开。
+--   以及挂在前臂上的虚拟后缘指 wf5。翼膜是一整张连续蒙皮网格（DragonMembrane），
+--   由翼骨上的控制点驱动、GPU 变形，任何折叠角度下都连成一张皮。
 -- 部件注册表 parts[bone] = { volume, node, voxels } 供后续体素破坏 / 重组使用。
 -- ====================================================================
 
 local Spec = require("dragon.DragonSpec")
 local Sculpt = require("dragon.DragonSculpt")
+local Membrane = require("dragon.DragonMembrane")
 
 ---@class DragonRig
 ---@field root Node
@@ -34,7 +34,6 @@ local Rig = {}
 Rig.__index = Rig
 
 local Q_IDENT = Quaternion(1, 0, 0, 0)
-Rig.STRIP_GAP = 0.012 -- 相邻翼膜薄片沿法线的错层（米）
 
 -- 关节欧拉角（度）→ 四元数，统一顺序 R = Rz * Ry * Rx（与 DragonSculpt.RotMatrix 一致）
 function Rig.Euler(x, y, z)
@@ -160,7 +159,7 @@ local function MembraneRegion(lay, x, z)
         aW, ap = norm(aW, aB), norm(ap, aB)
         local t = math.max(0, math.min(0.999, (ap - aB) / (aW - aB)))
         local k = math.floor(t * N)
-        return { kind = "fore", strip = k, t = (k + 0.5) / N }
+        return { kind = "fore", strip = k, t = (k + 0.5) / N, tr = t }
     end
     if InTri(x, z, O, E, B) then
         local aB = Polar(0, 0, B[1], B[3])
@@ -216,6 +215,8 @@ function Rig.Build(scene, world, parent)
         world:SetPaletteEntryPBR(idx, 0.3, 0.0, 0.5, Color(e[1], e[2], e[3], e[4]))
     end
     local material = Rig.CleanMaterial(world)
+    self.membraneMaterial = Membrane.CreateMaterial()
+    self.membranes = {}
 
     self.root = (parent or scene):CreateChild("Dragon")
     local prims, bones = Spec.Expand()
@@ -240,7 +241,8 @@ function Rig.Build(scene, world, parent)
     for _, b in ipairs(bones) do
         local s = Spec.VoxelSizeOf(b.name)
         local origin = { -0.5 * s, 0.0, -0.5 * s }
-        local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true })
+        -- 不复制外壳（overlap=false）：关节缝由 DragonSpec 的关节球（挂父骨骼、只占内部）填
+        local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
         local part = MakeVolume(world, material, vox, s, origin, b.pivot, self.bones[b.name], b.name)
         if part ~= nil then
             part.bone = b.name
@@ -342,79 +344,14 @@ function Rig:BuildWing(sfx, sign, world, material)
         end
     end
 
-    -- 翼膜：平面扫描，按区域分到各插值薄片
-    local buckets = {}
-    local function Bucket(key) local b = buckets[key]; if b == nil then b = {}; buckets[key] = b end return b end
-    local N = w.strips
-    for k = math.floor(-2.9 / s), math.floor(1.2 / s) do
-        local z = k * s
-        for i = math.floor(-0.3 / s), math.floor(7.2 / s) do
-            local x = i * s
-            local d = Sculpt.EvalField(bprims, x, 0, z)
-            if d > 0 then
-                local reg = MembraneRegion(lay, x, z)
-                if reg ~= nil then
-                    local key
-                    if reg.kind == "hand" then
-                        key = string.format("wm%d_%d%s", reg.gap, reg.strip, reg.outer and "o" or "")
-                    elseif reg.kind == "fore" then
-                        key = "wmf_" .. reg.strip
-                    else
-                        key = "wmh_" .. reg.strip
-                    end
-                    local b = Bucket(key)
-                    b[#b + 1] = { i, 0, k, MembraneColor(lay, x, z, reg) }
-                end
-            end
-        end
-    end
-
-    -- 薄片节点与插值规则
-    local bodyRot = Rig.Euler(-12, 0, -40)
-    if sign < 0 then bodyRot = Rig.MirrorQuat(bodyRot) end
-    local fans = lay.fans
-    local stripLayer = 0
-    local function MakeStrip(key, parentName, apexLocal, def)
-        local name = key .. sfx
-        local apexW = WP(apexLocal)
-        local node = Add(name, parentName, apexW)
-        -- 防 z-fighting：翅膀半收时同一张膜的相邻薄片在同一平面内收拢、互相重叠，
-        -- 共面重叠会闪烁。每块（内段）薄片沿翼膜法线错开 STRIP_GAP，外段随内段。
-        if parentName:sub(1, 2) ~= "wm" then
-            local off = (stripLayer - 5.5) * Rig.STRIP_GAP
-            stripLayer = stripLayer + 1
-            node.position = node.position + Vector3(0, off, 0)
-        end
-        def.node, def.name = node, name
-        self.strips[#self.strips + 1] = def
-        local vox = buckets[key]
-        if vox ~= nil then
-            local part = MakeVolume(world, material, Mirror(vox), s, OriginW(), apexW, node, name)
-            if part ~= nil then
-                part.bone, part.wing, part.membrane = name, true, true
-                self.parts[name] = part
-            end
-        end
-        return node
-    end
-    for g = 1, 4 do
-        local fA, fB = "wf" .. g .. sfx, "wf" .. (g + 1) .. sfx
-        for k = 0, N - 1 do
-            local t = (k + 0.5) / N
-            local key = string.format("wm%d_%d", g, k)
-            MakeStrip(key, "whand" .. sfx, W, { refA = self.bones[fA], refB = self.bones[fB], t = t })
-            local ac = math.rad(fans[g].a + (fans[g + 1].a - fans[g].a) * t)
-            local split = fans[g].J + (fans[g + 1].J - fans[g].J) * t
-            local apexO = { W[1] + math.cos(ac) * split, 0, W[3] - math.sin(ac) * split }
-            MakeStrip(key .. "o", key .. sfx, apexO, {
-                localA = self.bones["wf" .. g .. "m" .. sfx], localB = self.bones["wf" .. (g + 1) .. "m" .. sfx], t = t })
-        end
-    end
-    for k = 0, N - 1 do
-        local t = (k + 0.5) / N
-        MakeStrip("wmf_" .. k, "wing" .. sfx, E, { constA = Q_IDENT, refB = self.bones["wfore" .. sfx], t = t })
-        MakeStrip("wmh_" .. k, "chest", O, { constA = bodyRot, refB = self.bones["wing" .. sfx], t = t })
-    end
+    -- 翼膜：一整张连续蒙皮网格（DragonMembrane），不再拆成刚性薄片
+    local mem = Membrane.Build(self, {
+        sfx = sfx, sign = sign, lay = lay, region = MembraneRegion, color = MembraneColor,
+        material = self.membraneMaterial, triBase = (sign > 0) and 0 or Membrane.MAX_TRI,
+    })
+    self.membranes[#self.membranes + 1] = mem
+    self.parts["membrane" .. sfx] = { node = mem.node, mesh = mem.geom, voxels = mem.cells, bone = "chest",
+        wing = true, membrane = true }
     self.sides[sfx] = { lay = lay, sign = sign }
 end
 
@@ -433,19 +370,9 @@ function Rig:ResetPose()
     end
 end
 
--- 翼膜薄片：旋转 = 两侧参考骨（相对薄片父节点）旋转的球面插值
+-- 翼膜：按当前翼骨姿态更新控制三角网（GPU 蒙皮）
 function Rig:UpdateMembranes()
-    for _, s in ipairs(self.strips) do
-        local node = s.node
-        if s.localA ~= nil then
-            node.rotation = s.localA.rotation:Slerp(s.localB.rotation, s.t)
-        else
-            local pinv = node.parent.worldRotation:Inverse()
-            local qa = s.constA or (pinv * s.refA.worldRotation)
-            local qb = pinv * s.refB.worldRotation
-            node.rotation = qa:Slerp(qb, s.t)
-        end
-    end
+    Membrane.Update(self.membranes, self.membraneMaterial)
 end
 
 -- 世界坐标下的骨骼枢轴
@@ -481,13 +408,13 @@ local COL_STRIP = Color(0.5, 0.7, 1.0, 0.6)
 
 ---@param dbg DebugRenderer
 function Rig:DrawSkeleton(dbg, showStrips)
+    if showStrips then Membrane.Draw(self.membranes, dbg, COL_STRIP) end
     for _, name in ipairs(self.order) do
         local pn = self.parents[name]
-        local isStrip = name:sub(1, 2) == "wm"
-        if pn ~= nil and (showStrips or not isStrip) then
+        if pn ~= nil then
             local a = self.bones[pn].worldPosition
             local b = self.bones[name].worldPosition
-            local col = isStrip and COL_STRIP or ((name:sub(1, 1) == "w") and COL_WING or COL_BONE)
+            local col = (name:sub(1, 1) == "w") and COL_WING or COL_BONE
             dbg:AddLine(a, b, col, false)
             dbg:AddCross(b, 0.08, col, false)
         end

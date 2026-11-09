@@ -309,10 +309,14 @@ function M.VoxelizePart(prims, bone, s, origin, opts)
                     local x = ox + (i + 0.5) * s
                     local take = (p.bone == bone)
                     if not take and opts.overlap ~= false then
-                        -- 关节搭接：自身体块内部 + 六邻居全实心（静止时不可见）
-                        local deep = inside[idx(i + 1, j, k)] and inside[idx(i - 1, j, k)]
-                            and inside[idx(i, j + 1, k)] and inside[idx(i, j - 1, k)]
-                            and inside[idx(i, j, k + 1)] and inside[idx(i, j, k - 1)]
+                        -- 关节搭接：自身体块内部 + 两格内邻居全实心（离外表面至少 2 格，
+                        -- 关节转动时不会顶出皮肤和邻接部件的表面打架闪烁）
+                        local deep = true
+                        for dd = 1, 2 do
+                            deep = deep and inside[idx(i + dd, j, k)] and inside[idx(i - dd, j, k)]
+                                and inside[idx(i, j + dd, k)] and inside[idx(i, j - dd, k)]
+                                and inside[idx(i, j, k + dd)] and inside[idx(i, j, k - dd)]
+                        end
                         if deep then
                             local dOwn = 1e9
                             for _, q in ipairs(own) do

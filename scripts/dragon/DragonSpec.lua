@@ -161,7 +161,7 @@ local function TorsoColor(x, y, z)
     if z > 0.85 and abs(x) < w and y < 2.5 then return BellyPlate(x, y, z, "y") end
     -- 腹部下侧
     local bellyY = 1.74 + 0.05 * math.cos(z * 2.1)
-    if y < bellyY and abs(x) < 0.38 then return BellyPlate(x, y, z, "z") end
+    if y < bellyY and abs(x) < 0.38 then return P.WHITE end -- 腹底纯白：细接缝在掠射角下会爬动闪烁
     return Scales(x, y, z, Clamp01((y - 2.25) / 0.4))
 end
 
@@ -262,6 +262,8 @@ E("waist", { 0, 1.92, -0.2 }, { 0.66, 0.6, 0.56 }, TorsoColor, { k = 0.22, plate
 E("chest", { 0, 2.02, 0.5 }, { 0.75, 0.68, 0.72 }, TorsoColor, { k = 0.22, plate = PL })
 E("chest", { 0, 1.74, 0.88 }, { 0.56, 0.42, 0.42 }, TorsoColor, { k = 0.2, plate = PL })
 E("chest", { 0, 2.42, 0.55 }, { 0.52, 0.32, 0.62 }, TorsoColor, { k = 0.2, plate = PL })
+-- 肩部翼根隆起：翅膀从胸侧外缘长出来，而不是插在脊线上（参考冰与火翼根枢轴在胸侧外）
+E("chest", { 0.62, 2.42, 0.45 }, { 0.3, 0.26, 0.32 }, TorsoColor, { k = 0.16, sym = true })
 
 -- 颈
 for i = 1, 4 do
@@ -367,9 +369,9 @@ for _, dx in ipairs({ -0.13, -0.045, 0.045, 0.13 }) do
 end
 
 -- 后肢
-E("legU_R", { 0.8, 1.5, -0.95 }, { 0.3, 0.52, 0.5 }, LimbColor, { k = 0.14, plate = PL })
-C("legU_R", { 0.74, 1.8, -0.9 }, { 0.86, 1.06, -0.66 }, 0.3, 0.22, LimbColor, { k = 0.1, plate = PL })
-C("legL_R", { 0.86, 1.06, -0.66 }, { 0.92, 0.52, -1.42 }, 0.26, 0.2, LimbColor, { k = 0.08 })
+E("legU_R", { 0.72, 1.5, -0.92 }, { 0.22, 0.44, 0.4 }, LimbColor, { k = 0.14, plate = PL })
+C("legU_R", { 0.74, 1.8, -0.9 }, { 0.84, 1.06, -0.68 }, 0.26, 0.2, LimbColor, { k = 0.1, plate = PL })
+C("legL_R", { 0.84, 1.06, -0.68 }, { 0.92, 0.52, -1.42 }, 0.22, 0.19, LimbColor, { k = 0.08 })
 E("legL_R", { 0.88, 0.88, -0.95 }, { 0.18, 0.22, 0.26 }, LimbColor, { k = 0.08 })
 C("legM_R", { 0.92, 0.52, -1.42 }, { 0.92, 0.14, -1.3 }, 0.2, 0.19, LimbColor, { k = 0.06 })
 E("foot_R", { 0.92, 0.1, -1.15 }, { 0.21, 0.1, 0.25 }, P.BLUE_M, { k = 0.06 })
@@ -379,10 +381,35 @@ for _, dx in ipairs({ -0.14, -0.047, 0.047, 0.14 }) do
 end
 C("foot_R", { 0.92, 0.18, -1.36 }, { 0.92, 0.07, -1.52 }, 0.05, 0.02, P.BLUE_X)
 
+-- ---------------------------------------------------------------- 关节球
+-- 防裂缝：关节处一个挂在父骨骼上的内部球（半径 = 较细一侧截面 ×0.85 − 1.5 格），prio 只在球内
+-- 生效、不碰外表面。子关节弯曲时父骨骼的球填住缝；整条龙没有任何重复体素，不会共面闪烁。
+do
+    local VB = 0.08 * 1.5
+    local J = {
+        { "pelvis", { 0, 2.03, -0.22 }, 0.58 }, { "waist", { 0, 2.08, 0.35 }, 0.6 },
+        { "chest", { 0, 2.5, 0.8 }, NECK_PTS[1][3] }, { "neck1", { 0, 2.98, 0.86 }, NECK_PTS[2][3] },
+        { "neck2", { 0, 3.45, 0.89 }, NECK_PTS[3][3] }, { "neck3", { 0, 3.9, 0.97 }, NECK_PTS[4][3] },
+        { "pelvis", { 0, TAIL_PTS[1][2], TAIL_PTS[1][1] }, TAIL_PTS[1][3] },
+        { "chest", { 0.47, 1.75, 0.88 }, 0.3 }, { "armU_R", { 0.5, 1.0, 0.76 }, 0.23 }, { "armL_R", { 0.47, 0.33, 0.88 }, 0.2 },
+        { "pelvis", { 0.74, 1.8, -0.9 }, 0.26 }, { "legU_R", { 0.84, 1.06, -0.68 }, 0.2 },
+        { "legL_R", { 0.92, 0.52, -1.42 }, 0.18 }, { "legM_R", { 0.92, 0.14, -1.3 }, 0.17 },
+    }
+    for i = 1, 6 do J[#J + 1] = { "tail" .. i, { 0, TAIL_PTS[i + 1][2], TAIL_PTS[i + 1][1] }, TAIL_PTS[i + 1][3] } end
+    for _, j in ipairs(J) do
+        local r = j[3] * 0.85 - VB
+        if r > 0.05 then
+            local c = j[2]
+            local sym = (j[1]:sub(-2) ~= "_R") and c[1] ~= 0 or nil
+            E(j[1], c, { r, r, r }, P.BLUE_L, { prio = 0.4, sym = sym, joint = true })
+        end
+    end
+end
+
 -- ---------------------------------------------------------------- 翅膀
 -- 右翼，翼局部坐标（翼根为原点）的完全展开姿态
 M.WING = {
-    root = { 0.4, 2.72, 0.3 }, -- 世界静止坐标（胸部背侧）
+    root = { 0.74, 2.5, 0.45 }, -- 世界静止坐标（肩部隆起外侧）
     elbow = { 1.1, 0, 0.18 },
     wrist = { 2.55, 0, -0.02 },
     -- 指骨：a = 从 +X 朝 -Z 的展开角（度），L = 全长；关节在 joint*L 处
@@ -393,9 +420,15 @@ M.WING = {
         { a = 90, L = 2.35 },
     },
     joint = 0.52,
-    flank = { 0.0, 0, -1.45 }, -- 翼膜后缘贴体点
+    flank = { -0.3, 0, -1.4 }, -- 翼膜后缘贴体点（向脊线内收，贴住背侧）
     scallop = 0.16,
     strips = 2,                -- 每个指间翼膜的插值薄片数
+    -- 大骨弧度（调研起调值）：沿骨长 0/25/50/75/100% 的前缘偏移比例与半径比例
+    bones = {
+        -- offs = 向前缘凸的偏移/骨长，arch = 向背侧拱起/骨长（中点峰值）；冰与火 + 蝙蝠解剖整合
+        humerus = { r0 = 0.24, arch = 0.04, offs = { 0, 0.04, 0.06, 0.045, 0 }, rads = { 1.0, 0.9, 0.78, 0.74, 0.8 } },
+        forearm = { r0 = 0.2, arch = 0.05, offs = { 0, 0.06, 0.1, 0.07, 0 }, rads = { 1.1, 0.88, 0.77, 0.8, 1.12 } },
+    },
 }
 
 -- 关节锚点（指骨关节点、指尖）
@@ -427,18 +460,38 @@ function M.WingBonePrims()
         list[#list + 1] = Sculpt.Prepare({ type = "ellipsoid", bone = bone, c = c, r = r, color = color, k = 0.04 })
     end
     local O = { 0, 0, 0 }
+    -- 弧形大骨：沿二次弧线分段拼接，向翼前缘（+Z）拱起；两端关节粗、中段收细
+    -- 弧形大骨：按采样点（t = 0/.25/.5/.75/1）拼 4 段锥体，向翼前缘（+Z）拱起；
+    -- offs = 偏移 / 骨长，rads = 半径 / r0（肘、腕处膨大、中段收细）
+    local function CurvedBone(bone, a, b, r0, offs, rads, arch)
+        local dx, dz = b[1] - a[1], b[3] - a[3]
+        local L = math.sqrt(dx * dx + dz * dz)
+        local nx, nz = -dz / L, dx / L
+        if nz < 0 then nx, nz = -nx, -nz end
+        local prev
+        for i = 1, #offs do
+            local t = (i - 1) / (#offs - 1)
+            local o = offs[i] * L
+            local lift = (arch or 0) * L * 4 * t * (1 - t) -- 向背侧拱起
+            local p = { a[1] + dx * t + nx * o, lift, a[3] + dz * t + nz * o }
+            local r = r0 * rads[i]
+            if prev ~= nil then Cw(bone, prev.p, p, prev.r, r, P.BLUE_M) end
+            prev = { p = p, r = r }
+        end
+    end
+    local wb = M.WING.bones
     Ew("wing", O, { 0.22, 0.2, 0.22 }, P.BLUE_M)
-    Cw("wing", O, w.elbow, 0.22, 0.17, P.BLUE_M)
-    Ew("wfore", w.elbow, { 0.18, 0.16, 0.18 }, P.BLUE_M)
-    Cw("wfore", w.elbow, w.wrist, 0.17, 0.14, P.BLUE_M)
-    Ew("whand", w.wrist, { 0.17, 0.15, 0.17 }, P.BLUE_D)
+    CurvedBone("wing", O, w.elbow, wb.humerus.r0, wb.humerus.offs, wb.humerus.rads, wb.humerus.arch)
+    Ew("wfore", w.elbow, { 0.32, 0.22, 0.26 }, P.BLUE_M) -- 肘：尺骨鹰嘴膨大
+    CurvedBone("wfore", w.elbow, w.wrist, wb.forearm.r0, wb.forearm.offs, wb.forearm.rads, wb.forearm.arch)
+    Ew("whand", w.wrist, { 0.24, 0.18, 0.22 }, P.BLUE_D) -- 腕骨结
     local W = w.wrist
     Cw("whand", { W[1] + 0.04, 0, W[3] + 0.1 }, { W[1] + 0.12, 0.03, W[3] + 0.4 }, 0.08, 0.025, P.CLAW)
     for i, f in ipairs(fp) do
         -- 一指 = 翼前缘，粗；其余指骨细（参考图翼面大面积是白膜）
-        local r0, r1 = (i == 1) and 0.15 or 0.11, (i == 1) and 0.11 or 0.07
+        local r0, r1 = (i == 1) and 0.16 or 0.13, (i == 1) and 0.14 or 0.1
         Cw("wf" .. i, W, f.joint, r0, r1, P.BLUE_M)
-        Cw("wf" .. i .. "m", f.joint, f.tip, r1, (i == 1) and 0.06 or 0.04, P.BLUE_M)
+        Cw("wf" .. i .. "m", f.joint, f.tip, r1, (i == 1) and 0.08 or 0.06, P.BLUE_M)
     end
     return list
 end
@@ -464,6 +517,7 @@ M.SOCKETS = {
     { name = "mouth", bone = "head", offset = { 0, -0.04, 0.95 } },
     { name = "throat", bone = "neck4", offset = { 0, 0.0, 0.3 } },
     { name = "chestCore", bone = "chest", offset = { 0, 0, 0.4 } },
+    { name = "saddle", bone = "chest", offset = { 0, 0.66, -0.12 } }, -- 骑乘鞍座（胸背，翼根之间）
 }
 
 -- ---------------------------------------------------------------- 展开对称

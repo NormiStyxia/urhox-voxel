@@ -13,6 +13,7 @@ local Controller = require("dragon.DragonAnimationController")
 local DebugUI = require("dragon.DragonDebugUI")
 local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
+local DragonRide = require("dragon.DragonRide")
 
 local M = {}
 
@@ -28,6 +29,8 @@ local rig_ = nil
 local ctrl_ = nil
 ---@type VoxelPhysicsWorld
 local world_ = nil
+---@type DragonRide
+local ride_ = nil
 
 local cam = { yaw = -128.0, pitch = 12.0, dist = 17.0, target = Vector3(0, 2.4, -0.6), follow = true, pan = Vector3(0, 0, 0) }
 M.cam = cam
@@ -36,9 +39,16 @@ M.showHitZones = false
 M.showStrips = false
 M.showFeet = false
 M.showNomi = true
+M.playMode = true -- 玩法模式：操作诺米，靠近龙按 F 骑乘；关掉则回到纯动画调试
 -- 诺米体素小人（复用 VoxelTown 玩家角色的体素模型，约 1.7m，用来对比龙的体型）
 local NOMI_POS = Vector3(-2.6, 0, -3.4)
 local NOMI_YAW = -150.0
+-- 修长版体型（与 player.lua 的「修长」一致：头缩小、腿拉长、身体收窄）
+local NOMI_SLIM = {
+    scale = { head = 0.82, hair_locks = 0.85, hair_back = 0.85 },
+    stretch = { leg_right = 1.35, leg_left = 1.35 },
+    widen = { x = 0.85, z = 0.92, skip = { "head" } },
+}
 M.externalDrive = false -- 自动化验证时由测试脚本以固定步长驱动控制器
 
 -- 自动截图 / 回归测试配置（可选模块，测试时临时生成，不随项目发布）
@@ -65,6 +75,20 @@ local function BuildGround(world)
     world:FinalizeVolume(g)
     g:RebuildGeometry()
     return g
+end
+
+function M.SetPlayMode(on)
+    if on == M.playMode then return end
+    M.playMode = on
+    if not on then
+        if ride_ ~= nil then ride_:Release() end
+        DebugUI.SetHint("")
+        ctrl_.input.free = false
+    else
+        ctrl_.input.free = false
+        M.nomiNode:SetDeepEnabled(true)
+        M.showNomi = true
+    end
 end
 
 function M.ApplyCamera()
@@ -128,12 +152,22 @@ function M.Start()
     M.nomiNode = scene_:CreateChild("Nomi")
     M.nomiNode.position = NOMI_POS
     M.nomiNode.rotation = Quaternion(NOMI_YAW, Vector3.UP)
-    M.nomi = BlockCharacter.CreateVoxel(M.nomiNode, NomiVoxelData, nil)
+    M.nomi = BlockCharacter.CreateVoxel(M.nomiNode, NomiVoxelData, NOMI_SLIM)
+    ride_ = DragonRide.New(M)
+    M.ride = ride_
 
     -- 面朝太阳出生（光组的太阳在 -Z 方向），默认机位在受光的斜前方
     ctrl_:Teleport(Vector3(0, 0, 0), 180.0)
     cam.yaw = 180.0 - 145.0
     cam.target = Vector3(0, 2.4, 0.6)
+    if M.playMode then
+        -- 玩法模式：镜头在诺米身后看向龙
+        local d = ride_.pos
+        cam.yaw = math.deg(math.atan(-d.x, -d.z))
+        cam.pitch = 16.0
+        cam.dist = 9.0
+        cam.target = d + Vector3(0, 1.1, 0)
+    end
 
     camNode_ = scene_:CreateChild("Camera")
     camera_ = camNode_:CreateComponent("Camera")
@@ -165,6 +199,11 @@ end
 local function HandleKeys()
     local c = ctrl_
     if c.jointTest.enabled then return end
+    if M.playMode then
+        -- 玩法模式下键盘归诺米 / 骑乘（见 DragonRide）；只保留暂停 / 单步
+        if input:GetKeyPress(KEY_P) then c.paused = not c.paused end
+        return
+    end
     c.input.move = KeyAxis(KEY_W, KEY_S)
     c.input.turn = KeyAxis(KEY_D, KEY_A)
     c.input.climb = KeyAxis(KEY_SPACE, KEY_C)
@@ -220,13 +259,20 @@ function M.Update(dt)
     if shotCfg == nil or not shotCfg.noInput then HandleKeys() end
     HandleMouse()
     if not M.externalDrive then ctrl_:Update(dt) end
-    if M.nomi ~= nil then
-        if M.nomiNode.enabled ~= M.showNomi then M.nomiNode:SetDeepEnabled(M.showNomi) end
-        if M.showNomi then M.nomi:Update(dt, { moveSpeed = 0, onGround = true }) end
-    end
-    if cam.follow and cam.ortho == nil then
-        local p = rig_.body.worldPosition + Vector3(0, 0.4, 0)
-        cam.target = cam.target:Lerp(p + cam.pan, 1.0 - math.exp(-4.0 * dt))
+    if M.playMode and not M.externalDrive then
+        ride_:Update(dt, cam.yaw)
+        DebugUI.SetHint(ride_.hint)
+        local want = ride_:CameraTarget()
+        if cam.follow then cam.target = cam.target:Lerp(want + cam.pan, 1.0 - math.exp(-10.0 * dt)) end
+    else
+        if M.nomi ~= nil then
+            if M.nomiNode.enabled ~= M.showNomi then M.nomiNode:SetDeepEnabled(M.showNomi) end
+            if M.showNomi then M.nomi:Update(dt, { moveSpeed = 0, onGround = true }) end
+        end
+        if cam.follow and cam.ortho == nil then
+            local p = rig_.body.worldPosition + Vector3(0, 0.4, 0)
+            cam.target = cam.target:Lerp(p + cam.pan, 1.0 - math.exp(-4.0 * dt))
+        end
     end
     M.ApplyCamera()
     M.fpsAcc, M.fpsN = (M.fpsAcc or 0) + dt, (M.fpsN or 0) + 1

@@ -90,7 +90,7 @@ function C.New(rig, world)
     self.params = {
         playback = 1.0,   -- 动画播放速度
         walkSpeed = 1.6,  -- 步行速度 m/s
-        flapHz = 1.05,    -- 振翅频率
+        flapHz = 0.75,    -- 振翅频率（冰与火飞行循环约 1.5s；大体型更慢）
         amp = 1.0,        -- 动作幅度
         flySpeed = 8.0,   -- 巡航速度
         turnRate = 55.0,  -- 原地转身角速度 度/秒
@@ -174,14 +174,17 @@ function C:GroundWing(d, open)
     }
 end
 
--- 振翅周期：φ∈[0,1)，下拍 0..0.42（快、有力、完全展开、前缘下压），
--- 回收 0.42..1（肘腕收拢减小翼面、前缘上翻、翼尖滞后）
+-- 振翅周期（参考冰与火飞行循环的节奏）：φ∈[0,1)
+--   下拍 0..0.36：快、有力、完全展开、前缘下压
+--   底停 0.36..0.48：翼面压在最低处略停
+--   上抬 0.48..1：肘多收 22°、腕收拢减小翼面、前缘上翻；上下幅度不对称
+local FLAP_DOWN, FLAP_HOLD = 0.36, 0.48
 function C.FlapWing(phi, amp, brake)
     brake = brake or 0
     local w = {}
-    local up, down = 52 * amp, -40 * amp
-    if phi < 0.42 then
-        local s = Smooth(phi / 0.42)
+    local up, down = 50 * amp, -48 * amp
+    if phi < FLAP_DOWN then
+        local s = Smooth(phi / FLAP_DOWN)
         w.elev = Lerp(up, down, s)
         w.twist = -9 * math.sin(math.pi * s) * amp
         w.elbow = -6
@@ -189,37 +192,56 @@ function C.FlapWing(phi, amp, brake)
         w.fan = 1.0
         w.curl = Lerp(-7, 6, s) * amp
         w.sweep = -4 - 18 * brake
+    elseif phi < FLAP_HOLD then
+        local s = (phi - FLAP_DOWN) / (FLAP_HOLD - FLAP_DOWN)
+        w.elev = down + 3 * amp * math.sin(math.pi * s)
+        w.twist, w.elbow, w.wrist, w.fan = 0, -6 - 8 * s, 4 + 6 * s, 1.0
+        w.curl = 6 * amp
+        w.sweep = -4 - 18 * brake
     else
-        local s = Smooth((phi - 0.42) / 0.58)
+        local s = Smooth((phi - FLAP_HOLD) / (1 - FLAP_HOLD))
         local m = math.sin(math.pi * s)
+        local m0 = math.sin(math.pi * s ^ 0.7) -- 肘腕先收（从 0 起步、峰值提前）
         w.elev = Lerp(down, up, s)
         w.twist = 12 * m * amp
-        w.elbow = -6 - 40 * m * amp
-        w.wrist = 4 + 36 * m * amp
-        w.fan = 1.0 - 0.32 * m
+        w.elbow = -6 - 8 * (1 - s) - 54 * m0 * amp
+        w.wrist = 4 + 6 * (1 - s) + 38 * m0 * amp
+        w.fan = 1.0 - 0.32 * m0
         w.curl = Lerp(6, -7, s) * amp + 12 * m
         w.sweep = Lerp(-4, 6, m) - 18 * brake
     end
-    -- 翼尖（一指）相位滞后的独立运动
-    w.tip = -10 * math.cos(2 * math.pi * phi - 0.9) * amp
+    -- 翼尖（一指）滞后 0.15 周期的独立运动
+    w.tip = -10 * math.cos(2 * math.pi * (phi - 0.15)) * amp
     return w
 end
 
 -- 下拍升力信号（均值约 0）
 local function FlapLift(phi)
-    if phi < 0.42 then return math.sin(math.pi * phi / 0.42) * 1.3 - 0.35 end
-    return -0.55 + 0.2 * math.sin(math.pi * (phi - 0.42) / 0.58)
+    if phi < FLAP_DOWN then return math.sin(math.pi * phi / FLAP_DOWN) * 1.45 - 0.3 end
+    if phi < FLAP_HOLD then return -0.1 end
+    return -0.55 + 0.2 * math.sin(math.pi * (phi - FLAP_HOLD) / (1 - FLAP_HOLD))
 end
 
 -- 飞行收腿
-local function TuckLegs(p, k)
+-- 后腿：腹下紧凑折叠（脚收到髋下方，膝前、跗后的趾行折线保留），参考鸟类 / 大型猫科的收腿。
+-- kh 可为数字，或 { U, L, M, F } 每个关节各自的进度（错峰用）
+local HIND_TUCK = { U = -10, L = 65, M = -70, F = 50 }
+local function TuckLegs(p, k, kh)
     Pose.SetSym(p, "armU", 50 * k, 0, 6 * k)
     Pose.SetSym(p, "armL", -95 * k, 0, 0)
     Pose.SetSym(p, "hand", 70 * k, 0, 0)
-    Pose.SetSym(p, "legU", 62 * k, 0, 4 * k)
-    Pose.SetSym(p, "legL", 18 * k, 0, 0)
-    Pose.SetSym(p, "legM", -42 * k, 0, 0)
-    Pose.SetSym(p, "foot", 55 * k, 0, 0)
+    kh = kh or k
+    local kU, kL, kM, kF = kh, kh, kh, kh
+    if type(kh) == "table" then kU, kL, kM, kF = kh.U, kh.L, kh.M, kh.F end
+    Pose.SetSym(p, "legU", HIND_TUCK.U * kU, 0, 3 * kU)
+    Pose.SetSym(p, "legL", HIND_TUCK.L * kL, 0, 0)
+    Pose.SetSym(p, "legM", HIND_TUCK.M * kM, 0, 0)
+    Pose.SetSym(p, "foot", HIND_TUCK.F * kF, 0, 0)
+end
+
+-- 收腿错峰：膝先动，髋晚 40ms、跗晚 80ms、脚晚 120ms（fn(t) 返回该时刻的收腿进度）
+local function Stagger(fn, t)
+    return { L = fn(t), U = fn(t - 0.04), M = fn(t - 0.08), F = fn(t - 0.12) }
 end
 
 -- 降落伸腿（前伸、准备着地）
@@ -227,10 +249,10 @@ local function ReachLegs(p, k)
     Pose.SetSym(p, "armU", -28 * k, 0, 4 * k)
     Pose.SetSym(p, "armL", 14 * k, 0, 0)
     Pose.SetSym(p, "hand", 12 * k, 0, 0)
-    Pose.SetSym(p, "legU", -18 * k, 0, 3 * k)
-    Pose.SetSym(p, "legL", 10 * k, 0, 0)
-    Pose.SetSym(p, "legM", -8 * k, 0, 0)
-    Pose.SetSym(p, "foot", 18 * k, 0, 0)
+    Pose.SetSym(p, "legU", -15 * k, 0, 3 * k)
+    Pose.SetSym(p, "legL", 5 * k, 0, 0)
+    Pose.SetSym(p, "legM", -10 * k, 0, 0)
+    Pose.SetSym(p, "foot", 20 * k, 0, 0)
 end
 
 -- 飞行时的颈 / 尾 / 身体：颈部前伸、头抬平看前方、尾巴抬平当舵
@@ -244,6 +266,44 @@ function C:FlightBody(p, phi, ext)
     local pump = math.sin(2 * math.pi * phi)
     Pose.Set(p, "chest", -2 * pump * ext, 0, 0)
     Pose.Set(p, "waist", 1.5 * pump * ext, 0, 0)
+    -- 尾巴随振翅上下起伏（沿尾链滞后传播）
+    local w = 2 * math.pi * phi
+    for i = 1, 8 do
+        Pose.AddTo(p, "tail" .. i, 3.5 * ext * (0.4 + 0.6 * (i - 1) / 7) * math.sin(w - 0.55 * i), 0, 0)
+    end
+end
+
+-- 飞行中的四肢（在 TuckLegs 收腿姿态之上叠加）。综合冰与火（后腿小幅反相 + 趾波动）、
+-- 鸟类 / 蝙蝠收腿后的被动晃动和动画的次级动作原则：
+--   前爪：随振翅滞后甩动（越往爪尖越晚）、左右爪错开地慢慢蜷握 / 松开、转弯内侧前探、
+--         爬升收紧、下降放松前伸
+--   后腿：随振翅 3–6° 滞后摆动、越快越往后拖、转弯时向反侧摆配平
+-- glide = 1 时动作更松弛（滑翔）
+function C:FlightLimbs(p, phi, t, glide)
+    local L, inp = self.loco, self.input
+    local w = 2 * math.pi * phi
+    local flapK = 1.0 - 0.7 * glide
+    local bank = L.bank
+    local climb = Clamp(L.vy / 3.0, -1, 1)
+    local fast = Clamp((L.speed - 6.0) / 6.0, -0.5, 1.0)
+    for _, side in ipairs({ "_R", "_L" }) do
+        local sx = (side == "_R") and 1 or -1
+        -- 左右错开的慢蜷握（3.1s 周期，左右相位差半周）
+        local grip = math.sin(t * 2.0 + (sx > 0 and 0 or math.pi))
+        -- 转弯内侧：坡度 >0 向右转，右侧为内侧
+        local inner = Clamp(bank * sx / 30, 0, 1)
+        local reach = -14 * glide - 10 * inner - 8 * math.max(0, -climb) + 10 * math.max(0, climb)
+        Pose.AddTo(p, "armU" .. side, reach + 7 * flapK * math.sin(w - 0.6), 0, sx * (4 * inner))
+        Pose.AddTo(p, "armL" .. side, 9 * flapK * math.sin(w - 1.1) + 10 * glide + 6 * grip, 0, 0)
+        Pose.AddTo(p, "hand" .. side, 12 * flapK * math.sin(w - 1.6) + 16 * grip - 10 * glide, 0, 0)
+        -- 后腿
+        local trail = 12 * fast + 6 * glide
+        local balance = -sx * bank * 0.12
+        Pose.AddTo(p, "legU" .. side, trail + 3 * flapK * math.sin(w - 0.4) + 2 * math.sin(t * 1.3 + sx), 0, sx * balance)
+        Pose.AddTo(p, "legL" .. side, 4 * flapK * math.sin(w - 0.85), 0, 0)
+        Pose.AddTo(p, "legM" .. side, 5 * flapK * math.sin(w - 1.3), 0, 0)
+        Pose.AddTo(p, "foot" .. side, 6 * flapK * math.sin(w - 1.75) + 4 * math.sin(t * 1.7 + sx), 0, 0)
+    end
 end
 
 -- ---------------------------------------------------------------- 状态定义
@@ -269,8 +329,8 @@ STATES.IDLE = {
     pose = function(self, t)
         local p = Pose.New()
         local lk = self.look
-        local br = math.sin(2 * math.pi * t / 3.8)
-        Poses.Neck(p, { pitch = 2 + 3 * math.sin(t * 0.55) + lk.pitch * 0.5, yaw = lk.yaw * 0.7, curve = 2,
+        local br = math.sin(2 * math.pi * t / 6.0) -- 呼吸周期 6s（冰与火待机节奏）
+        Poses.Neck(p, { pitch = 2 + 4 * math.sin(t * 0.55) + lk.pitch * 0.5, yaw = lk.yaw * 0.7, curve = 2,
             headPitch = -2 - 2 * math.sin(t * 0.55) + lk.pitch * 0.5, headYaw = lk.yaw * 0.3, jaw = 1.5 + 1.5 * br })
         Poses.Tail(p, { yaw = 0, pitch = 0, waveAmp = 3.2, wavePhase = t * 1.05, lag = 0.5, liftAmp = 1.5 })
         local w = self:GroundWing(self.wingDeploy)
@@ -292,7 +352,7 @@ STATES.WALK = {
         L.speed = Approach(L.speed, target, 1.4, dt)
         -- 键盘转向；无输入时离场地中心太远就慢慢绕回
         local steer = inp.turn * 38
-        if inp.turn == 0 then
+        if inp.turn == 0 and not inp.free then
             local d = L.pos:Length()
             if d > 11 then
                 local toC = math.deg(math.atan(-L.pos.x, -L.pos.z))
@@ -308,7 +368,7 @@ STATES.WALK = {
         local yr = self.loco.yawRate
         Poses.Neck(p, { pitch = 7 + 2 * math.sin(2 * ph) * k, yaw = -3 * math.sin(ph) * k + yr * 0.35, curve = 1,
             headPitch = -6 - 2 * math.sin(2 * ph) * k, headYaw = yr * 0.15, jaw = 1 })
-        Poses.Tail(p, { yaw = -yr * 0.4, pitch = 3 * k, waveAmp = 6.5 * k, wavePhase = ph + 0.6, lag = 0.62, liftAmp = 2 })
+        Poses.Tail(p, { yaw = -yr * 0.4, pitch = 3 * k, waveAmp = 7 * k, wavePhase = ph + 0.6, lag = 0.785, liftAmp = 2 })
         local w = self:GroundWing(self.wingDeploy)
         w.elev = w.elev + 2.0 * math.sin(2 * ph) * k
         Poses.Wings(p, w)
@@ -439,7 +499,10 @@ STATES.TAKEOFF = {
         local flapW = Smooth((t - FLAP_T + 0.05) / 0.12)
         local w = (flapW > 0) and Poses.LerpWing(ground, C.FlapWing(self.flapPhase, self.params.amp * 1.15), flapW) or ground
         Poses.Wings(p, w)
-        TuckLegs(p, k.tuck)
+        local tuckAt = function(tt)
+            return Keys({ { 0.68, { v = 0 } }, { 1.15, { v = 0.85 } }, { 1.6, { v = 1.0 } } }, tt).v
+        end
+        TuckLegs(p, k.tuck, Stagger(tuckAt, t))
         -- 后腿蹬地：起跳瞬间跗关节伸展
         local push = Smooth((t - 0.5) / 0.15) * (1 - Smooth((t - 0.8) / 0.3))
         Pose.AddSym(p, "legM", 18 * push, 0, 0)
@@ -462,6 +525,7 @@ STATES.FLY = {
         Poses.Wings(p, C.FlapWing(phi, self.params.amp * (1 + 0.15 * math.max(0, self.input.climb))))
         self:FlightBody(p, phi, 1.0)
         TuckLegs(p, 1.0)
+        self:FlightLimbs(p, phi, t, 0)
         return p
     end,
 }
@@ -481,16 +545,37 @@ STATES.GLIDE = {
         Poses.Wings(p, w)
         self:FlightBody(p, (t * 0.25) % 1.0, 1.0)
         TuckLegs(p, 1.0)
+        self:FlightLimbs(p, (t * 0.25) % 1.0, t, 1)
         return p
     end,
 }
 
--- 降落：减速、仰身制动、伸腿、着地缓冲、收翼
+-- 降落（参考冰与火 / 鸟类降落：接近 → 仰身刹车 → 探爪 → 后足先触地 → 前足承重缓冲 → 回弹 → 收翼）
+-- 接地前的各阶段按「离地高度 h」推进（高度比时间更准），触地后按触地时间 since 推进。
+-- 颈部：逐节错峰（根先动、尖端晚），S 形；头单独稳定看向落点，不跟颈链走。
+local LAND_NECK_FLIGHT = { 9.3, 13.9, 16.2, 18.6 } -- 与 FlightBody 的 58° 总前伸一致
+local LAND_NECK_BRAKE = { -6, -4, 8, 10 }          -- 刹车：颈根后仰、颈尖前探，形成 S 形
+local LAND_NECK_SETTLE = { -4, -2, 12, 14 }        -- 触地缓冲：整颈随身体前压一点
+-- 触地后身体下沉量（米）：0.16s 压到底，0.5s 回升，带轻微回弹
+local function LandDip(s)
+    local D = 0.26
+    if s < 0.16 then return -D * Smooth(s / 0.16) end
+    local r = Clamp((s - 0.16) / 0.5, 0, 1)
+    return -D * (1 - Smooth(r)) + 0.02 * math.sin(math.pi * r)
+end
+local function LandPitch(self_, since, fb)
+    if since == nil then return -22 * fb end
+    if since < 0.18 then return Lerp(-22, 4, Smooth(since / 0.18)) end
+    return 4 * (1 - Smooth((since - 0.18) / 0.45))
+end
+
 STATES.LAND = {
     blendIn = 0.6, ground = false,
     enter = function(self)
         self.touchT = nil
         self.ikTarget = 0.0
+        self.ikFrontTarget = 0.0
+        self.impactS = nil
         self.wingOpenPose = Poses.WING_DISPLAY
     end,
     logic = function(self, dt, t)
@@ -504,29 +589,43 @@ STATES.LAND = {
             local sink = -Clamp(L.alt * 0.9, 0.7, 2.8)
             L.vy = Damp(L.vy, sink, 3.0, dt)
             L.alt = L.alt + L.vy * dt
-            self.flapPhase = (self.flapPhase + dt * self.params.flapHz * 0.95) % 1.0
-            self.ikTarget = (L.alt < 0.9) and 1.0 or 0.0
+            -- 刹车时拍翼略加快
+            local brakeK = Smooth((3.4 - L.alt) / 1.8)
+            self.flapPhase = (self.flapPhase + dt * self.params.flapHz * (0.95 + 0.2 * brakeK)) % 1.0
+            -- 后足先接地：离地 0.3m 才把后腿交给 IK，前腿等触地后再接手
+            self.ikTarget = (L.alt < 0.3) and 1.0 or 0.0
+            self.ikFrontTarget = 0.0
             if L.alt <= 0.0 then
                 L.alt, L.vy, L.airborne = 0.0, 0.0, false
                 self.touchT = t
-                self.impact = 1.0
+                self.impactS = 0.0
                 Gait.Reset(self.gait, L.pos, L.yaw, self.groundFn)
-                self.wingDeploy, self.wingDeployTarget = 1.0, 0.0
+                self.wingDeploy, self.wingDeployTarget = 1.0, 1.0
             end
         else
             L.speed = Approach(L.speed, 0, 3.0, dt)
             self.ikTarget = 1.0
-            if t - self.touchT > 1.9 then self:Request("IDLE") end
+            local since = t - self.touchT
+            self.ikFrontTarget = (since > 0.08) and 1.0 or 0.0 -- 前足比后足晚约 0.1s 承重
+            -- 触地后先撑翼 0.3s 再分级收拢
+            self.wingDeployTarget = (since < 0.3) and 1.0 or 0.0
+            if since > 1.9 then self:Request("IDLE") end
         end
     end,
     pose = function(self, t)
         local p = Pose.New()
         local L = self.loco
         local touched = self.touchT ~= nil
-        local since = touched and (t - self.touchT) or 0
-        local flare = touched and (1 - Smooth(since / 0.6)) or Smooth(t / 1.2)
-        -- 翅膀：空中前推制动扑翼；着地后转为张开再分级收拢
-        local flapW = C.FlapWing(self.flapPhase, self.params.amp * 1.1, 1.0)
+        local since = touched and (t - self.touchT) or nil
+        local h = touched and 0 or L.alt
+        local flare = Smooth((3.4 - h) / 1.8)    -- 刹车进度（离地 3.4m → 1.6m）
+        local fb = Smooth((3.0 - h) / 1.4)       -- 身体仰起进度
+        local near = Smooth((2.0 - h) / 1.4)     -- 探爪进度（离地 2.0m → 0.6m）
+
+        -- 翅膀：空中前推制动扑翼（前缘上翻、略后掠）；着地后撑开一下再分级收拢
+        local flapW = C.FlapWing(self.flapPhase, self.params.amp * (1.1 + 0.1 * flare), 1.0)
+        flapW.sweep = (flapW.sweep or 0) - 18 * flare
+        flapW.twist = (flapW.twist or 0) - 10 * flare
         local w
         if touched then
             w = Poses.LerpWing(flapW, self:GroundWing(self.wingDeploy), Smooth(since / 0.35))
@@ -534,17 +633,69 @@ STATES.LAND = {
             w = flapW
         end
         Poses.Wings(p, w)
-        Poses.Neck(p, { pitch = Lerp(50, 18, flare) * (touched and (1 - Smooth(since / 0.8)) or 1) + 4,
-            curve = 3 * flare, headPitch = -40 * (touched and (1 - Smooth(since / 0.8)) or 1) + 6 * flare })
-        Poses.Tail(p, { pitch = 20 * (touched and (1 - Smooth(since / 0.8)) or 1), waveAmp = 3, wavePhase = t * 2, lag = 0.5 })
-        if not touched then
-            local reach = Smooth((t - 0.4) / 1.0)
-            TuckLegs(p, 1 - reach)
-            local q = Pose.New()
-            ReachLegs(q, reach)
-            for k2, v in pairs(q.j) do Pose.AddTo(p, k2, v[1], v[2], v[3]) end
+
+        -- 躯干 / 胸 / 腰：刹车时胸腰略反弓，触地缓冲时胸前压、腰回收
+        local chestA, waistA = -3 * fb, 2 * fb
+        if touched then
+            local k = Smooth(since / 0.16) * (1 - Smooth((since - 0.2) / 0.5))
+            chestA, waistA = Lerp(-3, 5, k) * (1 - Smooth((since - 0.5) / 0.4)), Lerp(2, -3, k) * (1 - Smooth((since - 0.5) / 0.4))
         end
-        Pose.SetBody(p, -22 * flare, 0, 0, 0, 0, 0)
+        Pose.Set(p, "chest", chestA, 0, 0)
+        Pose.Set(p, "waist", waistA, 0, 0)
+        local bodyPitch = LandPitch(self, since, fb)
+        Pose.SetBody(p, bodyPitch, 0, 0, 0, 0, 0)
+
+        -- 颈：逐节错峰的 S 形，头单独稳定看向落点
+        local sumNeck = 0
+        for i = 1, 4 do
+            local lag = 0.12 * (i - 1)
+            local ang
+            if not touched then
+                ang = Lerp(LAND_NECK_FLIGHT[i], LAND_NECK_BRAKE[i], Smooth(flare * 1.25 - lag))
+                ang = ang + 1.6 * flare * math.sin(t * 3.0 - 0.8 * i)
+            else
+                local sl = 0.04 * (i - 1)
+                ang = Lerp(LAND_NECK_BRAKE[i], LAND_NECK_SETTLE[i], Smooth((since - sl) / 0.18))
+                ang = ang * (1 - Smooth((since - 0.2 - sl) / 0.6))
+                ang = ang + 3.0 * math.exp(-since * 3.5) * math.sin(since * 9.0 - 0.8 * i)
+            end
+            Pose.Set(p, "neck" .. i, ang, 0, 0)
+            sumNeck = sumNeck + ang
+        end
+        local headNet = Lerp(6, 10, near)
+        if touched then headNet = Lerp(10, 2, Smooth(since / 0.8)) end
+        local ancestors = bodyPitch + chestA + waistA + sumNeck
+        Pose.Set(p, "head", Clamp(headNet - ancestors, -35, 35), 0, 0)
+        Pose.Set(p, "jaw", 0, 0, 0)
+
+        -- 尾：刹车时向下压当配重，触地后带阻尼的波动回到待机
+        local tailK = touched and (1 - Smooth(since / 0.6)) or 1
+        Poses.Tail(p, { pitch = Lerp(26, 8, flare) * tailK, waveAmp = 3, wavePhase = t * 2, lag = 0.5 })
+        if touched then
+            local e = math.exp(-since * 4.0)
+            for i = 1, 8 do
+                Pose.AddTo(p, "tail" .. i, 0.9 * e * math.sin(since * 10.0 - 0.7 * i), 0, 0)
+            end
+        end
+
+        -- 四肢：肩 / 髋先前探，肘膝晚一拍，爪最后展开；触地后前肢 FK 淡出的同时 IK 接手
+        local function R(d) return Smooth((near * 1.2 - d)) end
+        local q = Pose.New()
+        if not touched then
+            TuckLegs(p, 1 - R(0), { U = 1 - R(0), L = 1 - R(0.08), M = 1 - R(0.12), F = 1 - R(0.18) })
+        end
+        local fade = touched and (1 - Smooth((since - 0.05) / 0.3)) or 1
+        local fadeE = touched and (1 - Smooth(since / 0.15)) or 1
+        local kS, kE, kH = R(0) * fade, R(0.08) * fadeE, R(0.16) * fade
+        -- 前肢：肩 -35° 肘 +20° 腕/爪 +15°（略外展）；后肢：髋 -25° 膝 +10° 跗 -10° 足 +25°
+        Pose.SetSym(q, "armU", -35 * kS, 0, 5 * kS)
+        Pose.SetSym(q, "armL", 20 * kE, 0, 0)
+        Pose.SetSym(q, "hand", 15 * kH, 0, 0)
+        Pose.SetSym(q, "legU", -25 * kS, 0, 3 * kS)
+        Pose.SetSym(q, "legL", 10 * kE, 0, 0)
+        Pose.SetSym(q, "legM", -10 * kH, 0, 0)
+        Pose.SetSym(q, "foot", 25 * kH, 0, 0)
+        for k2, v in pairs(q.j) do Pose.AddTo(p, k2, v[1], v[2], v[3]) end
         return p
     end,
 }
@@ -755,9 +906,9 @@ function C:Step(dt)
     end
 
     -- 次级变量
-    self.ikW = Approach(self.ikW, self.ikTarget, (self.state == "TAKEOFF") and 5.5 or 4.0, dt)
-    if self.state ~= "TAKEOFF" then self.ikFrontTarget = 1.0 end
-    self.ikFront = Approach(self.ikFront, self.ikFrontTarget, 5.0, dt)
+    self.ikW = Approach(self.ikW, self.ikTarget, (self.state == "TAKEOFF") and 5.5 or ((self.state == "LAND") and 6.0 or 4.0), dt)
+    if self.state ~= "TAKEOFF" and self.state ~= "LAND" then self.ikFrontTarget = 1.0 end
+    self.ikFront = Approach(self.ikFront, self.ikFrontTarget, (self.state == "LAND") and 4.0 or 5.0, dt)
     if STATES[self.state].ground and self.state ~= "TAKEOFF" then self.ikTarget = 1.0 end
     local deployRate = (self.state == "TAKEOFF") and 1.8 or 0.62
     self.wingDeploy = Approach(self.wingDeploy, self.wingDeployTarget, deployRate, dt)
@@ -765,6 +916,10 @@ function C:Step(dt)
         self.wingOpenPose = Poses.WING_DISPLAY
     end
     self.impact = Approach(self.impact, 0, 1.25, dt)
+    if self.impactS ~= nil then
+        self.impactS = self.impactS + dt
+        if self.impactS > 1.0 then self.impactS = nil end
+    end
     -- 观察环境：每隔几秒换一个注视方向
     local lk = self.look
     lk.timer = lk.timer - dt
@@ -807,19 +962,14 @@ function C:ApplyPose(dt)
     local drop, roll, pitchG = Gait.BodyMotion(self.gait)
     local gw = self.ikW
     local b = acc.body
-    local impactDy = -0.32 * math.sin(math.pi * Clamp(1 - self.impact, 0, 1)) * (self.impact > 0 and 1 or 0)
+    local impactDy = (self.impactS ~= nil) and LandDip(self.impactS) or 0
     b[5] = b[5] - 0.045 * drop * gw + impactDy
     b[1] = b[1] + L.pitch - 1.2 * pitchG * gw
     b[3] = b[3] - L.bank + 2.2 * roll * gw
     Pose.Apply(rig, acc)
 
-    -- 胸腔呼吸（缩放胸部体素，以骨骼枢轴为中心）
-    local chest = rig.parts.chest
-    if chest ~= nil and self.chestVolOffset ~= nil then
-        local s = 1.0 + 0.012 * math.sin(2 * math.pi * self.breath / 3.8) + 0.05 * (self.roarChest or 0) * ((self.state == "ROAR") and 1 or 0)
-        chest.node.scale = Vector3(s, s, s)
-        chest.node.position = self.chestVolOffset * s
-    end
+    -- 呼吸只用胸骨俯仰 + 身体升降表现；不再每帧缩放胸部体素（缩放会让胸腹交界处
+    -- 的面反复错动，在腹底掠射角下爬动闪烁）
 
     -- 四肢 IK（地面权重）；肩胛滑动位移随 IK 权重回到静止位置
     for _, f in ipairs(self.gait.feet) do f.chain.nodes[1].position = f.chain.rootRest end
@@ -835,8 +985,11 @@ function C:ApplyLegIK(wAll)
         local w = wAll * (f.front and self.ikFront or 1.0)
         if target ~= nil and w > 0.001 then
             -- 摆动相：足尖下垂、跖骨后摆
-            local toe = f.lift * (f.front and 28 or 34)
-            local qs = IK.Solve(c, target, yawQ * Quaternion(toe, Vector3.RIGHT), f.lift * 30)
+            -- 摆动相：初段跗 / 足尖先折起把腿链缩短，过身后展开，落地前把脚放平
+            local st = f.swing and f.t or 0
+            local toe = (f.front and 30 or 38) * math.sin(math.pi * st) * (1.0 - 0.7 * st)
+            local meta = f.front and 0 or 42 * math.sin(math.pi * math.min(1.0, st * 1.25)) * (1.0 - 0.35 * st)
+            local qs = IK.Solve(c, target, yawQ * Quaternion(toe, Vector3.RIGHT), meta)
             for i, node in ipairs(c.nodes) do
                 if w >= 0.999 then
                     node.rotation = qs[i]
