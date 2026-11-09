@@ -1159,8 +1159,8 @@ def render_iso(by_face, occ, yaw_deg=35, pitch_deg=20, scale=6, tris=()):
 
 
 # ------------------------------------------------------------------ 导出
-def export_lua(quads, palette, tris_q=()):
-    bmap = {b[0]: b for b in BONES}
+def export_lua(quads, palette, tris_q=(), bones=None):
+    bones = BONES if bones is None else bones
     lines = [
         "-- 自动生成：art/nomi_voxel/voxelize.py，请勿手改（改脚本后重新运行）",
         "-- 体素坐标：x 向右、y 向上、z 向前，脚底 y=0；quad = {方向, 层, u, v, 宽, 高, 颜色}",
@@ -1174,7 +1174,7 @@ def export_lua(quads, palette, tris_q=()):
         lines.append("        { %.3f, %.3f, %.3f }," % tuple(np.clip(c, 0, 255) / 255.0))
     lines.append("    },")
     lines.append("    bones = {")
-    for name, parent, pv in BONES:
+    for name, parent, pv in bones:
         par = f'"{parent}"' if parent else "nil"
         lines.append(f'        {{ name = "{name}", parent = {par}, pivot = {{ {pv[0]}, {pv[1]}, {pv[2]} }} }},')
     lines.append("    },")
@@ -1183,7 +1183,7 @@ def export_lua(quads, palette, tris_q=()):
     by_bone = {}
     for q in quads:
         by_bone.setdefault(q[0], []).append(q)
-    for name, _p, _v in BONES:
+    for name, _p, _v in bones:
         qs = by_bone.get(name, [])
         if not qs:
             continue
@@ -1203,7 +1203,7 @@ def export_lua(quads, palette, tris_q=()):
     tb = {}
     for bone, pts, c in tris_q:
         tb.setdefault(bone, []).append((pts, c))
-    for name, _p, _v in BONES:
+    for name, _p, _v in bones:
         ts = tb.get(name, [])
         if not ts:
             continue
@@ -1261,40 +1261,15 @@ def main():
     fidx, tidx = idx[:len(faces)], idx[len(faces):]
     quads = greedy(faces, fidx)
     tris_q = [(t[0], t[1], int(c)) for t, c in zip(tris, tidx)]
-    tris_rgb = [(t[1], palette[c]) for t, c in zip(tris, tidx)]
-    print(f"wedges={len(wedges)} tris={len(tris)}")
-
-    by_face = {key: palette[c] for key, c in greedy.final.items()}
-    views = [render(occ, part, by_face, v) for v in ("front", "side", "back")]
-    # 两排：上排常规 3/4 与背面，下排侧面 / 平视 3/4 / 低角度（实机里最容易露问题的角度）
-    angles = ((35, 20), (-40, 20), (150, 20), (215, 20),
-              (-90, 4), (-30, 8), (70, -14), (-110, -14))
-    isos = [render_iso(by_face, occ, yaw, pitch, tris=tris_rgb) for yaw, pitch in angles]
-    w, h = isos[0].size
-    sheet = Image.new("RGB", (w * 4, h * 2), (40, 40, 40))
-    for n, v in enumerate(isos):
-        sheet.paste(v, ((n % 4) * w, (n // 4) * h))
-    sheet.save(HERE / "preview_3d.png")
-
-    # 与参考图并排
-    ref = Image.open(REF).convert("RGB").crop((40, 0, 1500, GROUND + 5))
-    ref = ref.resize((int(ref.width * views[0].height / ref.height), views[0].height))
-    cmp_ = Image.new("RGB", (ref.width, ref.height * 2), (40, 40, 40))
-    cmp_.paste(ref, (0, 0))
-    vw = Image.new("RGB", (ref.width, ref.height), (60, 60, 60))
-    # 按参考图三视图的大致横向位置摆放
-    pos = {"front": (40, 500), "side": (560, 980), "back": (1000, 1500)}
-    for v, name in zip(views, ("front", "side", "back")):
-        a, b = pos[name]
-        cxp = int(((a + b) / 2 - 40) * ref.width / 1460 - v.width / 2)
-        vw.paste(v, (max(cxp, 0), 0))
-    cmp_.paste(vw, (0, ref.height))
-    cmp_.save(HERE / "compare.png")
+    from refine import finish
+    from review_mesh import save_review
+    quads, palette, tris_q, bones = finish(quads, palette, tris_q, BONES)
+    save_review(quads, palette, tris_q, bones, HERE)
 
     counts = {}
     for p in part[occ]:
         counts[p] = counts.get(p, 0) + 1
-    out = export_lua(quads, palette, tris_q)
+    out = export_lua(quads, palette, tris_q, bones)
     print(f"voxels={occ.sum()} faces={len(faces)} quads={len(quads)} parts={counts}")
     print("wrote", out)
 
