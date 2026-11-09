@@ -6,6 +6,9 @@
 
 local M = {}
 
+-- 启动场景："dragon" = 体素巨龙动画测试场景（scripts/dragon/），"town" = VoxelTown 沙盒
+M.START_SCENE = "dragon"
+
 -- 手建体积的调色板槽(硬度语义:伤害 power < hardness 完全免疫)
 M.MAT_ASPHALT = 1      -- 街道:炸药(power 8)能炸坑,散弹枪(3)啃不动
 M.MAT_GRASS = 2
