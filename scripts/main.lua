@@ -139,6 +139,10 @@ local function UpdateUnderwater()
 end
 
 function Start()
+    if config.START_SCENE == "dragon" then
+        require("dragon.DragonTest").Start()
+        return
+    end
     math.randomseed(1337)
     scene_ = Scene()
     scene_:CreateComponent("Octree")
