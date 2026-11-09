@@ -43,12 +43,6 @@ M.playMode = true -- 玩法模式：操作诺米，靠近龙按 F 骑乘；关�
 -- 诺米体素小人（复用 VoxelTown 玩家角色的体素模型，约 1.7m，用来对比龙的体型）
 local NOMI_POS = Vector3(-2.6, 0, -3.4)
 local NOMI_YAW = -150.0
--- 修长版体型（与 player.lua 的「修长」一致：头缩小、腿拉长、身体收窄）
-local NOMI_SLIM = {
-    scale = { head = 0.82, hair_locks = 0.85, hair_back = 0.85 },
-    stretch = { leg_right = 1.35, leg_left = 1.35 },
-    widen = { x = 0.85, z = 0.92, skip = { "head" } },
-}
 M.externalDrive = false -- 自动化验证时由测试脚本以固定步长驱动控制器
 
 -- 自动截图 / 回归测试配置（可选模块，测试时临时生成，不随项目发布）
@@ -152,7 +146,7 @@ function M.Start()
     M.nomiNode = scene_:CreateChild("Nomi")
     M.nomiNode.position = NOMI_POS
     M.nomiNode.rotation = Quaternion(NOMI_YAW, Vector3.UP)
-    M.nomi = BlockCharacter.CreateVoxel(M.nomiNode, NomiVoxelData, NOMI_SLIM)
+    M.nomi = BlockCharacter.CreateVoxel(M.nomiNode, NomiVoxelData, BlockCharacter.SLENDER)
     ride_ = DragonRide.New(M)
     M.ride = ride_
 

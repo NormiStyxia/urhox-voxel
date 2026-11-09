@@ -24,18 +24,6 @@ local modelNode
 local characterController
 local character
 local nomi = nil
--- 两种体型共用一份体素数据：Q 版是原比例；修长版头缩小、腿拉长。M 键切换
-local NOMI_VARIANTS = {
-    { name = "Q版", variant = nil },
-    { name = "修长", variant = {
-        scale = { head = 0.82, hair_locks = 0.85, hair_back = 0.85 },
-        stretch = { leg_right = 1.35, leg_left = 1.35 },
-        -- 头小了以后身体显宽：肩、外套、手臂、腿都往中线收窄（头本身不收）
-        widen = { x = 0.85, z = 0.92, skip = { "head" } },
-    } },
-}
-local nomiModels = {}
-local nomiIndex = 1
 local weaponType = StateMachine.WeaponType.NORMAL
 
 local yaw, pitch = 0.0, 5.0
@@ -156,15 +144,10 @@ local function UpdateWeaponState()
 end
 
 --- 显示 / 隐藏角色外观。几何挂在一层层骨骼子节点上，Node:SetEnabled 只管单个
---- 节点，必须递归；两种体型只显示当前那一个。
+--- 节点，必须递归。仅创建修长版。
 local function ApplyModelVisibility(visible)
     if modelNode == nil then return end
     modelNode:SetDeepEnabled(visible)
-    if visible then
-        for i, m in ipairs(nomiModels) do
-            m.root:SetDeepEnabled(i == nomiIndex)
-        end
-    end
 end
 
 local function CreateCharacter(spawn)
@@ -172,11 +155,7 @@ local function CreateCharacter(spawn)
     characterNode.worldPosition = spawn
 
     modelNode = characterNode:CreateChild("ModelNode")
-    -- 体素版（从 Mivo 三视图雕刻）；方块版 BlockCharacter.Create + game.NomiModelData 仍可用
-    for i, v in ipairs(NOMI_VARIANTS) do
-        nomiModels[i] = BlockCharacter.CreateVoxel(modelNode, NomiVoxelData, v.variant)
-    end
-    nomi = nomiModels[nomiIndex]
+    nomi = BlockCharacter.CreateVoxel(modelNode, NomiVoxelData, BlockCharacter.SLENDER)
     ApplyModelVisibility(true)
 
     characterController = characterNode:CreateComponent("VoxelCharacterController")
@@ -293,10 +272,6 @@ local function UpdateOnFoot(timeStep)
         if input:GetKeyDown(KEY_SHIFT) and not nomi:IsUsing() then
             controls:Set(CTRL_RUN, true)
         end
-    end
-
-    if input:GetKeyPress(KEY_M) then
-        M.CycleBodyType()
     end
 
     if not swimming and input:GetKeyPress(KEY_C) then
@@ -457,26 +432,9 @@ function M.TriggerShoot()
     nomi:TriggerUse()
 end
 
---- 在 Q 版 / 修长两种体型之间切换（M 键）
-function M.CycleBodyType()
-    if #nomiModels < 2 then return end
-    nomiIndex = nomiIndex % #nomiModels + 1
-    nomi = nomiModels[nomiIndex]
-    ApplyModelVisibility(modelNode.enabled)
-    print("Player: body type -> " .. NOMI_VARIANTS[nomiIndex].name)
-end
-
---- 校验用：当前实际可见（递归启用）的体型数量
+--- 校验用：当前实际可见的角色数量（只实例化一个模型）。
 function M.DebugVisibleModels()
-    local n = 0
-    for _, m in ipairs(nomiModels) do
-        if m.root.enabled and m.bones.body ~= nil and m.bones.body.enabled then n = n + 1 end
-    end
-    return n
-end
-
-function M.GetBodyTypeName()
-    return NOMI_VARIANTS[nomiIndex].name
+    return nomi ~= nil and nomi.root.enabled and nomi.bones.body.enabled and 1 or 0
 end
 
 function M.GetWeaponName()

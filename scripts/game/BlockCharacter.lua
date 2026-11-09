@@ -25,6 +25,13 @@ local M = {}
 M.debugMoveSpeed = nil
 M.__index = M
 
+-- 主场景与骑龙场景只使用这一份修长体型配置。
+M.SLENDER = {
+    scale = { head = 0.82, hair_locks = 0.85, hair_back = 0.85 },
+    stretch = { leg_right = 1.35, leg_left = 1.35 },
+    widen = { x = 0.85, z = 0.92, skip = { "head" } },
+}
+
 local UNIT = 0.05            -- 头顶约 1.7m，与 config.PLAYER_HEIGHT 对齐
 local MATERIAL = "Materials/Nomi.xml"
 local UV_INSET = 0.01        -- UV 往面内缩一点，避免最近点采样串到相邻像素
