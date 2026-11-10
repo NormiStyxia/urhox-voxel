@@ -283,19 +283,21 @@ DEFS.small = {
     extra = function(add)
         -- 萌系大眼：涂色椭球沿 x 贯穿右半边头，只看 y-z 椭圆（竖长），mask 只涂脸侧、不涂鼻梁顶。
         -- 深色瞳孔打底，下半虹膜由蓝到亮青渐变，前上方大高光 + 后下方小高光（Q 版动漫眼）
-        local cy, cz, ry, rz = 4.43, 1.7, 0.175, 0.16
+        -- 眼睛整块落在脸侧较平的一段（小号最终坐标 z≈0.58–0.70，表面 x≈0.17–0.26），
+        -- 不再往前伸到吻部；x 下限压到 0.1，侧脸往里收的地方也染到
+        local cy, cz, ry, rz = 4.43, 1.62, 0.17, 0.115
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.34) ^ 2 + (dz - 0.3) ^ 2 < 0.17 then return P.WHITE end   -- 大高光
-            if (dy + 0.4) ^ 2 + (dz + 0.38) ^ 2 < 0.05 then return P.WHITE end   -- 小高光
-            if dy < -0.62 then return IRIS end
-            if dy < -0.15 then return P.EYE end
+            if (dy - 0.38) ^ 2 + (dz - 0.3) ^ 2 < 0.13 then return P.WHITE end   -- 大高光（前上）
+            if (dy + 0.38) ^ 2 + (dz + 0.42) ^ 2 < 0.06 then return P.WHITE end  -- 小高光（后下）
+            if dy < -0.6 then return IRIS end
+            if dy < -0.12 then return P.EYE end
             return P.PUPIL
         end
         add({ type = "ellipsoid", bone = "head", c = { 0.25, cy, cz }, r = { 0.25, ry, rz }, color = EyeColor,
-            mask = function(x) return x > 0.15 end, paint = true, prio = 1.0 }, true)
+            mask = function(x) return x > 0.1 end, paint = true, prio = 1.0 }, true)
         -- 腮红：眼睛后下方
-        add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.26, 1.53 }, r = { 0.14, 0.05, 0.09 }, color = BLUSH,
+        add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.26, 1.5 }, r = { 0.14, 0.045, 0.08 }, color = BLUSH,
             mask = function(x) return x > 0.15 end, paint = true, prio = 0.4 }, true)
     end,
 }
@@ -360,8 +362,8 @@ DEFS.large = {
         add({ type = "ellipsoid", bone = "head", c = { 0.26, cy, cz }, r = { 0.24, 0.17, 0.22 }, color = EyeColor,
             mask = EyeMask, paint = true, prio = 1.0 }, true)
         -- 压眼的眉骨：眼睛正上方一道最深色的骨棱，前低后高，和后掠的角连成一条线
-        add({ type = "box", bone = "head", c = { 0.235, 4.6, 1.7 }, h = { 0.05, 0.022, 0.18 }, color = P.BLUE_X,
-            rot = { -12, -14, 20 }, round = 0.015 }, true)
+        add({ type = "box", bone = "head", c = { 0.22, 4.625, 1.68 }, h = { 0.045, 0.02, 0.17 }, color = P.BLUE_X,
+            rot = { -10, -14, 12 }, round = 0.015 }, true)
         -- 前臂肘后骨刺
         add({ type = "fin", bone = "armL_R", base = { 0.52, 0.98, 0.56 }, u = { 0, 1, 0 }, v = { 0, 0.25, -1 },
             len = 0.3, h = 0.34, color = P.BLUE_X, sweep = -0.1, thick = 0.13 })
