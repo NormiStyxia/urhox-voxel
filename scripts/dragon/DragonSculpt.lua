@@ -234,8 +234,9 @@ local function EvalField(cands, x, y, z)
                 if M.Hash3(ci, cj, ck) < 0.45 then di = di - p.plate end
             end
             if p.paint then
-                -- 涂色体块：不参与形体，只给落在它内部的体素换归属 / 颜色（型号变体的眼睛、腮红）
-                if di < 0 then
+                -- 涂色体块：不参与形体，只给落在它内部的体素换归属 / 颜色（型号变体的眼睛、腮红）；
+                -- mask(x, y, z) 可再裁出任意轮廓（杏仁眼等），返回 false 的点不归它
+                if di < 0 and (p.mask == nil or p.mask(x, y, z)) then
                     local dr = di - (p.prio or 0)
                     if dr < bestD then bestD, best = dr, p end
                 end

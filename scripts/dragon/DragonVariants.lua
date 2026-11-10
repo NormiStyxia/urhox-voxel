@@ -21,6 +21,8 @@ M.ORDER = { "small", "medium", "large" }
 
 local P = Spec.PAL
 local BLUSH = 55 -- 小号专用腮红槽位（龙占 40–55，地面 60/61）
+local IRIS = 56  -- 型号专用虹膜（大号自发光冰蓝 / 小号亮蓝）
+local LINER = 57 -- 型号专用眼线 / 高光（大号深色眼线、小号第二高光）
 
 -- ---------------------------------------------------------------- 3x3 / 向量
 ---@type number[]
@@ -125,6 +127,14 @@ local function ScaleAboutPrim(p, anchor, kl, kr, rot)
             return f(anchor[1] + d[1] / kl, anchor[2] + d[2] / kl, anchor[3] + d[3] / kl, pr)
         end
     end
+    if p.mask then
+        local f = p.mask
+        local Rt = R and Transpose(R) or IDENT
+        p.mask = function(x, y, z)
+            local d = MatVec(Rt, { x - anchor[1], y - anchor[2], z - anchor[3] })
+            return f(anchor[1] + d[1] / kl, anchor[2] + d[2] / kl, anchor[3] + d[3] / kl)
+        end
+    end
 end
 
 local function AnchorOf(p)
@@ -185,6 +195,13 @@ local function TransformPrim(p, b)
         p.color = function(x, y, z, pr)
             local o = MatVec(Li, { x - NP[1], y - NP[2], z - NP[3] })
             return f(P0[1] + o[1], P0[2] + o[2], P0[3] + o[3], pr)
+        end
+    end
+    if p.mask then
+        local f, NP, Li, P0 = p.mask, b.NP, b.Linv, b.P
+        p.mask = function(x, y, z)
+            local o = MatVec(Li, { x - NP[1], y - NP[2], z - NP[3] })
+            return f(P0[1] + o[1], P0[2] + o[2], P0[3] + o[3])
         end
     end
 end
@@ -257,25 +274,29 @@ DEFS.small = {
         [P.BLUE_L] = { 0.60, 0.81, 1.00 }, [P.BLUE_M] = { 0.47, 0.69, 0.99 }, [P.BLUE_D] = { 0.42, 0.59, 0.92 },
         [P.BLUE_X] = { 0.36, 0.50, 0.86 }, [P.BLUE_P] = { 0.78, 0.90, 1.00 }, [P.BLUE_L2] = { 0.54, 0.76, 1.00 },
         [P.PUPIL] = { 0.05, 0.07, 0.18 }, [P.EYE] = { 0.22, 0.55, 1.00 }, [P.MOUTH] = { 0.85, 0.42, 0.52 },
-        [BLUSH] = { 1.00, 0.62, 0.74 },
+        [BLUSH] = { 1.00, 0.62, 0.74 }, [IRIS] = { 0.55, 0.92, 1.00 },
     },
+    -- 型号专用槽位不发光（从大号切回来时清掉大号眼睛的自发光）
+    emissive = { [IRIS] = { 0, 0, 0, 0 }, [LINER] = { 0, 0, 0, 0 } },
     params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
-        -- 大圆眼：涂色椭球沿 x 贯穿右半边头（x∈0..0.5），只看 y-z 椭圆，凹凸处也整块染到；
-        -- 深色瞳孔为主，下缘一弯亮蓝，前上方一块白高光（小号去掉了眉骨，眼睛不被遮）
-        local cy, cz, ry, rz = 4.455, 1.72, 0.135, 0.13
+        -- 萌系大眼：涂色椭球沿 x 贯穿右半边头，只看 y-z 椭圆（竖长），mask 只涂脸侧、不涂鼻梁顶。
+        -- 深色瞳孔打底，下半虹膜由蓝到亮青渐变，前上方大高光 + 后下方小高光（Q 版动漫眼）
+        local cy, cz, ry, rz = 4.44, 1.67, 0.175, 0.16
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.3) ^ 2 + (dz - 0.3) ^ 2 < 0.14 then return P.WHITE end
-            if dy < -0.5 and math.abs(dz) < 0.75 then return P.EYE end
+            if (dy - 0.36) ^ 2 + (dz - 0.28) ^ 2 < 0.1 then return P.WHITE end   -- 大高光
+            if (dy + 0.42) ^ 2 + (dz + 0.34) ^ 2 < 0.035 then return P.WHITE end -- 小高光
+            if dy < -0.62 then return IRIS end
+            if dy < -0.15 then return P.EYE end
             return P.PUPIL
         end
         add({ type = "ellipsoid", bone = "head", c = { 0.25, cy, cz }, r = { 0.25, ry, rz }, color = EyeColor,
-            paint = true, prio = 0.5 }, true)
-        -- 腮红
-        add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.36, 1.55 }, r = { 0.14, 0.06, 0.095 }, color = BLUSH,
-            paint = true, prio = 0.4 }, true)
+            mask = function(x) return x > 0.15 end, paint = true, prio = 0.5 }, true)
+        -- 腮红：眼睛后下方
+        add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.26, 1.53 }, r = { 0.14, 0.05, 0.09 }, color = BLUSH,
+            mask = function(x) return x > 0.15 end, paint = true, prio = 0.4 }, true)
     end,
 }
 
@@ -301,15 +322,46 @@ DEFS.large = {
     tags = {
         horn = { 1.45, 1.15, rot = { -38, 0, 0 } }, spike = { 1.35, 1.1 }, crest = { 1.25, 1.05 }, cheek = { 1.15, 1.0 },
         tailblade = { 1.35, 1.1 }, tooth = { 1.3, 1.1 },
+        -- 中号的方块小眼换成 extra 里的杏仁眼
+        eye = false, pupil = false, eyelid = false,
     },
     -- 更深的钢蓝、象牙色爪，明暗对比更强
     palette = {
         [P.BLUE_L] = { 0.40, 0.62, 0.95 }, [P.BLUE_M] = { 0.25, 0.43, 0.82 }, [P.BLUE_D] = { 0.17, 0.27, 0.55 },
         [P.BLUE_X] = { 0.09, 0.13, 0.31 }, [P.BLUE_P] = { 0.62, 0.79, 0.98 }, [P.BLUE_L2] = { 0.33, 0.54, 0.90 },
         [P.CLAW] = { 0.94, 0.91, 0.83 }, [P.EYE] = { 0.30, 0.78, 1.00 },
+        [IRIS] = { 1.00, 0.74, 0.22 }, [LINER] = { 0.03, 0.04, 0.10 },
     },
+    -- 琥珀金虹膜微微自发光：钢蓝鳞片里最亮的一点，背光时也有眼神
+    emissive = { [IRIS] = { 1.0, 0.66, 0.18, 0.55 }, [LINER] = { 0, 0, 0, 0 } },
     params = { walkSpeed = 1.9, flapHz = 0.6, flySpeed = 9.5, turnRate = 42, sprintSpeed = 21.0 },
     extra = function(add)
+        -- 杏仁眼（中号坐标、侧视 y-z 平面）：后眼角上挑，深色眼线包边，琥珀金虹膜 + 竖瞳 + 一点高光。
+        -- u = 沿 z 归一（+1 = 前眼角），v = 相对倾斜中线的高度；眼睑轮廓 |v| < (1 − u²)^0.75
+        local cy, cz, rz, ry, tilt = 4.5, 1.71, 0.16, 0.07, 0.3
+        local function UV(y, z)
+            local u = (z - cz) / rz
+            local v = (y - cy - tilt * (cz - z)) / ry
+            local h = math.max(0, 1 - u * u) ^ 0.75
+            return u, v, h
+        end
+        local function EyeMask(x, y, z)
+            if x < 0.15 then return false end
+            local u, v, h = UV(y, z)
+            return math.abs(u) < 1 and math.abs(v) < h
+        end
+        local function EyeColor(x, y, z)
+            local u, v, h = UV(y, z)
+            if math.abs(v) > 0.55 * h or math.abs(u) > 0.78 then return LINER end -- 眼线
+            if math.abs(u - 0.14) < 0.15 then return P.PUPIL end                 -- 竖瞳（略靠前，目光朝前）
+            if v > 0.1 and u > 0.32 and u < 0.56 then return P.WHITE end          -- 高光
+            return IRIS
+        end
+        add({ type = "ellipsoid", bone = "head", c = { 0.26, cy, cz }, r = { 0.24, 0.13, 0.18 }, color = EyeColor,
+            mask = EyeMask, paint = true, prio = 0.6 }, true)
+        -- 压眼的眉骨：眼睛正上方一道最深色的骨棱，前低后高，和后掠的角连成一条线
+        add({ type = "box", bone = "head", c = { 0.235, 4.575, 1.7 }, h = { 0.05, 0.022, 0.15 }, color = P.BLUE_X,
+            rot = { -12, -14, 20 }, round = 0.015 }, true)
         -- 前臂肘后骨刺
         add({ type = "fin", bone = "armL_R", base = { 0.52, 0.98, 0.56 }, u = { 0, 1, 0 }, v = { 0, 0.25, -1 },
             len = 0.3, h = 0.34, color = P.BLUE_X, sweep = -0.1, thick = 0.13 })
@@ -433,13 +485,16 @@ local function Build(def)
     local spec = {
         id = def.id, name = def.name, size = S, rideable = def.rideable, pet = def.pet, digits = def.digits ~= nil,
         scapula = def.scapula, flightNeckLift = def.flightNeckLift,
-        PAL = Spec.PAL, EMISSIVE = Spec.EMISSIVE, VOXEL_BODY = def.voxel.body, VOXEL_HEAD = def.voxel.head,
+        PAL = Spec.PAL, VOXEL_BODY = def.voxel.body, VOXEL_HEAD = def.voxel.head,
         VOXEL_WING = def.voxel.wing, WING = wing, FingerPoints = Spec.FingerPoints, params = def.params,
         membraneThick = Spec.membraneThick * math.max(0.5, math.min(1.3, u)),
     }
     spec.PALETTE = {}
     for k, v in pairs(Spec.PALETTE) do spec.PALETTE[k] = v end
     for k, v in pairs(def.palette or {}) do spec.PALETTE[k] = v end
+    spec.EMISSIVE = {}
+    for k, v in pairs(Spec.EMISSIVE) do spec.EMISSIVE[k] = v end
+    for k, v in pairs(def.emissive or {}) do spec.EMISSIVE[k] = v end
 
     -- 足位
     local fF, fH = F("hand_R", fr.F), F("foot_R", fr.H)

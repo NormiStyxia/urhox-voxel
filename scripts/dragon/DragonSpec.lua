@@ -565,6 +565,10 @@ local function CopyPrim(p, bone)
         local f = p.color
         q.color = function(x, y, z, pr) return f(-x, y, z, pr) end
     end
+    if p.mask then
+        local f = p.mask
+        q.mask = function(x, y, z) return f(-x, y, z) end
+    end
     q.sym = nil
     return q
 end
