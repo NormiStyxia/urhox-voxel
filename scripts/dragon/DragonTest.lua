@@ -15,6 +15,8 @@ local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
 local DragonRide = require("dragon.DragonRide")
 local Variants = require("dragon.DragonVariants")
+local Breath = require("dragon.DragonBreath")
+Breath.Register(Controller)
 
 local M = {}
 
@@ -32,6 +34,8 @@ local ctrl_ = nil
 local world_ = nil
 ---@type DragonRide
 local ride_ = nil
+---@type DragonBreath
+local breath_ = nil
 
 local cam = { yaw = -128.0, pitch = 12.0, dist = 17.0, target = Vector3(0, 2.4, -0.6), follow = true, pan = Vector3(0, 0, 0) }
 M.cam = cam
@@ -106,7 +110,14 @@ function M.ApplyCamera()
     local rot = Quaternion(cam.pitch, cam.yaw, 0.0)
     local rush = cam.ortho == nil and (cam.flightVisual or 0) or 0
     if cam.ortho == nil then camera_.fov = 45 + 5 * rush end
-    camNode_.position = cam.target - rot * Vector3(0, 0, cam.dist + 1.5 * rush)
+    local shake = (breath_ ~= nil and cam.ortho == nil) and breath_.shake or 0
+    local jitter = Vector3.ZERO
+    if shake > 0.001 then
+        local t = time:GetElapsedTime()
+        local k = shake * (rig_.size or 1.0) * 0.35
+        jitter = Vector3(math.sin(t * 53.0) + 0.5 * math.sin(t * 97.0), math.sin(t * 61.0 + 1.3), 0) * k
+    end
+    camNode_.position = cam.target - rot * Vector3(0, 0, cam.dist + 1.5 * rush) + rot * jitter
     camNode_.rotation = rot
 end
 
@@ -147,6 +158,8 @@ function M.Start()
     M.rig = rig_
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
+    breath_ = Breath.New(scene_, rig_, ctrl_, M.variant)
+    M.breath = breath_
     -- 诺米：站在龙的右前方，面朝默认机位，只播待机动画
     M.nomiNode = scene_:CreateChild("Nomi")
     M.nomiNode.position = NOMI_POS
@@ -196,6 +209,7 @@ function M.SetVariant(id)
     if ride_ ~= nil then ride_:Release() end
     local oldSize = rig_.size or 1.0
     local oldId = M.variant
+    if breath_ ~= nil then breath_:Destroy() end
     rig_:Destroy()
     local ok, built = pcall(function() return Rig.Build(scene_, world_, nil, Variants.Get(id)) end)
     if not ok then
@@ -209,6 +223,8 @@ function M.SetVariant(id)
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
     ctrl_:Teleport(pos, yaw)
+    breath_ = Breath.New(scene_, rig_, ctrl_, id)
+    M.breath = breath_
     ride_:BindDragon(M)
     -- 镜头距离随体型缩放
     local k = (rig_.size or 1.0) / oldSize
@@ -236,6 +252,8 @@ local function HandleKeys()
     if M.playMode then
         -- 玩法模式下键盘归诺米 / 骑乘（见 DragonRide）；只保留暂停 / 单步
         if input:GetKeyPress(KEY_P) then c.paused = not c.paused end
+        -- 骑乘时 B 由 DragonRide 处理；步行时也能让龙吐息
+        if input:GetKeyPress(KEY_B) and ride_ ~= nil and ride_.mode == "free" then breath_:Trigger() end
         return
     end
     c.input.move = KeyAxis(KEY_W, KEY_S)
@@ -249,6 +267,7 @@ local function HandleKeys()
     if input:GetKeyPress(KEY_G) then c.demo = nil; c:Request("GLIDE") end
     if input:GetKeyPress(KEY_L) then c.demo = nil; c:Request("LAND") end
     if input:GetKeyPress(KEY_R) and not c.loco.airborne then c.demo = nil; c:Request("ROAR") end
+    if input:GetKeyPress(KEY_B) then breath_:Trigger() end
     if input:GetKeyPress(KEY_T) and not c.loco.airborne then
         c.demo = nil
         c:Request(c.state == "SPREAD_WINGS" and "IDLE" or "SPREAD_WINGS")
@@ -304,6 +323,7 @@ function M.Update(dt)
     if shotCfg == nil or not shotCfg.noInput then HandleKeys() end
     HandleMouse()
     if not M.externalDrive then ctrl_:Update(dt) end
+    breath_:Update()
     if M.playMode and not M.externalDrive then
         ride_:Update(dt, cam.yaw)
         DebugUI.SetHint(ride_.hint)

@@ -272,7 +272,8 @@ function R:UpdateMounted(dt)
     if Press(KEY_SPACE) and (not L.airborne or c.state == "GLIDE") then c:Request("FLY") end
     if Press(KEY_L) and L.airborne then c:Request("LAND") end
     if Press(KEY_G) and L.airborne then c:Request("GLIDE") end
-    local busy = (c.state == "ROAR" or c.state == "TURN")
+    if Press(KEY_B) and self.T.breath ~= nil then self.T.breath:Trigger() end
+    local busy = (c.state == "ROAR" or c.state == "TURN" or c.state == "BREATH")
     if not busy then
         if (c.input.move > 0 or c.input.turn ~= 0) then
             if c.state == "IDLE" then c:Request("WALK") end
@@ -347,7 +348,7 @@ function R:UpdateAI(dt)
         ai.mode, ai.timer = "idle", math.max(ai.timer, 1.5)
         return
     end
-    if c.state == "ROAR" or c.state == "TURN" or c.state == "SPREAD_WINGS" then return end
+    if c.state == "ROAR" or c.state == "TURN" or c.state == "SPREAD_WINGS" or c.state == "BREATH" then return end
     if ai.mode == "idle" then
         ai.timer = ai.timer - dt
         if ai.timer <= 0 then
@@ -363,7 +364,10 @@ function R:UpdateAI(dt)
         if dist < 2.0 or ai.timer <= 0 then
             ai.mode, ai.timer = "idle", 2.0 + math.random() * 3.5
             c:Request("IDLE")
-            if math.random() < 0.25 then c:Request("ROAR") end
+            local r = math.random()
+            local br = self.T.breath
+            if r < 0.15 and br ~= nil and br:Available() then br:Trigger()
+            elseif r < 0.3 then c:Request("ROAR") end
             return
         end
         local want = math.deg(math.atan(to.x, to.z))
@@ -403,7 +407,9 @@ function R:Update(dt, camYaw)
         self.hint = ""
     else
         self:UpdateMounted(dt)
-        self.hint = "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 下龙"
+        local br = self.T.breath
+        local bh = (br ~= nil and br:Available()) and ("  B " .. br.cfg.name) or ""
+        self.hint = "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 下龙" .. bh
     end
 end
 
