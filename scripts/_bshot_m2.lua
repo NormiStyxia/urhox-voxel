@@ -31,6 +31,12 @@ cfg.update = function(T, dt)
         c:Update(1 / 60)
         T.breath:Update()
     end
+    if frame % 20 == 0 then
+        local b = T.breath
+        local parts = {}
+        for k, e in pairs(b.em) do parts[#parts + 1] = k .. "=" .. tostring(e.on) .. "/" .. tostring(e.rate) .. "/" .. tostring(e.node.enabled) .. "/" .. tostring(e.em.numParticles) end
+        print("SHOT em " .. table.concat(parts, " ") .. " debris=" .. #b.debris.live .. " hidden=" .. tostring(b.hidden) .. " master=" .. b.master .. " root=" .. tostring(b.root.enabled))
+    end
     if frame % 20 == 0 then print(string.format("SHOT frame %d state %s t=%.2f shake=%.2f motes=%d", frame, c.state, c.stateT, T.breath.shake, T.breath.motes:Count())) end
 end
 BREATH_SHOT_CFG = cfg
