@@ -1,6 +1,7 @@
 -- 体素巨龙动画自动检查（validate-test）：固定 1/60s 步长跑完整演示序列
 local T = nil
 local VARIANT = nil -- 型号：nil/"medium" = 中号，"small" / "large"（run_anim_check.sh 第一个参数）
+local WING_STATES = { SPREAD_WINGS = true, TAKEOFF = true, FLY = true, GLIDE = true, LAND = true }
 local Ctrl = require("dragon.DragonAnimationController")
 local DT = 1.0 / 60.0
 local STEPS_PER_FRAME = 24
@@ -95,8 +96,11 @@ local function check()
         if q:IsNaN() then stats.nanCount = stats.nanCount + 1 end
         local pq = prevRot[name]
         if pq ~= nil then
-            -- 小型号步频更快：单步转角按当前步频相对中号行走（0.8 Hz）归一
-            local a = angleBetween(pq, q) / math.max(1.0, (ctrl.gait.freq or 0.8) / 0.8)
+            -- 小型号步频 / 振翅更快：单步转角按当前步频相对中号行走（0.8 Hz）、
+            -- 振翅频率相对中号（0.75 Hz）归一（只用于翅膀相关状态）；中号两项都是 1，不受影响
+            local flapR = WING_STATES[st] and ctrl.params.flapHz / 0.75 or 1.0
+            local rate = math.max(1.0, (ctrl.gait.freq or 0.8) / 0.8, flapR)
+            local a = angleBetween(pq, q) / rate
             stats.popBy = stats.popBy or {}
             if a > (stats.popBy[st] or 0) then
                 stats.popBy[st] = a
