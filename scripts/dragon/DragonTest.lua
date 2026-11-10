@@ -74,6 +74,8 @@ local function BuildGround(world)
     g.destructible = false
     world:FinalizeVolume(g)
     g:RebuildGeometry()
+    -- 龙息在地面上结霜 / 灼烧时直接改这一层的体素颜色
+    M.groundInfo = { volume = g, origin = Vector3(-n * s * 0.5, -s, -n * s * 0.5), cell = s }
     return g
 end
 
@@ -114,8 +116,9 @@ function M.ApplyCamera()
     local jitter = Vector3.ZERO
     if shake > 0.001 then
         local t = time:GetElapsedTime()
-        local k = shake * (rig_.size or 1.0) * 0.35
-        jitter = Vector3(math.sin(t * 53.0) + 0.5 * math.sin(t * 97.0), math.sin(t * 61.0 + 1.3), 0) * k
+        local k = shake * (0.6 + 0.4 * (rig_.size or 1.0)) * 0.55
+        jitter = Vector3(math.sin(t * 53.0) + 0.5 * math.sin(t * 97.0), math.sin(t * 61.0 + 1.3) + 0.4 * math.sin(t * 113.0), 0) * k
+        rot = rot * Quaternion(shake * 1.6 * math.sin(t * 71.0), Vector3.FORWARD)
     end
     camNode_.position = cam.target - rot * Vector3(0, 0, cam.dist + 1.5 * rush) + rot * jitter
     camNode_.rotation = rot
@@ -158,7 +161,7 @@ function M.Start()
     M.rig = rig_
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
-    breath_ = Breath.New(scene_, rig_, ctrl_, M.variant)
+    breath_ = Breath.New(scene_, rig_, ctrl_, M.variant, M.groundInfo)
     M.breath = breath_
     -- 诺米：站在龙的右前方，面朝默认机位，只播待机动画
     M.nomiNode = scene_:CreateChild("Nomi")
@@ -223,7 +226,7 @@ function M.SetVariant(id)
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
     ctrl_:Teleport(pos, yaw)
-    breath_ = Breath.New(scene_, rig_, ctrl_, id)
+    breath_ = Breath.New(scene_, rig_, ctrl_, id, M.groundInfo)
     M.breath = breath_
     ride_:BindDragon(M)
     -- 镜头距离随体型缩放
@@ -322,7 +325,9 @@ function M.Update(dt)
     if shotCfg ~= nil and shotCfg.update ~= nil then shotCfg.update(M, dt) end
     if shotCfg == nil or not shotCfg.noInput then HandleKeys() end
     HandleMouse()
-    if not M.externalDrive then ctrl_:Update(dt) end
+    -- 龙息卡帧：命中瞬间动画几乎停住一小下
+    local animDt = (breath_.hitstop > 0) and dt * 0.08 or dt
+    if not M.externalDrive then ctrl_:Update(animDt) end
     breath_:Update()
     if M.playMode and not M.externalDrive then
         ride_:Update(dt, cam.yaw)
