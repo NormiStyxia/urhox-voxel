@@ -5,7 +5,7 @@
 -- 诺米：简化的运动学控制器（地面 y=0，重力 + 跳跃，不走物理世界），与龙身体做 2D 圆形推开。
 -- 龙 AI：待机 ↔ 走向随机目标点（偶尔咆哮），玩家靠近或骑乘时停下。
 -- 骑乘：诺米挂在龙的 saddle 挂点（胸骨背上），坐姿覆盖腿 / 臂骨骼；W 前进 A/D 转向 S 停下，
--- Space / F 跳下。
+-- Space 起飞 / 上升，C 下降，F 下龙。
 -- ====================================================================
 
 local M = {}
@@ -166,7 +166,7 @@ function R:Mount()
     self.onGround = true
     local c = self.ctrl
     self.savedWalkSpeed = c.params.walkSpeed
-    c.input.move, c.input.turn = 0, 0
+    c.input.move, c.input.turn, c.input.climb = 0, 0, 0
     c:Request("IDLE")
 end
 
@@ -176,7 +176,7 @@ function R:Dismount()
     local right = chest.worldRotation * Vector3.RIGHT
     right = Vector3(right.x, 0, right.z):Normalized()
     local c = self.ctrl
-    c.input.move, c.input.turn = 0, 0
+    c.input.move, c.input.turn, c.input.climb = 0, 0, 0
     c.params.walkSpeed = self.savedWalkSpeed
     c:Request("IDLE")
     self.mode = "free"
@@ -227,17 +227,23 @@ function R:UpdateMount(dt)
 end
 
 function R:UpdateMounted(dt)
-        local c = self.ctrl
+    -- F takes priority: the same frame must not also issue a flight/jump command.
+    if Press(KEY_F) then self:Dismount(); return end
+    local c = self.ctrl
     local L = c.loco
     c.demo = nil
-    local w = Down(KEY_W)
+    local w, stop = Down(KEY_W), Down(KEY_S)
     local a, d = Down(KEY_A), Down(KEY_D)
-    c.input.move = w and 1 or 0
+    c.input.move = stop and (L.airborne and -1 or 0) or (w and 1 or 0)
     c.input.turn = (d and 1 or 0) - (a and 1 or 0)
     c.input.free = true
+    c.input.climb = (Down(KEY_SPACE) and 1 or 0) - (Down(KEY_C) and 1 or 0)
+    if Press(KEY_SPACE) and (not L.airborne or c.state == "GLIDE") then c:Request("FLY") end
+    if Press(KEY_L) and L.airborne then c:Request("LAND") end
+    if Press(KEY_G) and L.airborne then c:Request("GLIDE") end
     local busy = (c.state == "ROAR" or c.state == "TURN")
     if not busy then
-        if (w or c.input.turn ~= 0) then
+        if (c.input.move > 0 or c.input.turn ~= 0) then
             if c.state == "IDLE" then c:Request("WALK") end
         elseif c.state == "WALK" then
             c:Request("IDLE")
@@ -245,21 +251,20 @@ function R:UpdateMounted(dt)
     end
     -- 场地边界：走到边缘就停
     if math.abs(L.pos.x) > ARENA - 2 or math.abs(L.pos.z) > ARENA - 2 then
-        L.pos = Vector3(Clamp(L.pos.x, -ARENA + 2, ARENA - 2), 0, Clamp(L.pos.z, -ARENA + 2, ARENA - 2))
+        L.pos = Vector3(Clamp(L.pos.x, -ARENA + 2, ARENA - 2), L.pos.y, Clamp(L.pos.z, -ARENA + 2, ARENA - 2))
     end
     self.nomi:Update(dt, { moveSpeed = 0, onGround = true })
     self:SeatPose()
     self:AttachToSaddle()
     self.pos = self.node.worldPosition
-    if Press(KEY_F) or Press(KEY_SPACE) then self:Dismount() end
 end
 
 -- ---------------------------------------------------------------- 龙 AI（无人骑乘时）
 function R:UpdateAI(dt)
     local c, ai = self.ctrl, self.ai
     local L = c.loco
-    c.input.move, c.input.turn, c.input.free = 0, 0, false
-    if c.demo ~= nil then return end
+    c.input.move, c.input.turn, c.input.climb, c.input.free = 0, 0, 0, false
+    if c.demo ~= nil or L.airborne or c.state == "TAKEOFF" or c.state == "LAND" then return end
     c.params.walkSpeed = self.savedWalkSpeed
     local near = (Flat(self.pos) - Flat(L.pos)):Length() < 7.0
     if near then
@@ -314,12 +319,12 @@ function R:Update(dt, camYaw)
             self.hint = "WASD 移动   Space 跳跃   Shift 奔跑   靠近龙按 F 骑乘"
         end
     elseif self.mode == "mounting" then
-        self.ctrl.input.move, self.ctrl.input.turn = 0, 0
+        self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb = 0, 0, 0
         self:UpdateMount(dt)
         self.hint = ""
     else
         self:UpdateMounted(dt)
-        self.hint = "骑乘中： W 前进   A/D 转向   S 停下   Space / F 下龙"
+        self.hint = "骑乘中：W 前进  A/D 转向  S 停步/减速  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 下龙"
     end
 end
 
@@ -333,7 +338,7 @@ end
 function R:Release()
     if self.mode ~= "free" then
         self.ctrl.params.walkSpeed = self.savedWalkSpeed
-        self.ctrl.input.move, self.ctrl.input.turn = 0, 0
+        self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb = 0, 0, 0
         self.mode = "free"
         self.pos = Vector3(self.ctrl.loco.pos.x + 3.0, 0, self.ctrl.loco.pos.z)
         self.vy, self.onGround = 0, true

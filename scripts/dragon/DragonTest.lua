@@ -74,6 +74,7 @@ end
 function M.SetPlayMode(on)
     if on == M.playMode then return end
     M.playMode = on
+    ctrl_.input.move, ctrl_.input.turn, ctrl_.input.climb = 0, 0, 0
     if not on then
         if ride_ ~= nil then ride_:Release() end
         DebugUI.SetHint("")

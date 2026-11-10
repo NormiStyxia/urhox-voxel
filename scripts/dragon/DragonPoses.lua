@@ -79,7 +79,11 @@ end
 
 -- ---------------------------------------------------------------- 尾
 -- 波沿尾链传播：每节相位延迟 lag，幅度从根到尖递增
--- t = { yaw（+ 向右）, pitch（+ 上抬）, waveAmp, wavePhase, lag, liftAmp, curl }
+-- 原静止尾形越靠近尾尖越平；飞行时先抵消这段上翘，再逐节向下放松。
+-- 对应原骨架的段方向约 -36/-30/-23/-17/-12/-9/-3/0 度，
+-- 叠加后约为 -12/-17/-23/-30/-37/-45/-51/-57 度（向尾尖逐渐下垂）。
+local TAIL_DROOP = { 24, -11, -13, -13, -12, -11, -12, -9 }
+-- t = { yaw（+ 向右）, pitch（+ 上抬）, waveAmp, wavePhase, lag, liftAmp, curl, droop（0..1） }
 function M.Tail(pose, t)
     for i = 1, 8 do
         local f = (i - 1) / 7
@@ -88,6 +92,7 @@ function M.Tail(pose, t)
         local yaw = (t.yaw or 0) / 8 + amp * math.sin(ph)
         local lift = (t.liftAmp or 0) * (0.3 + 0.7 * f) * math.sin(ph * 0.5 + 1.3)
         local pitch = (t.pitch or 0) / 8 + lift + (t.curl or 0) * f * 0.25
+        pitch = pitch + TAIL_DROOP[i] * (t.droop or 0)
         Pose.Set(pose, "tail" .. i, pitch, yaw, 0)
     end
 end

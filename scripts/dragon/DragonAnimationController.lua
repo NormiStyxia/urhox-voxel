@@ -255,13 +255,13 @@ local function ReachLegs(p, k)
     Pose.SetSym(p, "foot", 20 * k, 0, 0)
 end
 
--- 飞行时的颈 / 尾 / 身体：颈部前伸、头抬平看前方、尾巴抬平当舵
+-- 飞行时颈部前伸；尾巴放松下垂，保留小幅滞后的摆动。
 function C:FlightBody(p, phi, ext)
     local bank = self.loco.bank
     Poses.Neck(p, { pitch = 58 * ext, curve = -4 * ext, yaw = -bank * 0.35, headPitch = -52 * ext + 3 * math.sin(2 * math.pi * phi),
         headYaw = 0, jaw = 0 })
-    Poses.Tail(p, { pitch = 34 * ext, yaw = bank * 0.25, waveAmp = 2.5, wavePhase = 2 * math.pi * phi, lag = 0.5,
-        liftAmp = 3 * ext })
+    Poses.Tail(p, { droop = ext, yaw = bank * 0.25, waveAmp = 2.5,
+        wavePhase = 2 * math.pi * phi, lag = 0.5, liftAmp = 0.8 * ext })
     -- 胸腔随下拍收缩，躯干微弯
     local pump = math.sin(2 * math.pi * phi)
     Pose.Set(p, "chest", -2 * pump * ext, 0, 0)
@@ -269,7 +269,7 @@ function C:FlightBody(p, phi, ext)
     -- 尾巴随振翅上下起伏（沿尾链滞后传播）
     local w = 2 * math.pi * phi
     for i = 1, 8 do
-        Pose.AddTo(p, "tail" .. i, 3.5 * ext * (0.4 + 0.6 * (i - 1) / 7) * math.sin(w - 0.55 * i), 0, 0)
+        Pose.AddTo(p, "tail" .. i, 1.0 * ext * (0.4 + 0.6 * (i - 1) / 7) * math.sin(w - 0.55 * i), 0, 0)
     end
 end
 
@@ -489,11 +489,13 @@ STATES.TAKEOFF = {
             { 0.0, { dy = 0, pitch = 0, neck = 4, head = -2, tuck = 0, tail = 0 } },
             { 0.5, { dy = -0.36, pitch = 5, neck = 22, head = -18, tuck = 0, tail = 6 } },
             { 0.74, { dy = 0.0, pitch = -10, neck = 30, head = -30, tuck = 0, tail = 14 } },
-            { 1.3, { dy = 0, pitch = -6, neck = 48, head = -44, tuck = 0.85, tail = 26 } },
-            { 2.6, { dy = 0, pitch = -3, neck = 56, head = -50, tuck = 1.0, tail = 32 } },
+            { 1.3, { dy = 0, pitch = -6, neck = 48, head = -44, tuck = 0.85, tail = 0 } },
+            { 2.6, { dy = 0, pitch = -3, neck = 56, head = -50, tuck = 1.0, tail = 0 } },
         }, t)
         Poses.Neck(p, { pitch = k.neck, curve = -2, headPitch = k.head })
-        Poses.Tail(p, { pitch = k.tail, waveAmp = 3, wavePhase = t * 3, lag = 0.5, liftAmp = 3 })
+        local tailRelax = Smooth((t - 0.74) / 1.2)
+        Poses.Tail(p, { pitch = k.tail, droop = tailRelax, waveAmp = 3, wavePhase = t * 3,
+            lag = 0.5, liftAmp = Lerp(3, 0.8, tailRelax) })
         -- 翅膀：蓄力时分级展开到上举位，起跳后切入振翅
         local ground = self:GroundWing(self.wingDeploy)
         local flapW = Smooth((t - FLAP_T + 0.05) / 0.12)
@@ -668,9 +670,10 @@ STATES.LAND = {
         Pose.Set(p, "head", Clamp(headNet - ancestors, -35, 35), 0, 0)
         Pose.Set(p, "jaw", 0, 0, 0)
 
-        -- 尾：刹车时向下压当配重，触地后带阻尼的波动回到待机
+        -- 尾：高空保持下垂，近地逐渐抬起避免扫地；触地后带阻尼地回到待机
         local tailK = touched and (1 - Smooth(since / 0.6)) or 1
-        Poses.Tail(p, { pitch = Lerp(26, 8, flare) * tailK, waveAmp = 3, wavePhase = t * 2, lag = 0.5 })
+        Poses.Tail(p, { pitch = 8 * flare * tailK, droop = (1 - flare) * tailK,
+            waveAmp = 3, wavePhase = t * 2, lag = 0.5 })
         if touched then
             local e = math.exp(-since * 4.0)
             for i = 1, 8 do
