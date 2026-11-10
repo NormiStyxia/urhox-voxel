@@ -2,6 +2,7 @@
 local VARIANT = "medium"
 local TARGET_T = 4.2
 local VIEW = 1
+SHOT_OUT = "_shot_m4.png"
 local frame = 0
 local cfg = { noUI = true, noInput = true }
 cfg.setup = function(T)
@@ -59,6 +60,17 @@ cfg.update = function(T, dt)
         local parts = {}
         for k, e in pairs(b.em) do parts[#parts + 1] = k .. "=" .. tostring(e.on) .. "/" .. tostring(e.rate) .. "/" .. tostring(e.node.enabled) .. "/" .. tostring(e.em.numParticles) end
         print("SHOT em " .. table.concat(parts, " ") .. " debris=" .. #b.debris.live .. " hidden=" .. tostring(b.hidden) .. " master=" .. b.master .. " root=" .. tostring(b.root.enabled))
+    end
+    if not SHOT_DONE and c.state == "BREATH" and c.stateT >= TARGET_T then
+        SHOT_WAIT = (SHOT_WAIT or 0) + 1
+        if SHOT_WAIT == 3 then
+            local img = Image()
+            graphics:TakeScreenShot(img)
+            img:SavePNG(SHOT_OUT)
+            print("SHOT saved", SHOT_OUT, c.stateT)
+            SHOT_DONE = true
+            engine:Exit()
+        end
     end
     if frame % 20 == 0 and b0.hitPos ~= nil then print("SHOT hit", b0.hitPos.x, b0.hitPos.y, b0.hitPos.z, "yaw", T.ctrl.loco.yaw, "tgt", T.cam.target.x, T.cam.target.y, T.cam.target.z) end
     if frame % 20 == 0 then print(string.format("SHOT frame %d state %s t=%.2f shake=%.2f motes=%d", frame, c.state, c.stateT, T.breath.shake, T.breath.motes:Count())) end
