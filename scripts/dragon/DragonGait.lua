@@ -18,10 +18,14 @@ M.OFFSETS = { HL = 0.0, FL = 0.25, HR = 0.5, FR = 0.75 }
 local function Smooth(t) return t * t * (3 - 2 * t) end
 
 ---@param feet table[] { key, chain, side }
----@param scale number|nil 型号尺度（中号 = 1）：抬脚高度、补步阈值按它缩放，步频按动力相似放快
-function M.New(feet, scale)
+---@param scale number|nil 型号尺度（中号 = 1）：补步阈值按它缩放
+---@param leg number|nil 腿长比例（髋高 / 中号髋高）：抬脚高度按它缩放；步速按腿长归一，
+---  步频 ∝ 1/√腿长（动力相似：短腿迈得快）。转身的步频不随体型变，保证每步转过的角度一致
+function M.New(feet, scale, leg)
     scale = scale or 1.0
-    local g = { feet = {}, phase = 0.0, duty = 0.66, freq = 0.0, active = false, stepHeight = 0.28 * scale, scale = scale }
+    leg = leg or scale
+    local g = { feet = {}, phase = 0.0, duty = 0.66, freq = 0.0, active = false, stepHeight = 0.28 * leg, scale = scale,
+        leg = leg, cadence = 1.0 / math.sqrt(leg) }
     for _, f in ipairs(feet) do
         g.feet[#g.feet + 1] = {
             key = f.key, chain = f.chain, side = f.side, front = f.key:sub(1, 1) == "F",
@@ -49,10 +53,13 @@ end
 function M.Update(g, dt, ctx)
     local v = ctx.vel
     local speed = math.sqrt(v.x * v.x + v.z * v.z)
-    local veff = math.max(speed, math.abs(math.rad(ctx.yawRate)) * 1.5)
-    -- 大型动物步频低、步幅大：1.6 m/s 时约 0.8 Hz、步幅约 2 m
-    local sc = g.scale or 1.0
-    local freq = math.min(1.5, 0.42 + 0.24 * veff / sc) / math.sqrt(sc) * (ctx.cadence or 1.0)
+    local sc, leg = g.scale or 1.0, g.leg or 1.0
+    local wTurn = math.abs(math.rad(ctx.yawRate)) * 1.5
+    local veff = math.max(speed, wTurn)
+    -- 大型动物步频低、步幅大：1.6 m/s 时约 0.8 Hz、步幅约 2 m（中号）
+    local fWalk = math.min(1.5, 0.42 + 0.24 * speed / leg) * (g.cadence or 1.0)
+    local fTurn = math.min(1.5, 0.42 + 0.24 * wTurn) * math.max(1.0, g.cadence or 1.0)
+    local freq = math.max(fWalk, fTurn) * (ctx.cadence or 1.0)
     g.freq = freq
     local duty = g.duty
     local swingDur = (1.0 - duty) / freq

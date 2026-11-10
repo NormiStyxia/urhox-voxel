@@ -181,7 +181,9 @@ report = function()
     for _, s2 in ipairs(Ctrl.STATE_ORDER) do
         local a = (stats.popBy or {})[s2] or 0
         per[#per + 1] = string.format("%s=%.1f(%s)", s2, a, tostring((stats.popWho or {})[s2]))
-        V.assert(a < ((s2 == "TAKEOFF") and 16 or 12), string.format("max joint step rotation %s %.1f deg", s2, a))
+        -- 短腿型号步频更快（gait.cadence = 1/√腿长），同样的动作单步转角按步频放宽
+        local cad = math.max(1.0, ctrl.gait.cadence or 1.0)
+        V.assert(a < ((s2 == "TAKEOFF") and 16 or 12) * cad, string.format("max joint step rotation %s %.1f deg", s2, a))
     end
     print("[DragonCheck] max step rot per state: " .. table.concat(per, " "))
     print(string.format("[DragonCheck] wing L/R mirror max diff=%.3f deg (%s)", stats.asym or 0, tostring(stats.asymName)))

@@ -91,6 +91,8 @@ function C.New(rig, world)
     -- 型号尺度：按米写的位移 / 高度常数乘 S，速度类乘 √S（动力相似）
     self.S = rig.size or 1.0
     self.vS = math.sqrt(self.S)
+    -- 腿长比例（髋高 / 中号 1.8m）：身体上下位移、抬脚高度按它缩放（小号腿比整体更短）
+    self.H = (rig.pivots ~= nil and rig.pivots.legU_R ~= nil) and rig.pivots.legU_R[2] / 1.8 or self.S
     self.params = {
         playback = 1.0,   -- 动画播放速度
         walkSpeed = 1.6,  -- 步行速度 m/s
@@ -141,7 +143,7 @@ function C.New(rig, world)
         feet[#feet + 1] = { key = "F" .. ((sx > 0) and "R" or "L"), chain = front, side = sx }
         feet[#feet + 1] = { key = "H" .. ((sx > 0) and "R" or "L"), chain = hind, side = sx }
     end
-    self.gait = Gait.New(feet, self.S)
+    self.gait = Gait.New(feet, self.S, self.H)
     self.digits = rig.spec ~= nil and rig.spec.digits or false
     self.groundFn = function(x, z) return self:GroundHeight(x, z) end
     Gait.Reset(self.gait, self.loco.pos, self.loco.yaw, self.groundFn)
@@ -1002,13 +1004,12 @@ function C:ApplyPose(dt)
     local gw = self.ikW
     local b = acc.body
     local impactDy = (self.impactS ~= nil) and LandDip(self.impactS) or 0
-    -- 姿态里的身体位移按中号的米数写，乘型号尺度
-    local S = self.S
-    b[4], b[6] = b[4] * S, b[6] * S
-    b[5] = (b[5] - 0.045 * drop * gw + impactDy) * S
+    -- 姿态里的身体位移按中号的米数写：前后左右乘型号尺度，上下乘腿长比例
+    b[4], b[6] = b[4] * self.S, b[6] * self.S
+    b[5] = (b[5] - 0.045 * drop * gw + impactDy) * self.H
     b[1] = b[1] + L.pitch - 1.2 * pitchG * gw
     b[3] = b[3] - L.bank + 2.2 * roll * gw
-    if self.digits then self:ClawPose(acc) end
+    if self.digits then self:ClawPose(acc, dt) end
     Pose.Apply(rig, acc)
 
     -- 呼吸只用胸骨俯仰 + 身体升降表现；不再每帧缩放胸部体素（缩放会让胸腹交界处
@@ -1054,12 +1055,24 @@ end
 --   空中：前爪左右错开地慢慢握放，后爪收拢；降落探爪时张开；咆哮时张开扣地
 --   待机：偶尔单趾抬一下
 local DIGIT_SPLAY = { -1.0, -0.35, 0.35, 1.0 } -- 1 = 内侧趾
-function C:ClawPose(acc)
+function C:ClawPose(acc, dt)
     local t = self.time
+    -- 目标角度经过一阶平滑，状态 / 支撑相切换时趾爪不会跳
+    self.clawSmooth = self.clawSmooth or {}
+    local sm = self.clawSmooth
+    local k = (dt ~= nil and dt > 0) and (1 - math.exp(-16 * dt)) or 0
+    local function Put(name, x, y)
+        local e = sm[name]
+        if e == nil then e = { x, y }; sm[name] = e
+        else e[1], e[2] = e[1] + (x - e[1]) * k, e[2] + (y - e[2]) * k end
+        acc.j[name] = { e[1], e[2], 0 }
+    end
     local g = self.gait
     local roar = (self.state == "ROAR") and (self.roarChest or 0) or 0
     local reach = 0
-    if self.state == "LAND" and self.touchT == nil then reach = Smooth((2.0 - self.loco.alt / self.S) / 1.4) end
+    if self.state == "LAND" then
+        reach = (self.touchT == nil) and Smooth((2.0 - self.loco.alt / self.S) / 1.4) or 1.0
+    end
     for _, f in ipairs(g.feet) do
         local side = (f.side > 0) and "_R" or "_L"
         local pre = f.front and "fd" or "hd"
@@ -1088,8 +1101,9 @@ function C:ClawPose(acc)
             end
             local curl = Lerp(curlA, curlG - lift, gw) * (1 + (n - 2.5) * 0.06)
             local claw = Lerp(clawA, clawG + 0.8 * lift, gw)
-            Pose.SetSide(acc, pre .. n, side, curl, Lerp(splayA, splayG, gw) * DIGIT_SPLAY[n], 0)
-            Pose.SetSide(acc, pre .. n .. "c", side, claw, 0, 0)
+            local splay = Lerp(splayA, splayG, gw) * DIGIT_SPLAY[n]
+            Put(pre .. n .. side, curl, (side == "_L") and -splay or splay)
+            Put(pre .. n .. "c" .. side, claw, 0)
         end
     end
 end
