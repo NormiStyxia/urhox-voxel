@@ -283,17 +283,17 @@ DEFS.small = {
     extra = function(add)
         -- 萌系大眼：涂色椭球沿 x 贯穿右半边头，只看 y-z 椭圆（竖长），mask 只涂脸侧、不涂鼻梁顶。
         -- 深色瞳孔打底，下半虹膜由蓝到亮青渐变，前上方大高光 + 后下方小高光（Q 版动漫眼）
-        local cy, cz, ry, rz = 4.44, 1.67, 0.175, 0.16
+        local cy, cz, ry, rz = 4.43, 1.7, 0.175, 0.16
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.36) ^ 2 + (dz - 0.28) ^ 2 < 0.1 then return P.WHITE end   -- 大高光
-            if (dy + 0.42) ^ 2 + (dz + 0.34) ^ 2 < 0.035 then return P.WHITE end -- 小高光
+            if (dy - 0.34) ^ 2 + (dz - 0.3) ^ 2 < 0.17 then return P.WHITE end   -- 大高光
+            if (dy + 0.4) ^ 2 + (dz + 0.38) ^ 2 < 0.05 then return P.WHITE end   -- 小高光
             if dy < -0.62 then return IRIS end
             if dy < -0.15 then return P.EYE end
             return P.PUPIL
         end
         add({ type = "ellipsoid", bone = "head", c = { 0.25, cy, cz }, r = { 0.25, ry, rz }, color = EyeColor,
-            mask = function(x) return x > 0.15 end, paint = true, prio = 0.5 }, true)
+            mask = function(x) return x > 0.15 end, paint = true, prio = 1.0 }, true)
         -- 腮红：眼睛后下方
         add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.26, 1.53 }, r = { 0.14, 0.05, 0.09 }, color = BLUSH,
             mask = function(x) return x > 0.15 end, paint = true, prio = 0.4 }, true)
@@ -338,7 +338,7 @@ DEFS.large = {
     extra = function(add)
         -- 杏仁眼（中号坐标、侧视 y-z 平面）：后眼角上挑，深色眼线包边，琥珀金虹膜 + 竖瞳 + 一点高光。
         -- u = 沿 z 归一（+1 = 前眼角），v = 相对倾斜中线的高度；眼睑轮廓 |v| < (1 − u²)^0.75
-        local cy, cz, rz, ry, tilt = 4.5, 1.71, 0.16, 0.07, 0.3
+        local cy, cz, rz, ry, tilt = 4.49, 1.7, 0.2, 0.1, 0.28
         local function UV(y, z)
             local u = (z - cz) / rz
             local v = (y - cy - tilt * (cz - z)) / ry
@@ -357,10 +357,10 @@ DEFS.large = {
             if v > 0.1 and u > 0.32 and u < 0.56 then return P.WHITE end          -- 高光
             return IRIS
         end
-        add({ type = "ellipsoid", bone = "head", c = { 0.26, cy, cz }, r = { 0.24, 0.13, 0.18 }, color = EyeColor,
-            mask = EyeMask, paint = true, prio = 0.6 }, true)
+        add({ type = "ellipsoid", bone = "head", c = { 0.26, cy, cz }, r = { 0.24, 0.17, 0.22 }, color = EyeColor,
+            mask = EyeMask, paint = true, prio = 1.0 }, true)
         -- 压眼的眉骨：眼睛正上方一道最深色的骨棱，前低后高，和后掠的角连成一条线
-        add({ type = "box", bone = "head", c = { 0.235, 4.575, 1.7 }, h = { 0.05, 0.022, 0.15 }, color = P.BLUE_X,
+        add({ type = "box", bone = "head", c = { 0.235, 4.6, 1.7 }, h = { 0.05, 0.022, 0.18 }, color = P.BLUE_X,
             rot = { -12, -14, 20 }, round = 0.015 }, true)
         -- 前臂肘后骨刺
         add({ type = "fin", bone = "armL_R", base = { 0.52, 0.98, 0.56 }, u = { 0, 1, 0 }, v = { 0, 0.25, -1 },
