@@ -166,7 +166,7 @@ function R:Mount()
     self.onGround = true
     local c = self.ctrl
     self.savedWalkSpeed = c.params.walkSpeed
-    c.input.move, c.input.turn, c.input.climb = 0, 0, 0
+    c.input.move, c.input.turn, c.input.climb, c.input.sprint = 0, 0, 0, false
     c:Request("IDLE")
 end
 
@@ -176,7 +176,7 @@ function R:Dismount()
     local right = chest.worldRotation * Vector3.RIGHT
     right = Vector3(right.x, 0, right.z):Normalized()
     local c = self.ctrl
-    c.input.move, c.input.turn, c.input.climb = 0, 0, 0
+    c.input.move, c.input.turn, c.input.climb, c.input.sprint = 0, 0, 0, false
     c.params.walkSpeed = self.savedWalkSpeed
     c:Request("IDLE")
     self.mode = "free"
@@ -196,9 +196,13 @@ function R:SeatPose()
     local n = self.nomi
     n:SetBone("leg_right", -58, 0, 22)
     n:SetBone("leg_left", -58, 0, -22)
-    n:SetBone("arm_right", -42, 0, 8)
-    n:SetBone("arm_left", -42, 0, -8)
-    n:SetBone("body", 4, 0, 0)
+    local stream = self.ctrl.loco.stream or 0
+    n:SetBone("body", 4 + 12 * stream, 0, 0)
+    n:SetBone("arm_right", -42 - 10 * stream, 0, 8)
+    n:SetBone("arm_left", -42 - 10 * stream, 0, -8)
+    n:SetBone("hair_back", 2 + 10 * stream, 0, 0)
+    n:SetBone("coat_upper", 2 + 3 * stream, 0, 0)
+    n:SetBone("coat_lower", 3 + 10 * stream, 0, 0)
 end
 
 function R:AttachToSaddle()
@@ -237,6 +241,8 @@ function R:UpdateMounted(dt)
     c.input.move = stop and (L.airborne and -1 or 0) or (w and 1 or 0)
     c.input.turn = (d and 1 or 0) - (a and 1 or 0)
     c.input.free = true
+    c.input.sprint = L.airborne and Down(KEY_SHIFT) and not stop and (c.state == "FLY" or c.state == "GLIDE")
+    if c.input.sprint and c.state == "GLIDE" then c:Request("FLY") end
     c.input.climb = (Down(KEY_SPACE) and 1 or 0) - (Down(KEY_C) and 1 or 0)
     if Press(KEY_SPACE) and (not L.airborne or c.state == "GLIDE") then c:Request("FLY") end
     if Press(KEY_L) and L.airborne then c:Request("LAND") end
@@ -250,7 +256,7 @@ function R:UpdateMounted(dt)
         end
     end
     -- 场地边界：走到边缘就停
-    if math.abs(L.pos.x) > ARENA - 2 or math.abs(L.pos.z) > ARENA - 2 then
+    if not L.airborne and (math.abs(L.pos.x) > ARENA - 2 or math.abs(L.pos.z) > ARENA - 2) then
         L.pos = Vector3(Clamp(L.pos.x, -ARENA + 2, ARENA - 2), L.pos.y, Clamp(L.pos.z, -ARENA + 2, ARENA - 2))
     end
     self.nomi:Update(dt, { moveSpeed = 0, onGround = true })
@@ -263,7 +269,7 @@ end
 function R:UpdateAI(dt)
     local c, ai = self.ctrl, self.ai
     local L = c.loco
-    c.input.move, c.input.turn, c.input.climb, c.input.free = 0, 0, 0, false
+    c.input.move, c.input.turn, c.input.climb, c.input.sprint, c.input.free = 0, 0, 0, false, false
     if c.demo ~= nil or L.airborne or c.state == "TAKEOFF" or c.state == "LAND" then return end
     c.params.walkSpeed = self.savedWalkSpeed
     local near = (Flat(self.pos) - Flat(L.pos)):Length() < 7.0
@@ -319,12 +325,12 @@ function R:Update(dt, camYaw)
             self.hint = "WASD 移动   Space 跳跃   Shift 奔跑   靠近龙按 F 骑乘"
         end
     elseif self.mode == "mounting" then
-        self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb = 0, 0, 0
+        self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb, self.ctrl.input.sprint = 0, 0, 0, false
         self:UpdateMount(dt)
         self.hint = ""
     else
         self:UpdateMounted(dt)
-        self.hint = "骑乘中：W 前进  A/D 转向  S 停步/减速  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 下龙"
+        self.hint = "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 下龙"
     end
 end
 
@@ -338,7 +344,7 @@ end
 function R:Release()
     if self.mode ~= "free" then
         self.ctrl.params.walkSpeed = self.savedWalkSpeed
-        self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb = 0, 0, 0
+        self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb, self.ctrl.input.sprint = 0, 0, 0, false
         self.mode = "free"
         self.pos = Vector3(self.ctrl.loco.pos.x + 3.0, 0, self.ctrl.loco.pos.z)
         self.vy, self.onGround = 0, true

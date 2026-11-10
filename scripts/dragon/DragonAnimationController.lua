@@ -23,6 +23,7 @@ local Poses = require("dragon.DragonPoses")
 local IK = require("dragon.DragonIK")
 local Gait = require("dragon.DragonGait")
 local Rig = require("dragon.DragonRig")
+local Flight = require("dragon.DragonFlight")
 
 ---@class DragonAnimationController
 ---@field rig DragonRig
@@ -95,7 +96,7 @@ function C.New(rig, world)
         flySpeed = 8.0,   -- 巡航速度
         turnRate = 55.0,  -- 原地转身角速度 度/秒
     }
-    self.input = { move = 0, turn = 0, climb = 0 }
+    self.input = { move = 0, turn = 0, climb = 0, sprint = false }
     self.layers = {}
     self.state = nil
     self.time = 0.0
@@ -104,6 +105,7 @@ function C.New(rig, world)
     -- 全局移动
     self.loco = { pos = Vector3(0, 0, 0), yaw = 0.0, speed = 0.0, yawRate = 0.0, alt = 0.0, vy = 0.0,
         bank = 0.0, pitch = 0.0, altTarget = 0.0, airborne = false }
+    Flight.Reset(self.loco, 0)
     -- 次级运动
     self.wingDeploy, self.wingDeployTarget = 0.0, 0.0
     self.wingOpenPose = Poses.WING_DISPLAY
@@ -148,6 +150,7 @@ end
 function C:Teleport(pos, yaw)
     local L = self.loco
     L.pos, L.yaw, L.speed, L.yawRate, L.alt, L.vy, L.airborne = Vector3(pos.x, 0, pos.z), yaw, 0, 0, 0, 0, false
+    Flight.Reset(L, yaw)
     Gait.Reset(self.gait, L.pos, L.yaw, self.groundFn)
 end
 
@@ -258,9 +261,11 @@ end
 -- 飞行时颈部前伸；尾巴放松下垂，保留小幅滞后的摆动。
 function C:FlightBody(p, phi, ext)
     local bank = self.loco.bank
+    local stream, brake = self.loco.stream or 0, self.loco.brake or 0
+    Pose.SetBody(p, 5 * stream - 7 * brake, 0, 0)
     Poses.Neck(p, { pitch = 58 * ext, curve = -4 * ext, yaw = -bank * 0.35, headPitch = -52 * ext + 3 * math.sin(2 * math.pi * phi),
         headYaw = 0, jaw = 0 })
-    Poses.Tail(p, { droop = ext, yaw = bank * 0.25, waveAmp = 2.5,
+    Poses.Tail(p, { droop = ext, stream = self.loco.tailStream or stream, yaw = bank * 0.25, waveAmp = 2.5,
         wavePhase = 2 * math.pi * phi, lag = 0.5, liftAmp = 0.8 * ext })
     -- 胸腔随下拍收缩，躯干微弯
     local pump = math.sin(2 * math.pi * phi)
@@ -524,7 +529,11 @@ STATES.FLY = {
     pose = function(self, t)
         local p = Pose.New()
         local phi = self.flapPhase
-        Poses.Wings(p, C.FlapWing(phi, self.params.amp * (1 + 0.15 * math.max(0, self.input.climb))))
+        local brake, boost = self.loco.brake or 0, self.loco.boost or 0
+        local w = C.FlapWing(phi, self.params.amp * (1 + 0.15 * math.max(0, self.input.climb) + 0.12 * boost))
+        w.sweep = (w.sweep or 0) - 12 * brake
+        w.elev = (w.elev or 0) + 8 * brake
+        Poses.Wings(p, w)
         self:FlightBody(p, phi, 1.0)
         TuckLegs(p, 1.0)
         self:FlightLimbs(p, phi, t, 0)
@@ -583,7 +592,12 @@ STATES.LAND = {
     logic = function(self, dt, t)
         local L = self.loco
         if self.touchT == nil then
-            L.speed = Approach(L.speed, 0.0, 2.6, dt)
+            -- Landing cancels thrust; retain momentum but brake before touching down.
+            L.boost = Approach(L.boost or 0, 0, 3, dt)
+            L.stream = Damp(L.stream or 0, 0, 3, dt)
+            L.brake = Damp(L.brake or 0, 1, 5, dt)
+            local stopRate = (L.speed > self.params.flySpeed) and 7 or 2.6
+            L.speed = Approach(L.speed, 0.0, stopRate, dt)
             L.yawRate = Damp(L.yawRate, 0, 2, dt)
             L.bank = Damp(L.bank, 0, 3, dt)
             -- 下降速度随高度递减
@@ -742,21 +756,7 @@ STATES.ROAR = {
 -- flapping=true：振翅维持高度 / 爬升；false：滑翔下沉
 function C:FlightLogic(dt, flapping)
     local L, inp, prm = self.loco, self.input, self.params
-    -- 速度
-    local vTarget = prm.flySpeed * Clamp(1 + inp.move * 0.45, 0.45, 1.6)
-    if not flapping then vTarget = math.max(5.5, L.speed - 0.4) end
-    L.speed = Approach(L.speed, vTarget, flapping and 2.0 or 0.6, dt)
-    -- 坡度转弯；无输入时远离场地就绕回
-    local bankTarget = inp.turn * 34
-    if inp.turn == 0 then
-        local d = L.pos:Length()
-        if d > 22 then
-            local toC = math.deg(math.atan(-L.pos.x, -L.pos.z))
-            bankTarget = Clamp(WrapDeg(toC - L.yaw) / 30, -1, 1) * 26
-        end
-    end
-    L.bank = Damp(L.bank, bankTarget, 2.2, dt)
-    L.yawRate = math.deg(G * math.tan(math.rad(L.bank)) / math.max(L.speed, 2.0))
+    Flight.Update(L, inp, prm, dt, flapping)
     -- 高度
     if flapping then
         L.altTarget = Clamp(L.altTarget + inp.climb * 3.2 * dt, 2.8, 40.0)
@@ -886,10 +886,7 @@ function C:Step(dt)
 
     -- 全局移动层
     local L = self.loco
-    L.yaw = WrapDeg(L.yaw + L.yawRate * dt)
-    local fwd = Quaternion(L.yaw, Vector3.UP) * Vector3.FORWARD
-    L.vel = fwd * L.speed
-    L.pos = L.pos + L.vel * dt
+    Flight.Move(L, dt, L.airborne)
     if not STATES[self.state].ground or L.airborne then
         if self.state == "TAKEOFF" and L.airborne then
             self:TakeoffVertical(dt)

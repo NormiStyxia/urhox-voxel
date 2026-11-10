@@ -74,7 +74,7 @@ end
 function M.SetPlayMode(on)
     if on == M.playMode then return end
     M.playMode = on
-    ctrl_.input.move, ctrl_.input.turn, ctrl_.input.climb = 0, 0, 0
+    ctrl_.input.move, ctrl_.input.turn, ctrl_.input.climb, ctrl_.input.sprint = 0, 0, 0, false
     if not on then
         if ride_ ~= nil then ride_:Release() end
         DebugUI.SetHint("")
@@ -102,7 +102,9 @@ function M.ApplyCamera()
         camera_.fov = math.deg(2.0 * math.atan(cam.ortho * 0.5 / cam.dist))
     end
     local rot = Quaternion(cam.pitch, cam.yaw, 0.0)
-    camNode_.position = cam.target - rot * Vector3(0, 0, cam.dist)
+    local rush = cam.ortho == nil and (cam.flightVisual or 0) or 0
+    if cam.ortho == nil then camera_.fov = 45 + 5 * rush end
+    camNode_.position = cam.target - rot * Vector3(0, 0, cam.dist + 1.5 * rush)
     camNode_.rotation = rot
 end
 
@@ -202,6 +204,7 @@ local function HandleKeys()
     c.input.move = KeyAxis(KEY_W, KEY_S)
     c.input.turn = KeyAxis(KEY_D, KEY_A)
     c.input.climb = KeyAxis(KEY_SPACE, KEY_C)
+    c.input.sprint = c.loco.airborne and input:GetKeyDown(KEY_SHIFT) and c.input.move >= 0
     if (c.input.move > 0 or c.input.turn ~= 0) and (c.state == "IDLE") then c.demo = nil; c:Request("WALK") end
     if input:GetKeyPress(KEY_Q) then c.demo = nil; c:Request("TURN", -90) end
     if input:GetKeyPress(KEY_E) then c.demo = nil; c:Request("TURN", 90) end
@@ -269,6 +272,8 @@ function M.Update(dt)
             cam.target = cam.target:Lerp(p + cam.pan, 1.0 - math.exp(-4.0 * dt))
         end
     end
+    local rush = M.playMode and ride_.mode == "mounted" and (ctrl_.loco.stream or 0) or 0
+    cam.flightVisual = (cam.flightVisual or 0) + (rush - (cam.flightVisual or 0)) * (1 - math.exp(-3 * dt))
     M.ApplyCamera()
     M.fpsAcc, M.fpsN = (M.fpsAcc or 0) + dt, (M.fpsN or 0) + 1
     if M.fpsAcc >= 0.5 then

@@ -63,6 +63,21 @@ keys({SPACE=true},{SPACE=true});r:UpdateFree(1/60,0)
 check(not r.onGround and r.vy>4.5,'on-foot Space still jumps')
 c.input.climb=1;r:Mount();check(c.input.climb==0,'mount clears previous flight input')
 c.input.climb=1;r:Release();check(c.input.climb==0,'release clears flight input')
+c.state='FLY';c.loco.airborne=true;r.mode='mounted'
+keys({SHIFT=true,W=true});r:UpdateMounted(1/60)
+check(c.input.sprint,'airborne Shift requests sprint')
+keys({SHIFT=true,S=true});r:UpdateMounted(1/60)
+check(not c.input.sprint and c.input.move<0,'S overrides Shift')
+keys({SHIFT=true,SPACE=true});r:UpdateMounted(1/60)
+check(c.input.sprint and c.input.climb==1 and r.mode=='mounted','sprint and climb coexist')
+keys({SHIFT=true},{F=true});r:UpdateMounted(1/60)
+check(r.mode=='free' and not c.input.sprint,'F clears sprint on dismount')
+c.state='IDLE';c.loco.airborne=false;r.mode='mounted'
+keys({SHIFT=true,W=true});r:UpdateMounted(1/60)
+check(not c.input.sprint,'ground dragon does not sprint')
+c.state='GLIDE';c.loco.airborne=true
+keys({SHIFT=true});r:UpdateMounted(1/60)
+check(c.state=='FLY' and c.input.sprint,'Shift resumes powered flight from glide')
 -- Access state pose functions without adding testing API to production modules.
 for i=1,20 do local name,value=debug.getupvalue(C.ApplyPose,i);if name=='STATES'then States=value;break end end
 function flightPose(phi)
