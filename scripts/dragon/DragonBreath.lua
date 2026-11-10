@@ -160,9 +160,11 @@ local function MakeTexture(kind)
     return tex
 end
 
-local function AddMaterial(kind)
+-- alpha = true：普通 Alpha 混合（雪地 / 亮天空上也看得清颜色）；否则加色发光
+local function AddMaterial(kind, alpha)
     local m = Material:new()
-    m:SetTechnique(0, cache:GetResource("Technique", "Techniques/DiffUnlitParticleAdd.xml"))
+    m:SetTechnique(0, cache:GetResource("Technique",
+        alpha and "Techniques/DiffUnlitParticleAlpha.xml" or "Techniques/DiffUnlitParticleAdd.xml"))
     local tex = MakeTexture(kind)
     m:SetTexture(TU_DIFFUSE, tex)
     return m
@@ -199,7 +201,7 @@ local function MakeRune(parent, name, style, main, accent)
     SetC(mat, "main_color", main)
     SetC(mat, "accent_color", accent)
     SetF(mat, "fade", 0.0)
-    SetF(mat, "darken", (style == 2) and 0.25 or 0.6)
+    SetF(mat, "darken", (style == 2) and 0.5 or 1.0)
     geom:SetMaterial(mat)
     geom.castShadows = false
     node.enabled = false
@@ -221,10 +223,10 @@ local function SetRune(r, fade, reveal, spin, spin2, pulse, intensity)
 end
 
 ---@param parent Node
-local function MakeEmitter(parent, name, kind, setup)
+local function MakeEmitter(parent, name, kind, setup, alpha)
     local node = parent:CreateChild(name)
     local fx = ParticleEffect:new()
-    fx:SetMaterial(AddMaterial(kind))
+    fx:SetMaterial(AddMaterial(kind, alpha))
     fx:SetRelative(false)
     fx:SetUpdateInvisible(true)
     fx:SetMinEmissionRate(0)
@@ -355,11 +357,11 @@ function B:Build(scene)
             fx:SetMinRotationSpeed(-90); fx:SetMaxRotationSpeed(90)
             fx:SetMinRotation(0); fx:SetMaxRotation(360)
             fx:SetMinEmissionRate(520); fx:SetMaxEmissionRate(620)
-            fx:AddColorTime(Color(0.95, 1.0, 1.0, 1), 0.0)
-            fx:AddColorTime(Color(0.45, 0.8, 1.0, 1), 0.18)
-            fx:AddColorTime(Color(0.12, 0.38, 0.95, 1), 0.5)
-            fx:AddColorTime(Color(0.0, 0.0, 0.0, 0), 0.85)
-        end)
+            fx:AddColorTime(Color(0.85, 0.97, 1.0, 0.95), 0.0)
+            fx:AddColorTime(Color(0.35, 0.72, 1.0, 0.85), 0.15)
+            fx:AddColorTime(Color(0.12, 0.42, 0.95, 0.6), 0.45)
+            fx:AddColorTime(Color(0.1, 0.3, 0.8, 0.0), 0.85)
+        end, true)
         -- 冰晶碎屑：细长亮点，速度更快，略受重力
         self.sparks = MakeEmitter(root, "FrostShards", "dot", function(fx)
             fx:SetNumParticles(400)
@@ -391,10 +393,11 @@ function B:Build(scene)
             fx:SetMinRotationSpeed(-40); fx:SetMaxRotationSpeed(40)
             fx:SetMaxRotation(360)
             fx:SetMinEmissionRate(110); fx:SetMaxEmissionRate(140)
-            fx:AddColorTime(Color(0.5, 0.8, 1.0, 0.7), 0.0)
-            fx:AddColorTime(Color(0.2, 0.45, 0.9, 0.5), 0.5)
-            fx:AddColorTime(Color(0, 0, 0, 0), 1.6)
-        end)
+            fx:AddColorTime(Color(0.55, 0.82, 1.0, 0.0), 0.0)
+            fx:AddColorTime(Color(0.45, 0.75, 1.0, 0.55), 0.25)
+            fx:AddColorTime(Color(0.3, 0.55, 0.95, 0.35), 0.8)
+            fx:AddColorTime(Color(0.3, 0.55, 0.95, 0.0), 1.6)
+        end, true)
         -- 冰刺：落点周围一圈体素冰柱，喷射中长出、结束后碎缩
         local iceMat = Material:new()
         iceMat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
@@ -417,8 +420,8 @@ function B:Build(scene)
         end
     else
         -- 光束：外层紫色宽光 + 内核金白细光
-        self.beamOuter = Beam(root, "BeamOuter", Color(0.9, 0.6, 1.6), Color(0.35, 0.12, 1.2), 1.2, 0.0)
-        self.beamCore = Beam(root, "BeamCore", Color(1.8, 1.6, 1.2), Color(1.4, 0.8, 0.35), 2.5, 0.0)
+        self.beamOuter = Beam(root, "BeamOuter", Color(0.75, 0.35, 1.8), Color(0.3, 0.05, 1.1), 1.2, 0.75)
+        self.beamCore = Beam(root, "BeamCore", Color(1.9, 1.5, 0.9), Color(1.5, 0.7, 0.2), 2.5, 0.35)
         -- 沿光束飞出的星屑
         self.stream = MakeEmitter(root, "AstralEmbers", "dot", function(fx)
             fx:SetNumParticles(700)
@@ -466,10 +469,11 @@ function B:Build(scene)
             fx:SetMaxRotation(360)
             fx:SetMinRotationSpeed(-60); fx:SetMaxRotationSpeed(60)
             fx:SetMinEmissionRate(70); fx:SetMaxEmissionRate(90)
-            fx:AddColorTime(Color(0.9, 0.6, 1.0, 0.8), 0.0)
-            fx:AddColorTime(Color(0.35, 0.12, 0.7, 0.5), 0.5)
-            fx:AddColorTime(Color(0, 0, 0, 0), 1.3)
-        end)
+            fx:AddColorTime(Color(0.55, 0.25, 0.95, 0.0), 0.0)
+            fx:AddColorTime(Color(0.45, 0.15, 0.85, 0.6), 0.15)
+            fx:AddColorTime(Color(0.25, 0.08, 0.5, 0.35), 0.6)
+            fx:AddColorTime(Color(0.2, 0.05, 0.4, 0.0), 1.3)
+        end, true)
     end
 
     -- 光点：口部 / 落点辉光，大号额外有汇聚星屑（手动驱动的 Billboard）

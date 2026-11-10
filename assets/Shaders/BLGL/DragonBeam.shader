@@ -28,7 +28,7 @@ void fragment() {
     float flow2 = 0.7 + 0.3 * sin(y * 13.0 - scroll * 6.0 + a * 2.0);
     float ends = smoothstep(0.0, 0.04, y) * (1.0 - smoothstep(0.93, 1.0, y));
     float core = pow(f, sharp);
-    vec3 col = mix(edge_color.rgb, core_color.rgb, core) * core * flow * flow2;
+    vec3 col = mix(edge_color.rgb, core_color.rgb, core * core) * (0.35 + 0.65 * core) * flow * flow2;
     col *= intensity * fade * ends;
     ALBEDO = col;
     ALPHA = clamp(core * darken * fade * ends, 0.0, 1.0);
