@@ -181,7 +181,8 @@ def polish(quads, palette, tris):
         i, j, _k = cell_ijk(d, l, u, v)
         return d == z['d'] and z['y'][0] <= j <= z['y'][1] and z['x'][0] <= i <= z['x'][1]
 
-    eye = {a for a in range(len(elems)) if in_zone(a, EYE_ZONE)}
+    # protect the eyes themselves (lashes, iris, highlight); shading in the eye rows is still cleaned
+    eye = {a for a in range(len(elems)) if in_zone(a, EYE_ZONE) and get(a) not in shade}
     dirty = lambda c: c in shade or is_navy(rgb[c])
 
     # rule 1: shading / navy on the head
