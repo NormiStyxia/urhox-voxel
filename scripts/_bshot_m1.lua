@@ -26,9 +26,12 @@ cfg.update = function(T, dt)
     -- 固定 1/60s 步长同时推进控制器和龙息特效，直到 TARGET_T；之后冻结（只保留极小步长让画面稳定）
     local steps = 0
     if frame < 3 then steps = 1
-    elseif c.state == "BREATH" and c.stateT < TARGET_T then steps = math.min(8, math.ceil((TARGET_T - c.stateT) * 60)) end
+    elseif c.state == "BREATH" and c.stateT < TARGET_T then
+        -- 用真实帧时间推进（引擎粒子按场景时间走，必须同步，否则截图时粒子已经消散）
+        steps = 1
+    end
     for _ = 1, steps do
-        local ok, err = pcall(function() c:Update(1 / 60); T.breath:Update() end)
+        local ok, err = pcall(function() c:Update(math.min(dt, 1 / 30)); T.breath:Update() end)
         if not ok then print("SHOT ERR " .. tostring(err)); break end
     end
     if frame % 20 == 0 then
