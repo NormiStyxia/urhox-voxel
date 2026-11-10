@@ -28,8 +28,8 @@ cfg.update = function(T, dt)
     if frame < 3 then steps = 1
     elseif c.state == "BREATH" and c.stateT < TARGET_T then steps = math.min(8, math.ceil((TARGET_T - c.stateT) * 60)) end
     for _ = 1, steps do
-        c:Update(1 / 60)
-        T.breath:Update()
+        local ok, err = pcall(function() c:Update(1 / 60); T.breath:Update() end)
+        if not ok then print("SHOT ERR " .. tostring(err)); break end
     end
     if frame % 20 == 0 then
         local b = T.breath
