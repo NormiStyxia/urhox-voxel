@@ -69,7 +69,7 @@ cfg.update = function(T, dt)
             img:SavePNG(SHOT_OUT)
             print("SHOT saved", SHOT_OUT, c.stateT)
             for i, cr in ipairs(T.breath.crystals) do print("SHOT crystal", i, cr.state, cr.holder.enabled, string.format("%.2f %.2f h=%.2f", cr.grow, cr.holder.position.y, cr.height)) end
-            print("SHOT paint", T.breath.painter and T.breath.painter:HasPaint())
+            print("SHOT paint", T.breath.ground and T.breath.ground:HasPaint())
             SHOT_DONE = true
             engine:Exit()
         end
