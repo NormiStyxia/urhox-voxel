@@ -1,6 +1,7 @@
 """Semantic finishing of Nomi's sampled mesh. Coordinates are unscaled authoring units.
 The approved head is immutable geometry; its face RGB bypasses all colour processing.
-Only hanging hair is rebuilt. Clothing, limbs and their colour details pass through unchanged.
+Hanging hair keeps its layered shape; authored head colours are restored.
+Clothing geometry is untouched; only reviewed stray light samples are recoloured.
 """
 import json
 from pathlib import Path
@@ -35,6 +36,22 @@ def protect_face(points):
     p = np.asarray(points)
     return p[:,1].min() <= 66 and p[:,1].max() >= 50 and p[:,2].max() >= 0 and p[:,2].min() <= 11.05 and p[:,0].min() <= 12 and p[:,0].max() >= -12
 
+def garment_spot(bone, points, rgb):
+    """Reviewed sampling spill only; coordinates in unscaled authoring units.
+
+    Coat-front specks sit outside the central white blouse. Sleeve specks are
+    on the inner elbow, away from the authored cuff. Lower torn-coat specks
+    reproduce nearby sock/skin colours; preserve the holes, replace only RGB.
+    """
+    x,y,z = np.mean(points,axis=0)
+    light = min(rgb) >= 125 and max(rgb)-min(rgb) < 65
+    if not light: return False
+    if bone == 'coat_upper': return 6 <= abs(x) <= 10 and 37 <= y <= 44
+    if bone in ('arm_right','arm_left'): return 11 <= abs(x) <= 14 and 31 <= y <= 34
+    if bone in ('cloak_strip_r','cloak_strip_l'): return 10 <= y <= 18
+    return False
+
+
 def finish(quads, palette, tris, bones):
     approved = json.loads((HERE / 'approved_head.json').read_text())
     palette = list(np.asarray(palette,float))
@@ -49,13 +66,9 @@ def finish(quads, palette, tris, bones):
             if np.array_equal(c,rgb): return i
         palette.append(rgb); return len(palette)-1
     def head_colour(points, index):
-        rgb = np.asarray(approved['palette'][int(index)-1])*255
-        if protect_face(points): return original(index)
-        center = np.mean(points,axis=0)
-        # The yellow ribbons stay yellow. All other non-face head surfaces are silver hair.
-        if rgb[0] > rgb[2]*1.35 and rgb[1] > rgb[2]*1.2 and abs(center[0]) > 13:
-            return colour('gold')
-        return colour('hair_edge' if abs(center[0]) > 14 or center[2] < -12 else 'hair')
+        # Restore authored strands, braids and ribbon/clip shading exactly.
+        # Broad replacement colours erased these details even with geometry intact.
+        return original(index)
 
     qs, ts = [], []
     for raw in approved['quads']:
@@ -66,10 +79,16 @@ def finish(quads, palette, tris, bones):
         pts = np.array(raw[:9]).reshape(3,3)
         ts.append(('head',pts.tolist(),head_colour(pts-OFFSET,raw[9])))
 
-    # Preserve original clothing, hands and legs verbatim. Cleaning hair must not
-    # replace garment construction or overwrite its authored colour accents.
-    qs.extend(q for q in quads if q[0] not in ('head','hair_back','hair_locks'))
-    ts.extend(t for t in tris if t[0] not in ('head','hair_back','hair_locks'))
+    # Recolour only stray light samples at the reviewed coat/sleeve/tail spots.
+    # All geometry, cuffs, collar, inner skirt and boot/sock colours stay intact.
+    def garment_colour(bone, points, ci):
+        if garment_spot(bone, points, palette[ci]):
+            return colour('navy')
+        return ci
+    qs.extend(q[:-1]+(garment_colour(q[0],quad_points(q),q[-1]),)
+              for q in quads if q[0] not in ('head','hair_back','hair_locks'))
+    ts.extend((b,p,garment_colour(b,np.asarray(p)-OFFSET,c))
+              for b,p,c in tris if b not in ('head','hair_back','hair_locks'))
 
     def face(bone, points, col):
         p=np.asarray(points,float)+OFFSET
