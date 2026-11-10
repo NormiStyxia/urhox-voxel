@@ -42,6 +42,18 @@ cfg.update = function(T, dt)
         local ok, err = pcall(function() c:Update(math.min(dt, 1 / 30)); T.breath:Update() end)
         if not ok then print("SHOT ERR " .. tostring(err)); break end
     end
+    -- 镜头跟随：VIEW 4 对准落点，其余对准龙口与落点之间
+    local b0 = T.breath
+    if b0 ~= nil and b0.hitPos ~= nil and frame > 3 then
+        local S = T.rig.size or 1.0
+        local mouth = T.rig.sockets.mouth.worldPosition
+        if VIEW == 4 then
+            T.cam.target = b0.hitPos + Vector3(0, 0.8 * S, 0)
+            T.cam.dist = 12 * S; T.cam.pitch = 26; T.cam.yaw = T.ctrl.loco.yaw + 115
+        else
+            T.cam.target = (mouth + b0.hitPos) * 0.5
+        end
+    end
     if frame % 20 == 0 then
         local b = T.breath
         local parts = {}
