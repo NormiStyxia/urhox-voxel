@@ -240,7 +240,7 @@ DEFS.small = {
         [P.PUPIL] = { 0.05, 0.07, 0.18 }, [P.EYE] = { 0.22, 0.55, 1.00 }, [P.MOUTH] = { 0.85, 0.42, 0.52 },
         [BLUSH] = { 1.00, 0.62, 0.74 },
     },
-    params = { walkSpeed = 1.05, flapHz = 1.4, flySpeed = 6.0, turnRate = 95, sprintSpeed = 11.0 },
+    params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
         -- 大眼睛：涂色椭球贴在实测的脸侧表面上（y≈4.50, z≈1.69 处表面 x≈0.20）。
@@ -262,7 +262,7 @@ DEFS.small = {
 
 DEFS.large = {
     id = "large", name = "大号 · 古龙", size = 1.5,
-    rideable = true,
+    rideable = true, scapula = 1.5,
     voxel = { body = 0.1, head = 0.068, wing = 0.12 },
     wing = { scale = 1.08 },
     digits = { digitLen = 1.7, clawLen = 1.75, digitRad = 1.08 },
@@ -412,6 +412,7 @@ local function Build(def)
 
     local spec = {
         id = def.id, name = def.name, size = S, rideable = def.rideable, pet = def.pet, digits = def.digits ~= nil,
+        scapula = def.scapula,
         PAL = Spec.PAL, EMISSIVE = Spec.EMISSIVE, VOXEL_BODY = def.voxel.body, VOXEL_HEAD = def.voxel.head,
         VOXEL_WING = def.voxel.wing, WING = wing, FingerPoints = Spec.FingerPoints, params = def.params,
         membraneThick = Spec.membraneThick * math.max(0.5, math.min(1.3, u)),

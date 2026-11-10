@@ -20,12 +20,12 @@ local function Smooth(t) return t * t * (3 - 2 * t) end
 ---@param feet table[] { key, chain, side }
 ---@param scale number|nil 型号尺度（中号 = 1）：补步阈值按它缩放
 ---@param leg number|nil 腿长比例（髋高 / 中号髋高）：抬脚高度按它缩放；步速按腿长归一，
----  步频 ∝ 1/√腿长（动力相似：短腿迈得快）。转身的步频不随体型变，保证每步转过的角度一致
+---  步频 ∝ 腿长^-0.4（短腿迈得快，比动力相似的 -0.5 略缓，避免小号腿部动作过碎）。转身的步频不随体型变，保证每步转过的角度一致
 function M.New(feet, scale, leg)
     scale = scale or 1.0
     leg = leg or scale
     local g = { feet = {}, phase = 0.0, duty = 0.66, freq = 0.0, active = false, stepHeight = 0.28 * leg, scale = scale,
-        leg = leg, cadence = 1.0 / math.sqrt(leg) }
+        leg = leg, cadence = leg ^ -0.4 }
     for _, f in ipairs(feet) do
         g.feet[#g.feet + 1] = {
             key = f.key, chain = f.chain, side = f.side, front = f.key:sub(1, 1) == "F",

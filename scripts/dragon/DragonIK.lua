@@ -54,7 +54,8 @@ function M.NewChain(rig, names, footRest, bend, side)
     -- 父节点局部空间下的足底静止点（= 世界静止坐标 - 父枢轴，静止旋转为单位）
     -- 静止足底点：root 局部 = 世界静止坐标（静止时 root 在原点）
     c.footRestRoot = V(footRest)
-    c.scapulaMax = M.SCAPULA_MAX * (rig.size or 1.0) -- 型号尺度
+    -- 型号尺度；spec.scapula 放大肩胛滑动（大号前肢粗壮、肩部活动幅度大）
+    c.scapulaMax = M.SCAPULA_MAX * (rig.size or 1.0) * ((rig.spec and rig.spec.scapula) or 1.0)
     return c
 end
 
