@@ -262,7 +262,7 @@ end
 function C:FlightBody(p, phi, ext)
     local bank = self.loco.bank
     local stream, brake = self.loco.stream or 0, self.loco.brake or 0
-    Pose.SetBody(p, 5 * stream - 7 * brake, 0, 0)
+    Pose.SetBody(p, 5 * stream + 3 * (self.loco.pull or 0) - 7 * brake, 0, 0)
     Poses.Neck(p, { pitch = 58 * ext, curve = -4 * ext, yaw = -bank * 0.35, headPitch = -52 * ext + 3 * math.sin(2 * math.pi * phi),
         headYaw = 0, jaw = 0 })
     Poses.Tail(p, { droop = ext, stream = self.loco.tailStream or stream, yaw = bank * 0.25, waveAmp = 2.5,
@@ -531,7 +531,7 @@ STATES.FLY = {
         local phi = self.flapPhase
         local brake, boost = self.loco.brake or 0, self.loco.boost or 0
         local w = C.FlapWing(phi, self.params.amp * (1 + 0.15 * math.max(0, self.input.climb) + 0.12 * boost))
-        w.sweep = (w.sweep or 0) - 12 * brake
+        w.sweep = (w.sweep or 0) + 8 * (self.loco.wind or 0) - 12 * brake
         w.elev = (w.elev or 0) + 8 * brake
         Poses.Wings(p, w)
         self:FlightBody(p, phi, 1.0)
@@ -597,7 +597,9 @@ STATES.LAND = {
             L.stream = Damp(L.stream or 0, 0, 3, dt)
             L.brake = Damp(L.brake or 0, 1, 5, dt)
             local stopRate = (L.speed > self.params.flySpeed) and 7 or 2.6
+            local previousSpeed = L.speed
             L.speed = Approach(L.speed, 0.0, stopRate, dt)
+            Flight.UpdateWind(L, self.params, dt, (L.speed - previousSpeed) / math.max(dt, 1e-6))
             L.yawRate = Damp(L.yawRate, 0, 2, dt)
             L.bank = Damp(L.bank, 0, 3, dt)
             -- 下降速度随高度递减

@@ -15,6 +15,20 @@ function M.Reset(L,yaw)
     L.travelYaw=yaw or L.yaw
     L.boost,L.stream,L.brake,L.edgeBrake=0,0,0,0
     L.tailStream=nil
+    L.wind,L.pull,L.hairWind,L.coatWind,L.hemWind,L.cameraPull=0,0,0,0,0,0
+end
+
+-- Air pressure remains at speed; acceleration briefly pulls the rider backwards.
+-- Separate response times keep the torso, hair and hem from moving in lockstep.
+function M.UpdateWind(L,prm,dt,accel)
+    local top=math.max(M.SPRINT_SPEED,prm.flySpeed*1.65)
+    local pressure=Clamp((L.speed*L.speed-prm.flySpeed^2)/(top*top-prm.flySpeed^2),0,1)
+    L.wind=Damp(L.wind or 0,pressure,5,dt)
+    L.pull=Damp(L.pull or 0,Clamp(accel/8,-1,1),9,dt)
+    L.hemWind=Damp(L.hemWind or 0,L.coatWind or 0,4,dt)
+    L.coatWind=Damp(L.coatWind or 0,L.hairWind or 0,5,dt)
+    L.hairWind=Damp(L.hairWind or 0,Clamp(L.wind+.35*math.max(0,L.pull),0,1.25),7,dt)
+    L.cameraPull=Damp(L.cameraPull or 0,.55*L.wind+.55*L.pull,4,dt)
 end
 
 -- Limit speed according to stopping distance along the actual travel direction.
@@ -56,7 +70,9 @@ function M.Update(L,inp,prm,dt,flapping)
         local remaining=math.max(cap*cap/12,1)
         rate=math.max(rate,math.min(30,L.speed*L.speed/(2*remaining)))
     end
+    local previousSpeed=L.speed
     L.speed=Approach(L.speed,target,rate,dt)
+    M.UpdateWind(L,prm,dt,(L.speed-previousSpeed)/math.max(dt,1e-6))
     L.stream=Damp(L.stream or 0,Clamp((L.speed-prm.flySpeed)/(top-prm.flySpeed),0,1),3,dt)
     L.tailStream=L.tailStream or {}
     for i=8,1,-1 do

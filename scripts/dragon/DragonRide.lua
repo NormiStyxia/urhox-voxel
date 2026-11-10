@@ -196,13 +196,22 @@ function R:SeatPose()
     local n = self.nomi
     n:SetBone("leg_right", -58, 0, 22)
     n:SetBone("leg_left", -58, 0, -22)
-    local stream = self.ctrl.loco.stream or 0
-    n:SetBone("body", 4 + 12 * stream, 0, 0)
-    n:SetBone("arm_right", -42 - 10 * stream, 0, 8)
-    n:SetBone("arm_left", -42 - 10 * stream, 0, -8)
-    n:SetBone("hair_back", 2 + 10 * stream, 0, 0)
-    n:SetBone("coat_upper", 2 + 3 * stream, 0, 0)
-    n:SetBone("coat_lower", 3 + 10 * stream, 0, 0)
+    local L = self.ctrl.loco
+    local wind, pull = L.wind or 0, L.pull or 0
+    local hair, coat, hem = L.hairWind or 0, L.coatWind or 0, L.hemWind or 0
+    -- Hips remain attached to the saddle: only the torso yields, then braces.
+    n:SetBone("body", 4 + 16 * wind - 12 * pull, 0, 0)
+    n:SetBone("head", -8 * wind + 4 * pull, 0, 0)
+    n:SetBone("arm_right", -42 - 16 * wind + 8 * pull, 0, 8)
+    n:SetBone("arm_left", -42 - 16 * wind + 8 * pull, 0, -8)
+    n:SetBone("hair_back", 2 + 30 * hair, 0, 0)
+    n:SetBone("hair_locks", 12 * hair, 0, 0)
+    n:SetBone("coat_upper", 2 + 7 * coat, 0, 0)
+    n:SetBone("coat_lower", 3 + 24 * hem, 0, 0)
+    -- These hang from coat_lower; use only a small additional local bend.
+    for _, name in ipairs({"cloak_strip_r", "cloak_strip_l", "cloak_strip_b"}) do
+        n:SetBone(name, 8 * hem, 0, 0)
+    end
 end
 
 function R:AttachToSaddle()

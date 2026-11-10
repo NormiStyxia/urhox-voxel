@@ -261,6 +261,12 @@ function M.Update(dt)
         ride_:Update(dt, cam.yaw)
         DebugUI.SetHint(ride_.hint)
         local want = ride_:CameraTarget()
+        if ride_.mode == "mounted" and cam.ortho == nil then
+            -- World-space lag follows travel, so mouse orbit and zoom stay intact.
+            local L = ctrl_.loco
+            local a = math.rad(L.travelYaw or L.yaw)
+            want = want - Vector3(math.sin(a), 0, math.cos(a)) * (L.cameraPull or 0)
+        end
         if cam.follow then cam.target = cam.target:Lerp(want + cam.pan, 1.0 - math.exp(-10.0 * dt)) end
     else
         if M.nomi ~= nil then
