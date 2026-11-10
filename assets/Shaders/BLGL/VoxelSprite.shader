@@ -21,5 +21,10 @@ void fragment() {
     // 像素抖动淡出：同一个粒子内按像素格哈希逐格消失
     float cellN = h21(floor(UV * cells) + 0.37);
     if (t.a < 0.5 || cellN > c.a * 1.02) discard;
-    ALBEDO = c.rgb * t.rgb * glow;
+    // 顶点色是 sRGB（粒子 / 公告板颜色按 sRGB 输入），转线性后再乘发光倍数
+    vec3 lin = c.rgb * (c.rgb * (c.rgb * 0.305306011 + 0.682171111) + 0.012522878);
+    // 发光时向白色靠一点，避免 HDR 色调映射把高饱和颜色推成纯红 / 纯蓝
+    float mx = max(max(lin.r, lin.g), lin.b);
+    vec3 col = mix(lin, vec3(mx), 0.25 * step(1.01, glow));
+    ALBEDO = col * t.rgb * glow;
 }

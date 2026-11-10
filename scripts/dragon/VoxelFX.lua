@@ -116,7 +116,7 @@ function M.Material(kind, glow)
     m:SetSurfaceTexture("sprite_tex", M.Texture(kind))
     local rows = SPRITES[kind] or SPRITES.square
     m:SetShaderParameter("cells", Variant(#rows + 2))
-    m:SetShaderParameter("glow", Variant(glow and 2.2 or 1.0))
+    m:SetShaderParameter("glow", Variant(glow and 1.35 or 1.0))
     return m
 end
 
