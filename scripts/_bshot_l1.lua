@@ -5,6 +5,9 @@ local VIEW = 1
 local frame = 0
 local cfg = { noUI = true, noInput = true }
 cfg.setup = function(T)
+    for _, n in ipairs({"Techniques/DiffUnlitParticleAlpha.xml","Techniques/DiffUnlitAlpha.xml","Techniques/DiffAddAlpha.xml","Techniques/DiffAlpha.xml","Techniques/DiffVColUnlitAlpha.xml"}) do
+        print("PROBE", n, cache:Exists(n))
+    end
     if VARIANT ~= T.variant then T.SetVariant(VARIANT) end
     T.SetPlayMode(false)
     T.showNomi = false

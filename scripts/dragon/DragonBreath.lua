@@ -52,7 +52,7 @@ CFG.medium = {
     name = "霜焰吐息", style = 0,
     total = 4.5, fireStart = 0.95, fireEnd = 3.6,
     aimDist = 8.0, maxLen = 13.0, wings = 0.35,
-    main = Color(0.30, 0.72, 1.6), accent = Color(0.85, 0.97, 1.6),
+    main = Color(0.08, 0.45, 1.9), accent = Color(0.35, 0.95, 1.8),
     lightColor = Color(0.55, 0.8, 1.0),
     keys = {
         { 0.0, { neck = 2, curve = 2, head = -2, jaw = 1, chest = 0, pitch = 0, dy = 0, tail = 0 } },
@@ -67,7 +67,7 @@ CFG.large = {
     name = "星陨龙息", style = 1,
     total = 6.4, fireStart = 1.95, fireEnd = 5.1,
     aimDist = 12.0, maxLen = 26.0, wings = 0.85,
-    main = Color(0.62, 0.32, 1.7), accent = Color(1.6, 1.15, 0.45),
+    main = Color(0.55, 0.12, 1.9), accent = Color(1.9, 1.1, 0.25),
     lightColor = Color(0.8, 0.55, 1.0),
     keys = {
         { 0.0, { neck = 2, curve = 2, head = -2, jaw = 1, chest = 0, pitch = 0, dy = 0, tail = 0 } },
@@ -199,6 +199,7 @@ local function MakeRune(parent, name, style, main, accent)
     SetC(mat, "main_color", main)
     SetC(mat, "accent_color", accent)
     SetF(mat, "fade", 0.0)
+    SetF(mat, "darken", (style == 2) and 0.25 or 0.6)
     geom:SetMaterial(mat)
     geom.castShadows = false
     node.enabled = false
