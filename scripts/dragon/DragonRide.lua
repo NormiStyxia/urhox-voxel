@@ -399,7 +399,9 @@ function R:Update(dt, camYaw)
                 self.hint = "幼龙还太小，骑不了——它会一直跟着你"
             end
         else
-            self.hint = "WASD 移动   Space 跳跃   Shift 奔跑   靠近龙按 F 骑乘"
+            local br = self.T.breath
+            local bh = (br ~= nil and br:Available()) and ("   B 让龙" .. br.cfg.name) or ""
+            self.hint = "WASD 移动   Space 跳跃   Shift 奔跑   靠近龙按 F 骑乘" .. bh
         end
     elseif self.mode == "mounting" then
         self.ctrl.input.move, self.ctrl.input.turn, self.ctrl.input.climb, self.ctrl.input.sprint = 0, 0, 0, false
