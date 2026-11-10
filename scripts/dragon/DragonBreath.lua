@@ -349,7 +349,7 @@ function B:Build(scene)
             fx:SetMinVelocity(16 * k); fx:SetMaxVelocity(22 * k)
             fx:SetMinTimeToLive(0.35); fx:SetMaxTimeToLive(0.55)
             fx:SetMinParticleSize(Vector2(0.16, 0.16) * k); fx:SetMaxParticleSize(Vector2(0.26, 0.26) * k)
-            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.2, C(0.6, 0.92, 1.0, 1) }, { 0.4, C(0.25, 0.6, 1.0, 0.9) }, { 0.55, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.2, C(0.6, 0.92, 1.0, 1) }, { 0.4, C(0.5, 0.78, 1.0, 0.9) }, { 0.55, C(0, 0, 0, 0) } })
         end })
         -- 体素冰雾：块状云团，膨胀
         self.em.mist = VoxelFX.Emitter(root, "FrostMist", { kind = "cloud", n = 700, setup = function(fx)

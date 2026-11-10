@@ -77,7 +77,11 @@ chest → armU → armL → hand（肩/肘/腕）       chest → wing → wfore
 中号「霜焰吐息」、大号「星陨龙息」，小号没有。按 `B`（玩法 / 骑乘 / 调试模式都可用）或调试面板「龙息」按钮触发；无人骑乘的中 / 大号溜达时偶尔也会自己吐息。
 
 - 动作：`DragonBreath.Register(Controller)` 给控制器加一个外挂状态 `BREATH`（不改控制器源码，不进 `STATE_ORDER` 和演示序列）。姿态按型号关键帧生成，喷射阶段用头部俯仰反馈（`ctrl.breathAim`）让口部对准前方地面落点。
-- 中号：后仰吸气 → 脚下六芒霜阵 + 口前雪花法阵 → 冰蓝霜焰粒子流 + 冰晶碎屑，落点霜雾、冰刺、霜环扩散。
-- 大号：低伏蓄力 + 汇聚星屑 → 脚下七芒星阵、口前三层法阵依次亮起 → 紫金双层光束贯穿法阵，落点连续冲击环、火花、紫烟，镜头震动（`breath.shake`）。
-- 法阵 / 冲击环：`Shaders/BLGL/DragonRune.shader`（程序化绘制，`style` 0 霜焰 / 1 星陨 / 2 冲击环）；光束：`Shaders/BLGL/DragonBeam.shader`。粒子贴图在 Lua 里生成，不依赖图片资源。
+- 中号「霜焰吐息」：后仰吸气、螺旋汇聚冰屑 → 脚下霜阵 + 口前雪花阵 → 白芯冰流 + 块状冰雾 + 旋转雪花；落点 0.45 秒后一节节顶出 8–9 根体素冰晶簇，地面逐格结霜，喷完冰晶碎成方块，霜面随后退去。
+- 大号「星陨龙息」：低伏蓄力（地阵每亮一段震一下）→ 口前三层法阵依次弹出 → 体素光柱（白金芯 + 四根金色绕束棱柱）+ 绕束星屑；开火有 0.07 秒顿帧，落点连续像素冲击环、火花、掀起的地面方块、紫色烟与余烬，地面烧出紫黑焦痕和紫晶簇。
+- 体素风格：所有法阵 / 光束在 shader 里量化到像素格，线条横平竖直、带深色描边，淡入淡出用像素抖动；旋转按固定角度跳格。粒子贴图是 Lua 里的 ASCII 像素图（最近邻、硬边），按寿命分档换色和缩小。
+- 震动：`breath.shake`（trauma² 衰减）驱动镜头抖动和法阵整体错位 glitch；`breath.hitstop > 0` 时 `DragonTest` 把动画 dt 压到 8%。
+- 文件：`VoxelFX.lua`（像素粒子发射器、Lua 公告板粒子、立方体碎块、体素晶簇、地面上色）；shader `DragonRune` / `DragonBeam` / `VoxelSprite` / `VoxelCube`（`assets/Shaders/BLGL/`）；音效 `assets/audio/sfx/breath_*.mp3`。调色板槽位 62–69 归龙息使用。
+- 地面上色需要地面是体素体：`Breath.New(scene, rig, ctrl, variant, { volume, origin, cell })`，不传则跳过。销毁时会还原被染色的格子。
+- 后续接破坏：`breath:OnHit(function(info) ... end)` 在喷射期间每帧回调 `{ pos, radius, power, element = "frost"/"astral", dir, origin }`，可直接喂 `ApplyDamageCone` / `ApplyDamageCapsule`，碎块特效叠在龙息特效上即可。
 - 参数集中在 `DragonBreath.CFG`（时长、射程、配色、关键帧）。换型号时 `DragonTest.SetVariant` 会销毁并重建特效。
