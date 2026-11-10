@@ -360,8 +360,8 @@ function B:Build(scene)
             fx:SetMinTimeToLive(0.6); fx:SetMaxTimeToLive(0.9)
             fx:SetMinParticleSize(Vector2(0.5, 0.5) * k); fx:SetMaxParticleSize(Vector2(0.8, 0.8) * k)
             fx:SetSizeAdd(2.6 * k)
-            VoxelFX.Steps(fx, { { 0, C(0.85, 0.97, 1.0, 0.95) }, { 0.15, C(0.5, 0.82, 1.0, 0.9) }, { 0.38, C(0.25, 0.58, 0.98, 0.75) },
-                { 0.62, C(0.14, 0.38, 0.85, 0.45) }, { 0.9, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(0.9, 0.98, 1.0, 0.9) }, { 0.15, C(0.62, 0.88, 1.0, 0.75) }, { 0.38, C(0.36, 0.68, 1.0, 0.55) },
+                { 0.62, C(0.22, 0.48, 0.92, 0.3) }, { 0.9, C(0, 0, 0, 0) } })
         end })
         -- 雪花片：外围，减速后下沉
         self.em.flake = VoxelFX.Emitter(root, "Flakes", { kind = "flake", n = 500, setup = function(fx)
@@ -413,9 +413,9 @@ function B:Build(scene)
             fx:SetMinVelocity(6 * k); fx:SetMaxVelocity(11 * k)
             fx:SetDampingForce(1.8)
             fx:SetMinTimeToLive(0.6); fx:SetMaxTimeToLive(1.0)
-            fx:SetMinParticleSize(Vector2(0.7, 0.7) * k); fx:SetMaxParticleSize(Vector2(1.1, 1.1) * k)
-            fx:SetSizeAdd(1.8 * k)
-            VoxelFX.Steps(fx, { { 0, C(0.75, 0.45, 1.0, 0.0) }, { 0.08, C(0.6, 0.28, 0.98, 0.8) }, { 0.4, C(0.4, 0.15, 0.8, 0.6) }, { 0.75, C(0.22, 0.06, 0.45, 0.35) }, { 1.0, C(0, 0, 0, 0) } })
+            fx:SetMinParticleSize(Vector2(0.4, 0.4) * k); fx:SetMaxParticleSize(Vector2(0.65, 0.65) * k)
+            fx:SetSizeAdd(0.9 * k)
+            VoxelFX.Steps(fx, { { 0, C(0.8, 0.55, 1.0, 0.0) }, { 0.08, C(0.65, 0.35, 1.0, 0.6) }, { 0.4, C(0.45, 0.2, 0.85, 0.4) }, { 0.75, C(0.3, 0.1, 0.6, 0.2) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：火花（方块，抛物线）
         self.em.chips = VoxelFX.Emitter(root, "ImpactSparks", { kind = "square", additive = true, n = 800, setup = function(fx)
@@ -434,9 +434,9 @@ function B:Build(scene)
             fx:SetMinVelocity(2.5 * k); fx:SetMaxVelocity(6 * k)
             fx:SetDampingForce(1.4)
             fx:SetMinTimeToLive(0.9); fx:SetMaxTimeToLive(1.5)
-            fx:SetMinParticleSize(Vector2(1.3, 1.3) * k); fx:SetMaxParticleSize(Vector2(2.0, 2.0) * k)
-            fx:SetSizeAdd(2.0 * k)
-            VoxelFX.Steps(fx, { { 0, C(0.95, 0.75, 1.0, 0.9) }, { 0.12, C(0.6, 0.25, 0.95, 0.75) }, { 0.45, C(0.35, 0.1, 0.7, 0.55) }, { 0.8, C(0.18, 0.05, 0.35, 0.3) }, { 1.0, C(0, 0, 0, 0) } })
+            fx:SetMinParticleSize(Vector2(0.8, 0.8) * k); fx:SetMaxParticleSize(Vector2(1.3, 1.3) * k)
+            fx:SetSizeAdd(1.1 * k)
+            VoxelFX.Steps(fx, { { 0, C(0.95, 0.8, 1.0, 0.8) }, { 0.12, C(0.65, 0.35, 0.98, 0.6) }, { 0.45, C(0.42, 0.18, 0.78, 0.4) }, { 0.8, C(0.25, 0.08, 0.45, 0.2) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 光束（体素光柱）
         self.beam = MakeBeamSegs(root, 5, C(1.0, 0.92, 0.7), C(0.62, 0.24, 1.0))
@@ -798,8 +798,8 @@ function B:Update()
     -- 发射率随噪声脉动（吐息有呼吸感，不是匀速水管）
     local surge = 0.75 + 0.25 * math.sin(now * 11.0) + 0.15 * math.sin(now * 23.0 + 1.0)
     if frost then
-        VoxelFX.SetRate(self.em.core, 260 * surge); VoxelFX.SetEmit(self.em.core, firing)
-        VoxelFX.SetRate(self.em.mist, 340 * surge); VoxelFX.SetEmit(self.em.mist, firing)
+        VoxelFX.SetRate(self.em.core, 340 * surge); VoxelFX.SetEmit(self.em.core, firing)
+        VoxelFX.SetRate(self.em.mist, 240 * surge); VoxelFX.SetEmit(self.em.mist, firing)
         VoxelFX.SetRate(self.em.flake, 150); VoxelFX.SetEmit(self.em.flake, firing)
         local gOn = firing and hitGround and t > cfg.fireStart + 0.2
         self.em.ground.node.position = hitG + Vector3(0, 0.25 * S, 0)
@@ -808,12 +808,12 @@ function B:Update()
         VoxelFX.SetRate(self.em.chips, 160 * surge); VoxelFX.SetEmit(self.em.chips, gOn)
     else
         VoxelFX.SetRate(self.em.core, 320 * surge); VoxelFX.SetEmit(self.em.core, firing)
-        VoxelFX.SetRate(self.em.mist, 120); VoxelFX.SetEmit(self.em.mist, firing)
+        VoxelFX.SetRate(self.em.mist, 45); VoxelFX.SetEmit(self.em.mist, firing)
         local gOn = firing and hitGround
         self.em.chips.node.position = hitG + Vector3(0, 0.1, 0)
         VoxelFX.SetRate(self.em.chips, 380 * surge); VoxelFX.SetEmit(self.em.chips, gOn)
         self.em.ground.node.position = hitG + Vector3(0, 0.3 * S, 0)
-        VoxelFX.SetRate(self.em.ground, 60); VoxelFX.SetEmit(self.em.ground, gOn)
+        VoxelFX.SetRate(self.em.ground, 28); VoxelFX.SetEmit(self.em.ground, gOn)
         self:UpdateBeam(origin, dir, len, fire, t, now)
         -- 绕束旋转的方块星屑
         if firing then

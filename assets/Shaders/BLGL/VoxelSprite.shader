@@ -17,8 +17,9 @@ float h21(vec2 p) {
 
 void fragment() {
     vec4 t = texture(sprite_tex, UV);
-    vec4 c = COLOR;
-    float cellN = h21(floor(UV * cells) + floor(c.r * 13.0 + c.b * 7.0));
-    if (t.a < 0.5 || cellN > c.a) discard;
+    vec4 c = clamp(COLOR, 0.0, 1.0);
+    // 像素抖动淡出：同一个粒子内按像素格哈希逐格消失
+    float cellN = h21(floor(UV * cells) + 0.37);
+    if (t.a < 0.5 || cellN > c.a * 1.02) discard;
     ALBEDO = c.rgb * t.rgb * glow;
 }
