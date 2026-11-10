@@ -18,8 +18,8 @@ uniform float style = 0.0;
 uniform float ring_r = 0.8;
 uniform float darken = 0.35;
 
-const float PI = 3.14159265;
-const float TAU = 6.2831853;
+const float K_PI = 3.14159265;
+const float K_TAU = 6.2831853;
 
 float hash1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
@@ -43,8 +43,8 @@ float star_dist(vec2 p, int n, int k, float R, float a0) {
     float d = 1e3;
     for (int i = 0; i < 9; i++) {
         if (i < n) {
-            float a = a0 + TAU * float(i) / float(n);
-            float b = a0 + TAU * float(i + k) / float(n);
+            float a = a0 + K_TAU * float(i) / float(n);
+            float b = a0 + K_TAU * float(i + k) / float(n);
             d = min(d, seg_dist(p, vec2(cos(a), sin(a)) * R, vec2(cos(b), sin(b)) * R));
         }
     }
@@ -55,7 +55,7 @@ float star_dist(vec2 p, int n, int k, float R, float a0) {
 float rune_dist(vec2 p, float r0, float r1, float count, float rot) {
     float r = length(p);
     float a = atan(p.y, p.x) + rot;
-    float cell = TAU / count;
+    float cell = K_TAU / count;
     float ci = floor(a / cell);
     float fa = fract(a / cell);
     float h = hash1(ci + 17.0 * count);
@@ -82,7 +82,7 @@ void fragment() {
     vec2 p = (UV - 0.5) * 2.0;
     float r = length(p);
     float px = max(fwidth(r), 1e-4) * 1.2;
-    float ang01 = fract(atan(p.y, p.x) / TAU + 0.25 + spin / TAU);
+    float ang01 = fract(atan(p.y, p.x) / K_TAU + 0.25 + spin / K_TAU);
 
     // 外环按角度画出（带一个亮的笔头），内部图形在 reveal 后半段浮现
     float rv = 1.0 - smoothstep(reveal - 0.012, reveal + 0.012, ang01);
@@ -102,13 +102,13 @@ void fragment() {
         mMain += (rings + runes) * rv;
         mMain += head * 2.0 * smoothstep(1.02, 0.86, r) * smoothstep(0.84, 0.9, r);
         vec2 pi = rot2(p, -spin2);
-        float hexa = stroke(star_dist(pi, 6, 2, 0.86, PI / 6.0), 0.008, px);
+        float hexa = stroke(star_dist(pi, 6, 2, 0.86, K_PI / 6.0), 0.008, px);
         float hexb = stroke(star_dist(rot2(p, spin2 * 1.6), 6, 1, 0.5, 0.0), 0.006, px);
         mAcc += hexa * rvIn;
         mMain += hexb * rvIn;
         // 雪花辐条 + 分叉
         float ang = atan(pi.y, pi.x);
-        float sec = TAU / 6.0;
+        float sec = K_TAU / 6.0;
         float la = (fract(ang / sec + 0.5) - 0.5) * sec;
         vec2 q = vec2(cos(la), sin(la)) * r;
         float sp = seg_dist(q, vec2(0.14, 0.0), vec2(0.48, 0.0));
@@ -127,27 +127,27 @@ void fragment() {
         float runes = stroke(rd, 0.0018, px);
         // 刻度环：72 条短刻度，每 9 条一条长刻度
         float ta = atan(p.y, p.x) - spin * 0.5;
-        float tc = fract(ta / (TAU / 72.0) + 0.5) - 0.5;
-        float tIdx = floor(ta / (TAU / 72.0) + 0.5);
+        float tc = fract(ta / (K_TAU / 72.0) + 0.5) - 0.5;
+        float tIdx = floor(ta / (K_TAU / 72.0) + 0.5);
         float longT = (mod(tIdx, 9.0) < 0.5) ? 1.0 : 0.0;
         float tickR = mix(0.86, 0.82, longT);
-        float tick = stroke(tc * TAU / 72.0 * r, 0.004, px) * step(tickR, r) * step(r, 0.925);
+        float tick = stroke(tc * K_TAU / 72.0 * r, 0.004, px) * step(tickR, r) * step(r, 0.925);
         mMain += (rings + runes + tick) * rv;
         mMain += head * 2.0 * smoothstep(1.02, 0.9, r) * smoothstep(0.88, 0.93, r);
-        float s73 = stroke(star_dist(rot2(p, -spin2), 7, 3, 0.765, PI / 2.0), 0.007, px);
-        float s72 = stroke(star_dist(rot2(p, spin2 * 0.6), 7, 2, 0.765, PI / 2.0), 0.005, px);
+        float s73 = stroke(star_dist(rot2(p, -spin2), 7, 3, 0.765, K_PI / 2.0), 0.007, px);
+        float s72 = stroke(star_dist(rot2(p, spin2 * 0.6), 7, 2, 0.765, K_PI / 2.0), 0.005, px);
         mMain += s73 * rvIn;
         mAcc += s72 * rvIn;
         // 七个顶点上的轨道小圆
         float orb = 1e3;
         for (int i = 0; i < 7; i++) {
-            float a = -spin2 + PI / 2.0 + TAU * float(i) / 7.0;
+            float a = -spin2 + K_PI / 2.0 + K_TAU * float(i) / 7.0;
             orb = min(orb, abs(length(p - vec2(cos(a), sin(a)) * 0.765) - 0.055));
         }
         mAcc += stroke(orb, 0.006, px) * rvIn;
         // 内层：双方块 + 中心之眼
         vec2 pk = rot2(p, spin2 * 1.8);
-        float sq = min(star_dist(pk, 4, 1, 0.4, 0.0), star_dist(pk, 4, 1, 0.4, PI / 4.0));
+        float sq = min(star_dist(pk, 4, 1, 0.4, 0.0), star_dist(pk, 4, 1, 0.4, K_PI / 4.0));
         mMain += stroke(sq, 0.005, px) * rvCore;
         float rd2 = rune_dist(p, 0.2, 0.27, 16.0, -spin * 1.5) * 0.07;
         mAcc += stroke(rd2, 0.003, px) * rvCore;
