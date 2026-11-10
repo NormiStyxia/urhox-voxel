@@ -30,7 +30,7 @@ cfg.update = function(T, dt)
     end
     if frame % 20 == 0 then print(string.format("SHOT frame %d state %s t=%.2f aim=%.1f", frame, c.state, c.stateT, c.breathAim or 0)) end
 end
-package.loaded["dragon._shotcfg"] = cfg
+BREATH_SHOT_CFG = cfg
 local DragonTest = require("dragon.DragonTest")
 function Start() DragonTest.Start() end
 function Stop() DragonTest.Stop() end
