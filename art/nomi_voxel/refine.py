@@ -120,6 +120,11 @@ def finish(quads, palette, tris, bones):
             tube('hair_back',rows,['hair','hair','hair_edge','hair_edge'])
         tube('hair_locks',[ring(sgn*12,43,11.5,.4,.5,.15),ring(sgn*12.5,47,11.5,1.1,1.2,.4),ring(sgn*13.5,53,9,1.3,1.1,.4)],['hair','hair','hair_edge','hair'])
 
+    # Colour-only polish reviewed against in-game screenshots (baked shading, coat spill, tie).
+    from polish import polish
+    qs, palette, ts, edits = polish(qs, palette, ts)
+    (HERE / 'polish_edits.json').write_text(json.dumps({'edits': edits}, ensure_ascii=False, indent=0))
+
     # Drop unused sampled shades; the retained face RGB is copied exactly, never clustered.
     used=sorted(set(q[-1] for q in qs)|set(t[-1] for t in ts))
     remap={old:new for new,old in enumerate(used)}
