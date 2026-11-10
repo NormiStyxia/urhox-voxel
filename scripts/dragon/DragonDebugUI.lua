@@ -6,6 +6,7 @@
 -- ====================================================================
 
 local UI = require("urhox-libs/UI")
+local Variants = require("dragon.DragonVariants")
 
 local M = {}
 
@@ -16,6 +17,7 @@ local pauseLabel = nil
 local jointLabels = {}
 ---@type Label
 local hintLabel = nil
+local uiReady = false
 
 local function SectionTitle(text)
     return UI.Label { text = text, fontSize = 12, fontWeight = "bold", fontColor = { 150, 200, 255, 255 }, marginTop = 6 }
@@ -52,7 +54,19 @@ end
 ---@param ctrl DragonAnimationController
 ---@param T table DragonTest 模块（显示开关、相机）
 function M.Build(ctrl, T)
-    UI.Init({ theme = "default-dark", scale = UI.Scale.DEFAULT })
+    if not uiReady then
+        UI.Init({ theme = "default-dark", scale = UI.Scale.DEFAULT })
+        uiReady = true
+    end
+    jointLabels = {}
+
+    -- 型号切换：当前型号用主色按钮
+    local variantButtons = {}
+    for _, id in ipairs(Variants.ORDER) do
+        variantButtons[#variantButtons + 1] = Btn(Variants.Name(id), function()
+            if id ~= T.variant then T.RequestVariant(id) end
+        end, (id == T.variant) and "primary" or "secondary")
+    end
 
     local states = {
         { "待机 / 收翼", "IDLE" }, { "行走", "WALK" }, { "左转 90°", "TURN", -90 }, { "右转 90°", "TURN", 90 },
@@ -107,6 +121,10 @@ function M.Build(ctrl, T)
                 width = "100%", flexGrow = 1, flexShrink = 1, flexBasis = 0, minHeight = 200, scrollY = true,
                 children = {
                     UI.Panel { width = "100%", gap = 4, paddingRight = 6, children = {
+                        SectionTitle("型号"),
+                        UI.SimpleGrid { columns = 3, gap = 4, children = variantButtons },
+                        UI.Label { whiteSpace = "normal", width = "100%", fontSize = 10, fontColor = { 170, 185, 210, 255 },
+                            text = "小号：宠物幼龙，不能骑，会跟着诺米  中号：原版巨龙  大号：古龙体型，趾爪可动" },
                         SectionTitle("动作状态"),
                         UI.SimpleGrid { columns = 2, gap = 4, children = stateButtons },
                         Btn("▶ 完整演示序列", function() ctrl:StartDemo() end, "primary"),
@@ -128,7 +146,7 @@ function M.Build(ctrl, T)
                         SliderRow("步行速度", 0.4, 3.5, 0.1, ctrl.params.walkSpeed, "%.1f", function(v) ctrl.params.walkSpeed = v end),
                         SliderRow("振翅频率", 0.4, 2.0, 0.05, ctrl.params.flapHz, "%.2f", function(v) ctrl.params.flapHz = v end),
                         SliderRow("动作幅度", 0.3, 1.5, 0.05, ctrl.params.amp, "%.2f", function(v) ctrl.params.amp = v end),
-                        SliderRow("飞行速度", 3.0, 14.0, 0.5, ctrl.params.flySpeed, "%.1f", function(v) ctrl.params.flySpeed = v end),
+                        SliderRow("飞行速度", 3.0, 16.0, 0.5, ctrl.params.flySpeed, "%.1f", function(v) ctrl.params.flySpeed = v end),
                         SliderRow("转身速度", 15, 120, 5, ctrl.params.turnRate, "%.0f", function(v) ctrl.params.turnRate = v end),
 
                         SectionTitle("显示"),

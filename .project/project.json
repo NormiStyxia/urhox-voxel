@@ -22,5 +22,27 @@
     "icon": "",
     "screenshots": [],
     "promotional_image": ""
+  },
+  "dc_publish_sync": {
+    "synced": true,
+    "dcVersion": "V-20261103",
+    "dcStatus": "INIT",
+    "baseFields": {
+      "title": "urhox-voxel",
+      "description": null,
+      "category": "casual",
+      "trial_note": null,
+      "icon_url": "https://img.tapimg.com/market/images/ef4719159691d7db73760cadfc67eac4.png",
+      "banner_url": null,
+      "square_promo_url": null,
+      "cover_horizontal_url": null,
+      "cover_vertical_url": null,
+      "screenshot_urls": null
+    },
+    "pending": {},
+    "baseGameplayDemoVideoId": 0
+  },
+  "metadata": {
+    "updated_at": "2026-11-10T04:40:45.061Z"
   }
 }

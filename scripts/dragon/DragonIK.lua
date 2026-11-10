@@ -54,6 +54,7 @@ function M.NewChain(rig, names, footRest, bend, side)
     -- 父节点局部空间下的足底静止点（= 世界静止坐标 - 父枢轴，静止旋转为单位）
     -- 静止足底点：root 局部 = 世界静止坐标（静止时 root 在原点）
     c.footRestRoot = V(footRest)
+    c.scapulaMax = M.SCAPULA_MAX * (rig.size or 1.0) -- 型号尺度
     return c
 end
 
@@ -125,7 +126,7 @@ function M.Solve(c, footWorld, groundRot, metaPitch)
         local dv = (wrist - a) --[[@as Vector3]]
         local dist = dv:Length()
         if dist > reachMax then
-            local slide = math.min(dist - reachMax, M.SCAPULA_MAX)
+            local slide = math.min(dist - reachMax, c.scapulaMax or M.SCAPULA_MAX)
             a = a + dv * (slide / dist)
         end
         c.nodes[1].position = a

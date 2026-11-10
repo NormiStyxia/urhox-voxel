@@ -18,8 +18,10 @@ M.OFFSETS = { HL = 0.0, FL = 0.25, HR = 0.5, FR = 0.75 }
 local function Smooth(t) return t * t * (3 - 2 * t) end
 
 ---@param feet table[] { key, chain, side }
-function M.New(feet)
-    local g = { feet = {}, phase = 0.0, duty = 0.66, freq = 0.0, active = false, stepHeight = 0.28 }
+---@param scale number|nil 型号尺度（中号 = 1）：抬脚高度、补步阈值按它缩放，步频按动力相似放快
+function M.New(feet, scale)
+    scale = scale or 1.0
+    local g = { feet = {}, phase = 0.0, duty = 0.66, freq = 0.0, active = false, stepHeight = 0.28 * scale, scale = scale }
     for _, f in ipairs(feet) do
         g.feet[#g.feet + 1] = {
             key = f.key, chain = f.chain, side = f.side, front = f.key:sub(1, 1) == "F",
@@ -49,7 +51,8 @@ function M.Update(g, dt, ctx)
     local speed = math.sqrt(v.x * v.x + v.z * v.z)
     local veff = math.max(speed, math.abs(math.rad(ctx.yawRate)) * 1.5)
     -- 大型动物步频低、步幅大：1.6 m/s 时约 0.8 Hz、步幅约 2 m
-    local freq = math.min(1.5, 0.42 + 0.24 * veff) * (ctx.cadence or 1.0)
+    local sc = g.scale or 1.0
+    local freq = math.min(1.5, 0.42 + 0.24 * veff / sc) / math.sqrt(sc) * (ctx.cadence or 1.0)
     g.freq = freq
     local duty = g.duty
     local swingDur = (1.0 - duty) / freq
@@ -68,7 +71,7 @@ function M.Update(g, dt, ctx)
     local anySwing = false
     for _, f in ipairs(g.feet) do if f.swing then anySwing = true end end
     local moving = veff > 0.06
-    g.active = moving or anySwing or maxErr > 0.22
+    g.active = moving or anySwing or maxErr > 0.22 * sc
     if g.active then g.phase = (g.phase + freq * dt) % 1.0 end
 
     for _, f in ipairs(g.feet) do
@@ -76,7 +79,7 @@ function M.Update(g, dt, ctx)
         local inWindow = g.active and u < (1.0 - duty)
         if inWindow and not f.inWindow and not f.swing then
             -- 进入摆动窗口：移动中必迈步；静止时只修正偏差大的脚
-            if moving or (f.err or 0) > 0.1 then
+            if moving or (f.err or 0) > 0.1 * sc then
                 f.swing, f.t, f.from = true, 0.0, f.planted
                 f.dur = swingDur
             end
@@ -92,7 +95,7 @@ function M.Update(g, dt, ctx)
             target.y = ctx.groundFn(target.x, target.z)
             local s = Smooth(f.t)
             local p = f.from:Lerp(target, s)
-            local h = g.stepHeight * (0.7 + 0.3 * math.min(1.0, speed / 2.0)) * (f.front and 1.0 or 0.9)
+            local h = g.stepHeight * (0.7 + 0.3 * math.min(1.0, speed / (2.0 * math.sqrt(sc)))) * (f.front and 1.0 or 0.9)
             f.lift = math.sin(math.pi * f.t)
             p.y = p.y + h * f.lift
             f.pos = p

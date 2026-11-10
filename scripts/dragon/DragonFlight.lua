@@ -22,7 +22,7 @@ end
 -- Air pressure remains at speed; acceleration briefly pulls the rider backwards.
 -- Separate response times keep the torso, hair and hem from moving in lockstep.
 function M.UpdateWind(L,prm,dt,accel)
-    local top=math.max(M.SPRINT_SPEED,prm.flySpeed*1.65)
+    local top=math.max(prm.sprintSpeed or M.SPRINT_SPEED,prm.flySpeed*1.65)
     local pressure=Clamp((L.speed*L.speed-prm.flySpeed^2)/(top*top-prm.flySpeed^2),0,1)
     L.wind=Damp(L.wind or 0,pressure,5,dt)
     L.pull=Damp(L.pull or 0,Clamp(accel/8,-1,1),9,dt)
@@ -53,7 +53,7 @@ function M.Update(L,inp,prm,dt,flapping)
     local sprint=flapping and inp.sprint and not braking
     L.boost=Approach(L.boost or 0,sprint and 1 or 0,sprint and 5 or 3,dt)
     local normal=prm.flySpeed*Clamp(1+inp.move*.45,.45,1.6)
-    local top=math.max(M.SPRINT_SPEED,prm.flySpeed*1.65)
+    local top=math.max(prm.sprintSpeed or M.SPRINT_SPEED,prm.flySpeed*1.65)
     local target=normal+(top-normal)*L.boost
     if not flapping then target=5.5 end
     if braking then target=prm.flySpeed*.55 end -- S always wins over Shift

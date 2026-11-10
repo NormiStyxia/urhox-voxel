@@ -233,10 +233,18 @@ local function EvalField(cands, x, y, z)
                 local ci, cj, ck = M.PlateCell(x, y, z)
                 if M.Hash3(ci, cj, ck) < 0.45 then di = di - p.plate end
             end
-            -- 归属：原始距离最小者；prio 让小细节（瞳孔等）压过包住它的体块
-            local dr = (di < 0) and (di - (p.prio or 0)) or di
-            if dr < bestD then bestD, best = dr, p end
-            d = smin(d, di, p.k or 0.0)
+            if p.paint then
+                -- 涂色体块：不参与形体，只给落在它内部的体素换归属 / 颜色（型号变体的眼睛、腮红）
+                if di < 0 then
+                    local dr = di - (p.prio or 0)
+                    if dr < bestD then bestD, best = dr, p end
+                end
+            else
+                -- 归属：原始距离最小者；prio 让小细节（瞳孔等）压过包住它的体块
+                local dr = (di < 0) and (di - (p.prio or 0)) or di
+                if dr < bestD then bestD, best = dr, p end
+                d = smin(d, di, p.k or 0.0)
+            end
         end
     end
     return d, best

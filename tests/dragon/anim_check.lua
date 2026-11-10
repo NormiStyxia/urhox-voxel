@@ -1,5 +1,6 @@
 -- 体素巨龙动画自动检查（validate-test）：固定 1/60s 步长跑完整演示序列
 local T = nil
+local VARIANT = nil -- 型号：nil/"medium" = 中号，"small" / "large"（run_anim_check.sh 第一个参数）
 local Ctrl = require("dragon.DragonAnimationController")
 local DT = 1.0 / 60.0
 local STEPS_PER_FRAME = 24
@@ -25,7 +26,9 @@ local function contactPoint(f)
 end
 
 local function setup()
+    if VARIANT ~= nil and VARIANT ~= T.variant then T.SetVariant(VARIANT) end
     ctrl, rig = T.ctrl, T.rig
+    print("[DragonCheck] variant " .. tostring(T.variant) .. " size " .. tostring(rig.size))
     T.externalDrive = true
     for name, node in pairs(rig.bones) do
         local pn = rig.parents[name]
@@ -168,9 +171,10 @@ report = function()
     end
     V.assert(stats.visited.TURN == true, "visited TURN")
     V.assert(ctrl.state == "IDLE" and not ctrl.loco.airborne, "demo ends grounded in IDLE")
-    V.assert(stats.ikErrMax < 0.06, string.format("IK foot error < 6cm (%.3f)", stats.ikErrMax))
-    V.assert(stats.drift < 0.03, string.format("stance foot drift < 3cm (%.4f)", stats.drift))
-    V.assert(stats.boneErr < 0.005, string.format("bone lengths constant (%.5f %s)", stats.boneErr, stats.boneName))
+    local k = rig.size or 1.0 -- 距离阈值按型号尺度
+    V.assert(stats.ikErrMax < 0.06 * k, string.format("IK foot error < %.1fcm (%.3f)", 6 * k, stats.ikErrMax))
+    V.assert(stats.drift < 0.03 * k, string.format("stance foot drift < %.1fcm (%.4f)", 3 * k, stats.drift))
+    V.assert(stats.boneErr < 0.005 * k, string.format("bone lengths constant (%.5f %s)", stats.boneErr, stats.boneName))
     V.assert(stats.flip == 0, "no knee/elbow flips (" .. stats.flipInfo .. ")")
     V.assert(stats.nanCount == 0, "no NaN rotations")
     local per = {}
@@ -182,6 +186,6 @@ report = function()
     print("[DragonCheck] max step rot per state: " .. table.concat(per, " "))
     print(string.format("[DragonCheck] wing L/R mirror max diff=%.3f deg (%s)", stats.asym or 0, tostring(stats.asymName)))
     V.assert((stats.asym or 0) < 0.5, string.format("wings symmetric (%.3f)", stats.asym or 0))
-    V.assert(stats.groundPen > -0.05, string.format("feet not below ground (%.3f)", stats.groundPen))
+    V.assert(stats.groundPen > -0.05 * k, string.format("feet not below ground (%.3f)", stats.groundPen))
     V.finish()
 end

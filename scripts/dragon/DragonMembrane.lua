@@ -56,9 +56,10 @@ local function MinBary(px, pz, a, b, c)
 end
 
 ---@param rig DragonRig
----@param opts table { sfx, sign, lay, region, color, material, triBase }
+---@param opts table { sfx, sign, lay, region, color, material, triBase, spec }
 function Membrane.Build(rig, opts)
     local sfx, sign, lay = opts.sfx, opts.sign, opts.lay
+    local spec = opts.spec or Spec
     local w, W, E, B, O = lay.w, lay.W, lay.E, lay.B, lay.O
     local chest = rig.bones.chest
     local cp = rig.pivots.chest
@@ -134,19 +135,22 @@ function Membrane.Build(rig, opts)
         return v
     end
 
-    -- 平面扫描出翼膜格子（与翼骨同尺寸的体素格）
-    local s = Spec.VOXEL_WING
+    -- 平面扫描出翼膜格子（与翼骨同尺寸的体素格）；扫描范围按翼尺寸缩放
+    local s = spec.VOXEL_WING
+    local u = w.unit or 1.0
     local cells = {}
     local list = {}
-    for k = math.floor(-2.9 / s), math.floor(1.2 / s) do
+    local x0, x1 = math.min(-0.3 * u, B[1] - 2 * s), 7.2 * u
+    local z0, z1 = math.min(-2.9 * u, B[3] - 2 * s), 1.2 * u
+    for k = math.floor(z0 / s), math.floor(z1 / s) do
         local z = k * s
-        for i = math.floor(-0.3 / s), math.floor(7.2 / s) do
+        for i = math.floor(x0 / s), math.floor(x1 / s) do
             local x = i * s
             local reg = opts.region(lay, x, z)
             if reg ~= nil then
                 local idx = opts.color(lay, x, z, reg)
-                local c = Spec.PALETTE[idx]
-                local e = Spec.EMISSIVE[idx]
+                local c = spec.PALETTE[idx]
+                local e = spec.EMISSIVE[idx]
                 local col = Color(c[1], c[2], c[3], e and e[4] or 0.0)
                 cells[i * 65536 + k] = true
                 list[#list + 1] = { i, k, col }
@@ -158,7 +162,7 @@ function Membrane.Build(rig, opts)
     local geom = node:CreateComponent("CustomGeometry")
     geom:SetNumGeometries(1)
     geom:BeginGeometry(0, TRIANGLE_LIST)
-    local h = 0.5 * Membrane.THICK
+    local h = 0.5 * (spec.membraneThick or Membrane.THICK)
     local nv = 0
     local function V(ci, ck, layer, nrm, col)
         local x, z = (ci - 0.5) * s, (ck - 0.5) * s
@@ -189,7 +193,8 @@ function Membrane.Build(rig, opts)
     end
     -- 顶点在 GPU 里才移动，剔除用的是静止包围盒：加一个退化三角形把包围盒撑到翅膀的活动范围
     local white = Color(1, 1, 1, 0)
-    for _, p in ipairs({ Vector3(-9, -6, -9), Vector3(9, 10, 9), Vector3(9, -6, -9) }) do
+    local bu = math.max(1.0, u)
+    for _, p in ipairs({ Vector3(-9 * bu, -6 * bu, -9 * bu), Vector3(9 * bu, 10 * bu, 9 * bu), Vector3(9 * bu, -6 * bu, -9 * bu) }) do
         geom:DefineVertex(p)
         geom:DefineNormal(UP)
         geom:DefineColor(white)

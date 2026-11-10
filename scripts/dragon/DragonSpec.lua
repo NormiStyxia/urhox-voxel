@@ -13,6 +13,15 @@ local Sculpt = require("dragon.DragonSculpt")
 
 local M = {}
 
+-- 型号信息：本文件描述的就是中号（原尺寸），小号 / 大号由 DragonVariants 在此基础上形变
+M.id = "medium"
+M.name = "中号 · 巨龙"
+M.size = 1.0          -- 整体尺度（动画里按米写的常数乘它）
+M.rideable = true
+M.membraneThick = 0.04
+-- 静止时足底接地点（右侧，世界静止坐标）：IK / 步态的静止足位
+M.footRest = { F = { 0.48, 0.0, 1.02 }, H = { 0.92, 0.0, -1.12 } }
+
 -- ---------------------------------------------------------------- 调色板
 -- 槽位 40+，避开 VoxelTown 的 1-19
 M.PAL = {
@@ -295,35 +304,36 @@ B("head", { 0.17, 4.56, 1.62 }, { 0.1, 0.04, 0.12 }, P.BLUE_M, { sym = true, rot
 -- 眼睛：浅色眼白 + 深色瞳孔（像素风，不发光）。
 -- 直接用最终世界坐标（不参与头部缩放），贴在实测的脸侧表面上（y≈4.50, z≈1.69 处表面 x≈0.20）；
 -- 瞳孔对齐头部体素网格（0.055m）的一个格心：x=4s, y=(81+0.5)s, z=31s，prio 让它压过眼白
-B("head", { 0.205, 4.48, 1.68 }, { 0.05, 0.06, 0.1 }, P.CLAW, { sym = true, worldSpace = true })
+B("head", { 0.205, 4.48, 1.68 }, { 0.05, 0.06, 0.1 }, P.CLAW, { sym = true, worldSpace = true, tag = "eye" })
 -- 瞳孔：深色，1 宽 × 2 高，放在眼白最前一列（k=32，z=1.76）→ 目光朝前
-B("head", { 0.235, 4.51, 1.76 }, { 0.03, 0.045, 0.026 }, P.PUPIL, { sym = true, worldSpace = true, prio = 0.2 })
+B("head", { 0.235, 4.51, 1.76 }, { 0.03, 0.045, 0.026 }, P.PUPIL, { sym = true, worldSpace = true, prio = 0.2, tag = "pupil" })
 -- 上眼睑：眼白上方一道深蓝线（j=83），压低眼神
-B("head", { 0.225, 4.5925, 1.69 }, { 0.035, 0.026, 0.1 }, P.BLUE_X, { sym = true, worldSpace = true, prio = 0.2 })
+B("head", { 0.225, 4.5925, 1.69 }, { 0.035, 0.026, 0.1 }, P.BLUE_X, { sym = true, worldSpace = true, prio = 0.2, tag = "eyelid" })
 B("head", { 0.07, 4.38, 2.08 }, { 0.026, 0.02, 0.03 }, P.PUPIL, { sym = true })
-C("head", { 0.12, 4.25, 1.92 }, { 0.12, 4.12, 1.95 }, 0.03, 0.012, P.CLAW, { sym = true })
-C("head", { 0.09, 4.25, 1.75 }, { 0.09, 4.16, 1.76 }, 0.022, 0.01, P.CLAW, { sym = true })
-F("head", { 0, 4.66, 1.38 }, { 0, 0, -1 }, { 0, 1, -0.4 }, 0.22, 0.22, P.BLUE_P, { sweep = 0.1, thick = 0.1 })
-F("head", { 0, 4.58, 1.08 }, { 0, 1, 0 }, { 0, 0.2, -1 }, 0.2, 0.3, P.BLUE_X, { sweep = -0.06, thick = 0.1 })
-F("head", { 0.12, 4.45, 1.02 }, { 0, 1, 0 }, { 0.3, 0.1, -1 }, 0.18, 0.3, P.BLUE_X, { sym = true, sweep = -0.08, thick = 0.09 })
-F("head", { 0.1, 4.28, 0.98 }, { 0, 1, 0 }, { 0.3, -0.15, -1 }, 0.16, 0.26, P.BLUE_X, { sym = true, sweep = -0.1, thick = 0.09 })
--- 角：四段弧
-C("head", { 0.17, 4.58, 1.22 }, { 0.26, 4.74, 0.98 }, 0.11, 0.095, P.BLUE_X, { sym = true })
-C("head", { 0.26, 4.74, 0.98 }, { 0.33, 4.86, 0.74 }, 0.095, 0.08, P.BLUE_X, { sym = true })
-C("head", { 0.33, 4.86, 0.74 }, { 0.36, 5.04, 0.58 }, 0.08, 0.06, P.BLUE_X, { sym = true })
-C("head", { 0.36, 5.04, 0.58 }, { 0.33, 5.22, 0.56 }, 0.06, 0.035, P.BLUE_X, { sym = true })
-C("head", { 0.33, 5.22, 0.56 }, { 0.28, 5.32, 0.62 }, 0.035, 0.012, P.BLUE_X, { sym = true })
-C("head", { 0.29, 4.78, 0.92 }, { 0.42, 4.84, 0.78 }, 0.05, 0.015, P.BLUE_X, { sym = true })
+C("head", { 0.12, 4.25, 1.92 }, { 0.12, 4.12, 1.95 }, 0.03, 0.012, P.CLAW, { sym = true, tag = "tooth" })
+C("head", { 0.09, 4.25, 1.75 }, { 0.09, 4.16, 1.76 }, 0.022, 0.01, P.CLAW, { sym = true, tag = "tooth" })
+F("head", { 0, 4.66, 1.38 }, { 0, 0, -1 }, { 0, 1, -0.4 }, 0.22, 0.22, P.BLUE_P, { sweep = 0.1, thick = 0.1, tag = "crest" })
+F("head", { 0, 4.58, 1.08 }, { 0, 1, 0 }, { 0, 0.2, -1 }, 0.2, 0.3, P.BLUE_X, { sweep = -0.06, thick = 0.1, tag = "crest" })
+F("head", { 0.12, 4.45, 1.02 }, { 0, 1, 0 }, { 0.3, 0.1, -1 }, 0.18, 0.3, P.BLUE_X, { sym = true, sweep = -0.08, thick = 0.09, tag = "crest" })
+F("head", { 0.1, 4.28, 0.98 }, { 0, 1, 0 }, { 0.3, -0.15, -1 }, 0.16, 0.26, P.BLUE_X, { sym = true, sweep = -0.1, thick = 0.09, tag = "crest" })
+-- 角：四段弧（anchor = 角根，型号变体以它为中心缩放角长）
+local HORN_ROOT = { 0.17, 4.58, 1.22 }
+C("head", { 0.17, 4.58, 1.22 }, { 0.26, 4.74, 0.98 }, 0.11, 0.095, P.BLUE_X, { sym = true, tag = "horn", anchor = HORN_ROOT })
+C("head", { 0.26, 4.74, 0.98 }, { 0.33, 4.86, 0.74 }, 0.095, 0.08, P.BLUE_X, { sym = true, tag = "horn", anchor = HORN_ROOT })
+C("head", { 0.33, 4.86, 0.74 }, { 0.36, 5.04, 0.58 }, 0.08, 0.06, P.BLUE_X, { sym = true, tag = "horn", anchor = HORN_ROOT })
+C("head", { 0.36, 5.04, 0.58 }, { 0.33, 5.22, 0.56 }, 0.06, 0.035, P.BLUE_X, { sym = true, tag = "horn", anchor = HORN_ROOT })
+C("head", { 0.33, 5.22, 0.56 }, { 0.28, 5.32, 0.62 }, 0.035, 0.012, P.BLUE_X, { sym = true, tag = "horn", anchor = HORN_ROOT })
+C("head", { 0.29, 4.78, 0.92 }, { 0.42, 4.84, 0.78 }, 0.05, 0.015, P.BLUE_X, { sym = true, tag = "horn", anchor = HORN_ROOT })
 -- 颊侧鳍状冠（白 / 浅蓝）
-F("head", { 0.24, 4.56, 1.2 }, { 0, 1, 0 }, { 0.7, 1.0, -0.5 }, 0.15, 0.3, P.BLUE_P, { sym = true, sweep = 0.05, thick = 0.09 })
-F("head", { 0.28, 4.45, 1.2 }, { 0, 1, 0 }, { 1, 0.45, -0.45 }, 0.2, 0.5, P.WHITE, { sym = true, sweep = 0.05, thick = 0.1 })
-F("head", { 0.3, 4.32, 1.18 }, { 0, 1, 0 }, { 1, -0.05, -0.4 }, 0.2, 0.52, P.WHITE, { sym = true, sweep = -0.03, thick = 0.1 })
-F("head", { 0.28, 4.2, 1.17 }, { 0, 1, 0 }, { 1, -0.6, -0.35 }, 0.15, 0.34, P.BLUE_P, { sym = true, sweep = -0.06, thick = 0.09 })
+F("head", { 0.24, 4.56, 1.2 }, { 0, 1, 0 }, { 0.7, 1.0, -0.5 }, 0.15, 0.3, P.BLUE_P, { sym = true, sweep = 0.05, thick = 0.09 , tag = "cheek" })
+F("head", { 0.28, 4.45, 1.2 }, { 0, 1, 0 }, { 1, 0.45, -0.45 }, 0.2, 0.5, P.WHITE, { sym = true, sweep = 0.05, thick = 0.1 , tag = "cheek" })
+F("head", { 0.3, 4.32, 1.18 }, { 0, 1, 0 }, { 1, -0.05, -0.4 }, 0.2, 0.52, P.WHITE, { sym = true, sweep = -0.03, thick = 0.1 , tag = "cheek" })
+F("head", { 0.28, 4.2, 1.17 }, { 0, 1, 0 }, { 1, -0.6, -0.35 }, 0.15, 0.34, P.BLUE_P, { sym = true, sweep = -0.06, thick = 0.09 , tag = "cheek" })
 
 -- 下颚
 B("jaw", { 0, 4.12, 1.7 }, { 0.15, 0.075, 0.3 }, JawColor, { k = 0.06, round = 0.04, rot = { -3, 0, 0 } })
 E("jaw", { 0, 4.14, 1.38 }, { 0.26, 0.12, 0.2 }, JawColor, { k = 0.08 })
-C("jaw", { 0.1, 4.16, 1.86 }, { 0.1, 4.25, 1.88 }, 0.025, 0.01, P.CLAW, { sym = true })
+C("jaw", { 0.1, 4.16, 1.86 }, { 0.1, 4.25, 1.88 }, 0.025, 0.01, P.CLAW, { sym = true, tag = "tooth" })
 
 -- 背刺（颈后、背、尾）
 do
@@ -331,11 +341,11 @@ do
     for n, s in ipairs(neckSp) do
         local zc, r = NeckAt(s[1])
         F(s[2], { 0, s[1], zc - r + 0.06 }, { 0, 1, 0 }, { 0, -0.3, -1 }, 0.32, 0.38 - n * 0.015, P.BLUE_X,
-            { sweep = -0.16, thick = 0.2 })
+            { sweep = -0.16, thick = 0.2, tag = "spike" })
     end
     local backSp = { { 0.5, 2.68, "chest" }, { 0.12, 2.56, "chest" }, { -0.28, 2.5, "waist" }, { -0.7, 2.42, "pelvis" }, { -1.08, 2.4, "pelvis" } }
     for _, s in ipairs(backSp) do
-        F(s[3], { 0, s[2] - 0.04, s[1] }, { 0, 0, -1 }, { 0, 1, -0.25 }, 0.34, 0.33, P.BLUE_X, { sweep = 0.12, thick = 0.22 })
+        F(s[3], { 0, s[2] - 0.04, s[1] }, { 0, 0, -1 }, { 0, 1, -0.25 }, 0.34, 0.33, P.BLUE_X, { sweep = 0.12, thick = 0.22, tag = "spike" })
     end
     for i = 1, 7 do
         local a, b = TAIL_PTS[i], TAIL_PTS[i + 1]
@@ -344,7 +354,7 @@ do
         local l = math.sqrt(dz * dz + dy * dy)
         local hgt = 0.26 - (i - 1) * 0.026
         F("tail" .. i, { 0, ym + rm - 0.04, zm }, { 0, dy / l, dz / l }, { 0, 1, 0 }, 0.3 - i * 0.015, hgt + 0.04, P.BLUE_X,
-            { sweep = 0.1, thick = 0.2 - i * 0.012 })
+            { sweep = 0.1, thick = 0.2 - i * 0.012, tag = "spike" })
     end
 end
 
@@ -354,8 +364,8 @@ for i = 1, 7 do
     C("tail" .. i, { 0, a[2], a[1] }, { 0, b[2], b[1] }, a[3], b[3], TailColor, { k = 0.1, plate = i < 5 and PL or nil })
 end
 C("tail8", { 0, 0.5, -4.85 }, { 0, 0.5, -5.0 }, 0.1, 0.08, TailColor)
-RH("tail8", { 0, 0.5, -5.08 }, { 0, 0, 1 }, { 0, 1, 0 }, 0.32, 0.22, 0.1, TailTipColor)
-RH("tail8", { 0, 0.5, -5.08 }, { 0, 0, 1 }, { 1, 0, 0 }, 0.32, 0.22, 0.1, TailTipColor)
+RH("tail8", { 0, 0.5, -5.08 }, { 0, 0, 1 }, { 0, 1, 0 }, 0.32, 0.22, 0.1, TailTipColor, { tag = "tailblade" })
+RH("tail8", { 0, 0.5, -5.08 }, { 0, 0, 1 }, { 1, 0, 0 }, 0.32, 0.22, 0.1, TailTipColor, { tag = "tailblade" })
 
 -- 前肢
 E("armU_R", { 0.52, 1.62, 0.9 }, { 0.34, 0.4, 0.35 }, LimbColor, { k = 0.12, plate = PL })
@@ -363,9 +373,16 @@ C("armU_R", { 0.48, 1.7, 0.88 }, { 0.5, 1.0, 0.76 }, 0.33, 0.27, LimbColor, { k 
 C("armL_R", { 0.5, 1.0, 0.76 }, { 0.47, 0.35, 0.88 }, 0.27, 0.23, LimbColor, { k = 0.08 })
 C("hand_R", { 0.47, 0.33, 0.88 }, { 0.48, 0.12, 0.97 }, 0.23, 0.23, LimbColor, { k = 0.06 })
 E("hand_R", { 0.48, 0.1, 1.02 }, { 0.2, 0.1, 0.2 }, P.BLUE_M, { k = 0.06 })
-for _, dx in ipairs({ -0.13, -0.045, 0.045, 0.13 }) do
-    C("hand_R", { 0.48 + dx, 0.09, 1.05 }, { 0.48 + dx * 1.25, 0.075, 1.2 }, 0.058, 0.052, P.BLUE_M)
-    C("hand_R", { 0.48 + dx * 1.25, 0.08, 1.18 }, { 0.48 + dx * 1.3, 0.04, 1.33 }, 0.07, 0.03, P.CLAW)
+-- 趾 / 爪：记入 M.DIGITS（右侧），大号型号把它们拆成可独立弯曲的趾骨
+M.DIGITS = {}
+local function Digit(limb, n, bone, a1, b1, r1, a2, b2, r2)
+    C(bone, a1, b1, r1[1], r1[2], P.BLUE_M, { tag = "digit" })
+    C(bone, a2, b2, r2[1], r2[2], P.CLAW, { tag = "claw" })
+    M.DIGITS[#M.DIGITS + 1] = { limb = limb, n = n, parent = bone, a1 = a1, b1 = b1, r1 = r1, a2 = a2, b2 = b2, r2 = r2 }
+end
+for n, dx in ipairs({ -0.13, -0.045, 0.045, 0.13 }) do
+    Digit("F", n, "hand_R", { 0.48 + dx, 0.09, 1.05 }, { 0.48 + dx * 1.25, 0.075, 1.2 }, { 0.058, 0.052 },
+        { 0.48 + dx * 1.25, 0.08, 1.18 }, { 0.48 + dx * 1.3, 0.04, 1.33 }, { 0.07, 0.03 })
 end
 
 -- 后肢
@@ -375,9 +392,9 @@ C("legL_R", { 0.84, 1.06, -0.68 }, { 0.92, 0.52, -1.42 }, 0.22, 0.19, LimbColor,
 E("legL_R", { 0.88, 0.88, -0.95 }, { 0.18, 0.22, 0.26 }, LimbColor, { k = 0.08 })
 C("legM_R", { 0.92, 0.52, -1.42 }, { 0.92, 0.14, -1.3 }, 0.2, 0.19, LimbColor, { k = 0.06 })
 E("foot_R", { 0.92, 0.1, -1.15 }, { 0.21, 0.1, 0.25 }, P.BLUE_M, { k = 0.06 })
-for _, dx in ipairs({ -0.14, -0.047, 0.047, 0.14 }) do
-    C("foot_R", { 0.92 + dx, 0.09, -1.08 }, { 0.92 + dx * 1.25, 0.075, -0.84 }, 0.062, 0.056, P.BLUE_M)
-    C("foot_R", { 0.92 + dx * 1.25, 0.08, -0.86 }, { 0.92 + dx * 1.3, 0.04, -0.71 }, 0.07, 0.03, P.CLAW)
+for n, dx in ipairs({ -0.14, -0.047, 0.047, 0.14 }) do
+    Digit("H", n, "foot_R", { 0.92 + dx, 0.09, -1.08 }, { 0.92 + dx * 1.25, 0.075, -0.84 }, { 0.062, 0.056 },
+        { 0.92 + dx * 1.25, 0.08, -0.86 }, { 0.92 + dx * 1.3, 0.04, -0.71 }, { 0.07, 0.03 })
 end
 C("foot_R", { 0.92, 0.18, -1.36 }, { 0.92, 0.07, -1.52 }, 0.05, 0.02, P.BLUE_X)
 
@@ -449,15 +466,17 @@ end
 M.FingerPoints = FingerPoints
 
 -- 翼骨体块（翼局部坐标；骨骼名在 Rig 里拼 _R/_L）
-function M.WingBonePrims()
-    local w = M.WING
+-- w 缺省为中号 M.WING；型号变体传入已按 w.unit 缩放过的翼数据，粗细常数同比缩放
+function M.WingBonePrims(w)
+    w = w or M.WING
+    local u = w.unit or 1.0
     local fp = FingerPoints(w)
     local list = {}
     local function Cw(bone, a, b, ra, rb, color)
-        list[#list + 1] = Sculpt.Prepare({ type = "cone", bone = bone, a = a, b = b, r = { ra, rb }, color = color, k = 0.04 })
+        list[#list + 1] = Sculpt.Prepare({ type = "cone", bone = bone, a = a, b = b, r = { ra * u, rb * u }, color = color, k = 0.04 * u })
     end
     local function Ew(bone, c, r, color)
-        list[#list + 1] = Sculpt.Prepare({ type = "ellipsoid", bone = bone, c = c, r = r, color = color, k = 0.04 })
+        list[#list + 1] = Sculpt.Prepare({ type = "ellipsoid", bone = bone, c = c, r = { r[1] * u, r[2] * u, r[3] * u }, color = color, k = 0.04 * u })
     end
     local O = { 0, 0, 0 }
     -- 弧形大骨：沿二次弧线分段拼接，向翼前缘（+Z）拱起；两端关节粗、中段收细
@@ -474,19 +493,19 @@ function M.WingBonePrims()
             local o = offs[i] * L
             local lift = (arch or 0) * L * 4 * t * (1 - t) -- 向背侧拱起
             local p = { a[1] + dx * t + nx * o, lift, a[3] + dz * t + nz * o }
-            local r = r0 * rads[i]
+            local r = r0 * rads[i] -- Cw 内再乘 u
             if prev ~= nil then Cw(bone, prev.p, p, prev.r, r, P.BLUE_M) end
             prev = { p = p, r = r }
         end
     end
-    local wb = M.WING.bones
+    local wb = w.bones
     Ew("wing", O, { 0.22, 0.2, 0.22 }, P.BLUE_M)
     CurvedBone("wing", O, w.elbow, wb.humerus.r0, wb.humerus.offs, wb.humerus.rads, wb.humerus.arch)
     Ew("wfore", w.elbow, { 0.32, 0.22, 0.26 }, P.BLUE_M) -- 肘：尺骨鹰嘴膨大
     CurvedBone("wfore", w.elbow, w.wrist, wb.forearm.r0, wb.forearm.offs, wb.forearm.rads, wb.forearm.arch)
     Ew("whand", w.wrist, { 0.24, 0.18, 0.22 }, P.BLUE_D) -- 腕骨结
     local W = w.wrist
-    Cw("whand", { W[1] + 0.04, 0, W[3] + 0.1 }, { W[1] + 0.12, 0.03, W[3] + 0.4 }, 0.08, 0.025, P.CLAW)
+    Cw("whand", { W[1] + 0.04 * u, 0, W[3] + 0.1 * u }, { W[1] + 0.12 * u, 0.03 * u, W[3] + 0.4 * u }, 0.08, 0.025, P.CLAW)
     for i, f in ipairs(fp) do
         -- 一指 = 翼前缘，粗；其余指骨细（参考图翼面大面积是白膜）
         local r0, r1 = (i == 1) and 0.16 or 0.13, (i == 1) and 0.14 or 0.1
@@ -538,7 +557,7 @@ local function CopyPrim(p, bone)
     local q = {}
     for k, v in pairs(p) do if not DERIVED[k] then q[k] = v end end
     q.bone = bone
-    for _, key in ipairs({ "c", "a", "b", "base", "u", "v" }) do
+    for _, key in ipairs({ "c", "a", "b", "base", "u", "v", "anchor" }) do
         if p[key] then q[key] = MirrorVec(p[key]) end
     end
     if p.rot then q.rot = { p.rot[1], -p.rot[2], -p.rot[3] } end
@@ -560,7 +579,7 @@ end
 local function ScaleHeadPrim(p)
     local s, c = M.HEAD_SCALE, HEAD_PIVOT
     local wx = M.HEAD_WIDEN
-    for _, key in ipairs({ "c", "a", "b", "base" }) do
+    for _, key in ipairs({ "c", "a", "b", "base", "anchor" }) do
         if p[key] then
             local v = ScaleAbout(p[key], c, s)
             v[1] = v[1] * wx
@@ -586,8 +605,17 @@ local function ScaleHeadPrim(p)
 end
 local headScaled = false
 
+-- 未预处理的体块副本（不改动模块内的 PRIMS，可反复调用）
+local function CopyRaw(p)
+    local q = {}
+    for k, v in pairs(p) do if not DERIVED[k] then q[k] = v end end
+    return q
+end
+M.MirrorPrim = CopyPrim
+
+---展开对称、施加头部缩放，返回未 Prepare 的体块（供型号变体再做形变）
 ---@return table prims, table bones
-function M.Expand()
+function M.ExpandRaw()
     if not headScaled then
         headScaled = true
         for _, p in ipairs(PRIMS) do
@@ -599,12 +627,12 @@ function M.Expand()
     end
     local prims = {}
     for _, p in ipairs(PRIMS) do
-        prims[#prims + 1] = Sculpt.Prepare(p)
+        prims[#prims + 1] = CopyRaw(p)
         local mb = MirrorName(p.bone)
         if mb ~= nil then
-            prims[#prims + 1] = Sculpt.Prepare(CopyPrim(p, mb))
+            prims[#prims + 1] = CopyPrim(p, mb)
         elseif p.sym then
-            prims[#prims + 1] = Sculpt.Prepare(CopyPrim(p, p.bone))
+            prims[#prims + 1] = CopyPrim(p, p.bone)
         end
     end
     local bones = {}
@@ -616,6 +644,13 @@ function M.Expand()
             bones[#bones + 1] = { name = mb, parent = mp, pivot = MirrorVec(b[3]) }
         end
     end
+    return prims, bones
+end
+
+---@return table prims, table bones
+function M.Expand()
+    local prims, bones = M.ExpandRaw()
+    for i, p in ipairs(prims) do prims[i] = Sculpt.Prepare(p) end
     return prims, bones
 end
 

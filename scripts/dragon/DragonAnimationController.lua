@@ -88,6 +88,9 @@ end
 function C.New(rig, world)
     local self = setmetatable({}, C)
     self.rig, self.world = rig, world
+    -- 型号尺度：按米写的位移 / 高度常数乘 S，速度类乘 √S（动力相似）
+    self.S = rig.size or 1.0
+    self.vS = math.sqrt(self.S)
     self.params = {
         playback = 1.0,   -- 动画播放速度
         walkSpeed = 1.6,  -- 步行速度 m/s
@@ -96,6 +99,10 @@ function C.New(rig, world)
         flySpeed = 8.0,   -- 巡航速度
         turnRate = 55.0,  -- 原地转身角速度 度/秒
     }
+    local sp = rig.spec and rig.spec.params
+    if sp ~= nil then
+        for k, v in pairs(sp) do self.params[k] = v end
+    end
     self.input = { move = 0, turn = 0, climb = 0, sprint = false }
     self.layers = {}
     self.state = nil
@@ -120,21 +127,22 @@ function C.New(rig, world)
     self.demo = nil
 
     -- 腿链
-    local P = rig.pivots
+    local fr = (rig.spec and rig.spec.footRest) or { F = { 0.48, 0.0, 1.02 }, H = { 0.92, 0.0, -1.12 } }
     self.chains = {}
     local feet = {}
     for _, side in ipairs({ "_R", "_L" }) do
         local sx = (side == "_R") and 1 or -1
         local front = IK.NewChain(rig, { "armU" .. side, "armL" .. side, "hand" .. side },
-            { 0.48 * sx, 0.0, 1.02 }, "back", sx)
+            { fr.F[1] * sx, 0.0, fr.F[3] }, "back", sx)
         local hind = IK.NewChain(rig, { "legU" .. side, "legL" .. side, "legM" .. side, "foot" .. side },
-            { 0.92 * sx, 0.0, -1.12 }, "front", sx)
+            { fr.H[1] * sx, 0.0, fr.H[3] }, "front", sx)
         self.chains["F" .. side] = front
         self.chains["H" .. side] = hind
         feet[#feet + 1] = { key = "F" .. ((sx > 0) and "R" or "L"), chain = front, side = sx }
         feet[#feet + 1] = { key = "H" .. ((sx > 0) and "R" or "L"), chain = hind, side = sx }
     end
-    self.gait = Gait.New(feet)
+    self.gait = Gait.New(feet, self.S)
+    self.digits = rig.spec ~= nil and rig.spec.digits or false
     self.groundFn = function(x, z) return self:GroundHeight(x, z) end
     Gait.Reset(self.gait, self.loco.pos, self.loco.yaw, self.groundFn)
 
@@ -312,7 +320,7 @@ function C:FlightLimbs(p, phi, t, glide)
     local flapK = (1.0 - 0.7 * glide) * (1 - .65 * drill)
     local bank = L.bank
     local climb = Clamp(L.vy / 3.0, -1, 1)
-    local fast = Clamp((L.speed - 6.0) / 6.0, -0.5, 1.0)
+    local fast = Clamp((L.speed - 6.0 * self.vS) / (6.0 * self.vS), -0.5, 1.0)
     for _, side in ipairs({ "_R", "_L" }) do
         local sx = (side == "_R") and 1 or -1
         -- 左右错开的慢蜷握（3.1s 周期，左右相位差半周）
@@ -391,7 +399,7 @@ STATES.WALK = {
     pose = function(self, t)
         local p = Pose.New()
         local ph = 2 * math.pi * self.gait.phase
-        local k = Clamp(self.loco.speed / 1.6, 0, 1.4) * self.params.amp
+        local k = Clamp(self.loco.speed / (1.6 * self.vS), 0, 1.4) * self.params.amp
         local yr = self.loco.yawRate
         Poses.Neck(p, { pitch = 7 + 2 * math.sin(2 * ph) * k, yaw = -3 * math.sin(ph) * k + yr * 0.35, curve = 1,
             headPitch = -6 - 2 * math.sin(2 * ph) * k, headYaw = yr * 0.15, jaw = 1 })
@@ -496,14 +504,14 @@ STATES.TAKEOFF = {
             if not self.jumped then
                 self.jumped = true
                 L.airborne = true
-                L.vy = 0.8
-                L.altTarget = CRUISE_ALT
+                L.vy = 0.8 * self.vS
+                L.altTarget = CRUISE_ALT * math.max(0.6, self.S)
                 self.flapPhase = 0.98
             end
             -- 蹬地：0.16 秒内后腿持续发力（加速度而不是瞬时冲量）
             if t < JUMP_T + 0.2 then
-                L.vy = L.vy + 18.0 * dt
-                L.speed = L.speed + 12.0 * dt
+                L.vy = L.vy + 18.0 * self.vS * dt
+                L.speed = L.speed + 12.0 * self.vS * dt
             end
             L.speed = Approach(L.speed, self.params.flySpeed * 0.7, 2.2, dt)
             if stretchH > 0.86 or t > JUMP_T + 0.3 then self.ikTarget = 0.0 end
@@ -574,7 +582,7 @@ STATES.GLIDE = {
     enter = function(self) self.ikTarget = 0.0 end,
     logic = function(self, dt)
         self:FlightLogic(dt, false)
-        if self.loco.alt < 2.6 then self:Request("FLY") end
+        if self.loco.alt < 2.6 * self.S then self:Request("FLY") end
     end,
     pose = function(self, t)
         local p = Pose.New()
@@ -632,14 +640,14 @@ STATES.LAND = {
             L.bank = Damp(L.bank, 0, 3, dt)
             -- 下降速度随高度递减
             L.altTarget = 0.0
-            local sink = -Clamp(L.alt * 0.9, 0.7, 2.8)
+            local sink = -Clamp(L.alt * 0.9, 0.7 * self.vS, 2.8 * self.vS)
             L.vy = Damp(L.vy, sink, 3.0, dt)
             L.alt = L.alt + L.vy * dt
             -- 刹车时拍翼略加快
-            local brakeK = Smooth((3.4 - L.alt) / 1.8)
+            local brakeK = Smooth((3.4 - L.alt / self.S) / 1.8)
             self.flapPhase = (self.flapPhase + dt * self.params.flapHz * (0.95 + 0.2 * brakeK)) % 1.0
             -- 后足先接地：离地 0.3m 才把后腿交给 IK，前腿等触地后再接手
-            self.ikTarget = (L.alt < 0.3) and 1.0 or 0.0
+            self.ikTarget = (L.alt < 0.3 * self.S) and 1.0 or 0.0
             self.ikFrontTarget = 0.0
             if L.alt <= 0.0 then
                 L.alt, L.vy, L.airborne = 0.0, 0.0, false
@@ -663,7 +671,7 @@ STATES.LAND = {
         local L = self.loco
         local touched = self.touchT ~= nil
         local since = touched and (t - self.touchT) or nil
-        local h = touched and 0 or L.alt
+        local h = touched and 0 or L.alt / self.S -- 换算成中号的离地高度
         local flare = Smooth((3.4 - h) / 1.8)    -- 刹车进度（离地 3.4m → 1.6m）
         local fb = Smooth((3.0 - h) / 1.4)       -- 身体仰起进度
         local near = Smooth((2.0 - h) / 1.4)     -- 探爪进度（离地 2.0m → 0.6m）
@@ -789,7 +797,7 @@ function C:FlightLogic(dt, flapping)
     Flight.Update(L, inp, prm, dt, flapping)
     -- 高度
     if flapping then
-        L.altTarget = Clamp(L.altTarget + inp.climb * 3.2 * dt, 2.8, 40.0)
+        L.altTarget = Clamp(L.altTarget + inp.climb * 3.2 * self.vS * dt, 2.8 * self.S, 40.0)
     else
         L.altTarget = L.alt - 1.0
     end
@@ -801,7 +809,7 @@ function C:FlightLogic(dt, flapping)
     local wave = flapping and (G * 0.55 * FlapLift(self.flapPhase) * prm.amp * (1 - .6 * drill)) or 0
     L.vy = L.vy + (cmd - G + wave) * dt
     L.alt = L.alt + L.vy * dt
-    if L.alt < 0.5 then L.alt, L.vy = 0.5, math.max(L.vy, 0) end
+    if L.alt < 0.5 * self.S then L.alt, L.vy = 0.5 * self.S, math.max(L.vy, 0) end
     L.pitch = Damp(L.pitch, Clamp(-L.vy * 2.6, -14, 14), 3.0, dt)
 end
 
@@ -994,9 +1002,13 @@ function C:ApplyPose(dt)
     local gw = self.ikW
     local b = acc.body
     local impactDy = (self.impactS ~= nil) and LandDip(self.impactS) or 0
-    b[5] = b[5] - 0.045 * drop * gw + impactDy
+    -- 姿态里的身体位移按中号的米数写，乘型号尺度
+    local S = self.S
+    b[4], b[6] = b[4] * S, b[6] * S
+    b[5] = (b[5] - 0.045 * drop * gw + impactDy) * S
     b[1] = b[1] + L.pitch - 1.2 * pitchG * gw
     b[3] = b[3] - L.bank + 2.2 * roll * gw
+    if self.digits then self:ClawPose(acc) end
     Pose.Apply(rig, acc)
 
     -- 呼吸只用胸骨俯仰 + 身体升降表现；不再每帧缩放胸部体素（缩放会让胸腹交界处
@@ -1036,11 +1048,58 @@ function C:ApplyLegIK(wAll)
     end
 end
 
+-- 大号的可动趾爪（fdN / fdNc 前爪，hdN / hdNc 后爪；x = 趾弯曲 +向下，y = 张开）：
+--   支撑相：趾面贴地、爪尖微扣；支撑末段脚跟抬起时趾面上翘、爪尖蹬地
+--   摆动相：抬脚时蜷起，落地前张开迎地
+--   空中：前爪左右错开地慢慢握放，后爪收拢；降落探爪时张开；咆哮时张开扣地
+--   待机：偶尔单趾抬一下
+local DIGIT_SPLAY = { -1.0, -0.35, 0.35, 1.0 } -- 1 = 内侧趾
+function C:ClawPose(acc)
+    local t = self.time
+    local g = self.gait
+    local roar = (self.state == "ROAR") and (self.roarChest or 0) or 0
+    local reach = 0
+    if self.state == "LAND" and self.touchT == nil then reach = Smooth((2.0 - self.loco.alt / self.S) / 1.4) end
+    for _, f in ipairs(g.feet) do
+        local side = (f.side > 0) and "_R" or "_L"
+        local pre = f.front and "fd" or "hd"
+        local gw = self.ikW * (f.front and self.ikFront or 1.0)
+        local curlG, clawG, splayG = 0, 6, 0
+        if f.swing then
+            local s = f.t
+            curlG = 38 * math.sin(math.pi * math.min(1, s * 1.3)) - 14 * Smooth((s - 0.7) / 0.3)
+            clawG = 30 * math.sin(math.pi * s)
+            splayG = -6 * math.sin(math.pi * s) + 8 * Smooth((s - 0.72) / 0.28)
+        elseif g.active then
+            local u = (g.phase - f.offset) % 1.0
+            local off = Smooth(((u - (1 - g.duty)) / g.duty - 0.72) / 0.28)
+            curlG, clawG = -18 * off, 6 + 16 * off
+        end
+        curlG, clawG, splayG = curlG - 6 * roar, clawG + 22 * roar, splayG + 12 * roar
+        local grip = 0.5 + 0.5 * math.sin(t * 1.8 + (f.side > 0 and 0 or 2.2) + (f.front and 0 or 1.1))
+        local curlA = f.front and (20 + 35 * grip) or 45
+        local clawA = f.front and (25 + 30 * grip) or 40
+        local splayA = f.front and (6 - 10 * grip) or -4
+        curlA, clawA, splayA = Lerp(curlA, -8, reach), Lerp(clawA, 8, reach), Lerp(splayA, 14, reach)
+        for n = 1, 4 do
+            local lift = 0
+            if not f.swing and not g.active then
+                lift = 14 * math.max(0, math.sin(t * 0.7 + n * 1.9 + f.side + (f.front and 0 or 2.6))) ^ 8
+            end
+            local curl = Lerp(curlA, curlG - lift, gw) * (1 + (n - 2.5) * 0.06)
+            local claw = Lerp(clawA, clawG + 0.8 * lift, gw)
+            Pose.SetSide(acc, pre .. n, side, curl, Lerp(splayA, splayG, gw) * DIGIT_SPLAY[n], 0)
+            Pose.SetSide(acc, pre .. n .. "c", side, claw, 0, 0)
+        end
+    end
+end
+
 -- 部位独立测试：其余部位冻结在静止姿态
 local MASK_GROUPS = {
     wings = function(n) return n:sub(1, 1) == "w" end,
     neck = function(n) return n:sub(1, 4) == "neck" or n == "head" or n == "jaw" end,
-    legs = function(n) return n:find("arm") or n:find("leg") or n:find("hand") or n:find("foot") end,
+    legs = function(n) return n:find("arm") or n:find("leg") or n:find("hand") or n:find("foot")
+        or n:match("^[fh]d%d") end,
     tail = function(n) return n:sub(1, 4) == "tail" end,
 }
 C.MASK_GROUPS = MASK_GROUPS

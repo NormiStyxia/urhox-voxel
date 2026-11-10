@@ -14,6 +14,7 @@ local DebugUI = require("dragon.DragonDebugUI")
 local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
 local DragonRide = require("dragon.DragonRide")
+local Variants = require("dragon.DragonVariants")
 
 local M = {}
 
@@ -44,6 +45,7 @@ M.playMode = true -- 玩法模式：操作诺米，靠近龙按 F 骑乘；关�
 local NOMI_POS = Vector3(-2.6, 0, -3.4)
 local NOMI_YAW = -150.0
 M.externalDrive = false -- 自动化验证时由测试脚本以固定步长驱动控制器
+M.variant = "medium"    -- 当前型号：small / medium / large（调试面板切换）
 
 -- 自动截图 / 回归测试配置（可选模块，测试时临时生成，不随项目发布）
 ---@type table|nil
@@ -141,7 +143,7 @@ function M.Start()
     SkyUtils.CreateGradientSky(scene_, { zenith = Color(0.10, 0.28, 0.66), horizon = Color(0.447, 0.638, 1.0), skyExp = 0.5 })
 
     BuildGround(world_)
-    rig_ = Rig.Build(scene_, world_)
+    rig_ = Rig.Build(scene_, world_, nil, Variants.Get(M.variant))
     M.rig = rig_
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
@@ -183,6 +185,34 @@ function M.Start()
 end
 
 function M.Stop()
+end
+
+-- 切换型号：拆掉当前的龙，在原地按新型号重建（诺米、镜头、显示开关保留）
+function M.SetVariant(id)
+    if id == M.variant or ctrl_ == nil then return end
+    local t0 = os.clock()
+    local L = ctrl_.loco
+    local pos, yaw = Vector3(L.pos.x, 0, L.pos.z), L.yaw
+    if ride_ ~= nil then ride_:Release() end
+    local oldSize = rig_.size or 1.0
+    rig_:Destroy()
+    M.variant = id
+    rig_ = Rig.Build(scene_, world_, nil, Variants.Get(id))
+    M.rig = rig_
+    ctrl_ = Controller.New(rig_, world_)
+    M.ctrl = ctrl_
+    ctrl_:Teleport(pos, yaw)
+    ride_:BindDragon(M)
+    -- 镜头距离随体型缩放
+    local k = (rig_.size or 1.0) / oldSize
+    cam.dist = math.max(4.0, math.min(80.0, cam.dist * (0.4 + 0.6 * k)))
+    if shotCfg == nil or not shotCfg.noUI then DebugUI.Build(ctrl_, M) end
+    print(string.format("DragonTest: variant -> %s (%.2fs)", id, os.clock() - t0))
+end
+
+-- 面板按钮只登记请求：等提示显示出来（两帧）后再在 Update 里重建，避免在 UI 回调里替换 UI 树
+function M.RequestVariant(id)
+    M.pendingVariant, M.pendingFrames = id, 2
 end
 
 -- ---------------------------------------------------------------- 输入
@@ -253,6 +283,16 @@ local function HandleMouse()
 end
 
 function M.Update(dt)
+    if M.pendingVariant ~= nil then
+        M.pendingFrames = M.pendingFrames - 1
+        DebugUI.SetHint("正在生成 " .. Variants.Name(M.pendingVariant) .. " …")
+        if M.pendingFrames <= 0 then
+            local id = M.pendingVariant
+            M.pendingVariant = nil
+            M.SetVariant(id)
+        end
+        return
+    end
     if shotCfg ~= nil and shotCfg.update ~= nil then shotCfg.update(M, dt) end
     if shotCfg == nil or not shotCfg.noInput then HandleKeys() end
     HandleMouse()
@@ -274,7 +314,7 @@ function M.Update(dt)
             if M.showNomi then M.nomi:Update(dt, { moveSpeed = 0, onGround = true }) end
         end
         if cam.follow and cam.ortho == nil then
-            local p = rig_.body.worldPosition + Vector3(0, 0.4, 0)
+            local p = rig_.body.worldPosition + Vector3(0, 0.4 * (rig_.size or 1.0), 0)
             cam.target = cam.target:Lerp(p + cam.pan, 1.0 - math.exp(-4.0 * dt))
         end
     end

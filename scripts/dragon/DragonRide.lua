@@ -6,6 +6,8 @@
 -- 龙 AI：待机 ↔ 走向随机目标点（偶尔咆哮），玩家靠近或骑乘时停下。
 -- 骑乘：诺米挂在龙的 saddle 挂点（胸骨背上），坐姿覆盖腿 / 臂骨骼；W 前进 A/D 转向 S 停下，
 -- Space 起飞 / 上升，C 下降，F 下龙。
+-- 型号：距离 / 碰撞圆按龙的尺度缩放；小号幼龙（spec.rideable = false）不能骑，
+-- 无人操作时像宠物一样跟在诺米身边。
 -- ====================================================================
 
 local M = {}
@@ -15,7 +17,7 @@ local MOUNT_TIME = 0.75      -- 上龙动画时长
 local WALK_SPEED, RUN_SPEED = 4.2, 7.0
 local JUMP_V, GRAVITY = 7.2, 22.0
 local ARENA = 62.0           -- 场地半宽（地面 140m 见方）
-local RIDE_WALK_SPEED = 2.0  -- 骑乘时龙的步行速度参数（W 全速约 3.2 m/s）
+local RIDE_WALK_K = 1.25     -- 骑乘时龙的步行速度 = 型号默认步行速度 × 1.25（中号 2.0，W 全速约 3.2 m/s）
 
 -- 龙身体的 2D 碰撞圆（骨骼名, 半径）：诺米不能穿过龙
 local BODY_CIRCLES = {
@@ -53,6 +55,7 @@ function M.New(T)
     self.T = T
     self.ctrl = T.ctrl
     self.rig = T.rig
+    self:BindDragon(T)
     self.nomi = T.nomi
     self.node = T.nomiNode
     self.pos = Vector3(4.5, 0, 3.0)
@@ -74,6 +77,18 @@ function M.New(T)
     self.node.position = self.pos
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
     return self
+end
+
+-- 换型号后重新绑定龙（保留诺米的位置与状态）
+function R:BindDragon(T)
+    self.ctrl = T.ctrl
+    self.rig = T.rig
+    local spec = self.rig.spec
+    self.size = self.rig.size or 1.0
+    self.rideable = spec == nil or spec.rideable ~= false
+    self.pet = spec ~= nil and spec.pet == true
+    self.savedWalkSpeed = self.ctrl.params.walkSpeed
+    self.ai = { mode = "idle", timer = 2.5, target = Vector3(0, 0, 0) }
 end
 
 -- ---------------------------------------------------------------- 工具
@@ -142,7 +157,7 @@ function R:UpdateFree(dt, camYaw)
                 local c = node.worldPosition
                 local dx, dz = self.pos.x - c.x, self.pos.z - c.z
                 local d = math.sqrt(dx * dx + dz * dz)
-                local rad2 = cdef[2] + 0.3
+                local rad2 = cdef[2] * (self.size or 1.0) + 0.3
                 if d < rad2 then
                     if d < 1e-4 then dx, dz, d = 0, 1, 1 end
                     self.pos = Vector3(c.x + dx / d * rad2, self.pos.y, c.z + dz / d * rad2)
@@ -228,7 +243,7 @@ function R:UpdateMount(dt)
     local saddle = self:SaddleNode()
     local target = saddle.worldPosition - saddle.worldRotation * Vector3(0, self.hipY, 0)
     local p = self.mountFrom:Lerp(target, s)
-    p = Vector3(p.x, p.y + 1.6 * math.sin(math.pi * s), p.z)
+    p = Vector3(p.x, p.y + math.max(1.6, 0.4 * target.y) * math.sin(math.pi * s), p.z)
     self.node.worldPosition = p
     local dyaw = self.ctrl.loco.yaw
     self.yaw = LerpAngle(self.mountYawFrom, dyaw, s)
@@ -236,7 +251,7 @@ function R:UpdateMount(dt)
     self.nomi:Update(dt, { moveSpeed = 0, onGround = false })
     if self.mountT >= MOUNT_TIME then
         self.mode = "mounted"
-        self.ctrl.params.walkSpeed = RIDE_WALK_SPEED
+        self.ctrl.params.walkSpeed = self.savedWalkSpeed * RIDE_WALK_K
     end
 end
 
@@ -275,14 +290,57 @@ function R:UpdateMounted(dt)
     self.pos = self.node.worldPosition
 end
 
+-- ---------------------------------------------------------------- 宠物 AI（小号幼龙）
+-- 跟在诺米身边：离远了小跑追上，靠近了停下、转头看诺米，偶尔叫一声
+function R:UpdatePet(dt)
+    local c, ai = self.ctrl, self.ai
+    local L = c.loco
+    c.input.move, c.input.turn, c.input.climb, c.input.sprint, c.input.free = 0, 0, 0, false, true
+    if c.demo ~= nil or L.airborne or c.state == "TAKEOFF" or c.state == "LAND" then return end
+    c.params.walkSpeed = self.savedWalkSpeed
+    local to = Flat(self.pos) - Flat(L.pos)
+    local dist = to:Length()
+    local diff = WrapDeg(math.deg(math.atan(to.x, to.z)) - L.yaw)
+    -- 头一直朝诺米看
+    c.look.tyaw, c.look.tpitch, c.look.timer = Clamp(diff, -50, 50), -6, 1.0
+    if c.state == "ROAR" or c.state == "TURN" or c.state == "SPREAD_WINGS" then return end
+    if ai.mode == "follow" then
+        if dist < 1.9 then
+            ai.mode, ai.timer = "idle", 1.5 + math.random() * 2.5
+            c:Request("IDLE")
+            return
+        end
+        if c.state == "IDLE" then
+            if math.abs(diff) > 75 then c:Request("TURN", Clamp(diff, -135, 135)) else c:Request("WALK") end
+        elseif c.state == "WALK" then
+            c.input.turn = Clamp(diff / 25.0, -1, 1)
+            c.input.move = (dist > 5.0) and 1 or 0 -- 离远了小跑
+        end
+    else
+        if c.state == "WALK" then c:Request("IDLE") end
+        ai.timer = ai.timer - dt
+        if dist > 3.2 then
+            ai.mode = "follow"
+        elseif ai.timer <= 0 then
+            ai.timer = 3.0 + math.random() * 4.0
+            if math.abs(diff) > 60 then
+                c:Request("TURN", Clamp(diff, -135, 135))
+            elseif math.random() < 0.3 then
+                c:Request(math.random() < 0.5 and "ROAR" or "SPREAD_WINGS")
+            end
+        end
+    end
+end
+
 -- ---------------------------------------------------------------- 龙 AI（无人骑乘时）
 function R:UpdateAI(dt)
+    if self.pet then return self:UpdatePet(dt) end
     local c, ai = self.ctrl, self.ai
     local L = c.loco
     c.input.move, c.input.turn, c.input.climb, c.input.sprint, c.input.free = 0, 0, 0, false, false
     if c.demo ~= nil or L.airborne or c.state == "TAKEOFF" or c.state == "LAND" then return end
     c.params.walkSpeed = self.savedWalkSpeed
-    local near = (Flat(self.pos) - Flat(L.pos)):Length() < 7.0
+    local near = (Flat(self.pos) - Flat(L.pos)):Length() < 7.0 * math.max(1.0, self.size or 1.0)
     if near then
         -- 玩家靠近：停下来站着，方便骑乘
         if c.state == "WALK" then c:Request("IDLE") end
@@ -328,9 +386,14 @@ function R:Update(dt, camYaw)
     if self.mode == "free" then
         self:UpdateFree(dt, camYaw)
         self:UpdateAI(dt)
-        if self:NearDragon() < MOUNT_RANGE and self.onGround then
-            self.hint = "按 F 骑上龙背"
-            if Press(KEY_F) then self:Mount() end
+        local size = self.size or 1.0
+        if self:NearDragon() < MOUNT_RANGE * math.max(0.6, size) and self.onGround then
+            if self.rideable then
+                self.hint = "按 F 骑上龙背"
+                if Press(KEY_F) then self:Mount() end
+            else
+                self.hint = "幼龙还太小，骑不了——它会一直跟着你"
+            end
         else
             self.hint = "WASD 移动   Space 跳跃   Shift 奔跑   靠近龙按 F 骑乘"
         end

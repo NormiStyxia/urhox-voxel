@@ -30,6 +30,8 @@ local Membrane = require("dragon.DragonMembrane")
 ---@field restPos table<string, Vector3>
 ---@field sockets table<string, Node>
 ---@field world VoxelPhysicsWorld
+---@field spec table 型号规格（DragonSpec 或 DragonVariants.Get 的结果）
+---@field size number 整体尺度（中号 = 1）
 local Rig = {}
 Rig.__index = Rig
 
@@ -114,8 +116,7 @@ local function InTri(px, pz, a, b, c)
     return not (neg and pos)
 end
 
-local function WingLayout()
-    local w = Spec.WING
+local function WingLayout(w)
     local fp = Spec.FingerPoints(w)
     local W, E, B = w.wrist, w.elbow, w.flank
     local O = { 0, 0, 0 }
@@ -125,14 +126,14 @@ local function WingLayout()
     end
     local a5, L5 = Polar(W[1], W[3], B[1], B[3])
     fans[5] = { a = a5, L = L5, J = L5 * w.joint }
-    return { w = w, fp = fp, W = W, E = E, B = B, O = O, fans = fans }
+    return { w = w, fp = fp, W = W, E = E, B = B, O = O, fans = fans, u = w.unit or 1.0 }
 end
 
 local function MembraneRegion(lay, x, z)
     local w, W, fans = lay.w, lay.W, lay.fans
     local N = w.strips
     local a, r = Polar(W[1], W[3], x, z)
-    if r > 0.12 then
+    if r > 0.12 * lay.u then
         for g = 1, 4 do
             local f0, f1 = fans[g], fans[g + 1]
             if a >= f0.a and a < f1.a then
@@ -174,6 +175,7 @@ end
 
 local function MembraneColor(lay, x, z, reg)
     local P = Spec.PAL
+    local u = lay.u
     -- 离最近翼骨线的距离（平面内）
     local W = lay.W
     local best = 1e9
@@ -186,11 +188,11 @@ local function MembraneColor(lay, x, z, reg)
     end
     for _, f in ipairs(lay.fp) do best = math.min(best, segDist(W, f.tip)) end
     best = math.min(best, segDist(lay.E, W), segDist(lay.O, lay.E))
-    if best < 0.16 then return P.MEM_EDGE end
+    if best < 0.16 * u then return P.MEM_EDGE end
     -- 后缘起的阶梯叠层（参考图翼膜的分层台阶）
     local depth
     if reg.kind == "hand" then depth = reg.R - reg.r else depth = best end
-    local band = math.floor((depth + 0.07 * math.floor(x / 0.3)) / 0.42)
+    local band = math.floor((depth + 0.07 * u * math.floor(x / (0.3 * u))) / (0.42 * u))
     if band % 2 == 1 then return P.MEM2 end
     return P.MEM
 end
@@ -199,19 +201,23 @@ end
 ---@param scene Scene
 ---@param world VoxelPhysicsWorld
 ---@param parent Node|nil
+---@param spec table|nil 型号规格，缺省为中号 DragonSpec
 ---@return DragonRig
-function Rig.Build(scene, world, parent)
+function Rig.Build(scene, world, parent, spec)
     local t0 = os.clock()
     local self = setmetatable({}, Rig)
+    spec = spec or Spec
+    self.spec = spec
+    self.size = spec.size or 1.0
     self.bones, self.pivots, self.parents, self.parts, self.strips, self.order = {}, {}, {}, {}, {}, {}
     self.sides = {}
     self.curlAxis = {}
     self.world = world
 
-    for idx, c in pairs(Spec.PALETTE) do
+    for idx, c in pairs(spec.PALETTE) do
         world:SetPaletteEntry(idx, Color(c[1], c[2], c[3]), 6.0)
     end
-    for idx, e in pairs(Spec.EMISSIVE) do
+    for idx, e in pairs(spec.EMISSIVE) do
         world:SetPaletteEntryPBR(idx, 0.3, 0.0, 0.5, Color(e[1], e[2], e[3], e[4]))
     end
     local material = Rig.CleanMaterial(world)
@@ -219,7 +225,7 @@ function Rig.Build(scene, world, parent)
     self.membranes = {}
 
     self.root = (parent or scene):CreateChild("Dragon")
-    local prims, bones = Spec.Expand()
+    local prims, bones = spec.Expand()
 
     local function AddBone(name, parentName, pivot)
         local pnode = parentName and self.bones[parentName] or self.root
@@ -239,7 +245,7 @@ function Rig.Build(scene, world, parent)
     -- 躯干 / 四肢 / 头尾
     local nVox = 0
     for _, b in ipairs(bones) do
-        local s = Spec.VoxelSizeOf(b.name)
+        local s = spec.VoxelSizeOf(b.name)
         local origin = { -0.5 * s, 0.0, -0.5 * s }
         -- 不复制外壳（overlap=false）：关节缝由 DragonSpec 的关节球（挂父骨骼、只占内部）填
         local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
@@ -261,7 +267,7 @@ function Rig.Build(scene, world, parent)
 
     -- 挂点
     self.sockets = {}
-    for _, s in ipairs(Spec.SOCKETS) do
+    for _, s in ipairs(spec.SOCKETS) do
         local n = self.bones[s.bone]:CreateChild("socket_" .. s.name)
         n.position = V3(s.offset)
         self.sockets[s.name] = n
@@ -273,14 +279,15 @@ function Rig.Build(scene, world, parent)
 
     local nParts = 0
     for _ in pairs(self.parts) do nParts = nParts + 1 end
-    print(string.format("DragonRig: %d bones, %d voxel parts, %d voxels, body %.2fs, total %.2fs",
-        #self.order, nParts, nVox, tBody, os.clock() - t0))
+    print(string.format("DragonRig[%s]: %d bones, %d voxel parts, %d voxels, body %.2fs, total %.2fs",
+        spec.id or "medium", #self.order, nParts, nVox, tBody, os.clock() - t0))
     return self
 end
 
 -- 一侧翅膀：sign = +1 右翼，-1 左翼（几何沿 X 镜像）
 function Rig:BuildWing(sfx, sign, world, material)
-    local lay = WingLayout()
+    local spec = self.spec
+    local lay = WingLayout(spec.WING)
     local w, W, E, B, O = lay.w, lay.W, lay.E, lay.B, lay.O
     local root = { w.root[1] * sign, w.root[2], w.root[3] }
     local function M(p) return { p[1] * sign, p[2], p[3] } end
@@ -313,7 +320,7 @@ function Rig:BuildWing(sfx, sign, world, material)
     Add("wf5" .. sfx, "wfore" .. sfx, WP(W))
     Add("wf5m" .. sfx, "wf5" .. sfx, WP({ W[1] + math.cos(a5) * f5.J, 0, W[3] - math.sin(a5) * f5.J }))
 
-    local s = Spec.VOXEL_WING
+    local s = spec.VOXEL_WING
     -- 翼局部格点：体素中心落在 s 的整数倍（膜层正好是 y=0 一层）
     local originL = { -0.5 * s, -0.5 * s, -0.5 * s }
     -- 世界静止坐标下的格点原点（体素中心对齐翼根 + i*s）
@@ -328,7 +335,7 @@ function Rig:BuildWing(sfx, sign, world, material)
     end
 
     -- 翼骨
-    local bprims = Spec.WingBonePrims()
+    local bprims = spec.WingBonePrims(spec.WING)
     local boneNames = { "wing", "wfore", "whand" }
     for i = 1, 4 do
         boneNames[#boneNames + 1] = "wf" .. i
@@ -348,11 +355,22 @@ function Rig:BuildWing(sfx, sign, world, material)
     local mem = Membrane.Build(self, {
         sfx = sfx, sign = sign, lay = lay, region = MembraneRegion, color = MembraneColor,
         material = self.membraneMaterial, triBase = (sign > 0) and 0 or Membrane.MAX_TRI,
+        spec = spec,
     })
     self.membranes[#self.membranes + 1] = mem
     self.parts["membrane" .. sfx] = { node = mem.node, mesh = mem.geom, voxels = mem.cells, bone = "chest",
         wing = true, membrane = true }
     self.sides[sfx] = { lay = lay, sign = sign }
+end
+
+-- 销毁整条龙（切换型号用）：先从体素世界移除各部件体积，再删节点
+function Rig:Destroy()
+    for _, part in pairs(self.parts) do
+        if part.volume ~= nil then self.world:RemoveVolume(part.volume) end
+    end
+    self.parts = {}
+    if self.root ~= nil then self.root:Remove() end
+    self.root = nil
 end
 
 -- ---------------------------------------------------------------- 运行时
@@ -389,7 +407,7 @@ end
 -- 世界点 → 最近的命中区
 function Rig:HitZoneAt(worldPoint, extra)
     local best, bestD = nil, 1e9
-    for _, z in ipairs(Spec.HIT_ZONES) do
+    for _, z in ipairs(self.spec.HIT_ZONES) do
         local node = self.bones[z.bone]
         if node ~= nil then
             local c = node:LocalToWorld(V3(z.offset))
@@ -423,7 +441,7 @@ end
 
 ---@param dbg DebugRenderer
 function Rig:DrawHitZones(dbg)
-    for _, z in ipairs(Spec.HIT_ZONES) do
+    for _, z in ipairs(self.spec.HIT_ZONES) do
         local node = self.bones[z.bone]
         if node ~= nil then
             local c = node:LocalToWorld(V3(z.offset))
