@@ -11,7 +11,8 @@ undoes the recorded edits and compares the unit cells with the pre-polish baseli
 Rules (in this order):
   1. Head "dirt" -- brown-grey shading (A/H/o) and coat navy on hair -- takes the
      majority colour of its clean neighbours; next to skin it becomes skin.
-     The eyes (front, eye rows) are protected.
+     The eyes (front, eye rows) are protected. Forehead skin between the bangs uses
+     the plain skin tone instead of the sampled shadowed one.
   2. Isolated dark hair specks (dark component of at most SPECK_MAX cells) take
      the majority colour of the surrounding hair; longer strand lines are kept.
   3. Navy, skin, or brown inside the gold tie (front of the chest) becomes gold;
@@ -39,6 +40,7 @@ HAIR_BASE = np.array((232., 233., 240.))
 HAIR_CONTRAST = 0.6                                              # rule 4: keep 60% of the darkening
 HAIR_KEEP_LUMA = 215
 EYE_ZONE = dict(d='pz', y=(56, 61), x=(16, 35))                 # index coords of the eye rows
+FOREHEAD_Y = 61                                                  # above the upper lash row (y=60)
 TIE_ZONE = dict(d='pz', y=(36, 44), x=(20, 31))                  # index coords of the tie
 
 
@@ -205,6 +207,13 @@ def polish(quads, palette, tris):
     for a in range(len(elems)):
         if a not in eye and dirty(get(a)):
             put(a, index(HAIR_FALLBACK), 'head_shading')
+    # forehead skin between the bangs was sampled in the bangs' painted shadow; the game's
+    # own cast shadow lands on the same cells, so use the plain skin tone there
+    shaded_skin, plain_skin = all_of(SKIN[1]), index(SKIN[0])
+    for a in range(len(elems)):
+        kind, n_, centre, nrm = elems[a]
+        if kind == 'q' and cells[n_][1] == 'pz' and cells[n_][4] >= FOREHEAD_Y and get(a) in shaded_skin:
+            put(a, plain_skin, 'head_shading')
 
     # rule 2: isolated dark specks inside the hair
     hairish = lambda c: (c not in skin and c not in golds and not is_navy(rgb[c]) and c not in shade
