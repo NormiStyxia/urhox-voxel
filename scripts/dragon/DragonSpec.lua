@@ -309,7 +309,7 @@ B("head", { 0.205, 4.48, 1.68 }, { 0.05, 0.06, 0.1 }, P.CLAW, { sym = true, worl
 B("head", { 0.235, 4.51, 1.76 }, { 0.03, 0.045, 0.026 }, P.PUPIL, { sym = true, worldSpace = true, prio = 0.2, tag = "pupil" })
 -- 上眼睑：眼白上方一道深蓝线（j=83），压低眼神
 B("head", { 0.225, 4.5925, 1.69 }, { 0.035, 0.026, 0.1 }, P.BLUE_X, { sym = true, worldSpace = true, prio = 0.2, tag = "eyelid" })
-B("head", { 0.07, 4.38, 2.08 }, { 0.026, 0.02, 0.03 }, P.PUPIL, { sym = true })
+B("head", { 0.07, 4.38, 2.08 }, { 0.026, 0.02, 0.03 }, P.PUPIL, { sym = true, tag = "nostril" })
 C("head", { 0.12, 4.25, 1.92 }, { 0.12, 4.12, 1.95 }, 0.03, 0.012, P.CLAW, { sym = true, tag = "tooth" })
 C("head", { 0.09, 4.25, 1.75 }, { 0.09, 4.16, 1.76 }, 0.022, 0.01, P.CLAW, { sym = true, tag = "tooth" })
 F("head", { 0, 4.66, 1.38 }, { 0, 0, -1 }, { 0, 1, -0.4 }, 0.22, 0.22, P.BLUE_P, { sweep = 0.1, thick = 0.1, tag = "crest" })

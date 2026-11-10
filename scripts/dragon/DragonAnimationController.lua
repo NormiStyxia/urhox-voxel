@@ -1009,6 +1009,12 @@ function C:ApplyPose(dt)
     b[5] = (b[5] - 0.045 * drop * gw + impactDy) * self.H
     b[1] = b[1] + L.pitch - 1.2 * pitchG * gw
     b[3] = b[3] - L.bank + 2.2 * roll * gw
+    -- 静止姿态颈部前压的型号（大号）：离地时把颈抬回去，飞行中仍然前伸，头保持原朝向
+    local lift = rig.spec and rig.spec.flightNeckLift
+    if lift ~= nil then
+        local k = 1 - gw
+        for name, a in pairs(lift) do Pose.AddTo(acc, name, a * k, 0, 0) end
+    end
     if self.digits then self:ClawPose(acc, dt) end
     Pose.Apply(rig, acc)
 

@@ -88,10 +88,22 @@ end
 -- ---------------------------------------------------------------- 标签运算（中号坐标）
 local POS_KEYS = { "c", "a", "b", "base", "anchor" }
 
--- 以 anchor 为中心伸缩：位置 ×kl，截面半径 ×kr
-local function ScaleAboutPrim(p, anchor, kl, kr)
+-- 以 anchor 为中心伸缩：位置 ×kl，截面半径 ×kr；rot（度，仅锥体 / 鳍片）绕 anchor 转向，左侧自动镜像
+local function ScaleAboutPrim(p, anchor, kl, kr, rot)
+    local R = nil
+    if rot ~= nil and (p.type == "cone" or p.type == "fin") then
+        if anchor[1] < 0 then R = Sculpt.RotMatrix(rot[1], -rot[2], -rot[3]) else R = Sculpt.RotMatrix(rot[1], rot[2], rot[3]) end
+    end
     for _, key in ipairs(POS_KEYS) do
-        if type(p[key]) == "table" then p[key] = Add(anchor, Mul(Sub(p[key], anchor), kl)) end
+        if type(p[key]) == "table" then
+            local d = Mul(Sub(p[key], anchor), kl)
+            if R ~= nil then d = MatVec(R, d) end
+            p[key] = Add(anchor, d)
+        end
+    end
+    if R ~= nil then
+        if p.u then p.u = MatVec(R, p.u) end
+        if p.v then p.v = MatVec(R, p.v) end
     end
     local t = p.type
     if t == "ellipsoid" then p.r = { p.r[1] * kl, p.r[2] * kl, p.r[3] * kl }
@@ -107,8 +119,10 @@ local function ScaleAboutPrim(p, anchor, kl, kr)
     if p.k then p.k = p.k * kr end
     if type(p.color) == "function" then
         local f = p.color
+        local Rt = R and Transpose(R) or IDENT
         p.color = function(x, y, z, pr)
-            return f(anchor[1] + (x - anchor[1]) / kl, anchor[2] + (y - anchor[2]) / kl, anchor[3] + (z - anchor[3]) / kl, pr)
+            local d = MatVec(Rt, { x - anchor[1], y - anchor[2], z - anchor[3] })
+            return f(anchor[1] + d[1] / kl, anchor[2] + d[2] / kl, anchor[3] + d[3] / kl, pr)
         end
     end
 end
@@ -229,7 +243,7 @@ DEFS.small = {
         tail = { len = 0.72, thick = 1.15 }, tail8 = { len = 1.1, thick = 1.1 },
     },
     tags = {
-        eye = false, pupil = false, eyelid = false, tooth = false,
+        eye = false, pupil = false, eyelid = false, tooth = false, nostril = false,
         horn = { 0.45, 0.85 }, spike = { 0.42, 0.8 }, crest = { 0.6, 0.9 }, cheek = { 0.8, 1.0 },
         claw = { 0.55, 0.9 }, tailblade = { 0.85, 1.0 },
     },
@@ -243,16 +257,16 @@ DEFS.small = {
     params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
-        -- 大眼睛：涂色椭球贴在实测的脸侧表面上（y≈4.50, z≈1.69 处表面 x≈0.20）。
-        -- 上半深色瞳孔、下沿一圈亮蓝虹膜、前上方一块高光
-        local cx, cy, cz, ry, rz = 0.2, 4.5, 1.7, 0.125, 0.125
+        -- 大圆眼：涂色椭球，中心在脸侧表面（中号坐标 y≈4.47, z≈1.72 处表面 x≈0.22），
+        -- x 半径只取薄薄一层，避免染到头顶；深色瞳孔为主，下缘一弯亮蓝，前上方一块白高光
+        local cx, cy, cz, ry, rz = 0.22, 4.465, 1.72, 0.13, 0.13
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.38) ^ 2 + (dz - 0.3) ^ 2 < 0.1 then return P.WHITE end
-            if dy < -0.4 then return P.EYE end
+            if (dy - 0.32) ^ 2 + (dz - 0.28) ^ 2 < 0.09 then return P.WHITE end
+            if dy < -0.5 and math.abs(dz) < 0.75 then return P.EYE end
             return P.PUPIL
         end
-        add({ type = "ellipsoid", bone = "head", c = { cx, cy, cz }, r = { 0.08, ry, rz }, color = EyeColor,
+        add({ type = "ellipsoid", bone = "head", c = { cx + 0.02, cy, cz }, r = { 0.07, ry, rz }, color = EyeColor,
             paint = true, prio = 0.5 }, true)
         -- 腮红
         add({ type = "ellipsoid", bone = "head", c = { 0.37, 4.36, 1.54 }, r = { 0.08, 0.055, 0.09 }, color = BLUSH,
@@ -263,6 +277,7 @@ DEFS.small = {
 DEFS.large = {
     id = "large", name = "大号 · 古龙", size = 1.5,
     rideable = true, scapula = 1.5,
+    flightNeckLift = { neck1 = -22, neck2 = -8, head = 30 },
     voxel = { body = 0.1, head = 0.068, wing = 0.12 },
     wing = { scale = 1.08 },
     digits = { digitLen = 1.7, clawLen = 1.75, digitRad = 1.08 },
@@ -270,16 +285,16 @@ DEFS.large = {
         body = { len = 1.1, thick = 1.08 }, pelvis = { len = 1.08, thick = 1.1 },
         waist = { len = 1.12, thick = 1.1 }, chest = { len = 1.06, thick = 1.2 },
         -- 颈部前倾、头部回正：怪物猎人古龙那种压低的头颈线条
-        neck1 = { len = 0.9, thick = 1.14, rot = { 14, 0, 0 } }, neck2 = { len = 0.9, thick = 1.12, rot = { 6, 0, 0 } },
-        neck3 = { len = 0.9, thick = 1.1 }, neck4 = { len = 0.9, thick = 1.1 },
-        head = { len = 1.12, thick = 0.95, rot = { -20, 0, 0 } }, jaw = { len = 1.12, thick = 0.95 },
+        neck1 = { len = 0.9, thick = 1.16, rot = { 24, 0, 0 } }, neck2 = { len = 0.9, thick = 1.12, rot = { 10, 0, 0 } },
+        neck3 = { len = 0.88, thick = 1.1, rot = { -4, 0, 0 } }, neck4 = { len = 0.88, thick = 1.1 },
+        head = { len = 1.12, thick = 0.95, rot = { -30, 0, 0 } }, jaw = { len = 1.12, thick = 0.95 },
         armU = { len = 1.06, thick = 1.32 }, armL = { len = 1.04, thick = 1.3 }, hand = { len = 1.28, thick = 1.28 },
         legU = { len = 1.0, thick = 1.16 }, legL = { len = 1.0, thick = 1.14 }, legM = { len = 1.0, thick = 1.14 },
         foot = { len = 1.2, thick = 1.2 },
         tail = { len = 1.2, thick = 1.15 }, tail8 = { len = 1.3, thick = 1.3 },
     },
     tags = {
-        horn = { 1.55, 1.15 }, spike = { 1.35, 1.1 }, crest = { 1.25, 1.05 }, cheek = { 1.15, 1.0 },
+        horn = { 1.45, 1.15, rot = { -38, 0, 0 } }, spike = { 1.35, 1.1 }, crest = { 1.25, 1.05 }, cheek = { 1.15, 1.0 },
         tailblade = { 1.35, 1.1 }, tooth = { 1.3, 1.1 },
     },
     -- 更深的钢蓝、象牙色爪，明暗对比更强
@@ -326,7 +341,7 @@ local function Build(def)
         if op == false then
             -- 删除
         else
-            if op then ScaleAboutPrim(p, AnchorOf(p), op[1], op[2]) end
+            if op then ScaleAboutPrim(p, AnchorOf(p), op[1], op[2], op.rot) end
             kept[#kept + 1] = p
         end
     end
@@ -412,7 +427,7 @@ local function Build(def)
 
     local spec = {
         id = def.id, name = def.name, size = S, rideable = def.rideable, pet = def.pet, digits = def.digits ~= nil,
-        scapula = def.scapula,
+        scapula = def.scapula, flightNeckLift = def.flightNeckLift,
         PAL = Spec.PAL, EMISSIVE = Spec.EMISSIVE, VOXEL_BODY = def.voxel.body, VOXEL_HEAD = def.voxel.head,
         VOXEL_WING = def.voxel.wing, WING = wing, FingerPoints = Spec.FingerPoints, params = def.params,
         membraneThick = Spec.membraneThick * math.max(0.5, math.min(1.3, u)),
