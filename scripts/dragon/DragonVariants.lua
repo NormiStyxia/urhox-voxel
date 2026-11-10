@@ -274,10 +274,10 @@ DEFS.small = {
         [P.BLUE_L] = { 0.60, 0.81, 1.00 }, [P.BLUE_M] = { 0.47, 0.69, 0.99 }, [P.BLUE_D] = { 0.42, 0.59, 0.92 },
         [P.BLUE_X] = { 0.36, 0.50, 0.86 }, [P.BLUE_P] = { 0.78, 0.90, 1.00 }, [P.BLUE_L2] = { 0.54, 0.76, 1.00 },
         [P.PUPIL] = { 0.05, 0.07, 0.18 }, [P.EYE] = { 0.22, 0.55, 1.00 }, [P.MOUTH] = { 0.85, 0.42, 0.52 },
-        [BLUSH] = { 1.00, 0.62, 0.74 }, [IRIS] = { 0.55, 0.92, 1.00 },
+        [BLUSH] = { 1.00, 0.62, 0.74 }, [IRIS] = { 0.55, 0.92, 1.00 }, [LINER] = { 1.0, 1.0, 1.0 },
     },
-    -- 型号专用槽位不发光（从大号切回来时清掉大号眼睛的自发光）
-    emissive = { [IRIS] = { 0, 0, 0, 0 }, [LINER] = { 0, 0, 0, 0 } },
+    -- 高光（LINER 槽）纯白微发光，任何光照下都亮；虹膜不发光（也清掉大号留下的自发光）
+    emissive = { [IRIS] = { 0, 0, 0, 0 }, [LINER] = { 1.0, 1.0, 1.0, 0.45 } },
     params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
@@ -285,11 +285,11 @@ DEFS.small = {
         -- 深色瞳孔打底，下半虹膜由蓝到亮青渐变，前上方大高光 + 后下方小高光（Q 版动漫眼）
         -- 眼睛整块落在脸侧较平的一段（小号最终坐标 z≈0.58–0.70，表面 x≈0.17–0.26），
         -- 不再往前伸到吻部；x 下限压到 0.1，侧脸往里收的地方也染到
-        local cy, cz, ry, rz = 4.415, 1.62, 0.155, 0.115
+        local cy, cz, ry, rz = 4.415, 1.6, 0.155, 0.115
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.36) ^ 2 + (dz - 0.32) ^ 2 < 0.07 then return P.WHITE end   -- 大高光（前上）
-            if (dy + 0.36) ^ 2 + (dz + 0.42) ^ 2 < 0.035 then return P.WHITE end -- 小高光（后下）
+            if (dy - 0.34) ^ 2 + (dz - 0.22) ^ 2 < 0.07 then return LINER end     -- 大高光（前上）
+            if (dy + 0.36) ^ 2 + (dz + 0.42) ^ 2 < 0.035 then return LINER end   -- 小高光（后下）
             if dy < -0.6 then return IRIS end
             if dy < -0.12 then return P.EYE end
             return P.PUPIL
