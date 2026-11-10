@@ -264,10 +264,10 @@ DEFS.small = {
     extra = function(add)
         -- 大圆眼：涂色椭球沿 x 贯穿右半边头（x∈0..0.5），只看 y-z 椭圆，凹凸处也整块染到；
         -- 深色瞳孔为主，下缘一弯亮蓝，前上方一块白高光（小号去掉了眉骨，眼睛不被遮）
-        local cy, cz, ry, rz = 4.47, 1.72, 0.135, 0.13
+        local cy, cz, ry, rz = 4.455, 1.72, 0.135, 0.13
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.32) ^ 2 + (dz - 0.28) ^ 2 < 0.09 then return P.WHITE end
+            if (dy - 0.3) ^ 2 + (dz - 0.3) ^ 2 < 0.14 then return P.WHITE end
             if dy < -0.5 and math.abs(dz) < 0.75 then return P.EYE end
             return P.PUPIL
         end
@@ -285,7 +285,7 @@ DEFS.large = {
     flightNeckLift = { neck1 = -22, neck2 = -8, head = 30 },
     voxel = { body = 0.1, head = 0.068, wing = 0.12 },
     wing = { scale = 1.08 },
-    digits = { digitLen = 1.9, clawLen = 1.6, digitRad = 1.0, clawRad = 0.62, clawDrop = 0.035, spread = 1.35 },
+    digits = { digitLen = 1.9, clawLen = 1.9, digitRad = 1.0, clawRad = 0.8, clawDrop = 0.04, spread = 1.35 },
     bones = {
         body = { len = 1.1, thick = 1.08 }, pelvis = { len = 1.08, thick = 1.1 },
         waist = { len = 1.12, thick = 1.1 }, chest = { len = 1.06, thick = 1.2 },
