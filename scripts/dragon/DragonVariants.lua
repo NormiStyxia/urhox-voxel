@@ -285,11 +285,11 @@ DEFS.small = {
         -- 深色瞳孔打底，下半虹膜由蓝到亮青渐变，前上方大高光 + 后下方小高光（Q 版动漫眼）
         -- 眼睛整块落在脸侧较平的一段（小号最终坐标 z≈0.58–0.70，表面 x≈0.17–0.26），
         -- 不再往前伸到吻部；x 下限压到 0.1，侧脸往里收的地方也染到
-        local cy, cz, ry, rz = 4.43, 1.62, 0.17, 0.115
+        local cy, cz, ry, rz = 4.415, 1.62, 0.155, 0.115
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.38) ^ 2 + (dz - 0.3) ^ 2 < 0.13 then return P.WHITE end   -- 大高光（前上）
-            if (dy + 0.38) ^ 2 + (dz + 0.42) ^ 2 < 0.06 then return P.WHITE end  -- 小高光（后下）
+            if (dy - 0.36) ^ 2 + (dz - 0.32) ^ 2 < 0.07 then return P.WHITE end   -- 大高光（前上）
+            if (dy + 0.36) ^ 2 + (dz + 0.42) ^ 2 < 0.035 then return P.WHITE end -- 小高光（后下）
             if dy < -0.6 then return IRIS end
             if dy < -0.12 then return P.EYE end
             return P.PUPIL
