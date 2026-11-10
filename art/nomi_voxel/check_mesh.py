@@ -21,36 +21,23 @@ for (v,c),(vv,cc) in zip(old,new):
     if protect_face(v):
         assert np.array_equal(oldpal[c],p[cc]),'protected face RGB changed'
         face_count+=1
-bone_map={name:(parent,pivot) for name,parent,pivot in b}
-for side in ['right','left']:
-    assert bone_map['shin_'+side][0]=='leg_'+side
-    assert bone_map['shin_'+side][1][1]==12
-alltris=triangles(q,t)
-for name,v,c in alltris:
-    assert np.isfinite(v).all()
-    assert np.linalg.norm(np.cross(v[1]-v[0],v[2]-v[0]))>1e-9,(name,'degenerate face')
-    assert 0<=c<len(p)
-# The hanging locks live outside the hood width in final slender coordinates.
-# Root attachments intentionally overlap the head, so only the hood's vertical band is tested.
-# Full per-bone scaling includes a pivot transformed by Shape (not a world origin scale).
-pivot=shape('hair_back',np.array((0,51,-8)))
-hair=np.concatenate([(shape(n,v)-pivot)*.85+pivot for n,v,c in alltris if n=='hair_back'])
-hood=np.concatenate([shape(n,v) for n,v,c in alltris if n=='hood'])
-hair_band=hair[(hair[:,1]>=40)&(hair[:,1]<=50)]
-gap=float(np.abs(hair_band[:,0]).min()-np.abs(hood[:,0]).max())
-assert gap>1,'hanging hair merges into hood'
-for name in ['hair_back','hair_locks']:
-    colours={tuple(p[c]) for n,_,c in alltris if n==name}
-    approved={tuple(np.round(np.array(COLORS[x])/255,3)*255) for x in ['hair','hair_edge']}
-    assert colours<=approved
-nonface={tuple(p[c]) for n,_,c in alltris if n!='head'}
-assert len(nonface)<=11
-# Skin cannot appear on the coat/hood, and white hair cannot be projected onto those surfaces.
-coat_allowed={tuple(np.round(np.array(COLORS[x])/255,3)*255) for x in ['navy','fold','lining']}
-for n,_,c in alltris:
-    if n.startswith(('coat','cloak')) or n=='hood': assert tuple(p[c]) in coat_allowed
+# Exact part restoration is the acceptance criterion; a low colour count is not.
+import hashlib
+baseline=json.loads((HERE/'rollback_baseline.json').read_text())
+def digest(names):
+    records=[]
+    for kind,items in [('q',q),('t',t)]:
+        for row in items:
+            if row[0] not in names:continue
+            records.append([kind,*row[:-1],p[row[-1]].tolist()])
+    return hashlib.sha256(json.dumps(records,separators=(',',':')).encode()).hexdigest()
+hair={'head','hair_back','hair_locks'}
+parts={name for name,_,_ in b}-hair
+assert digest(parts)==baseline['clothing_limbs'],'clothing/limb geometry or RGB changed'
+assert digest(hair)==baseline['hair'],'accepted hair changed'
+assert json.loads(json.dumps(b))==baseline['original_bones'],'bone structure not restored'
 report={'head_triangles_unchanged':len(old),'face_triangles_rgb_unchanged':face_count,
-        'non_head_colour_count':len(nonface),'hair_to_hood_lateral_gap_m':round(gap*.022,5),
-        'bones':len(b),'render_triangles':len(alltris)}
+        'clothing_limbs_exact_restore':True,'accepted_hair_exact_preservation':True,
+        'bones':len(b),'palette_entries':len(p)}
 print(json.dumps(report,indent=2))
 (ROOT/'.tmp/nomi-review/checks.json').write_text(json.dumps(report,indent=2))

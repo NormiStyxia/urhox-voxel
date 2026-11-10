@@ -1,6 +1,6 @@
 """Semantic finishing of Nomi's sampled mesh. Coordinates are unscaled authoring units.
 The approved head is immutable geometry; its face RGB bypasses all colour processing.
-Coat, lining, hood and hanging locks are authored as separate closed meshes, not projections.
+Only hanging hair is rebuilt. Clothing, limbs and their colour details pass through unchanged.
 """
 import json
 from pathlib import Path
@@ -66,43 +66,10 @@ def finish(quads, palette, tris, bones):
         pts = np.array(raw[:9]).reshape(3,3)
         ts.append(('head',pts.tolist(),head_colour(pts-OFFSET,raw[9])))
 
-    def painted(bone, points, old):
-        x,y,z = np.mean(points,axis=0)
-        if bone.startswith('hair'):
-            return colour('hair_edge' if z < -10 else 'hair')
-        if bone.startswith('arm'):
-            if y < 31.7: return colour('skin')
-            if 33 <= y < 35: return colour('white')
-            return colour('navy')
-        if bone == 'body':
-            if z > 4 and 34 <= y < 43:
-                return colour('gold' if abs(x)<2.1 else 'white')
-            if z > 4 and y >= 43:
-                return colour('white' if abs(x)<(49-y)*.7 else 'navy')
-            return colour('navy')
-        # Boots retain only intentional sole, cuff and upper regions.
-        if bone.startswith('leg'):
-            return colour('sole' if y<1.2 else ('white_edge' if 1.2<=y<2.4 else 'navy'))
-        return colour('navy')
-
-    keep = ('body','arm_right','arm_left','leg_right','leg_left','hair_locks')
-    # Leave the hand silhouette and bodice intact. Retain only the original boot below y=10.
-    for q in quads:
-        bone=q[0]
-        if bone not in keep or bone.startswith('arm'): continue
-        pts=quad_points(q)
-        if bone=='body' and pts[:,1].max() <= 33: continue
-        if bone.startswith('leg') and pts[:,1].max()>10: continue
-        if bone=='hair_locks': continue  # replaced by continuous beveled locks below
-        name=bone.replace('leg_', 'shin_') if bone.startswith('leg') else bone
-        qs.append((name,)+tuple(q[1:-1])+(painted(bone,pts,q[-1]),))
-    for bone,pts,c in tris:
-        if bone not in keep or bone=='hair_locks' or bone.startswith('arm'): continue
-        p=np.asarray(pts)-OFFSET
-        if bone=='body' and p[:,1].max()<=33: continue
-        if bone.startswith('leg') and p[:,1].max()>10: continue
-        name=bone.replace('leg_', 'shin_') if bone.startswith('leg') else bone
-        ts.append((name,pts,painted(bone,p,c)))
+    # Preserve original clothing, hands and legs verbatim. Cleaning hair must not
+    # replace garment construction or overwrite its authored colour accents.
+    qs.extend(q for q in quads if q[0] not in ('head','hair_back','hair_locks'))
+    ts.extend(t for t in tris if t[0] not in ('head','hair_back','hair_locks'))
 
     def face(bone, points, col):
         p=np.asarray(points,float)+OFFSET
@@ -122,77 +89,6 @@ def finish(quads, palette, tris, bones):
         return [(cx-rx+bevel,y,cz+rz),(cx+rx-bevel,y,cz+rz),(cx+rx,y,cz+rz-bevel),
                 (cx+rx,y,cz-rz+bevel),(cx+rx-bevel,y,cz-rz),(cx-rx+bevel,y,cz-rz),
                 (cx-rx,y,cz-rz+bevel),(cx-rx,y,cz+rz-bevel)]
-
-    # Sleeves use broad continuous planes, not per-row extrusion ridges.
-    # Keep the A-pose silhouette and shoulder pivots; cuffs and hands are distinct regions.
-    for side,sgn in [('right',1),('left',-1)]:
-        b='arm_'+side
-        tube(b,[ring(sgn*18.2,34,-1.5,4,4.5,.8),ring(sgn*14.2,42,-1.5,3.6,4.4,.8),ring(sgn*10.5,48,-1.5,2.8,4,.7)],['navy'])
-        tube(b,[ring(sgn*18.6,33,-1.5,4,4.5,.8),ring(sgn*18.2,34,-1.5,4,4.5,.8)],['white'])
-        tube(b,[ring(sgn*19,32,-1.5,4,4.5,.8),ring(sgn*18.6,33,-1.5,4,4.5,.8)],['navy'])
-        tube(b,[ring(sgn*19.5,28.5,-1.5,2.6,3.3,.2),ring(sgn*18.7,32.5,-1.5,2.6,3.3,.2)],['skin'])
-
-    # Hips are inside the skirt, not at the exposed hem. Knee is a true child pivot.
-    bones=list(bones)
-    for side,x in [('right',4.5),('left',-4.5)]:
-        leg='leg_'+side; shin='shin_'+side
-        idx=next(i for i,b in enumerate(bones) if b[0]==leg)
-        bones[idx]=(leg,'root',(x,24,-1))
-        bones.insert(idx+1,(shin,leg,(x,12,-1)))
-        tube(leg,[ring(x,12,-1,3.1,3,.45),ring(x,15,-1,3.35,3.1,.45),ring(x,25,-1,3.6,3.3,.5)],['skin'])
-        tube(shin,[ring(x,8.8,-1,3.4,3.8,.4),ring(x,12.4,-1,3.1,3,.45)],['white'])
-        # Closed hinge barrel, circular AFTER the slender shape is baked; no dark flat cut.
-        rings=[]
-        for xx in (x-3.1,x+3.1):
-            rings.append([(xx,12+2.8/1.35*np.sin(a),-1+2.8/.92*np.cos(a)) for a in np.linspace(0,2*np.pi,17)[:-1]])
-        # Explicit outward orientation along X.
-        for i in range(16):
-            k=(i+1)%16
-            face(leg,[rings[0][i],rings[1][i],rings[1][k],rings[0][k]],'white')
-        face(leg,rings[0],'white');face(leg,list(reversed(rings[1])),'white')
-
-    # A separate closed underskirt and a sparse pleated navy skirt, well inside the coat.
-    tube('skirt',[ring(0,18,-.2,10.2,7.8,1.2),ring(0,21.4,-.2,9.9,7.6,1.2)],['white','white_edge'])
-    tube('skirt',[ring(0,21,-.2,10,7.5,1.1),ring(0,22,-.2,9.9,7.4,1.1)],['white'])
-    tube('skirt',[ring(0,22,-.2,9.9,7.4,1.1),ring(0,28,-.2,8.1,6.1,1.1),ring(0,34,-.2,6.9,5.2,1.1)],['navy','fold','navy','navy'])
-
-    def coat_path(y,hw,back,front,gap):
-        return [(gap,y,front),(hw-.5,y,front-.6),(hw,y,front-2),(hw,y,back+3),
-                (hw-2,y,back),(0,y,back-.4),(-hw+2,y,back),(-hw,y,back+3),
-                (-hw,y,front-2),(-hw+.5,y,front-.6),(-gap,y,front)]
-    def shell(bone, rows, thickness=.8):
-        inside=[[(x*(1-thickness/max(abs(x),8)),y,z+thickness if z<0 else z-thickness) for x,y,z in row] for row in rows]
-        for j in range(len(rows)-1):
-            for i in range(len(rows[0])-1):
-                k=i+1
-                # path goes clockwise around the back; reverse orientation for exterior
-                face(bone,[rows[j][k],rows[j+1][k],rows[j+1][i],rows[j][i]],'navy' if i%3 else 'fold')
-                face(bone,[inside[j][i],inside[j+1][i],inside[j+1][k],inside[j][k]],'lining')
-            for i in [0,len(rows[0])-1]:
-                p=[rows[j][i],rows[j+1][i],inside[j+1][i],inside[j][i]]
-                face(bone,p if i==0 else list(reversed(p)),'navy')
-        for j in [0,len(rows)-1]:
-            for i in range(len(rows[0])-1):
-                p=[rows[j][i],inside[j][i],inside[j][i+1],rows[j][i+1]]
-                face(bone,p if j==0 else list(reversed(p)),'navy')
-    shell('coat_upper',[coat_path(35.5,9.6,-10.5,9,6.9),coat_path(42,9.4,-11,9,6.9),coat_path(50.5,10,-10,7,5.5)])
-    shell('coat_lower',[coat_path(19,15,-13.5,10,11),coat_path(27,12.8,-12.8,10,8.5),coat_path(36.5,9.6,-10.5,9,6.9)])
-    # Torn tails are broad independent panels; no one-voxel horizontal teeth.
-    for side,sgn in [('r',1),('l',-1)]:
-        rows=[[(sgn*13,7 if sgn>0 else 10,-3),(sgn*16,10 if sgn>0 else 7,-7),(sgn*13,13,-12)],
-              [(sgn*13,20,1),(sgn*15,20,-7),(sgn*12,20,-13.5)]]
-        if sgn<0: rows=[list(reversed(r)) for r in rows]
-        shell('cloak_strip_'+side,rows)
-    shell('cloak_strip_b',[[(-9,15,-13.4),(-4,18,-14),(0,13,-14.4),(4,17,-14),(9,14,-13.4)],
-                           [(-11,20,-13),(-5,20,-13.7),(0,20,-13.9),(5,20,-13.7),(11,20,-13)]])
-
-    # Folded hood: its rear V and front return have independent surfaces and thickness.
-    rim=[(-8.1,50,-10),(8.1,50,-10),(8.1,47,-13),(4,42,-14),(0,40.5,-14),(-4,42,-14),(-8.1,47,-13)]
-    back=[(x,y,z-.9) for x,y,z in rim]
-    face('hood',back,'navy')
-    face('hood',list(reversed(rim)),'lining')
-    for i in range(len(rim)):
-        k=(i+1)%len(rim);face('hood',[rim[i],back[i],back[k],rim[k]],'fold')
 
     # Side locks sweep from the head, on either side of (not painted onto) the hood.
     # Separate strands keep broad sloped tips; depth never derives from coat samples.
