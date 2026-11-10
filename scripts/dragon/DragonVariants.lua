@@ -200,20 +200,25 @@ local function ArticulateDigits(prims, bones, cfg)
     for _, d in ipairs(Spec.DIGITS) do
         local pre = (d.limb == "F") and "fd" or "hd"
         local kd, kc, kr = cfg.digitLen or 1, cfg.clawLen or 1, cfg.digitRad or 1
-        local b1 = Add(d.a1, Mul(Sub(d.b1, d.a1), kd))
-        local shift = Sub(b1, d.b1)
-        local a2 = Add(d.a2, shift)
-        local b2 = Add(a2, Mul(Sub(d.b2, d.a2), kc))
+        -- 趾间距放宽（spread），趾节加长；爪尖按 clawDrop 向下勾
+        local dx = (d.a1[1] - d.cx) * ((cfg.spread or 1) - 1)
+        local a1 = { d.a1[1] + dx, d.a1[2], d.a1[3] }
+        local b1 = Add(a1, Mul(Sub(d.b1, d.a1), kd))
+        local a2 = Add(b1, Sub(d.a2, d.b1))
+        local cd = Sub(d.b2, d.a2)
+        cd[2] = cd[2] - (cfg.clawDrop or 0)
+        local b2 = Add(a2, Mul(cd, kc))
         for _, side in ipairs({ "_R", "_L" }) do
             local mx = (side == "_L") and MirrorX or function(v) return v end
             local parent = d.parent:sub(1, -3) .. side
             local n1, n2 = pre .. d.n .. side, pre .. d.n .. "c" .. side
-            bones[#bones + 1] = { name = n1, parent = parent, pivot = mx(d.a1) }
+            bones[#bones + 1] = { name = n1, parent = parent, pivot = mx(a1) }
             bones[#bones + 1] = { name = n2, parent = n1, pivot = mx(a2) }
-            keep[#keep + 1] = { type = "cone", bone = n1, a = mx(d.a1), b = mx(b1), r = { d.r1[1] * kr, d.r1[2] * kr }, color = P_.BLUE_M }
-            keep[#keep + 1] = { type = "cone", bone = n2, a = mx(a2), b = mx(b2), r = { d.r2[1] * kr * 1.05, d.r2[2] }, color = P_.CLAW }
+            keep[#keep + 1] = { type = "cone", bone = n1, a = mx(a1), b = mx(b1), r = { d.r1[1] * kr, d.r1[2] * kr }, color = P_.BLUE_M }
+            local cr = cfg.clawRad or 1
+            keep[#keep + 1] = { type = "cone", bone = n2, a = mx(a2), b = mx(b2), r = { d.r2[1] * cr, d.r2[2] * cr }, color = P_.CLAW }
             -- 指节球：挂父骨骼，弯趾时遮住缝
-            keep[#keep + 1] = { type = "ellipsoid", bone = parent, c = mx(d.a1), r = { d.r1[1] * kr, d.r1[1] * kr, d.r1[1] * kr },
+            keep[#keep + 1] = { type = "ellipsoid", bone = parent, c = mx(a1), r = { d.r1[1] * kr, d.r1[1] * kr, d.r1[1] * kr },
                 color = P_.BLUE_M, joint = true }
             keep[#keep + 1] = { type = "ellipsoid", bone = n1, c = mx(a2), r = { d.r1[2] * kr * 0.95, d.r1[2] * kr * 0.95, d.r1[2] * kr * 0.95 },
                 color = P_.BLUE_M, joint = true }
@@ -230,7 +235,7 @@ local DEFS = {}
 DEFS.small = {
     id = "small", name = "小号 · 幼龙", size = 0.42,
     rideable = false, pet = true,
-    voxel = { body = 0.04, head = 0.028, wing = 0.05 },
+    voxel = { body = 0.04, head = 0.024, wing = 0.05 },
     wing = { scale = 0.66 },
     bones = {
         body = { len = 0.78, thick = 1.12 }, pelvis = { len = 0.78, thick = 1.14 },
@@ -243,7 +248,7 @@ DEFS.small = {
         tail = { len = 0.72, thick = 1.15 }, tail8 = { len = 1.1, thick = 1.1 },
     },
     tags = {
-        eye = false, pupil = false, eyelid = false, tooth = false, nostril = false,
+        eye = false, pupil = false, eyelid = false, tooth = false, nostril = false, brow = false,
         horn = { 0.45, 0.85 }, spike = { 0.42, 0.8 }, crest = { 0.6, 0.9 }, cheek = { 0.8, 1.0 },
         claw = { 0.55, 0.9 }, tailblade = { 0.85, 1.0 },
     },
@@ -257,19 +262,19 @@ DEFS.small = {
     params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
-        -- 大圆眼：涂色椭球，中心在脸侧表面（中号坐标 y≈4.47, z≈1.72 处表面 x≈0.22），
-        -- x 半径只取薄薄一层，避免染到头顶；深色瞳孔为主，下缘一弯亮蓝，前上方一块白高光
-        local cx, cy, cz, ry, rz = 0.22, 4.465, 1.72, 0.13, 0.13
+        -- 大圆眼：涂色椭球沿 x 贯穿右半边头（x∈0..0.5），只看 y-z 椭圆，凹凸处也整块染到；
+        -- 深色瞳孔为主，下缘一弯亮蓝，前上方一块白高光（小号去掉了眉骨，眼睛不被遮）
+        local cy, cz, ry, rz = 4.47, 1.72, 0.135, 0.13
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
             if (dy - 0.32) ^ 2 + (dz - 0.28) ^ 2 < 0.09 then return P.WHITE end
             if dy < -0.5 and math.abs(dz) < 0.75 then return P.EYE end
             return P.PUPIL
         end
-        add({ type = "ellipsoid", bone = "head", c = { cx + 0.02, cy, cz }, r = { 0.07, ry, rz }, color = EyeColor,
+        add({ type = "ellipsoid", bone = "head", c = { 0.25, cy, cz }, r = { 0.25, ry, rz }, color = EyeColor,
             paint = true, prio = 0.5 }, true)
         -- 腮红
-        add({ type = "ellipsoid", bone = "head", c = { 0.37, 4.36, 1.54 }, r = { 0.08, 0.055, 0.09 }, color = BLUSH,
+        add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.36, 1.55 }, r = { 0.14, 0.06, 0.095 }, color = BLUSH,
             paint = true, prio = 0.4 }, true)
     end,
 }
@@ -280,7 +285,7 @@ DEFS.large = {
     flightNeckLift = { neck1 = -22, neck2 = -8, head = 30 },
     voxel = { body = 0.1, head = 0.068, wing = 0.12 },
     wing = { scale = 1.08 },
-    digits = { digitLen = 1.7, clawLen = 1.75, digitRad = 1.08 },
+    digits = { digitLen = 1.9, clawLen = 1.6, digitRad = 1.0, clawRad = 0.62, clawDrop = 0.035, spread = 1.35 },
     bones = {
         body = { len = 1.1, thick = 1.08 }, pelvis = { len = 1.08, thick = 1.1 },
         waist = { len = 1.12, thick = 1.1 }, chest = { len = 1.06, thick = 1.2 },

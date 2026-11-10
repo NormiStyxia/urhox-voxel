@@ -4,7 +4,7 @@
   "author": {
     "id": "1838934907"
   },
-  "entry": "main.lua",
+  "entry": "dragon_main.lua",
   "version": "1.0.0",
   "taptap_publish": {
     "title": "urhox-voxel",
