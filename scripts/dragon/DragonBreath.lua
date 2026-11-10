@@ -136,10 +136,10 @@ local PAL = {
 M.PAL = PAL
 
 local function SetupPalette(world)
-    world:SetPaletteEntry(PAL.ICE_BODY, Color(0.42, 0.72, 0.98), 2.0)
-    world:SetPaletteEntry(PAL.ICE_EDGE, Color(0.72, 0.92, 1.0), 2.0)
+    world:SetPaletteEntry(PAL.ICE_BODY, Color(0.2, 0.48, 0.92), 2.0)
+    world:SetPaletteEntry(PAL.ICE_EDGE, Color(0.5, 0.82, 1.0), 2.0)
     world:SetPaletteEntry(PAL.ICE_GLOW, Color(0.92, 1.0, 1.0), 2.0)
-    world:SetPaletteEntryPBR(PAL.ICE_BODY, 0.12, 0.0, 0.8, Color(0.15, 0.4, 1.0, 0.35))
+    world:SetPaletteEntryPBR(PAL.ICE_BODY, 0.12, 0.0, 0.8, Color(0.1, 0.35, 1.0, 0.5))
     world:SetPaletteEntryPBR(PAL.ICE_EDGE, 0.1, 0.0, 0.8, Color(0.4, 0.75, 1.0, 0.6))
     world:SetPaletteEntryPBR(PAL.ICE_GLOW, 0.1, 0.0, 0.8, Color(0.7, 0.95, 1.0, 1.6))
     world:SetPaletteEntry(PAL.FROST_A, Color(0.70, 0.86, 1.0), 50.0)
