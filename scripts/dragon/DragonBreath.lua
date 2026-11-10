@@ -231,10 +231,11 @@ local function MakeBeamSegs(parent, n, core, edge)
         local sm = node:CreateComponent("StaticModel")
         sm:SetModel(model)
         local mat = ShaderMaterial("Shaders/BLGL/DragonBeam.shader")
-        local outer = (i % 2 == 0)
-        SetC(mat, "core_color", outer and edge or core)
-        SetC(mat, "edge_color", edge)
+        local outer = (i > 1)
+        SetC(mat, "core_color", outer and C(1.0, 0.8, 0.4) or core)
+        SetC(mat, "edge_color", outer and C(1.0, 0.55, 0.2) or edge)
         SetF(mat, "seed", i * 1.37)
+        SetF(mat, "cells", outer and 3 or 10)
         sm:SetMaterial(mat)
         sm.castShadows = false
         node.enabled = false
@@ -438,7 +439,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(0.95, 0.75, 1.0, 0.9) }, { 0.12, C(0.6, 0.25, 0.95, 0.75) }, { 0.45, C(0.35, 0.1, 0.7, 0.55) }, { 0.8, C(0.18, 0.05, 0.35, 0.3) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 光束（体素光柱）
-        self.beam = MakeBeamSegs(root, 2, C(1.0, 0.9, 0.7), C(0.6, 0.22, 1.0))
+        self.beam = MakeBeamSegs(root, 5, C(1.0, 0.92, 0.7), C(0.62, 0.24, 1.0))
     end
 
     -- Lua 粒子：螺旋汇聚 / 绕束 / 余烬 / 闪光
@@ -897,17 +898,28 @@ function B:UpdateBeam(origin, dir, len, fire, t, now)
     local bl = math.max(0.05, len * ext)
     self.beamLen = bl
     local pulse = (math.floor(now * 16) % 3 == 0) and 1.12 or 1.0
+    local side, up = Basis(dir)
+    local base = Quaternion(Vector3.UP, dir)
     for i, seg in ipairs(self.beam) do
         if fire > 0.01 then
             if not seg.node.enabled then seg.node.enabled = true end
-            local w = (seg.outer and 1.5 or 0.62) * S * (0.5 + 0.5 * fire) * pulse
-            seg.node.position = origin + dir * (bl * 0.5)
-            local twist = seg.outer and (45 + math.floor(now * 8) * 15) or 0
-            seg.node.rotation = Quaternion(Vector3.UP, dir) * Quaternion(twist, Vector3.UP)
-            seg.node.scale = Vector3(w, bl, w)
+            if seg.outer then
+                -- 四根金色细光棱绕主束螺旋（每 1/8 秒跳一档角度）
+                local a = (i - 2) * math.pi * 0.5 + math.floor(now * 8) * (math.pi / 12)
+                local rr = 0.95 * S * (0.6 + 0.4 * fire)
+                local w = 0.22 * S * pulse
+                seg.node.position = origin + dir * (bl * 0.5) + (side * math.cos(a) + up * math.sin(a)) * rr
+                seg.node.rotation = base * Quaternion(45, Vector3.UP)
+                seg.node.scale = Vector3(w, bl * 0.92, w)
+            else
+                local w = 1.25 * S * (0.5 + 0.5 * fire) * pulse
+                seg.node.position = origin + dir * (bl * 0.5)
+                seg.node.rotation = base * Quaternion(45, Vector3.UP)
+                seg.node.scale = Vector3(w, bl, w)
+            end
             SetF(seg.mat, "fade", fire)
-            SetF(seg.mat, "scroll", now)
-            SetF(seg.mat, "intensity", seg.outer and 1.6 or 3.2)
+            SetF(seg.mat, "scroll", now * (seg.outer and 1.3 or 1.0))
+            SetF(seg.mat, "intensity", seg.outer and 2.4 or 2.8)
             SetF(seg.mat, "beam_len", bl)
         elseif seg.node.enabled then
             seg.node.enabled = false

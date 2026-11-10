@@ -11,7 +11,11 @@ cfg.setup = function(T)
     T.externalDrive = true
     T.cam.follow = false
     local S = T.rig.size or 1.0
-    if VIEW == 1 then
+    if VIEW == 3 then
+        -- 侧视：龙在原点面朝 -Z（偏航 180°），镜头在 +X 侧
+        T.cam.yaw, T.cam.pitch, T.cam.dist = -90, 12, 20 * S
+        T.cam.target = Vector3(0, 2.2 * S, -5.5 * S)
+    elseif VIEW == 1 then
         T.cam.yaw, T.cam.pitch, T.cam.dist = 180 + 120, 14, 19 * S
         T.cam.target = Vector3(-1.5 * S, 2.0 * S, -5.0 * S)
     else

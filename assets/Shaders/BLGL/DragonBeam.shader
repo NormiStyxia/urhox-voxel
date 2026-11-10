@@ -1,17 +1,19 @@
-// 星陨龙息体素光柱：套在 Models/Box.mdl（-0.5..0.5）上的方形截面光柱。
-//   * 轴向（Y）分成一节节「光段」，每段亮度不同、沿轴向前推（scroll）→ 像一串方块在流动
-//   * 截面方向用像素格量化：中心亮、边缘一格深色描边，硬边无柔光
-//   * 两端各一段淡出
+// 星陨龙息体素光柱：套在 Models/Box.mdl（-0.5..0.5）上。
+//   * 轴向（Y）切成一节节光段，沿光束方向流动，段与段之间留暗缝
+//   * 截面方向量化成像素格：中心白金高光、往外过渡到主色、最外一格深紫描边
+//   * 视线掠射的侧面更透（菲涅尔反向），正面看像一根实心光柱，侧面看像能量体
 shader_type spatial;
 render_mode shading_model_unlit, blend_mix, cull_disabled, depth_draw_never;
 
-uniform vec4 core_color = vec4(1.0, 0.9, 0.7, 1.0);
+uniform vec4 core_color = vec4(1.0, 0.95, 0.8, 1.0);
 uniform vec4 edge_color = vec4(0.6, 0.22, 1.0, 1.0);
+uniform vec4 dark_color = vec4(0.12, 0.02, 0.25, 1.0);
 uniform float intensity = 3.0;
 uniform float fade = 1.0;
 uniform float scroll = 0.0;
-uniform float beam_len = 10.0;   // 光柱长度（米），决定光段数量
+uniform float beam_len = 10.0;
 uniform float seed = 0.0;
+uniform float cells = 8.0;
 
 varying vec3 opos;
 
@@ -22,28 +24,29 @@ void vertex() {
 }
 
 void fragment() {
-    // 截面：取所在面的两个横向坐标，量化成 6 格
     vec3 a = abs(opos);
-    float lateral = max(a.x, a.z) * 2.0;           // 0 中心 .. 1 边
-    float face = (a.x > a.z) ? opos.z : opos.x;    // 侧面上的横向坐标 -0.5..0.5
-    float cellL = floor((face + 0.5) * 6.0);
-    // 轴向光段：约 0.35m 一段，随时间前推
-    float segLen = 0.35;
+    float face = (a.x > a.z) ? opos.z : opos.x;
+    // 截面像素格：0 = 中心，1 = 边
+    float cl = floor((face + 0.5) * cells);
+    float lat = abs((cl + 0.5) / cells - 0.5) * 2.0;
     float y = (opos.y + 0.5) * beam_len;
-    float seg = floor(y / segLen - scroll * 18.0);
-    float segB = 0.65 + 0.35 * h11(seg);
-    float segStep = step(0.12, fract(y / segLen - scroll * 18.0)); // 段与段之间一条暗缝
-    // 边缘一格描边
-    float edge = step(0.5, abs(cellL - 2.5) - 1.5);
-    vec3 col = mix(core_color.rgb * (1.0 + 0.4 * segB), edge_color.rgb, edge) * intensity;
-    col *= mix(0.55, 1.0, segStep) * segB;
-    // 端点淡出：前后各 4% 长度，按段量化
+    float segLen = 0.4;
+    float segF = y / segLen - scroll * 16.0;
+    float seg = floor(segF);
+    float gap = step(0.14, fract(segF));
+    float segB = 0.75 + 0.25 * h11(seg);
+    vec3 col;
+    if (lat > 0.8) col = dark_color.rgb;
+    else if (lat > 0.5) col = edge_color.rgb * intensity * 0.8;
+    else if (lat > 0.22) col = mix(edge_color.rgb, core_color.rgb, 0.5) * intensity;
+    else col = core_color.rgb * intensity * 1.3;
+    col *= mix(0.45, 1.0, gap) * segB;
     float u = opos.y + 0.5;
-    float ends = step(0.03, u) * step(u, 0.97);
-    float aOut = fade * ends * mix(0.9, 1.0, segStep);
-    // 逐格抖动显隐
-    float n = h11(seg * 13.0 + cellL);
-    if (n > fade * 1.1 || aOut < 0.01) discard;
+    float ends = step(0.02, u) * step(u, 0.985);
+    // 侧面掠射时边缘格更透
+    float alpha = fade * ends * ((lat > 0.8) ? 0.75 : 0.95);
+    float n = h11(seg * 13.0 + cl);
+    if (n > fade * 1.1 || alpha < 0.02) discard;
     ALBEDO = col;
-    ALPHA = clamp(aOut, 0.0, 1.0);
+    ALPHA = alpha;
 }

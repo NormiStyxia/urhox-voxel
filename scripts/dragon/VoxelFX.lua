@@ -104,13 +104,19 @@ function M.Texture(kind)
     return tex
 end
 
--- additive = true 加色发光（只用于少量高光）；否则普通 Alpha，雪地 / 亮天空上颜色清楚
-function M.Material(kind, additive)
+-- 像素粒子材质（VoxelSprite.shader）：硬边、像素抖动淡出；glow = true 时颜色进 HDR 发光
+function M.Material(kind, glow)
     local m = Material:new()
-    m:SetTechnique(0, cache:GetResource("Technique",
-        additive and "Techniques/DiffUnlitParticleAdd.xml" or "Techniques/DiffUnlitParticleAlpha.xml"))
-    local tex = M.Texture(kind)
-    m:SetTexture(TU_DIFFUSE, tex)
+    if not m:SetSurfaceShader("Shaders/BLGL/VoxelSprite.shader") then
+        print("VoxelFX: VoxelSprite.shader failed, fallback to particle technique")
+        m:SetTechnique(0, cache:GetResource("Technique", "Techniques/DiffUnlitParticleAlpha.xml"))
+        m:SetTexture(TU_DIFFUSE, M.Texture(kind))
+        return m
+    end
+    m:SetSurfaceTexture("sprite_tex", M.Texture(kind))
+    local rows = SPRITES[kind] or SPRITES.square
+    m:SetShaderParameter("cells", Variant(#rows + 2))
+    m:SetShaderParameter("glow", Variant(glow and 2.2 or 1.0))
     return m
 end
 
@@ -264,17 +270,23 @@ end
 local Debris = {}
 Debris.__index = Debris
 
+---@type table<string, Material>
 local matCache = {}
+-- 体素块材质（VoxelCube.shader）：纯色 + 自发光 + 边缘压暗；按颜色缓存
 local function CubeMaterial(c, glow)
     local key = string.format("%.2f_%.2f_%.2f_%.2f", c.r, c.g, c.b, glow or 0)
     local m = matCache[key]
     if m ~= nil then return m end
     m = Material:new()
-    m:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
-    m:SetShaderParameter("MatDiffColor", Variant(Color(c.r, c.g, c.b, 1.0)))
-    m:SetShaderParameter("MatEmissiveColor", Variant(Color(c.r * (glow or 0), c.g * (glow or 0), c.b * (glow or 0))))
-    m:SetShaderParameter("Roughness", Variant(0.35))
-    m:SetShaderParameter("Metallic", Variant(0.0))
+    local g = glow or 0
+    if m:SetSurfaceShader("Shaders/BLGL/VoxelCube.shader") then
+        m:SetShaderParameter("base_color", Variant(Color(c.r, c.g, c.b, 1.0)))
+        m:SetShaderParameter("emit_color", Variant(Color(c.r * g, c.g * g, c.b * g, 1.0)))
+    else
+        m:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
+        m:SetShaderParameter("MatDiffColor", Variant(Color(c.r, c.g, c.b, 1.0)))
+        m:SetShaderParameter("MatEmissiveColor", Variant(Color(c.r * g, c.g * g, c.b * g)))
+    end
     matCache[key] = m
     return m
 end
