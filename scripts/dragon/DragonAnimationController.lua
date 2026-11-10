@@ -260,21 +260,42 @@ end
 
 -- 飞行时颈部前伸；尾巴放松下垂，保留小幅滞后的摆动。
 function C:FlightBody(p, phi, ext)
-    local bank = self.loco.bank
-    local stream, brake = self.loco.stream or 0, self.loco.brake or 0
-    Pose.SetBody(p, 5 * stream + 3 * (self.loco.pull or 0) - 7 * brake, 0, 0)
+    local L = self.loco
+    local bank = L.bank
+    local stream, brake = L.stream or 0, L.brake or 0
+    local drill = L.drill or 0
+    local launch = math.max(0, L.pull or 0) * (L.boost or 0) * drill
+    local flow = L.flowYaw or 0
+    local bodyPitch = 5 * stream + 8 * drill + 7 * launch - 7 * brake
+    local flowPitch = Clamp(-math.deg(math.atan(L.vy or 0, math.max(L.speed or 0, 1))), -20, 20)
+    Pose.SetBody(p, bodyPitch, 0, 0, 0, -.18 * drill - .12 * launch, .12 * launch)
     Poses.Neck(p, { pitch = 58 * ext, curve = -4 * ext, yaw = -bank * 0.35, headPitch = -52 * ext + 3 * math.sin(2 * math.pi * phi),
         headYaw = 0, jaw = 0 })
-    Poses.Tail(p, { droop = ext, stream = self.loco.tailStream or stream, yaw = bank * 0.25, waveAmp = 2.5,
+    Poses.Tail(p, { droop = ext, stream = L.tailStream or stream, yaw = L.flowYaw ~= nil and flow or bank * 0.25, waveAmp = 2.5 * (1 - .65 * drill),
         wavePhase = 2 * math.pi * phi, lag = 0.5, liftAmp = 0.8 * ext })
     -- 胸腔随下拍收缩，躯干微弯
     local pump = math.sin(2 * math.pi * phi)
-    Pose.Set(p, "chest", -2 * pump * ext, 0, 0)
-    Pose.Set(p, "waist", 1.5 * pump * ext, 0, 0)
+    Pose.Set(p, "chest", -2 * pump * ext * (1 - .7 * drill) + 3 * drill, 0, 0)
+    Pose.Set(p, "waist", 1.5 * pump * ext * (1 - .7 * drill) - 2 * drill, 0, 0)
+    -- Bend at the neck base, then straighten the upper neck into the airflow.
+    -- Counter-rotate the head so lowering the chest does not point the snout down.
+    local neckPitch = { 42, 20, 10, -4 }
+    local neckSum = 0
+    for i = 1, 4 do
+        local e = p.j["neck" .. i]
+        e[1] = Lerp(e[1], neckPitch[i], drill)
+        e[2] = Lerp(e[2], flow * .25, drill)
+        neckSum = neckSum + e[1]
+    end
+    local levelHead = flowPitch + 4 - bodyPitch - (L.pitch or 0)
+        - p.j.chest[1] - p.j.waist[1] - neckSum
+    p.j.head[1] = Lerp(p.j.head[1], levelHead, drill)
+    -- Body pitching down must not kick the streamed tail upwards.
+    Pose.AddTo(p, "tail1", -(bodyPitch + (L.pitch or 0) - flowPitch) * drill, 0, 0)
     -- 尾巴随振翅上下起伏（沿尾链滞后传播）
     local w = 2 * math.pi * phi
     for i = 1, 8 do
-        Pose.AddTo(p, "tail" .. i, 1.0 * ext * (0.4 + 0.6 * (i - 1) / 7) * math.sin(w - 0.55 * i), 0, 0)
+        Pose.AddTo(p, "tail" .. i, (1 - .6 * drill) * ext * (0.4 + 0.6 * (i - 1) / 7) * math.sin(w - 0.55 * i), 0, 0)
     end
 end
 
@@ -287,7 +308,8 @@ end
 function C:FlightLimbs(p, phi, t, glide)
     local L, inp = self.loco, self.input
     local w = 2 * math.pi * phi
-    local flapK = 1.0 - 0.7 * glide
+    local drill = L.drill or 0
+    local flapK = (1.0 - 0.7 * glide) * (1 - .65 * drill)
     local bank = L.bank
     local climb = Clamp(L.vy / 3.0, -1, 1)
     local fast = Clamp((L.speed - 6.0) / 6.0, -0.5, 1.0)
@@ -297,12 +319,12 @@ function C:FlightLimbs(p, phi, t, glide)
         local grip = math.sin(t * 2.0 + (sx > 0 and 0 or math.pi))
         -- 转弯内侧：坡度 >0 向右转，右侧为内侧
         local inner = Clamp(bank * sx / 30, 0, 1)
-        local reach = -14 * glide - 10 * inner - 8 * math.max(0, -climb) + 10 * math.max(0, climb)
+        local reach = -14 * glide - 10 * inner - 8 * math.max(0, -climb) + 10 * math.max(0, climb) + 16 * drill
         Pose.AddTo(p, "armU" .. side, reach + 7 * flapK * math.sin(w - 0.6), 0, sx * (4 * inner))
         Pose.AddTo(p, "armL" .. side, 9 * flapK * math.sin(w - 1.1) + 10 * glide + 6 * grip, 0, 0)
         Pose.AddTo(p, "hand" .. side, 12 * flapK * math.sin(w - 1.6) + 16 * grip - 10 * glide, 0, 0)
         -- 后腿
-        local trail = 12 * fast + 6 * glide
+        local trail = 12 * fast + 6 * glide + 18 * drill
         local balance = -sx * bank * 0.12
         Pose.AddTo(p, "legU" .. side, trail + 3 * flapK * math.sin(w - 0.4) + 2 * math.sin(t * 1.3 + sx), 0, sx * balance)
         Pose.AddTo(p, "legL" .. side, 4 * flapK * math.sin(w - 0.85), 0, 0)
@@ -530,8 +552,13 @@ STATES.FLY = {
         local p = Pose.New()
         local phi = self.flapPhase
         local brake, boost = self.loco.brake or 0, self.loco.boost or 0
-        local w = C.FlapWing(phi, self.params.amp * (1 + 0.15 * math.max(0, self.input.climb) + 0.12 * boost))
-        w.sweep = (w.sweep or 0) + 8 * (self.loco.wind or 0) - 12 * brake
+        local drill = self.loco.drill or 0
+        local launch = math.max(0, self.loco.pull or 0) * boost * drill
+        local w = C.FlapWing(phi, self.params.amp * (1 + 0.15 * math.max(0, self.input.climb)) * (1 - .42 * drill))
+        w.elev = Lerp(w.elev, -24, .7 * launch)
+        w.sweep = (w.sweep or 0) + 8 * (self.loco.wind or 0) + 22 * drill - 12 * brake
+        w.wrist = (w.wrist or 0) + 18 * drill
+        w.fan = (w.fan or 1) * (1 - .12 * drill)
         w.elev = (w.elev or 0) + 8 * brake
         Poses.Wings(p, w)
         self:FlightBody(p, phi, 1.0)
@@ -594,6 +621,7 @@ STATES.LAND = {
         if self.touchT == nil then
             -- Landing cancels thrust; retain momentum but brake before touching down.
             L.boost = Approach(L.boost or 0, 0, 3, dt)
+            L.drill = Damp(L.drill or 0, 0, 4, dt)
             L.stream = Damp(L.stream or 0, 0, 3, dt)
             L.brake = Damp(L.brake or 0, 1, 5, dt)
             local stopRate = (L.speed > self.params.flySpeed) and 7 or 2.6
@@ -765,11 +793,12 @@ function C:FlightLogic(dt, flapping)
     else
         L.altTarget = L.alt - 1.0
     end
-    local hz = prm.flapHz * (1 + 0.25 * math.max(0, inp.climb))
+    local drill = L.drill or 0
+    local hz = prm.flapHz * (1 + 0.25 * math.max(0, inp.climb) + .3 * drill)
     if flapping then self.flapPhase = (self.flapPhase + dt * hz) % 1.0 end
     local cmd = Clamp(G + 2.4 * (L.altTarget - L.alt) - 2.2 * L.vy, 0.0, 2.6 * G)
     if not flapping then cmd = G - 1.1 end
-    local wave = flapping and (G * 0.55 * FlapLift(self.flapPhase) * prm.amp) or 0
+    local wave = flapping and (G * 0.55 * FlapLift(self.flapPhase) * prm.amp * (1 - .6 * drill)) or 0
     L.vy = L.vy + (cmd - G + wave) * dt
     L.alt = L.alt + L.vy * dt
     if L.alt < 0.5 then L.alt, L.vy = 0.5, math.max(L.vy, 0) end

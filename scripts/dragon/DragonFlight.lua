@@ -16,6 +16,7 @@ function M.Reset(L,yaw)
     L.boost,L.stream,L.brake,L.edgeBrake=0,0,0,0
     L.tailStream=nil
     L.wind,L.pull,L.hairWind,L.coatWind,L.hemWind,L.cameraPull=0,0,0,0,0,0
+    L.drill,L.flowYaw=0,0
 end
 
 -- Air pressure remains at speed; acceleration briefly pulls the rider backwards.
@@ -73,6 +74,12 @@ function M.Update(L,inp,prm,dt,flapping)
     local previousSpeed=L.speed
     L.speed=Approach(L.speed,target,rate,dt)
     M.UpdateWind(L,prm,dt,(L.speed-previousSpeed)/math.max(dt,1e-6))
+    -- A distinct powered-flight silhouette, with a slower release into coasting.
+    -- Do not keep charging into the arena edge while Shift is held.
+    local drive=sprint and L.edgeBrake==0
+    local drill=drive and (.45+.55*L.wind) or (.6*Clamp((L.wind-.45)/.55,0,1))
+    if braking or L.edgeBrake>0 then drill=0 end
+    L.drill=Damp(L.drill or 0,drill,drive and 8 or 4,dt)
     L.stream=Damp(L.stream or 0,Clamp((L.speed-prm.flySpeed)/(top-prm.flySpeed),0,1),3,dt)
     L.tailStream=L.tailStream or {}
     for i=8,1,-1 do
@@ -96,6 +103,8 @@ function M.Move(L,dt,inertial)
         local rate=2.8-1.0*(L.stream or 0)+1.5*(L.brake or 0)
         local from=L.travelYaw or L.yaw
         L.travelYaw=Wrap(from+Wrap(L.yaw-from)*(1-math.exp(-rate*dt)))
+        -- Airflow is opposite travel, not opposite the newly steered heading.
+        L.flowYaw=Damp(L.flowYaw or 0,Clamp(Wrap(L.travelYaw-L.yaw),-30,30),8,dt)
     else
         M.Reset(L,L.yaw)
     end
