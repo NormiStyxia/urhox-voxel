@@ -91,7 +91,7 @@ local POS_KEYS = { "c", "a", "b", "base", "anchor" }
 -- 以 anchor 为中心伸缩：位置 ×kl，截面半径 ×kr
 local function ScaleAboutPrim(p, anchor, kl, kr)
     for _, key in ipairs(POS_KEYS) do
-        if p[key] then p[key] = Add(anchor, Mul(Sub(p[key], anchor), kl)) end
+        if type(p[key]) == "table" then p[key] = Add(anchor, Mul(Sub(p[key], anchor), kl)) end
     end
     local t = p.type
     if t == "ellipsoid" then p.r = { p.r[1] * kl, p.r[2] * kl, p.r[3] * kl }

@@ -195,9 +195,16 @@ function M.SetVariant(id)
     local pos, yaw = Vector3(L.pos.x, 0, L.pos.z), L.yaw
     if ride_ ~= nil then ride_:Release() end
     local oldSize = rig_.size or 1.0
+    local oldId = M.variant
     rig_:Destroy()
+    local ok, built = pcall(function() return Rig.Build(scene_, world_, nil, Variants.Get(id)) end)
+    if not ok then
+        print("DragonTest: variant " .. id .. " failed: " .. tostring(built))
+        id = oldId
+        built = Rig.Build(scene_, world_, nil, Variants.Get(id))
+    end
     M.variant = id
-    rig_ = Rig.Build(scene_, world_, nil, Variants.Get(id))
+    rig_ = built
     M.rig = rig_
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
