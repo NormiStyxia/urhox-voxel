@@ -123,7 +123,8 @@ def finish(quads, palette, tris, bones):
     # Colour-only polish reviewed against in-game screenshots (baked shading, coat spill, tie).
     from polish import polish
     qs, palette, ts, edits = polish(qs, palette, ts)
-    (HERE / 'polish_edits.json').write_text(json.dumps({'edits': edits}, ensure_ascii=False, indent=0))
+    (HERE / 'polish_edits.json').write_text(
+        '{"edits": [\n' + ',\n'.join(json.dumps(e, separators=(',', ':')) for e in edits) + '\n]}\n')
 
     # Drop unused sampled shades; the retained face RGB is copied exactly, never clustered.
     used=sorted(set(q[-1] for q in qs)|set(t[-1] for t in ts))
