@@ -60,6 +60,7 @@ cfg.update = function(T, dt)
         for k, e in pairs(b.em) do parts[#parts + 1] = k .. "=" .. tostring(e.on) .. "/" .. tostring(e.rate) .. "/" .. tostring(e.node.enabled) .. "/" .. tostring(e.em.numParticles) end
         print("SHOT em " .. table.concat(parts, " ") .. " debris=" .. #b.debris.live .. " hidden=" .. tostring(b.hidden) .. " master=" .. b.master .. " root=" .. tostring(b.root.enabled))
     end
+    if frame % 20 == 0 and b0.hitPos ~= nil then print("SHOT hit", b0.hitPos.x, b0.hitPos.y, b0.hitPos.z, "yaw", T.ctrl.loco.yaw, "tgt", T.cam.target.x, T.cam.target.y, T.cam.target.z) end
     if frame % 20 == 0 then print(string.format("SHOT frame %d state %s t=%.2f shake=%.2f motes=%d", frame, c.state, c.stateT, T.breath.shake, T.breath.motes:Count())) end
 end
 BREATH_SHOT_CFG = cfg
