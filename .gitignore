@@ -14,6 +14,9 @@ logs/.nfs*
 .org.chromium.Chromium.??????
 .DS_Store
 
+# Local branding / studio icons (not part of the game assets)
+/branding/
+
 # OSS util
 .ossutil_checkpoint/
 ossutil_output/
