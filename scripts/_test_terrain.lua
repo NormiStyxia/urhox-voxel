@@ -1,0 +1,20 @@
+local Pal = require("ruins.RuinsPalette")
+local Terrain = require("ruins.RuinsTerrain")
+local SkyUtils = require("urhox-libs.Rendering.SkyUtils")
+function Start()
+    local scene = Scene()
+    scene:CreateComponent("Octree")
+    local world = scene:CreateComponent("VoxelPhysicsWorld")
+    Pal.Setup(world)
+    local lg = scene:CreateChild("LightGroup")
+    lg:LoadXML(cache:GetResource("XMLFile", "LightGroup/TownDay.xml"):GetRoot())
+    SkyUtils.CreateGradientSky(scene, { zenith = Color(0.10, 0.28, 0.66), horizon = Color(0.447, 0.638, 1.0), skyExp = 0.5 })
+    Terrain.Build(world)
+    local cam = scene:CreateChild("Cam")
+    local c = cam:CreateComponent("Camera")
+    c.farClip = 500
+    cam.position = Vector3(0, 70, -120)
+    cam:LookAt(Vector3(0, 0, 0))
+    renderer:SetViewport(0, Viewport:new(scene, c))
+    _G.keep = scene
+end
