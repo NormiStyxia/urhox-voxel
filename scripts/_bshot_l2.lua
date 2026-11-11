@@ -71,6 +71,17 @@ cfg.update = function(T, dt)
             img:SavePNG(SHOT_OUT)
             print("SHOT saved", SHOT_OUT, c.stateT)
             for i, cr in ipairs(T.breath.crystals or {}) do print("SHOT crystal", i, cr.state, cr.holder.enabled, string.format("%.2f %.2f h=%.2f", cr.grow, cr.holder.position.y, cr.height)) end
+            for ci, cr in ipairs(T.breath.crystals or {}) do
+                if ci <= 3 and cr.volume ~= nil then
+                    local g = cr.volume:GetGrid()
+                    local d = g:GetDimensions()
+                    local parts = {}
+                    for x = 0, d.x - 1 do for y = 0, d.y - 1 do for z = 0, d.z - 1 do
+                        if g:IsSolid(x, y, z) then parts[#parts + 1] = x .. "," .. y .. "," .. z .. "," .. g:GetVoxelMaterial(x, y, z) end
+                    end end end
+                    print("SHOT vox " .. ci .. " " .. table.concat(parts, ";"))
+                end
+            end
             print("SHOT paint", T.breath.ground and T.breath.ground.HasPaint and T.breath.ground:HasPaint())
             SHOT_DONE = true
             engine:Exit()
