@@ -333,7 +333,7 @@ DEFS.large = {
     emissive = { [IRIS] = { 1.0, 0.66, 0.18, 0.55 }, [LINER] = { 0, 0, 0, 0 } },
     params = { walkSpeed = 1.9, flapHz = 0.6, flySpeed = 9.5, turnRate = 42, sprintSpeed = 21.0 },
     extra = function(add)
-        -- 杏仁眼（中号坐标、侧视 y-z 平面）：后眼角上挑，深色眼线包边，琥珀金虹膜 + 竖瞳 + 一点高光。
+        -- 杏仁眼（中号坐标、侧视 y-z 平面）：后眼角上挑，深色眼线包边，外侧琥珀金、内侧黑色长条。
         -- u = 沿 z 归一（+1 = 前眼角），v = 相对倾斜中线的高度；眼睑轮廓 |v| < (1 − u²)^0.75
         local cy, cz, rz, ry, tilt = 4.49, 1.7, 0.2, 0.1, 0.28
         local function UV(y, z)
