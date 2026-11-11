@@ -1,0 +1,34 @@
+-- 临时截图：龙外皮
+local VARIANT = "large"
+local YAW, PITCH, DIST, TY, TZ, SKIN = -120, 14, 6.0, 1.0, -3.2, true
+SHOT_OUT = "_shot_t5.png"
+local frame = 0
+local cfg = { noUI = true, noInput = true }
+cfg.setup = function(T)
+    if not SKIN then require('dragon.DragonRig').TAIL_ALIGN = false end
+    if VARIANT ~= T.variant then T.SetVariant(VARIANT) end
+    T.SetPlayMode(false)
+    T.showNomi = false
+    T.cam.follow = false
+    local S = T.rig.size or 1.0
+    T.cam.yaw, T.cam.pitch, T.cam.dist = 180 + YAW, PITCH, DIST * S
+    T.cam.target = Vector3(0, TY * S, TZ * S)
+end
+cfg.update = function(T, dt)
+    frame = frame + 1
+    local S = T.rig.size or 1.0
+    T.cam.follow = false
+    T.cam.yaw, T.cam.pitch, T.cam.dist = 180 + YAW, PITCH, DIST * S
+    T.cam.target = Vector3(0, TY * S, TZ * S)
+    if frame == 40 then
+        local img = Image()
+        graphics:TakeScreenShot(img)
+        img:SavePNG(SHOT_OUT)
+        print("SHOT saved", SHOT_OUT)
+        engine:Exit()
+    end
+end
+BREATH_SHOT_CFG = cfg
+local DragonTest = require("dragon.DragonTest")
+function Start() DragonTest.Start() end
+function Stop() DragonTest.Stop() end

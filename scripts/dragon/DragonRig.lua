@@ -100,6 +100,178 @@ local function MakeVolume(world, material, voxels, s, origin, pivot, parentNode,
     return { volume = vol, node = node, voxels = #voxels, size = s }
 end
 
+-- ---------------------------------------------------------------- 尾巴：沿节轴体素化 + 环纹
+-- 世界轴对齐的格子切斜向下的尾巴，侧面会变成一级级台阶（乐高感）。这里每节尾巴改在
+-- 「自己的方向」上建格子：局部 Z = 这节的轴线（指向尾尖），Y = 与轴垂直的上方，X = 侧向，
+-- 切出来是一段笔直的方截面棱柱，不再有台阶；体积节点再转回这个方向。
+-- 颜色按圈：沿轴每 RING 米一圈，深浅交替，节与节交界一圈最深；腹面白甲连续、同样按圈分格。
+Rig.TAIL_ALIGN = true
+local RING = 0.16  -- 一圈的长度（米，中号）；型号尺度另乘
+
+-- 尾巴各节的轴：返回 a(根端), b(尾端) 世界静止坐标，取这节体块（锥形胶囊）的两端
+local function TailAxis(prims, bone)
+    for _, p in ipairs(prims) do
+        if p.bone == bone and p.type == "cone" and not p.joint then return p.a, p.b, p.r end
+    end
+    return nil
+end
+
+-- 局部 → 世界旋转（列向量 ex, ey, ez）
+local function TailFrame(a, b)
+    local dx, dy, dz = b[1] - a[1], b[2] - a[2], b[3] - a[3]
+    local l = math.sqrt(dx * dx + dy * dy + dz * dz)
+    local ez = { dx / l, dy / l, dz / l }
+    -- 侧向 = 世界 X（尾巴在 YZ 平面内），上方 = ez × ex
+    local ex = { 1, 0, 0 }
+    local ey = { ez[2] * ex[3] - ez[3] * ex[2], ez[3] * ex[1] - ez[1] * ex[3], ez[1] * ex[2] - ez[2] * ex[1] }
+    if ey[2] < 0 then ey = { -ey[1], -ey[2], -ey[3] }; ex = { -1, 0, 0 } end
+    return ex, ey, ez, l
+end
+
+-- 环纹配色：t = 沿整条尾巴的弧长（米），v = 在截面上的高度（-1 腹 .. 1 背），edge = 是否在节交界
+local function RingColor(P, t, v, side, nodeSeam, ringLen)
+    local ring = math.floor(t / ringLen)
+    local f = t / ringLen - ring
+    if v < -0.35 and side < 0.8 then
+        -- 腹甲：白色，按圈分格，格缝浅灰
+        if f < 0.18 then return P.WHITE_S end
+        return P.WHITE
+    end
+    if nodeSeam then return P.BLUE_D end
+    -- 背脊一条深色，两侧深浅交替
+    if v > 0.72 then return (ring % 2 == 0) and P.BLUE_M or P.BLUE_D end
+    if f < 0.2 then return P.BLUE_M end
+    return (ring % 2 == 0) and P.BLUE_L or P.BLUE_L2
+end
+
+-- 沿节轴体素化一节尾巴：返回局部格子的体素 { i, j, k, color }、局部原点（相对枢轴）、旋转
+local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
+    local a, b = TailAxis(prims, bone)
+    if a == nil then return nil end
+    local ex, ey, ez, len = TailFrame(a, b)
+    -- 体块起点在轴上相对枢轴的位置（中号两者重合，型号变体可能略有偏移）
+    local az0 = (a[1] - pivot[1]) * ez[1] + (a[2] - pivot[2]) * ez[2] + (a[3] - pivot[3]) * ez[3]
+    -- 包围：这节自身体块 + 背刺等，用 Sculpt 的场求值（含邻接节搭接）
+    local own, cands = {}, {}
+    ---@type number[]
+    local bmin = { 1e9, 1e9, 1e9 }
+    ---@type number[]
+    local bmax = { -1e9, -1e9, -1e9 }
+    for _, p in ipairs(prims) do
+        if p.bone == bone then
+            own[#own + 1] = p
+            for k = 1, 3 do
+                bmin[k] = math.min(bmin[k], p.bmin[k]); bmax[k] = math.max(bmax[k], p.bmax[k])
+            end
+        end
+    end
+    for _, p in ipairs(prims) do
+        if p.bmax[1] >= bmin[1] - s and p.bmin[1] <= bmax[1] + s and p.bmax[2] >= bmin[2] - s
+            and p.bmin[2] <= bmax[2] + s and p.bmax[3] >= bmin[3] - s and p.bmin[3] <= bmax[3] + s then
+            cands[#cands + 1] = p
+        end
+    end
+    -- 局部包围盒：把世界 AABB 的 8 个角投到局部轴
+    ---@type number[]
+    local lmin = { 1e9, 1e9, 1e9 }
+    ---@type number[]
+    local lmax = { -1e9, -1e9, -1e9 }
+    for cx = 0, 1 do for cy = 0, 1 do for cz = 0, 1 do
+        local w = { cx == 0 and bmin[1] or bmax[1], cy == 0 and bmin[2] or bmax[2], cz == 0 and bmin[3] or bmax[3] }
+        local d = { w[1] - pivot[1], w[2] - pivot[2], w[3] - pivot[3] }
+        local l = { d[1] * ex[1] + d[2] * ex[2] + d[3] * ex[3], d[1] * ey[1] + d[2] * ey[2] + d[3] * ey[3],
+            d[1] * ez[1] + d[2] * ez[2] + d[3] * ez[3] }
+        for k = 1, 3 do lmin[k] = math.min(lmin[k], l[k]); lmax[k] = math.max(lmax[k], l[k]) end
+    end end end
+    -- 侧向对称：格子在 X 上以 0 为中心（中线落在体素中心，左右各一半）
+    local hx = math.max(-lmin[1], lmax[1])
+    local i0, i1 = -math.floor(hx / s + 0.5) - 1, math.floor(hx / s + 0.5) + 1
+    local j0, j1 = math.floor(lmin[2] / s) - 1, math.floor(lmax[2] / s) + 1
+    local k0, k1 = math.floor(lmin[3] / s) - 1, math.floor(lmax[3] / s) + 1
+    local P = Spec.PAL
+    local S = spec.size or 1.0
+    local ringLen = RING * S
+    -- 这节的半径（用于截面高度归一化）：取锥两端半径插值
+    local r0, r1 = nil, nil
+    for _, p in ipairs(own) do if p.type == "cone" and not p.joint then r0, r1 = p.ra, p.rb end end
+    r0, r1 = r0 or 0.2, r1 or 0.2
+    local out = {}
+    for k = k0, k1 do
+        local lz = (k + 0.5) * s
+        for j = j0, j1 do
+            local ly = (j + 0.5) * s
+            for i = i0, i1 do
+                local lx = i * s  -- X 以 0 为中心（中线一列）
+                local x = pivot[1] + ex[1] * lx + ey[1] * ly + ez[1] * lz
+                local y = pivot[2] + ex[2] * lx + ey[2] * ly + ez[2] * lz
+                local z = pivot[3] + ex[3] * lx + ey[3] * ly + ez[3] * lz
+                local d, best = Sculpt.EvalField(cands, x, y, z)
+                if d <= 0 and best ~= nil then
+                    local take = (best.bone == bone)
+                    if not take then
+                        -- 和邻节搭接：自身体块内部够深的点也归自己（关节转动不露缝）
+                        local dOwn = 1e9
+                        for _, q in ipairs(own) do dOwn = math.min(dOwn, Sculpt.Eval(q, x, y, z)) end
+                        if dOwn < -1.5 * s then take, best = true, own[1] end
+                    end
+                    if take then
+                        local c
+                        local tag = best.tag
+                        if best.type == "cone" and not best.joint then
+                            -- 尾身：按圈配色
+                            local t = lz - az0
+                            local u = math.max(0, math.min(1, t / len))
+                            local r = r0 + (r1 - r0) * u
+                            local v = ly / math.max(r, 1e-3)
+                            local side = math.abs(lx) / math.max(r, 1e-3)
+                            local seam = (t < s * 0.99) or (t > len - s * 0.99)
+                            c = RingColor(P, arc0 + t, v, side, seam, ringLen)
+                        else
+                            c = best.color
+                            if type(c) == "function" then c = c(x, y, z, best) end
+                        end
+                        if tag == nil and best.joint then
+                            -- 关节球（藏在内部）：用相邻环色
+                            c = P.BLUE_D
+                        end
+                        out[#out + 1] = { i - i0, j - j0, k - k0, c }
+                    end
+                end
+            end
+        end
+    end
+    local origin = { i0 * s - 0.5 * s, j0 * s, k0 * s }  -- 局部（相对枢轴），体素中心 = origin + (idx+0.5)s
+    local rot = Quaternion(Vector3(ex[1], ex[2], ex[3]), Vector3(ey[1], ey[2], ey[3]), Vector3(ez[1], ez[2], ez[3]))
+    return out, origin, rot, len
+end
+
+-- 已在局部格子里的体素直接建体积（不再做世界轴对齐）
+local function MakeVolumeLocal(world, material, voxels, s, origin, rot, parentNode, name)
+    if #voxels == 0 then return nil end
+    local dx, dy, dz = 0, 0, 0
+    for _, v in ipairs(voxels) do
+        if v[1] + 1 > dx then dx = v[1] + 1 end
+        if v[2] + 1 > dy then dy = v[2] + 1 end
+        if v[3] + 1 > dz then dz = v[3] + 1 end
+    end
+    local vol = world:CreateVolume(math.floor(dx), math.floor(dy), math.floor(dz), s, Vector3.ZERO, Quaternion())
+    local g = vol:GetGrid()
+    for _, v in ipairs(voxels) do
+        g:SetSolid(v[1], v[2], v[3], true)
+        g:SetVoxelMaterial(v[1], v[2], v[3], v[4])
+    end
+    vol.destructible = true
+    vol.material = material
+    vol:RebuildGeometry()
+    local node = vol:GetNode()
+    node.temporary = true
+    node.name = "vox_" .. name
+    node:SetParent(parentNode)
+    node.rotation = rot
+    node.position = rot * Vector3(origin[1], origin[2], origin[3])
+    return { volume = vol, node = node, voxels = #voxels, size = s }
+end
+
 -- ---------------------------------------------------------------- 翼膜区域
 -- 平面点 (x, z)（翼局部，y=0）→ 区域描述 { kind, gap, strip, outer, t } 或 nil
 local function Polar(cx, cz, x, z)
@@ -244,12 +416,23 @@ function Rig.Build(scene, world, parent, spec)
 
     -- 躯干 / 四肢 / 头尾
     local nVox = 0
+    local tailArc = 0.0
     for _, b in ipairs(bones) do
         local s = spec.VoxelSizeOf(b.name)
         local origin = { -0.5 * s, 0.0, -0.5 * s }
-        -- 不复制外壳（overlap=false）：关节缝由 DragonSpec 的关节球（挂父骨骼、只占内部）填
-        local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
-        local part = MakeVolume(world, material, vox, s, origin, b.pivot, self.bones[b.name], b.name)
+        local part = nil
+        if Rig.TAIL_ALIGN and b.name:match("^tail%d$") then
+            -- 尾巴：沿节轴体素化 + 环纹（见 VoxelizeTailAligned）
+            local vox, lo, rot, len = VoxelizeTailAligned(prims, b.name, s, b.pivot, spec, tailArc)
+            if vox ~= nil then
+                part = MakeVolumeLocal(world, material, vox, s, lo, rot, self.bones[b.name], b.name)
+                tailArc = tailArc + len
+            end
+        else
+            -- 不复制外壳（overlap=false）：关节缝由 DragonSpec 的关节球（挂父骨骼、只占内部）填
+            local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
+            part = MakeVolume(world, material, vox, s, origin, b.pivot, self.bones[b.name], b.name)
+        end
         if part ~= nil then
             part.bone = b.name
             self.parts[b.name] = part
