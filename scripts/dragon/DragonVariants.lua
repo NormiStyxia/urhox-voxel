@@ -273,28 +273,22 @@ DEFS.small = {
     palette = {
         [P.BLUE_L] = { 0.60, 0.81, 1.00 }, [P.BLUE_M] = { 0.47, 0.69, 0.99 }, [P.BLUE_D] = { 0.42, 0.59, 0.92 },
         [P.BLUE_X] = { 0.36, 0.50, 0.86 }, [P.BLUE_P] = { 0.78, 0.90, 1.00 }, [P.BLUE_L2] = { 0.54, 0.76, 1.00 },
-        [P.PUPIL] = { 0.05, 0.07, 0.18 }, [P.EYE] = { 0.22, 0.55, 1.00 }, [P.MOUTH] = { 0.85, 0.42, 0.52 },
+        [P.PUPIL] = { 0.025, 0.025, 0.03 }, [P.EYE] = { 0.22, 0.55, 1.00 }, [P.MOUTH] = { 0.85, 0.42, 0.52 },
         [BLUSH] = { 1.00, 0.62, 0.74 }, [IRIS] = { 0.55, 0.92, 1.00 }, [LINER] = { 1.0, 1.0, 1.0 },
     },
-    -- 高光（LINER 槽）纯白微发光，任何光照下都亮；虹膜不发光（也清掉大号留下的自发光）
-    emissive = { [IRIS] = { 0, 0, 0, 0 }, [LINER] = { 1.0, 1.0, 1.0, 0.45 } },
+    -- 简单黑白眼不使用虹膜或高光自发光，切换型号时清掉大号留下的眼部自发光
+    emissive = { [IRIS] = { 0, 0, 0, 0 }, [LINER] = { 0, 0, 0, 0 } },
     params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
-        -- 萌系大眼：涂色椭球沿 x 贯穿右半边头，只看 y-z 椭圆（竖长），mask 只涂脸侧、不涂鼻梁顶。
-        -- 深色瞳孔打底，下半虹膜由蓝到亮青渐变，前上方大高光 + 后下方小高光（Q 版动漫眼）
-        -- 眼睛整块落在脸侧较平的一段（小号最终坐标 z≈0.58–0.70，表面 x≈0.17–0.26），
-        -- 不再往前伸到吻部；x 下限压到 0.1，侧脸往里收的地方也染到
-        local cy, cz, ry, rz = 4.415, 1.6, 0.155, 0.115
+        -- 和中号一样的简单方块眼：大部分眼白，靠鼻梁的前侧一列黑色；不画虹膜和高光。
+        -- 涂色盒贯穿侧脸，仅改变现有体素颜色，不额外叠一层几何。
+        local cy, cz, hy, hz = 4.445, 1.62, 0.085, 0.095
         local function EyeColor(x, y, z)
-            local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy - 0.34) ^ 2 + (dz - 0.22) ^ 2 < 0.07 then return LINER end     -- 大高光（前上）
-            if (dy + 0.36) ^ 2 + (dz + 0.42) ^ 2 < 0.035 then return LINER end   -- 小高光（后下）
-            if dy < -0.6 then return IRIS end
-            if dy < -0.12 then return P.EYE end
-            return P.PUPIL
+            if z > cz + hz * 0.4 then return P.PUPIL end
+            return LINER
         end
-        add({ type = "ellipsoid", bone = "head", c = { 0.25, cy, cz }, r = { 0.25, ry, rz }, color = EyeColor,
+        add({ type = "box", bone = "head", c = { 0.25, cy, cz }, h = { 0.25, hy, hz }, color = EyeColor,
             mask = function(x) return x > 0.1 end, paint = true, prio = 1.0 }, true)
         -- 腮红：眼睛后下方
         add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.26, 1.5 }, r = { 0.14, 0.045, 0.08 }, color = BLUSH,
@@ -332,6 +326,7 @@ DEFS.large = {
         [P.BLUE_L] = { 0.40, 0.62, 0.95 }, [P.BLUE_M] = { 0.25, 0.43, 0.82 }, [P.BLUE_D] = { 0.17, 0.27, 0.55 },
         [P.BLUE_X] = { 0.09, 0.13, 0.31 }, [P.BLUE_P] = { 0.62, 0.79, 0.98 }, [P.BLUE_L2] = { 0.33, 0.54, 0.90 },
         [P.CLAW] = { 0.94, 0.91, 0.83 }, [P.EYE] = { 0.30, 0.78, 1.00 },
+        [P.PUPIL] = { 0.025, 0.025, 0.03 },
         [IRIS] = { 1.00, 0.74, 0.22 }, [LINER] = { 0.03, 0.04, 0.10 },
     },
     -- 琥珀金虹膜微微自发光：钢蓝鳞片里最亮的一点，背光时也有眼神
@@ -354,9 +349,9 @@ DEFS.large = {
         end
         local function EyeColor(x, y, z)
             local u, v, h = UV(y, z)
+            -- 靠鼻梁的前侧长条为黑色，贯穿眼睛内区；外侧仍保留琥珀虹膜。
+            if u > 0.05 and math.abs(v) < 0.55 * h then return P.PUPIL end
             if math.abs(v) > 0.55 * h or math.abs(u) > 0.78 then return LINER end -- 眼线
-            if math.abs(u - 0.14) < 0.15 then return P.PUPIL end                 -- 竖瞳（略靠前，目光朝前）
-            if v > 0.1 and u > 0.32 and u < 0.56 then return P.WHITE end          -- 高光
             return IRIS
         end
         add({ type = "ellipsoid", bone = "head", c = { 0.26, cy, cz }, r = { 0.24, 0.17, 0.22 }, color = EyeColor,
