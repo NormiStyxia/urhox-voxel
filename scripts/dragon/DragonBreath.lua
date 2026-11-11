@@ -26,7 +26,7 @@ local M = {}
 
 -- 移动端 / Web 没有 LUT 色调映射兜底（只能走 ACES），高亮点光与加法混合粒子
 -- 会在吐息期间把整个画面推成一片白。这里统一降强度与粒子量，桌面端保持原样。
-local LOW_FX = PlatformUtils.IsWebPlatform() or PlatformUtils.IsMobilePlatform()
+local LOW_FX = true -- TEMP FORCE
 local FX_GAIN = LOW_FX and 0.45 or 1.0   -- 灯光亮度 / shader intensity 倍率
 local FX_COUNT = LOW_FX and 0.45 or 1.0  -- 粒子数量倍率
 M.LOW_FX = LOW_FX

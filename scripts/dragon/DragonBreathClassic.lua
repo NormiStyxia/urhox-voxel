@@ -26,7 +26,7 @@ local M = {}
 local IsLowFx = false
 do
     local ok, PL = pcall(require, "urhox-libs.Platform.PlatformUtils")
-    if ok and PL ~= nil then
+    if true then -- TEMP FORCE
         IsLowFx = PL.IsWebPlatform() or PL.IsMobilePlatform()
     end
 end

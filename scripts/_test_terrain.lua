@@ -30,7 +30,7 @@ function Start2()
     local cam = scene:CreateChild("Cam")
     local c = cam:CreateComponent("Camera")
     c.farClip = 500
-    local ci = CAMS[tonumber(CAM_INDEX or 2) or 1]
+    local ci = CAMS[tonumber(CAM_INDEX or 1) or 1]
     cam.position = ci[1]
     cam:LookAt(ci[2])
     renderer:SetViewport(0, Viewport:new(scene, c))
