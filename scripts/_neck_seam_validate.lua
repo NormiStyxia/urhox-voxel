@@ -45,8 +45,7 @@ function Start()
                     local partPosition = part.node.position
                     local origin = q:Inverse() * partPosition
                     local original = Vector3(origin.x / expected, origin.y, origin.z)
-                    local d = part.volume:GetGrid():GetDimensions()
-                    local mid = part.node.position + q * Vector3(d.x * part.size * expected * 0.5, 0, 0)
+                    local mid = part.node.position + q * Vector3(-original.x * expected, 0, 0)
                     assert(math.abs(mid.x) < 1e-5, id .. ": neck symmetry")
                     initial[name] = { position = part.node.position, scale = scale, original = q * original }
                 else
