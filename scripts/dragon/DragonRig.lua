@@ -15,6 +15,7 @@
 local Spec = require("dragon.DragonSpec")
 local Sculpt = require("dragon.DragonSculpt")
 local Membrane = require("dragon.DragonMembrane")
+local Skin = require("dragon.DragonSkin")
 
 ---@class DragonRig
 ---@field root Node
@@ -32,8 +33,12 @@ local Membrane = require("dragon.DragonMembrane")
 ---@field world VoxelPhysicsWorld
 ---@field spec table 型号规格（DragonSpec 或 DragonVariants.Get 的结果）
 ---@field size number 整体尺度（中号 = 1）
+---@field skin table|nil 鳞片外皮配置 { material, colorOf }
+---@field skinVisible boolean
 local Rig = {}
 Rig.__index = Rig
+-- 外皮：true = 倒角网格 + 鳞片着色（DragonSkin），false = 原始体素方块
+Rig.USE_SKIN = true
 
 local Q_IDENT = Quaternion(1, 0, 0, 0)
 
@@ -69,7 +74,8 @@ function Rig.CleanMaterial(world)
 end
 
 -- ---------------------------------------------------------------- 体积创建
-local function MakeVolume(world, material, voxels, s, origin, pivot, parentNode, name)
+-- skin（可选）：{ material, colorOf }，给部件额外生成鳞片外皮网格（同位置的兄弟节点），并隐藏体素体积
+local function MakeVolume(world, material, voxels, s, origin, pivot, parentNode, name, skin)
     if #voxels == 0 then return nil end
     local i0, j0, k0, i1, j1, k1 = 1e9, 1e9, 1e9, -1e9, -1e9, -1e9
     for _, v in ipairs(voxels) do
@@ -83,10 +89,12 @@ local function MakeVolume(world, material, voxels, s, origin, pivot, parentNode,
     local dx, dy, dz = math.floor(i1 - i0 + 1), math.floor(j1 - j0 + 1), math.floor(k1 - k0 + 1)
     local vol = world:CreateVolume(dx, dy, dz, s, Vector3.ZERO, Quaternion())
     local g = vol:GetGrid()
-    for _, v in ipairs(voxels) do
+    local rel = {}
+    for n, v in ipairs(voxels) do
         local x, y, z = math.floor(v[1] - i0), math.floor(v[2] - j0), math.floor(v[3] - k0)
         g:SetSolid(x, y, z, true)
         g:SetVoxelMaterial(x, y, z, v[4])
+        rel[n] = { x, y, z, v[4] }
     end
     vol.destructible = true
     vol.material = material
@@ -97,7 +105,12 @@ local function MakeVolume(world, material, voxels, s, origin, pivot, parentNode,
     node:SetParent(parentNode)
     node.rotation = Quaternion()
     node.position = Vector3(origin[1] + i0 * s - pivot[1], origin[2] + j0 * s - pivot[2], origin[3] + k0 * s - pivot[3])
-    return { volume = vol, node = node, voxels = #voxels, size = s }
+    local skinNode = nil
+    if skin ~= nil then
+        skinNode = Skin.Build(parentNode, "skin_" .. name, rel, { dx, dy, dz }, s, skin.material, skin.colorOf, node.position)
+        if skinNode ~= nil then node.enabled = false end
+    end
+    return { volume = vol, node = node, voxels = #voxels, size = s, skin = skinNode }
 end
 
 -- ---------------------------------------------------------------- 翼膜区域
@@ -221,6 +234,20 @@ function Rig.Build(scene, world, parent, spec)
         world:SetPaletteEntryPBR(idx, 0.3, 0.0, 0.5, Color(e[1], e[2], e[3], e[4]))
     end
     local material = Rig.CleanMaterial(world)
+    -- 鳞片外皮：颜色直接取型号调色板（sRGB），自发光强度取 EMISSIVE 的 alpha
+    local skin = nil
+    if Rig.USE_SKIN then
+        skin = {
+            material = Skin.CreateMaterial(),
+            colorOf = function(idx)
+                local c = spec.PALETTE[idx] or { 1, 0, 1 }
+                local e = spec.EMISSIVE[idx]
+                return c[1], c[2], c[3], e and e[4] or 0
+            end,
+        }
+    end
+    self.skin = skin
+    self.skinVisible = skin ~= nil
     self.membraneMaterial = Membrane.CreateMaterial()
     self.membranes = {}
 
@@ -249,7 +276,7 @@ function Rig.Build(scene, world, parent, spec)
         local origin = { -0.5 * s, 0.0, -0.5 * s }
         -- 不复制外壳（overlap=false）：关节缝由 DragonSpec 的关节球（挂父骨骼、只占内部）填
         local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
-        local part = MakeVolume(world, material, vox, s, origin, b.pivot, self.bones[b.name], b.name)
+        local part = MakeVolume(world, material, vox, s, origin, b.pivot, self.bones[b.name], b.name, skin)
         if part ~= nil then
             part.bone = b.name
             self.parts[b.name] = part
@@ -344,7 +371,7 @@ function Rig:BuildWing(sfx, sign, world, material)
     for _, bn in ipairs(boneNames) do
         local vox = Mirror(Sculpt.VoxelizePart(bprims, bn, s, originL))
         local name = bn .. sfx
-        local part = MakeVolume(world, material, vox, s, OriginW(), self.pivots[name], self.bones[name], name)
+        local part = MakeVolume(world, material, vox, s, OriginW(), self.pivots[name], self.bones[name], name, self.skin)
         if part ~= nil then
             part.bone, part.wing = name, true
             self.parts[name] = part
@@ -396,6 +423,17 @@ end
 -- 世界坐标下的骨骼枢轴
 function Rig:WorldPivot(name)
     return self.bones[name].worldPosition
+end
+
+-- 外皮开关：true 显示鳞片外皮，false 显示原始体素方块（对比用）
+function Rig:SetSkinVisible(on)
+    for _, part in pairs(self.parts) do
+        if part.skin ~= nil then
+            part.skin.enabled = on
+            part.node.enabled = not on
+        end
+    end
+    self.skinVisible = on
 end
 
 -- 部件访问（供体素破坏）：返回 VoxelVolume 或 nil

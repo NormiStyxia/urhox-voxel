@@ -292,6 +292,7 @@ local function HandleKeys()
     if input:GetKeyPress(KEY_R) and not c.loco.airborne then c.demo = nil; c:Request("ROAR") end
     if input:GetKeyPress(KEY_B) then breath_:Trigger() end
     if input:GetKeyPress(KEY_V) then M.pendingBreathToggle = true end
+    if input:GetKeyPress(KEY_K) then M.pendingSkinToggle = true end
     if input:GetKeyPress(KEY_T) and not c.loco.airborne then
         c.demo = nil
         c:Request(c.state == "SPREAD_WINGS" and "IDLE" or "SPREAD_WINGS")
@@ -334,6 +335,11 @@ end
 
 function M.Update(dt)
     -- 面板按钮 / V 键只登记，换特效（会重建面板）放到 Update 里做
+    if M.pendingSkinToggle then
+        M.pendingSkinToggle = false
+        rig_:SetSkinVisible(not rig_.skinVisible)
+        if shotCfg == nil or not shotCfg.noUI then DebugUI.Build(ctrl_, M) end
+    end
     if M.pendingBreathToggle then
         M.pendingBreathToggle = false
         M.ToggleBreathStyle()
