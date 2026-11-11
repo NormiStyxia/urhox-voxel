@@ -72,6 +72,10 @@ cfg.update = function(T, dt)
             print("SHOT saved", SHOT_OUT, c.stateT)
             for i, cr in ipairs(T.breath.crystals or {}) do print("SHOT crystal", i, cr.state, cr.holder.enabled, string.format("%.2f %.2f h=%.2f", cr.grow, cr.holder.position.y, cr.height)) end
             for ci, cr in ipairs(T.breath.crystals or {}) do
+                local vn = cr.volume:GetNode()
+                print("SHOT cpos", ci, cr.base.x, cr.base.y, cr.base.z, "vol", vn.worldPosition.x, vn.worldPosition.y, vn.worldPosition.z, "en", vn.enabled, cr.holder.enabled, "scale", cr.holder.worldScale.y, "hit", T.breath.hitPos.x, T.breath.hitPos.z, "cam", T.cam.target.x, T.cam.target.z)
+            end
+            for ci, cr in ipairs({}) do
                 if ci <= 3 and cr.volume ~= nil then
                     local g = cr.volume:GetGrid()
                     local d = g:GetDimensions()
