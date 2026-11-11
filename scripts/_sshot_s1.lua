@@ -16,6 +16,10 @@ cfg.setup = function(T)
 end
 cfg.update = function(T, dt)
     frame = frame + 1
+    local S = T.rig.size or 1.0
+    T.cam.follow = false
+    T.cam.yaw, T.cam.pitch, T.cam.dist = 180 + YAW, PITCH, DIST * S
+    T.cam.target = Vector3(0, TY * S, TZ * S)
     if frame == 40 then
         local img = Image()
         graphics:TakeScreenShot(img)
