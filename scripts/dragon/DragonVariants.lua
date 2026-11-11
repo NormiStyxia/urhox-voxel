@@ -281,15 +281,17 @@ DEFS.small = {
     params = { walkSpeed = 0.85, flapHz = 1.4, flySpeed = 6.0, turnRate = 80, sprintSpeed = 11.0 },
     -- 额外体块（中号最终坐标，挂头骨，随头部一起形变）
     extra = function(add)
-        -- 和中号一样的简单方块眼：大部分眼白，靠鼻梁的前侧一列黑色；不画虹膜和高光。
-        -- 涂色盒贯穿侧脸，仅改变现有体素颜色，不额外叠一层几何。
-        local cy, cz, hy, hz = 4.445, 1.62, 0.085, 0.095
+        -- 呆萌豆豆眼：小椭圆黑瞳为主，后侧留少量眼白；直接涂现有体素，不叠几何。
+        local cy, cz, ry, rz = 4.46, 1.62, 0.075, 0.065
         local function EyeColor(x, y, z)
-            if z > cz + hz * 0.4 then return P.PUPIL end
+            local dy, dz = (y - cy) / ry, (z - cz) / rz
+            if (dy / 0.85) ^ 2 + ((dz - 0.22) / 0.72) ^ 2 < 1 then return P.PUPIL end
             return LINER
         end
-        add({ type = "box", bone = "head", c = { 0.25, cy, cz }, h = { 0.25, hy, hz }, color = EyeColor,
-            mask = function(x) return x > 0.1 end, paint = true, prio = 1.0 }, true)
+        add({ type = "box", bone = "head", c = { 0.25, cy, cz }, h = { 0.25, ry, rz }, color = EyeColor,
+            mask = function(x, y, z)
+                return x > 0.1 and ((y - cy) / ry) ^ 2 + ((z - cz) / rz) ^ 2 < 1
+            end, paint = true, prio = 1.0 }, true)
         -- 腮红：眼睛后下方
         add({ type = "ellipsoid", bone = "head", c = { 0.4, 4.26, 1.5 }, r = { 0.14, 0.045, 0.08 }, color = BLUSH,
             mask = function(x) return x > 0.15 end, paint = true, prio = 0.4 }, true)
@@ -327,13 +329,13 @@ DEFS.large = {
         [P.BLUE_X] = { 0.09, 0.13, 0.31 }, [P.BLUE_P] = { 0.62, 0.79, 0.98 }, [P.BLUE_L2] = { 0.33, 0.54, 0.90 },
         [P.CLAW] = { 0.94, 0.91, 0.83 }, [P.EYE] = { 0.30, 0.78, 1.00 },
         [P.PUPIL] = { 0.025, 0.025, 0.03 },
-        [IRIS] = { 1.00, 0.74, 0.22 }, [LINER] = { 0.03, 0.04, 0.10 },
+        [IRIS] = { 0.97, 0.98, 1.00 }, [LINER] = { 0.03, 0.04, 0.10 },
     },
-    -- 琥珀金虹膜微微自发光：钢蓝鳞片里最亮的一点，背光时也有眼神
-    emissive = { [IRIS] = { 1.0, 0.66, 0.18, 0.55 }, [LINER] = { 0, 0, 0, 0 } },
+    -- 眼白不再使用黄色自发光，黑瞳和眼线也不发光。
+    emissive = { [IRIS] = { 0, 0, 0, 0 }, [LINER] = { 0, 0, 0, 0 } },
     params = { walkSpeed = 1.9, flapHz = 0.6, flySpeed = 9.5, turnRate = 42, sprintSpeed = 21.0 },
     extra = function(add)
-        -- 杏仁眼（中号坐标、侧视 y-z 平面）：后眼角上挑，深色眼线包边，外侧琥珀金、内侧黑色长条。
+        -- 杏仁眼（中号坐标、侧视 y-z 平面）：后眼角上挑，深色眼线包边，外侧眼白、内侧黑色长条。
         -- u = 沿 z 归一（+1 = 前眼角），v = 相对倾斜中线的高度；眼睑轮廓 |v| < (1 − u²)^0.75
         local cy, cz, rz, ry, tilt = 4.49, 1.7, 0.2, 0.1, 0.28
         local function UV(y, z)
@@ -349,7 +351,7 @@ DEFS.large = {
         end
         local function EyeColor(x, y, z)
             local u, v, h = UV(y, z)
-            -- 靠鼻梁的前侧长条为黑色，贯穿眼睛内区；外侧仍保留琥珀虹膜。
+            -- 靠鼻梁的前侧长条为黑色，贯穿眼睛内区；外侧保留眼白。
             if u > 0.05 and math.abs(v) < 0.55 * h then return P.PUPIL end
             if math.abs(v) > 0.55 * h or math.abs(u) > 0.78 then return LINER end -- 眼线
             return IRIS
