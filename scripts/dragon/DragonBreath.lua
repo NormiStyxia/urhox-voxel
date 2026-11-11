@@ -422,7 +422,7 @@ function B:Build(scene)
             fx:SetMinVelocity(24 * k); fx:SetMaxVelocity(34 * k)
             fx:SetMinTimeToLive(0.4); fx:SetMaxTimeToLive(0.7)
             fx:SetMinParticleSize(Vector2(0.26, 0.26) * k); fx:SetMaxParticleSize(Vector2(0.4, 0.4) * k)
-            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.3, C(0.6, 0.95, 1.0, 1) }, { 0.6, C(0.3, 0.55, 1.0, 1) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.3, C(0.6, 0.95, 1.0, 1) }, { 0.6, C(0.12, 0.58, 1.0, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 束外寒雾（深一点的蓝）
         self.em.mist = VoxelFX.Emitter(root, "AstralSmoke", { kind = "cloud", n = 500, setup = function(fx)
@@ -433,7 +433,7 @@ function B:Build(scene)
             fx:SetMinTimeToLive(0.6); fx:SetMaxTimeToLive(1.0)
             fx:SetMinParticleSize(Vector2(0.4, 0.4) * k); fx:SetMaxParticleSize(Vector2(0.65, 0.65) * k)
             fx:SetSizeAdd(0.9 * k)
-            VoxelFX.Steps(fx, { { 0, C(0.8, 0.92, 1.0, 0.0) }, { 0.08, C(0.6, 0.8, 1.0, 0.45) }, { 0.4, C(0.42, 0.62, 0.95, 0.28) }, { 0.75, C(0.3, 0.46, 0.85, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(0.8, 0.92, 1.0, 0.0) }, { 0.08, C(0.55, 0.82, 1.0, 0.45) }, { 0.4, C(0.35, 0.65, 0.95, 0.28) }, { 0.75, C(0.22, 0.5, 0.85, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：火花（方块，抛物线）
         self.em.chips = VoxelFX.Emitter(root, "ImpactSparks", { kind = "square", additive = true, n = 800, setup = function(fx)
@@ -443,7 +443,7 @@ function B:Build(scene)
             fx:SetConstantForce(Vector3(0, -22, 0))
             fx:SetMinTimeToLive(0.7); fx:SetMaxTimeToLive(1.3)
             fx:SetMinParticleSize(Vector2(0.14, 0.14) * k); fx:SetMaxParticleSize(Vector2(0.24, 0.24) * k)
-            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.25, C(0.7, 1.0, 1.0, 1) }, { 0.55, C(0.35, 0.75, 1.0, 1) }, { 0.8, C(0.18, 0.4, 0.95, 1) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.25, C(0.7, 1.0, 1.0, 1) }, { 0.55, C(0.35, 0.75, 1.0, 1) }, { 0.8, C(0.06, 0.45, 0.95, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：冰雾烟柱
         self.em.ground = VoxelFX.Emitter(root, "ImpactSmoke", { kind = "cloud", n = 300, setup = function(fx)
@@ -649,7 +649,7 @@ function B:UpdateCrystals(dt)
                         local frost = (self.cfg.style == 0)
                         self.motes:Spawn({ pos = p, vel = Vector3(0, 0.3 * S, 0), life = Rand(0.3, 0.55),
                             size = Rand(0.16, 0.28) * S, colors = frost and { C(1, 1, 1), C(0.75, 0.95, 1.0), C(0.45, 0.8, 1.0) }
-                                or { C(1, 1, 1), C(0.55, 1.0, 1.0), C(0.25, 0.6, 1.0) } })
+                                or { C(1, 1, 1), C(0.55, 1.0, 1.0), C(0.1, 0.6, 1.0) } })
                     end
                 end
             end
@@ -683,7 +683,7 @@ function B:ShatterCrystals()
                 self.motes:Spawn({ pos = cr.base + Vector3(Rand(-0.4, 0.4) * S, Rand(0, cr.height), Rand(-0.4, 0.4) * S),
                     vel = Vector3(Rand(-2, 2), Rand(1, 4), Rand(-2, 2)) * S, grav = 6, drag = 1.5, life = Rand(0.5, 0.9),
                     size = Rand(0.12, 0.2) * S, colors = frost and { C(1, 1, 1), C(0.6, 0.9, 1.0), C(0.3, 0.6, 1.0) }
-                        or { C(1, 1, 1), C(0.5, 0.95, 1.0), C(0.2, 0.45, 1.0) } })
+                        or { C(1, 1, 1), C(0.5, 0.95, 1.0), C(0.08, 0.5, 1.0) } })
             end
         end
         cr.state = "hidden"
@@ -765,7 +765,7 @@ function B:Update()
                 local v = (side * math.cos(a) + up * math.sin(a)) * Rand(3, 7) + dir * Rand(2, 6)
                 self.motes:Spawn({ pos = origin + dir * 0.4 * S, vel = v * S, drag = 3, life = Rand(0.3, 0.55),
                     size = Rand(0.14, 0.26) * S, colors = frost and { C(1, 1, 1), C(0.7, 0.95, 1.0), C(0.35, 0.7, 1.0) }
-                        or { C(1, 1, 1), C(0.55, 0.95, 1.0), C(0.2, 0.45, 1.0) } })
+                        or { C(1, 1, 1), C(0.55, 0.95, 1.0), C(0.08, 0.5, 1.0) } })
             end
         end
         local tCrystal = cfg.fireStart + (frost and 0.45 or 0.3)
@@ -839,7 +839,7 @@ function B:Update()
             local gold = (not frost) and math.random() < 0.45
             self.motes:Spawn({ life = life, size = Rand(0.14, 0.24) * S,
                 colors = frost and { C(0.5, 0.8, 1.0), C(0.75, 0.95, 1.0), C(1, 1, 1) }
-                    or (gold and { C(0.3, 0.85, 1.0), C(0.65, 1.0, 1.0), C(1, 1, 1) } or { C(0.12, 0.3, 1.0), C(0.4, 0.62, 1.0), C(0.9, 0.96, 1.0) }),
+                    or (gold and { C(0.3, 0.85, 1.0), C(0.65, 1.0, 1.0), C(1, 1, 1) } or { C(0.05, 0.38, 1.0), C(0.25, 0.68, 1.0), C(0.9, 0.96, 1.0) }),
                 fn = function(mo, _, u)
                     local p = u * u
                     local ang = a0 + p * math.pi * 2.2
@@ -893,7 +893,7 @@ function B:Update()
                 local d0 = Rand(0.5, 0.95)
                 local gold = math.random() < 0.4
                 self.motes:Spawn({ life = Rand(0.35, 0.6), size = Rand(0.16, 0.3) * S,
-                    colors = gold and { C(1, 1, 1), C(0.6, 1.0, 1.0), C(0.25, 0.7, 1.0) } or { C(0.85, 0.92, 1.0), C(0.4, 0.6, 1.0), C(0.12, 0.25, 0.9) },
+                    colors = gold and { C(1, 1, 1), C(0.6, 1.0, 1.0), C(0.25, 0.7, 1.0) } or { C(0.85, 0.92, 1.0), C(0.25, 0.66, 1.0), C(0.04, 0.3, 0.9) },
                     pos = origin, fn = function(mo, _, u)
                         local o2, d2 = self:MouthFrame()
                         local s2, u2 = Basis(d2)
@@ -936,7 +936,7 @@ function B:Update()
                 local rr = Rand(0.3, 3.0) * S
                 self.motes:Spawn({ pos = hitG + Vector3(math.cos(a) * rr, 0.2, math.sin(a) * rr),
                     vel = Vector3(Rand(-0.5, 0.5), Rand(2, 5), Rand(-0.5, 0.5)) * S, drag = 0.8, life = Rand(0.8, 1.6),
-                    size = Rand(0.14, 0.24) * S, colors = { C(1, 1, 1), C(0.6, 0.95, 1.0), C(0.3, 0.6, 1.0), C(0.12, 0.25, 0.8) } })
+                    size = Rand(0.14, 0.24) * S, colors = { C(1, 1, 1), C(0.6, 0.95, 1.0), C(0.12, 0.6, 1.0), C(0.04, 0.3, 0.85) } })
             end
         end
     end
