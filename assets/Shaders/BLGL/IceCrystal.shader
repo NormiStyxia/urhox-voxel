@@ -36,7 +36,7 @@ void fragment() {
 
     // ---- 竖向渐变：根部偏深，尖顶偏亮
     col = mix(mix(deep_color.rgb, col, 0.5), col, smoothstep(0.0, 0.45, h));
-    col = mix(col, light_color.rgb, smoothstep(0.65, 1.0, h) * 0.3);
+    col = mix(col, light_color.rgb, smoothstep(0.65, 1.0, h) * 0.18);
 
     // ---- 面内坐标：尖顶三角面把横向坐标归一化，算到两条棱的距离
     float w = mix(1.0, max(1.0 - UV.y, 0.001), tipFace);
@@ -52,7 +52,7 @@ void fragment() {
     float ndv = clamp(dot(N, V), 0.0, 1.0);
     float fres = pow(1.0 - ndv, 3.0);
     float back = pow(clamp(dot(-V, L), 0.0, 1.0), 3.0);
-    col += edge_color.rgb * translucency * (fres * 0.32 + back * (0.25 + 0.5 * fres) * 0.6);
+    col += edge_color.rgb * translucency * (fres * 0.2 + back * (0.25 + 0.5 * fres) * 0.6);
 
     // ---- 上扫高光带（每根晶体相位不同）
     float sweep = fract(h * 0.8 - un * 0.22 - TIME * 0.35 + rnd);

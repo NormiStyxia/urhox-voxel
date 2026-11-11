@@ -149,8 +149,8 @@ local PAL_DEF = {
 -- debris = 碎裂时的立方体碎块颜色（同一套色阶里取）
 local ICE_LOOK = {
     medium = {
-        deep = Color(0.07, 0.30, 0.78), mid = Color(0.30, 0.66, 1.0),
-        light = Color(0.74, 0.93, 1.0), edge = Color(1.0, 1.0, 1.0), translucency = 1.0, debris = {},
+        deep = Color(0.03, 0.20, 0.66), mid = Color(0.16, 0.54, 1.0),
+        light = Color(0.52, 0.86, 1.0), edge = Color(0.92, 1.0, 1.0), translucency = 0.8, debris = {},
     },
     large = {
         deep = Color(0.01, 0.06, 0.32), mid = Color(0.05, 0.28, 0.88),
