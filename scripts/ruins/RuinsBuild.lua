@@ -659,7 +659,21 @@ local function BuildAqueduct(world)
 end
 
 -- ---------------------------------------------------------------- 植被
+-- 留给谜题的空地：塔台 / 时之碑扇区 / 主路
+local function Reserved(x, z)
+    if (x + 32) ^ 2 + (z + 6) ^ 2 < 10 ^ 2 then return true end
+    for i = 0, 3 do
+        local a = pi / 4 + i * pi / 2
+        local sx, sz = cos(a) * 30.5, sin(a) * 30.5
+        if (x - sx) ^ 2 + (z - sz) ^ 2 < 7 ^ 2 then return true end
+    end
+    if abs(x) < 7 then return true end
+    return false
+end
+M.Reserved = Reserved
+
 local function Tree(world, x, z, o)
+    if not o.force and Reserved(x, z) then return nil end
     local gy = Terrain.HeightAt(x, z)
     local h = o.h or 7
     local cr = o.r or 3.2
@@ -755,8 +769,8 @@ M.Crystal = Crystal
 local function BuildVegetation(world)
     local rng = Noise.Rng(2026)
     -- 金叶古树：龙庭东南、西北各一棵，内环上（作为构图焦点）
-    Tree(world, 30.5, -14, { h = 9, r = 4.5, trunk = 0.7, gold = true, lean = 1.2, leanA = pi })
-    Tree(world, -31, 15, { h = 10, r = 5.0, trunk = 0.75, gold = true, lean = 1.4, leanA = 0.3 })
+    Tree(world, 30.5, -14, { force = true, h = 9, r = 4.5, trunk = 0.7, gold = true, lean = 1.2, leanA = pi })
+    Tree(world, -31, 15, { force = true, h = 10, r = 5.0, trunk = 0.75, gold = true, lean = 1.4, leanA = 0.3 })
     -- 外环普通树：沿外环随机，避开道路和城墙
     local placed = 0
     for i = 1, 60 do
@@ -785,7 +799,7 @@ local function BuildVegetation(world)
         local gy = Terrain.HeightAt(x, z)
         local ok = r > 27 and r < 68 and abs(x) > 4.5 and gy <= Terrain.RING_Y + 0.6 and gy >= Terrain.RING_Y - 0.1
             and abs(r - M.WALL_R) > 2.5 and (r < Terrain.RAVINE_IN - 1 or r > Terrain.RAVINE_OUT + 1)
-        if ok then items[#items + 1] = { kind = "bush", x = x, z = z, y = gy, r = rng:Range(0.6, 1.2) } end
+        if ok and not Reserved(x, z) then items[#items + 1] = { kind = "bush", x = x, z = z, y = gy, r = rng:Range(0.6, 1.2) } end
     end
     -- 峡谷里的时晶簇（发光，给峡谷底提供蓝色光源感）
     for i = 1, 40 do

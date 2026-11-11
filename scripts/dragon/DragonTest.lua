@@ -101,7 +101,7 @@ end
 -- 泛光扩散成整屏白。这里给低配平台设一个阈值，只让真正亮的部分发光。
 function M.SetupBloom(zone)
     if zone == nil then return end
-    local lowFx = PlatformUtils.IsWebPlatform() or PlatformUtils.IsMobilePlatform()
+    local lowFx = true
     if not lowFx then return end
     zone.bloomMode = BLOOM_MODE_UE
     zone.bloomUEThreshold = 1.2

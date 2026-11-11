@@ -164,10 +164,12 @@ function C:Teleport(pos, yaw)
     Gait.Reset(self.gait, L.pos, L.yaw, self.groundFn)
 end
 
+-- 地面高度：射线从当前身高上方一点往下打（不从高空打，避免命中头顶的拱桥 / 穹顶）
 function C:GroundHeight(x, z)
-    local hit = self.world:RaycastSingle(Ray(Vector3(x, 30.0, z), Vector3(0, -1, 0)), 60.0)
+    local ref = self.groundRef or 0.0
+    local hit = self.world:RaycastSingle(Ray(Vector3(x, ref + 6.0, z), Vector3(0, -1, 0)), 40.0)
     if hit ~= nil and hit.hit then return hit.position.y end
-    return 0.0
+    return ref
 end
 
 -- ---------------------------------------------------------------- 姿态片段
@@ -997,7 +999,25 @@ function C:ApplyPose(dt)
 
     -- 全局移动层 → root；身体姿态层 → body
     local L = self.loco
-    local gy = L.airborne and 0.0 or self:GroundHeight(L.pos.x, L.pos.z)
+    -- 空中：高度相对「飞行地板」（起飞点地面高度，之后缓慢跟随身下地形；上升快、下降慢），
+    -- 落地时 alt → 0 即落在身下的地面上
+    local gy
+    if L.airborne then
+        local below = self:GroundHeight(L.pos.x, L.pos.z)
+        local f = self.airFloor or below
+        local k = (below > f) and 3.0 or 0.6
+        f = f + (below - f) * (1 - math.exp(-k * math.max(dt, 0)))
+        if below > f + L.alt - 0.5 then
+            -- 地形突然比龙还高（飞向山壁）：把高度抬上去，不穿地
+            L.alt = below - f + 0.5
+        end
+        self.airFloor = f
+        gy = f
+    else
+        gy = self:GroundHeight(L.pos.x, L.pos.z)
+        self.airFloor = gy
+    end
+    self.groundRef = gy + L.alt
     rig.root.position = Vector3(L.pos.x, gy + L.alt, L.pos.z)
     rig.root.rotation = Quaternion(L.yaw, Vector3.UP)
     local drop, roll, pitchG = Gait.BodyMotion(self.gait)

@@ -155,71 +155,86 @@ local function BuildBridge(world, scene)
 end
 
 -- ---------------------------------------------------------------- ③ 悬石阶梯
--- 位置：西侧内环（x≈-31, z≈-3），一座高 13m 的断塔台（柱廊外），顶上放时之钥。
--- 巨石挂在旁边的断拱下（y≈14），下方是空地；打碎后碎块下落，冻结它们当跳台。
-M.KEY_POS = Vector3(-33.0, Terrain.RING_Y + 13.6, -3.0)
+-- 位置：西南内环（塔台中心 (-36, -6)），一座 5m 高的方塔台，顶上放时之钥；塔壁光滑爬不上去。
+-- 塔顶向东伸出一段断拱，拱端用锁链挂着巨石（中心离地约 5.8m）。
+--
+--   侧视（东 →）：
+--        塔台顶 y=11 ┌────┐╭──断拱──╮ 锚点 y=14
+--                    │    │         ║ 锁链
+--                    │    │        (巨石) 中心 y≈11.8，底 y≈10.2
+--                    │    │      ← 碎块下落途中冻结 → 形成 y 8~11 的跳台
+--        地面 y=6  ──┴────┴──▆(矮墙 1.1m)──────────
+-- 诺米跳高约 1.4m：地面 → 矮墙(7.1) → 冻结碎块(8~10) → 塔顶(11)。
+-- 冻结 10 秒；失败了对巨石施放回溯，碎块飞回原位重新挂好。
+M.TOWER = { x = -36.0, z = -6.0, h = 5.0 }
+M.KEY_POS = Vector3(-36.0, Terrain.RING_Y + 5.0 + 0.9, -6.0)
 local function BuildBoulderTower(world, scene)
-    local tx, tz = -33.0, -3.0
+    local tx, tz = M.TOWER.x, M.TOWER.z
     local base = Terrain.RING_Y
-    local top = base + 13.0
-    -- 塔台：方形石台 4.5×4.5，四周光滑无法攀爬；顶部金色平台
-    local b = Brush.New(world, { min = { tx - 3, base - 0.5, tz - 3 }, max = { tx + 3, top + 1.5, tz + 3 }, size = 0.25 })
-    b:Shape(tx - 3, base - 0.5, tz - 3, tx + 3, top + 1.5, tz + 3, function(x, y, z)
+    local top = base + M.TOWER.h
+    local b = Brush.New(world, { min = { tx - 3, base - 0.5, tz - 3 }, max = { tx + 3, top + 1.25, tz + 3 }, size = 0.25 })
+    b:Shape(tx - 3, base - 0.5, tz - 3, tx + 3, top + 1.25, tz + 3, function(x, y, z)
         local dx, dz = abs(x - tx), abs(z - tz)
         local ly = y - base
-        local e = (ly < 1.0) and 2.6 or 2.25
+        local e = (ly < 0.75) and 2.6 or 2.25
         if y > top then
-            -- 顶部护栏（只有三面，朝东开口，让跳台方向进入）
+            -- 顶部护栏：西、南、北三面，东面开口（跳台方向）
             if y > top + 1.0 then return nil end
-            if dx > 2.0 or dz > 2.0 then
-                if x > tx + 1.9 then return nil end
-                if (x + z) % 1.0 < 0.5 then return P.GOLD end
-                return nil
+            if dx > 2.25 or dz > 2.25 then return nil end
+            if dx > 1.95 or dz > 1.95 then
+                if x > tx + 1.0 then return nil end
+                if ((x + z) * 2) % 2 < 1.0 or y > top + 0.75 then return P.GOLD end
             end
             return nil
         end
         if dx > e or dz > e then return nil end
-        if y > top - 0.25 then return P.GOLD_DARK end
-        if (ly % 3.0) < 0.25 then return P.GOLD_DARK end
+        if y > top - 0.25 then return (dx < 0.9 and dz < 0.9) and P.RUNE_GOLD or P.GOLD_DARK end
+        if (ly % 2.5) < 0.25 then return P.GOLD_DARK end
         return Build.MossyStone(x, y, z, base)
     end)
-    Keep = nil
-    local v = b:Finish({})
-    M.towerVol = v
-    -- 断拱：从塔顶向东伸出的一段拱（挂巨石的锚点在拱端 x=tx+9, y=top+3）
-    local ab = Brush.New(world, { min = { tx, top - 1, tz - 1.0 }, max = { tx + 11, top + 4.5, tz + 1.0 }, size = 0.25 })
-    ab:Shape(tx, top - 1, tz - 1.0, tx + 11, top + 4.5, tz + 1.0, function(x, y, z)
-        local u = (x - tx) / 10.0
+    M.towerVol = b:Finish({})
+    -- 断拱：塔顶东缘升起，拱端在 x = tx + 9.2
+    local ab = Brush.New(world, { min = { tx + 1.5, top - 0.5, tz - 1.0 }, max = { tx + 10.5, top + 4.5, tz + 1.0 }, size = 0.25 })
+    ab:Shape(tx + 1.5, top - 0.5, tz - 1.0, tx + 10.5, top + 4.5, tz + 1.0, function(x, y, z)
+        local u = (x - tx - 1.5) / 8.5
         if u < 0 or u > 1 then return nil end
-        local cy = top + 0.5 + 3.0 * sin(u * pi * 0.6)
-        if abs(y - cy) > 0.55 or abs(z - tz) > 0.8 then return nil end
-        if u > 0.92 - 0.06 * Noise.Value2(y * 3, z * 3, 3) then return nil end
-        if abs(y - cy) > 0.35 and abs(z - tz) < 0.25 then return P.GOLD end
+        local cy = top + 0.4 + 3.0 * sin(u * pi * 0.5)
+        if abs(y - cy) > 0.5 or abs(z - tz) > 0.75 then return nil end
+        if u > 0.97 - 0.05 * Noise.Value2(y * 3, z * 3, 3) then return nil end
+        if abs(y - cy) > 0.3 and abs(z - tz) < 0.25 then return P.GOLD end
         return Build.Marble(x, y, z)
     end)
     ab:Finish({})
-    -- 锁链（视觉，静态无碰撞）：锚点到巨石顶
+    -- 矮墙残段（第一级台阶）
+    local sb = Brush.New(world, { min = { tx + 4.5, base - 0.25, tz - 2.5 }, max = { tx + 6.5, base + 1.2, tz + 0.5 }, size = 0.25 })
+    sb:Shape(tx + 4.5, base - 0.25, tz - 2.5, tx + 6.5, base + 1.2, tz + 0.5, function(x, y, z)
+        local top2 = base + 0.6 + 0.5 * Noise.Value2(x * 2, z * 2, 9)
+        if y > top2 then return nil end
+        return Build.MossyStone(x, y, z, base)
+    end)
+    sb:Finish({})
+    -- 锁链（视觉，无碰撞）
     local anchor = Vector3(tx + 8.6, top + 3.0, tz)
-    local cb = Brush.New(world, { min = { anchor.x - 0.4, top - 1.5, tz - 0.4 }, max = { anchor.x + 0.4, anchor.y + 0.2, tz + 0.4 }, size = 0.125 })
-    cb:Shape(anchor.x - 0.4, top - 1.5, tz - 0.4, anchor.x + 0.4, anchor.y, tz + 0.4, function(x, y, z)
-        local k = floor((y - top) / 0.375)
+    local by = top + 0.8
+    local cb = Brush.New(world, { min = { anchor.x - 0.375, by + 1.0, tz - 0.375 }, max = { anchor.x + 0.375, anchor.y + 0.1, tz + 0.375 }, size = 0.125 })
+    cb:Shape(anchor.x - 0.375, by + 1.0, tz - 0.375, anchor.x + 0.375, anchor.y, tz + 0.375, function(x, y, z)
+        local k = floor((y - by) / 0.375)
         local dx, dz = x - anchor.x, z - tz
         if k % 2 == 0 then
-            if abs(dz) < 0.07 and abs(abs(dx) - 0.14) < 0.07 then return P.GOLD_DARK end
+            if abs(dz) < 0.07 and abs(abs(dx) - 0.13) < 0.07 then return P.GOLD_DARK end
         else
-            if abs(dx) < 0.07 and abs(abs(dz) - 0.14) < 0.07 then return P.GOLD_DARK end
+            if abs(dx) < 0.07 and abs(abs(dz) - 0.13) < 0.07 then return P.GOLD_DARK end
         end
     end)
     M.chain = cb:Finish({ visual = true })
-    -- 巨石：直径 ~3.4m 的不规则岩块，挂在锚点下（底部 y≈top-4.8），时之物件（0.25m 体素）
-    local bx, by, bz = anchor.x, top - 3.2, tz
+    -- 巨石（时之物件）
+    local bx, bz = anchor.x, tz
     local bb = Brush.New(world, { min = { bx - 2.0, by - 1.9, bz - 2.0 }, max = { bx + 2.0, by + 1.9, bz + 2.0 }, size = 0.25 })
     bb:Shape(bx - 2.0, by - 1.9, bz - 2.0, bx + 2.0, by + 1.9, bz + 2.0, function(x, y, z)
         local dx, dy, dz = x - bx, y - by, z - bz
         local d = sqrt(dx * dx + dy * dy * 1.15 + dz * dz)
         local n = Noise.Value3(x * 0.9, y * 0.9, z * 0.9, 41)
-        if d > 1.5 + 0.35 * n then return nil end
-        -- 金色箍带 + 蓝色时纹
+        if d > 1.45 + 0.35 * n then return nil end
         if abs(dy) < 0.13 then return P.GOLD end
         if Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.05 then return P.RUNE_BLUE end
         return Build.Stone(x, y, z)
@@ -228,9 +243,9 @@ local function BuildBoulderTower(world, scene)
     o.id = "boulder"
     o.world, o.scene = world, scene
     o.seed = 23
+    o.freezeTime = 10.0
     local obj = Add(TimeObject.New(o))
     obj.title = "悬石"
-    obj.hangY = by
     obj:On(function(self, ev)
         if ev == "shatter" and M.chain ~= nil then
             M.chain:GetNode().enabled = false
