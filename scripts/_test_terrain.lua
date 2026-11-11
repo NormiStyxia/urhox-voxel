@@ -1,3 +1,4 @@
+NO_TERRAIN = true
 local Pal = require("ruins.RuinsPalette")
 local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
@@ -19,7 +20,7 @@ function Start2()
     local lg = scene:CreateChild("LightGroup")
     lg:LoadXML(cache:GetResource("XMLFile", "LightGroup/TownDay.xml"):GetRoot())
     SkyUtils.CreateGradientSky(scene, { zenith = Color(0.10, 0.28, 0.66), horizon = Color(0.447, 0.638, 1.0), skyExp = 0.5 })
-    Terrain.Build(world)
+    if not NO_TERRAIN then Terrain.Build(world) end
     Build.Build(world)
     local mat = Material:new()
     mat:SetSurfaceShader("Shaders/BLGL/VoxelPalettePBR.shader")
