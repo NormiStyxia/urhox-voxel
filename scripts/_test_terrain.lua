@@ -1,4 +1,3 @@
-NO_TERRAIN = true
 local Pal = require("ruins.RuinsPalette")
 local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
@@ -37,3 +36,11 @@ function Start2()
     renderer:SetViewport(0, Viewport:new(scene, c))
     _G.keep = scene
 end
+local fr = 0
+SubscribeToEvent("Update", function()
+    fr = fr + 1
+    if fr % 50 == 0 and _G.keep then
+        local w = _G.keep:GetComponent("VoxelPhysicsWorld")
+        print("PENDING " .. fr .. " " .. tostring(w:GetPendingMeshJobCount()))
+    end
+end)
