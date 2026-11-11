@@ -10,7 +10,7 @@
 --         三层冰息（亮白方块核 / 体素冰雾 / 雪花片）→ 落点结霜蔓延、冰晶簇破土、冰渣迸射
 --   大号 · 星陨：低伏蓄力，七芒星地阵逐段点亮（每段一震）、星屑螺旋汇聚 →
 --         口前三层法阵依次弹出 → 体素光柱一节节射出、开火卡帧重震 →
---         落点紫水晶簇、灼痕、金色火花 + 余烬、连续像素冲击环
+--         落点深蓝冰川晶簇林、地面冰封、冰青火花 + 霜烬、连续像素冲击环（全程蓝白，与中号的天青 / 雪白区分）
 --
 -- 动作：在控制器上注册外挂状态 BREATH（不改控制器源码）；喷射阶段用头部俯仰反馈对准落点。
 -- 破坏预留：B:OnHit(fn) 每帧广播命中 { pos, radius, power, element, dir, origin }，
@@ -69,8 +69,8 @@ CFG.large = {
     name = "星陨龙息", style = 1,
     total = 6.4, fireStart = 1.95, fireEnd = 5.1,
     aimDist = 12.0, maxLen = 26.0, wings = 0.85,
-    main = Color(0.55, 0.12, 1.9), accent = Color(1.9, 1.1, 0.25),
-    lightColor = Color(0.8, 0.55, 1.0),
+    main = Color(0.12, 0.3, 1.9), accent = Color(1.4, 1.7, 2.0),
+    lightColor = Color(0.55, 0.78, 1.0),
     keys = {
         { 0.0, { neck = 2, curve = 2, head = -2, jaw = 1, chest = 0, pitch = 0, dy = 0, tail = 0 } },
         { 0.7, { neck = -18, curve = -10, head = -20, jaw = 6, chest = 1, pitch = -4, dy = 0.02, tail = 8 } },
@@ -128,30 +128,47 @@ function M.Register(Controller)
 end
 
 -- ---------------------------------------------------------------- 调色板 / 槽位
--- 龙用 40–57，地面 60/61；龙息占 62–69（晶簇 + 地面霜 / 灼痕）
+-- 龙用 40–57，地面 60/61；龙息占 62–77
+--   中号「霜焰」：天青 / 雪白，通透明亮
+--   大号「寒星」：深蓝宝石 / 冰川青，对比更重、发光更强
 local PAL = {
-    ICE_BODY = 62, ICE_EDGE = 63, ICE_GLOW = 64, FROST_A = 65, FROST_B = 66,
-    AME_BODY = 67, AME_GLOW = 68, SCORCH = 69,
+    -- 中号晶簇
+    ICE_BODY = 62, ICE_EDGE = 63, ICE_GLOW = 64, ICE_LIGHT = 70, ICE_DARK = 71, ICE_ROOT = 72,
+    -- 中号地面霜
+    FROST_A = 65, FROST_B = 66,
+    -- 大号晶簇
+    GLA_BODY = 67, GLA_GLOW = 68, GLA_EDGE = 73, GLA_LIGHT = 74, GLA_DARK = 75, GLA_ROOT = 76,
+    -- 大号地面冰封
+    FLOOR_A = 69, FLOOR_B = 77,
 }
 M.PAL = PAL
 
+-- { 槽位, 颜色, 粗糙度, 自发光(rgb, 强度) }
+local PAL_DEF = {
+    { PAL.ICE_BODY, { 0.34, 0.64, 0.98 }, 0.12, { 0.2, 0.5, 1.0, 0.25 } },
+    { PAL.ICE_LIGHT, { 0.62, 0.86, 1.0 }, 0.10, { 0.4, 0.75, 1.0, 0.35 } },
+    { PAL.ICE_DARK, { 0.16, 0.40, 0.86 }, 0.15, { 0.1, 0.3, 1.0, 0.15 } },
+    { PAL.ICE_EDGE, { 0.86, 0.97, 1.0 }, 0.08, { 0.7, 0.95, 1.0, 0.8 } },
+    { PAL.ICE_GLOW, { 0.95, 1.0, 1.0 }, 0.05, { 0.8, 0.97, 1.0, 2.2 } },
+    { PAL.ICE_ROOT, { 0.84, 0.91, 1.0 }, 0.6, nil },
+    { PAL.FROST_A, { 0.72, 0.87, 1.0 }, 0.2, { 0.3, 0.6, 1.0, 0.12 } },
+    { PAL.FROST_B, { 0.55, 0.76, 0.98 }, 0.2, { 0.2, 0.5, 1.0, 0.18 } },
+    { PAL.GLA_BODY, { 0.10, 0.27, 0.80 }, 0.10, { 0.05, 0.2, 1.0, 0.35 } },
+    { PAL.GLA_LIGHT, { 0.24, 0.55, 0.96 }, 0.08, { 0.15, 0.45, 1.0, 0.45 } },
+    { PAL.GLA_DARK, { 0.04, 0.12, 0.46 }, 0.12, { 0.02, 0.1, 0.8, 0.2 } },
+    { PAL.GLA_EDGE, { 0.45, 0.94, 1.0 }, 0.05, { 0.35, 0.9, 1.0, 1.2 } },
+    { PAL.GLA_GLOW, { 0.80, 1.0, 1.0 }, 0.05, { 0.6, 1.0, 1.0, 3.0 } },
+    { PAL.GLA_ROOT, { 0.32, 0.46, 0.76 }, 0.5, nil },
+    { PAL.FLOOR_A, { 0.24, 0.44, 0.80 }, 0.08, { 0.1, 0.3, 1.0, 0.18 } },
+    { PAL.FLOOR_B, { 0.36, 0.60, 0.93 }, 0.08, { 0.2, 0.55, 1.0, 0.3 } },
+}
+
 local function SetupPalette(world)
-    world:SetPaletteEntry(PAL.ICE_BODY, Color(0.2, 0.48, 0.92), 2.0)
-    world:SetPaletteEntry(PAL.ICE_EDGE, Color(0.5, 0.82, 1.0), 2.0)
-    world:SetPaletteEntry(PAL.ICE_GLOW, Color(0.92, 1.0, 1.0), 2.0)
-    world:SetPaletteEntryPBR(PAL.ICE_BODY, 0.12, 0.0, 0.8, Color(0.1, 0.35, 1.0, 0.5))
-    world:SetPaletteEntryPBR(PAL.ICE_EDGE, 0.1, 0.0, 0.8, Color(0.4, 0.75, 1.0, 0.6))
-    world:SetPaletteEntryPBR(PAL.ICE_GLOW, 0.1, 0.0, 0.8, Color(0.7, 0.95, 1.0, 1.6))
-    world:SetPaletteEntry(PAL.FROST_A, Color(0.70, 0.86, 1.0), 50.0)
-    world:SetPaletteEntry(PAL.FROST_B, Color(0.52, 0.74, 0.98), 50.0)
-    world:SetPaletteEntryPBR(PAL.FROST_A, 0.2, 0.0, 0.7, Color(0.3, 0.6, 1.0, 0.12))
-    world:SetPaletteEntryPBR(PAL.FROST_B, 0.2, 0.0, 0.7, Color(0.2, 0.5, 1.0, 0.18))
-    world:SetPaletteEntry(PAL.AME_BODY, Color(0.42, 0.18, 0.78), 2.0)
-    world:SetPaletteEntry(PAL.AME_GLOW, Color(1.0, 0.78, 0.4), 2.0)
-    world:SetPaletteEntryPBR(PAL.AME_BODY, 0.15, 0.0, 0.8, Color(0.5, 0.15, 1.0, 0.7))
-    world:SetPaletteEntryPBR(PAL.AME_GLOW, 0.2, 0.0, 0.6, Color(1.0, 0.7, 0.3, 2.0))
-    world:SetPaletteEntry(PAL.SCORCH, Color(0.22, 0.12, 0.36), 50.0)
-    world:SetPaletteEntryPBR(PAL.SCORCH, 0.6, 0.0, 0.4, Color(0.6, 0.2, 1.0, 0.25))
+    for _, d in ipairs(PAL_DEF) do
+        local c, e = d[2], d[4]
+        world:SetPaletteEntry(d[1], Color(c[1], c[2], c[3]), 2.0)
+        world:SetPaletteEntryPBR(d[1], d[3], 0.0, 0.8, e and Color(e[1], e[2], e[3], e[4]) or Color(0, 0, 0, 0))
+    end
 end
 
 -- ---------------------------------------------------------------- 材质工具
@@ -232,8 +249,9 @@ local function MakeBeamSegs(parent, n, core, edge)
         sm:SetModel(model)
         local mat = ShaderMaterial("Shaders/BLGL/DragonBeam.shader")
         local outer = (i > 1)
-        SetC(mat, "core_color", outer and C(1.0, 0.8, 0.4) or core)
-        SetC(mat, "edge_color", outer and C(1.0, 0.55, 0.2) or edge)
+        SetC(mat, "core_color", outer and C(0.7, 1.0, 1.0) or core)
+        SetC(mat, "edge_color", outer and C(0.25, 0.75, 1.0) or edge)
+        SetC(mat, "dark_color", C(0.02, 0.06, 0.25))
         SetF(mat, "seed", i * 1.37)
         SetF(mat, "cells", outer and 3 or 10)
         sm:SetMaterial(mat)
@@ -316,8 +334,8 @@ function B:Build(scene)
         self.groundRune = MakeRune(root, "GroundRune", 0, pal, 72, 2)
         self.groundRune.size = 8.0 * S
     else
-        local palV = { C(0.08, 0.02, 0.16), C(0.5, 0.16, 1.0), C(0.85, 0.5, 1.0), C(1.0, 0.92, 0.7) }
-        local palG = { C(0.14, 0.05, 0.02), C(0.95, 0.55, 0.12), C(1.0, 0.82, 0.35), C(1.0, 1.0, 0.85) }
+        local palV = { C(0.01, 0.03, 0.16), C(0.1, 0.3, 0.95), C(0.4, 0.72, 1.0), C(0.9, 1.0, 1.0) }
+        local palG = { C(0.01, 0.1, 0.2), C(0.2, 0.75, 1.0), C(0.6, 0.97, 1.0), C(1.0, 1.0, 1.0) }
         local layers = { { 2.2, 1.2, palV, 40 }, { 3.3, 2.7, palG, 52 }, { 4.6, 4.5, palV, 64 } }
         for i, ly in ipairs(layers) do
             local r = MakeRune(root, "MouthRune" .. i, 1, ly[3], ly[4], i * 3)
@@ -330,7 +348,7 @@ function B:Build(scene)
     -- 冲击环池
     self.rings = {}
     local ringPal = frost and { C(0.02, 0.07, 0.24), C(0.3, 0.7, 1.0), C(0.75, 0.96, 1.0), C(1, 1, 1) }
-        or { C(0.1, 0.02, 0.18), C(0.7, 0.3, 1.0), C(1.0, 0.75, 0.35), C(1, 1, 0.9) }
+        or { C(0.01, 0.03, 0.16), C(0.15, 0.45, 1.0), C(0.5, 0.92, 1.0), C(1, 1, 1) }
     for i = 1, 5 do
         local r = MakeRune(root, "Ring" .. i, 2, ringPal, frost and 56 or 80, i * 11)
         r.age = 1.0
@@ -397,16 +415,16 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.35, C(0.7, 0.92, 1.0, 1) }, { 0.7, C(0.4, 0.7, 1.0, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
     else
-        -- 绕束星屑（亮金 / 紫，加色）
+        -- 绕束星屑（白 / 冰青 / 深蓝，加色）
         self.em.core = VoxelFX.Emitter(root, "AstralSparks", { kind = "cross", additive = true, n = 700, setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.7, 0.7, 0.7) * k)
             fx:SetMinDirection(Vector3(-0.05, -0.05, 1)); fx:SetMaxDirection(Vector3(0.05, 0.05, 1))
             fx:SetMinVelocity(24 * k); fx:SetMaxVelocity(34 * k)
             fx:SetMinTimeToLive(0.4); fx:SetMaxTimeToLive(0.7)
             fx:SetMinParticleSize(Vector2(0.26, 0.26) * k); fx:SetMaxParticleSize(Vector2(0.4, 0.4) * k)
-            VoxelFX.Steps(fx, { { 0, C(1, 0.95, 0.7, 1) }, { 0.3, C(1.0, 0.7, 0.3, 1) }, { 0.6, C(0.7, 0.35, 1.0, 1) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.3, C(0.6, 0.95, 1.0, 1) }, { 0.6, C(0.3, 0.55, 1.0, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
-        -- 束外紫色体素烟
+        -- 束外寒雾（深一点的蓝）
         self.em.mist = VoxelFX.Emitter(root, "AstralSmoke", { kind = "cloud", n = 500, setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.9, 0.9, 0.9) * k)
             fx:SetMinDirection(Vector3(-0.25, -0.25, 1)); fx:SetMaxDirection(Vector3(0.25, 0.25, 1))
@@ -415,7 +433,7 @@ function B:Build(scene)
             fx:SetMinTimeToLive(0.6); fx:SetMaxTimeToLive(1.0)
             fx:SetMinParticleSize(Vector2(0.4, 0.4) * k); fx:SetMaxParticleSize(Vector2(0.65, 0.65) * k)
             fx:SetSizeAdd(0.9 * k)
-            VoxelFX.Steps(fx, { { 0, C(0.85, 0.65, 1.0, 0.0) }, { 0.08, C(0.75, 0.5, 1.0, 0.45) }, { 0.4, C(0.6, 0.38, 0.92, 0.28) }, { 0.75, C(0.48, 0.28, 0.75, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(0.8, 0.92, 1.0, 0.0) }, { 0.08, C(0.6, 0.8, 1.0, 0.45) }, { 0.4, C(0.42, 0.62, 0.95, 0.28) }, { 0.75, C(0.3, 0.46, 0.85, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：火花（方块，抛物线）
         self.em.chips = VoxelFX.Emitter(root, "ImpactSparks", { kind = "square", additive = true, n = 800, setup = function(fx)
@@ -425,9 +443,9 @@ function B:Build(scene)
             fx:SetConstantForce(Vector3(0, -22, 0))
             fx:SetMinTimeToLive(0.7); fx:SetMaxTimeToLive(1.3)
             fx:SetMinParticleSize(Vector2(0.14, 0.14) * k); fx:SetMaxParticleSize(Vector2(0.24, 0.24) * k)
-            VoxelFX.Steps(fx, { { 0, C(1, 1, 0.85, 1) }, { 0.25, C(1, 0.75, 0.3, 1) }, { 0.55, C(0.95, 0.4, 0.75, 1) }, { 0.8, C(0.5, 0.2, 0.9, 1) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.25, C(0.7, 1.0, 1.0, 1) }, { 0.55, C(0.35, 0.75, 1.0, 1) }, { 0.8, C(0.18, 0.4, 0.95, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
-        -- 落点：紫色体素烟柱
+        -- 落点：冰雾烟柱
         self.em.ground = VoxelFX.Emitter(root, "ImpactSmoke", { kind = "cloud", n = 300, setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(1.4, 0.3, 1.4) * k)
             fx:SetMinDirection(Vector3(-1, 0.6, -1)); fx:SetMaxDirection(Vector3(1, 1.6, 1))
@@ -436,10 +454,10 @@ function B:Build(scene)
             fx:SetMinTimeToLive(0.9); fx:SetMaxTimeToLive(1.5)
             fx:SetMinParticleSize(Vector2(0.5, 0.5) * k); fx:SetMaxParticleSize(Vector2(0.9, 0.9) * k)
             fx:SetSizeAdd(0.7 * k)
-            VoxelFX.Steps(fx, { { 0, C(1.0, 0.9, 1.0, 0.6) }, { 0.12, C(0.82, 0.6, 1.0, 0.42) }, { 0.45, C(0.66, 0.44, 0.92, 0.26) }, { 0.8, C(0.5, 0.32, 0.75, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
+            VoxelFX.Steps(fx, { { 0, C(0.95, 1.0, 1.0, 0.6) }, { 0.12, C(0.7, 0.88, 1.0, 0.42) }, { 0.45, C(0.5, 0.7, 0.98, 0.26) }, { 0.8, C(0.38, 0.55, 0.9, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 光束（体素光柱）
-        self.beam = MakeBeamSegs(root, 5, C(1.0, 0.92, 0.7), C(0.62, 0.24, 1.0))
+        self.beam = MakeBeamSegs(root, 5, C(0.95, 1.0, 1.0), C(0.15, 0.4, 1.0))
     end
 
     -- Lua 粒子：螺旋汇聚 / 绕束 / 余烬 / 闪光
@@ -449,24 +467,54 @@ function B:Build(scene)
     self.debris = VoxelFX.Debris(root, 70)
 
     -- 晶簇（真正的体素体积）
-    local mats = frost and { body = PAL.ICE_BODY, edge = PAL.ICE_EDGE, glow = PAL.ICE_GLOW }
-        or { body = PAL.AME_BODY, edge = PAL.AME_BODY, glow = PAL.AME_GLOW }
+    -- 中号：细长尖锐的天青冰刺，围成一圈向外炸开
+    -- 大号：粗壮的深蓝冰川六棱柱，两圈「晶林」，尖顶短
+    local mats = frost and { body = PAL.ICE_BODY, light = PAL.ICE_LIGHT, dark = PAL.ICE_DARK,
+            edge = PAL.ICE_EDGE, glow = PAL.ICE_GLOW, root = PAL.ICE_ROOT }
+        or { body = PAL.GLA_BODY, light = PAL.GLA_LIGHT, dark = PAL.GLA_DARK,
+            edge = PAL.GLA_EDGE, glow = PAL.GLA_GLOW, root = PAL.GLA_ROOT }
     local palMat = self.world:GetPaletteMaterial()
-    local n = frost and 9 or 8
-    for i = 1, n do
+    -- { 环半径, 高度, 粗细, 侧晶数, 外倾角 }（按中号尺寸写，乘 S）
+    local layout = frost and {
+        { 0, 2.7, 0.36, 5, 0 },
+        { 1.5, 1.7, 0.24, 3, 16 }, { 1.7, 1.4, 0.22, 3, 20 }, { 1.4, 1.9, 0.25, 3, 14 },
+        { 1.8, 1.2, 0.2, 2, 24 }, { 1.6, 1.6, 0.23, 3, 18 },
+        { 2.8, 0.9, 0.16, 2, 32 }, { 3.0, 0.7, 0.14, 1, 38 }, { 2.7, 1.0, 0.17, 2, 30 },
+        { 3.2, 0.6, 0.13, 1, 40 }, { 2.9, 0.8, 0.15, 2, 34 },
+    } or {
+        { 0, 3.3, 0.62, 4, 0 },
+        { 2.2, 2.4, 0.46, 2, 10 }, { 2.4, 2.0, 0.42, 2, 12 }, { 2.1, 2.7, 0.5, 2, 8 },
+        { 2.5, 1.8, 0.4, 2, 14 }, { 2.3, 2.2, 0.44, 2, 11 },
+        { 4.0, 1.4, 0.34, 1, 18 }, { 4.3, 1.1, 0.3, 1, 22 }, { 3.9, 1.5, 0.36, 2, 16 },
+        { 4.4, 1.0, 0.28, 1, 24 }, { 4.1, 1.3, 0.32, 1, 20 }, { 4.5, 0.9, 0.26, 1, 26 },
+    }
+    local n = #layout
+    local ring1 = 0
+    for _, ly in ipairs(layout) do if ly[1] > 0 and ly[1] < 2.6 then ring1 = ring1 + 1 end end
+    local i1, i2 = 0, 0
+    for i, ly in ipairs(layout) do
         local main = (i == 1)
-        local h = (main and 2.6 or (1.1 + 0.9 * VoxelFX.Hash(i * 3.3))) * S * (frost and 1.0 or 1.25)
+        local a
+        if main then a = 0
+        elseif ly[1] < 2.6 then
+            a = i1 / ring1 * math.pi * 2 + VoxelFX.Hash(i * 9.1) * 0.5; i1 = i1 + 1
+        else
+            a = (i2 + 0.5) / (n - 1 - ring1) * math.pi * 2 + VoxelFX.Hash(i * 5.3) * 0.4; i2 = i2 + 1
+        end
         local cr = VoxelFX.Crystal(self.world, palMat, root, "Crystal" .. i, {
-            voxel = 0.1 * S, height = h, radius = (main and 0.42 or 0.24 + 0.1 * VoxelFX.Hash(i * 1.1)) * S,
-            count = main and 5 or 3, seed = i * 2.7 + (frost and 0 or 50), mats = mats })
-        local a = (i - 1) / (n - 1) * math.pi * 2 + VoxelFX.Hash(i * 9.1) * 0.6
-        local rr = main and 0 or ((frost and 1.6 or 2.6) + 1.4 * VoxelFX.Hash(i * 4.7)) * S
+            voxel = (frost and 0.09 or 0.1) * S, height = ly[2] * S, radius = ly[3] * S,
+            count = 1 + ly[4], seed = i * 2.7 + (frost and 0 or 50), tip = frost and 0.5 or 0.8, mats = mats })
+        local rr = ly[1] * S
         cr.off = Vector3(math.cos(a) * rr, 0, math.sin(a) * rr)
-        cr.delay = main and 0 or (0.08 + 0.32 * VoxelFX.Hash(i * 6.1))
+        cr.lean = ly[5]
+        cr.out = Vector3(math.cos(a), 0, math.sin(a))
+        -- 先中心后外圈：一波向外炸开
+        cr.delay = main and 0 or ((ly[1] / (frost and 3.2 or 4.5)) * 0.35 + 0.06 * VoxelFX.Hash(i * 6.1))
         cr.yaw = VoxelFX.Hash(i * 2.9) * 360
         cr.state = "hidden"
         self.crystals[i] = cr
     end
+    self.crystalLinger = frost and 2.2 or 3.0  -- 喷射结束后晶簇停留多久再碎
 
     -- 灯光
     local function MakeLight(name, range)
@@ -573,19 +621,37 @@ function B:UpdateCrystals(dt)
                         local a = math.random() * math.pi * 2
                         self.debris:Spawn({ pos = cr.base + Vector3(math.cos(a) * 0.3 * S, 0.15 * S, math.sin(a) * 0.3 * S),
                             vel = Vector3(math.cos(a) * Rand(1.5, 3.5), Rand(3, 6), math.sin(a) * Rand(1.5, 3.5)) * S,
-                            size = Rand(0.08, 0.16) * S, color = (self.cfg.style == 0) and C(0.8, 0.93, 1.0) or C(0.5, 0.3, 0.8),
+                            size = Rand(0.08, 0.16) * S, color = (self.cfg.style == 0) and C(0.84, 0.93, 1.0) or C(0.32, 0.46, 0.76),
                             glow = 0.4, life = Rand(0.8, 1.3), spin = 540, groundFn = self.groundFn })
                     end
                 end
-                -- 分 6 段升起（体素感：一段段顶出来），最后一段过冲回弹
-                local u = math.min(1, cr.age / 0.32)
-                local stepped = math.floor(u * 6) / 6
-                local over = (u >= 1) and (1 + 0.06 * math.max(0, 1 - (cr.age - 0.32) / 0.15)) or stepped
+                -- 分段升起（体素感：一节节顶出来），最后一段过冲回弹
+                local steps = (self.cfg.style == 0) and 6 or 8
+                local dur = (self.cfg.style == 0) and 0.3 or 0.42
+                local u = math.min(1, cr.age / dur)
+                local stepped = math.floor(u * steps) / steps
+                local over = (u >= 1) and (1 + 0.06 * math.max(0, 1 - (cr.age - dur) / 0.15)) or stepped
                 cr.grow = over
-                cr.holder.position = cr.base + Vector3(0, -cr.height * (1 - math.min(1, over)), 0)
-                cr.holder.rotation = Quaternion(cr.yaw, Vector3.UP)
+                -- 向外倾斜（绕切线轴），中心主晶直立
+                local tilt = Quaternion(cr.lean or 0, Vector3(cr.out.z, 0, -cr.out.x))
+                local up = tilt * Vector3.UP
+                cr.holder.position = cr.base - up * (cr.height * (1 - math.min(1, over)))
+                cr.holder.rotation = tilt * Quaternion(cr.yaw, Vector3.UP)
                 local sc = 0.75 + 0.25 * math.min(1, over)
                 cr.holder.scale = Vector3(sc, over, sc)
+                -- 立住以后：晶面上零星闪光（像素星），停留期间一直有
+                if u >= 1 then
+                    cr.glint = (cr.glint or 0) - dt
+                    if cr.glint <= 0 then
+                        cr.glint = Rand(0.15, 0.45)
+                        local hgt = Rand(0.3, 1.0) * cr.height
+                        local p = cr.base + up * hgt + Vector3(Rand(-1, 1), 0, Rand(-1, 1)) * cr.radius * (1.1 - hgt / cr.height)
+                        local frost = (self.cfg.style == 0)
+                        self.motes:Spawn({ pos = p, vel = Vector3(0, 0.3 * S, 0), life = Rand(0.3, 0.55),
+                            size = Rand(0.16, 0.28) * S, colors = frost and { C(1, 1, 1), C(0.75, 0.95, 1.0), C(0.45, 0.8, 1.0) }
+                                or { C(1, 1, 1), C(0.55, 1.0, 1.0), C(0.25, 0.6, 1.0) } })
+                    end
+                end
             end
         end
     end
@@ -595,7 +661,7 @@ end
 function B:ShatterCrystals()
     local S, frost = self.S, (self.cfg.style == 0)
     local cols = frost and { C(0.42, 0.72, 0.98), C(0.72, 0.92, 1.0), C(0.92, 1.0, 1.0) }
-        or { C(0.42, 0.18, 0.78), C(0.6, 0.3, 0.95), C(1.0, 0.78, 0.4) }
+        or { C(0.1, 0.27, 0.8), C(0.24, 0.55, 0.96), C(0.45, 0.94, 1.0), C(0.8, 1.0, 1.0) }
     local any = false
     for _, cr in ipairs(self.crystals) do
         if cr.holder.enabled then
@@ -617,7 +683,7 @@ function B:ShatterCrystals()
                 self.motes:Spawn({ pos = cr.base + Vector3(Rand(-0.4, 0.4) * S, Rand(0, cr.height), Rand(-0.4, 0.4) * S),
                     vel = Vector3(Rand(-2, 2), Rand(1, 4), Rand(-2, 2)) * S, grav = 6, drag = 1.5, life = Rand(0.5, 0.9),
                     size = Rand(0.12, 0.2) * S, colors = frost and { C(1, 1, 1), C(0.6, 0.9, 1.0), C(0.3, 0.6, 1.0) }
-                        or { C(1, 0.95, 0.7), C(1, 0.7, 0.3), C(0.7, 0.35, 1.0) } })
+                        or { C(1, 1, 1), C(0.5, 0.95, 1.0), C(0.2, 0.45, 1.0) } })
             end
         end
         cr.state = "hidden"
@@ -651,6 +717,8 @@ function B:Update()
     self:UpdateGround(dt, t, active)
     self.trauma = math.max(0, self.trauma - dt * 1.4)
     self.hitstop = math.max(0, self.hitstop - dt)
+    -- 晶簇在喷射结束后停留 crystalLinger 秒再碎（BREATH 状态结束后照样计时）
+    if self.crystalT ~= nil and t > self.crystalT then self.crystalT = nil; self:ShatterCrystals() end
 
     if m <= 0 and not active then
         if not self.hidden then self:HideAll() end
@@ -697,16 +765,17 @@ function B:Update()
                 local v = (side * math.cos(a) + up * math.sin(a)) * Rand(3, 7) + dir * Rand(2, 6)
                 self.motes:Spawn({ pos = origin + dir * 0.4 * S, vel = v * S, drag = 3, life = Rand(0.3, 0.55),
                     size = Rand(0.14, 0.26) * S, colors = frost and { C(1, 1, 1), C(0.7, 0.95, 1.0), C(0.35, 0.7, 1.0) }
-                        or { C(1, 1, 0.9), C(1, 0.8, 0.4), C(0.8, 0.4, 1.0) } })
+                        or { C(1, 1, 1), C(0.55, 0.95, 1.0), C(0.2, 0.45, 1.0) } })
             end
         end
         local tCrystal = cfg.fireStart + (frost and 0.45 or 0.3)
         if Crossed(prevT, t, tCrystal) and hitGround then
             for i = 1, #self.crystals do self:CrystalAt(i, hitG) end
+            self.crystalT = cfg.fireEnd + self.crystalLinger
             self:Play("grow", "impact", 1.0)
             self:Kick(frost and 0.3 or 0.45)
         end
-        if Crossed(prevT, t, cfg.fireEnd + (frost and 0.55 or 0.4)) then self:ShatterCrystals() end
+
         if not frost then
             -- 蓄力阶段：地面阵每亮一段震一下
             for j = 1, 4 do
@@ -714,7 +783,7 @@ function B:Update()
             end
         end
     end
-    if not active and self.crystals[1].state ~= "hidden" then self:ShatterCrystals() end
+
 
     -- 持续震动：喷射中维持一个底噪
     if fire > 0.3 then self.trauma = math.max(self.trauma, frost and 0.32 or 0.5) end
@@ -770,7 +839,7 @@ function B:Update()
             local gold = (not frost) and math.random() < 0.45
             self.motes:Spawn({ life = life, size = Rand(0.14, 0.24) * S,
                 colors = frost and { C(0.5, 0.8, 1.0), C(0.75, 0.95, 1.0), C(1, 1, 1) }
-                    or (gold and { C(1.0, 0.6, 0.2), C(1, 0.85, 0.45), C(1, 1, 0.9) } or { C(0.55, 0.25, 1.0), C(0.8, 0.5, 1.0), C(1, 0.9, 1.0) }),
+                    or (gold and { C(0.3, 0.85, 1.0), C(0.65, 1.0, 1.0), C(1, 1, 1) } or { C(0.12, 0.3, 1.0), C(0.4, 0.62, 1.0), C(0.9, 0.96, 1.0) }),
                 fn = function(mo, _, u)
                     local p = u * u
                     local ang = a0 + p * math.pi * 2.2
@@ -824,7 +893,7 @@ function B:Update()
                 local d0 = Rand(0.5, 0.95)
                 local gold = math.random() < 0.4
                 self.motes:Spawn({ life = Rand(0.35, 0.6), size = Rand(0.16, 0.3) * S,
-                    colors = gold and { C(1, 1, 0.85), C(1, 0.75, 0.3), C(0.9, 0.45, 0.2) } or { C(0.95, 0.8, 1.0), C(0.7, 0.4, 1.0), C(0.45, 0.15, 0.9) },
+                    colors = gold and { C(1, 1, 1), C(0.6, 1.0, 1.0), C(0.25, 0.7, 1.0) } or { C(0.85, 0.92, 1.0), C(0.4, 0.6, 1.0), C(0.12, 0.25, 0.9) },
                     pos = origin, fn = function(mo, _, u)
                         local o2, d2 = self:MouthFrame()
                         local s2, u2 = Basis(d2)
@@ -849,7 +918,7 @@ function B:Update()
             local rr = Rand(0.5, frost and 2.5 or 4.0) * S
             local p = hitG + Vector3(math.cos(a) * rr, 0.1 * S, math.sin(a) * rr)
             self.debris:Spawn({ pos = p, vel = Vector3(math.cos(a) * Rand(1, 3), Rand(4, 8), math.sin(a) * Rand(1, 3)) * math.sqrt(S),
-                size = Rand(0.16, 0.32) * S, color = frost and C(0.86, 0.93, 1.0) or C(0.3, 0.15, 0.45), glow = frost and 0.25 or 0.6,
+                size = Rand(0.16, 0.32) * S, color = frost and C(0.86, 0.93, 1.0) or C(0.3, 0.45, 0.78), glow = frost and 0.25 or 0.6,
                 life = Rand(1.0, 1.6), spin = 300, groundFn = self.groundFn, bounce = 0.3 })
         end
         if not frost then self:Kick(0.08) end
@@ -858,7 +927,7 @@ function B:Update()
         local info = { pos = hitG, radius = (frost and 1.6 or 2.6) * S, power = (frost and 1.0 or 3.0) * fire,
             element = frost and "frost" or "astral", dir = dir, origin = origin }
         for _, fn in ipairs(self.listeners) do fn(info) end
-        -- 星陨：落点持续上升的金色余烬
+        -- 星陨：落点持续上升的霜烬
         if not frost then
             self.emberAcc = (self.emberAcc or 0) + 50 * dt
             while self.emberAcc >= 1 do
@@ -867,7 +936,7 @@ function B:Update()
                 local rr = Rand(0.3, 3.0) * S
                 self.motes:Spawn({ pos = hitG + Vector3(math.cos(a) * rr, 0.2, math.sin(a) * rr),
                     vel = Vector3(Rand(-0.5, 0.5), Rand(2, 5), Rand(-0.5, 0.5)) * S, drag = 0.8, life = Rand(0.8, 1.6),
-                    size = Rand(0.14, 0.24) * S, colors = { C(1, 0.95, 0.7), C(1, 0.7, 0.3), C(0.8, 0.35, 0.95), C(0.4, 0.15, 0.7) } })
+                    size = Rand(0.14, 0.24) * S, colors = { C(1, 1, 1), C(0.6, 0.95, 1.0), C(0.3, 0.6, 1.0), C(0.12, 0.25, 0.8) } })
             end
         end
     end
@@ -904,7 +973,7 @@ function B:UpdateBeam(origin, dir, len, fire, t, now)
         if fire > 0.01 then
             if not seg.node.enabled then seg.node.enabled = true end
             if seg.outer then
-                -- 四根金色细光棱绕主束螺旋（每 1/8 秒跳一档角度）
+                -- 四根冰青细光棱绕主束螺旋（每 1/8 秒跳一档角度）
                 local a = (i - 2) * math.pi * 0.5 + math.floor(now * 8) * (math.pi / 12)
                 local rr = 0.95 * S * (0.6 + 0.4 * fire)
                 local w = 0.22 * S * pulse
@@ -970,11 +1039,13 @@ function B:UpdateGround(dt, t, active)
             if frost then
                 return (VoxelFX.Hash(i * 3.7 + k * 1.3) > 0.45 + 0.4 * d) and PAL.FROST_B or PAL.FROST_A
             end
-            return PAL.SCORCH
+            -- 大号：深蓝冰封地面，靠近中心更亮
+            return (d < 0.35 or VoxelFX.Hash(i * 5.1 + k * 2.3) > 0.55 + 0.35 * d) and PAL.FLOOR_B or PAL.FLOOR_A
         end)
     elseif self.paintCenter ~= nil and gp:HasPaint() then
-        local holdEnd = cfg.fireEnd + (frost and 1.6 or 2.2)
-        if (not active) or t > holdEnd then
+        -- 冰晶碎掉之后地面霜 / 冰封再退
+        local holdEnd = cfg.fireEnd + self.crystalLinger + 0.2
+        if t > holdEnd then
             self.paintR = math.max(0, (self.paintR or 0) - 5 * S * 0.06)
             gp:Recede(self.paintCenter.x, self.paintCenter.z, self.paintR)
             if self.paintR <= 0 then gp:Recede(0, 0, 0); self.paintCenter = nil end

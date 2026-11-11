@@ -383,9 +383,13 @@ end
 ---@field state string
 ---@field grow number
 ---@field age number
+---@field lean number
+---@field out Vector3
+---@field glint number
 
 -- 一簇 = 一根主晶 + 若干侧晶，每根是倾斜的六棱锥台（截面用六边形距离）。
--- opts = { voxel, height, radius, count, seed, mats = { body, edge, glow } }
+-- opts = { voxel, height, radius, count, seed, tip, mats = { body, edge, glow, light?, dark?, root? } }
+-- 着色：每个六边形棱面按固定「伪光照」分亮 / 中 / 暗三档，棱线亮色竖条，顶端发光，根部冻土色带
 -- 返回 { holder(Node), volume, height, colors = {Color...}, voxels }
 ---@param world VoxelPhysicsWorld
 ---@param parent Node
@@ -416,7 +420,7 @@ function M.Crystal(world, material, parent, name, opts)
         for iy = 0, ny - 1 do
             for iz = 0, nx - 1 do
                 local x, y, z = ox + (ix + 0.5) * s, oy + (iy + 0.5) * s, oz + (iz + 0.5) * s
-                ---@type {u: number, depth: number}|nil
+                ---@type {u: number, depth: number, edgeOff: number, shade: number}|nil
                 local best, bestDepth = nil, 0
                 for _, sp in ipairs(spikes) do
                     local px, py, pz = x - sp.base[1], y - sp.base[2], z - sp.base[3]
@@ -438,18 +442,39 @@ function M.Crystal(world, material, parent, name, opts)
                         -- 六边形距离
                         local hex = math.max(math.abs(a2) * 0.866 + math.abs(b2) * 0.5, math.abs(b2))
                         local u = math.max(0, t) / sp.h
-                        -- 上 70% 收尖
-                        local rr = sp.r * ((u < 0.62) and (1.0 - 0.15 * u) or (0.9 * (1 - u) / 0.38))
+                        -- 顶部收尖（tip 以上线性收到尖；tip 大 = 更粗的柱状晶）
+                        local tip = opts.tip or 0.62
+                        local rr = sp.r * ((u < tip) and (1.0 - 0.15 * u) or ((1 - 0.15 * tip) * (1 - u) / (1 - tip)))
                         local depth = rr - hex
-                        if depth > 0 and depth > bestDepth then best, bestDepth = { u = u, depth = depth, sp = sp }, depth end
+                        if depth > 0 and depth > bestDepth then
+                            -- 所在棱面：六边形的 6 个面法线在 30° + 60°k；离面中心越远越靠近棱线
+                            local ang = math.deg(math.atan(b2, a2))
+                            local k = math.floor((ang - 30) / 60 + 0.5)
+                            local fc = 30 + 60 * k
+                            local off = math.abs(ang - fc)
+                            -- 面法线转回体积空间，和固定的「伪光照」方向点乘 → 每个棱面一个明暗档
+                            local fa = math.rad(fc) - sp.spin
+                            local na, nb = math.cos(fa), math.sin(fa)
+                            local nx3, ny3, nz3 = ux * na + vx * nb, uy * na + vy * nb, uz * na + vz * nb
+                            local shade = nx3 * 0.62 + ny3 * 0.35 + nz3 * -0.7
+                            best, bestDepth = { u = u, depth = depth, edgeOff = off, shade = shade }, depth
+                        end
                     end
                 end
                 if best ~= nil then
+                    local mats = opts.mats
                     local m
-                    if best.u > 0.86 then m = opts.mats.glow
+                    local h = Hash(ix * 3.1 + iy * 7.7 + iz * 1.3 + seed)
+                    if best.u > 0.84 then m = mats.glow
                     elseif best.depth < s * 1.2 then
-                        m = (Hash(ix * 3.1 + iy * 7.7 + iz * 1.3 + seed) > 0.72) and opts.mats.glow or opts.mats.edge
-                    else m = opts.mats.body end
+                        if best.edgeOff > 22 then m = mats.edge          -- 棱线：亮色竖条
+                        elseif h > 0.93 then m = mats.glow               -- 零星闪点
+                        elseif best.shade > 0.3 then m = mats.light or mats.edge
+                        elseif best.shade < -0.25 then m = mats.dark or mats.body
+                        else m = mats.body end
+                        -- 根部一圈：冻土色带，像从地里挤出来
+                        if best.u < 0.07 and mats.root ~= nil then m = mats.root end
+                    else m = mats.body end
                     vox[#vox + 1] = { ix, iy, iz, m }
                 end
             end

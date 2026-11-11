@@ -16,6 +16,7 @@ local NomiVoxelData = require("game.NomiVoxelData")
 local DragonRide = require("dragon.DragonRide")
 local Variants = require("dragon.DragonVariants")
 local Breath = require("dragon.DragonBreath")
+local BreathClassic = require("dragon.DragonBreathClassic")
 Breath.Register(Controller)
 
 local M = {}
@@ -34,7 +35,7 @@ local ctrl_ = nil
 local world_ = nil
 ---@type DragonRide
 local ride_ = nil
----@type DragonBreath
+---@type DragonBreath|DragonBreathClassic
 local breath_ = nil
 
 local cam = { yaw = -128.0, pitch = 12.0, dist = 17.0, target = Vector3(0, 2.4, -0.6), follow = true, pan = Vector3(0, 0, 0) }
@@ -133,6 +134,25 @@ function M.SetView(which)
     else cam.yaw, cam.pitch = base - 128.0, 12.0 end
 end
 
+-- 龙息两套特效：pixel = 体素像素版（DragonBreath），classic = 柔光经典版（DragonBreathClassic）
+M.breathStyle = "pixel"
+
+function M.NewBreath(id)
+    if M.breathStyle == "classic" then return BreathClassic.New(scene_, rig_, ctrl_, id) end
+    return Breath.New(scene_, rig_, ctrl_, id, M.groundInfo)
+end
+
+-- 切换龙息特效版本（吐息中途切换会直接中断当前这一口）
+function M.ToggleBreathStyle()
+    M.breathStyle = (M.breathStyle == "pixel") and "classic" or "pixel"
+    if breath_ ~= nil then breath_:Destroy() end
+    if ctrl_.state == "BREATH" then ctrl_:Request("IDLE") end
+    breath_ = M.NewBreath(M.variant)
+    M.breath = breath_
+    print("DragonTest: breath style -> " .. M.breathStyle)
+    if shotCfg == nil or not shotCfg.noUI then DebugUI.Build(ctrl_, M) end
+end
+
 function M.Start()
     local ok, cfg = pcall(require, "dragon._shotcfg")
     if ok then shotCfg = cfg end
@@ -161,7 +181,7 @@ function M.Start()
     M.rig = rig_
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
-    breath_ = Breath.New(scene_, rig_, ctrl_, M.variant, M.groundInfo)
+    breath_ = M.NewBreath(M.variant)
     M.breath = breath_
     -- 诺米：站在龙的右前方，面朝默认机位，只播待机动画
     M.nomiNode = scene_:CreateChild("Nomi")
@@ -226,7 +246,7 @@ function M.SetVariant(id)
     ctrl_ = Controller.New(rig_, world_)
     M.ctrl = ctrl_
     ctrl_:Teleport(pos, yaw)
-    breath_ = Breath.New(scene_, rig_, ctrl_, id, M.groundInfo)
+    breath_ = M.NewBreath(id)
     M.breath = breath_
     ride_:BindDragon(M)
     -- 镜头距离随体型缩放
@@ -271,6 +291,7 @@ local function HandleKeys()
     if input:GetKeyPress(KEY_L) then c.demo = nil; c:Request("LAND") end
     if input:GetKeyPress(KEY_R) and not c.loco.airborne then c.demo = nil; c:Request("ROAR") end
     if input:GetKeyPress(KEY_B) then breath_:Trigger() end
+    if input:GetKeyPress(KEY_V) then M.pendingBreathToggle = true end
     if input:GetKeyPress(KEY_T) and not c.loco.airborne then
         c.demo = nil
         c:Request(c.state == "SPREAD_WINGS" and "IDLE" or "SPREAD_WINGS")
@@ -312,6 +333,11 @@ local function HandleMouse()
 end
 
 function M.Update(dt)
+    -- 面板按钮 / V 键只登记，换特效（会重建面板）放到 Update 里做
+    if M.pendingBreathToggle then
+        M.pendingBreathToggle = false
+        M.ToggleBreathStyle()
+    end
     if M.pendingVariant ~= nil then
         M.pendingFrames = M.pendingFrames - 1
         DebugUI.SetHint("正在生成 " .. Variants.Name(M.pendingVariant) .. " …")
