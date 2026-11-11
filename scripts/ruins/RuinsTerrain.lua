@@ -223,6 +223,7 @@ function M.Build(world)
         end
     end
     print(string.format("RuinsTerrain: %d chunks in %.2fs", nChunks, os.clock() - t0))
+    print("RuinsTerrain: returning")
     return { volumes = vols }
 end
 
