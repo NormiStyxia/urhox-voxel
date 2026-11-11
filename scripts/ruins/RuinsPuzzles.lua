@@ -443,6 +443,23 @@ function M.Update(dt)
     for _, o in ipairs(M.list) do o:Update(dt) end
 end
 
+-- 世界点附近的时之物件（任一碎块中心或完整物件包围球在 radius 内）
+function M.FindNear(pos, radius)
+    local best, bd = nil, radius
+    for _, o in ipairs(M.list) do
+        if o:IsWhole() then
+            local d = (o.center - pos):Length() - o.radius
+            if d < bd then best, bd = o, d end
+        else
+            for _, c in ipairs(o:PieceCenters()) do
+                local d = (c - pos):Length()
+                if d < bd then best, bd = o, d end
+            end
+        end
+    end
+    return best
+end
+
 -- 体积 → 所属时之物件
 ---@param vol VoxelVolume
 function M.FindByVolume(vol)
