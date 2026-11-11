@@ -13,6 +13,17 @@
 
 local M = {}
 
+-- 移动端 / Web 没有 LUT 色调映射兜底，加法混合粒子的 HDR 亮度会被泛光放大成整屏白，
+-- 这里压低发光倍数；桌面端保持原样。
+local IsLowFx = false
+do
+    local ok, PL = pcall(require, "urhox-libs.Platform.PlatformUtils")
+    if ok and PL ~= nil then
+        IsLowFx = PL.IsWebPlatform() or PL.IsMobilePlatform()
+    end
+end
+M.IsLowFx = IsLowFx
+
 local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
 local function Hash(n) return (math.sin(n * 127.1 + 311.7) * 43758.5453) % 1 end
 M.Hash = Hash
@@ -116,7 +127,7 @@ function M.Material(kind, glow)
     m:SetSurfaceTexture("sprite_tex", M.Texture(kind))
     local rows = SPRITES[kind] or SPRITES.square
     m:SetShaderParameter("cells", Variant(#rows + 2))
-    m:SetShaderParameter("glow", Variant(glow and 1.35 or 1.0))
+    m:SetShaderParameter("glow", Variant(glow and (IsLowFx and 1.0 or 1.35) or 1.0))
     return m
 end
 

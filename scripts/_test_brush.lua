@@ -13,4 +13,16 @@ function Start()
     print("solid after box " .. b.volume:GetSolidCount() .. " grid " .. b.grid:GetSolidCount())
     local v = b:Finish({})
     print("finish " .. tostring(v) .. " pos " .. tostring(v and v:GetNode().worldPosition))
+    local g = world:CreateVolume(8, 8, 8, 0.25, Vector3(3, 0, -1))
+    g:GetGrid():FillBox(0,0,0,7,7,7,true); g:GetGrid():PaintBox(0,0,0,7,7,7,100)
+    world:FinalizeVolume(g); g:RebuildGeometry()
+    local lg = scene:CreateChild("L"); local l = lg:CreateComponent("Light"); l.lightType = LIGHT_DIRECTIONAL; lg.direction = Vector3(0.3,-1,0.5)
+    local z = scene:CreateComponent("Zone"); z.ambientColor = Color(0.4,0.4,0.4); z.boundingBox = BoundingBox(-100,100)
+    local cam = scene:CreateChild("C"); local c = cam:CreateComponent("Camera"); cam.position = Vector3(0, 4, -9); cam:LookAt(Vector3(1,1,0))
+    renderer:SetViewport(0, Viewport:new(scene, c)); _G.keep = scene
+    print("v node parent " .. tostring(v:GetNode():GetParent()) .. " scene " .. tostring(scene) .. " verts " .. v:GetVertexCount() .. " g verts " .. g:GetVertexCount())
+end
+local _S = Start
+function Start()
+    _S()
 end

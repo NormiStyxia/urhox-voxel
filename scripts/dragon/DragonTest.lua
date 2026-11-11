@@ -8,6 +8,7 @@
 -- ====================================================================
 
 local SkyUtils = require("urhox-libs.Rendering.SkyUtils")
+local PlatformUtils = require("urhox-libs.Platform.PlatformUtils")
 local Rig = require("dragon.DragonRig")
 local Controller = require("dragon.DragonAnimationController")
 local DebugUI = require("dragon.DragonDebugUI")
@@ -95,6 +96,19 @@ function M.SetPlayMode(on)
     end
 end
 
+-- 泛光阈值：光组 XML 里 UE 模式的阈值是 -1（所有亮度都参与泛光），桌面端高光
+-- 被 LUT 压住没问题；移动端 / Web 只能走 ACES，吐息时的高亮点光与加法粒子会被
+-- 泛光扩散成整屏白。这里给低配平台设一个阈值，只让真正亮的部分发光。
+function M.SetupBloom(zone)
+    if zone == nil then return end
+    local lowFx = PlatformUtils.IsWebPlatform() or PlatformUtils.IsMobilePlatform()
+    if not lowFx then return end
+    zone.bloomMode = BLOOM_MODE_UE
+    zone.bloomUEThreshold = 1.2
+    zone.bloomUEIntensity = 0.45
+    print("[DragonTest] bloom tuned for mobile/web (threshold 1.2)")
+end
+
 function M.ApplyCamera()
     -- 近似正交（比对三视图用）：超长焦，视野高度 = cam.ortho 米
     if cam.ortho ~= nil then
@@ -167,6 +181,7 @@ function M.Start()
     M.zone = lg:GetComponent("Zone")
     -- 展示用补光：抬高环境光、加一盏不投影的正面补光，让白色腹甲 / 翼膜不被压成灰色
     if M.zone ~= nil then M.zone:SetAmbientColor(Color(0.30, 0.34, 0.42)) end
+    M.SetupBloom(M.zone)
     local fillNode = scene_:CreateChild("FillLight")
     fillNode.direction = Vector3(0.45, -0.55, -0.7)
     local fill = fillNode:CreateComponent("Light")

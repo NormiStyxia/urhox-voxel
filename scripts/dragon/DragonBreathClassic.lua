@@ -22,6 +22,16 @@ local Poses = require("dragon.DragonPoses")
 
 local M = {}
 
+-- 移动端 / Web 没有 LUT 色调映射兜底（只能走 ACES），高亮点光会被泛光推成整屏白。
+local IsLowFx = false
+do
+    local ok, PL = pcall(require, "urhox-libs.Platform.PlatformUtils")
+    if ok and PL ~= nil then
+        IsLowFx = PL.IsWebPlatform() or PL.IsMobilePlatform()
+    end
+end
+local FX_GAIN = IsLowFx and 0.45 or 1.0
+
 local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
 local function Lerp(a, b, t) return a + (b - a) * t end
 local function Smooth(t) t = Clamp(t, 0, 1) return t * t * (3 - 2 * t) end
@@ -744,11 +754,11 @@ function B:Update()
     local ml = self.mouthLight
     ml.node.enabled = glowK > 0.01
     ml.node.position = origin + dir * 0.6 * S
-    ml.light.brightness = ((cfg.style == 1) and 60 or 40) * glowK * fl
+    ml.light.brightness = ((cfg.style == 1) and 60 or 40) * glowK * fl * FX_GAIN
     local il = self.impactLight
     il.node.enabled = hk > 0.01
     il.node.position = Vector3(hit.x, gy + 1.0 * S, hit.z)
-    il.light.brightness = ((cfg.style == 1) and 120 or 60) * hk * fl
+    il.light.brightness = ((cfg.style == 1) and 120 or 60) * hk * fl * FX_GAIN
 
     -- 镜头震动强度（DragonTest 读取）
     local target = (cfg.style == 1) and (0.2 * Window(t, cfg.fireStart, cfg.fireEnd, 0.05, 0.3) +
