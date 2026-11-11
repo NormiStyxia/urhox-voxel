@@ -130,8 +130,6 @@ function M.Build(ctrl, T)
                         Btn("▶ 完整演示序列", function() ctrl:StartDemo() end, "primary"),
                         Btn((T.breath ~= nil and T.breath:Available()) and ("龙息 · " .. T.breath.cfg.name .. "（B）") or "龙息（仅中号 / 大号）",
                             function() if T.breath ~= nil then T.breath:Trigger() end end, "primary"),
-                        Btn("龙的外皮：" .. ((T.rig ~= nil and T.rig.skinVisible) and "鳞片" or "体素方块") .. "（K 切换）",
-                            function() T.pendingSkinToggle = true end),
                         Btn("龙息特效：" .. ((T.breathStyle == "classic") and "柔光经典版" or "体素像素版") .. "（V 切换）",
                             function() T.pendingBreathToggle = true end),
 
@@ -196,7 +194,7 @@ function M.Build(ctrl, T)
                         SectionTitle("键盘"),
                         UI.Label { whiteSpace = "normal", width = "100%", fontSize = 10, fontColor = { 170, 185, 210, 255 },
                             text = "【玩法模式】WASD 移动诺米  Space 跳  Shift 奔跑  靠近龙按 F 骑乘（骑乘时 W 前进 A/D 转向 S 刹车 Shift 空中冲刺 Space 起飞/上升 C 下降 L 降落 G 滑翔 F 下龙）\n【调试模式】W/S 加减速  A/D 转向  Q/E 原地转身  Space 起飞/爬升  C 下降\n" ..
-                                "G 滑翔  L 降落  R 咆哮  B 龙息  V 龙息特效版本  K 外皮  T 展翼/收翼  P 暂停  N 单步\n" ..
+                                "G 滑翔  L 降落  R 咆哮  B 龙息  V 龙息特效版本  T 展翼/收翼  P 暂停  N 单步\n" ..
                                 "鼠标右键/左键拖动旋转  滚轮缩放  中键或 Shift+左键平移\n1/2/3/4 正/侧/背/斜视角  F 跟随" },
                     } },
                 },
