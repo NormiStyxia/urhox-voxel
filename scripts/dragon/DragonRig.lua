@@ -293,7 +293,13 @@ local function MakeVolumeLocal(world, material, voxels, s, origin, rot, parentNo
     node.name = "vox_" .. name
     node:SetParent(parentNode)
     node.rotation = rot
-    node.position = rot * Vector3(origin[1], origin[2], origin[3])
+    -- 颈节的 X 侧面原来都落在相同格平面；搭接后即使俯仰也会共面，产生深度闪烁。
+    -- 仅把视觉体积绕骨骼中线做 0.3%～2.1% 的侧向微缩，让相邻节表面错开（中号约毫米级）。
+    -- 原点 X 必须同步缩放，否则会绕网格最小角缩放、破坏左右对称；骨骼 / 挂点 / YZ 均不变。
+    local neckIndex = tonumber(name:match("^neck(%d)$"))
+    local sideScale = neckIndex and (1.0 - 0.003 - (neckIndex - 1) * 0.006) or 1.0
+    node.scale = Vector3(sideScale, 1.0, 1.0)
+    node.position = rot * Vector3(origin[1] * sideScale, origin[2], origin[3])
     return { volume = vol, node = node, voxels = #voxels, size = s }
 end
 
