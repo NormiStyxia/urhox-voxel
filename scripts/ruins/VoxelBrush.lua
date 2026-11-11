@@ -45,6 +45,9 @@ function M.New(world, o)
     self.yaw = o.yaw or 0
     self.rot = Quaternion(self.yaw, Vector3.UP)
     local pos = self.origin + self.rot * Vector3(lmin[1], lmin[2], lmin[3])
+    if self.nx > 255 or self.ny > 255 or self.nz > 255 then
+        print(string.format("VoxelBrush: WARNING large dims %dx%dx%d (%s)", self.nx, self.ny, self.nz, tostring(o.name)))
+    end
     self.volume = world:CreateVolume(self.nx, self.ny, self.nz, s, pos, self.rot)
     self.grid = self.volume:GetGrid()
     self.count = 0

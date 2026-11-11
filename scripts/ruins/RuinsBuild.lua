@@ -777,31 +777,49 @@ local function BuildVegetation(world)
         local x, z = cos(a) * r, sin(a) * r
         if abs(x) > 6 then Tree(world, x, z, { h = rng:Range(4.5, 6), r = rng:Range(2.0, 2.8), lean = 0.5, leanA = a }) end
     end
-    -- 灌木 + 时晶：按象限合到几个体积里
-    for qd = 0, 3 do
-        local x0, x1 = (qd % 2 == 0) and -70 or 0, (qd % 2 == 0) and 0 or 70
-        local z0, z1 = (qd < 2) and -70 or 0, (qd < 2) and 0 or 70
-        local b = Brush.New(world, { min = { x0, Terrain.RAVINE_Y - 1, z0 }, max = { x1, Terrain.RING_Y + 6, z1 }, size = 0.25 })
-        for i = 1, 40 do
-            local x, z = rng:Range(x0, x1), rng:Range(z0, z1)
-            local r = sqrt(x * x + z * z)
+    -- 灌木 + 时晶：先撒点，再按 28m 网格分桶，每桶一个体积（体积尺寸 ≤ 255 格）
+    local items = {}
+    for i = 1, 160 do
+        local x, z = rng:Range(-68, 68), rng:Range(-68, 68)
+        local r = sqrt(x * x + z * z)
+        local gy = Terrain.HeightAt(x, z)
+        local ok = r > 27 and r < 68 and abs(x) > 4.5 and gy <= Terrain.RING_Y + 0.6 and gy >= Terrain.RING_Y - 0.1
+            and abs(r - M.WALL_R) > 2.5 and (r < Terrain.RAVINE_IN - 1 or r > Terrain.RAVINE_OUT + 1)
+        if ok then items[#items + 1] = { kind = "bush", x = x, z = z, y = gy, r = rng:Range(0.6, 1.2) } end
+    end
+    -- 峡谷里的时晶簇（发光，给峡谷底提供蓝色光源感）
+    for i = 1, 40 do
+        local a = rng:Range(0, 2 * pi)
+        local rr = rng:Range(Terrain.RAVINE_IN + 2, Terrain.RAVINE_OUT - 2)
+        local x, z = cos(a) * rr, sin(a) * rr
+        if abs(x) > 5 then
             local gy = Terrain.HeightAt(x, z)
-            local ok = r > 27 and r < 68 and abs(x) > 4.5 and gy <= Terrain.RING_Y + 0.6 and gy >= Terrain.RING_Y - 0.1
-                and abs(r - M.WALL_R) > 2.5 and (r < Terrain.RAVINE_IN - 1 or r > Terrain.RAVINE_OUT + 1)
-            if ok then Bush(b, x, gy, z, rng:Range(0.6, 1.2), rng) end
-        end
-        -- 峡谷里的时晶簇（发光，给峡谷底提供蓝色光源感）
-        for i = 1, 14 do
-            local a = rng:Range(qd * pi / 2, (qd + 1) * pi / 2) + pi -- 象限对应
-            local rr = rng:Range(Terrain.RAVINE_IN + 2, Terrain.RAVINE_OUT - 2)
-            local x, z = cos(a) * rr, sin(a) * rr
-            if x >= x0 and x < x1 and z >= z0 and z < z1 and abs(x) > 5 then
-                local gy = Terrain.HeightAt(x, z)
-                for k = 1, rng:Int(2, 4) do
-                    Crystal(b, x + rng:Range(-0.8, 0.8), gy, z + rng:Range(-0.8, 0.8), rng:Range(1.2, 3.2), rng:Range(0.25, 0.45),
-                        rng:Range(0, 0.35), rng:Range(0, 2 * pi))
-                end
+            for k = 1, rng:Int(2, 4) do
+                items[#items + 1] = { kind = "crystal", x = x + rng:Range(-0.8, 0.8), z = z + rng:Range(-0.8, 0.8), y = gy,
+                    h = rng:Range(1.2, 3.2), r = rng:Range(0.25, 0.45), tilt = rng:Range(0, 0.35), a = rng:Range(0, 2 * pi) }
             end
+        end
+    end
+    local CELL = 28
+    local buckets = {}
+    for _, it in ipairs(items) do
+        local key = floor((it.x + 84) / CELL) * 100 + floor((it.z + 84) / CELL)
+        local bk = buckets[key]
+        if bk == nil then bk = {}; buckets[key] = bk end
+        bk[#bk + 1] = it
+    end
+    for _, bk in pairs(buckets) do
+        local x0, x1, z0, z1, y0, y1 = 1e9, -1e9, 1e9, -1e9, 1e9, -1e9
+        for _, it in ipairs(bk) do
+            local e = (it.kind == "crystal") and (it.h * 0.4 + 0.6) or (it.r + 0.2)
+            x0, x1 = min(x0, it.x - e), max(x1, it.x + e)
+            z0, z1 = min(z0, it.z - e), max(z1, it.z + e)
+            y0, y1 = min(y0, it.y - 0.5), max(y1, it.y + ((it.kind == "crystal") and it.h or it.r * 1.3) + 0.3)
+        end
+        local b = Brush.New(world, { min = { x0, y0, z0 }, max = { x1, y1, z1 }, size = 0.25, name = "veg" })
+        for _, it in ipairs(bk) do
+            if it.kind == "bush" then Bush(b, it.x, it.y, it.z, it.r, rng)
+            else Crystal(b, it.x, it.y, it.z, it.h, it.r, it.tilt, it.a) end
         end
         Keep(b:Finish({}))
     end

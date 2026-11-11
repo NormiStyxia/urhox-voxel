@@ -1,7 +1,6 @@
 -- 临时：吐息过曝复现截图（validate-test 注入，验证后删除）
-local MODE = "noexposure"
+local MODE = "info"
 local VARIANT = nil
-local VIEW = "side"
 local frames, fired, got = 0, false, {}
 local OUT = "/workspace/screenshots/"
 
@@ -15,15 +14,19 @@ local function Grab(name)
     end
 end
 
-local function SetupZone(T)
+local function DumpInfo(T)
     local z = T.zone
-    if z == nil then return end
-    if MODE == "noexposure" then z:SetAttribute("Auto Exposure Enable", Variant(false))
-    elseif MODE == "aces" then z.tonemapMode = TONEMAP_MODE_ACES
-    elseif MODE == "bloomth" then z.bloomUEThreshold = 1.0
-    elseif MODE == "nofog" then z:SetAttribute("Volumetric Fog Enabled", Variant(false)) end
-    print(string.format("[BreathShot] mode=%s bloom=%s ueI=%.3f ueT=%.3f exp=%s",
-        MODE, tostring(z.bloomMode), z.bloomUEIntensity or -9, z.bloomUEThreshold or -9, tostring(z.autoExposureEnabled)))
+    print(string.format("[BreathShot] platform=%s native=%s api=%s compute=%s",
+        tostring(GetPlatform()), tostring(GetNativePlatform()),
+        tostring(graphics:GetApiName()), tostring(graphics:GetComputeShaderSupport())))
+    if z ~= nil then
+        print(string.format("[BreathShot] zone bloomMode=%s ueI=%.3f ueT=%.3f plus=%.3f th=%.2f w=%.2f tonemap=%s exp=%s expPlus=%s minB=%.1f maxB=%.1f bias=%.1f force=%s",
+            tostring(z.bloomMode), z.bloomUEIntensity or -9, z.bloomUEThreshold or -9,
+            z.bloomPlusIntensity or -9, z.bloomThreshold or -9, z.bloomWeight or -9,
+            tostring(z.tonemapMode), tostring(z.autoExposureEnabled), tostring(z.autoExposurePlusEnabled),
+            z.autoExposureMinBrightness or -9, z.autoExposureMaxBrightness or -9,
+            z.autoExposureBias or -9, tostring(z.autoExposureForceTarget)))
+    end
 end
 
 local function Tick()
@@ -36,13 +39,11 @@ local function Tick()
         T.playMode = false
         T.cam.follow = false
         T.cam.target = Vector3(0, 2.0, 0)
+        DumpInfo(T)
     end
-    if frames >= 6 and frames <= 60 then
-        T.cam.yaw, T.cam.pitch, T.cam.dist = 150.0, 10.0, 12.0
-    end
+    if frames >= 6 then T.cam.yaw, T.cam.pitch, T.cam.dist = 150.0, 10.0, 12.0 end
     if not fired and frames >= 10 then
         fired = true
-        SetupZone(T)
         local ok = T.breath:Trigger()
         print("[BreathShot] trigger=" .. tostring(ok) .. " state=" .. tostring(c.state))
     end
@@ -50,7 +51,6 @@ local function Tick()
         local t = c.stateT or 0
         if got.a == nil and t > 1.3 then got.a = true; Grab("v_" .. MODE .. "_a") end
         if got.b == nil and t > 2.2 then got.b = true; Grab("v_" .. MODE .. "_b") end
-        if got.c == nil and t > 3.2 then got.c = true; Grab("v_" .. MODE .. "_c") end
     end
 end
 
