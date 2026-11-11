@@ -24,7 +24,8 @@ function Start2()
     local mat = Material:new()
     mat:SetSurfaceShader("Shaders/BLGL/VoxelPalettePBR.shader")
     mat:SetSurfaceTexture("palette_tex", world:GetPaletteTexture())
-    for i = 0, world:GetVolumeCount() - 1 do world:GetVolume(i).material = mat end
+    print("VC " .. world:GetVolumeCount())
+    for i = 0, world:GetVolumeCount() - 1 do local v = world:GetVolume(i); if v then v.material = mat end end
     local z = lg:GetComponent("Zone"); z:SetFogStart(150); z:SetFogEnd(400); z:SetHeightFogEnable(false); z:SetVolumetricFogEnabled(false)
     local cam = scene:CreateChild("Cam")
     local c = cam:CreateComponent("Camera")

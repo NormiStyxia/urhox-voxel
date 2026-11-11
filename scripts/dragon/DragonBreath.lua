@@ -20,8 +20,16 @@
 local Pose = require("dragon.DragonPose")
 local Poses = require("dragon.DragonPoses")
 local VoxelFX = require("dragon.VoxelFX")
+local PlatformUtils = require("urhox-libs.Platform.PlatformUtils")
 
 local M = {}
+
+-- 移动端 / Web 没有 LUT 色调映射兜底（只能走 ACES），高亮点光与加法混合粒子
+-- 会在吐息期间把整个画面推成一片白。这里统一降强度与粒子量，桌面端保持原样。
+local LOW_FX = PlatformUtils.IsWebPlatform() or PlatformUtils.IsMobilePlatform()
+local FX_GAIN = LOW_FX and 0.45 or 1.0   -- 灯光亮度 / shader intensity 倍率
+local FX_COUNT = LOW_FX and 0.45 or 1.0  -- 粒子数量倍率
+M.LOW_FX = LOW_FX
 
 local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
 local function Lerp(a, b, t) return a + (b - a) * t end
@@ -357,7 +365,7 @@ function B:Build(scene)
     self.em = {}
     if frost then
         -- 核心冰流：亮白小方块，速度快
-        self.em.core = VoxelFX.Emitter(root, "FrostCore", { kind = "square", additive = true, n = 600, setup = function(fx)
+        self.em.core = VoxelFX.Emitter(root, "FrostCore", { kind = "square", additive = true, n = math.floor(600 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.12, 0.12, 0.12) * k)
             fx:SetMinDirection(Vector3(-0.07, -0.07, 1)); fx:SetMaxDirection(Vector3(0.07, 0.07, 1))
             fx:SetMinVelocity(16 * k); fx:SetMaxVelocity(22 * k)
@@ -366,7 +374,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.2, C(0.6, 0.92, 1.0, 1) }, { 0.4, C(0.5, 0.78, 1.0, 0.9) }, { 0.55, C(0, 0, 0, 0) } })
         end })
         -- 体素冰雾：块状云团，膨胀
-        self.em.mist = VoxelFX.Emitter(root, "FrostMist", { kind = "cloud", n = 700, setup = function(fx)
+        self.em.mist = VoxelFX.Emitter(root, "FrostMist", { kind = "cloud", n = math.floor(700 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.2, 0.2, 0.2) * k)
             fx:SetMinDirection(Vector3(-0.15, -0.14, 1)); fx:SetMaxDirection(Vector3(0.15, 0.16, 1))
             fx:SetMinVelocity(10 * k); fx:SetMaxVelocity(15 * k)
@@ -378,7 +386,7 @@ function B:Build(scene)
                 { 0.62, C(0.5, 0.72, 0.98, 0.18) }, { 0.85, C(0, 0, 0, 0) } })
         end })
         -- 雪花片：外围，减速后下沉
-        self.em.flake = VoxelFX.Emitter(root, "Flakes", { kind = "flake", n = 500, setup = function(fx)
+        self.em.flake = VoxelFX.Emitter(root, "Flakes", { kind = "flake", n = math.floor(500 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.3, 0.3, 0.3) * k)
             fx:SetMinDirection(Vector3(-0.3, -0.2, 1)); fx:SetMaxDirection(Vector3(0.3, 0.35, 1))
             fx:SetMinVelocity(8 * k); fx:SetMaxVelocity(14 * k)
@@ -390,7 +398,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.5, C(0.7, 0.9, 1.0, 1) }, { 0.85, C(0.5, 0.75, 1.0, 0.7) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：贴地霜雾
-        self.em.ground = VoxelFX.Emitter(root, "GroundMist", { kind = "cloud", n = 300, setup = function(fx)
+        self.em.ground = VoxelFX.Emitter(root, "GroundMist", { kind = "cloud", n = math.floor(300 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_BOX); fx:SetEmitterSize(Vector3(2.0, 0.2, 2.0) * k)
             fx:SetMinDirection(Vector3(-1, 0.05, -1)); fx:SetMaxDirection(Vector3(1, 0.3, 1))
             fx:SetMinVelocity(1.5 * k); fx:SetMaxVelocity(3.5 * k)
@@ -401,7 +409,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(0.85, 0.95, 1.0, 0.0) }, { 0.1, C(0.82, 0.94, 1.0, 0.5) }, { 0.5, C(0.7, 0.86, 1.0, 0.3) }, { 0.85, C(0.6, 0.8, 1.0, 0.15) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：冰渣迸射（小方块，抛物线）
-        self.em.chips = VoxelFX.Emitter(root, "IceChips", { kind = "square", n = 400, setup = function(fx)
+        self.em.chips = VoxelFX.Emitter(root, "IceChips", { kind = "square", n = math.floor(400 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.8, 0.2, 0.8) * k)
             fx:SetMinDirection(Vector3(-1, 1.0, -1)); fx:SetMaxDirection(Vector3(1, 2.2, 1))
             fx:SetMinVelocity(4 * k); fx:SetMaxVelocity(9 * k)
@@ -412,7 +420,7 @@ function B:Build(scene)
         end })
     else
         -- 绕束星屑（白 / 冰青 / 深蓝，加色）
-        self.em.core = VoxelFX.Emitter(root, "AstralSparks", { kind = "cross", additive = true, n = 700, setup = function(fx)
+        self.em.core = VoxelFX.Emitter(root, "AstralSparks", { kind = "cross", additive = true, n = math.floor(700 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.7, 0.7, 0.7) * k)
             fx:SetMinDirection(Vector3(-0.05, -0.05, 1)); fx:SetMaxDirection(Vector3(0.05, 0.05, 1))
             fx:SetMinVelocity(24 * k); fx:SetMaxVelocity(34 * k)
@@ -421,7 +429,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.3, C(0.6, 0.95, 1.0, 1) }, { 0.6, C(0.12, 0.58, 1.0, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 束外寒雾（深一点的蓝）
-        self.em.mist = VoxelFX.Emitter(root, "AstralSmoke", { kind = "cloud", n = 500, setup = function(fx)
+        self.em.mist = VoxelFX.Emitter(root, "AstralSmoke", { kind = "cloud", n = math.floor(500 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.9, 0.9, 0.9) * k)
             fx:SetMinDirection(Vector3(-0.25, -0.25, 1)); fx:SetMaxDirection(Vector3(0.25, 0.25, 1))
             fx:SetMinVelocity(6 * k); fx:SetMaxVelocity(11 * k)
@@ -432,7 +440,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(0.8, 0.92, 1.0, 0.0) }, { 0.08, C(0.55, 0.82, 1.0, 0.45) }, { 0.4, C(0.35, 0.65, 0.95, 0.28) }, { 0.75, C(0.22, 0.5, 0.85, 0.12) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：火花（方块，抛物线）
-        self.em.chips = VoxelFX.Emitter(root, "ImpactSparks", { kind = "square", additive = true, n = 800, setup = function(fx)
+        self.em.chips = VoxelFX.Emitter(root, "ImpactSparks", { kind = "square", additive = true, n = math.floor(800 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(0.8, 0.2, 0.8) * k)
             fx:SetMinDirection(Vector3(-1, 0.8, -1)); fx:SetMaxDirection(Vector3(1, 2.4, 1))
             fx:SetMinVelocity(7 * k); fx:SetMaxVelocity(16 * k)
@@ -442,7 +450,7 @@ function B:Build(scene)
             VoxelFX.Steps(fx, { { 0, C(1, 1, 1, 1) }, { 0.25, C(0.7, 1.0, 1.0, 1) }, { 0.55, C(0.35, 0.75, 1.0, 1) }, { 0.8, C(0.06, 0.45, 0.95, 1) }, { 1.0, C(0, 0, 0, 0) } })
         end })
         -- 落点：冰雾烟柱
-        self.em.ground = VoxelFX.Emitter(root, "ImpactSmoke", { kind = "cloud", n = 300, setup = function(fx)
+        self.em.ground = VoxelFX.Emitter(root, "ImpactSmoke", { kind = "cloud", n = math.floor(300 * FX_COUNT), setup = function(fx)
             fx:SetEmitterType(EMITTER_SPHERE); fx:SetEmitterSize(Vector3(1.4, 0.3, 1.4) * k)
             fx:SetMinDirection(Vector3(-1, 0.6, -1)); fx:SetMaxDirection(Vector3(1, 1.6, 1))
             fx:SetMinVelocity(2.5 * k); fx:SetMaxVelocity(6 * k)
@@ -457,10 +465,10 @@ function B:Build(scene)
     end
 
     -- Lua 粒子：螺旋汇聚 / 绕束 / 余烬 / 闪光
-    self.motes = VoxelFX.Motes(root, "Motes", 420, frost and "star" or "cross", true)
-    self.motesA = VoxelFX.Motes(root, "MotesAlpha", 260, "square", false)
+    self.motes = VoxelFX.Motes(root, "Motes", math.floor(420 * FX_COUNT), frost and "star" or "cross", true)
+    self.motesA = VoxelFX.Motes(root, "MotesAlpha", math.floor(260 * FX_COUNT), "square", false)
     -- 立方体碎块
-    self.debris = VoxelFX.Debris(root, 70)
+    self.debris = VoxelFX.Debris(root, math.floor(70 * FX_COUNT))
 
     -- 晶簇：平面刻面网格 + IceCrystal.shader（三档明暗 / 透光 / 棱线）
     -- 中号：细长尖锐的冰刺，天青 / 雪白，通透明亮
@@ -793,17 +801,17 @@ function B:Update()
     local beat = (math.floor(now * 8) % 2 == 0) and 1 or 0.6
     if frost then
         SetRune(gr, Window(t, 0.15, cfg.fireEnd + 0.25, 0.3, 0.5) * m, Smooth((t - 0.15) / 0.6),
-            StepAngle(now, 0.35, 6), -StepAngle(now, 0.55, 6), 0.4 * fire * beat, glitch * 0.6, 1.4)
+            StepAngle(now, 0.35, 6), -StepAngle(now, 0.55, 6), 0.4 * fire * beat, glitch * 0.6, 1.4 * FX_GAIN)
         local r = self.runes[1]
         r.node.position = origin + dir * r.dist + (side * Rand(-1, 1) + up * Rand(-1, 1)) * 0.03 * S * glitch
         r.node.rotation = frontQ
         local pop = 1.0 + 0.12 * math.max(0, 1 - (t - cfg.fireStart) / 0.15) * (t > cfg.fireStart and 1 or 0)
         r.node.scale = Vector3(r.size * pop, r.size * pop, 1)
         SetRune(r, Window(t, 0.3, cfg.fireEnd + 0.1, 0.25, 0.3) * m, Smooth((t - 0.3) / 0.5),
-            StepAngle(now, 1.6, 10), -StepAngle(now, 2.4, 10), fire * beat, glitch, 1.6 + 0.8 * fire)
+            StepAngle(now, 1.6, 10), -StepAngle(now, 2.4, 10), fire * beat, glitch, (1.6 + 0.8 * fire) * FX_GAIN)
     else
         SetRune(gr, Window(t, 0.0, cfg.fireEnd + 0.35, 0.3, 0.6) * m, Smooth(t / 1.4),
-            StepAngle(now, 0.2, 5), -StepAngle(now, 0.3, 5), 0.3 + 0.7 * fire * beat, glitch * 0.7, 1.5)
+            StepAngle(now, 0.2, 5), -StepAngle(now, 0.3, 5), 0.3 + 0.7 * fire * beat, glitch * 0.7, 1.5 * FX_GAIN)
         for i, r in ipairs(self.runes) do
             local t0 = 0.45 + 0.35 * (i - 1)
             local sgn = (i % 2 == 0) and -1 or 1
@@ -812,7 +820,7 @@ function B:Update()
             local pop = 1.0 + 0.15 * math.max(0, 1 - (t - cfg.fireStart - 0.05 * i) / 0.18) * (t > cfg.fireStart + 0.05 * i and 1 or 0)
             r.node.scale = Vector3(r.size * pop, r.size * pop, 1)
             SetRune(r, Window(t, t0, cfg.fireEnd + 0.12 * i, 0.2, 0.35) * m, Smooth((t - t0) / 0.4),
-                sgn * StepAngle(now, 1.0 + 0.4 * i, 8), -sgn * StepAngle(now, 1.6, 8), fire * beat, glitch, 1.6 + 1.0 * fire)
+                sgn * StepAngle(now, 1.0 + 0.4 * i, 8), -sgn * StepAngle(now, 1.6, 8), fire * beat, glitch, (1.6 + 1.0 * fire) * FX_GAIN)
             if Crossed(prevT, t, t0) then self:Kick(0.1) end
         end
     end
@@ -940,12 +948,12 @@ function B:Update()
     local ml = self.mouthLight
     ml.node.enabled = glowK > 0.01
     ml.node.position = origin + dir * 0.6 * S
-    ml.light.brightness = (frost and 45 or 70) * glowK * flick
+    ml.light.brightness = (frost and 45 or 70) * glowK * flick * FX_GAIN
     local il = self.impactLight
     local hk = hitGround and fire or 0
     il.node.enabled = hk > 0.01
     il.node.position = hitG + Vector3(0, 1.0 * S, 0)
-    il.light.brightness = (frost and 70 or 140) * hk * flick
+    il.light.brightness = (frost and 70 or 140) * hk * flick * FX_GAIN
 
     self.snd.mouth.node.position = origin
     self.snd.impact.node.position = hitG
@@ -981,7 +989,7 @@ function B:UpdateBeam(origin, dir, len, fire, t, now)
             end
             SetF(seg.mat, "fade", fire)
             SetF(seg.mat, "scroll", now * (seg.outer and 1.3 or 1.0))
-            SetF(seg.mat, "intensity", seg.outer and 2.4 or 2.8)
+            SetF(seg.mat, "intensity", (seg.outer and 2.4 or 2.8) * FX_GAIN)
             SetF(seg.mat, "beam_len", bl)
         elseif seg.node.enabled then
             seg.node.enabled = false
