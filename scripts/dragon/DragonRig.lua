@@ -134,13 +134,15 @@ local function RingColor(P, t, v, side, nodeSeam, ringLen)
     local f = t / ringLen - ring
     if v < -0.35 and side < 0.8 then
         -- 腹甲：白色，按圈分格，格缝浅灰
-        if f < 0.18 then return P.WHITE_S end
+        if f < 0.2 then return P.WHITE_S end
         return P.WHITE
     end
-    if nodeSeam then return P.BLUE_D end
-    -- 背脊一条深色，两侧深浅交替
-    if v > 0.72 then return (ring % 2 == 0) and P.BLUE_M or P.BLUE_D end
-    if f < 0.2 then return P.BLUE_M end
+    -- 节交界：一圈中蓝（不用最深色，避免整条尾巴发黑）
+    if nodeSeam then return P.BLUE_M end
+    -- 背脊：一条中蓝
+    if v > 0.75 then return P.BLUE_M end
+    -- 两侧：每圈前沿一道中蓝窄环，其余为主色，奇偶圈在两档浅蓝间交替
+    if f < 0.22 then return P.BLUE_M end
     return (ring % 2 == 0) and P.BLUE_L or P.BLUE_L2
 end
 
@@ -193,7 +195,8 @@ local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
     local ringLen = RING * S
     -- 这节的半径（用于截面高度归一化）：取锥两端半径插值
     local r0, r1 = nil, nil
-    for _, p in ipairs(own) do if p.type == "cone" and not p.joint then r0, r1 = p.ra, p.rb end end
+    local body = own[1]
+    for _, p in ipairs(own) do if p.type == "cone" and not p.joint then r0, r1, body = p.ra, p.rb, p end end
     r0, r1 = r0 or 0.2, r1 or 0.2
     local out = {}
     for k = k0, k1 do
@@ -208,15 +211,19 @@ local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
                 local d, best = Sculpt.EvalField(cands, x, y, z)
                 if d <= 0 and best ~= nil then
                     local take = (best.bone == bone)
-                    if not take then
-                        -- 和邻节搭接：自身体块内部够深的点也归自己（关节转动不露缝）
+                    if not take and best.joint == nil then
+                        -- 和下一节搭接：两节格子方向不同，交界处会出现楔形缝；
+                        -- 沿轴往尾端多伸 1.5 格（截面仍取下一节的形状），把缝盖住
+                        local t = lz - az0
+                        if t > len - s * 0.5 and t < len + s * 1.5 and best.type == "cone" then take, best = true, body end
+                    elseif not take then
+                        -- 关节球（属于父骨骼、藏在内部）：自身体块内部够深的点也归自己
                         local dOwn = 1e9
                         for _, q in ipairs(own) do dOwn = math.min(dOwn, Sculpt.Eval(q, x, y, z)) end
-                        if dOwn < -1.5 * s then take, best = true, own[1] end
+                        if dOwn < -1.5 * s then take, best = true, body end
                     end
                     if take then
                         local c
-                        local tag = best.tag
                         if best.type == "cone" and not best.joint then
                             -- 尾身：按圈配色
                             local t = lz - az0
@@ -229,10 +236,6 @@ local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
                         else
                             c = best.color
                             if type(c) == "function" then c = c(x, y, z, best) end
-                        end
-                        if tag == nil and best.joint then
-                            -- 关节球（藏在内部）：用相邻环色
-                            c = P.BLUE_D
                         end
                         out[#out + 1] = { i - i0, j - j0, k - k0, c }
                     end
