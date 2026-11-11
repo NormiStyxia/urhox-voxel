@@ -6,7 +6,7 @@
 --     颜色按阶梯跳变（Steps），不做平滑渐变
 --   * Motes：Lua 驱动的像素公告板粒子（需要自定义轨迹的：螺旋汇聚、绕束旋转、弹跳火星）
 --   * Debris：真正的小立方体碎块（重力、落地弹跳、旋转、结尾逐级缩小）
---   * Crystal：程序化体素晶簇（真正的 VoxelVolume，从地里升起、碎裂成立方体碎块）
+--   * IceCluster：刻面冰晶簇（平面六棱晶体网格，配 IceCrystal.shader），从地里升起、碎裂成立方体碎块
 --   * GroundPainter：把地面体素临时改色（结霜 / 灼烧），可按半径蔓延和退回
 -- 全部为纯视觉，不建物理体。
 -- ====================================================================
@@ -369,10 +369,10 @@ function Debris:Clear()
     self.live = {}
 end
 
--- ---------------------------------------------------------------- 体素晶簇
+-- ---------------------------------------------------------------- 晶簇数据
 ---@class VoxelFXCrystal
 ---@field holder Node
----@field volume VoxelVolume
+---@field volume VoxelVolume|nil
 ---@field height number
 ---@field radius number
 ---@field voxels integer
@@ -387,116 +387,86 @@ end
 ---@field out Vector3
 ---@field glint number
 
--- 一簇 = 一根主晶 + 若干侧晶，每根是倾斜的六棱锥台（截面用六边形距离）。
--- opts = { voxel, height, radius, count, seed, tip, mats = { body, edge, glow, light?, dark?, root? } }
--- 着色：每个六边形棱面按固定「伪光照」分亮 / 中 / 暗三档，棱线亮色竖条，顶端发光，根部冻土色带
--- 返回 { holder(Node), volume, height, colors = {Color...}, voxels }
----@param world VoxelPhysicsWorld
+-- ---------------------------------------------------------------- 冰晶簇（平面刻面网格）
+-- 一簇 = 一根主晶 + 若干外倾侧晶。每根晶体是六棱柱 + 六棱锥尖顶，逐面平直法线（硬朗刻面，
+-- 不是体素小方块），配 IceCrystal.shader 做三档明暗 / 透光 / 棱线。顶点数据约定见 shader 头注释。
+-- opts = { height, radius, count, seed, tip(尖顶占高度比例), sides }
+-- 返回 VoxelFXCrystal（holder 初始隐藏；volume 为 nil）
 ---@param parent Node
-function M.Crystal(world, material, parent, name, opts)
-    local s = opts.voxel
+---@param material Material
+function M.IceCluster(parent, name, material, opts)
     local seed = opts.seed or 1
-    local spikes = {}
     local count = opts.count or 3
+    local sides = opts.sides or 6
+    local holder = parent:CreateChild(name)
+    local geom = holder:CreateChild("Mesh"):CreateComponent("CustomGeometry")
+    geom:BeginGeometry(0, TRIANGLE_LIST)
+
+    local function Vert(p, n, u, v, h, tipFlag, rnd)
+        geom:DefineVertex(p)
+        geom:DefineNormal(n)
+        geom:DefineColor(Color(h, tipFlag, rnd, 1.0))
+        geom:DefineTexCoord(Vector2(u, v))
+    end
+    -- 平面三角形：法线取朝外（远离晶轴）的那一侧
+    ---@param pts Vector3[]
+    ---@param axisP Vector3
+    ---@param axisD Vector3
+    local function Face(pts, uvs, hs, tipFlag, rnd, axisP, axisD)
+        local a, b, c = pts[1], pts[2], pts[3]
+        local ab = Vector3(b.x - a.x, b.y - a.y, b.z - a.z)
+        local ac = Vector3(c.x - a.x, c.y - a.y, c.z - a.z)
+        local n = ab:CrossProduct(ac):Normalized()
+        local mid = Vector3((a.x + b.x + c.x) / 3, (a.y + b.y + c.y) / 3, (a.z + b.z + c.z) / 3)
+        local onAxis = axisP + axisD * (mid - axisP):DotProduct(axisD)
+        if n:DotProduct(mid - onAxis) < 0 then n = n * -1.0 end
+        for i = 1, 3 do Vert(pts[i], n, uvs[i][1], uvs[i][2], hs[i], tipFlag, rnd) end
+    end
+
     for i = 1, count do
         local main = (i == 1)
         local a = Hash(seed * 7.3 + i * 1.9) * math.pi * 2
-        local tilt = main and (Hash(seed + 0.3) * 12) or (22 + Hash(seed * 3.1 + i) * 22)
-        local h = opts.height * (main and 1.0 or (0.42 + 0.3 * Hash(seed * 1.7 + i * 5.1)))
-        local r = opts.radius * (main and 1.0 or (0.55 + 0.25 * Hash(seed * 9.1 + i)))
-        local off = main and 0 or (opts.radius * (0.7 + 0.5 * Hash(seed * 4.4 + i)))
-        spikes[i] = { base = { math.cos(a) * off, 0, math.sin(a) * off }, h = h, r = r,
-            dir = { math.cos(a) * math.sin(math.rad(tilt)), math.cos(math.rad(tilt)), math.sin(a) * math.sin(math.rad(tilt)) },
-            spin = Hash(seed * 2.2 + i) * math.pi }
-    end
-    -- 包围盒
-    local ext = opts.radius * 2.6 + opts.height * 0.5
-    local nx = math.floor(2 * ext / s) + 2
-    local ny = math.floor((opts.height * 1.05) / s) + 3
-    local ox, oz = -nx * s * 0.5, -nx * s * 0.5
-    local oy = -2 * s -- 根部埋进地面两格
-    local vox = {}
-    for ix = 0, nx - 1 do
-        for iy = 0, ny - 1 do
-            for iz = 0, nx - 1 do
-                local x, y, z = ox + (ix + 0.5) * s, oy + (iy + 0.5) * s, oz + (iz + 0.5) * s
-                ---@type {u: number, depth: number, edgeOff: number, shade: number}|nil
-                local best, bestDepth = nil, 0
-                for _, sp in ipairs(spikes) do
-                    local px, py, pz = x - sp.base[1], y - sp.base[2], z - sp.base[3]
-                    local t = px * sp.dir[1] + py * sp.dir[2] + pz * sp.dir[3]
-                    if t > -2.5 * s and t < sp.h then
-                        local qx, qy, qz = px - sp.dir[1] * t, py - sp.dir[2] * t, pz - sp.dir[3] * t
-                        -- 径向两轴：任取与 dir 垂直的基
-                        local ux, uy, uz = sp.dir[2], -sp.dir[1], 0
-                        local ul = math.sqrt(ux * ux + uy * uy)
-                        if ul < 1e-4 then ux, uy, uz, ul = 1, 0, 0, 1 end
-                        ux, uy = ux / ul, uy / ul
-                        local vx = sp.dir[2] * uz - sp.dir[3] * uy
-                        local vy = sp.dir[3] * ux - sp.dir[1] * uz
-                        local vz = sp.dir[1] * uy - sp.dir[2] * ux
-                        local a2 = qx * ux + qy * uy + qz * uz
-                        local b2 = qx * vx + qy * vy + qz * vz
-                        local cs, sn = math.cos(sp.spin), math.sin(sp.spin)
-                        a2, b2 = a2 * cs - b2 * sn, a2 * sn + b2 * cs
-                        -- 六边形距离
-                        local hex = math.max(math.abs(a2) * 0.866 + math.abs(b2) * 0.5, math.abs(b2))
-                        local u = math.max(0, t) / sp.h
-                        -- 顶部收尖（tip 以上线性收到尖；tip 大 = 更粗的柱状晶）
-                        local tip = opts.tip or 0.62
-                        local rr = sp.r * ((u < tip) and (1.0 - 0.15 * u) or ((1 - 0.15 * tip) * (1 - u) / (1 - tip)))
-                        local depth = rr - hex
-                        if depth > 0 and depth > bestDepth then
-                            -- 所在棱面：六边形的 6 个面法线在 30° + 60°k；离面中心越远越靠近棱线
-                            local ang = math.deg(math.atan(b2, a2))
-                            local k = math.floor((ang - 30) / 60 + 0.5)
-                            local fc = 30 + 60 * k
-                            local off = math.abs(ang - fc)
-                            -- 面法线转回体积空间，和固定的「伪光照」方向点乘 → 每个棱面一个明暗档
-                            local fa = math.rad(fc) - sp.spin
-                            local na, nb = math.cos(fa), math.sin(fa)
-                            local nx3, ny3, nz3 = ux * na + vx * nb, uy * na + vy * nb, uz * na + vz * nb
-                            local shade = nx3 * 0.62 + ny3 * 0.35 + nz3 * -0.7
-                            best, bestDepth = { u = u, depth = depth, edgeOff = off, shade = shade }, depth
-                        end
-                    end
-                end
-                if best ~= nil then
-                    local mats = opts.mats
-                    local m
-                    local h = Hash(ix * 3.1 + iy * 7.7 + iz * 1.3 + seed)
-                    if best.u > 0.84 then m = mats.glow
-                    elseif best.depth < s * 1.2 then
-                        if best.edgeOff > 22 then m = mats.edge          -- 棱线：亮色竖条
-                        elseif h > 0.93 then m = mats.glow               -- 零星闪点
-                        elseif best.shade > 0.3 then m = mats.light or mats.edge
-                        elseif best.shade < -0.25 then m = mats.dark or mats.body
-                        else m = mats.body end
-                        -- 根部一圈：冻土色带，像从地里挤出来
-                        if best.u < 0.07 and mats.root ~= nil then m = mats.root end
-                    else m = mats.body end
-                    vox[#vox + 1] = { ix, iy, iz, m }
-                end
-            end
+        local tilt = main and (Hash(seed + 0.3) * 8) or (18 + Hash(seed * 3.1 + i) * 24)
+        local h = opts.height * (main and 1.0 or (0.4 + 0.32 * Hash(seed * 1.7 + i * 5.1)))
+        local r = opts.radius * (main and 1.0 or (0.5 + 0.25 * Hash(seed * 9.1 + i)))
+        local off = main and 0 or (opts.radius * (0.55 + 0.45 * Hash(seed * 4.4 + i)))
+        local tr = math.rad(tilt)
+        local base = Vector3(math.cos(a) * off, 0, math.sin(a) * off)
+        local dir = Vector3(math.cos(a) * math.sin(tr), math.cos(tr), math.sin(a) * math.sin(tr)):Normalized()
+        local e1 = dir:CrossProduct(Vector3(0, 0, 1))
+        if e1:LengthSquared() < 1e-4 then e1 = dir:CrossProduct(Vector3(1, 0, 0)) end
+        e1 = e1:Normalized()
+        local e2 = dir:CrossProduct(e1):Normalized()
+        local spin = Hash(seed * 2.2 + i) * math.pi
+        local rnd = Hash(seed * 5.5 + i * 3.3)
+        local tipFrac = (opts.tip or 0.3) * (0.85 + 0.3 * Hash(seed * 6.6 + i))
+        local bodyTop = h * (1 - tipFrac)
+        local bottom = -0.35 * r -- 根部埋进地里
+        local lo, hi = {}, {}
+        for k = 0, sides - 1 do
+            local ang = spin + k * math.pi * 2 / sides
+            local jr = 1 + (Hash(seed * 1.3 + i * 13.7 + k * 3.1) - 0.5) * 0.22
+            local rad = (e1 * math.cos(ang) + e2 * math.sin(ang)) * (r * jr)
+            lo[k] = base + dir * bottom + rad
+            hi[k] = base + dir * bodyTop + rad * 0.88
+        end
+        local apex = base + dir * h + (e1 * (Hash(seed + i * 2.9) - 0.5) + e2 * (Hash(seed + i * 4.1) - 0.5)) * (r * 0.3)
+        local hTop = bodyTop / h
+        for k = 0, sides - 1 do
+            local k2 = (k + 1) % sides
+            -- 柱身一面（两个三角形共用同一法线方向判断）
+            Face({ lo[k], lo[k2], hi[k2] }, { { 0, 0 }, { 1, 0 }, { 1, 1 } }, { 0, 0, hTop }, 0, rnd, base, dir)
+            Face({ lo[k], hi[k2], hi[k] }, { { 0, 0 }, { 1, 1 }, { 0, 1 } }, { 0, hTop, hTop }, 0, rnd, base, dir)
+            -- 尖顶一面
+            Face({ hi[k], hi[k2], apex }, { { 0, 0 }, { 1, 0 }, { 0.5, 1 } }, { hTop, hTop, 1 }, 1, rnd, base, dir)
         end
     end
-    local vol = world:CreateVolume(nx, ny, nx, s, Vector3.ZERO, Quaternion())
-    local g = vol:GetGrid()
-    for _, v in ipairs(vox) do
-        g:SetSolid(v[1], v[2], v[3], true)
-        g:SetVoxelMaterial(v[1], v[2], v[3], v[4])
-    end
-    vol.material = material
-    vol:RebuildGeometry()
-    local holder = parent:CreateChild(name)
-    local node = vol:GetNode()
-    node.temporary = true
-    node:SetParent(holder)
-    node.position = Vector3(ox, oy, oz)
-    node.rotation = Quaternion()
+    geom:Commit()
+    geom:SetMaterial(material)
+    geom.castShadows = true
     holder.enabled = false
     ---@type VoxelFXCrystal
-    return { holder = holder, volume = vol, height = opts.height, radius = opts.radius, voxels = #vox }
+    return { holder = holder, height = opts.height, radius = opts.radius, voxels = 0 }
 end
 
 -- ---------------------------------------------------------------- 地面改色

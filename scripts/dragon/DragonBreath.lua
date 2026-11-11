@@ -3,7 +3,7 @@
 --
 -- 风格：像素法阵（DragonRune.shader 量化成低分辨率像素格、阶梯线、4 阶调色、定格旋转），
 -- 粒子全部是硬边像素贴图（方块 / 十字 / 雪花 / 像素云团），颜色阶梯跳变；
--- 落点长出真正的体素晶簇（VoxelVolume），结束碎成立方体碎块；地面体素临时改色
+-- 落点长出刻面冰晶簇（平面网格 + IceCrystal.shader），结束碎成立方体碎块；地面体素临时改色
 -- （结霜 / 灼痕）并逐格蔓延、退回。震动统一由 trauma 驱动（镜头 + 法阵 glitch）。
 --
 --   中号 · 霜焰（参考冰与火冰龙）：后仰吸气、冰晶螺旋汇入口部 → 雪花像素法阵 →
@@ -128,40 +128,36 @@ function M.Register(Controller)
 end
 
 -- ---------------------------------------------------------------- 调色板 / 槽位
--- 龙用 40–57，地面 60/61；龙息占 62–77
+-- 龙用 40–57，地面 60/61；龙息占 65 / 66 / 69 / 77（地面霜 / 冰封）
 --   中号「霜焰」：天青 / 雪白，通透明亮
 --   大号「寒星」：深蓝宝石 / 冰川青，对比更重、发光更强
 local PAL = {
-    -- 中号晶簇
-    ICE_BODY = 62, ICE_EDGE = 63, ICE_GLOW = 64, ICE_LIGHT = 70, ICE_DARK = 71, ICE_ROOT = 72,
-    -- 中号地面霜
-    FROST_A = 65, FROST_B = 66,
-    -- 大号晶簇
-    GLA_BODY = 67, GLA_GLOW = 68, GLA_EDGE = 73, GLA_LIGHT = 74, GLA_DARK = 75, GLA_ROOT = 76,
-    -- 大号地面冰封
-    FLOOR_A = 69, FLOOR_B = 77,
+    FROST_A = 65, FROST_B = 66, -- 中号地面霜
+    FLOOR_A = 69, FLOOR_B = 77, -- 大号地面冰封
 }
 M.PAL = PAL
 
 -- { 槽位, 颜色, 粗糙度, 自发光(rgb, 强度) }
 local PAL_DEF = {
-    { PAL.ICE_BODY, { 0.34, 0.64, 0.98 }, 0.12, { 0.2, 0.5, 1.0, 0.25 } },
-    { PAL.ICE_LIGHT, { 0.62, 0.86, 1.0 }, 0.10, { 0.4, 0.75, 1.0, 0.35 } },
-    { PAL.ICE_DARK, { 0.16, 0.40, 0.86 }, 0.15, { 0.1, 0.3, 1.0, 0.15 } },
-    { PAL.ICE_EDGE, { 0.86, 0.97, 1.0 }, 0.08, { 0.7, 0.95, 1.0, 0.8 } },
-    { PAL.ICE_GLOW, { 0.95, 1.0, 1.0 }, 0.05, { 0.8, 0.97, 1.0, 2.2 } },
-    { PAL.ICE_ROOT, { 0.84, 0.91, 1.0 }, 0.6, nil },
     { PAL.FROST_A, { 0.72, 0.87, 1.0 }, 0.2, { 0.3, 0.6, 1.0, 0.12 } },
     { PAL.FROST_B, { 0.55, 0.76, 0.98 }, 0.2, { 0.2, 0.5, 1.0, 0.18 } },
-    { PAL.GLA_BODY, { 0.10, 0.27, 0.80 }, 0.10, { 0.05, 0.2, 1.0, 0.35 } },
-    { PAL.GLA_LIGHT, { 0.24, 0.55, 0.96 }, 0.08, { 0.15, 0.45, 1.0, 0.45 } },
-    { PAL.GLA_DARK, { 0.04, 0.12, 0.46 }, 0.12, { 0.02, 0.1, 0.8, 0.2 } },
-    { PAL.GLA_EDGE, { 0.45, 0.94, 1.0 }, 0.05, { 0.35, 0.9, 1.0, 1.2 } },
-    { PAL.GLA_GLOW, { 0.80, 1.0, 1.0 }, 0.05, { 0.6, 1.0, 1.0, 3.0 } },
-    { PAL.GLA_ROOT, { 0.32, 0.46, 0.76 }, 0.5, nil },
     { PAL.FLOOR_A, { 0.24, 0.44, 0.80 }, 0.08, { 0.1, 0.3, 1.0, 0.18 } },
     { PAL.FLOOR_B, { 0.36, 0.60, 0.93 }, 0.08, { 0.2, 0.55, 1.0, 0.3 } },
 }
+
+-- 冰晶配色（IceCrystal.shader）：四个色阶 = 背光面 / 侧面 / 受光面 / 棱线与透光
+-- debris = 碎裂时的立方体碎块颜色（同一套色阶里取）
+local ICE_LOOK = {
+    medium = {
+        deep = Color(0.07, 0.30, 0.78), mid = Color(0.30, 0.66, 1.0),
+        light = Color(0.74, 0.93, 1.0), edge = Color(1.0, 1.0, 1.0), translucency = 1.0, debris = {},
+    },
+    large = {
+        deep = Color(0.01, 0.06, 0.32), mid = Color(0.05, 0.28, 0.88),
+        light = Color(0.36, 0.78, 1.0), edge = Color(0.62, 0.98, 1.0), translucency = 1.25, debris = {},
+    },
+}
+for _, look in pairs(ICE_LOOK) do look.debris = { look.mid, look.light, look.edge } end
 
 local function SetupPalette(world)
     for _, d in ipairs(PAL_DEF) do
@@ -466,23 +462,24 @@ function B:Build(scene)
     -- 立方体碎块
     self.debris = VoxelFX.Debris(root, 70)
 
-    -- 晶簇（真正的体素体积）
-    -- 中号：细长尖锐的天青冰刺，围成一圈向外炸开
-    -- 大号：粗壮的深蓝冰川六棱柱，两圈「晶林」，尖顶短
-    local mats = frost and { body = PAL.ICE_BODY, light = PAL.ICE_LIGHT, dark = PAL.ICE_DARK,
-            edge = PAL.ICE_EDGE, glow = PAL.ICE_GLOW, root = PAL.ICE_ROOT }
-        or { body = PAL.GLA_BODY, light = PAL.GLA_LIGHT, dark = PAL.GLA_DARK,
-            edge = PAL.GLA_EDGE, glow = PAL.GLA_GLOW, root = PAL.GLA_ROOT }
-    local palMat = self.world:GetPaletteMaterial()
+    -- 晶簇：平面刻面网格 + IceCrystal.shader（三档明暗 / 透光 / 棱线）
+    -- 中号：细长尖锐的冰刺，天青 / 雪白，通透明亮
+    -- 大号：粗壮的冰川六棱柱，两圈「晶林」，深蓝宝石 / 冰川青，对比更重
+    local ice = frost and ICE_LOOK.medium or ICE_LOOK.large
+    local iceMat = ShaderMaterial("Shaders/BLGL/IceCrystal.shader")
+    SetC(iceMat, "deep_color", ice.deep); SetC(iceMat, "mid_color", ice.mid)
+    SetC(iceMat, "light_color", ice.light); SetC(iceMat, "edge_color", ice.edge)
+    SetF(iceMat, "translucency", ice.translucency)
+    self.iceMat, self.iceLook = iceMat, ice
     -- { 环半径, 高度, 粗细, 侧晶数, 外倾角 }（按中号尺寸写，乘 S）
     local layout = frost and {
-        { 0, 2.7, 0.36, 5, 0 },
-        { 1.5, 1.7, 0.24, 3, 16 }, { 1.7, 1.4, 0.22, 3, 20 }, { 1.4, 1.9, 0.25, 3, 14 },
-        { 1.8, 1.2, 0.2, 2, 24 }, { 1.6, 1.6, 0.23, 3, 18 },
-        { 2.8, 0.9, 0.16, 2, 32 }, { 3.0, 0.7, 0.14, 1, 38 }, { 2.7, 1.0, 0.17, 2, 30 },
-        { 3.2, 0.6, 0.13, 1, 40 }, { 2.9, 0.8, 0.15, 2, 34 },
+        { 0, 2.7, 0.34, 4, 0 },
+        { 1.5, 1.7, 0.24, 2, 16 }, { 1.7, 1.4, 0.22, 2, 20 }, { 1.4, 1.9, 0.25, 2, 14 },
+        { 1.8, 1.2, 0.2, 2, 24 }, { 1.6, 1.6, 0.23, 2, 18 },
+        { 2.8, 0.9, 0.16, 1, 32 }, { 3.0, 0.7, 0.14, 1, 38 }, { 2.7, 1.0, 0.17, 2, 30 },
+        { 3.2, 0.6, 0.13, 1, 40 }, { 2.9, 0.8, 0.15, 1, 34 },
     } or {
-        { 0, 3.3, 0.62, 4, 0 },
+        { 0, 3.3, 0.6, 4, 0 },
         { 2.2, 2.4, 0.46, 2, 10 }, { 2.4, 2.0, 0.42, 2, 12 }, { 2.1, 2.7, 0.5, 2, 8 },
         { 2.5, 1.8, 0.4, 2, 14 }, { 2.3, 2.2, 0.44, 2, 11 },
         { 4.0, 1.4, 0.34, 1, 18 }, { 4.3, 1.1, 0.3, 1, 22 }, { 3.9, 1.5, 0.36, 2, 16 },
@@ -501,9 +498,9 @@ function B:Build(scene)
         else
             a = (i2 + 0.5) / (n - 1 - ring1) * math.pi * 2 + VoxelFX.Hash(i * 5.3) * 0.4; i2 = i2 + 1
         end
-        local cr = VoxelFX.Crystal(self.world, palMat, root, "Crystal" .. i, {
-            voxel = (frost and 0.09 or 0.1) * S, height = ly[2] * S, radius = ly[3] * S,
-            count = 1 + ly[4], seed = i * 2.7 + (frost and 0 or 50), tip = frost and 0.5 or 0.8, mats = mats })
+        local cr = VoxelFX.IceCluster(root, "Crystal" .. i, iceMat, {
+            height = ly[2] * S, radius = ly[3] * S, count = 1 + ly[4],
+            seed = i * 2.7 + (frost and 0 or 50), tip = frost and 0.42 or 0.22 })
         local rr = ly[1] * S
         cr.off = Vector3(math.cos(a) * rr, 0, math.sin(a) * rr)
         cr.lean = ly[5]
@@ -564,9 +561,6 @@ end
 function B:Destroy()
     if self.ctrl ~= nil and self.ctrl.breathCfg == self.cfg then self.ctrl.breathCfg = nil end
     if self.ground ~= nil then self.ground:Recede(0, 0, 0); self.ground:Flush() end
-    for _, cr in ipairs(self.crystals or {}) do
-        if cr.volume ~= nil then self.world:RemoveVolume(cr.volume) end
-    end
     self.crystals = {}
     if self.root ~= nil then self.root:Remove() end
     self.root = nil
@@ -621,7 +615,7 @@ function B:UpdateCrystals(dt)
                         local a = math.random() * math.pi * 2
                         self.debris:Spawn({ pos = cr.base + Vector3(math.cos(a) * 0.3 * S, 0.15 * S, math.sin(a) * 0.3 * S),
                             vel = Vector3(math.cos(a) * Rand(1.5, 3.5), Rand(3, 6), math.sin(a) * Rand(1.5, 3.5)) * S,
-                            size = Rand(0.08, 0.16) * S, color = (self.cfg.style == 0) and C(0.84, 0.93, 1.0) or C(0.32, 0.46, 0.76),
+                            size = Rand(0.08, 0.16) * S, color = self.iceLook.light,
                             glow = 0.4, life = Rand(0.8, 1.3), spin = 540, groundFn = self.groundFn })
                     end
                 end
@@ -660,8 +654,7 @@ end
 -- 碎裂：晶簇隐藏，换成一批立方体碎块（颜色取晶体调色板）
 function B:ShatterCrystals()
     local S, frost = self.S, (self.cfg.style == 0)
-    local cols = frost and { C(0.42, 0.72, 0.98), C(0.72, 0.92, 1.0), C(0.92, 1.0, 1.0) }
-        or { C(0.1, 0.27, 0.8), C(0.24, 0.55, 0.96), C(0.45, 0.94, 1.0), C(0.8, 1.0, 1.0) }
+    local cols = self.iceLook.debris
     local any = false
     for _, cr in ipairs(self.crystals) do
         if cr.holder.enabled then
