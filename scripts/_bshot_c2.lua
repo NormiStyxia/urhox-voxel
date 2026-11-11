@@ -47,11 +47,13 @@ cfg.update = function(T, dt)
     end
     -- 镜头跟随：VIEW 4 对准落点，其余对准龙口与落点之间
     local b0 = T.breath
-    if b0 ~= nil and b0.hitPos ~= nil and frame > 3 and c.stateT < (b0.cfg.fireEnd - 0.2) then
+    if b0 ~= nil and b0.hitPos ~= nil and frame > 3 and (c.stateT < (b0.cfg.fireEnd - 0.2) or VIEW == 4) then
         local S = T.rig.size or 1.0
         local mouth = T.rig.sockets.mouth.worldPosition
         if VIEW == 4 then
-            T.cam.target = b0.hitPos + Vector3(0, 0.8 * S, 0)
+            local cr1 = b0.crystals and b0.crystals[1]
+            local focus = (cr1 ~= nil and cr1.base ~= nil and cr1.holder.enabled) and cr1.base or b0.hitPos
+            T.cam.target = focus + Vector3(0, 0.8 * S, 0)
             T.cam.dist = 12 * S; T.cam.pitch = 26; T.cam.yaw = T.ctrl.loco.yaw + 115
         else
             T.cam.target = (mouth + b0.hitPos) * 0.5
