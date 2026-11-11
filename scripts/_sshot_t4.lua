@@ -2,6 +2,7 @@
 local VARIANT = "medium"
 local YAW, PITCH, DIST, TY, TZ, SKIN = -140, 18, 6.5, 1.0, -3.2, false
 SHOT_OUT = "_shot_t4.png"
+ANIM = false
 local frame = 0
 local cfg = { noUI = true, noInput = true }
 cfg.setup = function(T)
@@ -11,8 +12,8 @@ cfg.setup = function(T)
         if want == T.variant then T.SetVariant(want == "medium" and "small" or "medium") end
         T.SetVariant(want)
     end
-    T.externalDrive = true
-    T.rig:ResetPose()
+    T.externalDrive = not ANIM
+    if not ANIM then T.rig:ResetPose() end
     T.SetPlayMode(false)
     T.showNomi = false
     T.cam.follow = false
@@ -26,7 +27,7 @@ cfg.update = function(T, dt)
     T.cam.follow = false
     T.cam.yaw, T.cam.pitch, T.cam.dist = 180 + YAW, PITCH, DIST * S
     T.cam.target = Vector3(0, TY * S, TZ * S)
-    if frame == 38 then
+    if frame == (ANIM and 150 or 38) then
         -- 导出尾巴体素（局部格坐标 + 体积节点的世界变换），离线渲染用
         for _, name in ipairs({ "tail1", "tail2", "tail3", "tail4", "tail5", "tail6", "tail7", "tail8", "pelvis" }) do
             local part = T.rig.parts[name]
@@ -45,7 +46,7 @@ cfg.update = function(T, dt)
             end
         end
     end
-    if frame == 40 then
+    if frame == (ANIM and 152 or 40) then
         local img = Image()
         graphics:TakeScreenShot(img)
         img:SavePNG(SHOT_OUT)
