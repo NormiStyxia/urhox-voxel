@@ -106,6 +106,8 @@ end
 -- 切出来是一段笔直的方截面棱柱，不再有台阶；体积节点再转回这个方向。
 -- 颜色按圈：沿轴每 RING 米一圈，深浅交替，节与节交界一圈最深；腹面白甲连续、同样按圈分格。
 Rig.TAIL_ALIGN = true
+-- 颈（neck1..4）与四肢（armU/armL/legU/legL/legM）同样沿节轴体素化；手脚太小，仍用世界网格
+Rig.LIMB_ALIGN = true
 local RING = 0.16  -- 一圈的长度（米，中号）；型号尺度另乘
 
 -- 尾巴各节的轴：返回 a(根端), b(尾端) 世界静止坐标，取这节体块（锥形胶囊）的两端
@@ -122,17 +124,22 @@ local function TailFrame(a, b)
     local l = math.sqrt(dx * dx + dy * dy + dz * dz)
     local ez = { dx / l, dy / l, dz / l }
     -- 侧向 = 世界 X（尾巴在 YZ 平面内），上方 = ez × ex
-    local ex = { 1, 0, 0 }
+    -- 四肢轴带侧向分量：先把世界 X 对轴正交化，保证旋转是正交的
+    local dot = ez[1]
+    local ex = { 1 - dot * ez[1], -dot * ez[2], -dot * ez[3] }
+    local el = math.sqrt(ex[1] * ex[1] + ex[2] * ex[2] + ex[3] * ex[3])
+    ex = { ex[1] / el, ex[2] / el, ex[3] / el }
     local ey = { ez[2] * ex[3] - ez[3] * ex[2], ez[3] * ex[1] - ez[1] * ex[3], ez[1] * ex[2] - ez[2] * ex[1] }
     if ey[2] < 0 then ey = { -ey[1], -ey[2], -ey[3] }; ex = { -1, 0, 0 } end
     return ex, ey, ez, l
 end
 
--- 环纹配色：t = 沿整条尾巴的弧长（米），v = 在截面上的高度（-1 腹 .. 1 背），edge = 是否在节交界
-local function RingColor(P, t, v, side, nodeSeam, ringLen)
+-- 环纹配色：t = 沿整条链的弧长（米），v = 在截面上的高度（-1 腹 .. 1 背），edge = 是否在节交界
+-- limb = true：四肢不画腹甲和背脊条，只有环纹
+local function RingColor(P, t, v, side, nodeSeam, ringLen, limb)
     local ring = math.floor(t / ringLen)
     local f = t / ringLen - ring
-    if v < -0.35 and side < 0.8 then
+    if not limb and v < -0.35 and side < 0.8 then
         -- 腹甲：白色，按圈分格，格缝浅灰
         if f < 0.2 then return P.WHITE_S end
         return P.WHITE
@@ -140,19 +147,33 @@ local function RingColor(P, t, v, side, nodeSeam, ringLen)
     -- 节交界：一圈中蓝（不用最深色，避免整条尾巴发黑）
     if nodeSeam then return P.BLUE_M end
     -- 背脊：一条中蓝
-    if v > 0.75 then return P.BLUE_M end
+    if not limb and v > 0.75 then return P.BLUE_M end
     -- 两侧：每圈前沿一道中蓝窄环，其余为主色，奇偶圈在两档浅蓝间交替
     if f < 0.22 then return P.BLUE_M end
     return (ring % 2 == 0) and P.BLUE_L or P.BLUE_L2
 end
 
--- 沿节轴体素化一节尾巴：返回局部格子的体素 { i, j, k, color }、局部原点（相对枢轴）、旋转
-local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
+-- 沿轴体素化的骨骼 → 所属链（链内弧长连续，环纹跨节对齐）；limb 链不画腹甲 / 背脊
+local function AlignedChain(name)
+    if Rig.TAIL_ALIGN and name:match("^tail%d$") then return "tail", false end
+    if not Rig.LIMB_ALIGN then return nil end
+    if name:match("^neck%d$") then return "neck", false end
+    local limb, side = name:match("^(%a+)_([RL])$")
+    if limb == "armU" or limb == "armL" then return "arm_" .. side, true end
+    if limb == "legU" or limb == "legL" or limb == "legM" then return "leg_" .. side, true end
+    return nil
+end
+
+-- 沿节轴体素化一节：返回局部格子的体素 { i, j, k, color }、局部原点（相对枢轴）、旋转、节长
+local function VoxelizeAligned(prims, bone, s, pivot, spec, arc0, limb)
     local a, b = TailAxis(prims, bone)
     if a == nil then return nil end
     local ex, ey, ez, len = TailFrame(a, b)
     -- 体块起点在轴上相对枢轴的位置（中号两者重合，型号变体可能略有偏移）
     local az0 = (a[1] - pivot[1]) * ez[1] + (a[2] - pivot[2]) * ez[2] + (a[3] - pivot[3]) * ez[3]
+    -- 轴线在截面上相对枢轴的偏移（四肢体块的轴不一定穿过枢轴），截面高度 / 侧距以轴线为准
+    local ax0 = (a[1] - pivot[1]) * ex[1] + (a[2] - pivot[2]) * ex[2] + (a[3] - pivot[3]) * ex[3]
+    local ay0 = (a[1] - pivot[1]) * ey[1] + (a[2] - pivot[2]) * ey[2] + (a[3] - pivot[3]) * ey[3]
     -- 包围：这节自身体块 + 背刺等，用 Sculpt 的场求值（含邻接节搭接）
     local own, cands = {}, {}
     ---@type number[]
@@ -209,7 +230,7 @@ local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
                 local y = pivot[2] + ex[2] * lx + ey[2] * ly + ez[2] * lz
                 local z = pivot[3] + ex[3] * lx + ey[3] * ly + ez[3] * lz
                 local d, best = Sculpt.EvalField(cands, x, y, z)
-                if d <= 0 and best ~= nil then
+                if d <= 0 and best ~= nil and y >= 0 then  -- y >= 0：贴地裁切（同 clampGround）
                     local take = (best.bone == bone)
                     if not take and best.joint == nil then
                         -- 和下一节搭接：两节格子方向不同，交界处会出现楔形缝；
@@ -224,18 +245,19 @@ local function VoxelizeTailAligned(prims, bone, s, pivot, spec, arc0)
                     end
                     if take then
                         local c
-                        if best.type == "cone" and not best.joint then
-                            -- 尾身：按圈配色
+                        local c0 = best.color
+                        if type(c0) == "function" then c0 = c0(x, y, z, best) end
+                        if best.type == "cone" and not best.joint and c0 ~= P.BLUE_D then
+                            -- 节身：按圈配色（四肢关节护甲 BLUE_D 保留原色）
                             local t = lz - az0
                             local u = math.max(0, math.min(1, t / len))
                             local r = r0 + (r1 - r0) * u
-                            local v = ly / math.max(r, 1e-3)
-                            local side = math.abs(lx) / math.max(r, 1e-3)
+                            local v = (ly - ay0) / math.max(r, 1e-3)
+                            local side = math.abs(lx - ax0) / math.max(r, 1e-3)
                             local seam = (t < s * 0.99) or (t > len - s * 0.99)
-                            c = RingColor(P, arc0 + t, v, side, seam, ringLen)
+                            c = RingColor(P, arc0 + t, v, side, seam, ringLen, limb)
                         else
-                            c = best.color
-                            if type(c) == "function" then c = c(x, y, z, best) end
+                            c = c0
                         end
                         out[#out + 1] = { i - i0, j - j0, k - k0, c }
                     end
@@ -419,22 +441,24 @@ function Rig.Build(scene, world, parent, spec)
 
     -- 躯干 / 四肢 / 头尾
     local nVox = 0
-    local tailArc = 0.0
+    local chainArc = {}
     for _, b in ipairs(bones) do
         local s = spec.VoxelSizeOf(b.name)
         local origin = { -0.5 * s, 0.0, -0.5 * s }
         local part = nil
-        if Rig.TAIL_ALIGN and b.name:match("^tail%d$") then
-            -- 尾巴：沿节轴体素化 + 环纹（见 VoxelizeTailAligned）
-            local vox, lo, rot, len = VoxelizeTailAligned(prims, b.name, s, b.pivot, spec, tailArc)
-            if vox ~= nil then
-                part = MakeVolumeLocal(world, material, vox, s, lo, rot, self.bones[b.name], b.name)
-                tailArc = tailArc + len
-            end
+        local chain, limb = AlignedChain(b.name)
+        local vox, lo, rot, len = nil, nil, nil, nil
+        if chain ~= nil then
+            -- 尾 / 颈 / 四肢：沿节轴体素化 + 环纹（见 VoxelizeAligned）
+            vox, lo, rot, len = VoxelizeAligned(prims, b.name, s, b.pivot, spec, chainArc[chain] or 0.0, limb)
+        end
+        if vox ~= nil then
+            part = MakeVolumeLocal(world, material, vox, s, lo, rot, self.bones[b.name], b.name)
+            chainArc[chain] = (chainArc[chain] or 0.0) + len
         else
             -- 不复制外壳（overlap=false）：关节缝由 DragonSpec 的关节球（挂父骨骼、只占内部）填
-            local vox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
-            part = MakeVolume(world, material, vox, s, origin, b.pivot, self.bones[b.name], b.name)
+            local wvox = Sculpt.VoxelizePart(prims, b.name, s, origin, { clampGround = true, overlap = false })
+            part = MakeVolume(world, material, wvox, s, origin, b.pivot, self.bones[b.name], b.name)
         end
         if part ~= nil then
             part.bone = b.name
