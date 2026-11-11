@@ -47,7 +47,7 @@ cfg.update = function(T, dt)
     end
     -- 镜头跟随：VIEW 4 对准落点，其余对准龙口与落点之间
     local b0 = T.breath
-    if b0 ~= nil and b0.hitPos ~= nil and frame > 3 then
+    if b0 ~= nil and b0.hitPos ~= nil and frame > 3 and c.stateT < (b0.cfg.fireEnd - 0.2) then
         local S = T.rig.size or 1.0
         local mouth = T.rig.sockets.mouth.worldPosition
         if VIEW == 4 then
