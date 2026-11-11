@@ -285,7 +285,7 @@ DEFS.small = {
         local cy, cz, ry, rz = 4.46, 1.62, 0.075, 0.065
         local function EyeColor(x, y, z)
             local dy, dz = (y - cy) / ry, (z - cz) / rz
-            if (dy / 0.85) ^ 2 + ((dz - 0.22) / 0.72) ^ 2 < 1 then return P.PUPIL end
+            if (dy / 0.98) ^ 2 + ((dz - 0.12) / 0.9) ^ 2 < 1 then return P.PUPIL end
             return LINER
         end
         add({ type = "box", bone = "head", c = { 0.25, cy, cz }, h = { 0.25, ry, rz }, color = EyeColor,
