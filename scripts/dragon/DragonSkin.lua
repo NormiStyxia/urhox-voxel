@@ -16,7 +16,7 @@ local Spec = require("dragon.DragonSpec")
 local M = {}
 M.SHADER = "Shaders/BLGL/DragonSkin.shader"
 M.SMOOTH = 1         -- 平滑次数
-M.SMOOTH_K = 0.45    -- 每次向邻点平均靠拢的比例
+M.SMOOTH_K = 0.4    -- 每次向邻点平均靠拢的比例
 
 -- 表面类型（写进 UV.x）：0 鱼鳞，1 腹甲横纹，2 素面（眼、爪、口、角刺）
 local KIND = {}

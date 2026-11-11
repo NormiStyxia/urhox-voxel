@@ -7,7 +7,7 @@
 shader_type spatial;
 render_mode shading_model_pbr, cull_disabled;
 
-uniform float scale_size = 2.4;   // 鳞片行距 = 体素边长 × 该值
+uniform float scale_size = 1.9;   // 鳞片行距 = 体素边长 × 该值
 uniform float scale_amount = 1.0; // 鳞片明暗强度
 uniform float bump_amount = 1.0;  // 鳞片起伏强度
 
@@ -73,14 +73,14 @@ void fragment() {
     vec4 f = skin_field(q, w, isScale, isPlate);
 
     // ---- 颜色：鳞片中央亮、下缘暗线、被压处暗；腹甲接缝暗
-    float tone = mix(0.84, 1.1, clamp(f.x * 0.8 + 0.3, 0.0, 1.0));
-    tone *= 1.0 - 0.32 * f.y - 0.18 * f.z;
+    float tone = mix(0.9, 1.06, clamp(f.x * 0.8 + 0.3, 0.0, 1.0));
+    tone *= 1.0 - 0.4 * f.y - 0.2 * f.z;
     float k = mix(1.0, tone, isScale * scale_amount);
     k *= mix(1.0, mix(0.8, 1.04, f.w), isPlate);
     ALBEDO = lin * k;
 
     // ---- 法线：局部空间有限差分
-    float strength = 0.22 * bump_amount * (isScale + isPlate * 0.7);
+    float strength = 0.12 * bump_amount * (isScale + isPlate * 0.7);
     vec3 t1 = normalize(cross(on, abs(on.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
     vec3 t2 = cross(on, t1);
     float e = 0.04;

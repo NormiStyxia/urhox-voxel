@@ -399,7 +399,8 @@ function M.IceCluster(parent, name, material, opts)
     local count = opts.count or 3
     local sides = opts.sides or 6
     local holder = parent:CreateChild(name)
-    local geom = holder:CreateChild("Mesh"):CreateComponent("CustomGeometry")
+    -- 网格直接挂在 holder 上：Node.enabled 只管自己这一层，挂子节点会隐藏不掉
+    local geom = holder:CreateComponent("CustomGeometry")
     geom:BeginGeometry(0, TRIANGLE_LIST)
 
     local function Vert(p, n, u, v, h, tipFlag, rnd)
