@@ -5,8 +5,14 @@ SHOT_OUT = "_shot_t5.png"
 local frame = 0
 local cfg = { noUI = true, noInput = true }
 cfg.setup = function(T)
-    if not SKIN then require('dragon.DragonRig').TAIL_ALIGN = false end
-    if VARIANT ~= T.variant then T.SetVariant(VARIANT) end
+    require('dragon.DragonRig').TAIL_ALIGN = SKIN
+    if not SKIN or VARIANT ~= T.variant then
+        local want = VARIANT
+        if want == T.variant then T.SetVariant(want == "medium" and "small" or "medium") end
+        T.SetVariant(want)
+    end
+    T.externalDrive = true
+    T.rig:ResetPose()
     T.SetPlayMode(false)
     T.showNomi = false
     T.cam.follow = false
