@@ -107,7 +107,9 @@ local function MakeVolume(world, material, voxels, s, origin, pivot, parentNode,
     node.position = Vector3(origin[1] + i0 * s - pivot[1], origin[2] + j0 * s - pivot[2], origin[3] + k0 * s - pivot[3])
     local skinNode = nil
     if skin ~= nil then
+        local ts = os.clock()
         skinNode = Skin.Build(parentNode, "skin_" .. name, rel, { dx, dy, dz }, s, skin.material, skin.colorOf, node.position)
+        skin.time = (skin.time or 0) + os.clock() - ts
         if skinNode ~= nil then node.enabled = false end
     end
     return { volume = vol, node = node, voxels = #voxels, size = s, skin = skinNode }
@@ -306,8 +308,8 @@ function Rig.Build(scene, world, parent, spec)
 
     local nParts = 0
     for _ in pairs(self.parts) do nParts = nParts + 1 end
-    print(string.format("DragonRig[%s]: %d bones, %d voxel parts, %d voxels, body %.2fs, total %.2fs",
-        spec.id or "medium", #self.order, nParts, nVox, tBody, os.clock() - t0))
+    print(string.format("DragonRig[%s]: %d bones, %d voxel parts, %d voxels, body %.2fs, skin %.2fs, total %.2fs",
+        spec.id or "medium", #self.order, nParts, nVox, tBody, skin and skin.time or 0, os.clock() - t0))
     return self
 end
 
