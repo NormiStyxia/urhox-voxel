@@ -104,7 +104,7 @@ function M.Build(spells)
         backgroundColor = INK, borderRadius = 8, pointerEvents = "none",
         children = { UI.Label { whiteSpace = "normal", width = 230, fontSize = 11, fontColor = { 190, 205, 240, 255 },
             text = "WASD 移动  Space 跳  Shift 跑\n鼠标 视角  左键 碎时（按住蓄力）\nE 冻结  Q 回溯\nF 骑龙 / 下龙（龙苏醒后）\nTab 切换远景  按住 T 时间快进\nEsc 释放鼠标" ..
-                (GetPlatform() == "Web" and "\n浏览器拒绝锁定时技能仍可用" or "") } },
+                (GetPlatform() == "Web" and "\n未锁定时按住鼠标拖动视角\n首次点击激活，再点击请求锁定" or "") } },
     }
     clockLabel = UI.Label { text = "", fontSize = 12, fontColor = { 255, 226, 170, 255 } }
     local clock = UI.Panel {

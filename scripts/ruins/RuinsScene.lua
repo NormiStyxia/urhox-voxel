@@ -55,7 +55,7 @@ local stage_ = "gate"
 local mouseLocked = false
 local farView = false
 local isWeb = PlatformUtils.IsWebPlatform()
-local resumeHint = "点击画面锁定鼠标 · Esc 释放"
+local resumeHint = isWeb and "点击激活画面 · 未锁定时按住鼠标拖动视角 · 再点击可锁定" or "点击画面锁定鼠标 · Esc 释放"
 local inputTakenOver = false
 local pointer = PointerCapture.New({
     web = isWeb,
@@ -80,7 +80,8 @@ local pointer = PointerCapture.New({
             caster_.charging, caster_.charge = false, 0
         end
         local hint = locked and "" or (M.debugOn and "F10 关闭调试面板后，点击画面继续" or resumeHint)
-        if reason == "fallback" then hint = "浏览器未授予锁定 · 技能仍可使用 · 点击可重试锁定" end
+        if reason == "fallback" then hint = "未锁定：按住鼠标拖动视角 · 技能可用 · 点击可重试锁定" end
+        if reason == "activate" then hint = "画面已激活：按住拖动视角 · 再点击可请求锁定" end
         HUD.SetHint(hint)
         print("RuinsScene: pointer " .. reason .. ", mode=" .. tostring(input.mouseMode))
     end,
@@ -334,8 +335,12 @@ function M.ApplyCamera() end
 ---@param eventType string
 ---@param eventData MouseButtonDownEventData
 function Ruins_HandleMouseDown(eventType, eventData)
-    if eventData:GetInt("Button") ~= MOUSEB_LEFT then return end
-    pointer:Click(HUD.IsPointerOverUI())
+    local button = eventData:GetInt("Button")
+    if button == MOUSEB_LEFT then
+        pointer:Click(HUD.IsPointerOverUI())
+    elseif (button == MOUSEB_RIGHT or button == MOUSEB_MIDDLE) and not HUD.IsPointerOverUI() then
+        pointer:Resume()
+    end
 end
 
 ---@param eventType string
@@ -427,20 +432,10 @@ function Ruins_HandleUpdate(eventType, eventData)
     pointer:Update(input:GetMouseButtonDown(MOUSEB_LEFT))
     if Press(KEY_F10) then M.ToggleDebugPanel() end
     if Press(KEY_TAB) then farView = not farView end
-    if pointer:CanLook() then
+    local dragging = input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT) or input:GetMouseButtonDown(MOUSEB_MIDDLE)
+    if pointer:CanLook(dragging) and (mouseLocked or not HUD.IsPointerOverUI()) then
         local mm = input.mouseMove
-        if isWeb and not mouseLocked then
-            local pos = input.mousePosition
-            local w, h = graphics:GetWidth(), graphics:GetHeight()
-            if pos.x >= 0 and pos.y >= 0 and pos.x < w and pos.y < h and not HUD.IsPointerOverUI() then
-                local edge = math.min(w, h) * 0.08
-                local xEdge = Clamp((pos.x - (w - edge)) / edge, 0, 1) - Clamp((edge - pos.x) / edge, 0, 1)
-                local yEdge = Clamp((pos.y - (h - edge)) / edge, 0, 1) - Clamp((edge - pos.y) / edge, 0, 1)
-                nomi_:Look(Clamp(mm.x, -120, 120) + xEdge * 600 * dt, Clamp(mm.y, -120, 120) + yEdge * 360 * dt, 0.12)
-            end
-        else
-            nomi_:Look(mm.x, mm.y, 0.12)
-        end
+        nomi_:Look(mm.x, mm.y, 0.12)
     end
     -- 龙
     local ctrl = M.ctrl

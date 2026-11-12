@@ -17,15 +17,17 @@ function M:init(port)
     self.deadline = 0.0
     self.attackArmed = false
     self.skipLook = false
+    self.primed = not port.web
+    self.focusSince = -1.0
 end
 
 function M:IsCaptured() return self.state == "captured" end
 function M:IsEnabled() return self.active and not self.blocked end
 function M:CanAttack() return self:IsEnabled() and self.attackArmed end
 
-function M:CanLook()
+function M:CanLook(dragging)
     if self.skipLook then self.skipLook = false; return false end
-    return self:IsEnabled()
+    return self:IsEnabled() and (self:IsCaptured() or dragging == true)
 end
 
 -- 键盘操作也能激活玩法，不必先取得浏览器锁定。
@@ -48,6 +50,10 @@ function M:Release(reason)
     self.active = false
     self.attackArmed = false
     self.skipLook = true
+    if self.port.web then
+        self.primed = false
+        self.focusSince = -1.0
+    end
     self.retryAt = self.port.now() + (self.port.web and 2.0 or 0.0)
     self.port.release()
     if wasActive then self.port.changed(false, reason) end
@@ -60,12 +66,25 @@ function M:SetBlocked(blocked)
 end
 
 function M:Click(overUI)
-    if self.blocked or overUI or not self.port.focused() then return end
+    if self.blocked or overUI then return end
+    -- 首次 Web 点击只激活新画布；不把同一次点击同时用来争抢浏览器锁定。
+    if self.port.web and not self.primed then
+        self.primed = true
+        self.active = true
+        self.skipLook = true
+        self.attackArmed = false
+        self.focusSince = self.port.focused() and self.port.now() or -1.0
+        self.retryAt = math.max(self.retryAt, self.port.now() + 0.3)
+        self.port.changed(false, "activate")
+        return
+    end
+    if not self.port.focused() then return end
     local wasActive = self.active
     self.active = true
     if not wasActive then self.attackArmed = false; self.skipLook = true end
     if self.state ~= "free" and self.state ~= "fallback" then return end
     if self.port.now() < self.retryAt then return end
+    if self.port.web and (self.focusSince < 0 or self.port.now() - self.focusSince < 0.3) then return end
     self.state = "pending"
     self.deadline = self.port.now() + 4.0
     -- 必须由真实点击触发；不在 Update 或失败回调中自动重试。
@@ -88,9 +107,11 @@ end
 
 function M:Update(leftDown)
     if not self.port.focused() then
+        self.focusSince = -1.0
         if self.active or self.state ~= "free" then self:Release("focus") end
         return
     end
+    if self.focusSince < 0 then self.focusSince = self.port.now() end
     if self.state == "pending" then
         if self.port.captured() then
             self:Confirm()

@@ -21,7 +21,14 @@ V.atFrame(5, function()
     p:Click(true)
     V.assert(e.requests == 0, "UI 不请求锁定")
     p:Click(false)
-    V.assert(e.requests == 1 and p.state == "pending", "Web 首次点击实际请求锁定")
+    V.assert(e.requests == 0 and p:IsEnabled(), "Web 首次点击只激活新画布")
+    e.now = 10.1
+    p:Click(false)
+    V.assert(e.requests == 0, "焦点尚未稳定不请求锁定")
+    e.now = 10.4
+    p:Update(false)
+    p:Click(false)
+    V.assert(e.requests == 1 and p.state == "pending", "焦点稳定后的真实点击请求锁定")
     V.assert(p:IsEnabled(), "等待浏览器时玩法已经激活")
     p:Update(false)
     V.assert(p:CanAttack(), "等待锁定时仍可施法")
@@ -29,11 +36,11 @@ V.atFrame(5, function()
     V.assert(p.state == "pending", "仅相对模式不冒充浏览器锁定成功")
     for i = 1, 10 do p:Click(false) end
     V.assert(e.requests == 1, "pending 不重复请求")
-    e.now = 14.1
+    e.now = 14.5
     p:Update(false)
     V.assert(p.state == "fallback" and p:CanAttack(), "超时兼容模式仍允许技能")
     V.assert(e.requests == 1, "失败不自动重试")
-    e.now = 16.2
+    e.now = 16.6
     p:Click(false)
     V.assert(e.requests == 2, "后续真实点击可以重试")
     e.locked = true
@@ -94,12 +101,16 @@ V.atFrame(5, function()
         local left = VariantMap()
         left["Button"] = MOUSEB_LEFT
         Ruins_HandleMouseDown("MouseButtonDown", left --[[@as MouseButtonDownEventData]])
-        V.assert(mock.requests == 1, "实际场景点击恢复 MM_RELATIVE 请求而非禁止锁定")
-        mock.locked = true
-        local mode = VariantMap()
-        mode["Mode"], mode["MouseLocked"] = MM_RELATIVE, true
-        Ruins_HandleMouseModeChanged("MouseModeChanged", mode --[[@as MouseModeChangedEventData]])
-        V.assert(mock.mouseMode == MM_RELATIVE, "锁定成功回报不会被游戏撤销")
+        if _G["POINTER_WEB_TEST"] then
+            V.assert(mock.requests == 0, "Web 场景首次点击先激活而不争抢锁定")
+        else
+            V.assert(mock.requests == 1, "桌面首次点击正常请求锁定")
+            mock.locked = true
+            local mode = VariantMap()
+            mode["Mode"], mode["MouseLocked"] = MM_RELATIVE, true
+            Ruins_HandleMouseModeChanged("MouseModeChanged", mode --[[@as MouseModeChangedEventData]])
+            V.assert(mock.mouseMode == MM_RELATIVE, "锁定成功回报不会被游戏撤销")
+        end
         Key(KEY_ESCAPE)
         mock.requests = 0
         -- 尚无浏览器锁定，直接按 E、Q 也必须进入真实 Cast。
@@ -123,8 +134,15 @@ V.atFrame(5, function()
         mock.mouseMove = IntVector2(20, 0)
         local yaw = scene.nomiCtl.camYaw
         Tick()
-        V.assert(scene.nomiCtl.camYaw ~= yaw, "未锁定时视角仍能响应鼠标")
+        V.assert(scene.nomiCtl.camYaw == yaw, "未锁定时只移动光标不会转视角")
+        mock.left = true
+        Tick()
+        V.assert(scene.nomiCtl.camYaw ~= yaw, "未锁定时按住左键拖动能转视角")
+        yaw = scene.nomiCtl.camYaw
+        mock.left = false
         mock.mouseMove = IntVector2(0, 0)
+        Tick()
+        V.assert(scene.nomiCtl.camYaw == yaw, "松开鼠标停止拖动视角")
         scene.ToggleDebugPanel()
         scene.caster.cool.freeze = 0
         scene.caster.lastCast = "shatter"
