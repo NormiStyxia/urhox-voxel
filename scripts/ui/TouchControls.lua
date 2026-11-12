@@ -4,7 +4,7 @@ local UI = require('urhox-libs/UI')
 local Input = require('ui.TouchInput')
 local Draw = require('ui.PixelDraw')
 local M = { menuOpen=false }
-local provider, onModeChanged
+local provider, onModeChanged, onCancel
 local owners, buttons = {}, {}
 local joy, lookID
 local state = {}
@@ -13,6 +13,7 @@ local clock, idle, frame, fullFlash, lastCharge = 0, 0, 0, 0, 0
 local releasedJoy, releasedFrame
 local width, height, safe = 844,390,{left=0,right=0,top=0,bottom=0}
 local oldEnabled=false
+local wasBlocked=false
 local started=false
 ---@type Node?
 local eventNode
@@ -25,22 +26,26 @@ local SETS = {
         {name='rewind',x=-124,y=-124}, {name='mount',main=true,x=-212,y=-72},
     },
     ground={
-        {name='ascend',size=80,main=true,x=-48,y=-48},
-        {name='breath',x=-148,y=-32}, {name='dismount',x=-48,y=-148},
+        {name='breath',size=80,main=true,x=-48,y=-48},
+        {name='ascend',x=-48,y=-148}, {name='dismount',x=-148,y=-32},
+        {name='breathSpecial',icon='breath',label='大招',x=-124,y=-124},
     },
     air={
-        {name='ascend',size=80,main=true,x=-48,y=-48},
-        {name='descend',x=-140,y=-24}, {name='dash',x=-48,y=-148},
-        {name='breath',x=-130,y=-112}, {name='glide',x=-210,y=-64},
-        {name='land',x=-230,y=-150},
+        {name='breath',size=80,main=true,x=-48,y=-48},
+        {name='ascend',x=-48,y=-148}, {name='descend',x=-148,y=-32},
+        {name='dash',x=-124,y=-124}, {name='land',x=-212,y=-72},
+        {name='breathSpecial',icon='breath',label='大招',x=-196,y=-160},
     },
 }
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
+local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
+local function TopButtons() return current=='air' and AIR_TOP or TOP end
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Cancel()
     owners,buttons={},{}
     joy,lookID=nil,nil
     Input.Clear()
+    if onCancel then onCancel() end
 end
 function M.Cancel() Cancel() end
 function M.IsBlocked() return M.menuOpen or state.blocked == true end
@@ -59,11 +64,13 @@ function M.Sync()
         previous,current,transition=current,nextMode,0
         -- A held ground button must not silently become an airborne button.
         -- Preserve joystick/look fingers; retire action fingers until lifted.
-        for _,o in pairs(owners) do if o.kind=='button' then Input.CancelAction(o.name); o.kind='retired' end end
+        for _,o in pairs(owners) do if o.kind=='button' then o.kind='retired' end end
         buttons={}
-        Input.Set('sprint',false)
+        Input.CancelActions()
+        if onCancel then onCancel() end
     end
-    if state.blocked and next(owners) then Cancel() end
+    if state.blocked and not wasBlocked then Cancel() end
+    wasBlocked=state.blocked==true
     local enabled=Input.IsEnabled()
     if enabled~=oldEnabled then
         oldEnabled=enabled; Cancel(); M.menuOpen=false
@@ -111,7 +118,7 @@ function M.BeginTouch(id,x,y)
     idle=0
     -- Help is modal; all fingers are consumed until dismissed.
     if M.menuOpen then M.menuOpen=false; Cancel(); owners[id]={kind='retired'}; return end
-    for i,b in ipairs(TOP) do
+    for i,b in ipairs(TopButtons()) do
         if Hit(b,x,y,true,i) then
             if b.name=='menu' then Cancel(); M.menuOpen=true; owners[id]={kind='retired'}
             elseif not buttons[b.name] then buttons[b.name]=id; owners[id]={kind='button',name=b.name}; Input.Set(b.name,true) end
@@ -158,6 +165,16 @@ function M.Update(dt)
     transition=math.min(5,transition+1)
     if transition>=5 then previous=nil end
     M.Sync()
+    -- Reconcile native owners if a backend drops cancelled touches without TouchEnd.
+    if not input.focus or input.minimized then
+        if next(owners) then Cancel() end
+    else
+        local live={}
+        for i=0,input.numTouches-1 do live[input:GetTouch(i).touchID]=true end
+        for id,o in pairs(owners) do
+            if o.native and not live[id] then Cancel(); break end
+        end
+    end
     local charge=state.charge or 0
     if charge>=1 and lastCharge<1 then fullFlash=2 elseif fullFlash>0 then fullFlash=fullFlash-1 end
     lastCharge=charge
@@ -166,7 +183,7 @@ local function DrawSet(vg,mode,alpha,offset)
     for _,b in ipairs(SETS[mode]) do if Visible(b) then
         local x,y=Position(b)
         y=y+offset
-        local down=mode==current and Input.Down(b.name)
+        local down=mode==current and (Input.Down(b.name) or (b.name=='breath' and state.breathActive))
         local active=(b.name=='glide' and state.gliding) or (b.name=='dash' and down)
         local a=(down and 1 or (idle>=3 and .45 or .78))*alpha
         local cd=state.cool and state.cool[b.name] or 0
@@ -179,7 +196,8 @@ local function DrawSet(vg,mode,alpha,offset)
             Draw.Arc(vg,x,y,r,r-2,1,32,Draw.colors.bright,a*(step==1 and 1 or .5))
         end
         if charge>=1 and fullFlash>0 then Draw.Arc(vg,x,y,48,42,1,32,Draw.colors.bright,1) end
-        if b.name=='mount' then Draw.Text(vg,'上龙',x,y+42,12,Draw.colors.gold,NVG_ALIGN_CENTER,a) end
+        local label=b.label or (b.name=='mount' and '上龙')
+        if label then Draw.Text(vg,label,x,y+42,12,Draw.colors.gold,NVG_ALIGN_CENTER,a) end
     end end
 end
 local Layer=UI.Panel:Extend('RuinsTouchControls')
@@ -201,23 +219,23 @@ function Layer:Render(vg)
     if previous and transition<2 then DrawSet(vg,previous,transition==0 and 1 or .5,0) end
     local a=transition<2 and 0 or math.min(1,(transition-1)/3)
     if a>0 then DrawSet(vg,current,a,transition<4 and (4-transition)*2 or 0) end
-    for i,b in ipairs(TOP) do
+    for i,b in ipairs(TopButtons()) do
         local x,y=Position(b,true,i)
         local down=Input.Down(b.name)
-        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,false,false)
+        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,false)
     end
     if M.menuOpen then
         local w=math.min(420,width-safe.left-safe.right-40)
         local x,y=Draw.Snap((width-w)/2),Draw.Snap(math.max(safe.top+20,(height-176)/2))
         Draw.NineSlice(vg,'panel_paper',x,y,w,176,8,1)
-        local lines={'操作说明','左摇杆移动 · 右侧拖动看四周','按住碎时蓄力 · 松手释放碎时','靠近龙，点【上龙】','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
+        local lines={'操作说明','左摇杆移动 · 右侧拖动看四周','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
         for i,line in ipairs(lines) do Draw.Text(vg,line,x+w/2,y+22+(i-1)*22,12,Draw.colors.brown,NVG_ALIGN_CENTER) end
     end
     Draw.Finish(vg)
 end
-function M.Attach(parent,getState,changed)
+function M.Attach(parent,getState,changed,cancelled)
     if not parent then return end
-    provider,onModeChanged=getState,changed
+    provider,onModeChanged,onCancel=getState,changed,cancelled
     Input.Detect()
     if not started then
         eventNode=Node()
@@ -225,6 +243,8 @@ function M.Attach(parent,getState,changed)
         eventObject:SubscribeToEvent('TouchBegin',function(_,t,d) RuinsTouch_Begin(t,d --[[@as TouchBeginEventData]]) end)
         eventObject:SubscribeToEvent('TouchMove',function(_,t,d) RuinsTouch_Move(t,d --[[@as TouchMoveEventData]]) end)
         eventObject:SubscribeToEvent('TouchEnd',function(_,t,d) RuinsTouch_End(t,d --[[@as TouchEndEventData]]) end)
+        -- Optional host cancellation signal; unlike TouchEnd this must not cast.
+        eventObject:SubscribeToEvent('TouchCancel',function() Cancel() end)
         eventObject:SubscribeToEvent('InputFocus',function(_,t,d) RuinsTouch_Focus(t,d --[[@as InputFocusEventData]]) end)
         eventObject:SubscribeToEvent('KeyDown',function(_,t,d) RuinsTouch_Key(t,d --[[@as KeyDownEventData]]) end)
         eventObject:SubscribeToEvent('EndFrame',function() Input.EndFrame() end)
@@ -237,17 +257,21 @@ function M.Reattach(parent)
     if parent then parent:AddChild(Layer{position='absolute',left=0,top=0,width='100%',height='100%',pointerEvents='none'}) end
 end
 function M.Stop()
-    Cancel(); provider,onModeChanged=nil,nil; M.menuOpen=false
+    Cancel(); provider,onModeChanged,onCancel=nil,nil,nil; M.menuOpen=false
     if eventObject then eventObject:UnsubscribeFromAllEvents() end
     if eventNode then eventNode:Remove() end
     eventObject,eventNode=nil,nil
-    started=false;oldEnabled=false;previous=nil;transition=5
+    started=false;oldEnabled=false;wasBlocked=false;previous=nil;transition=5
 end
 ---@param data TouchBeginEventData
 function RuinsTouch_Begin(_,data)
     if not provider then return end
     local dpr=graphics:GetDPR()
-    M.BeginTouch(data:GetInt('TouchID'),data:GetInt('X')/dpr,data:GetInt('Y')/dpr)
+    local id=data:GetInt('TouchID')
+    M.BeginTouch(id,data:GetInt('X')/dpr,data:GetInt('Y')/dpr)
+    for i=0,input.numTouches-1 do
+        if input:GetTouch(i).touchID==id and owners[id] then owners[id].native=true; break end
+    end
 end
 ---@param data TouchMoveEventData
 function RuinsTouch_Move(_,data)

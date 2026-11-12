@@ -35,9 +35,9 @@ local function Down(key)
     if M.fake ~= nil and M.fake[key] ~= nil then return M.fake[key] end
     return input:GetKeyDown(key) or TouchInput.KeyDown(key)
 end
-local function Press(key, keyboardOnly)
+local function Press(key)
     if M.fakePress ~= nil and M.fakePress[key] then M.fakePress[key] = nil return true end
-    return input:GetKeyPress(key) or (not keyboardOnly and TouchInput.KeyPress(key))
+    return input:GetKeyPress(key) or TouchInput.KeyPress(key)
 end
 
 local function WrapDeg(a)
@@ -310,9 +310,9 @@ function R:UpdateMounted(dt)
     if Press(KEY_SPACE) and (not L.airborne or c.state == "GLIDE") then c:Request("FLY") end
     if Press(KEY_L) and L.airborne then c:Request("LAND") end
     if Press(KEY_G) and L.airborne then c:Request(TouchInput.IsEnabled() and c.state=="GLIDE" and "FLY" or "GLIDE") end
-    if Press(KEY_B, self.T.stream ~= nil) and self.T.breath ~= nil then
+    if Press(KEY_B) and self.T.breath ~= nil then
         if not self.T.breath:Trigger() and self.onNotice then
-            self.onNotice(L.airborne and (TouchInput.IsEnabled() and "点【降落】后可吐息" or "吐息需落地施放：按 L 降落") or "吐息正在准备或收招")
+            self.onNotice(L.airborne and (TouchInput.IsEnabled() and "点【降落】后可施放大招" or "大招需落地施放：按 L 降落") or "大招正在准备或收招")
         end
     end
     local busy = (c.state == "ROAR" or c.state == "TURN" or c.state == "BREATH")

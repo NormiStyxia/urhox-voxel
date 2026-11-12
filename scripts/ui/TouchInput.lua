@@ -44,6 +44,11 @@ function M.Press(name)
     return true
 end
 function M.CancelAction(name) held[name],pressed[name]=nil,nil end
+-- Mode changes cancel every action edge while preserving joystick/look ownership.
+function M.CancelActions()
+    held,pressed={},{}
+    M.revision=M.revision+1
+end
 function M.EndFrame() pressed = {} end
 function M.SetMove(f, r) forward, right = f, r end
 function M.MoveAxis()
@@ -65,7 +70,7 @@ local function Actions(key)
     if key == KEY_C then return 'descend' end
     if key == KEY_G then return 'glide' end
     if key == KEY_L then return 'land' end
-    if key == KEY_B then return 'breath' end
+    if key == KEY_B then return 'breathSpecial' end
     if key == KEY_TAB then return 'farview' end
     if key == KEY_T then return 'fastTime' end
 end

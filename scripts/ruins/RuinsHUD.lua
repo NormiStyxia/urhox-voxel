@@ -105,7 +105,7 @@ function Layer:Render(vg)
     if help and not touch then
         local hx=w-s.right-320
         Draw.NineSlice(vg,'panel_paper',hx,top,304,144,8,.95)
-        for i,line in ipairs({'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','F 上龙/下龙 · Space 起飞/上升','C 下降 · G 滑翔 · L 降落 · B 龙息','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}) do
+        for i,line in ipairs({'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','F 上龙/下龙 · Space 起飞/上升','C 下降 · G 滑翔 · L 降落 · B 大招','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}) do
             Draw.Text(vg,line,hx+16,top+22+(i-1)*20,12,C.brown)
         end
     end

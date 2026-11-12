@@ -22,6 +22,7 @@ local DragonRide = require("dragon.DragonRide")
 local Variants = require("dragon.DragonVariants")
 local Breath = require("dragon.DragonBreath")
 local BreathClassic = require("dragon.DragonBreathClassic")
+local Stream = require("dragon.DragonStream")
 Breath.Register(Controller)
 
 local M = {}
@@ -160,13 +161,33 @@ function M.NewBreath(id)
     return Breath.New(scene_, rig_, ctrl_, id, M.groundInfo)
 end
 
+-- The standalone scene has no RuinsDragon host, so owns its ordinary stream here.
+local ordinarySource
+local streamMode
+local function DestroyStream()
+    if M.stream then M.stream:Destroy(); M.stream=nil end
+    if ordinarySource then ordinarySource:Destroy(); ordinarySource=nil end
+end
+local function CreateStream()
+    local source=breath_
+    if M.breathStyle=="classic" then
+        ordinarySource=Breath.New(scene_,rig_,ctrl_,M.variant,M.groundInfo)
+        source=ordinarySource
+    end
+    if source:Available() then M.stream=Stream.New(scene_,source) end
+    ctrl_.breathCfg=breath_.cfg -- Preserve the selected special-breath style.
+    streamMode=nil
+end
+
 -- 切换龙息特效版本（吐息中途切换会直接中断当前这一口）
 function M.ToggleBreathStyle()
     M.breathStyle = (M.breathStyle == "pixel") and "classic" or "pixel"
+    DestroyStream()
     if breath_ ~= nil then breath_:Destroy() end
     if ctrl_.state == "BREATH" then ctrl_:Request("IDLE") end
     breath_ = M.NewBreath(M.variant)
     M.breath = breath_
+    CreateStream()
     print("DragonTest: breath style -> " .. M.breathStyle)
     if shotCfg == nil or not shotCfg.noUI then DebugUI.Build(ctrl_, M) end
 end
@@ -203,6 +224,7 @@ function M.Start()
     M.ctrl = ctrl_
     breath_ = M.NewBreath(M.variant)
     M.breath = breath_
+    CreateStream()
     -- 诺米：站在龙的右前方，面朝默认机位，只播待机动画
     M.nomiNode = scene_:CreateChild("Nomi")
     M.nomiNode.position = NOMI_POS
@@ -234,7 +256,7 @@ function M.Start()
     if shotCfg ~= nil and shotCfg.setup ~= nil then shotCfg.setup(M) end
     TouchControls.Attach(UI.GetRoot(),function()
         return {mounted=ride_.mode~="free",mounting=ride_.mode=="mounting",airborne=ctrl_.loco.airborne,
-            gliding=ctrl_.state=="GLIDE",canMount=ride_.rideable and ride_.onGround and ride_:NearDragon()<3.6,
+            gliding=ctrl_.state=="GLIDE",breathActive=M.stream and M.stream.active,canMount=ride_.rideable and ride_.onGround and ride_:NearDragon()<3.6,
             blocked=not M.playMode,noSpells=true}
     end,function(on)
         if on then
@@ -244,6 +266,8 @@ function M.Start()
         else DebugUI.Build(ctrl_,M) end
         -- Reparent the existing display layer after the mode swaps UI roots.
         M.touchNeedsAttach=true
+    end,function()
+        if M.stream then M.stream:Stop(true) end
     end)
     ride_.controlsEnabled=function() return not TouchControls.IsBlocked() end
     M.ApplyCamera()
@@ -256,6 +280,7 @@ end
 
 function M.Stop()
     TouchControls.Stop()
+    DestroyStream()
     TouchHUD.Stop()
 end
 
@@ -268,6 +293,7 @@ function M.SetVariant(id)
     if ride_ ~= nil then ride_:Release() end
     local oldSize = rig_.size or 1.0
     local oldId = M.variant
+    DestroyStream()
     if breath_ ~= nil then breath_:Destroy() end
     rig_:Destroy()
     local ok, built = pcall(function() return Rig.Build(scene_, world_, nil, Variants.Get(id)) end)
@@ -284,6 +310,7 @@ function M.SetVariant(id)
     ctrl_:Teleport(pos, yaw)
     breath_ = M.NewBreath(id)
     M.breath = breath_
+    CreateStream()
     ride_:BindDragon(M)
     -- 镜头距离随体型缩放
     local k = (rig_.size or 1.0) / oldSize
@@ -428,6 +455,15 @@ function M.Update(dt)
             local p = rig_.body.worldPosition + Vector3(0, 0.4 * (rig_.size or 1.0), 0)
             cam.target = cam.target:Lerp(p + cam.pan, 1.0 - math.exp(-4.0 * dt))
         end
+    end
+    TouchControls.Sync()
+    if M.stream then
+        if streamMode~=ride_.mode then streamMode=ride_.mode; M.stream:Stop(true) end
+        local allowed=M.playMode and ride_.mode=="mounted" and ctrl_.state~="BREATH"
+            and input.focus and not input.minimized and not TouchControls.IsBlocked()
+        local target=camNode_.worldPosition+camNode_.worldDirection*100
+        M.stream:Update(dt,TouchInput.Down("breath"),target,allowed)
+        if ordinarySource then ordinarySource:UpdateRings(dt) end
     end
     local rush = M.playMode and ride_.mode == "mounted" and (ctrl_.loco.stream or 0) or 0
     cam.flightVisual = (cam.flightVisual or 0) + (rush - (cam.flightVisual or 0)) * (1 - math.exp(-3 * dt))

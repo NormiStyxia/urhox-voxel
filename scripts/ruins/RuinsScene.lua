@@ -38,6 +38,7 @@ Breath.Register(Controller)
 ---@field fake table|nil
 ---@field fakePress table|nil
 ---@field forceCamMode string|nil
+---@field stream table|nil Ordinary breath owned by RuinsDragon.
 local M = {}
 
 M.DEBUG_PANEL = false   -- 巨龙动画测试面板：默认隐藏（代码保留在 dragon/DragonDebugUI.lua）
@@ -277,6 +278,7 @@ local function AttachTouchControls()
         local ride,ctrl=M.ride,M.ctrl
         return { mounted=ride.mode~="free", mounting=ride.mode=="mounting",
             airborne=ctrl.loco.airborne, gliding=ctrl.state=="GLIDE", blocked=M.debugOn,
+            breathActive=M.stream and M.stream.active,
             canMount=M.dragonAwake and not ride.locked and ride.mode=="free" and ride.onGround and ride:NearDragon()<3.6,
             cool=caster_.cool, cooldown=cooldown, charging=caster_.charging,
             charge=caster_.charging and caster_.charge or 0 }
@@ -284,6 +286,9 @@ local function AttachTouchControls()
         pointer:Release("touch-mode")
         drag.buttons=0
         caster_.charging,caster_.charge=false,0
+    end,function()
+        caster_.charging,caster_.charge=false,0
+        if M.stream then M.stream:Stop(true) end
     end)
 end
 
@@ -462,11 +467,13 @@ end
 -- remains the separate special breath in DragonRide; simulated touch mouse is ignored.
 function M.readStreamInput()
     local touch=TouchInput.IsEnabled()
-    local allowed=not M.debugOn and not TouchControls.IsBlocked()
+    local mounted=M.ride and M.ride.mode=="mounted"
+    local allowed=mounted and M.ctrl.state~="BREATH"
+        and not M.debugOn and not TouchControls.IsBlocked()
         and input.focus and not input.minimized
         and (touch or pointer:CanAttack() or M.fake~=nil)
-    local held=TouchInput.Down("breath") or Down(KEY_1)
-        or (not touch and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT))
+    local held=mounted and (TouchInput.Down("breath") or Down(KEY_1)
+        or (not touch and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)))
     return held,allowed
 end
 
@@ -550,7 +557,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         local a=nomi_:Aim(100)
         M.breath.aimTarget=a.hit and a.pos or a.far
         if TouchInput.IsEnabled() then HUD.SetTarget("按住【龙息】持续吐息 · 朝准星方向喷射")
-        else HUD.SetTarget(ctrl.loco.airborne and "左键普通吐息 · L 降落后可施放特殊吐息" or "左键普通吐息 · B 特殊吐息") end
+        else HUD.SetTarget("长按破坏键持续吐息（左键/1）") end
     else M.breath.aimTarget=nil end
     M.breath:Update()
     if not M.dragonAwake then
