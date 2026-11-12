@@ -10,6 +10,9 @@
 -- 无人操作时像宠物一样跟在诺米身边。
 -- ====================================================================
 
+---@class DragonRideModule
+---@field fake table|nil
+---@field fakePress table|nil
 local M = {}
 
 local MOUNT_RANGE = 3.6      -- 离龙胸口多远内可以骑乘（米）
@@ -46,6 +49,14 @@ local function Smooth(t) t = Clamp(t, 0, 1) return t * t * (3 - 2 * t) end
 local function LerpAngle(a, b, t) return a + WrapDeg(b - a) * t end
 
 ---@class DragonRide
+---@field onMount fun()|nil
+---@field onDismount fun(pos: Vector3, right: Vector3)|nil
+---@field wander table|nil
+---@field external boolean|nil
+---@field externalGround boolean|nil
+---@field aiOff boolean|nil
+---@field locked boolean|nil
+---@field lockedHint string|nil
 local R = {}
 R.__index = R
 
@@ -172,6 +183,7 @@ end
 
 -- ---------------------------------------------------------------- 骑乘
 function R:Mount()
+    if self.onMount ~= nil then self.onMount() end
     self.mode = "mounting"
     self.mountT = 0.0
     self.mountFrom = self.pos
@@ -204,6 +216,7 @@ function R:Dismount()
     self.noCollideT = 0.6
     self.node.position = self.pos
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
+    if self.onDismount ~= nil then self.onDismount(self.pos, right) end
 end
 
 -- 坐姿：覆盖腿 / 臂骨骼
@@ -353,8 +366,9 @@ function R:UpdateAI(dt)
         ai.timer = ai.timer - dt
         if ai.timer <= 0 then
             local ang = math.random() * math.pi * 2
-            local r = 5 + math.random() * 8
-            ai.target = Vector3(math.sin(ang) * r, 0, math.cos(ang) * r)
+            local wr = self.wander or { center = Vector3(0, 0, 0), min = 5, max = 13 }
+            local r = wr.min + math.random() * (wr.max - wr.min)
+            ai.target = wr.center + Vector3(math.sin(ang) * r, 0, math.cos(ang) * r)
             ai.mode, ai.timer = "walk", 25.0
         end
     else
@@ -388,8 +402,18 @@ end
 -- ---------------------------------------------------------------- 总更新
 function R:Update(dt, camYaw)
     if self.mode == "free" then
-        self:UpdateFree(dt, camYaw)
-        self:UpdateAI(dt)
+        -- external：步行由外部控制器（遗迹场景的 NomiController）负责，这里只读位置
+        if self.external then
+            self.pos = self.node.worldPosition
+            self.onGround = self.externalGround ~= false
+        else
+            self:UpdateFree(dt, camYaw)
+        end
+        if not self.aiOff then self:UpdateAI(dt) end
+        if self.locked then
+            self.hint = self.lockedHint or ""
+            return
+        end
         local size = self.size or 1.0
         if self:NearDragon() < MOUNT_RANGE * math.max(0.6, size) and self.onGround then
             if self.rideable then

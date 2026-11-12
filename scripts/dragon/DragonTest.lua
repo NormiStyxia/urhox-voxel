@@ -1,5 +1,5 @@
 -- ====================================================================
--- DragonTest.lua — 体素巨龙独立测试场景（入口：dragon_main.lua 或 config.START_SCENE）。
+-- DragonTest.lua — 体素巨龙独立测试场景（入口：dragon_main.lua）。
 --
 -- 场景：简洁雪地（2m 棋盘格，便于观察是否滑步）+ 白天光组；默认只生成一条龙。
 -- 相机：右键 / 左键拖动旋转，滚轮缩放，中键或 Shift+左键拖动平移，
@@ -47,7 +47,7 @@ M.showStrips = false
 M.showFeet = false
 M.showNomi = true
 M.playMode = true -- 玩法模式：操作诺米，靠近龙按 F 骑乘；关掉则回到纯动画调试
--- 诺米体素小人（复用 VoxelTown 玩家角色的体素模型，约 1.7m，用来对比龙的体型）
+-- 诺米体素小人（诺米的体素模型，约 1.7m，用来对比龙的体型）
 local NOMI_POS = Vector3(-2.6, 0, -3.4)
 local NOMI_YAW = -150.0
 M.externalDrive = false -- 自动化验证时由测试脚本以固定步长驱动控制器

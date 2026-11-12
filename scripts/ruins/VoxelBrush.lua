@@ -113,16 +113,20 @@ end
 function B:Carve(x0, y0, z0, x1, y1, z1) self:Box(x0, y0, z0, x1, y1, z1, false) end
 
 -- 通用形状：fn(cx,cy,cz,i,j,k) → 材质 / false / nil
-function B:Shape(x0, y0, z0, x1, y1, z1, fn)
+-- colFn(cx,cz)（可选）：整列预筛，返回 false 的列直接跳过（大包围盒里的细长形状提速用）
+function B:Shape(x0, y0, z0, x1, y1, z1, fn, colFn)
     local i0, i1 = self:Range(min(x0, x1), max(x0, x1), 1)
     local j0, j1 = self:Range(min(y0, y1), max(y0, y1), 2)
     local k0, k1 = self:Range(min(z0, z1), max(z0, z1), 3)
+    local s, lo = self.s, self.lmin
     for i = i0, i1 do
         for k = k0, k1 do
-            for j = j0, j1 do
-                local cx, cy, cz = self:Center(i, j, k)
-                local m = fn(cx, cy, cz, i, j, k)
-                if m ~= nil then self:Set(i, j, k, m) end
+            if colFn == nil or colFn(lo[1] + (i + 0.5) * s, lo[3] + (k + 0.5) * s) then
+                for j = j0, j1 do
+                    local cx, cy, cz = self:Center(i, j, k)
+                    local m = fn(cx, cy, cz, i, j, k)
+                    if m ~= nil then self:Set(i, j, k, m) end
+                end
             end
         end
     end
@@ -185,11 +189,16 @@ function B:Finish(o)
     o = o or {}
     local v = self.volume
     if v:GetSolidCount() == 0 and not o.keepEmpty then
-        self.world:RemoveVolume(v)
+        v:Dispose()
         return nil
     end
     v.destructible = o.destructible == true
     v.evictable = false
+    -- 统一换成带风化细节的静态体素材质（时之物件等会在之后自行覆盖）
+    if M.materialFor ~= nil then
+        local mat = M.materialFor(self.s)
+        if mat ~= nil then v.material = mat end
+    end
     if o.visual then
         -- 不定型：只渲染、无物理体（悬浮装饰 / 回溯中的残片）
     elseif o.dynamic then

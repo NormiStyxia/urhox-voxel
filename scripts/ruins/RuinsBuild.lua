@@ -18,6 +18,7 @@ local Brush = require("ruins.VoxelBrush")
 local Noise = require("ruins.Noise")
 local Pal = require("ruins.RuinsPalette")
 local Terrain = require("ruins.RuinsTerrain")
+local Trees = require("ruins.RuinsTrees")
 local P = Pal.P
 
 local M = {}
@@ -25,22 +26,28 @@ local M = {}
 local sin, cos, sqrt, floor, abs, max, min, pi = math.sin, math.cos, math.sqrt, math.floor, math.abs, math.max, math.min, math.pi
 local Hash3 = Noise.Hash3
 
+-- 石材配色：按"砌块"取色（1.0 × 0.5 × 1.0m 的错缝砌块，每块一个色），
+-- 比逐格随机色更像真实的石墙；少量逐格斑点保留颗粒感。细的风化明暗交给 RuinsVoxel.shader。
+local function Block(x, y, z, salt)
+    local course = floor(y * 2.0)
+    local off = (course % 2) * 0.5
+    return Hash3(floor(x + off) + salt, course, floor(z + off) - salt)
+end
 local function Stone(x, y, z)
-    local h = Hash3(floor(x * 4), floor(y * 4), floor(z * 4))
-    if h < 0.45 then return P.STONE_A elseif h < 0.8 then return P.STONE_B elseif h < 0.95 then return P.STONE_C end
+    local h = Block(x, y, z, 0)
+    if h < 0.40 then return P.STONE_A elseif h < 0.78 then return P.STONE_B elseif h < 0.95 then return P.STONE_C end
     return P.STONE_D
 end
--- 带苔藓：越靠下越多，上表面也长
+-- 带苔藓：苔藓成片（三维噪声），靠墙脚和上表面更多
 local function MossyStone(x, y, z, base)
-    local h = Hash3(floor(x * 4) + 7, floor(y * 4), floor(z * 4))
-    local n = Noise.Value3(x * 0.8, y * 0.8, z * 0.8, 3)
-    if n > 0.62 and h < 0.7 then return P.STONE_MOSS end
-    if base ~= nil and y - base < 0.6 and h < 0.35 then return P.STONE_MOSS end
+    local n = Noise.Value3(x * 0.35, y * 0.5, z * 0.35, 3) * 0.75 + Noise.Value3(x * 1.4, y * 1.4, z * 1.4, 4) * 0.25
+    local foot = (base ~= nil) and math.max(0, 1 - (y - base) / 1.2) or 0
+    if n + foot * 0.3 > 0.68 then return P.STONE_MOSS end
     return Stone(x, y, z)
 end
 local function Marble(x, y, z)
-    local h = Hash3(floor(x * 4) + 3, floor(y * 4), floor(z * 4))
-    if h < 0.55 then return P.MARBLE_A elseif h < 0.92 then return P.MARBLE_B end
+    local h = Block(x, y, z, 3)
+    if h < 0.55 then return P.MARBLE_A elseif h < 0.95 then return P.MARBLE_B end
     return P.STONE_A
 end
 M.Stone, M.Marble, M.MossyStone = Stone, Marble, MossyStone
@@ -268,7 +275,7 @@ local function BuildFallenColumns(world)
                 local len = rng:Range(2.0, 3.6)
                 local gy = Terrain.HeightAt(cx, cz)
                 if sqrt(cx * cx + cz * cz) < Terrain.COURT_R then gy = 0 end
-                local b = Brush.New(world, { origin = Vector3(cx, gy, cz), yaw = yaw, min = { -len / 2, 0, -0.8 }, max = { len / 2, 1.6, 0.8 }, size = 0.25 })
+                local b = Brush.New(world, { origin = Vector3(cx, gy + 0.0, cz), yaw = yaw, min = { -len / 2, 0, -0.8 }, max = { len / 2, 1.6, 0.8 }, size = 0.25 })
                 b:Shape(-len / 2, 0, -0.8, len / 2, 1.6, 0.8, function(x, y, z)
                     local dy, dz = y - 0.72, z
                     local d = sqrt(dy * dy + dz * dz)
@@ -436,6 +443,30 @@ local function BuildInnerParapet(world)
     end
 end
 
+-- ---------------------------------------------------------------- 大阶梯（龙庭 ↔ 内环，南北各一条）
+-- 台面高度与地形碰撞层一致（Terrain.StairY）；每级前沿一条浅色压边，踏面中间磨损发暗
+local function BuildStairs(world)
+    local hw = Terrain.STAIR_HALF
+    for _, sz in ipairs({ -1, 1 }) do
+        local zA, zB = sz * (Terrain.COURT_R - 0.5), sz * Terrain.STAIR_END
+        local b = Brush.New(world, { min = { -hw, -1.0, min(zA, zB) }, max = { hw, Terrain.RING_Y, max(zA, zB) }, size = 0.25 })
+        b:Shape(-hw, -1.0, min(zA, zB), hw, Terrain.RING_Y, max(zA, zB), function(x, y, z)
+            local d = abs(z) - Terrain.COURT_R
+            if d < -0.5 then return nil end
+            local top = (d < 0) and 0.0 or Terrain.StairY(z)
+            if y > top then return nil end
+            local edge = (d >= 0) and ((d % 1.0) < 0.25) or false
+            if y > top - 0.25 then
+                if edge then return P.MARBLE_A end
+                if abs(x) < 1.2 and Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.5 then return P.TILE_B end
+                return Marble(x, y, z)
+            end
+            return Stone(x, y, z)
+        end)
+        Keep(b:Finish({}))
+    end
+end
+
 -- ---------------------------------------------------------------- 外城墙 + 角楼 + 城门
 M.WALL_R = Terrain.WALL_R
 local function BuildOuterWall(world)
@@ -450,7 +481,8 @@ local function BuildOuterWall(world)
         local zs = { sin(a0) * (R + 2), sin(a1) * (R + 2), sin(a0) * (R - 2), sin(a1) * (R - 2) }
         local x0, x1 = min(xs[1], xs[2], xs[3], xs[4]), max(xs[1], xs[2], xs[3], xs[4])
         local z0, z1 = min(zs[1], zs[2], zs[3], zs[4]), max(zs[1], zs[2], zs[3], zs[4])
-        local b = Brush.New(world, { min = { x0, baseY - 1, z0 }, max = { x1, baseY + H + 1.5, z1 }, size = 0.5 })
+        local b = Brush.New(world, { min = { x0, baseY - 1, z0 }, max = { x1, baseY + H + 1.5, z1 }, size = 0.25 })
+        local function InRing(x, z) return abs(sqrt(x * x + z * z) - R) <= T * 0.5 + 0.55 end
         b:Shape(x0, baseY - 1, z0, x1, baseY + H + 1.5, z1, function(x, y, z)
             local r = sqrt(x * x + z * z)
             if abs(r - R) > T * 0.5 + 0.5 then return nil end
@@ -459,7 +491,7 @@ local function BuildOuterWall(world)
             if a < a0 or a >= a1 then return nil end
             -- 南门（-90°）/ 北门（90°）门洞 宽 5m 高 4.5m
             local gx = abs(x)
-            local isGate = gx < 2.6 and abs(abs(z) - R) < 2
+            local isGate = gx < 3.4 and abs(abs(z) - R) < 2
             local ly = y - baseY
             local ground = Terrain.HeightAt(x, z)
             if y < ground - 0.5 then return nil end
@@ -471,11 +503,24 @@ local function BuildOuterWall(world)
             local ruinE = abs(math.deg(a) - 15) < 12
             if ruinE then top = 0.8 + Noise.Value2(a * 30, 1, 52) * 1.2 end
             if isGate then
-                if ly < 4.5 then return nil end
-                -- 门拱：半圆
-                local dy = ly - 4.5
-                if gx * gx + dy * dy * 0 < 0 then return nil end
-                top = H + 1.0
+                -- 门洞：直墙 3.2m + 半圆拱（半径 2.5），拱上一圈金边，拱心石刻蓝色符文
+                local spring = 3.2
+                local archR = 2.5
+                local dy = ly - spring
+                local rr = sqrt(gx * gx + max(0, dy) * max(0, dy))
+                if ly < spring or rr < archR then
+                    if gx < archR then return nil end
+                end
+                if dy > 0 and rr < archR + 0.55 and gx < archR + 0.5 then
+                    if gx < 0.5 and rr > archR then return P.RUNE_BLUE end
+                    return P.GOLD
+                end
+                -- 门楼：比两侧墙高 1.5m，顶部垛口
+                top = H + 1.5
+                if ly > top then return nil end
+                if ly > top - 0.5 and abs(r - R) > 0.3 and (gx * 2) % 2 > 1.0 then return nil end
+                if ly > top - 1.0 and ly <= top - 0.5 then return P.GOLD_DARK end
+                return Stone(x, y, z)
             end
             -- 垛口
             if ly > top then return nil end
@@ -483,10 +528,9 @@ local function BuildOuterWall(world)
                 local m = (a * R / 1.0) % 2
                 if m > 1.0 and top >= H - 0.1 then return nil end
             end
-            if isGate and ly > H + 0.2 then return P.GOLD end
             if ly > top - 0.5 and top >= H - 0.1 then return Stone(x, y, z) end
             return MossyStone(x, y, z, baseY)
-        end)
+        end, InRing)
         Keep(b:Finish({}))
     end
     -- 角楼：4 座（45° 方向），东北的倒塌
@@ -495,7 +539,7 @@ local function BuildOuterWall(world)
         local cx, cz = cos(a) * R, sin(a) * R
         local collapsed = (i == 0)
         local h = collapsed and 7.0 or 14.0
-        local b = Brush.New(world, { min = { cx - 4, baseY - 1, cz - 4 }, max = { cx + 4, baseY + h + 6, cz + 4 }, size = 0.5 })
+        local b = Brush.New(world, { min = { cx - 4, baseY - 1, cz - 4 }, max = { cx + 4, baseY + h + 6, cz + 4 }, size = 0.25 })
         b:Shape(cx - 4, baseY - 1, cz - 4, cx + 4, baseY + h + 6, cz + 4, function(x, y, z)
             local dx, dz = x - cx, z - cz
             local d = sqrt(dx * dx + dz * dz)
@@ -526,7 +570,7 @@ local function BuildOuterWall(world)
                     return P.ROOF
                 end
             end
-        end)
+        end, function(x, z) return (x - cx) ^ 2 + (z - cz) ^ 2 <= 3.7 * 3.7 end)
         Keep(b:Finish({}))
     end
 end
@@ -536,7 +580,7 @@ local function BuildNorthHall(world)
     local cz = 60.0
     local baseY = Terrain.RING_Y
     -- 台基 20×10，三级台阶
-    local b = Brush.New(world, { min = { -12, baseY - 1, cz - 7 }, max = { 12, baseY + 13, cz + 8 }, size = 0.5 })
+    local b = Brush.New(world, { min = { -12, baseY - 1, cz - 7 }, max = { 12, baseY + 13, cz + 8 }, size = 0.25 })
     b:Shape(-12, baseY - 1, cz - 7, 12, baseY + 2, cz + 8, function(x, y, z)
         local ly = y - baseY
         local dz = z - cz
@@ -627,7 +671,7 @@ end
 local function BuildAqueduct(world)
     -- 沿 +X 方向，z = 10，从 x=36 到 x=58；桥墩落在谷底
     local z0 = 10
-    local b = Brush.New(world, { min = { 34, Terrain.RAVINE_Y - 1, z0 - 1.6 }, max = { 60, Terrain.RING_Y + 6, z0 + 1.6 }, size = 0.5 })
+    local b = Brush.New(world, { min = { 34, Terrain.RAVINE_Y - 1, z0 - 1.6 }, max = { 60, Terrain.RING_Y + 6, z0 + 1.6 }, size = 0.25 })
     local deck = Terrain.RING_Y + 3.5
     b:Shape(34, Terrain.RAVINE_Y - 1, z0 - 1.6, 60, deck + 2, z0 + 1.6, function(x, y, z)
         local dz = abs(z - z0)
@@ -661,7 +705,7 @@ end
 -- ---------------------------------------------------------------- 植被
 -- 留给谜题的空地：塔台 / 时之碑扇区 / 主路
 local function Reserved(x, z)
-    if (x + 32) ^ 2 + (z + 6) ^ 2 < 10 ^ 2 then return true end
+    if (x + 32) ^ 2 + (z + 3) ^ 2 < 10 ^ 2 then return true end
     for i = 0, 3 do
         local a = pi / 4 + i * pi / 2
         local sx, sz = cos(a) * 30.5, sin(a) * 30.5
@@ -672,82 +716,11 @@ local function Reserved(x, z)
 end
 M.Reserved = Reserved
 
+-- 树 / 灌木是网格（RuinsTrees），不是体素：树冠是起伏的叶团，枝干是弯曲的管
 local function Tree(world, x, z, o)
     if not o.force and Reserved(x, z) then return nil end
-    local gy = Terrain.HeightAt(x, z)
-    local h = o.h or 7
-    local cr = o.r or 3.2
-    local leaves = o.gold and Pal.GOLD_LEAVES or Pal.LEAVES
-    local b = Brush.New(world, { min = { x - cr - 1, gy - 0.5, z - cr - 1 }, max = { x + cr + 1, gy + h + cr, z + cr + 1 }, size = 0.25 })
-    local lean = o.lean or 0
-    local la = o.leanA or 0
-    local lx, lz = cos(la) * lean, sin(la) * lean
-    -- 树干
-    b:Shape(x - 1.5, gy - 0.5, z - 1.5, x + 1.5, gy + h, z + 1.5, function(px, py, pz)
-        local t = (py - gy) / h
-        local cx, cz = x + lx * t * t, z + lz * t * t
-        local rr = (o.trunk or 0.45) * (1.0 - 0.45 * t) + ((t < 0.08) and 0.35 or 0)
-        local dx, dz = px - cx, pz - cz
-        if dx * dx + dz * dz <= rr * rr then return P.BARK end
-    end)
-    -- 枝杈 + 树冠团（3–5 团）
-    local rng = Noise.Rng(floor(x * 31 + z * 17))
-    local tx, tz = x + lx, z + lz
-    local blobs = { { tx, gy + h, tz, cr } }
-    for i = 1, rng:Int(2, 4) do
-        local a = rng:Range(0, 2 * pi)
-        local d = rng:Range(cr * 0.5, cr * 0.9)
-        blobs[#blobs + 1] = { tx + cos(a) * d, gy + h - rng:Range(0.4, 1.8), tz + sin(a) * d, cr * rng:Range(0.55, 0.8) }
-    end
-    for _, bl in ipairs(blobs) do
-        b:Shape(bl[1] - bl[4], bl[2] - bl[4] * 0.8, bl[3] - bl[4], bl[1] + bl[4], bl[2] + bl[4] * 0.8, bl[3] + bl[4], function(px, py, pz)
-            local dx, dy, dz = (px - bl[1]) / bl[4], (py - bl[2]) / (bl[4] * 0.72), (pz - bl[3]) / bl[4]
-            local d = dx * dx + dy * dy + dz * dz
-            local n = Noise.Value3(px * 1.3, py * 1.3, pz * 1.3, 13)
-            if d < 0.65 + 0.5 * n then
-                local h2 = Hash3(floor(px * 4), floor(py * 4), floor(pz * 4))
-                -- 上半更亮
-                if dy > 0.3 and h2 < 0.5 then return leaves[2] end
-                if dy < -0.3 then return leaves[3] end
-                return leaves[(h2 < 0.6) and 1 or 2]
-            end
-        end)
-        -- 枝
-        b:Shape(min(tx, bl[1]) - 0.3, min(gy + h - 2, bl[2]) - 0.3, min(tz, bl[3]) - 0.3, max(tx, bl[1]) + 0.3, max(gy + h, bl[2]) + 0.3, max(tz, bl[3]) + 0.3, function(px, py, pz)
-            local ax, ay, az = tx, gy + h - 1.8, tz
-            local bx, by, bz = bl[1], bl[2], bl[3]
-            local abx, aby, abz = bx - ax, by - ay, bz - az
-            local l2 = abx * abx + aby * aby + abz * abz
-            if l2 < 0.01 then return nil end
-            local t = ((px - ax) * abx + (py - ay) * aby + (pz - az) * abz) / l2
-            if t < 0 or t > 1 then return nil end
-            local qx, qy, qz = ax + abx * t - px, ay + aby * t - py, az + abz * t - pz
-            if qx * qx + qy * qy + qz * qz < 0.22 * 0.22 then return P.BARK end
-        end)
-    end
-    -- 金叶古树：落叶铺地（在地表上画一层薄叶）
-    if o.gold then
-        b:Shape(x - cr - 1, gy - 0.25, z - cr - 1, x + cr + 1, gy + 0.25, z + cr + 1, function(px, py, pz)
-            local dx, dz = px - tx, pz - tz
-            if dx * dx + dz * dz > (cr + 0.8) ^ 2 then return nil end
-            local g = Terrain.HeightAt(px, pz)
-            if abs(g - gy) > 0.3 then return nil end
-            if py > g and py < g + 0.25 and Hash3(floor(px * 4), 1, floor(pz * 4)) < 0.3 then return Pal.GOLD_LEAVES[1] end
-        end)
-    end
-    return Keep(b:Finish({}))
-end
-
-local function Bush(b, x, y, z, r, rng)
-    b:Shape(x - r, y, z - r, x + r, y + r * 1.2, z + r, function(px, py, pz)
-        local dx, dy, dz = (px - x) / r, (py - y) / (r * 0.9), (pz - z) / r
-        local n = Noise.Value3(px * 2, py * 2, pz * 2, 19)
-        if dx * dx + dy * dy + dz * dz < 0.6 + 0.5 * n then
-            local h = Hash3(floor(px * 4), floor(py * 4), floor(pz * 4))
-            if h > 0.97 then return P.FLOWER_W elseif h > 0.95 then return P.FLOWER_B end
-            return Pal.LEAVES[(h < 0.5) and 1 or ((h < 0.8) and 2 or 3)]
-        end
-    end)
+    local gy = Terrain.HeightAt(x, z) - 0.05
+    return Trees.Tree(M.scene, world, x, gy, z, o)
 end
 
 local function Crystal(b, x, y, z, h, r, tilt, a)
@@ -791,52 +764,31 @@ local function BuildVegetation(world)
         local x, z = cos(a) * r, sin(a) * r
         if abs(x) > 6 then Tree(world, x, z, { h = rng:Range(4.5, 6), r = rng:Range(2.0, 2.8), lean = 0.5, leanA = a }) end
     end
-    -- 灌木 + 时晶：先撒点，再按 28m 网格分桶，每桶一个体积（体积尺寸 ≤ 255 格）
-    local items = {}
+    -- 灌木（网格叶团）
     for i = 1, 160 do
         local x, z = rng:Range(-68, 68), rng:Range(-68, 68)
         local r = sqrt(x * x + z * z)
         local gy = Terrain.HeightAt(x, z)
         local ok = r > 27 and r < 68 and abs(x) > 4.5 and gy <= Terrain.RING_Y + 0.6 and gy >= Terrain.RING_Y - 0.1
             and abs(r - M.WALL_R) > 2.5 and (r < Terrain.RAVINE_IN - 1 or r > Terrain.RAVINE_OUT + 1)
-        if ok and not Reserved(x, z) then items[#items + 1] = { kind = "bush", x = x, z = z, y = gy, r = rng:Range(0.6, 1.2) } end
+        if ok and not Reserved(x, z) then Trees.Bush(M.scene, x, gy - 0.05, z, rng:Range(0.6, 1.2), rng) end
     end
-    -- 峡谷里的时晶簇（发光，给峡谷底提供蓝色光源感）
+    -- 峡谷里的时晶簇（网格六棱柱，发光，给峡谷底提供蓝色光源感）
+    local nCrystal = 0
     for i = 1, 40 do
         local a = rng:Range(0, 2 * pi)
         local rr = rng:Range(Terrain.RAVINE_IN + 2, Terrain.RAVINE_OUT - 2)
         local x, z = cos(a) * rr, sin(a) * rr
         if abs(x) > 5 then
-            local gy = Terrain.HeightAt(x, z)
             for k = 1, rng:Int(2, 4) do
-                items[#items + 1] = { kind = "crystal", x = x + rng:Range(-0.8, 0.8), z = z + rng:Range(-0.8, 0.8), y = gy,
-                    h = rng:Range(1.2, 3.2), r = rng:Range(0.25, 0.45), tilt = rng:Range(0, 0.35), a = rng:Range(0, 2 * pi) }
+                local px, pz = x + rng:Range(-0.8, 0.8), z + rng:Range(-0.8, 0.8)
+                Trees.Crystal(M.scene, px, Terrain.HeightAt(px, pz), pz, rng:Range(1.2, 3.2), rng:Range(0.22, 0.4),
+                    rng:Range(0, 0.4), rng:Range(0, 2 * pi), rng:Next() < 0.3)
+                nCrystal = nCrystal + 1
             end
         end
     end
-    local CELL = 28
-    local buckets = {}
-    for _, it in ipairs(items) do
-        local key = floor((it.x + 84) / CELL) * 100 + floor((it.z + 84) / CELL)
-        local bk = buckets[key]
-        if bk == nil then bk = {}; buckets[key] = bk end
-        bk[#bk + 1] = it
-    end
-    for _, bk in pairs(buckets) do
-        local x0, x1, z0, z1, y0, y1 = 1e9, -1e9, 1e9, -1e9, 1e9, -1e9
-        for _, it in ipairs(bk) do
-            local e = (it.kind == "crystal") and (it.h * 0.4 + 0.6) or (it.r + 0.2)
-            x0, x1 = min(x0, it.x - e), max(x1, it.x + e)
-            z0, z1 = min(z0, it.z - e), max(z1, it.z + e)
-            y0, y1 = min(y0, it.y - 0.5), max(y1, it.y + ((it.kind == "crystal") and it.h or it.r * 1.3) + 0.3)
-        end
-        local b = Brush.New(world, { min = { x0, y0, z0 }, max = { x1, y1, z1 }, size = 0.25, name = "veg" })
-        for _, it in ipairs(bk) do
-            if it.kind == "bush" then Bush(b, it.x, it.y, it.z, it.r, rng)
-            else Crystal(b, it.x, it.y, it.z, it.h, it.r, it.tilt, it.a) end
-        end
-        Keep(b:Finish({}))
-    end
+    print("RuinsBuild: crystals " .. nCrystal)
 end
 
 -- ---------------------------------------------------------------- 悬浮碎岩（纯视觉，缓慢漂浮旋转）
@@ -912,12 +864,14 @@ end
 
 -- ---------------------------------------------------------------- 入口
 ---@param world VoxelPhysicsWorld
-function M.Build(world)
+---@param scene Scene
+function M.Build(world, scene)
+    M.scene = scene
     local t0 = os.clock()
     local steps = {
         { "court", BuildCourtFloor }, { "altar", BuildAltar }, { "colonnade", BuildColonnade },
         { "fallen", BuildFallenColumns }, { "dome", BuildDomeRibs }, { "steles", BuildSteleBases },
-        { "parapet", BuildInnerParapet }, { "wall", BuildOuterWall }, { "hall", BuildNorthHall },
+        { "parapet", BuildInnerParapet }, { "stairs", BuildStairs }, { "wall", BuildOuterWall }, { "hall", BuildNorthHall },
         { "aqueduct", BuildAqueduct }, { "vegetation", BuildVegetation }, { "floaters", BuildFloaters },
     }
     for _, s in ipairs(steps) do

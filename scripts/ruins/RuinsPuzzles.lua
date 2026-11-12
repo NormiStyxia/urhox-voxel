@@ -50,8 +50,8 @@ end
 ---@param b VoxelBrush
 local function Harvest(world, b)
     local vox = b:Collect()
-    local o = { voxels = vox, dims = { b.nx, b.ny, b.nz }, origin = b.origin + b.rot * Vector3(b.lmin[1], b.lmin[2], b.lmin[3]), yaw = b.yaw, size = b.s }
-    world:RemoveVolume(b.volume)
+    local o = { voxels = vox, dims = { b.nx, b.ny, b.nz }, origin = b.origin + b.rot * Vector3(b.lmin[1] or 0, b.lmin[2] or 0, b.lmin[3] or 0), yaw = b.yaw, size = b.s }
+    b.volume:Dispose()
     return o
 end
 
@@ -77,7 +77,7 @@ local function BuildGateRubble(world)
     -- 填满门洞下半部，确保过不去（门洞宽 5.2、高 4.5）
     b:Shape(-2.6, Terrain.RING_Y, -R - 0.8, 2.6, Terrain.RING_Y + 3.0, -R + 0.8, function(x, y, z)
         local h = Hash3(floor(x * 4), floor(y * 4), floor(z * 4))
-        return Pal.RUBBLES[(h < 0.4) and 1 or ((h < 0.8) and 2 or 3)]
+        return Pal.Pick(Pal.RUBBLES, h)
     end)
     local v = b:Finish({ destructible = true })
     M.gateRubble = v
@@ -138,9 +138,9 @@ local function BuildBridge(world, scene)
         local pz = cz + rng:Range(-1.5, 1.5)
         -- 靠两岸的碎块挂在岸边台阶上，中段落到谷底
         local edgeK = abs(cz - (-44.0)) / 5.5
-        local gy = Terrain.HeightAt(px, pz)
+        local gy = math.max(Terrain.HeightAt(px, pz), Terrain.CollideHeight(px, pz))
         local y = gy + 0.05
-        if edgeK > 0.75 then y = max(gy, Terrain.RING_Y - 5.5) + 0.05 end
+        if edgeK > 0.75 then y = max(gy + 0.0, Terrain.RING_Y - 5.5) + 0.05 end
         local rot = Quaternion(rng:Range(-35, 35), rng:Range(0, 360), rng:Range(-35, 35))
         return Vector3(px - p.nx * s * 0.5, y, pz - p.nz * s * 0.5), rot
     end
@@ -166,23 +166,22 @@ end
 --        地面 y=6  ──┴────┴──▆(矮墙 1.1m)──────────
 -- 诺米跳高约 1.4m：地面 → 矮墙(7.1) → 冻结碎块(8~10) → 塔顶(11)。
 -- 冻结 10 秒；失败了对巨石施放回溯，碎块飞回原位重新挂好。
-M.TOWER = { x = -36.0, z = -6.0, h = 5.0 }
-M.KEY_POS = Vector3(-36.0, Terrain.RING_Y + 5.0 + 0.9, -6.0)
+M.TOWER = { x = -36.0, z = -6.0, h = 4.25 }
+M.KEY_POS = Vector3(-36.0, Terrain.RING_Y + 4.25 + 0.9, -6.0)
 local function BuildBoulderTower(world, scene)
     local tx, tz = M.TOWER.x, M.TOWER.z
     local base = Terrain.RING_Y
     local top = base + M.TOWER.h
+    -- 塔台：4.5m 见方，塔壁光滑；顶部只有西、南两面护栏（东北角是上塔的入口）
     local b = Brush.New(world, { min = { tx - 3, base - 0.5, tz - 3 }, max = { tx + 3, top + 1.25, tz + 3 }, size = 0.25 })
     b:Shape(tx - 3, base - 0.5, tz - 3, tx + 3, top + 1.25, tz + 3, function(x, y, z)
         local dx, dz = abs(x - tx), abs(z - tz)
         local ly = y - base
         local e = (ly < 0.75) and 2.6 or 2.25
         if y > top then
-            -- 顶部护栏：西、南、北三面，东面开口（跳台方向）
-            if y > top + 1.0 then return nil end
-            if dx > 2.25 or dz > 2.25 then return nil end
-            if dx > 1.95 or dz > 1.95 then
-                if x > tx + 1.0 then return nil end
+            if y > top + 1.0 or dx > 2.25 or dz > 2.25 then return nil end
+            local west, south = x < tx - 1.95, z < tz - 1.95
+            if west or south then
                 if ((x + z) * 2) % 2 < 1.0 or y > top + 0.75 then return P.GOLD end
             end
             return nil
@@ -193,33 +192,35 @@ local function BuildBoulderTower(world, scene)
         return Build.MossyStone(x, y, z, base)
     end)
     M.towerVol = b:Finish({})
-    -- 断拱：塔顶东缘升起，拱端在 x = tx + 9.2
-    local ab = Brush.New(world, { min = { tx + 1.5, top - 0.5, tz - 1.0 }, max = { tx + 10.5, top + 4.5, tz + 1.0 }, size = 0.25 })
-    ab:Shape(tx + 1.5, top - 0.5, tz - 1.0, tx + 10.5, top + 4.5, tz + 1.0, function(x, y, z)
-        local u = (x - tx - 1.5) / 8.5
+    -- 断梁：从塔北壁伸出，向东上扬，梁端挂锁链
+    local ax, ay, az = tx + 5.0, top + 3.6, tz + 3.2
+    local ab = Brush.New(world, { min = { tx - 1.5, top - 1.0, az - 0.8 }, max = { ax + 1.2, ay + 0.8, az + 0.8 }, size = 0.25 })
+    ab:Shape(tx - 1.5, top - 1.0, az - 0.8, ax + 1.2, ay + 0.8, az + 0.8, function(x, y, z)
+        local u = (x - (tx - 1.5)) / (ax + 1.0 - (tx - 1.5))
         if u < 0 or u > 1 then return nil end
-        local cy = top + 0.4 + 3.0 * sin(u * pi * 0.5)
-        if abs(y - cy) > 0.5 or abs(z - tz) > 0.75 then return nil end
+        local cy = top - 0.6 + (ay - top + 0.6) * sin(u * pi * 0.5)
+        if abs(y - cy) > 0.5 or abs(z - az) > 0.7 then return nil end
         if u > 0.97 - 0.05 * Noise.Value2(y * 3, z * 3, 3) then return nil end
-        if abs(y - cy) > 0.3 and abs(z - tz) < 0.25 then return P.GOLD end
+        if abs(y - cy) > 0.3 and abs(z - az) < 0.25 then return P.GOLD end
         return Build.Marble(x, y, z)
     end)
     ab:Finish({})
-    -- 矮墙残段（第一级台阶）
-    local sb = Brush.New(world, { min = { tx + 4.5, base - 0.25, tz - 2.5 }, max = { tx + 6.5, base + 1.2, tz + 0.5 }, size = 0.25 })
-    sb:Shape(tx + 4.5, base - 0.25, tz - 2.5, tx + 6.5, base + 1.2, tz + 0.5, function(x, y, z)
-        local top2 = base + 0.6 + 0.5 * Noise.Value2(x * 2, z * 2, 9)
+    -- 矮墙残段（第一级台阶，巨石东侧）
+    local sx0, sz0 = tx + 6.5, az + 0.3
+    local sb = Brush.New(world, { min = { sx0, base - 0.25, sz0 }, max = { sx0 + 2.2, base + 1.3, sz0 + 2.2 }, size = 0.25 })
+    sb:Shape(sx0, base - 0.25, sz0, sx0 + 2.2, base + 1.3, sz0 + 2.2, function(x, y, z)
+        local top2 = base + 0.7 + 0.4 * Noise.Value2(x * 2, z * 2, 9)
         if y > top2 then return nil end
         return Build.MossyStone(x, y, z, base)
     end)
     sb:Finish({})
+    -- 巨石（时之物件）：中心在梁端下方
+    local bx, by, bz = ax, top + 0.6, az
     -- 锁链（视觉，无碰撞）
-    local anchor = Vector3(tx + 8.6, top + 3.0, tz)
-    local by = top + 0.8
-    local cb = Brush.New(world, { min = { anchor.x - 0.375, by + 1.0, tz - 0.375 }, max = { anchor.x + 0.375, anchor.y + 0.1, tz + 0.375 }, size = 0.125 })
-    cb:Shape(anchor.x - 0.375, by + 1.0, tz - 0.375, anchor.x + 0.375, anchor.y, tz + 0.375, function(x, y, z)
+    local cb = Brush.New(world, { min = { ax - 0.375, by + 1.2, az - 0.375 }, max = { ax + 0.375, ay - 0.3, az + 0.375 }, size = 0.125 })
+    cb:Shape(ax - 0.375, by + 1.2, az - 0.375, ax + 0.375, ay - 0.3, az + 0.375, function(x, y, z)
         local k = floor((y - by) / 0.375)
-        local dx, dz = x - anchor.x, z - tz
+        local dx, dz = x - ax, z - az
         if k % 2 == 0 then
             if abs(dz) < 0.07 and abs(abs(dx) - 0.13) < 0.07 then return P.GOLD_DARK end
         else
@@ -227,14 +228,12 @@ local function BuildBoulderTower(world, scene)
         end
     end)
     M.chain = cb:Finish({ visual = true })
-    -- 巨石（时之物件）
-    local bx, bz = anchor.x, tz
     local bb = Brush.New(world, { min = { bx - 2.0, by - 1.9, bz - 2.0 }, max = { bx + 2.0, by + 1.9, bz + 2.0 }, size = 0.25 })
     bb:Shape(bx - 2.0, by - 1.9, bz - 2.0, bx + 2.0, by + 1.9, bz + 2.0, function(x, y, z)
         local dx, dy, dz = x - bx, y - by, z - bz
         local d = sqrt(dx * dx + dy * dy * 1.15 + dz * dz)
         local n = Noise.Value3(x * 0.9, y * 0.9, z * 0.9, 41)
-        if d > 1.45 + 0.35 * n then return nil end
+        if d > 1.35 + 0.35 * n then return nil end
         if abs(dy) < 0.13 then return P.GOLD end
         if Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.05 then return P.RUNE_BLUE end
         return Build.Stone(x, y, z)
@@ -243,11 +242,61 @@ local function BuildBoulderTower(world, scene)
     o.id = "boulder"
     o.world, o.scene = world, scene
     o.seed = 23
-    o.freezeTime = 10.0
+    o.freezeTime = 12.0
+    o.pieceGravity = 0.35
+    o.shatterPower = 0.35
     local obj = Add(TimeObject.New(o))
     obj.title = "悬石"
+    -- 固定分块（格坐标，16x16x17）：三块大的台阶石（权重大）+ 若干小碎块
+    obj.fixedSeeds = {
+        { 4, 4, 4, 2.4 }, { 11, 4, 11, 2.4 }, { 8, 12, 8, 2.4 },
+        { 12, 12, 3, 0.9 }, { 3, 12, 12, 0.9 }, { 13, 8, 13, 0.8 }, { 2, 8, 2, 0.8 },
+    }
+    -- 碎块飞行设计：最大的 3 块用 1.6s 飘到「台阶位」并悬停 2.5s，之后开始缓慢下坠（重力 0.35）。
+    -- 玩家在这段时间里冻结，就得到一条通往塔顶的阶梯；错过了可以回溯重来。
+    -- 台阶位（碎块中心）：碎块约 2m 高，中心 +1 ≈ 顶面。石顶 ≈ 7.0 → 8.1 → 9.2 → 塔顶 10.25（东侧无护栏）
+    -- 由矮墙向西南绕到塔东壁，每级水平间距 ≈ 2.5m、高差 1m（诺米跳高约 1.3m）
+    local slots = {
+        Vector3(tx + 5.6, base + 0.1, tz + 1.6),  -- 顶 ≈ 7.0（从矮墙 6.9 走上去）
+        Vector3(tx + 4.8, base + 1.2, tz - 1.0),  -- 顶 ≈ 8.1
+        Vector3(tx + 3.6, base + 2.3, tz - 3.2),  -- 顶 ≈ 9.2
+    }
+    M.STAIR_SLOTS = slots
+    local T_ARRIVE = 1.6
+    obj.shatterAim = function(self, pieces, rng)
+        local s = self.size
+        local order = {}
+        for i, p in ipairs(pieces) do order[i] = p end
+        table.sort(order, function(a, b2) return #a.ids > #b2.ids end)
+        for i, p in ipairs(order) do
+            local v = p.vol
+            if v ~= nil then
+                local c = p.node.worldPosition + p.node.worldRotation * Vector3(p.nx * s * 0.5, p.ny * s * 0.5, p.nz * s * 0.5)
+                local slot = slots[i]
+                if slot ~= nil then
+                    -- 「台阶石」：时间迟滞，先失重滑向台阶位并在那里悬停 ~2.5s，之后才开始下坠
+                    p.aimSlot, p.aimT = slot, 0
+                    p.aimFrom = c
+                    v.gravityFactor = 0
+                    v.linearDamping = 0
+                    v:SetCollidable(false) -- 飞行中不互相挤（到位后恢复碰撞）
+                    local d = slot - c
+                    v.linearVelocity = d * (1.0 / T_ARRIVE)
+                    v.angularVelocity = Vector3(rng:Range(-0.3, 0.3), rng:Range(-0.6, 0.6), rng:Range(-0.3, 0.3))
+                else
+                    -- 小碎块：向外散开落到塔下
+                    local away = Vector3(c.x - bx, 0, c.z - bz)
+                    if away:LengthSquared() < 0.01 then away = Vector3(1, 0, 0) end
+                    v.linearVelocity = away:Normalized() * rng:Range(1.0, 2.2) + Vector3(0, rng:Range(0.5, 1.5), 0)
+                    v.angularVelocity = Vector3(rng:Range(-3, 3), rng:Range(-3, 3), rng:Range(-3, 3))
+                end
+            end
+        end
+    end
     obj:On(function(self, ev)
-        if ev == "shatter" and M.chain ~= nil then
+        if ev == "freeze" then
+            for _, p in ipairs(self.pieces) do p.aimSlot = nil end
+        elseif ev == "shatter" and M.chain ~= nil then
             M.chain:GetNode().enabled = false
         elseif ev == "restored" and M.chain ~= nil then
             M.chain:GetNode().enabled = true
@@ -311,7 +360,7 @@ local function BuildSteles(world, scene)
             local d = 1.8 + hgt * 3.2 + rng:Range(-0.6, 0.6)
             local px = cx + out.x * d + side.x * rng:Range(-1.6, 1.6)
             local pz = cz + out.z * d + side.z * rng:Range(-1.6, 1.6)
-            local gy = Terrain.HeightAt(px, pz)
+            local gy = math.max(Terrain.HeightAt(px, pz), Terrain.CollideHeight(px, pz))
             local rot = Quaternion(rng:Range(-80, 80), rng:Range(0, 360), rng:Range(-30, 30))
             return Vector3(px - p.nx * s * 0.5, gy + 0.02, pz - p.nz * s * 0.5), rot
         end
@@ -419,7 +468,7 @@ function M.CheckGate()
                 if hit.hit and hit.volume == M.gateRubble then clear = false end
             end
         end
-        if clear then
+        if clear or now < M.gateRubbleSolid0 * 0.45 then
             M.steps.gate = true
             Emit("gate", {})
         end
@@ -439,11 +488,50 @@ function M.Build(world, scene)
     print(string.format("RuinsPuzzles: built %d time objects in %.2fs", #M.list, os.clock() - t0))
 end
 
+-- 悬石的「台阶石」：到位后悬停 HOVER 秒再恢复重力（给玩家冻结的时间窗）
+local HOVER = 2.5
+local function UpdateStairStones(dt)
+    local o = M.boulder
+    if o == nil or o.state ~= "SHATTERED" then return end
+    local sz = o.size
+    for _, p in ipairs(o.pieces) do
+        if p.aimSlot ~= nil and p.vol ~= nil and not p.frozen then
+            p.aimT = p.aimT + dt
+            local v = p.vol
+            if p.aimT < 1.6 + HOVER then
+                -- 速度伺服：沿弧线（先上抛再落位）把碎块中心拉向台阶位
+                local c = p.node.worldPosition + p.node.worldRotation * Vector3(p.nx * sz * 0.5, p.ny * sz * 0.5, p.nz * sz * 0.5)
+                local u = math.min(1.0, p.aimT / 1.6)
+                local w = u * u * (3 - 2 * u)
+                local goal = p.aimFrom:Lerp(p.aimSlot, w) + Vector3(0, math.sin(u * pi) * 1.2, 0)
+                local want = (goal - c) * 8.0
+                if want:Length() > 9.0 then want = want:Normalized() * 9.0 end
+                v.linearVelocity = want
+                v.angularVelocity = v.angularVelocity * 0.92
+                v:Activate()
+                if u >= 1.0 and not p.aimLanded then
+                    p.aimLanded = true
+                    v:SetCollidable(true)
+                end
+            else
+                v.gravityFactor = o.pieceGravity
+                v.linearDamping = 0.05
+                v:SetCollidable(true)
+                v:Activate()
+                p.aimSlot = nil
+            end
+        end
+    end
+end
+
 function M.Update(dt)
+    UpdateStairStones(dt)
     for _, o in ipairs(M.list) do o:Update(dt) end
 end
 
 -- 世界点附近的时之物件（任一碎块中心或完整物件包围球在 radius 内）
+---@param pos Vector3
+---@param radius number
 function M.FindNear(pos, radius)
     local best, bd = nil, radius
     for _, o in ipairs(M.list) do

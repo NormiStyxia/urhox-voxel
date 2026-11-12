@@ -582,7 +582,7 @@ end
 -- 销毁整条龙（切换型号用）：先从体素世界移除各部件体积，再删节点
 function Rig:Destroy()
     for _, part in pairs(self.parts) do
-        if part.volume ~= nil then self.world:RemoveVolume(part.volume) end
+        if part.volume ~= nil then part.volume:Dispose() end
     end
     self.parts = {}
     if self.root ~= nil then self.root:Remove() end

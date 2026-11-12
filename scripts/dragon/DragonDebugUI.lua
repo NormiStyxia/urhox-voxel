@@ -51,6 +51,42 @@ local function Check(label, checked, onChange)
     return UI.Checkbox { label = label, checked = checked, size = 16, onChange = function(self, v) onChange(v) end }
 end
 
+-- 时间 / 昼夜（宿主有 dayNight 时才显示，如时之遗迹）
+---@param T table
+local function TimeSection(T)
+    local dn = T.dayNight
+    if dn == nil then return UI.Panel { height = 0 } end
+    ---@type Label
+    local clock = UI.Label { text = dn:ClockText(), fontSize = 11, fontColor = { 255, 226, 170, 255 } }
+    ---@type Slider
+    local slider = nil
+    local function Set(h)
+        dn:SetHour(h)
+        if dn.lockHour ~= nil then dn.lockHour = h end
+        clock:SetText(dn:ClockText())
+    end
+    slider = UI.Slider {
+        value = dn.hour, min = 0, max = 24, step = 0.25, flexGrow = 1, flexShrink = 1,
+        onChange = function(self, v) Set(v) end,
+    }
+    local function Jump(text, h)
+        return Btn(text, function() Set(h); slider:SetValue(h) end)
+    end
+    return UI.Panel { width = "100%", gap = 4, children = {
+        SectionTitle("时间 / 昼夜"),
+        UI.Panel { flexDirection = "row", alignItems = "center", gap = 6, width = "100%", children = {
+            UI.Label { text = "时刻", fontSize = 11, width = 30, fontColor = { 200, 210, 230, 255 } }, slider, clock } },
+        UI.SimpleGrid { columns = 4, gap = 4, children = {
+            Jump("黎明", 6.0), Jump("正午", 12.0), Jump("黄昏", 17.8), Jump("夜晚", 22.0) } },
+        Check("固定白天（停在 12:00）", dn.lockHour ~= nil and math.abs(dn.lockHour - 12) < 0.01, function(v)
+            if v then Set(12.0); dn.lockHour = 12.0; slider:SetValue(12.0) else dn.lockHour = nil end
+        end),
+        Check("暂停时间（停在当前时刻）", false, function(v)
+            dn.lockHour = v and dn.hour or nil
+        end),
+    } }
+end
+
 ---@param ctrl DragonAnimationController
 ---@param T table DragonTest 模块（显示开关、相机）
 function M.Build(ctrl, T)
@@ -121,6 +157,7 @@ function M.Build(ctrl, T)
                 width = "100%", flexGrow = 1, flexShrink = 1, flexBasis = 0, minHeight = 200, scrollY = true,
                 children = {
                     UI.Panel { width = "100%", gap = 4, paddingRight = 6, children = {
+                        TimeSection(T),
                         SectionTitle("型号"),
                         UI.SimpleGrid { columns = 3, gap = 4, children = variantButtons },
                         UI.Label { whiteSpace = "normal", width = "100%", fontSize = 10, fontColor = { 170, 185, 210, 255 },

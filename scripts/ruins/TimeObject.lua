@@ -47,6 +47,13 @@ M.STATE = { WHOLE = "WHOLE", SHATTERED = "SHATTERED", FROZEN = "FROZEN", REWIND 
 ---@field restPos Vector3      碎块完整时的世界位置（体积最小角）
 ---@field restRot Quaternion
 ---@field frozen boolean
+---@field aimSlot Vector3|nil
+---@field aimT number|nil
+---@field aimFrom Vector3|nil
+---@field aimLanded boolean|nil
+---@field freezeVel Vector3|nil
+---@field freezeAng Vector3|nil
+---@field from table|nil       { pos: Vector3, rot: Quaternion }
 
 ---@class TimeObject
 ---@field id string
@@ -54,6 +61,10 @@ M.STATE = { WHOLE = "WHOLE", SHATTERED = "SHATTERED", FROZEN = "FROZEN", REWIND 
 ---@field scene Scene
 ---@field voxels table[]
 ---@field size number
+---@field center Vector3
+---@field fixedSeeds table[]|nil
+---@field shatterAim fun(self: TimeObject, pieces: TimePiece[], rng: table)|nil
+---@field radius number
 ---@field origin Vector3
 ---@field yaw number
 ---@field rot Quaternion
@@ -137,6 +148,9 @@ function M.New(o)
     self.canShatter = o.canShatter ~= false
     self.canRewind = o.canRewind ~= false
     self.canFreeze = o.canFreeze ~= false
+    self.freezeTime = o.freezeTime
+    self.pieceGravity = o.pieceGravity or 1.0  -- 碎块重力倍率（悬石用 0.4：遗迹里时间流速偏慢）
+    self.shatterPower = o.shatterPower or 1.0
     self.material = OwnMaterial(self.world, self.size)
     self.lastHover = -1
     -- 体素中心（世界坐标）的包围盒，用于瞄准高亮和距离判定
@@ -146,7 +160,7 @@ function M.New(o)
     -- 原始体素查表（rebuild 用）
     self:BuildWhole()
     if o.shattered then
-        self:Shatter({ level = o.shatterLevel or 1, point = self.center, scatter = o.startScatter, silent = true })
+        self:Shatter({ level = o.shatterLevel or 1, point = self.center, scatter = o.startScatter, silent = true, force = true })
         -- 场景开局就是碎的：碎块按 scatter 摆好后直接冻成静态（模拟「早已散落」）
         self:SettleAsRubble()
     end
@@ -181,7 +195,7 @@ end
 
 function T:RemoveWhole()
     if self.whole ~= nil then
-        self.world:RemoveVolume(self.whole)
+        self.whole:Dispose()
         self.whole = nil
     end
 end
@@ -221,10 +235,14 @@ function T:Partition(level, hitLocal)
     end
     local want = (level == 1) and rng:Int(6, 10) or rng:Int(18, 30)
     want = math.min(want, math.max(2, n // 6), MAX_PIECES)
-    -- 种子：一半撒在命中点附近（碎得更细），一半全局随机
+    -- 种子：一半撒在命中点附近（碎得更细），一半全局随机；物件可用 fixedSeeds 指定固定种子（谜题用）
     local seeds = {}
+    if level == 1 and self.fixedSeeds ~= nil then
+        for si, sd in ipairs(self.fixedSeeds) do seeds[si] = sd end
+        want = #seeds
+    end
     local d = self.dims
-    for si = 1, want do
+    for si = #seeds + 1, want do
         local near = hitLocal ~= nil and si <= want // 2
         local sx, sy, sz
         if near then
@@ -265,7 +283,8 @@ function T:Components(assign, groups)
             seen[idx] = true
             local head = 1
             while head <= #comp do
-                local v = vox[comp[head]]
+                local ci = comp[head] or 1
+                local v = vox[ci]
                 head = head + 1
                 for _, nb in ipairs(NB) do
                     local key = (v[1] + nb[1]) * 1000000 + (v[2] + nb[2]) * 1000 + (v[3] + nb[3])
@@ -313,7 +332,7 @@ function T:MakePiece(ids, dynamic, pos, rot)
     local p = { ids = ids, minI = i0, minJ = j0, minK = k0, nx = nx, ny = ny, nz = nz, track = {}, frozen = false }
     p.restPos = self:LocalToWorld(i0, j0, k0)
     p.restRot = self.rot
-    self:SpawnPieceVolume(p, dynamic, pos or p.restPos, rot or p.restRot)
+    if dynamic ~= nil then self:SpawnPieceVolume(p, dynamic, pos or p.restPos, rot or p.restRot) end
     return p
 end
 
@@ -336,6 +355,7 @@ function T:SpawnPieceVolume(p, dynamic, pos, rot)
         vol.density = 1800.0
         vol.linearDamping = 0.05
         vol.angularDamping = 0.15
+        vol.gravityFactor = self.pieceGravity
         self.world:FinalizeVolumeAsDynamic(vol)
     elseif dynamic == "static" then
         self.world:FinalizeVolume(vol)
@@ -350,7 +370,7 @@ end
 ---@param p TimePiece
 function T:RemovePieceVolume(p)
     if p.vol ~= nil then
-        self.world:RemoveVolume(p.vol)
+        p.vol:Dispose()
         p.vol, p.node = nil, nil
     end
 end
@@ -358,9 +378,9 @@ end
 -- ---------------------------------------------------------------- 碎时
 -- o = { level, point(世界命中点), dir(冲击方向), power, scatter, silent }
 function T:Shatter(o)
+    o = o or {}
     if not self.canShatter and not o.force then return false end
     if self.state == M.STATE.REWIND then return false end
-    o = o or {}
     local level = o.level or 1
     -- 已碎：再次碎时 → 把命中点附近的碎块进一步细分
     if self.state == M.STATE.SHATTERED or self.state == M.STATE.FROZEN then
@@ -379,18 +399,23 @@ function T:Shatter(o)
     for _, ids in ipairs(comps) do
         local p
         if o.scatter ~= nil then
-            p = self:MakePiece(ids, "visual")
+            -- 开局散落：直接在散落位置生成静态碎块
+            p = self:MakePiece(ids, nil)
             local pos, rot = o.scatter(self, p, rng)
-            self:RemovePieceVolume(p)
-            self:SpawnPieceVolume(p, "dynamic", pos, rot)
+            self:SpawnPieceVolume(p, "static", pos, rot)
+            p.track = { { t = 0, pos = pos, rot = rot } }
+            p.frozen = true
         else
             p = self:MakePiece(ids, "dynamic")
         end
         self.pieces[#self.pieces + 1] = p
     end
     -- 冲击：从命中点向外的径向冲量 + 沿施法方向
-    if o.point ~= nil and o.scatter == nil then
-        local power = o.power or 1.0
+    if o.scatter == nil and self.shatterAim ~= nil then
+        -- 物件自定义碎块飞行（谜题用：让碎块按设计路径散开）
+        self.shatterAim(self, self.pieces, rng)
+    elseif o.point ~= nil and o.scatter == nil then
+        local power = (o.power or 1.0) * self.shatterPower
         for _, p in ipairs(self.pieces) do
             local v = p.vol
             if v ~= nil then
@@ -409,7 +434,7 @@ function T:Shatter(o)
     self.state = M.STATE.SHATTERED
     self.recT = 0
     self.recAcc = 0
-    self:RecordAll(0)
+    if o.scatter == nil then self:RecordAll(0) end
     if not o.silent then self:Emit("shatter", { level = level, count = #self.pieces }) end
     print(string.format("TimeObject[%s]: shattered into %d pieces (level %d)", self.id, #self.pieces, level))
     return true
@@ -425,7 +450,7 @@ function T:Refine(o)
     local rng = Noise.Rng(self.seed * 17 + #self.pieces)
     for _, p in ipairs(self.pieces) do
         local c = p.node ~= nil and (p.node.worldPosition + p.node.worldRotation * Vector3(p.nx * s * 0.5, p.ny * s * 0.5, p.nz * s * 0.5)) or p.restPos
-        if (c - pt):Length() < 2.2 + math.max(p.nx, p.ny, p.nz) * s * 0.5 and #p.ids > 1 and changed < 6 then
+        if (c - pt --[[@as Vector3]]):Length() < 2.2 + math.max(p.nx, p.ny, p.nz) * s * 0.5 and #p.ids > 1 and changed < 6 then
             changed = changed + 1
             -- 把这块按 2x2x2 / 单体素切开，切出的子块继承母块当前位姿与轨迹
             local pos, rot = p.node.worldPosition, p.node.worldRotation
@@ -443,10 +468,9 @@ function T:Refine(o)
             self:RemovePieceVolume(p)
             for _, key in ipairs(order) do
                 local ids = groups[key]
-                local q = self:MakePiece(ids, "visual")
+                local q = self:MakePiece(ids, nil)
                 -- 子块在母块里的偏移（母块局部）
                 local off = Vector3((q.minI - p.minI) * s, (q.minJ - p.minJ) * s, (q.minK - p.minK) * s)
-                self:RemovePieceVolume(q)
                 local qpos = pos + rot * off
                 self:SpawnPieceVolume(q, "dynamic", qpos, rot)
                 -- 继承母块轨迹（每个采样点叠加子块偏移），保证回溯时子块沿母块的路径回家
@@ -473,13 +497,6 @@ end
 
 -- 开局散落：碎块直接变成静态（轨迹只有一个点：当前位置；回溯时从这里飞回家）
 function T:SettleAsRubble()
-    for _, p in ipairs(self.pieces) do
-        local pos, rot = p.node.worldPosition, p.node.worldRotation
-        self:RemovePieceVolume(p)
-        self:SpawnPieceVolume(p, "static", pos, rot)
-        p.track = { { t = 0, pos = pos, rot = rot } }
-        p.frozen = true
-    end
     self.state = M.STATE.FROZEN
     self.rubble = true
     self.recT = 0
@@ -550,29 +567,32 @@ end
 function T:Rewind()
     if not self.canRewind then return false end
     if self.state ~= M.STATE.SHATTERED and self.state ~= M.STATE.FROZEN then return false end
-    -- 所有碎块转为纯视觉体积，沿轨迹倒放
-    local maxT = 0
+    -- 轨迹终点：最后一次真正有运动的采样时间（之后碎块都是静止的，不浪费回放时间）
+    local lastMove = 0
+    for _, p in ipairs(self.pieces) do
+        local last = p.track[#p.track]
+        if last ~= nil and last.t > lastMove then lastMove = last.t end
+    end
+    local tEnd = math.min(lastMove + 0.15, MAX_RECORD)
     for _, p in ipairs(self.pieces) do
         if p.node ~= nil then
             local pos, rot = p.node.worldPosition, p.node.worldRotation
             self:RemovePieceVolume(p)
             self:SpawnPieceVolume(p, "visual", pos, rot)
             p.vol.material = M.Material(self.world, 2.0, self.size)
-            -- 轨迹末尾补上当前位姿
-            local tr = p.track
-            local last = tr[#tr]
-            local tNow = math.max(self.recT, last ~= nil and last.t or 0)
-            tr[#tr + 1] = { t = tNow, pos = pos, rot = rot }
-            if tNow > maxT then maxT = tNow end
+            p.track[#p.track + 1] = { t = tEnd, pos = pos, rot = rot }
+            p.from = { pos = pos, rot = rot }
         end
         p.frozen = false
     end
-    self.rewindLen = math.min(maxT, MAX_RECORD) / REWIND_SPEED
-    self.rewindFrom = maxT
+    -- 没有真实轨迹（开局散落 / 刚碎就回溯）：碎块沿弧线依次飞回
+    self.noTrack = lastMove < 0.3
+    self.rewindFrom = tEnd
+    self.rewindLen = self.noTrack and (1.8 + math.min(1.2, #self.pieces * 0.02)) or math.max(1.0, tEnd / REWIND_SPEED)
     self.rewindT = 0
     self.state = M.STATE.REWIND
     self:Emit("rewind_start", { duration = self.rewindLen + REWIND_SETTLE })
-    print(string.format("TimeObject[%s]: rewinding %d pieces, track %.2fs", self.id, #self.pieces, maxT))
+    print(string.format("TimeObject[%s]: rewinding %d pieces, track %.2fs, noTrack=%s", self.id, #self.pieces, tEnd, tostring(self.noTrack)))
     return true
 end
 
@@ -596,37 +616,42 @@ end
 function T:UpdateRewind(dt)
     self.rewindT = self.rewindT + dt
     local len = self.rewindLen
-    local settle = REWIND_SETTLE
-    -- 先倒放轨迹（加速，ease-in：开头慢一点，像时间被拽住）
-    local u = (len > 0) and Clamp(self.rewindT / len, 0, 1) or 1
+    if self.noTrack then
+        -- 依次起飞：按离原位远近错开，弧线 + 旋转回正
+        local n = #self.pieces
+        local stagger = math.min(0.8, len * 0.35)
+        for idx, p in ipairs(self.pieces) do
+            if p.node ~= nil and p.from ~= nil then
+                local delay = stagger * ((idx * 0.618) % 1.0)
+                local w = Smooth((self.rewindT - delay) / (len - stagger))
+                local dist = (p.from.pos - p.restPos):Length()
+                local lift = math.sin(w * math.pi) * (0.8 + dist * 0.25)
+                p.node.worldPosition = p.from.pos:Lerp(p.restPos, w) + Vector3(0, lift, 0)
+                p.node.worldRotation = p.from.rot:Slerp(p.restRot, w)
+            end
+        end
+        if self.rewindT >= len + 0.05 then self:Reassemble() end
+        return
+    end
+    -- 倒放录下的轨迹（smoothstep 时间曲线：起止慢、中间快），最后一小段插值到精确原位
+    local u = Clamp(self.rewindT / len, 0, 1)
     local ue = u * u * (3 - 2 * u)
     local tq = self.rewindFrom * (1 - ue)
-    local su = Smooth((self.rewindT - len) / settle)
-    for idx, p in ipairs(self.pieces) do
+    local su = Smooth((self.rewindT - len) / REWIND_SETTLE)
+    for _, p in ipairs(self.pieces) do
         if p.node ~= nil then
             local pos, rot = Sample(p.track, tq)
             if pos ~= nil then
-                -- 轨迹起点之后的最后一段：插值到原位（轨迹第一个采样点不一定精确等于原位，
-                -- 开局散落的物件轨迹只有散落位置一个点）
                 if self.rewindT > len then
                     pos = pos:Lerp(p.restPos, su)
                     rot = rot:Slerp(p.restRot, su)
-                elseif #p.track <= 2 then
-                    -- 没有真实轨迹：走一条带弧度的路径飞回
-                    local start = p.track[#p.track]
-                    local w = ue
-                    local lift = math.sin(w * math.pi) * (1.2 + (idx % 5) * 0.4)
-                    pos = start.pos:Lerp(p.restPos, w) + Vector3(0, lift, 0)
-                    rot = start.rot:Slerp(p.restRot, w)
                 end
                 p.node.worldPosition = pos
                 p.node.worldRotation = rot
             end
         end
     end
-    if self.rewindT >= len + settle then
-        self:Reassemble()
-    end
+    if self.rewindT >= len + REWIND_SETTLE then self:Reassemble() end
 end
 
 function T:Reassemble()

@@ -10,8 +10,8 @@
 -- 三个基础法术：
 --   碎时 Shatter（左键 / 1）：时之物件 → 碎成大小不一的块（按住蓄力 0.6s → 碎成最小单元）；
 --        普通可破坏体素（封门乱石等）→ 引擎弹坑 + 崩落碎块。
---   冻结 Freeze（右键 / 2）：范围 3.5m 内正在运动的时之碎块定格 10 秒，可当平台踩。
---   回溯 Rewind（R / 3）：被瞄准的时之物件（或它的任一碎块）沿轨迹倒放、重组为完整物件。
+--   冻结 Freeze（E / 2）：范围 3.5m 内正在运动的时之碎块定格 10 秒，可当平台踩。
+--   回溯 Rewind（Q / 3）：被瞄准的时之物件（或它的任一碎块）沿轨迹倒放、重组为完整物件。
 -- 配色：蓝为主（0.22, 0.46, 1.0），偏蓝紫（0.42, 0.34, 1.0），金色点缀（1.0, 0.74, 0.30）。
 -- ====================================================================
 
@@ -31,7 +31,7 @@ local function Rand(a, b) return a + (b - a) * math.random() end
 M.SPELLS = {
     {
         id = "shatter", name = "碎时", key = KEY_1, cooldown = 0.35, range = 40.0,
-        color = M.GOLD, icon = "✦",
+        color = M.GOLD, icon = "💥",
         desc = "左键：打碎时之物件 / 碎石（按住蓄力碎成最小单元）",
         cast = function(ctx, aim, charge)
             if not aim.hit then return false, "没有目标" end
@@ -41,7 +41,8 @@ M.SPELLS = {
                 if not obj.canShatter then return false, obj.title .. "无法被打碎" end
                 local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge })
                 if ok then ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge) end
-                return ok, ok and nil or "它已经碎了"
+                if ok then return true, nil end
+                return false, "它已经碎得不能再碎了"
             end
             -- 普通可破坏体素：引擎伤害（power 3：碎石硬度 1 能碎，古石硬度 4 打不动）
             local vol = aim.volume
@@ -50,7 +51,8 @@ M.SPELLS = {
                 local removed = ctx.world:ApplyDamageAtWorldPoint(aim.pos, r, 3.0)
                 ctx.world:ApplyRadialImpulse(aim.pos, r * 1.8, 1200.0 * (1 + charge))
                 ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge)
-                return removed > 0, (removed > 0) and nil or "太坚硬了"
+                if removed > 0 then return true, nil end
+                return false, "太坚硬了"
             end
             ctx.fx:Burst(aim.pos, "fizzle", 0.6)
             return false, "古石太坚硬，只有带时之印记的物件和碎石能被打碎"
@@ -59,7 +61,7 @@ M.SPELLS = {
     {
         id = "freeze", name = "冻结", key = KEY_2, cooldown = 0.6, range = 40.0,
         color = M.BLUE, icon = "❄",
-        desc = "右键：定格范围内的时之碎块 10 秒（可以踩上去）",
+        desc = "E：定格范围内的时之碎块 10 秒（可以踩上去）",
         cast = function(ctx, aim)
             local center = aim.hit and aim.pos or aim.far
             local n = 0
@@ -67,7 +69,7 @@ M.SPELLS = {
                 if obj.state == "SHATTERED" then
                     local near = false
                     for _, c in ipairs(obj:PieceCenters()) do
-                        if (c - center):Length() < 4.0 then near = true; break end
+                        if (c - center --[[@as Vector3]]):Length() < 4.0 then near = true; break end
                     end
                     if near or aim.object == obj then
                         if obj:Freeze(obj.freezeTime or 10.0) then n = n + 1 end
@@ -81,7 +83,7 @@ M.SPELLS = {
     },
     {
         id = "rewind", name = "回溯", key = KEY_3, cooldown = 0.8, range = 60.0,
-        color = M.VIOLET, icon = "⟲",
+        color = M.VIOLET, icon = "⏪",
         desc = "R：让时之物件沿时间倒流，重组为原样",
         cast = function(ctx, aim)
             local obj = aim.object
@@ -127,6 +129,7 @@ end
 function C:Ready(id) return (self.cool[id] or 0) <= 0 end
 
 function C:Cast(id, aim)
+    ---@type table|nil
     local sp = M.BY_ID[id]
     if sp == nil or not self:Ready(id) then return false end
     local ok, msg = sp.cast(self.ctx, aim, self.charge)
@@ -136,7 +139,6 @@ function C:Cast(id, aim)
     if msg ~= nil then self:Say(msg) end
     -- 施法光束（手 → 目标）
     self.ctx.fx:Beam(self.ctx.handPos(), aim.hit and aim.pos or aim.far, sp.color)
-    print(string.format("TimeSpells: cast %s ok=%s msg=%s", id, tostring(ok), tostring(msg)))
     return ok
 end
 
@@ -247,18 +249,23 @@ function F:Burst(pos, kind, k)
 end
 
 -- 施法光束：一条拉长的发光立方体，0.25 秒淡出
+---@param from Vector3
+---@param to Vector3
 function F:Beam(from, to, color)
+    ---@type table|nil
     local b = nil
-    for _, it in ipairs(self.beams) do
+    ---@type table[]
+    local beams = self.beams
+    for _, it in ipairs(beams) do
         if it.age >= it.life then b = it; break end
     end
     if b == nil then return end
-    local d = to - from
+    local d = Vector3(to.x - from.x, to.y - from.y, to.z - from.z)
     local len = d:Length()
     if len < 0.1 then return end
     b.from, b.to, b.color, b.age, b.len = from, to, color, 0, len
     b.node.enabled = true
-    b.node.position = (from + to) * 0.5
+    b.node.position = Vector3((from.x + to.x) * 0.5, (from.y + to.y) * 0.5, (from.z + to.z) * 0.5)
     b.node.rotation = Quaternion(Vector3.FORWARD, d * (1.0 / len))
     b.sm:SetMaterial(VoxelFX.CubeMaterial(color, 3.0))
     -- 沿光束的像素点

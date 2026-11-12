@@ -40,11 +40,11 @@ M.P = P
 
 -- { 槽位, 颜色, 硬度, 粗糙度, 金属度, 自发光(rgba, a=强度) }
 local DEF = {
-    { P.STONE_A, { 0.78, 0.74, 0.66 }, 4.0, 0.9 },
-    { P.STONE_B, { 0.70, 0.66, 0.58 }, 4.0, 0.9 },
-    { P.STONE_C, { 0.60, 0.57, 0.51 }, 4.0, 0.92 },
-    { P.STONE_D, { 0.50, 0.48, 0.44 }, 4.0, 0.95 },
-    { P.STONE_MOSS, { 0.42, 0.55, 0.32 }, 4.0, 0.95 },
+    { P.STONE_A, { 0.74, 0.70, 0.63 }, 4.0, 0.9 },
+    { P.STONE_B, { 0.69, 0.65, 0.58 }, 4.0, 0.9 },
+    { P.STONE_C, { 0.63, 0.60, 0.54 }, 4.0, 0.92 },
+    { P.STONE_D, { 0.56, 0.53, 0.48 }, 4.0, 0.95 },
+    { P.STONE_MOSS, { 0.44, 0.52, 0.33 }, 4.0, 0.95 },
     { P.MARBLE_A, { 0.93, 0.92, 0.88 }, 6.0, 0.55 },
     { P.MARBLE_B, { 0.85, 0.85, 0.82 }, 6.0, 0.6 },
     { P.MARBLE_BLUE, { 0.55, 0.66, 0.84 }, 6.0, 0.5 },
@@ -119,14 +119,22 @@ function M.SetFloorRune(world, k, pulse)
 end
 
 -- 随机选色工具：pick(list, h) h ∈ [0,1)
+---@param list integer[]
+---@param h number
+---@return integer
 function M.Pick(list, h)
-    return list[math.min(#list, math.floor(h * #list) + 1)]
+    return list[math.min(#list, math.floor(h * #list) + 1)] or list[1] or 0
 end
 
+---@type integer[]
 M.STONES = { P.STONE_A, P.STONE_B, P.STONE_C }
+---@type integer[]
 M.MARBLES = { P.MARBLE_A, P.MARBLE_A, P.MARBLE_B }
+---@type integer[]
 M.RUBBLES = { P.RUBBLE_A, P.RUBBLE_B, P.RUBBLE_C }
+---@type integer[]
 M.LEAVES = { P.LEAF_A, P.LEAF_B, P.LEAF_C }
+---@type integer[]
 M.GOLD_LEAVES = { P.LEAF_GOLD, P.LEAF_GOLD_B, P.LEAF_GOLD }
 
 return M
