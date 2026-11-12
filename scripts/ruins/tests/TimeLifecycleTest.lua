@@ -64,8 +64,11 @@ local function CheckRetired(before, message)
 end
 
 local function CheckCounts(volumes, bodies, message)
-    Check(world:GetVolumeCount() == baseVolumes + volumes, message .. "：世界体积数无累积/丢失")
-    Check(world:GetBodyCount() == baseBodies + bodies, message .. "：真实 solver body 数正确")
+    local actualVolumes, actualBodies = world:GetVolumeCount(), world:GetBodyCount()
+    print(string.format("TimeLifecycleCount: %s volumes=%d expected=%d bodies=%d expected=%d",
+        message, actualVolumes, baseVolumes+volumes, actualBodies, baseBodies+bodies))
+    Check(actualVolumes == baseVolumes + volumes, message .. "：世界体积数无累积/丢失")
+    Check(actualBodies == baseBodies + bodies, message .. "：真实 solver body 数正确")
 end
 
 local function CheckVoxels(object, message)

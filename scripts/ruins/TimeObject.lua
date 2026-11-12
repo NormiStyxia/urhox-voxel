@@ -220,20 +220,22 @@ function T:BuildWhole()
     volumeOwners[vol] = self
 end
 
--- RemoveVolume 文档声明会销毁 body，但 Lua 持有的 component/node 引用仍可能延迟析构。
--- 显式 Dispose 与 DragonRig 同路径；mask=0 是释放前的实时兜底，不依赖 GC。
+-- 世界注册表与 component 生命周期分别释放；单独 Dispose 可能留下 world 空槽。
+-- 先 mask=0，再注销体积并显式释放，不依赖 GC。
+---@param world VoxelPhysicsWorld
 ---@param volume VoxelVolume
-local function DisposeVolume(volume)
+local function DisposeVolume(world, volume)
     local node = volume:GetNode()
     volumeOwners[volume] = nil
     volume.collisionMask = 0
+    world:RemoveVolume(volume)
     volume:Dispose()
     if node ~= nil then node:Dispose() end
 end
 
 function T:RemoveWhole()
     if self.whole ~= nil then
-        DisposeVolume(self.whole)
+        DisposeVolume(self.world, self.whole) -- 注销世界体积并立即释放。
         self.whole = nil
     end
 end
@@ -438,7 +440,7 @@ end
 ---@param p TimePiece
 function T:RemovePieceVolume(p)
     if p.vol ~= nil then
-        DisposeVolume(p.vol)
+        DisposeVolume(self.world, p.vol) -- 同一释放路径覆盖所有碎块模式。
         p.vol, p.node, p.mode = nil, nil, nil
     end
 end

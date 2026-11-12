@@ -54,6 +54,7 @@ local function Harvest(world, b)
     local volume = b.volume
     local node = volume:GetNode()
     volume.collisionMask = 0
+    world:RemoveVolume(volume)
     volume:Dispose()
     if node ~= nil then node:Dispose() end
     return o

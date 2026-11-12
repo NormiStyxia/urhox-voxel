@@ -36,7 +36,7 @@ V.atFrame(8, function()
     game.sigils:Update(0,aim,Vector3.ZERO,nomi:CameraNode(),game.caster,1,true)
     V.assert(not game.sigils.target.node.enabled,"墙遮挡时不显示目标时钟")
     local wallNode=wall:GetNode()
-    wall:Dispose(); wallNode:Dispose()
+    world:RemoveVolume(wall); wall:Dispose(); wallNode:Dispose()
 
     local rubble = world:CreateVolume(4,4,4,.25,Vector3(300,5,299))
     rubble:GetGrid():FillBox(0,0,0,3,3,3,true)
@@ -48,12 +48,15 @@ V.atFrame(8, function()
     game.sigils:Update(0,aim,Vector3.ZERO,nomi:CameraNode(),game.caster,1,true)
     V.assert(game.sigils.target.node.enabled,"普通可破坏物件也显示时钟")
     local rubbleNode=rubble:GetNode()
-    rubble:Dispose(); rubbleNode:Dispose()
+    world:RemoveVolume(rubble); rubble:Dispose(); rubbleNode:Dispose()
 
     V.assert(object:Shatter({level=1,point=object.center,power=0}),"生成真实碎块")
     object:Freeze(10)
     local piece=object.pieces[1]
-    local voxel=object.voxels[piece.ids[1]]
+    ---@type integer[]
+    local ids=piece.ids
+    local firstId=ids[1]
+    local voxel=voxels[firstId]
     local center=piece.node.worldPosition+piece.node.worldRotation*Vector3(
         (voxel[1]-piece.minI+.5)*.25,(voxel[2]-piece.minJ+.5)*.25,(voxel[3]-piece.minK+.5)*.25)
     local pieceRay=Ray(center-Vector3(0,0,3),Vector3.FORWARD)
