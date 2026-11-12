@@ -1,0 +1,25 @@
+// Six bounded world-space patches. Height gate prevents painting another floor.
+uniform vec4 frost_patch1 = vec4(0.0);
+uniform vec4 frost_patch2 = vec4(0.0);
+uniform vec4 frost_patch3 = vec4(0.0);
+uniform vec4 frost_patch4 = vec4(0.0);
+uniform vec4 frost_patch5 = vec4(0.0);
+uniform vec4 frost_patch6 = vec4(0.0);
+uniform float frost_weight1 = 0.0;
+uniform float frost_weight2 = 0.0;
+uniform float frost_weight3 = 0.0;
+uniform float frost_weight4 = 0.0;
+uniform float frost_weight5 = 0.0;
+uniform float frost_weight6 = 0.0;
+float frost_patch_mask(vec3 p, vec4 patch, float w) {
+    float jag = sin(p.x*8.1+sin(p.z*4.0))*sin(p.z*7.3)*0.08;
+    float edge = length(p.xz-patch.xz)+jag;
+    return (1.0-smoothstep(patch.w*0.72, max(0.001,patch.w), edge))
+        * (1.0-smoothstep(0.12,0.7,abs(p.y-patch.y))) * w;
+}
+float ruins_frost(vec3 p, vec3 n) {
+    float f = max(frost_patch_mask(p,frost_patch1,frost_weight1),frost_patch_mask(p,frost_patch2,frost_weight2));
+    f=max(f,max(frost_patch_mask(p,frost_patch3,frost_weight3),frost_patch_mask(p,frost_patch4,frost_weight4)));
+    f=max(f,max(frost_patch_mask(p,frost_patch5,frost_weight5),frost_patch_mask(p,frost_patch6,frost_weight6)));
+    return f*smoothstep(0.45,0.8,n.y);
+}

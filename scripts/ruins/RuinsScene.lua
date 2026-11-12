@@ -18,6 +18,8 @@ local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
 local Puzzles = require("ruins.RuinsPuzzles")
 local Spells = require("ruins.TimeSpells")
+local Sigil = require("ruins.TimeSigil")
+local RuinsDragon = require("ruins.RuinsDragon")
 local Nomi = require("ruins.NomiController")
 local HUD = require("ruins.RuinsHUD")
 local Rig = require("dragon.DragonRig")
@@ -144,6 +146,7 @@ local function SetupLighting()
     M.dayNight = DayNight.New({ scene = scene_, zone = zone, zoneNode = lg, sun = sun, sunNode = sunNode, hour = M.START_HOUR })
     -- 尺寸与砌筑类型共同缓存；谜题、雕像、金饰不自动套墙砖纹。
     local vmats = {}
+    M.surfaceMaterials = vmats
     Brush.materialFor = function(size, masonry)
         local key = tostring(size) .. ":" .. (masonry or "plain")
         local m = vmats[key]
@@ -156,7 +159,7 @@ local function SetupLighting()
         end
         m:SetSurfaceTexture("palette_tex", world_:GetPaletteTexture())
         m:SetShaderParameter("voxel_size", Variant(size))
-        m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "ashlar" and 1.0 or 0.0)))
+        m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
         m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
         vmats[key] = m
         return m
@@ -196,7 +199,10 @@ local function SetupDragon()
     ride.lockedHint = ""
     ride.wander = { center = M.DRAGON_POS, min = 3, max = 11 }
     ride.node = nomi_.node
+    ride.controlsEnabled = function() return not M.debugOn and (pointer:IsEnabled() or M.fake~=nil) end
+    ride.onNotice = function(text) caster_:Say(text) end
     ride.onMount = function()
+        caster_.charging,caster_.charge=false,0
         nomi_.cc.enabled = false
         M.mounted = true
     end
@@ -207,6 +213,7 @@ local function SetupDragon()
         M.mounted = false
     end
     M.ride = ride
+    M.dragonWorld=RuinsDragon.New(M,world_,nomi_,Puzzles,Terrain)
     -- 沉睡：趴伏 + 闭眼（动画控制器没有睡眠状态，用暂停在待机第一帧并降低身体）
     M.dragonAwake = false
     M.sleepK = 1.0
@@ -293,7 +300,8 @@ function M.Start()
     nomi_ = Nomi.New(scene_, world_, M.SPAWN, 0)
     renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera()))
     fx_ = Spells.NewFX(scene_)
-    caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_,
+    M.sigils=Sigil.New(scene_)
+    caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_, sigils = M.sigils,
         handPos = function() return nomi_:HandPos() end })
     SetupDragon()
 
@@ -431,7 +439,7 @@ local function UpdateAim()
         obj.hoverTarget = 1
         local st = ({ WHOLE = "完整", SHATTERED = "破碎中", FROZEN = "已碎", REWIND = "回溯中" })[obj.state] or ""
         if obj.state == "FROZEN" and not obj.rubble then st = "冻结" end
-        HUD.SetTarget(string.format("◆ %s · %s", obj.title or obj.id, st))
+        HUD.SetTarget(string.format("◆ %s · %s%s", obj.title or obj.id, st, obj.canRewind and "  [Q 回溯]" or ""),obj)
     elseif aim.hit and aim.volume ~= nil and aim.volume.destructible and aim.volume ~= Puzzles.gateRubble then
         HUD.SetTarget("")
     elseif aim.hit and aim.volume == Puzzles.gateRubble then
@@ -443,20 +451,13 @@ local function UpdateAim()
 end
 
 local function HandleSpells(dt, aim)
-    if M.mounted then return end
+    if M.mounted then caster_.charging,caster_.charge=false,0; return end
     local testInput = M.fake ~= nil or M.fakePress ~= nil
-    if M.debugOn or (not pointer:IsEnabled() and not testInput) then return end
-    local lmb = (pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1)
-    if pointer:CanAttack() or Down(KEY_1) then
-        -- 碎时：按下开始蓄力，松开施放
-        if lmb then
-            if not caster_.charging and caster_:Ready("shatter") then caster_.charging = true; caster_.charge = 0 end
-        elseif caster_.charging then
-            caster_:Cast("shatter", aim)
-            caster_.charging = false
-            caster_.charge = 0
-        end
+    if M.debugOn or (not pointer:IsEnabled() and not testInput) then
+        caster_.charging,caster_.charge=false,0; return
     end
+    local lmb = (pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1)
+    caster_:HandleCharge(lmb,aim,true)
     -- 冻结 E、回溯 Q（不用鼠标右键）；数字键 2 / 3 保留给测试脚本
     if Press(KEY_E) or Press(KEY_2) then caster_:Cast("freeze", aim) end
     if Press(KEY_Q) or Press(KEY_3) then caster_:Cast("rewind", aim) end
@@ -466,6 +467,9 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
     local dt = eventData["TimeStep"]:GetFloat()
     if nomi_ == nil or M.mounted or (M.ride ~= nil and M.ride.mode ~= "free") then return end
+    if M.debugOn or (not pointer:IsEnabled() and M.fake==nil) then
+        nomi_:Move(dt,0,0,false,false,false); return
+    end
     local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
     local r = (Down(KEY_D) and 1 or 0) - (Down(KEY_A) and 1 or 0)
     nomi_:Move(dt, f, r, Down(KEY_SHIFT), Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0)
@@ -486,6 +490,15 @@ function Ruins_HandleUpdate(eventType, eventData)
     M.ride.externalGround = nomi_.cc.onGround
     M.ride:Update(dt, nomi_.camYaw)
     ctrl:Update(dt)
+    if M.ride.mode=="mounted" then
+        M.ride:SeatPose(); M.ride:AttachToSaddle()
+        M.ride.pos=nomi_.node.worldPosition
+    end
+    if M.mounted then
+        local a=nomi_:Aim(100)
+        M.breath.aimTarget=a.hit and a.pos or a.far
+        HUD.SetTarget(ctrl.loco.airborne and "L 降落后可吐息" or "B 吐息 · 朝准星方向喷射")
+    else M.breath.aimTarget=nil end
     M.breath:Update()
     if not M.dragonAwake then
         ctrl.input.move, ctrl.input.turn = 0, 0
@@ -507,10 +520,12 @@ function Ruins_HandleUpdate(eventType, eventData)
         end
     end
     ApplySleepPose(dt)
+    M.dragonWorld:Update(dt)
     -- 谜题 / 法术
     local aim = (not M.mounted) and UpdateAim() or { hit = false, dir = Vector3.FORWARD, far = Vector3.ZERO }
     HandleSpells(dt, aim)
     caster_:Update(dt)
+    M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn)
     Puzzles.Update(dt)
     Puzzles.CheckGate()
     Puzzles.UpdateKey(time_, nomi_:Position())
@@ -540,7 +555,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     -- 动画
     if M.ride.mode == "free" then nomi_:Animate(dt, caster_.charging or caster_.castAnim > 0) end
     -- HUD
-    HUD.UpdateSlots(caster_.cool, caster_.charging and caster_.charge or 0)
+    HUD.UpdateSlots(caster_.cool, caster_.charging and caster_.charge or 0,Spells.ShatterRadius(caster_.charge))
     if banner.t > 0 then
         banner.t = banner.t - dt
         if banner.t <= 0 then HUD.SetMessage(caster_.message) end
@@ -552,7 +567,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         if M.ride.locked or M.ride.mode == "free" and (h == nil or h:find("WASD")) then h = "" end
         HUD.SetHint(h)
     end
-    HUD.SetCrossVisible(not M.mounted)
+    HUD.SetCrossVisible(not M.debugOn)
 end
 
 function Ruins_HandlePostUpdate(eventType, eventData)

@@ -890,6 +890,7 @@ function C:Update(rawDt)
 end
 
 function C:Step(dt)
+    local oldPos,oldYaw,oldAlt=self.loco.pos,self.loco.yaw,self.loco.alt
     -- 演示序列
     local demo = self.demo
     if demo ~= nil then
@@ -939,6 +940,8 @@ function C:Step(dt)
         L.bank = Damp(L.bank, 0, 4, dt)
         L.pitch = Damp(L.pitch, 0, 4, dt)
     end
+
+    if self.resolveMotion then self:resolveMotion(oldPos,oldYaw,oldAlt) end
 
     -- 地面步态；空中时落足点始终投影在身体正下方（降落伸腿时 IK 去够地面）
     if not L.airborne then

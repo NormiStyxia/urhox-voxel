@@ -30,7 +30,7 @@ Ride=require('dragon.DragonRide');C=require('dragon.DragonAnimationController')
 Pose=require('dragon.DragonPose');Spec=require('dragon.DragonSpec');Sculpt=require('dragon.DragonSculpt')
 checks=0
 local function check(ok,label)checks=checks+1;assert(ok,label)end
-local c=setmetatable({state='IDLE',layers={},params={walkSpeed=1.6,flySpeed=8,flapHz=.75,amp=1},
+local c=setmetatable({S=1,vS=1,state='IDLE',layers={},params={walkSpeed=1.6,flySpeed=8,flapHz=.75,amp=1},
  input={move=0,turn=0,climb=0},loco={pos=Vector3(0,0,0),yaw=0,airborne=false,bank=0,
  speed=8,alt=6,altTarget=6,vy=0,pitch=0},flapPhase=0},C)
 local node={worldPosition=Vector3(0,3,0),WorldToLocal=function(_,p)return p end}

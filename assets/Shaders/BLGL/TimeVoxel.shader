@@ -65,7 +65,7 @@ void fragment() {
     if (mode < 0.5) {
         // 无常驻逐格发光，也不把复原成功提示铺在全部体素边缘。
         emission *= mix(1.0, 0.12, restored);
-        emission += blue_color.rgb * fres * clamp(hover, 0.0, 1.0) * 0.22 * s * (1.0 - restored);
+        // Selected rim is applied to every state below.
     } else if (mode < 1.5) {
         // 冻结：冷色调 + 冰面高光
         vec3 ice = mix(blue_color.rgb, violet_color.rgb, 0.35 + 0.3 * h);
@@ -86,6 +86,10 @@ void fragment() {
         emission += gold_color.rgb * spark * 2.5 * s;
         emission += gold_color.rgb * (1.0 - smoothstep(0.02, 0.07, edge)) * 0.8 * s;
     }
+
+    float selection = clamp(hover, 0.0, 1.0);
+    emission += mix(blue_color.rgb, gold_color.rgb, 0.3) * (0.12 + fres * 2.4) * selection;
+    base = mix(base, base * 0.85 + blue_color.rgb * 0.15, selection);
 
     // 石材表面有细颗粒，但不是按体素单元描边。
     float stone = step(99.5, idx) * (1.0 - step(108.5, idx));

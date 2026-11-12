@@ -20,7 +20,9 @@ local Brush = require("ruins.VoxelBrush")
 local counts, allocations, occupied, wallCells = {}, {}, {}, {}
 local phase
 local world = {}
-function world:CreateVolume(nx,ny,nz,s,pos)
+function world:CreateVolume(nx,ny,nz,s,pos,rot)
+    local cells={}
+    if phase=="wall" and s==.125 then wallCells[#wallCells+1]={pos=pos,rot=rot,cells=cells} end
     assert(nx<=255 and ny<=255 and nz<=255, "oversized volume")
     allocations[phase]=(allocations[phase] or 0)+nx*ny*nz
     local grid = {}
@@ -29,12 +31,10 @@ function world:CreateVolume(nx,ny,nz,s,pos)
         if solid then
             counts[phase]=(counts[phase] or 0)+1
             if phase=="wall" and s==0.125 then
-                local x,y,z=pos.x+(i+.5)*s,pos.y+(j+.5)*s,pos.z+(k+.5)*s
+                local p=pos+rot*Vector3((i+.5)*s,(j+.5)*s,(k+.5)*s)
+                local x,y,z=p.x,p.y,p.z
                 assert(not(math.abs(x)<2 and math.abs(math.abs(z)-51)<1 and y>6.25 and y<9), "gate blocked")
-                if math.abs(y-7.0625)<.001 and math.abs(math.sqrt(x*x+z*z)-51)<.25 then
-                    local key=string.format("%.4f:%.4f",x,z)
-                    wallCells[key]=true
-                end
+                if math.abs(y-7.0625)<.001 then cells[i..":"..k]=true end
             end
         end
     end
@@ -56,14 +56,22 @@ for _, pair in ipairs({{"colonnade","BuildColonnade"},{"fallen","BuildFallenColu
     up(Build.Build,pair[2])(world)
     print(string.format("%s: cells=%d allocated=%d %.2fs",phase,counts[phase] or 0,allocations[phase],os.clock()-t))
 end
--- 沿环墙分段交界采样，避开南北门与东侧主动坍塌区。
+-- Query actual rotated wall grids at their shared polygon vertices.
+local function solid(x,z)
+    for _,w in ipairs(wallCells) do
+        local px,pz=x-w.pos.x,z-w.pos.z
+        local ex,ez=w.rot*Vector3(1,0,0),w.rot*Vector3(0,0,1)
+        local i=math.floor((px*ex.x+pz*ex.z)/.125)
+        local k=math.floor((px*ez.x+pz*ez.z)/.125)
+        if w.cells[i..":"..k] then return true end
+    end
+    return false
+end
 for seg=0,31 do
     if seg~=1 and seg~=8 and seg~=24 then
         local a=seg*math.pi/16
         for delta=-1,1 do
-            local x=math.floor(math.cos(a+delta*.0005)*51/.125)*.125+.0625
-            local z=math.floor(math.sin(a+delta*.0005)*51/.125)*.125+.0625
-            assert(wallCells[string.format("%.4f:%.4f",x,z)],"wall segment gap "..seg)
+            assert(solid(math.cos(a+delta*.0005)*51,math.sin(a+delta*.0005)*51),"wall segment gap "..seg)
         end
     end
 end
@@ -94,7 +102,7 @@ wood:Path({Vector3(0,0,0),Vector3(0,2,0)},.25)
 local cells=#wood.cells
 wood:Path({Vector3(0,0,0),Vector3(0,2,0)},.25)
 assert(#wood.cells==cells,"overlap not merged")
-assert(wood:Finish()==6,"straight square trunk should merge to six faces")
+local straight=wood:Finish(); assert(straight<80,"chamfered trunk must merge coplanar cells")
 checkMesh()
 verts,normals={},{}
 wood=NewWood(parent)

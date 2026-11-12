@@ -115,6 +115,7 @@ local function Flat(v) return Vector3(v.x, 0, v.z) end
 
 function R:NearDragon()
     local c = self.rig.bones.chest.worldPosition
+    if self.ctrl.loco.airborne or math.abs(self.pos.y-self.rig.root.worldPosition.y)>2.5 then return math.huge end
     return (Flat(c) - Flat(self.pos)):Length()
 end
 
@@ -198,6 +199,15 @@ function R:Mount()
 end
 
 function R:Dismount()
+    local safe
+    if self.resolveDismount then
+        local reason
+        safe,reason=self.resolveDismount()
+        if not safe then
+            if self.onNotice then self.onNotice(reason) end
+            return false
+        end
+    end
     local saddle = self:SaddleNode()
     local chest = self.rig.bones.chest
     local right = chest.worldRotation * Vector3.RIGHT
@@ -207,7 +217,7 @@ function R:Dismount()
     c.params.walkSpeed = self.savedWalkSpeed
     c:Request("IDLE")
     self.mode = "free"
-    self.pos = saddle.worldPosition
+    self.pos = safe or saddle.worldPosition
     self.yaw = c.loco.yaw
     self.vy = 4.5
     self.speed = 3.2
@@ -285,7 +295,11 @@ function R:UpdateMounted(dt)
     if Press(KEY_SPACE) and (not L.airborne or c.state == "GLIDE") then c:Request("FLY") end
     if Press(KEY_L) and L.airborne then c:Request("LAND") end
     if Press(KEY_G) and L.airborne then c:Request("GLIDE") end
-    if Press(KEY_B) and self.T.breath ~= nil then self.T.breath:Trigger() end
+    if Press(KEY_B) and self.T.breath ~= nil then
+        if not self.T.breath:Trigger() and self.onNotice then
+            self.onNotice(L.airborne and "吐息需落地施放：按 L 降落" or "吐息正在准备或收招")
+        end
+    end
     local busy = (c.state == "ROAR" or c.state == "TURN" or c.state == "BREATH")
     if not busy then
         if (c.input.move > 0 or c.input.turn ~= 0) then
@@ -401,6 +415,13 @@ end
 
 -- ---------------------------------------------------------------- 总更新
 function R:Update(dt, camYaw)
+    if self.controlsEnabled and not self.controlsEnabled() then
+        local c=self.ctrl
+        c.input.move,c.input.turn,c.input.climb,c.input.sprint=0,0,0,false
+        if c.state=="WALK" then c:Request("IDLE") end
+        if self.mode=="mounting" then self:UpdateMount(dt) end
+        return
+    end
     if self.mode == "free" then
         -- external：步行由外部控制器（遗迹场景的 NomiController）负责，这里只读位置
         if self.external then
@@ -435,7 +456,7 @@ function R:Update(dt, camYaw)
         self:UpdateMounted(dt)
         local br = self.T.breath
         local bh = (br ~= nil and br:Available()) and ("  B " .. br.cfg.name) or ""
-        self.hint = "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 下龙" .. bh
+        self.hint = "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 落稳后下龙" .. bh
     end
 end
 

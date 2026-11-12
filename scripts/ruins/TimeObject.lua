@@ -152,6 +152,7 @@ function M.New(o)
     self.pieceGravity = o.pieceGravity or 1.0  -- 碎块重力倍率（悬石用 0.4：遗迹里时间流速偏慢）
     self.shatterPower = o.shatterPower or 1.0
     self.material = OwnMaterial(self.world, self.size)
+    self.effectMaterials = {}
     self.lastHover = -1
     -- 体素中心（世界坐标）的包围盒，用于瞄准高亮和距离判定
     local s = self.size
@@ -175,6 +176,16 @@ function T:Emit(ev, data)
 end
 
 -- ---------------------------------------------------------------- 完整体积
+function T:EffectMaterial(mode)
+    if self.effectMaterials[mode] == nil then
+        local m=OwnMaterial(self.world,self.size)
+        m:SetShaderParameter("mode",Variant(mode))
+        m:SetShaderParameter("hover",Variant(self.hover or 0))
+        self.effectMaterials[mode]=m
+    end
+    return self.effectMaterials[mode]
+end
+
 function T:BuildWhole()
     self:RemoveWhole() -- 幂等：世界内只保留一个完整体积。
     local s = self.size
@@ -453,7 +464,7 @@ function T:Refine(o)
     local rng = Noise.Rng(self.seed * 17 + #self.pieces)
     for _, p in ipairs(self.pieces) do
         local c = p.node ~= nil and (p.node.worldPosition + p.node.worldRotation * Vector3(p.nx * s * 0.5, p.ny * s * 0.5, p.nz * s * 0.5)) or p.restPos
-        if (c - pt --[[@as Vector3]]):Length() < 2.2 + math.max(p.nx, p.ny, p.nz) * s * 0.5 and #p.ids > 1 and changed < 6 then
+        if (c - pt --[[@as Vector3]]):Length() < (o.radius or 2.2) + math.max(p.nx, p.ny, p.nz) * s * 0.5 and #p.ids > 1 and changed < 6 then
             changed = changed + 1
             -- 把这块按 2x2x2 / 单体素切开，切出的子块继承母块当前位姿与轨迹
             local pos, rot = p.node.worldPosition, p.node.worldRotation
@@ -538,7 +549,7 @@ function T:Freeze(duration)
             self:RemovePieceVolume(p)
             self:SpawnPieceVolume(p, "static", pos, rot)
             p.frozen = true
-            p.vol.material = M.Material(self.world, 1.0, self.size)
+            p.vol.material = self:EffectMaterial(1.0)
         end
     end
     self.state = M.STATE.FROZEN
@@ -582,7 +593,7 @@ function T:Rewind()
             local pos, rot = p.node.worldPosition, p.node.worldRotation
             self:RemovePieceVolume(p)
             self:SpawnPieceVolume(p, "visual", pos, rot)
-            p.vol.material = M.Material(self.world, 2.0, self.size)
+            p.vol.material = self:EffectMaterial(2.0)
             p.track[#p.track + 1] = { t = tEnd, pos = pos, rot = rot }
             p.from = { pos = pos, rot = rot }
         end
@@ -719,6 +730,7 @@ function T:Update(dt)
     if h ~= self.lastHover then
         self.lastHover = h
         self.material:SetShaderParameter("hover", Variant(h))
+        for _,m in pairs(self.effectMaterials) do m:SetShaderParameter("hover",Variant(h)) end
     end
     local wantMode = (self.frozenWhole ~= nil) and 1.0 or 0.0
     if wantMode ~= self.lastMode then

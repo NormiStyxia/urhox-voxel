@@ -123,7 +123,7 @@ function M.Register(Controller)
             local aimW = Window(t, cfg.fireStart - 0.1, cfg.fireEnd, 0.2, 0.4)
             Poses.Neck(p, { pitch = k.neck, curve = k.curve, yaw = 2.5 * math.sin(t * 2.3) * fire,
                 headPitch = k.head + (self.breathAim or 0) * aimW + shake * math.sin(t * hz),
-                headYaw = shake * 1.4 * math.sin(t * hz * 0.83 + 1.0),
+                headYaw = (self.breathYaw or 0) * aimW + shake * 1.4 * math.sin(t * hz * 0.83 + 1.0),
                 jaw = k.jaw + 2.5 * math.sin(t * hz * 1.1) * fire })
             Poses.Tail(p, { pitch = k.tail, waveAmp = 3 + 5 * fire, wavePhase = t * (2.0 + 2.0 * fire), lag = 0.55,
                 liftAmp = 2 + 2 * fire })
@@ -302,6 +302,10 @@ function M.New(scene, rig, ctrl, variantId, ground)
     return self
 end
 
+function B:TraceSurface(origin,dir,distance)
+    return self.world:RaycastSingle(Ray(origin,dir),distance)
+end
+
 function B:Available() return self.cfg ~= nil end
 function B:Busy() return self.ctrl.state == "BREATH" end
 
@@ -315,6 +319,8 @@ function B:Trigger()
     if c.state == "BREATH" or c.state == "TAKEOFF" or c.state == "LAND" then return false end
     c.demo = nil
     c.breathAim = 0
+    c.breathYaw = 0
+    self.castId=(self.castId or 0)+1
     c:Request("BREATH")
     print("DragonBreath: trigger " .. self.cfg.name)
     return c.state == "BREATH"
@@ -740,17 +746,27 @@ function B:Update()
     local horiz = math.sqrt(dir.x * dir.x + dir.z * dir.z)
     local curPitch = math.deg(math.atan(-dir.y, math.max(horiz, 1e-4)))
     local wantPitch = math.deg(math.atan(origin.y - gy, cfg.aimDist * S))
+    if self.aimTarget then
+        local v=self.aimTarget-origin
+        wantPitch=math.deg(math.atan(-v.y,math.max(.01,math.sqrt(v.x*v.x+v.z*v.z))))
+        local desiredYaw=math.deg(math.atan(v.x,v.z))
+        local currentYaw=math.deg(math.atan(dir.x,dir.z))
+        local diff=(desiredYaw-currentYaw+180)%360-180
+        c.breathYaw=Clamp((c.breathYaw or 0)+diff*math.min(1,dt*4),-35,35)
+    end
     if active and t > cfg.fireStart - 0.25 and t < cfg.fireEnd then
         c.breathAim = Clamp((c.breathAim or 0) + (wantPitch - curPitch) * 5.0 * dt, -40, 40)
     end
 
     -- 落点
     local len = cfg.maxLen * S
-    if dir.y < -0.02 then len = math.min(len, (origin.y - gy) / -dir.y) end
-    local hit = origin + dir * len
-    local hitGround = dir.y < -0.02 and len < cfg.maxLen * S - 0.01
-    local hitG = Vector3(hit.x, c:GroundHeight(hit.x, hit.z), hit.z)
-    self.hitPos = hitG
+    local surface=self:TraceSurface(origin,dir,len)
+    local hitSurface=surface~=nil and surface.hit
+    if hitSurface then len=math.max(.05,surface.distance) end
+    local hit=origin+dir*len
+    local hitGround=hitSurface and surface.normal.y>.5
+    local hitG=hitSurface and surface.position or hit
+    self.hitPos=hitSurface and hitG or nil
     local frontQ = Quaternion(Vector3.FORWARD, dir)
 
     -- ---------------- 时间事件
@@ -862,6 +878,12 @@ function B:Update()
         if e ~= nil then
             e.node.position = emitPos
             e.node.rotation = frontQ
+            -- Stop newly emitted stream particles before the struck surface.
+            e.baseMinLife=e.baseMinLife or e.fx:GetMinTimeToLive()
+            e.baseMaxLife=e.baseMaxLife or e.fx:GetMaxTimeToLive()
+            local travel=math.max(.01,(len-.8*S)/math.max(.01,e.fx:GetMaxVelocity()))
+            e.fx:SetMinTimeToLive(math.min(e.baseMinLife,travel*.8))
+            e.fx:SetMaxTimeToLive(math.min(e.baseMaxLife,travel))
         end
     end
     local firing = fire > 0.35
@@ -898,7 +920,7 @@ function B:Update()
                     pos = origin, fn = function(mo, _, u)
                         local o2, d2 = self:MouthFrame()
                         local s2, u2 = Basis(d2)
-                        local along = (d0 + 0.25 * u) * (self.beamLen or len)
+                        local along = math.min(.98,d0 + 0.25 * u) * (self.beamLen or len)
                         local ang = a0 + u * 9.0
                         local rad = (0.55 + 0.6 * u) * S
                         mo.pos = o2 + d2 * along + (s2 * math.cos(ang) + u2 * math.sin(ang)) * rad
@@ -909,11 +931,11 @@ function B:Update()
 
     -- ---------------- 落点：冲击环 / 碎块 / 命中广播
     self.ringTimer = self.ringTimer - dt
-    if firing and hitGround and self.ringTimer <= 0 then
+    if firing and hitSurface and self.ringTimer <= 0 then
         self.ringTimer = frost and 0.38 or 0.18
-        self:SpawnRing(hitG, frost and 6.5 * S or 10 * S, frost and 0.9 or 0.65)
+        self:SpawnRing(hitG, frost and 6.5 * S or 10 * S, frost and 0.9 or 0.65,surface.normal)
         -- 冲击波掀起的地面方块
-        local n = frost and 3 or 6
+        local n = hitGround and (frost and 3 or 6) or 0
         for _ = 1, n do
             local a = math.random() * math.pi * 2
             local rr = Rand(0.5, frost and 2.5 or 4.0) * S
@@ -924,9 +946,10 @@ function B:Update()
         end
         if not frost then self:Kick(0.08) end
     end
-    if firing and hitGround then
+    if firing and hitSurface then
         local info = { pos = hitG, radius = (frost and 1.6 or 2.6) * S, power = (frost and 1.0 or 3.0) * fire,
-            element = frost and "frost" or "astral", dir = dir, origin = origin }
+            element = frost and "frost" or "astral", dir = dir, origin = origin,
+            normal=surface.normal, volume=surface.volume, cast=self.castId or 0 }
         for _, fn in ipairs(self.listeners) do fn(info) end
         -- 星陨：落点持续上升的霜烬
         if not frost then
@@ -950,9 +973,9 @@ function B:Update()
     ml.node.position = origin + dir * 0.6 * S
     ml.light.brightness = (frost and 45 or 70) * glowK * flick * FX_GAIN
     local il = self.impactLight
-    local hk = hitGround and fire or 0
+    local hk = hitSurface and fire or 0
     il.node.enabled = hk > 0.01
-    il.node.position = hitG + Vector3(0, 1.0 * S, 0)
+    il.node.position = hitG + (hitSurface and surface.normal or Vector3.UP) * .6 * S
     il.light.brightness = (frost and 70 or 140) * hk * flick * FX_GAIN
 
     self.snd.mouth.node.position = origin
@@ -997,11 +1020,12 @@ function B:UpdateBeam(origin, dir, len, fire, t, now)
     end
 end
 
-function B:SpawnRing(pos, size, life)
+function B:SpawnRing(pos, size, life, normal)
+    normal=normal or Vector3.UP
     for _, r in ipairs(self.rings) do
         if r.age >= 1.0 then
-            r.age, r.pos, r.size, r.life = 0.0, pos + Vector3(0, 0.06, 0), size, life
-            r.node.rotation = Quaternion(90, Vector3.RIGHT)
+            r.age, r.pos, r.size, r.life = 0.0, pos + normal*.06, size, life
+            r.node.rotation = Quaternion(Vector3.FORWARD,normal)
             return
         end
     end

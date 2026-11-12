@@ -57,6 +57,10 @@ for round=1,3 do
     assert(o.material.params.restored==0)
     if round==1 then
         assert(o:Freeze(3));assert(count()==#o.pieces)
+        o.hoverTarget=1;o:Update(.3)
+        assert(o.pieces[1].vol.material.params.hover>.8,"frozen fragments must show selected highlight")
+        local second=o:EffectMaterial(2)
+        assert(second~=o.pieces[1].vol.material and second~=o.material,"state materials must be independently owned")
         o:Unfreeze();assert(count()==#o.pieces)
         o:Freeze(3);assert(count()==#o.pieces)
     elseif round==2 then

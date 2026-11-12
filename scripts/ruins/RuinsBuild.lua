@@ -134,7 +134,7 @@ local function BuildCourtFloor(world)
             end
             return P.STONE_B
         end)
-        Keep(b:Finish({}))
+        Keep(b:Finish({ masonry = "floor" }))
     end
 end
 
@@ -492,23 +492,31 @@ local function BuildOuterWall(world)
     local baseY = Terrain.RING_Y
     local H = 6.0
     local T = 1.6
-    -- 32 段共享世界网格；细化外墙同时缩小稀疏包围盒。
+    -- 32 面多边形围墙：大墙面保持平整，角点/扶壁保留体素构造。
     local segments = 32
+    local halfAngle = pi / segments
+    local apothem = R * cos(halfAngle)
+    local tangent = math.tan(halfAngle)
     for seg = 0, segments - 1 do
         local a0, a1 = seg * 2 * pi / segments, (seg + 1) * 2 * pi / segments
-        local xs = { cos(a0) * (R + 2), cos(a1) * (R + 2), cos(a0) * (R - 2), cos(a1) * (R - 2) }
-        local zs = { sin(a0) * (R + 2), sin(a1) * (R + 2), sin(a0) * (R - 2), sin(a1) * (R - 2) }
-        local x0, x1 = min(xs[1], xs[2], xs[3], xs[4]), max(xs[1], xs[2], xs[3], xs[4])
-        local z0, z1 = min(zs[1], zs[2], zs[3], zs[4]), max(zs[1], zs[2], zs[3], zs[4])
-        local b = Brush.New(world, { min = { x0, baseY - 1, z0 }, max = { x1, baseY + H + 1.5, z1 }, size = M.DETAIL.wall })
+        local mid = (a0 + a1) * 0.5
+        local ca, sa = cos(mid), sin(mid)
+        local x0, x1 = -(apothem + 1.5) * tangent - 0.125, (apothem + 1.5) * tangent + 0.125
+        local z0, z1 = -1.375, 1.375
+        local function WorldXZ(x, z) return ca * (apothem + z) + sa * x, sa * (apothem + z) - ca * x end
+        -- 每片墙在自己的局部网格里沿平面建造，再整体旋转；不沿世界圆弧逐格切面。
+        local b = Brush.New(world, { origin = Vector3(ca * apothem, 0, sa * apothem), yaw = 90 - math.deg(mid),
+            min = { x0, baseY - 1, z0 }, max = { x1, baseY + H + 1.5, z1 }, size = M.DETAIL.wall })
         -- 同一竖列共享地表/角度/风化高度，避免细化后每个体素重复查地形噪声。
         local r, a, gx, isGate, ground, columnTop, along, pier
-        local function InRing(x, z)
-            r = sqrt(x * x + z * z)
+        local function InRing(lx, lz)
+            -- 接缝藏在角点，重叠半格避免多边形转角漏光。
+            if abs(lx) > (apothem + lz) * tangent + 0.0625 then return false end
+            local x, z = WorldXZ(lx, lz)
+            r = R + lz
             if abs(r - R) > T * 0.5 + 0.5 then return false end
             a = math.atan(z, x)
             if a < 0 then a = a + 2 * pi end
-            if a < a0 or a >= a1 then return false end
             gx = abs(x)
             isGate = gx < 3.4 and abs(abs(z) - R) < 2
             ground = Terrain.HeightAt(x, z)
@@ -518,7 +526,8 @@ local function BuildOuterWall(world)
             pier = min(along % 8.0, 8.0 - along % 8.0) < 0.5
             return true
         end
-        b:Shape(x0, baseY - 1, z0, x1, baseY + H + 1.5, z1, function(x, y, z)
+        b:Shape(x0, baseY - 1, z0, x1, baseY + H + 1.5, z1, function(lx, y, lz)
+            local x, z = WorldXZ(lx, lz)
             local ly = y - baseY
             if y < ground - 0.5 then return nil end
             local top = columnTop

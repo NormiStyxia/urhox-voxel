@@ -7,6 +7,7 @@
 // daynight_tint：昼夜模块统一写入，乘到最终颜色（与其他自定义材质一致）。
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
+#include "res://Shaders/BLGL/RuinsFrost.shaderinc"
 
 uniform sampler2D splat_map : filter_linear, repeat_disable;
 uniform vec3 daynight_tint = vec3(1.0);
@@ -168,4 +169,9 @@ void fragment() {
     ROUGHNESS = clamp(mix(0.92, 0.78, wPath) + (chips - 0.5) * 0.12 * bumpWeight * detailFade, 0.0, 1.0);
     METALLIC = 0.0;
     SPECULAR = mix(0.25, 0.4, wRock);
+    float ice = ruins_frost(VERTEX, NORMAL);
+    float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);
+    ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
+    ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
+    SPECULAR = mix(SPECULAR, 0.7, ice);
 }

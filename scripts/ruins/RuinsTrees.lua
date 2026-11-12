@@ -135,19 +135,25 @@ local function NewWood(parent)
     return setmetatable({ parent = parent, cells = {}, occupied = {} }, Wood)
 end
 
-function Wood:Path(pts, radius)
+function Wood:Path(pts, radius, endRadius)
     local s = BARK_CELL
     for k = 1, #pts - 1 do
         local a, b = pts[k], pts[k + 1]
         local dx, dy, dz = b.x - a.x, b.y - a.y, b.z - a.z
         local len2 = dx * dx + dy * dy + dz * dz
-        for x = math.floor((min(a.x, b.x) - radius) / s), math.floor((max(a.x, b.x) + radius) / s) do
-            for y = math.floor((min(a.y, b.y) - radius) / s), math.floor((max(a.y, b.y) + radius) / s) do
-                for z = math.floor((min(a.z, b.z) - radius) / s), math.floor((max(a.z, b.z) + radius) / s) do
+        local r0 = radius + ((endRadius or radius) - radius) * (k - 1) / (#pts - 1)
+        local r1 = radius + ((endRadius or radius) - radius) * k / (#pts - 1)
+        local bound = max(r0, r1)
+        for x = math.floor((min(a.x, b.x) - bound) / s), math.floor((max(a.x, b.x) + bound) / s) do
+            for y = math.floor((min(a.y, b.y) - bound) / s), math.floor((max(a.y, b.y) + bound) / s) do
+                for z = math.floor((min(a.z, b.z) - bound) / s), math.floor((max(a.z, b.z) + bound) / s) do
                     local px, py, pz = (x + 0.5) * s - a.x, (y + 0.5) * s - a.y, (z + 0.5) * s - a.z
                     local t = len2 > 0 and max(0, min(1, (px * dx + py * dy + pz * dz) / len2)) or 0
                     -- 方截面，不把圆管表面仅仅切成更多小面。
-                    if max(math.abs(px - dx * t), math.abs(py - dy * t), math.abs(pz - dz * t)) <= radius then
+                    local rr = r0 + (r1 - r0) * t
+                    local ax, ay, az = math.abs(px - dx * t), math.abs(py - dy * t), math.abs(pz - dz * t)
+                    -- 方截面削去过硬的四角；仍是棱面，不恢复圆管。
+                    if max(ax, ay, az) <= rr and ax + az <= rr * 1.72 then
                         local key = CellKey(x, y, z)
                         if not self.occupied[key] then
                             self.occupied[key] = true
@@ -255,13 +261,13 @@ function M.Tree(scene, world, x, gy, z, o)
             local t = cuts[s] + (cuts[s + 1] - cuts[s]) * k / 4
             pts[#pts + 1] = TrunkAt(t)
         end
-        wood:Path(pts, tr * (1.0 - 0.28 * (s - 1)))
+        wood:Path(pts, tr * (1.0 - 0.66 * cuts[s]), tr * (1.0 - 0.66 * cuts[s + 1]))
     end
     -- 根部隆起：4 条短根
     for i = 0, 3 do
         local a = i * pi / 2 + rng:Range(-0.4, 0.4)
         local d = Vector3(cos(a), 0, sin(a))
-        wood:Path({ Vector3(0, 0.9, 0) + d * (tr * 0.2), Vector3(0, 0.35, 0) + d * (tr * 1.0), d * (tr * 2.0) + Vector3(0, -0.1, 0) }, tr * 0.38)
+        wood:Path({ Vector3(0, 0.9, 0) + d * (tr * 0.2), Vector3(0, 0.35, 0) + d * (tr * 1.0), d * (tr * 2.0) + Vector3(0, -0.1, 0) }, tr * 0.42, tr * 0.09)
     end
     -- 树冠：顶团 + 3–5 个侧团（每个侧团一根枝伸过去）+ 填缝小团，全部是叶片卡
     local top = TrunkAt(1.0)
@@ -278,7 +284,7 @@ function M.Tree(scene, world, x, gy, z, o)
         local p = top + Vector3(cos(a) * d, -rng:Range(0.3, 1.6), sin(a) * d)
         local fork = TrunkAt(rng:Range(0.6, 0.85))
         local mid = (fork + p) * 0.5 + Vector3(0, 0.5, 0)
-        wood:Path({ fork, mid, p }, tr * 0.32)
+        wood:Path({ fork, mid, p }, tr * 0.32, tr * 0.10)
         leaves:Clump(p + Vector3(0, 0.3, 0), cr * rng:Range(0.55, 0.75), rng)
     end
     for i = 1, 2 do

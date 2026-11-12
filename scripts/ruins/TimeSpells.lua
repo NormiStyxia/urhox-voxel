@@ -8,7 +8,7 @@
 -- 只需要往表里加条目 / 在 Cast 里套一层 modifier 处理，不用改 TimeObject。
 --
 -- 三个基础法术：
---   碎时 Shatter（左键 / 1）：时之物件 → 碎成大小不一的块（按住蓄力 0.6s → 碎成最小单元）；
+--   碎时 Shatter（左键 / 1）：时之物件 → 碎成大小不一的块（按住蓄力 1.4s → 碎成最小单元）；
 --        普通可破坏体素（封门乱石等）→ 引擎弹坑 + 崩落碎块。
 --   冻结 Freeze（E / 2）：范围 3.5m 内正在运动的时之碎块定格 10 秒，可当平台踩。
 --   回溯 Rewind（Q / 3）：被瞄准的时之物件（或它的任一碎块）沿轨迹倒放、重组为完整物件。
@@ -18,6 +18,11 @@
 local VoxelFX = require("dragon.VoxelFX")
 
 local M = {}
+M.CHARGE_SECONDS = 1.4
+function M.ShatterRadius(charge)
+    local t=math.max(0,math.min(1,charge))
+    return .9+2.3*t*t*(3-2*t)
+end
 
 M.BLUE = Color(0.25, 0.5, 1.0)
 M.VIOLET = Color(0.45, 0.38, 1.0)
@@ -32,22 +37,34 @@ M.SPELLS = {
     {
         id = "shatter", name = "碎时", key = KEY_1, cooldown = 0.35, range = 40.0,
         color = M.GOLD, icon = "💥",
-        desc = "左键：打碎时之物件 / 碎石（按住蓄力碎成最小单元）",
+        desc = "左键：打碎时之物件 / 碎石（按住蓄力扩大破坏范围）",
         cast = function(ctx, aim, charge)
             if not aim.hit then return false, "没有目标" end
             local obj = aim.object
             local level = (charge >= 1.0) and 3 or ((charge >= 0.5) and 2 or 1)
             if obj ~= nil then
                 if not obj.canShatter then return false, obj.title .. "无法被打碎" end
-                local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge })
-                if ok then ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge) end
+                local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge, radius = M.ShatterRadius(charge) })
+                if ok then
+                    ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge)
+                    local radius=M.ShatterRadius(charge)
+                    for _,other in ipairs(ctx.puzzles.list) do
+                        if other~=obj and other.canShatter and (other.center-aim.pos):Length()<radius then
+                            local delta=other.center-aim.pos
+                            local h=ctx.world:RaycastSingle(Ray(aim.pos+aim.normal*.1,delta:Normalized()),delta:Length())
+                            if not h.hit or ctx.puzzles.FindByVolume(h.volume)==other then
+                                other:Shatter({level=level,point=aim.pos,dir=aim.dir,power=1+charge*.6,radius=radius})
+                            end
+                        end
+                    end
+                end
                 if ok then return true, nil end
                 return false, "它已经碎得不能再碎了"
             end
             -- 普通可破坏体素：引擎伤害（power 3：碎石硬度 1 能碎，古石硬度 4 打不动）
             local vol = aim.volume
             if vol ~= nil and vol.destructible then
-                local r = 0.9 + 0.7 * charge
+                local r = M.ShatterRadius(charge)
                 local removed = ctx.world:ApplyDamageAtWorldPoint(aim.pos, r, 3.0)
                 ctx.world:ApplyRadialImpulse(aim.pos, r * 1.8, 1200.0 * (1 + charge))
                 ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge)
@@ -84,7 +101,7 @@ M.SPELLS = {
     {
         id = "rewind", name = "回溯", key = KEY_3, cooldown = 0.8, range = 60.0,
         color = M.VIOLET, icon = "⏪",
-        desc = "R：让时之物件沿时间倒流，重组为原样",
+        desc = "Q：让时之物件沿时间倒流，重组为原样",
         cast = function(ctx, aim)
             local obj = aim.object
             if obj == nil and aim.hit then obj = ctx.puzzles.FindNear(aim.pos, 2.5) end
@@ -126,6 +143,16 @@ function M.NewCaster(ctx)
     return self
 end
 
+function C:HandleCharge(down, aim, enabled)
+    if not enabled then self.charging,self.charge=false,0; return end
+    if down then
+        if not self.charging and self:Ready("shatter") then self.charging,self.charge=true,0 end
+    elseif self.charging then
+        self:Cast("shatter",aim)
+        self.charging,self.charge=false,0
+    end
+end
+
 function C:Ready(id) return (self.cool[id] or 0) <= 0 end
 
 function C:Cast(id, aim)
@@ -139,6 +166,9 @@ function C:Cast(id, aim)
     if msg ~= nil then self:Say(msg) end
     -- 施法光束（手 → 目标）
     self.ctx.fx:Beam(self.ctx.handPos(), aim.hit and aim.pos or aim.far, sp.color)
+    if self.ctx.sigils and aim.hit then
+        self.ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,sp.color,id=="shatter" and M.ShatterRadius(self.charge) or 2.0)
+    end
     return ok
 end
 
@@ -152,7 +182,7 @@ function C:Update(dt)
     self.messageT = math.max(0, self.messageT - dt)
     if self.messageT <= 0 then self.message = nil end
     self.castAnim = math.max(0, self.castAnim - dt)
-    if self.charging then self.charge = math.min(1.0, self.charge + dt / 0.6) end
+    if self.charging then self.charge = math.min(1.0, self.charge + dt / M.CHARGE_SECONDS) end
 end
 
 -- ---------------------------------------------------------------- 法术特效

@@ -8,7 +8,7 @@ lua,g=base.lua,base.g
 lua.execute('''
 function chargePose(L,phi)
  L.vy=L.vy or 0; L.pitch=L.pitch or 0
- local c=setmetatable({loco=L,input={climb=0},params={amp=1},flapPhase=phi},C)
+ local c=setmetatable({S=1,vS=1,loco=L,input={climb=0},params={amp=1},flapPhase=phi},C)
  return C.STATES.FLY.pose(c,0)
 end
 ''')
@@ -70,7 +70,7 @@ function flightAltitude(sprint,climb,fps)
  L.alt,L.altTarget,L.vy,L.pitch=6,6,0,0
  inp.sprint,inp.climb=sprint,climb
  prm.amp,prm.flapHz=1,.75
- local c=setmetatable({loco=L,input=inp,params=prm,flapPhase=0},C)
+ local c=setmetatable({S=1,vS=1,loco=L,input=inp,params=prm,flapPhase=0},C)
  local low,high=100,-100
  for i=1,fps*6 do
   c:FlightLogic(1/fps,true);Flight.Move(L,1/fps,true);L.pos=Vector3(0,0,0)

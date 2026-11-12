@@ -7,7 +7,7 @@ lua, g = base.lua, base.g
 lua.execute('''
 function riderPose(L)
  local angles={}
- local rider=Ride.New({ctrl={loco=L,params={walkSpeed=2}},
+ local rider=Ride.New({rig={size=1},ctrl={loco=L,params={walkSpeed=2}},
  nomiNode={WorldToLocal=function(_,v)return v end},
  nomi={bones={leg_right={worldPosition=Vector3(0,1,0)}},
  SetBone=function(_,name,x,y,z) angles[name]=x end}})

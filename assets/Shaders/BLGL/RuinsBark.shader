@@ -30,11 +30,21 @@ void fragment() {
     vec3 n = normalize(NORMAL);
     float along = abs(n.x) > abs(n.z) ? wp.z : wp.x;
     float ridge = n2(vec2(along * 18.0, wp.y * 0.8));
-    float crack = smoothstep(0.62, 0.8, ridge);
+    float crack = smoothstep(0.58, 0.76, ridge);
+    float scar = n2(vec2(along * 6.0 + n2(wp.xz * 1.5), wp.y * 2.2));
+    float footprint = max(length(dFdx(wp)), length(dFdy(wp)));
+    float detail = 1.0 - smoothstep(0.02, 0.10, footprint);
     vec3 col = mix(bark_light, bark_dark, crack * 0.8 + n2(wp.xz * 3.0 + wp.y) * 0.25);
     // 苔痕：只长在朝上 / 朝北的一侧（n.z > 0），成片
     float moss = smoothstep(0.55, 0.75, n2(vec2(along * 3.0, wp.y * 0.7))) * smoothstep(-0.2, 0.6, n.z + n.y * 0.5);
     col = mix(col, moss_color, moss * 0.6);
+    col *= 1.0 - smoothstep(0.60, 0.76, scar) * 0.18;
+    float relief = ridge * 0.007 + scar * 0.004;
+    vec3 dx = dFdx(wp), dy = dFdy(wp);
+    vec3 r1 = cross(dy, n), r2 = cross(n, dx);
+    float det = dot(dx, r1);
+    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
+    NORMAL = normalize(n - clamp(grad, vec3(-0.3), vec3(0.3)) * detail);
     ALBEDO = srgb_to_linear(col) * daynight_tint;
     ROUGHNESS = 0.92;
     METALLIC = 0.0;

@@ -31,6 +31,8 @@ local msgPanel = nil
 local clockLabel = nil
 local lastClock = nil
 local slots = {}
+local crossTicks={}
+local chargeLabel,chargeFill,chargePanel
 local ready = false
 
 local function Slot(sp, keyText)
@@ -73,9 +75,13 @@ function M.Build(spells)
     local keys = { shatter = "左键", freeze = "E", rewind = "Q" }
     local slotRow = {}
     for _, sp in ipairs(spells) do slotRow[#slotRow + 1] = Slot(sp, keys[sp.id] or "") end
+    chargeLabel=UI.Label{text="",fontSize=12,fontColor=GOLD,marginBottom=5}
+    chargeFill=UI.Panel{width=0,height=3,backgroundColor=GOLD}
+    chargePanel=UI.Panel{alignItems="center",marginBottom=22,children={chargeLabel,
+        UI.Panel{width=210,height=3,backgroundColor={60,70,95,180},children={chargeFill}}}}
     local slotBar = UI.Panel {
         position = "absolute", left = 0, right = 0, bottom = 18, alignItems = "center", pointerEvents = "none",
-        children = { UI.Panel { flexDirection = "row", gap = 10, children = slotRow } },
+        children = { chargePanel, UI.Panel { flexDirection = "row", gap = 10, children = slotRow } },
     }
     hintLabel = UI.Label { text = "", fontSize = 13, fontColor = { 225, 232, 250, 255 }, textAlign = "center" }
     local hintBar = UI.Panel {
@@ -89,8 +95,11 @@ function M.Build(spells)
     local msgBar = UI.Panel { position = "absolute", left = 0, right = 0, top = "22%", alignItems = "center", pointerEvents = "none",
         children = { msgPanel } }
     -- 准星：中心点 + 四段短线
+    crossTicks={}
     local function Tick(w, h, l, t)
-        return UI.Panel { position = "absolute", width = w, height = h, left = l, top = t, backgroundColor = { 255, 255, 255, 230 }, borderRadius = 1 }
+        local tick = UI.Panel { position = "absolute", width = w, height = h, left = l, top = t, backgroundColor = { 255, 255, 255, 230 }, borderRadius = 1 }
+        crossTicks[#crossTicks+1]=tick
+        return tick
     end
     crossPanel = UI.Panel { width = 26, height = 26, pointerEvents = "none", children = {
         Tick(4, 4, 11, 11), Tick(2, 7, 12, 0), Tick(2, 7, 12, 19), Tick(7, 2, 0, 12), Tick(7, 2, 19, 12),
@@ -116,6 +125,7 @@ function M.Build(spells)
         children = { objPanel, help, clock, cross, msgBar, hintBar, slotBar } }
     UI.SetRoot(M.root)
     msgPanel:SetVisible(false)
+    chargePanel:SetVisible(false)
 end
 
 function M.SetObjective(title, sub)
@@ -140,12 +150,18 @@ end
 
 function M.SetTarget(text, timeObj)
     if targetLabel ~= nil then targetLabel:SetText(text or "") end
+    for _,tick in ipairs(crossTicks) do tick:SetStyle({backgroundColor=timeObj and GOLD or {255,255,255,230}}) end
 end
 
 function M.SetCrossVisible(v) if crossPanel ~= nil then crossPanel:SetVisible(v) end end
 
 -- cools: { id → 剩余秒 }，charge 0..1
-function M.UpdateSlots(cools, charge)
+function M.UpdateSlots(cools, charge, radius)
+    if chargePanel then
+        chargePanel:SetVisible(charge>0)
+        chargeFill:SetStyle({width=210*charge})
+        chargeLabel:SetText(string.format("%s · %d%% · 半径 %.1fm",charge>=1 and "蓄力完成 · 松开释放" or "碎时蓄力",math.floor(charge*100),radius or 0))
+    end
     for id, s in pairs(slots) do
         local left = cools[id] or 0
         local k = (s.cd > 0) and math.min(1, left / s.cd) or 0

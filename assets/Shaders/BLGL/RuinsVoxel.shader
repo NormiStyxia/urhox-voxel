@@ -5,6 +5,7 @@
 // 断面（体素内部被打出来的面）自动用调色板的断面色。
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
+#include "res://Shaders/BLGL/RuinsFrost.shaderinc"
 
 uniform sampler2D palette_tex : filter_nearest, repeat_disable;
 #include "res://Shaders/BLGL/Voxel/VoxelPalette.shaderinc"
@@ -74,7 +75,8 @@ void fragment() {
     // 石材限定：100..108，142..144。金属、符文、草皮不受石缝影响。
     float stone = step(99.5, idx) * (1.0 - step(108.5, idx));
     float rubble = step(141.5, idx) * (1.0 - step(144.5, idx));
-    float mineral = max(stone, rubble);
+    float tile = step(138.5, idx) * (1.0 - step(141.5, idx));
+    float mineral = max(max(stone, rubble), tile);
     float footprint = max(length(dFdx(wp)), length(dFdy(wp)));
     float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
     float grain = h31(floor(wp * 40.0));
@@ -82,7 +84,7 @@ void fragment() {
 
     // 环墙采用 1.5m × 0.75m 砌石，浅缝无几何挖槽。
     float horizontal = abs(n.x) > abs(n.z) ? wp.z : wp.x;
-    if (masonry_mode > 1.5) {
+    if (masonry_mode > 1.5 && masonry_mode < 2.5) {
         horizontal = mod(atan(wp.z, wp.x) + 6.2831853, 6.2831853) * wall_radius;
     }
     float blockScale = masonry_mode > 1.5 ? 1.5 : 1.0;
@@ -100,6 +102,12 @@ void fragment() {
     float jointK = joint * detailFade * masonry;
     shade *= 1.0 - 0.16 * jointK + 0.025 * lip * detailFade * masonry;
 
+    // 中央庭院用石板尺度的磨耗与窄裂纹，不沿每个体素画格线。
+    float slabNoise = n3(wp * vec3(2.8, 1.0, 2.8));
+    float fissureField = sin(wp.x * 2.1 + wp.z * 1.3 + n3(wp * 0.8) * 9.0);
+    float fissure = (1.0 - smoothstep(0.025, 0.07 + footprint * 1.2, abs(fissureField)))
+        * smoothstep(0.50, 0.66, slabNoise) * detailFade;
+    shade *= 1.0 + tile * ((slabNoise - 0.5) * 0.22 - fissure * 0.23);
     // 石质的中尺度矿脉与细孔，补足柱身近景，避免纯白石膏感。
     float marble = step(104.5, idx) * (1.0 - step(106.5, idx));
     float veins = n3(wp * vec3(2.2, 5.0, 2.2) + vec3(g * 3.0));
@@ -121,4 +129,9 @@ void fragment() {
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
+    float ice = ruins_frost(VERTEX, NORMAL);
+    float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);
+    ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
+    ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
+    SPECULAR = mix(SPECULAR, 0.7, ice);
 }
