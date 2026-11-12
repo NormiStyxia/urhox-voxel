@@ -91,8 +91,18 @@ V.atFrame(5, function()
     end
     local ok, err = pcall(function()
         _G["input"] = mock
+        local left = VariantMap()
+        left["Button"] = MOUSEB_LEFT
+        Ruins_HandleMouseDown("MouseButtonDown", left --[[@as MouseButtonDownEventData]])
+        V.assert(mock.requests == 1, "实际场景点击恢复 MM_RELATIVE 请求而非禁止锁定")
+        mock.locked = true
+        local mode = VariantMap()
+        mode["Mode"], mode["MouseLocked"] = MM_RELATIVE, true
+        Ruins_HandleMouseModeChanged("MouseModeChanged", mode --[[@as MouseModeChangedEventData]])
+        V.assert(mock.mouseMode == MM_RELATIVE, "锁定成功回报不会被游戏撤销")
         Key(KEY_ESCAPE)
-        -- 尚无任何点击/浏览器锁定，直接按 E、Q 也必须进入真实 Cast。
+        mock.requests = 0
+        -- 尚无浏览器锁定，直接按 E、Q 也必须进入真实 Cast。
         scene.caster.cool.freeze, scene.caster.cool.rewind = 0, 0
         Key(KEY_E)
         Tick()
