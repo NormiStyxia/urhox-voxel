@@ -101,15 +101,14 @@ V.atFrame(5, function()
         local left = VariantMap()
         left["Button"] = MOUSEB_LEFT
         Ruins_HandleMouseDown("MouseButtonDown", left --[[@as MouseButtonDownEventData]])
+        V.assert(mock.requests == 0, "按下鼠标不切换模式破坏拖动")
+        local up = VariantMap()
+        up["Button"] = MOUSEB_LEFT
+        Ruins_HandleMouseUp("MouseButtonUp", up --[[@as MouseButtonUpEventData]])
         if _G["POINTER_WEB_TEST"] then
-            V.assert(mock.requests == 0, "Web 场景首次点击先激活而不争抢锁定")
+            V.assert(mock.requests == 0, "Web 纯点击先激活")
         else
-            V.assert(mock.requests == 1, "桌面首次点击正常请求锁定")
-            mock.locked = true
-            local mode = VariantMap()
-            mode["Mode"], mode["MouseLocked"] = MM_RELATIVE, true
-            Ruins_HandleMouseModeChanged("MouseModeChanged", mode --[[@as MouseModeChangedEventData]])
-            V.assert(mock.mouseMode == MM_RELATIVE, "锁定成功回报不会被游戏撤销")
+            V.assert(mock.requests == 1, "桌面纯点击松开时请求锁定")
         end
         Key(KEY_ESCAPE)
         mock.requests = 0
@@ -131,18 +130,39 @@ V.atFrame(5, function()
         mock.left = false
         Tick()
         V.assert(scene.caster.lastCast == "shatter" and not scene.caster.charging, "松开左键实际释放碎时")
-        mock.mouseMove = IntVector2(20, 0)
-        local yaw = scene.nomiCtl.camYaw
-        Tick()
-        V.assert(scene.nomiCtl.camYaw == yaw, "未锁定时只移动光标不会转视角")
-        mock.left = true
-        Tick()
-        V.assert(scene.nomiCtl.camYaw ~= yaw, "未锁定时按住左键拖动能转视角")
-        yaw = scene.nomiCtl.camYaw
-        mock.left = false
+        -- 保持帧级 mouseMove=0，只发送真实形状的鼠标事件，覆盖此前 mock 掩盖的问题。
         mock.mouseMove = IntVector2(0, 0)
+        local move = VariantMap()
+        move["X"], move["Y"] = 130, 110
+        move["DX"], move["DY"] = 0, 0
+        local yaw = scene.nomiCtl.camYaw
+        SendEvent("MouseMove", move)
+        V.assert(scene.nomiCtl.camYaw == yaw, "无按下事件时不转视角")
+        left["X"], left["Y"] = 100, 100
+        SendEvent("MouseButtonDown", left)
+        SendEvent("MouseMove", move)
+        V.assert(math.abs(scene.nomiCtl.camYaw - yaw - 3.6) < 0.001, "相对位移和轮询按键均为零时，绝对坐标拖动仍转视角")
+        V.assert(mock.requests == 0, "拖动期间没有锁定请求")
+        yaw = scene.nomiCtl.camYaw
+        SendEvent("MouseButtonUp", up)
+        move["X"] = 150
+        SendEvent("MouseMove", move)
         Tick()
-        V.assert(scene.nomiCtl.camYaw == yaw, "松开鼠标停止拖动视角")
+        V.assert(scene.nomiCtl.camYaw == yaw, "松开事件后停止转视角且不重复应用位移")
+        mock.focus = false
+        SendEvent("MouseButtonDown", left)
+        move["X"] = 140
+        SendEvent("MouseMove", move)
+        V.assert(scene.nomiCtl.camYaw ~= yaw, "引擎焦点标志滞后不阻塞已到达的拖动事件")
+        local focus = VariantMap()
+        focus["Focus"], focus["Minimized"] = false, false
+        SendEvent("InputFocus", focus)
+        yaw = scene.nomiCtl.camYaw
+        move["X"] = 160
+        SendEvent("MouseMove", move)
+        V.assert(scene.nomiCtl.camYaw == yaw, "真正失焦事件取消拖动")
+        mock.focus = true
+
         scene.ToggleDebugPanel()
         scene.caster.cool.freeze = 0
         scene.caster.lastCast = "shatter"

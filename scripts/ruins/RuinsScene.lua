@@ -57,6 +57,7 @@ local farView = false
 local isWeb = PlatformUtils.IsWebPlatform()
 local resumeHint = isWeb and "点击激活画面 · 未锁定时按住鼠标拖动视角 · 再点击可锁定" or "点击画面锁定鼠标 · Esc 释放"
 local inputTakenOver = false
+local drag = { buttons = 0, x = 0, y = 0, distance = 0, samples = 0 }
 local pointer = PointerCapture.New({
     web = isWeb,
     now = function() return GetTime():GetElapsedTime() end,
@@ -75,6 +76,9 @@ local pointer = PointerCapture.New({
     end,
     changed = function(locked, reason)
         mouseLocked = locked
+        if locked or reason == "escape" or reason == "focus" or reason == "panel" or reason == "stop" then
+            drag.buttons = 0
+        end
         if not locked then input:SetMouseVisible(true) end
         if reason ~= "fallback" and not locked and caster_ ~= nil then
             caster_.charging, caster_.charge = false, 0
@@ -302,6 +306,8 @@ function M.Start()
     SubscribeToEvent("PostUpdate", "Ruins_HandlePostUpdate")
     SubscribeToEvent("SceneUpdate", "Ruins_HandleSceneUpdate")
     SubscribeToEvent("MouseButtonDown", "Ruins_HandleMouseDown")
+    SubscribeToEvent("MouseButtonUp", "Ruins_HandleMouseUp")
+    SubscribeToEvent("MouseMove", "Ruins_HandleMouseMove")
     SubscribeToEvent("MouseModeChanged", "Ruins_HandleMouseModeChanged")
     SubscribeToEvent("KeyDown", "Ruins_HandleKeyDown")
     SubscribeToEvent("InputFocus", "Ruins_HandleInputFocus")
@@ -334,16 +340,48 @@ function M.ToggleBreathStyle() end
 function M.ApplyCamera() end
 
 -- ---------------------------------------------------------------- 输入
--- 只在一次有效的左键事件中请求；模式通知不再反向设置鼠标模式。
+-- 拖动走事件中的绝对坐标差，不依赖未锁定时可能被归零的帧级 mouseMove。
 ---@param eventType string
 ---@param eventData MouseButtonDownEventData
 function Ruins_HandleMouseDown(eventType, eventData)
     local button = eventData:GetInt("Button")
-    if button == MOUSEB_LEFT then
-        pointer:Click(HUD.IsPointerOverUI())
-    elseif (button == MOUSEB_RIGHT or button == MOUSEB_MIDDLE) and not HUD.IsPointerOverUI() then
-        pointer:Resume()
+    if button ~= MOUSEB_LEFT and button ~= MOUSEB_RIGHT and button ~= MOUSEB_MIDDLE then return end
+    -- 正常 HUD 全部是展示层；只有打开调试面板时才禁止玩法拖动。
+    if M.debugOn then return end
+    if not mouseLocked then
+        drag.buttons = drag.buttons | button
+        drag.x, drag.y = eventData:GetInt("X"), eventData:GetInt("Y")
+        drag.distance, drag.samples = 0, 0
+        print(string.format("RuinsInput: drag begin button=%d pos=%d,%d focus=%s", button, drag.x, drag.y, tostring(input.focus)))
     end
+    pointer:Resume()
+end
+
+---@param eventType string
+---@param eventData MouseMoveEventData
+function Ruins_HandleMouseMove(eventType, eventData)
+    if mouseLocked or M.debugOn or nomi_ == nil or drag.buttons == 0 then return end
+    local x, y = eventData:GetInt("X"), eventData:GetInt("Y")
+    local dx, dy = x - drag.x, y - drag.y
+    drag.x, drag.y = x, y
+    if dx == 0 and dy == 0 then return end
+    nomi_:Look(dx, dy, 0.12)
+    drag.distance = drag.distance + math.abs(dx) + math.abs(dy)
+    drag.samples = drag.samples + 1
+    if drag.samples == 1 then
+        print(string.format("RuinsInput: drag move delta=%d,%d yaw=%.2f", dx, dy, nomi_.camYaw))
+    end
+end
+
+---@param eventType string
+---@param eventData MouseButtonUpEventData
+function Ruins_HandleMouseUp(eventType, eventData)
+    local button = eventData:GetInt("Button")
+    if drag.buttons & button == 0 then return end
+    drag.buttons = drag.buttons & (~button)
+    print(string.format("RuinsInput: drag end samples=%d distance=%d", drag.samples, drag.distance))
+    -- 纯点击才申请锁定；拖动途中不切换模式，否则失败请求会破坏绝对坐标输入。
+    if button == MOUSEB_LEFT and drag.distance < 4 and not M.debugOn then pointer:Click(false) end
 end
 
 ---@param eventType string
@@ -366,7 +404,10 @@ end
 ---@param eventType string
 ---@param eventData InputFocusEventData
 function Ruins_HandleInputFocus(eventType, eventData)
-    if not eventData:GetBool("Focus") or eventData:GetBool("Minimized") then pointer:Release("focus") end
+    if not eventData:GetBool("Focus") or eventData:GetBool("Minimized") then
+        drag.buttons = 0
+        pointer:Release("focus")
+    end
 end
 
 -- M.fake / M.fakePress：自动化测试注入按键（正常游戏为 nil）
@@ -435,8 +476,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     pointer:Update(input:GetMouseButtonDown(MOUSEB_LEFT))
     if Press(KEY_F10) then M.ToggleDebugPanel() end
     if Press(KEY_TAB) then farView = not farView end
-    local dragging = input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT) or input:GetMouseButtonDown(MOUSEB_MIDDLE)
-    if pointer:CanLook(dragging) and (mouseLocked or not HUD.IsPointerOverUI()) then
+    if mouseLocked and pointer:CanLook(false) then
         local mm = input.mouseMove
         nomi_:Look(mm.x, mm.y, 0.12)
     end
@@ -530,6 +570,8 @@ function M.Stop()
     UnsubscribeFromEvent("PostUpdate")
     UnsubscribeFromEvent("SceneUpdate")
     UnsubscribeFromEvent("MouseButtonDown")
+    UnsubscribeFromEvent("MouseButtonUp")
+    UnsubscribeFromEvent("MouseMove")
     UnsubscribeFromEvent("MouseModeChanged")
     UnsubscribeFromEvent("KeyDown")
     UnsubscribeFromEvent("InputFocus")
