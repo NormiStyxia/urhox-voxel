@@ -2,6 +2,16 @@
 local V = _G["V"]
 local totals, calls = {}, {}
 local recording = false
+local renderFrames, renderBatches, renderTriangles = 0, 0, 0
+local drawCalls = {}
+local function CountDraw(name)
+    local draw = require("ui.PixelDraw")
+    local original = draw[name]
+    draw[name] = function(...)
+        if recording then drawCalls[name] = (drawCalls[name] or 0) + 1 end
+        return original(...)
+    end
+end
 local function Watch(object, method, name)
     local original = object[method]
     object[method] = function(self, ...)
@@ -22,6 +32,14 @@ V.atFrame(5, function()
     Watch(game.dragonWorld, "Update", "dragon.adapter")
     Watch(game.dayNight, "Update", "daynight")
     Watch(game.sigils, "Update", "sigils")
+    CountDraw("TextWidth")
+    CountDraw("NineSlice")
+    SubscribeToEvent("EndRendering", function()
+        if not recording then return end
+        renderFrames = renderFrames + 1
+        renderBatches = renderBatches + renderer:GetNumBatches()
+        renderTriangles = renderTriangles + renderer:GetNumPrimitives()
+    end)
     local puzzles = require("ruins.RuinsPuzzles")
     local oldUpdate, oldGate = puzzles.Update, puzzles.CheckGate
     puzzles.Update = function(dt)
@@ -43,6 +61,12 @@ V.atFrame(110, function()
     table.sort(keys)
     for _, key in ipairs(keys) do
         print(string.format("RuinsPerf: %s %.4f ms/frame (%d calls, 90 frames)", key, totals[key] * 1000 / 90, calls[key] or 90))
+    end
+    if renderFrames > 0 then
+        print(string.format("RuinsPerf: render %d frames, %.0f batches/frame, %.0f primitives/frame", renderFrames, renderBatches / renderFrames, renderTriangles / renderFrames))
+        for name, count in pairs(drawCalls) do
+            print(string.format("RuinsPerf: HUD %s %.1f calls/frame", name, count / renderFrames))
+        end
     end
     V.assert(not _G["RUINS"].dragonAwake, "基线采样覆盖沉睡龙")
 end)
