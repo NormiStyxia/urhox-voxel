@@ -64,10 +64,16 @@ local function CheckRetired(before, message)
 end
 
 local function CheckCounts(volumes, bodies, message)
-    local actualVolumes, actualBodies = world:GetVolumeCount(), world:GetBodyCount()
-    print(string.format("TimeLifecycleCount: %s volumes=%d expected=%d bodies=%d expected=%d",
-        message, actualVolumes, baseVolumes+volumes, actualBodies, baseBodies+bodies))
-    Check(actualVolumes == baseVolumes + volumes, message .. "：世界体积数无累积/丢失")
+    -- RemoveVolume 后 world 列表在下一物理步清理空槽，瞬时 raw count 不是 live 数。
+    -- GetVolume 的原生下标从0开始；Lua自己的数组仍从1开始。
+    local rawVolumes, actualBodies = world:GetVolumeCount(), world:GetBodyCount()
+    local actualVolumes = 0
+    for i = 0, rawVolumes-1 do
+        if world:GetVolume(i) ~= nil then actualVolumes=actualVolumes+1 end
+    end
+    print(string.format("TimeLifecycleCount: %s live=%d raw=%d expected=%d bodies=%d expected=%d",
+        message, actualVolumes, rawVolumes, baseVolumes+volumes, actualBodies, baseBodies+bodies))
+    Check(actualVolumes == baseVolumes + volumes, message .. "：存活体积数无累积/丢失")
     Check(actualBodies == baseBodies + bodies, message .. "：真实 solver body 数正确")
 end
 
@@ -294,5 +300,6 @@ end)
 -- 正常 RUINS 继续运行几个真实帧，确认无延迟残留；不要和其他变更世界的测试合跑。
 V.atFrame(10, function()
     CheckCounts(0, 0, "恢复自动步进后体积/body不累积")
+    Check(world:GetVolumeCount()==baseVolumes,"恢复步进后空槽全部回收")
     Check(#retired > 0, "测试持有旧 userdata，不靠 GC")
 end)

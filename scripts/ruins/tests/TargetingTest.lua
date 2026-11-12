@@ -67,6 +67,8 @@ V.atFrame(8, function()
     V.assert(aim.object==object,"无碰撞的回溯碎块仍可被准星识别")
     object:Reassemble()
     object:RemoveWhole()
-    V.assert(world:GetVolumeCount()==base,"瞄准测试不留下体积")
+    local live=0
+    for i=0,world:GetVolumeCount()-1 do if world:GetVolume(i)~=nil then live=live+1 end end
+    V.assert(live==base,"瞄准测试不留下存活体积")
     print("RuinsAimTest: real grid targeting and occlusion passed")
 end)
