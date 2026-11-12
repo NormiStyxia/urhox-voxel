@@ -11,11 +11,11 @@ uniform float frost_weight3 = 0.0;
 uniform float frost_weight4 = 0.0;
 uniform float frost_weight5 = 0.0;
 uniform float frost_weight6 = 0.0;
-float frost_patch_mask(vec3 p, vec4 patch, float w) {
+float frost_patch_mask(vec3 p, vec4 area, float w) {
     float jag = sin(p.x*8.1+sin(p.z*4.0))*sin(p.z*7.3)*0.08;
-    float edge = length(p.xz-patch.xz)+jag;
-    return (1.0-smoothstep(patch.w*0.72, max(0.001,patch.w), edge))
-        * (1.0-smoothstep(0.12,0.7,abs(p.y-patch.y))) * w;
+    float edge = length(p.xz-area.xz)+jag;
+    return (1.0-smoothstep(area.w*0.72, max(0.001,area.w), edge))
+        * (1.0-smoothstep(0.12,0.7,abs(p.y-area.y))) * w;
 }
 float ruins_frost(vec3 p, vec3 n) {
     float f = max(frost_patch_mask(p,frost_patch1,frost_weight1),frost_patch_mask(p,frost_patch2,frost_weight2));
