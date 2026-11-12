@@ -2,6 +2,7 @@
 local M = {}
 local S = {}; S.__index = S
 local ROMAN = {'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'}
+---@type table<string, number[][]>
 local GLYPH = {
  I={{0,-.5,0,.5},{-.22,.5,.22,.5},{-.22,-.5,.22,-.5}},
  V={{-.3,.5,0,-.5},{0,-.5,.3,.5}}, X={{-.3,.5,.3,-.5},{-.3,-.5,.3,.5}},
@@ -71,13 +72,16 @@ function S:Pulse(pos,normal,color,radius)
     p.pos=pos+normal*.07; p.rot=Quaternion(Vector3.FORWARD,normal)
     p.color=color; p.radius=radius; p.age=0
 end
+---@param aim table
+---@param camera Node
 function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     self.age=self.age+dt
     local face=camera.worldRotation
-    local selected=enabled and aim.object~=nil
+    local selected=enabled and aim.hit and (aim.object~=nil or aim.breakable==true)
     self.target.node.enabled=selected
     if selected then
-        local pos=aim.pos+(camera.worldPosition-aim.pos):Normalized()*.16
+        local hitPos = aim.pos --[[@as Vector3]]
+        local pos=hitPos+(camera.worldPosition-hitPos):Normalized()*.16
         local distance=(camera.worldPosition-pos):Length()
         Show(self.target,pos,face,math.max(.45,math.min(1.2,distance*.035)),Color(.45,.75,1,1),.95)
     end

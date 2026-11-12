@@ -2,9 +2,29 @@
 local VoxelFX=require('dragon.VoxelFX')
 local Pose=require('dragon.DragonPose')
 local M={RANGE=18.0,POWER=1.8}
+---@class DragonStream
+---@field breath DragonBreath
+---@field ctrl DragonAnimationController
+---@field world VoxelPhysicsWorld
+---@field active boolean
+---@field strength number
+---@field time number
+---@field castId number
+---@field particles number
+---@field ringAt number
+---@field pitch number
+---@field yaw number
+---@field requiresRelease boolean
+---@field root Node|nil
+---@field node Node
+---@field mat Material
+---@field motes VoxelFXMotes
 local S={}; S.__index=S
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Wrap(a) return (a+180)%360-180 end
+---@param scene Scene
+---@param breath DragonBreath
+---@return DragonStream
 function M.New(scene,breath)
     local self=setmetatable({breath=breath,ctrl=breath.ctrl,world=breath.world,active=false,
         strength=0,time=0,castId=0,particles=0,ringAt=0,pitch=0,yaw=0,requiresRelease=false},S)
@@ -32,12 +52,14 @@ function M.New(scene,breath)
     self.ctrl.overlayPose=function(_,pose) self:OverlayPose(pose) end
     return self
 end
+---@param pose {j: table<string, number[]>, body: number[]}
 function S:OverlayPose(pose)
     local w=self.strength
     Pose.AddTo(pose,'neck3',self.pitch*.3*w,self.yaw*.3*w,0)
     Pose.AddTo(pose,'head',self.pitch*.7*w,self.yaw*.7*w,0)
     Pose.AddTo(pose,'jaw',18*w,0,0)
 end
+---@param requireRelease boolean|nil
 function S:Stop(requireRelease)
     self.active=false;self.strength=0;self.pitch,self.yaw=0,0
     if requireRelease then self.requiresRelease=true end
@@ -45,6 +67,10 @@ function S:Stop(requireRelease)
 end
 -- allowed=false is a cancellation, not a release-to-fire action.
 -- A cancelled held input must be released before it can start again.
+---@param dt number
+---@param held boolean
+---@param target Vector3|nil
+---@param allowed boolean|nil
 function S:Update(dt,held,target,allowed)
     dt=math.min(math.max(dt,0),.1)
     self.time=self.time+dt

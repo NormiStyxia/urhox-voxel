@@ -487,6 +487,7 @@ function M.WingBonePrims(w)
         local L = math.sqrt(dx * dx + dz * dz)
         local nx, nz = -dz / L, dx / L
         if nz < 0 then nx, nz = -nx, -nz end
+        ---@type {p: number[], r: number}|nil
         local prev
         for i = 1, #offs do
             local t = (i - 1) / (#offs - 1)

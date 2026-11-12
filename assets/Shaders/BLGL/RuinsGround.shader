@@ -85,70 +85,95 @@ void fragment() {
     vec3 n = normalize(NORMAL);
     vec3 weights = pow(abs(n), vec3(4.0));
     weights /= max(weights.x + weights.y + weights.z, 0.0001);
-    float footprint = max(length(dFdx(wp)), length(dFdy(wp)));
+    // Keep the relief field quad-wide: do NOT move these samples into weight/LOD branches.
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    float footprint = max(length(dpdx), length(dpdy));
     float detailFade = 1.0 - smoothstep(0.035, 0.14, footprint);
     float grainFade = 1.0 - smoothstep(0.012, 0.055, footprint);
     float chips = surfaceNoise(wp * 11.0, weights);
     float grain = surfaceNoise(wp * 45.0, weights);
+    float relief = chips * 0.006 + grain * 0.0015;
+    vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
+    float det = dot(dpdx, r1);
+    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
     // 控制图按世界坐标取：第 0 行 = +Z（北）
     vec2 suv = vec2(wp.x + world_half, world_half - wp.z) / (2.0 * world_half);
     vec4 sp = texture(splat_map, suv);
 
-    // ---- 草地：大块明暗斑 + 细碎颗粒 + 枯草斑
+    // Shared low-frequency fields remain at every distance (snow, blend edges and grass).
     float big = fbm(wp.xz * 0.045);
     float mid = fbm(wp.xz * 0.28 + 3.0);
     float fine = vnoise(wp.xz * 3.1);
-    vec3 grass = mix(grass_dark, grass_light, clamp(big * 1.1 + mid * 0.35 - 0.25, 0.0, 1.0));
-    grass = mix(grass, grass_dry, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.55);
-    grass *= 0.88 + fine * 0.22;
 
-    // ---- 泥土 / 碎石
-    float pebble = smoothstep(0.63, 0.76, chips);
-    vec3 dirt = dirt_color * (0.85 + mid * 0.3);
-    dirt *= 1.0 + (chips - 0.5) * 0.34 * detailFade + (grain - 0.5) * 0.18 * grainFade;
-    dirt = mix(dirt, path_color * 0.72, pebble * 0.38 * detailFade);
-
-    // ---- 铺石路：不规则石板（Voronoi 风格的格缝）
-    vec2 pc = wp.xz * 1.15;
-    vec2 cell = floor(pc + vec2(0.0, floor(pc.x) * 0.5));
-    vec2 f = fract(pc + vec2(0.0, floor(pc.x) * 0.5));
-    float seam = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
-    float slab = hash2(cell);
-    vec3 path = path_color * (0.84 + slab * 0.26) * (0.92 + fine * 0.12);
-    path = mix(path * 0.55, path, smoothstep(0.02, 0.07, seam));
-    path = mix(path, grass * 0.9, smoothstep(0.55, 0.85, mid) * 0.5 * (1.0 - smoothstep(0.03, 0.09, seam)));
-
-    // ---- 岩壁：倾斜 + 噪声扭曲的岩层（不是水平环带）
-    float warp = fbm(wp.xz * 0.05 + vec2(wp.y * 0.03)) * 6.0;
-    float strata = wp.y * 0.55 + dot(wp.xz, vec2(0.07, 0.045)) + warp;
-    float band = vnoise(vec2(strata, 0.5)) * 0.65 + vnoise(vec2(strata * 3.7, 7.0)) * 0.35;
-    vec3 rock = mix(rock_b, rock_a, band);
-    rock = mix(rock, rock_warm, smoothstep(0.6, 0.85, fbm(wp.xz * 0.11 + wp.y * 0.07)) * 0.6);
-    vec3 rp = wp * 1.6;
-    vec2 cellX = rockCell(rp.yz), cellY = rockCell(rp.xz), cellZ = rockCell(rp.xy);
-    vec2 cellDetail = cellX * weights.x + cellY * weights.y + cellZ * weights.z;
-    float crack = 1.0 - smoothstep(0.012, 0.045 + footprint * 1.6, cellDetail.y);
-    float rockFade = 1.0 - smoothstep(0.08, 0.30, footprint);
-    rock *= 0.92 + (cellDetail.x - 0.5) * 0.20 * rockFade;
-    rock *= 1.0 - crack * 0.19 * rockFade + (chips - 0.5) * 0.26 * detailFade + (grain - 0.5) * 0.13 * grainFade;
-    // 崖顶向下挂一点苔
-    float mossy = smoothstep(0.55, 0.75, fbm(vec2(wp.x - wp.z, wp.y * 2.0) * 0.35)) * smoothstep(0.35, 0.75, n.y + 0.6);
-    rock = mix(rock, grass_dark * 1.2, mossy * 0.45);
-    rock = mix(rock, deep_color, (1.0 - smoothstep(deep_y - 1.0, deep_y + 1.5, wp.y)) * 0.8);
-
-    // ---- 权重
+    // ---- 权重：先决定实际可见的材质，再计算只用于颜色的昂贵细节。
     float slope = 1.0 - n.y;
     float wRock = max(sp.b, smoothstep(0.28, 0.45, slope + (fine - 0.5) * 0.06));
     float wPath = sp.r * (1.0 - wRock);
     float wDirt = sp.g * (1.0 - wRock) * (1.0 - wPath);
-    // 草地边缘用噪声咬边，避免控制图的线性渐变
     float edgeN = (mid - 0.5) * 0.5;
     wPath = smoothstep(0.35, 0.65, wPath + edgeN * 0.6);
     wDirt = smoothstep(0.3, 0.7, wDirt + edgeN);
-    vec3 col = grass;
-    col = mix(col, dirt, wDirt);
-    col = mix(col, path, wPath);
-    col = mix(col, rock, wRock);
+    vec3 col = vec3(0.0);
+    // All branches below are derivative-free. Exact zero/one tests preserve blend boundaries.
+    if (wRock < 1.0) {
+        // ---- 草地：铺石缝里也用到草色，不仅是裸露草地。
+        vec3 grass = mix(grass_dark, grass_light, clamp(big * 1.1 + mid * 0.35 - 0.25, 0.0, 1.0));
+        grass = mix(grass, grass_dry, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.55);
+        grass *= 0.88 + fine * 0.22;
+        col = grass;
+
+        // ---- 泥土 / 碎石：被铺石或岩壁完全覆盖时跳过。
+        if (wDirt > 0.0 && wPath < 1.0) {
+            float pebble = smoothstep(0.63, 0.76, chips);
+            vec3 dirt = dirt_color * (0.85 + mid * 0.3);
+            dirt *= 1.0 + (chips - 0.5) * 0.34 * detailFade + (grain - 0.5) * 0.18 * grainFade;
+            dirt = mix(dirt, path_color * 0.72, pebble * 0.38 * detailFade);
+            col = mix(col, dirt, wDirt);
+        }
+
+        // ---- 铺石路：保留原石板、窄缝及缝内草色。
+        if (wPath > 0.0) {
+            vec2 pc = wp.xz * 1.15;
+            vec2 cell = floor(pc + vec2(0.0, floor(pc.x) * 0.5));
+            vec2 f = fract(pc + vec2(0.0, floor(pc.x) * 0.5));
+            float seam = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
+            float slab = hash2(cell);
+            vec3 path = path_color * (0.84 + slab * 0.26) * (0.92 + fine * 0.12);
+            path = mix(path * 0.55, path, smoothstep(0.02, 0.07, seam));
+            path = mix(path, grass * 0.9, smoothstep(0.55, 0.85, mid) * 0.5 * (1.0 - smoothstep(0.03, 0.09, seam)));
+            col = mix(col, path, wPath);
+        }
+    }
+
+    // ---- 岩壁：只在实际贡献颜色时计算，近景岩层、风化与苔藓不变。
+    if (wRock > 0.0) {
+        float warp = fbm(wp.xz * 0.05 + vec2(wp.y * 0.03)) * 6.0;
+        float strata = wp.y * 0.55 + dot(wp.xz, vec2(0.07, 0.045)) + warp;
+        float band = vnoise(vec2(strata, 0.5)) * 0.65 + vnoise(vec2(strata * 3.7, 7.0)) * 0.35;
+        vec3 rock = mix(rock_b, rock_a, band);
+        rock = mix(rock, rock_warm, smoothstep(0.6, 0.85, fbm(wp.xz * 0.11 + wp.y * 0.07)) * 0.6);
+        float rockFade = 1.0 - smoothstep(0.08, 0.30, footprint);
+        // The old Voronoi terms already vanish at rockFade == 0; do not evaluate 27 cells there.
+        vec2 cellDetail = vec2(0.5, 1.0);
+        float crack = 0.0;
+        if (rockFade > 0.0) {
+            vec3 rp = wp * 1.6;
+            cellDetail = vec2(0.0);
+            if (weights.x > 0.0) { cellDetail += rockCell(rp.yz) * weights.x; }
+            if (weights.y > 0.0) { cellDetail += rockCell(rp.xz) * weights.y; }
+            if (weights.z > 0.0) { cellDetail += rockCell(rp.xy) * weights.z; }
+            crack = 1.0 - smoothstep(0.012, 0.045 + footprint * 1.6, cellDetail.y);
+        }
+        rock *= 0.92 + (cellDetail.x - 0.5) * 0.20 * rockFade;
+        rock *= 1.0 - crack * 0.19 * rockFade + (chips - 0.5) * 0.26 * detailFade + (grain - 0.5) * 0.13 * grainFade;
+        float mossFacing = smoothstep(0.35, 0.75, n.y + 0.6);
+        if (mossFacing > 0.0) {
+            float mossy = smoothstep(0.55, 0.75, fbm(vec2(wp.x - wp.z, wp.y * 2.0) * 0.35)) * mossFacing;
+            rock = mix(rock, grass_dark * 1.2, mossy * 0.45);
+        }
+        rock = mix(rock, deep_color, (1.0 - smoothstep(deep_y - 1.0, deep_y + 1.5, wp.y)) * 0.8);
+        col = mix(col, rock, wRock);
+    }
     // 草地被 GrassField 覆盖处稍压暗（草缝里是草丛深处）
     float under = sp.a * (1.0 - wRock) * (1.0 - wPath) * (1.0 - wDirt);
     col = mix(col, col * 0.62, under * 0.5);
@@ -156,13 +181,7 @@ void fragment() {
     float snow = smoothstep(snow_y - 1.0, snow_y + 1.5, wp.y + (big - 0.5) * 3.0) * smoothstep(0.25, 0.7, n.y);
     col = mix(col, snow_color * (0.92 + fine * 0.08), snow);
 
-    // 毫米级凹凸直接扰动世界法线；无切线流要求，轮廓/碰撞不改变。
-    // relief 内不包含屏幕导数；先求一阶梯度，后按像素足迹淡出。
-    float relief = chips * 0.006 + grain * 0.0015;
-    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
-    vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
-    float det = dot(dpdx, r1);
-    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
+    // 毫米级凹凸直接扰动世界法线；梯度已在所有非一致分支之前求好。
     float bumpWeight = max(wRock, wDirt) * (1.0 - snow);
     NORMAL = normalize(n - clamp(grad, vec3(-0.35), vec3(0.35)) * detailFade * bumpWeight);
     ALBEDO = srgb_to_linear(col) * daynight_tint;
@@ -170,8 +189,11 @@ void fragment() {
     METALLIC = 0.0;
     SPECULAR = mix(0.25, 0.4, wRock);
     float ice = ruins_frost(VERTEX, NORMAL);
-    float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);
-    ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
-    ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
-    SPECULAR = mix(SPECULAR, 0.7, ice);
+    // Frost is evaluated after all derivatives; a zero mask needs no vein sin/pow or PBR mixes.
+    if (ice != 0.0) {
+        float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);
+        ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
+        ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
+        SPECULAR = mix(SPECULAR, 0.7, ice);
+    }
 }

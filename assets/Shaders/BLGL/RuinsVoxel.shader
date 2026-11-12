@@ -56,72 +56,103 @@ void fragment() {
 
     vec3 n = normalize(NORMAL);
     vec3 wp = VERTEX;
-    // 大块风化：世界空间，两层
-    float g = n3(wp * 0.35) * 0.6 + n3(wp * 1.3 + 7.0) * 0.4;
-    float shade = 1.0 + (g - 0.5) * 2.0 * grime;
-    // 朝下的面略暗、朝上的面略亮（积尘 / 背光）
-    shade *= 1.0 + n.y * 0.05;
-
-    // 体素格内坐标
-    vec3 cellP = opos / voxel_size;
-    vec3 cell = floor(cellP - normalize(object_normal) * 0.5);
-    vec3 f = fract(cellP);
-    vec3 an = abs(normalize(object_normal));
-    vec2 uv = (an.x > 0.5) ? f.yz : ((an.y > 0.5) ? f.xz : f.xy);
-    float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    shade *= 1.0 + (h31(cell) - 0.5) * 2.0 * jitter;
-    shade *= 1.0 - bevel * (1.0 - smoothstep(0.0, 0.12, edge));
-
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    float footprint = max(length(dpdx), length(dpdy));
+    float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
+    float detailFade = 1.0 - smoothstep(0.08, 0.30, footprint);
+    float surfaceFade = 1.0 - smoothstep(0.04, 0.16, footprint);
     // 石材限定：100..108，142..144。金属、符文、草皮不受石缝影响。
     float stone = step(99.5, idx) * (1.0 - step(108.5, idx));
     float rubble = step(141.5, idx) * (1.0 - step(144.5, idx));
     float tile = step(138.5, idx) * (1.0 - step(141.5, idx));
     float mineral = max(max(stone, rubble), tile);
-    float footprint = max(length(dFdx(wp)), length(dFdy(wp)));
-    float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
-    float grain = h31(floor(wp * 40.0));
-    shade *= 1.0 + (grain - 0.5) * 0.10 * grainFade * mineral;
-
-    // 环墙采用 1.5m × 0.75m 砌石，浅缝无几何挖槽。
-    float horizontal = abs(n.x) > abs(n.z) ? wp.z : wp.x;
-    if (masonry_mode > 1.5 && masonry_mode < 2.5) {
-        horizontal = mod(atan(wp.z, wp.x) + 6.2831853, 6.2831853) * wall_radius;
-    }
-    float blockScale = masonry_mode > 1.5 ? 1.5 : 1.0;
-    float row = floor(wp.y * 2.0 / blockScale);
-    vec2 blockUV = vec2(horizontal / blockScale + mod(row, 2.0) * 0.5, wp.y * 2.0 / blockScale);
-    vec2 blockF = fract(blockUV);
-    vec2 distances = min(blockF, vec2(1.0) - blockF) * vec2(1.0, 0.5) * blockScale;
-    float jointDistance = min(distances.x, distances.y);
-    float aa = max(fwidth(horizontal), fwidth(wp.y)) * 0.65 + 0.001;
-    float detailFade = 1.0 - smoothstep(0.08, 0.30, footprint);
-    float joint = 1.0 - smoothstep(0.008, 0.018 + aa, jointDistance);
-    float lip = smoothstep(0.015, 0.027 + aa, jointDistance)
-        * (1.0 - smoothstep(0.035, 0.055 + aa, jointDistance));
-    float masonry = step(0.5, masonry_mode) * stone * (1.0 - smoothstep(0.55, 0.85, abs(n.y)));
-    float jointK = joint * detailFade * masonry;
-    shade *= 1.0 - 0.16 * jointK + 0.025 * lip * detailFade * masonry;
-
-    // 中央庭院用石板尺度的磨耗与窄裂纹，不沿每个体素画格线。
-    float slabNoise = n3(wp * vec3(2.8, 1.0, 2.8));
-    float fissureField = sin(wp.x * 2.1 + wp.z * 1.3 + n3(wp * 0.8) * 9.0);
-    float fissure = (1.0 - smoothstep(0.025, 0.07 + footprint * 1.2, abs(fissureField)))
-        * smoothstep(0.50, 0.66, slabNoise) * detailFade;
-    shade *= 1.0 + tile * ((slabNoise - 0.5) * 0.22 - fissure * 0.23);
-    // 石质的中尺度矿脉与细孔，补足柱身近景，避免纯白石膏感。
     float marble = step(104.5, idx) * (1.0 - step(106.5, idx));
+
+    // Keep ALL relief inputs quad-wide, including non-marble mineral veins.
+    // Their one-order derivatives must not consume a field conditionally sampled per pixel.
+    float g = n3(wp * 0.35) * 0.6 + n3(wp * 1.3 + 7.0) * 0.4;
     float veins = n3(wp * vec3(2.2, 5.0, 2.2) + vec3(g * 3.0));
-    float patina = smoothstep(0.57, 0.78, veins);
     float pores = n3(wp * 24.0);
-    float surfaceFade = 1.0 - smoothstep(0.04, 0.16, footprint);
-    base = mix(base, base * vec3(0.72, 0.68, 0.61), patina * 0.38 * marble);
-    shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
-    // 世界空间表面梯度，不依赖体素网格中不存在的切线流。
     float relief = (pores * 0.0025 + veins * 0.003) * mineral;
-    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
     vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
     float det = dot(dpdx, r1);
     vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
+
+    // Only a draw-uniform switch may guard the masonry derivatives. Do not add stone/LOD here.
+    float horizontal = 0.0;
+    float aa = 0.001;
+    if (masonry_mode >= 0.5) {
+        horizontal = abs(n.x) > abs(n.z) ? wp.z : wp.x;
+        if (masonry_mode > 1.5 && masonry_mode < 2.5) {
+            horizontal = mod(atan(wp.z, wp.x) + 6.2831853, 6.2831853) * wall_radius;
+        }
+        aa = max(fwidth(horizontal), fwidth(wp.y)) * 0.65 + 0.001;
+    }
+
+    // 大块两层风化不随距离变纯色。
+    float shade = 1.0 + (g - 0.5) * 2.0 * grime;
+    // 朝下的面略暗、朝上的面略亮（积尘 / 背光）
+    shade *= 1.0 + n.y * 0.05;
+
+    // 体素格内坐标：关闭 jitter/bevel 时不做其专用计算。
+    if (jitter != 0.0 || bevel != 0.0) {
+        vec3 cellP = opos / voxel_size;
+        vec3 objectN = normalize(object_normal);
+        if (jitter != 0.0) {
+            vec3 cell = floor(cellP - objectN * 0.5);
+            shade *= 1.0 + (h31(cell) - 0.5) * 2.0 * jitter;
+        }
+        if (bevel != 0.0) {
+            vec3 f = fract(cellP);
+            vec3 an = abs(objectN);
+            vec2 uv = (an.x > 0.5) ? f.yz : ((an.y > 0.5) ? f.xz : f.xy);
+            float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+            shade *= 1.0 - bevel * (1.0 - smoothstep(0.0, 0.12, edge));
+        }
+    }
+
+    // Grain affects color/roughness only, never the relief derivatives above.
+    float grain = 0.5;
+    if (mineral > 0.0 && grainFade > 0.0) { grain = h31(floor(wp * 40.0)); }
+    shade *= 1.0 + (grain - 0.5) * 0.10 * grainFade * mineral;
+
+    // 环墙采用 1.5m × 0.75m 砌石，浅缝无几何挖槽。
+    float masonry = step(0.5, masonry_mode) * stone * (1.0 - smoothstep(0.55, 0.85, abs(n.y)));
+    float jointK = 0.0;
+    if (masonry > 0.0 && detailFade > 0.0) {
+        float blockScale = masonry_mode > 1.5 ? 1.5 : 1.0;
+        float row = floor(wp.y * 2.0 / blockScale);
+        vec2 blockUV = vec2(horizontal / blockScale + mod(row, 2.0) * 0.5, wp.y * 2.0 / blockScale);
+        vec2 blockF = fract(blockUV);
+        vec2 distances = min(blockF, vec2(1.0) - blockF) * vec2(1.0, 0.5) * blockScale;
+        float jointDistance = min(distances.x, distances.y);
+        float joint = 1.0 - smoothstep(0.008, 0.018 + aa, jointDistance);
+        float lip = smoothstep(0.015, 0.027 + aa, jointDistance)
+            * (1.0 - smoothstep(0.035, 0.055 + aa, jointDistance));
+        jointK = joint * detailFade * masonry;
+        shade *= 1.0 - 0.16 * jointK + 0.025 * lip * detailFade * masonry;
+    }
+
+    // 中央庭院：仅石板需要这两次 n3。磨耗保留到远景，已淡出的裂纹不算。
+    if (tile > 0.0) {
+        float slabNoise = n3(wp * vec3(2.8, 1.0, 2.8));
+        float fissure = 0.0;
+        if (detailFade > 0.0 && slabNoise > 0.50) {
+            float fissureField = sin(wp.x * 2.1 + wp.z * 1.3 + n3(wp * 0.8) * 9.0);
+            fissure = (1.0 - smoothstep(0.025, 0.07 + footprint * 1.2, abs(fissureField)))
+                * smoothstep(0.50, 0.66, slabNoise) * detailFade;
+        }
+        shade *= 1.0 + tile * ((slabNoise - 0.5) * 0.22 - fissure * 0.23);
+    }
+    // 原矿脉/细孔颜色与近景法线不变；只有已为零的颜色贡献跳过。
+    if (marble > 0.0) {
+        float patina = smoothstep(0.57, 0.78, veins);
+        base = mix(base, base * vec3(0.72, 0.68, 0.61), patina * 0.38 * marble);
+    }
+    if (mineral > 0.0 && surfaceFade > 0.0) {
+        shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
+    }
+    // 世界空间表面梯度已在非一致分支前求好，不依赖体素切线流。
     NORMAL = normalize(n - clamp(grad, vec3(-0.22), vec3(0.22)) * surfaceFade);
     float emiK = emi.a;
     ALBEDO = base * shade * daynight_tint;
@@ -130,8 +161,11 @@ void fragment() {
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
     float ice = ruins_frost(VERTEX, NORMAL);
-    float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);
-    ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
-    ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
-    SPECULAR = mix(SPECULAR, 0.7, ice);
+    // Frost is evaluated after all derivatives; a zero mask needs no vein sin/pow or PBR mixes.
+    if (ice != 0.0) {
+        float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);
+        ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
+        ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
+        SPECULAR = mix(SPECULAR, 0.7, ice);
+    }
 }

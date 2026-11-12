@@ -1,6 +1,19 @@
 -- Scene adapter: kinematic collision, safe dismount, bounded breath damage / frost.
 local Stream = require("dragon.DragonStream")
 local M = {}
+---@class RuinsFrostPatch
+---@field pos Vector3
+---@field radius number
+---@field age number
+
+---@class RuinsDragonAdapter
+---@field host table
+---@field nomi NomiController
+---@field world VoxelPhysicsWorld
+---@field puzzles table
+---@field terrain table
+---@field patches RuinsFrostPatch[]
+---@field hadFrost boolean|nil
 local D = {}; D.__index = D
 local BODY = {{'pelvis',1.0},{'waist',.95},{'chest',1.0},{'neck2',.55},{'head',.75},{'tail1',.6},{'tail3',.5}}
 local PLAYER_BODY={}
@@ -22,16 +35,24 @@ function M.New(host,world,nomi,puzzles,terrain)
     self.rideMode=host.ride.mode
     return self
 end
+---@param c table
+---@param oldPos Vector3
+---@param oldYaw number
+---@param oldAlt number
 function D:ResolveMotion(c,oldPos,oldYaw,oldAlt)
     local L,rig=c.loco,c.rig
-    local delta=L.pos-oldPos+Vector3(0,L.alt-oldAlt,0)
+    local newPos = L.pos --[[@as Vector3]]
+    local translation = newPos - oldPos
+    local delta=translation+Vector3(0,L.alt-oldAlt,0)
+    if delta:LengthSquared() < 1e-12 and math.abs(L.yaw-oldYaw) < 1e-8 then return end
     local q=Quaternion(L.yaw-oldYaw,Vector3.UP)
     local fraction=1
     for _,def in ipairs(BODY) do
-        local node=rig.bones[def[1]]
+        local node=rig.bones[def[1]] --[[@as Node?]]
         if node then
-            local offset=node.worldPosition-rig.root.worldPosition
-            local move=delta+q*offset-offset
+            local root = rig.root --[[@as Node]]
+            local offset=node.worldPosition-root.worldPosition
+            local move=delta+q*offset-offset --[[@as Vector3]]
             local distance=move:Length()
             if distance>.0001 then
                 local hit=self.world:SphereCast(Sphere(node.worldPosition,def[2]*rig.size*.85),move:Normalized(),distance+.06)
@@ -42,7 +63,7 @@ function D:ResolveMotion(c,oldPos,oldYaw,oldAlt)
         end
     end
     -- Grounded dragons cannot step onto a wall / cross the chasm in one stride.
-    if not L.airborne and (L.pos-oldPos):LengthSquared()>.00001 then
+    if not L.airborne and translation:LengthSquared()>.00001 then
         local a=c:GroundHeight(oldPos.x,oldPos.z)
         local b=c:GroundHeight(L.pos.x,L.pos.z)
         if b-a>0.65*rig.size or a-b>1.4*rig.size then fraction=0 end
@@ -119,7 +140,10 @@ function D:PushPlayer()
         self.nomi.cc:Teleport(p); self.nomi.node.worldPosition=p; self.host.ride.pos=p
     end
 end
+---@param pos Vector3
+---@param radius number
 function D:AddIce(pos,radius)
+    ---@type RuinsFrostPatch|nil
     local patch
     for _,p in ipairs(self.patches) do
         if math.abs(p.pos.y-pos.y)<.6 and (p.pos-pos):Length()<math.max(1,p.radius*.65) then patch=p; break end
@@ -171,8 +195,10 @@ function D:Update(dt)
         end
         h.stream:Update(dt,held,h.breath.aimTarget,allowed and h.ride.mode=="mounted")
     end
+    if #self.patches == 0 and not self.hadFrost then return end
     if self.time<self.nextMaterial then return end
     self.nextMaterial=self.time+.1
+    self.hadFrost = #self.patches > 0
     local mats={}
     if self.terrain.groundMaterial then mats[#mats+1]=self.terrain.groundMaterial end
     for _,m in pairs(self.host.surfaceMaterials or {}) do mats[#mats+1]=m end

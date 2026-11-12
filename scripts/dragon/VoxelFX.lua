@@ -188,7 +188,22 @@ function M.SetRate(e, rate)
 end
 
 -- ---------------------------------------------------------------- Lua 驱动的像素粒子
+---@class VoxelFXMoteItem
+---@field idx integer
+---@field age number
+---@field pos Vector3
+---@field vel Vector3
+---@field life number
+---@field size number
+---@field colors Color[]
+---@field grav number|nil
+---@field drag number|nil
+---@field ground number|nil
+---@field bounce number|nil
+---@field fn fun(m: VoxelFXMoteItem, dt: number, u: number)|nil
+
 ---@class VoxelFXMotes
+---@field list VoxelFXMoteItem[]
 local Motes = {}
 Motes.__index = Motes
 
@@ -222,8 +237,11 @@ end
 
 function Motes:Update(dt)
     local bb, list = self.bb, self.list
-    local keep = {}
-    for _, m in ipairs(list) do
+    local count = #list
+    if count == 0 then return end
+    local liveCount = 0
+    for i = 1, count do
+        local m = list[i]
         m.age = m.age + dt
         local u = m.age / m.life
         if u >= 1 then
@@ -252,21 +270,27 @@ function Motes:Update(dt)
             local ci = math.min(#cs, math.floor(u * #cs) + 1)
             b.color = cs[ci]
             b.rotation = 0
-            keep[#keep + 1] = m
+            liveCount = liveCount + 1
+            list[liveCount] = m
         end
     end
-    self.list = keep
+    for i = liveCount + 1, count do list[i] = nil end
+    -- Commit even when this frame killed the last mote: the disabled flags
+    -- must reach the renderer before subsequent empty Update calls return.
     bb:Commit()
 end
 
 function Motes:Count() return #self.list end
 
 function Motes:Clear()
-    for _, m in ipairs(self.list) do
+    local list = self.list
+    if #list == 0 then return end
+    for i = #list, 1, -1 do
+        local m = list[i]
         self.bb:GetBillboard(m.idx).enabled = false
         self.free[#self.free + 1] = m.idx
+        list[i] = nil
     end
-    self.list = {}
     self.bb:Commit()
 end
 
@@ -304,12 +328,21 @@ end
 M.CubeMaterial = CubeMaterial
 
 ---@param parent Node
-function M.Debris(parent, n)
+---@param lazy boolean|nil Allocate cube nodes on first Spawn when true.
+function M.Debris(parent, n, lazy)
     local self = setmetatable({}, Debris)
     self.items, self.free, self.live = {}, {}, {}
+    self.parent, self.capacity, self.initialized = parent, n, false
+    if not lazy then self:InitPool() end
+    return self
+end
+
+function Debris:InitPool()
+    if self.initialized then return end
+    self.initialized = true
     local model = cache:GetResource("Model", "Models/Box.mdl")
-    for i = 1, n do
-        local node = parent:CreateChild("Cube" .. i)
+    for i = 1, self.capacity do
+        local node = self.parent:CreateChild("Cube" .. i)
         local sm = node:CreateComponent("StaticModel")
         sm:SetModel(model)
         sm.castShadows = (i % 3 == 0)
@@ -317,11 +350,11 @@ function M.Debris(parent, n)
         self.items[i] = { node = node, sm = sm }
         self.free[#self.free + 1] = self.items[i]
     end
-    return self
 end
 
 -- p = { pos, vel, size, color, glow, life, spin, groundFn, bounce }
 function Debris:Spawn(p)
+    if not self.initialized then self:InitPool() end
     local it = table.remove(self.free)
     if it == nil then return nil end
     it.pos, it.vel, it.size, it.life, it.age = p.pos, p.vel or Vector3.ZERO, p.size or 0.1, p.life or 1.5, 0
@@ -337,8 +370,12 @@ function Debris:Spawn(p)
 end
 
 function Debris:Update(dt)
-    local keep = {}
-    for _, it in ipairs(self.live) do
+    local live = self.live
+    local count = #live
+    if count == 0 then return end
+    local liveCount = 0
+    for i = 1, count do
+        local it = live[i]
         it.age = it.age + dt
         local u = it.age / it.life
         if u >= 1 then
@@ -366,18 +403,21 @@ function Debris:Update(dt)
             -- 结尾逐级缩小（体素感：一档一档变小）
             local s = it.size * ((u > 0.9) and 0.35 or ((u > 0.78) and 0.65 or 1.0))
             it.node.scale = Vector3(s, s, s)
-            keep[#keep + 1] = it
+            liveCount = liveCount + 1
+            live[liveCount] = it
         end
     end
-    self.live = keep
+    for i = liveCount + 1, count do live[i] = nil end
 end
 
 function Debris:Clear()
-    for _, it in ipairs(self.live) do
+    local live = self.live
+    for i = #live, 1, -1 do
+        local it = live[i]
         it.node.enabled = false
         self.free[#self.free + 1] = it
+        live[i] = nil
     end
-    self.live = {}
 end
 
 -- ---------------------------------------------------------------- 晶簇数据

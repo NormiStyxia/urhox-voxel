@@ -10,7 +10,7 @@
 -- 状态机：
 --   WHOLE    完整（静态体积，可站人）
 --   SHATTERED 已碎（碎块是动态刚体，物理在跑，同时录轨迹）
---   FROZEN   冻结（碎块转成运动学静止：记录当前位姿，重建为静态体积，可以踩）
+--   FROZEN   冻结（碎块显式释放动态 body 后重建为静态体积，可以踩）
 --   REWIND   回溯（碎块沿录下的轨迹倒放 → 最后一段插值回原位 → 合并成完整物件）
 --
 -- 碎裂算法（大小不一的碎块）：
@@ -24,6 +24,17 @@
 local Noise = require("ruins.Noise")
 
 local M = {}
+
+-- 统一索引所有 live 体积（包括无碰撞的回溯残片）；释放前必须注销。
+---@type table<VoxelVolume, TimeObject>
+local volumeOwners = {}
+
+---@param volume VoxelVolume|nil
+---@return TimeObject|nil
+function M.FindByVolume(volume)
+    if volume == nil then return nil end
+    return volumeOwners[volume]
+end
 
 local MAX_PIECES = 90         -- 单个物件最多碎块数
 local RECORD_DT = 1.0 / 20.0  -- 轨迹采样间隔
@@ -47,6 +58,7 @@ M.STATE = { WHOLE = "WHOLE", SHATTERED = "SHATTERED", FROZEN = "FROZEN", REWIND 
 ---@field restPos Vector3      碎块完整时的世界位置（体积最小角）
 ---@field restRot Quaternion
 ---@field frozen boolean
+---@field mode string|nil      dynamic / static / visual（不把 IsStatic 当成无 body 的判定）
 ---@field aimSlot Vector3|nil
 ---@field aimT number|nil
 ---@field aimFrom Vector3|nil
@@ -57,6 +69,8 @@ M.STATE = { WHOLE = "WHOLE", SHATTERED = "SHATTERED", FROZEN = "FROZEN", REWIND 
 
 ---@class TimeObject
 ---@field id string
+---@field title string
+---@field lastMode number|nil  shader mode 是浮点参数；nil 表示尚未同步
 ---@field world VoxelPhysicsWorld
 ---@field scene Scene
 ---@field voxels table[]
@@ -158,12 +172,12 @@ function M.New(o)
     local s = self.size
     self.center = self.origin + self.rot * Vector3(self.dims[1] * s * 0.5, self.dims[2] * s * 0.5, self.dims[3] * s * 0.5)
     self.radius = math.sqrt(self.dims[1] ^ 2 + self.dims[2] ^ 2 + self.dims[3] ^ 2) * s * 0.5
-    -- 原始体素查表（rebuild 用）
-    self:BuildWhole()
+    -- 开局散落直接生成残片；不要先建立整桥/整碑再删掉那份碰撞。
     if o.shattered then
         self:Shatter({ level = o.shatterLevel or 1, point = self.center, scatter = o.startScatter, silent = true, force = true })
-        -- 场景开局就是碎的：碎块按 scatter 摆好后直接冻成静态（模拟「早已散落」）
         self:SettleAsRubble()
+    else
+        self:BuildWhole()
     end
     print(string.format("TimeObject[%s]: %d voxels, %dx%dx%d @%.2fm", self.id, #self.voxels,
         self.dims[1], self.dims[2], self.dims[3], s))
@@ -203,13 +217,32 @@ function T:BuildWhole()
     vol:RebuildGeometry()
     vol:GetNode().name = "Time_" .. self.id
     self.whole = vol
+    volumeOwners[vol] = self
+end
+
+-- RemoveVolume 文档声明会销毁 body，但 Lua 持有的 component/node 引用仍可能延迟析构。
+-- 显式 Dispose 与 DragonRig 同路径；mask=0 是释放前的实时兜底，不依赖 GC。
+---@param volume VoxelVolume
+local function DisposeVolume(volume)
+    local node = volume:GetNode()
+    volumeOwners[volume] = nil
+    volume.collisionMask = 0
+    volume:Dispose()
+    if node ~= nil then node:Dispose() end
 end
 
 function T:RemoveWhole()
     if self.whole ~= nil then
-        self.world:RemoveVolume(self.whole)
+        DisposeVolume(self.whole)
         self.whole = nil
     end
+end
+
+function T:Dispose()
+    self:RemoveWhole()
+    for _, p in ipairs(self.pieces) do self:RemovePieceVolume(p) end
+    self.pieces = {}
+    self.listeners = {}
 end
 
 -- 物件局部格坐标 → 世界坐标（格最小角）
@@ -280,6 +313,32 @@ function T:Partition(level, hitLocal)
     return assign, want
 end
 
+-- 超预算只合并分组，不删原始 ids。Refine 仅合并同一母块（位姿/轨迹一致）的子块；
+-- 不把已经飞到不同位置的旧碎块硬并成一个体积，否则会凭空移动碰撞。
+local function LimitComponents(voxels, components, limit)
+    if #components <= limit then return components end
+    table.sort(components, function(a, b) return #a > #b end)
+    local keep, anchors = {}, {}
+    for i = 1, limit do
+        keep[i] = components[i]
+        local v = voxels[components[i][1]]
+        anchors[i] = { v[1], v[2], v[3] }
+    end
+    for i = limit + 1, #components do
+        local component = components[i]
+        local v = voxels[component[1]]
+        local best, distance = 1, math.huge
+        for j, anchor in ipairs(anchors) do
+            local dx, dy, dz = v[1] - anchor[1], v[2] - anchor[2], v[3] - anchor[3]
+            local d = dx * dx + dy * dy + dz * dz
+            if d < distance then best, distance = j, d end
+        end
+        local target = keep[best]
+        for _, id in ipairs(component) do target[#target + 1] = id end
+    end
+    return keep
+end
+
 -- 把每个分组按 6 邻接拆成连通块，返回 { {ids...}, ... }
 function T:Components(assign, groups)
     local vox = self.voxels
@@ -310,19 +369,8 @@ function T:Components(assign, groups)
             out[#out + 1] = comp
         end
     end
-    -- 块太多时把最小的块按顺序并入相邻大块（简单处理：并入同组第一块）
-    if #out > MAX_PIECES then
-        table.sort(out, function(a, b) return #a > #b end)
-        local keep = {}
-        for i = 1, MAX_PIECES do keep[i] = out[i] end
-        for i = MAX_PIECES + 1, #out do
-            local c = out[i]
-            local tgt = keep[((i - 1) % MAX_PIECES) + 1]
-            for _, id in ipairs(c) do tgt[#tgt + 1] = id end
-        end
-        out = keep
-    end
-    return out
+    -- 完整体超过预算时也守恒全部体素；聚合组可能含不相连的小岛，但空格不填实。
+    return LimitComponents(vox, out, MAX_PIECES)
 end
 
 -- 生成碎块体积（位于完整时的原位）
@@ -350,6 +398,8 @@ end
 
 ---@param p TimePiece
 function T:SpawnPieceVolume(p, dynamic, pos, rot)
+    -- 幂等重建：不允许覆写 live vol 引用后遗失其 body。
+    self:RemovePieceVolume(p)
     local s = self.size
     local vol = self.world:CreateVolume(math.tointeger(p.nx) or 1, math.tointeger(p.ny) or 1, math.tointeger(p.nz) or 1, s, pos, rot)
     local g = vol:GetGrid()
@@ -371,20 +421,42 @@ function T:SpawnPieceVolume(p, dynamic, pos, rot)
         self.world:FinalizeVolumeAsDynamic(vol)
     elseif dynamic == "static" then
         self.world:FinalizeVolume(vol)
+    else
+        -- 没有 Finalize = 无 solver body；mask=0 也排除角色/查询的粗筛路径。
+        -- SetCollidable(false) 仅保留到场景载入时，不是运行时 body 开关。
+        vol:SetCollidable(false)
+        vol.collisionMask = 0
     end
-    -- "visual"：不定型，只渲染（回溯动画用）
     vol:RebuildGeometry()
     vol:GetNode().name = "TimePiece_" .. self.id
     p.vol = vol
     p.node = vol:GetNode()
+    p.mode = dynamic
+    volumeOwners[vol] = self
 end
 
 ---@param p TimePiece
 function T:RemovePieceVolume(p)
     if p.vol ~= nil then
-        self.world:RemoveVolume(p.vol)
-        p.vol, p.node = nil, nil
+        DisposeVolume(p.vol)
+        p.vol, p.node, p.mode = nil, nil, nil
     end
+end
+
+-- API 没有公开 static/dynamic/bodyless 原地切换；反复 Finalize 的旧 body 清理
+-- 未文档化，不能冒险。需要转换时真正释放再建；同模式只改 Node（visual 无 body）。
+---@param p TimePiece
+function T:SetPieceMode(p, mode, pos, rot)
+    if p.vol ~= nil and p.mode == mode then
+        if mode == "visual" then
+            p.node.worldPosition = pos
+            p.node.worldRotation = rot
+            return
+        end
+        -- 静态/动态 Node 移动不保证 solver teleport；只有完全相同的位姿可以跳过重建。
+        if p.node.worldPosition == pos and p.node.worldRotation == rot then return end
+    end
+    self:SpawnPieceVolume(p, mode, pos, rot)
 end
 
 -- ---------------------------------------------------------------- 碎时
@@ -457,51 +529,56 @@ end
 -- 已碎再碎：命中点 2.2m 内的碎块重新分成更小的块（level+1）
 function T:Refine(o)
     local pt = o.point
-    if pt == nil then return false end
+    if pt == nil or #self.pieces >= MAX_PIECES then return false end
     local s = self.size
-    local changed = 0
+    local changed, extra = 0, MAX_PIECES - #self.pieces
     local newList = {}
     local rng = Noise.Rng(self.seed * 17 + #self.pieces)
     for _, p in ipairs(self.pieces) do
         local c = p.node ~= nil and (p.node.worldPosition + p.node.worldRotation * Vector3(p.nx * s * 0.5, p.ny * s * 0.5, p.nz * s * 0.5)) or p.restPos
-        if (c - pt --[[@as Vector3]]):Length() < (o.radius or 2.2) + math.max(p.nx, p.ny, p.nz) * s * 0.5 and #p.ids > 1 and changed < 6 then
-            changed = changed + 1
-            -- 把这块按 2x2x2 / 单体素切开，切出的子块继承母块当前位姿与轨迹
-            local pos, rot = p.node.worldPosition, p.node.worldRotation
-            local vel = (p.vol ~= nil and not p.frozen) and p.vol.linearVelocity or Vector3.ZERO
+        if extra > 0 and p.node ~= nil and (c - pt --[[@as Vector3]]):Length() < (o.radius or 2.2) + math.max(p.nx, p.ny, p.nz) * s * 0.5 and #p.ids > 1 and changed < 6 then
+            -- 先确定预算内的最终子组，再释放母块；不能先造超量碎块再截断 newList。
             local cellK = (#p.ids > 64) and 2 or 1
-            local groups = {}
-            local order = {}
+            local groups, components = {}, {}
             for _, id in ipairs(p.ids) do
                 local v = self.voxels[id]
                 local key = ((v[1] - p.minI) // cellK) * 1000000 + ((v[2] - p.minJ) // cellK) * 1000 + ((v[3] - p.minK) // cellK)
-                if groups[key] == nil then groups[key] = {}; order[#order + 1] = key end
-                local gl = groups[key]
-                gl[#gl + 1] = id
-            end
-            self:RemovePieceVolume(p)
-            for _, key in ipairs(order) do
-                local ids = groups[key]
-                local q = self:MakePiece(ids, nil)
-                -- 子块在母块里的偏移（母块局部）
-                local off = Vector3((q.minI - p.minI) * s, (q.minJ - p.minJ) * s, (q.minK - p.minK) * s)
-                local qpos = pos + rot * off
-                self:SpawnPieceVolume(q, "dynamic", qpos, rot)
-                -- 继承母块轨迹（每个采样点叠加子块偏移），保证回溯时子块沿母块的路径回家
-                for _, tr in ipairs(p.track) do
-                    q.track[#q.track + 1] = { t = tr.t, pos = tr.pos + tr.rot * off, rot = tr.rot }
+                if groups[key] == nil then
+                    groups[key] = {}
+                    components[#components + 1] = groups[key]
                 end
-                local away = (qpos - pt):Normalized()
-                q.vol.linearVelocity = vel + away * rng:Range(2.0, 4.5) + Vector3(0, rng:Range(1.0, 3.0), 0)
-                q.vol.angularVelocity = Vector3(rng:Range(-6, 6), rng:Range(-6, 6), rng:Range(-6, 6))
-                newList[#newList + 1] = q
+                local group = groups[key]
+                group[#group + 1] = id
+            end
+            components = LimitComponents(self.voxels, components, extra + 1)
+            if #components > 1 then
+                changed = changed + 1
+                extra = extra - (#components - 1)
+                local pos, rot = p.node.worldPosition, p.node.worldRotation
+                local vel = (p.vol ~= nil and not p.frozen) and p.vol.linearVelocity or Vector3.ZERO
+                self:RemovePieceVolume(p)
+                for _, ids in ipairs(components) do
+                    local q = self:MakePiece(ids, nil)
+                    local off = Vector3((q.minI - p.minI) * s, (q.minJ - p.minJ) * s, (q.minK - p.minK) * s)
+                    local qpos = pos + rot * off
+                    self:SpawnPieceVolume(q, "dynamic", qpos, rot)
+                    -- 有限量继承母块轨迹；所有原始 ids 和轨迹坐标都保留，回溯可精确归位。
+                    for _, tr in ipairs(p.track) do
+                        q.track[#q.track + 1] = { t = tr.t, pos = tr.pos + tr.rot * off, rot = tr.rot }
+                    end
+                    local away = (qpos - pt):Normalized()
+                    q.vol.linearVelocity = vel + away * rng:Range(2.0, 4.5) + Vector3(0, rng:Range(1.0, 3.0), 0)
+                    q.vol.angularVelocity = Vector3(rng:Range(-6, 6), rng:Range(-6, 6), rng:Range(-6, 6))
+                    newList[#newList + 1] = q
+                end
+            else
+                newList[#newList + 1] = p
             end
         else
             newList[#newList + 1] = p
         end
     end
     if changed == 0 then return false end
-    -- 冻结中的物件被再碎：其余冻结块保持冻结，新碎块参与物理
     self.pieces = newList
     self.state = M.STATE.SHATTERED
     self:Emit("shatter", { level = 3, count = #self.pieces })
@@ -511,6 +588,12 @@ end
 
 -- 开局散落：碎块直接变成静态（轨迹只有一个点：当前位置；回溯时从这里飞回家）
 function T:SettleAsRubble()
+    for _, p in ipairs(self.pieces) do
+        if p.node ~= nil then
+            self:SetPieceMode(p, "static", p.node.worldPosition, p.node.worldRotation)
+            p.frozen = true
+        end
+    end
     self.state = M.STATE.FROZEN
     self.rubble = true
     self.recT = 0
@@ -541,13 +624,14 @@ function T:Freeze(duration)
         return true
     end
     if self.state ~= M.STATE.SHATTERED then return false end
+    -- 含坠入虚空的 visual 残片也转静态；冻结期间所有残片都必须能踩。
+    self:RecordAll(math.min(self.recT, MAX_RECORD))
     for _, p in ipairs(self.pieces) do
-        if p.vol ~= nil and not p.frozen then
+        if p.vol ~= nil and p.mode ~= "static" then
             local pos, rot = p.node.worldPosition, p.node.worldRotation
             p.freezeVel = p.vol.linearVelocity
             p.freezeAng = p.vol.angularVelocity
-            self:RemovePieceVolume(p)
-            self:SpawnPieceVolume(p, "static", pos, rot)
+            self:SetPieceMode(p, "static", pos, rot)
             p.frozen = true
             p.vol.material = self:EffectMaterial(1.0)
         end
@@ -566,8 +650,7 @@ function T:Unfreeze()
     for _, p in ipairs(self.pieces) do
         if p.frozen and p.vol ~= nil then
             local pos, rot = p.node.worldPosition, p.node.worldRotation
-            self:RemovePieceVolume(p)
-            self:SpawnPieceVolume(p, "dynamic", pos, rot)
+            self:SetPieceMode(p, "dynamic", pos, rot)
             p.vol.linearVelocity = p.freezeVel or Vector3.ZERO
             p.vol.angularVelocity = p.freezeAng or Vector3.ZERO
             p.frozen = false
@@ -591,8 +674,7 @@ function T:Rewind()
     for _, p in ipairs(self.pieces) do
         if p.node ~= nil then
             local pos, rot = p.node.worldPosition, p.node.worldRotation
-            self:RemovePieceVolume(p)
-            self:SpawnPieceVolume(p, "visual", pos, rot)
+            self:SetPieceMode(p, "visual", pos, rot)
             p.vol.material = self:EffectMaterial(2.0)
             p.track[#p.track + 1] = { t = tEnd, pos = pos, rot = rot }
             p.from = { pos = pos, rot = rot }
@@ -701,8 +783,7 @@ function T:Update(dt)
         for _, p in ipairs(self.pieces) do
             if p.node ~= nil and not p.frozen and p.node.worldPosition.y < -30 then
                 local pos, rot = p.node.worldPosition, p.node.worldRotation
-                self:RemovePieceVolume(p)
-                self:SpawnPieceVolume(p, "visual", Vector3(pos.x, -30, pos.z), rot)
+                self:SetPieceMode(p, "visual", Vector3(pos.x, -30, pos.z), rot)
                 p.frozen = true
             end
         end
@@ -746,12 +827,7 @@ function T:IsBroken() return self.state == M.STATE.SHATTERED or self.state == M.
 -- 某个体积是不是这个物件的一部分
 ---@param vol VoxelVolume
 function T:Owns(vol)
-    if vol == nil then return false end
-    if self.whole ~= nil and self.whole == vol then return true end
-    for _, p in ipairs(self.pieces) do
-        if p.vol == vol then return true end
-    end
-    return false
+    return vol ~= nil and volumeOwners[vol] == self
 end
 
 -- 当前视觉中心（碎了取碎块平均）

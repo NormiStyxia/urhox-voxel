@@ -14,6 +14,7 @@ local function CountDraw(name)
 end
 local function Watch(object, method, name)
     local original = object[method]
+    totals[name], calls[name] = 0.0, 0
     object[method] = function(self, ...)
         if not recording then return original(self, ...) end
         local start = os.clock()
@@ -56,6 +57,11 @@ end)
 V.atFrame(20, function() recording = true end)
 V.atFrame(110, function()
     recording = false
+    V.assert((calls["dragon.controller"] or 0) == 0 and (calls["dragon.membranes"] or 0) == 0,
+        "稳态沉睡不重复求解骨骼与翼膜")
+    local game = _G["RUINS"]
+    local root = game.rig.root.position
+    V.assert(root.y > -3 and root.y < 3, "缓存睡姿不会累积下沉")
     local keys = {}
     for key in pairs(totals) do keys[#keys + 1] = key end
     table.sort(keys)
@@ -68,5 +74,18 @@ V.atFrame(110, function()
             print(string.format("RuinsPerf: HUD %s %.1f calls/frame", name, count / renderFrames))
         end
     end
-    V.assert(not _G["RUINS"].dragonAwake, "基线采样覆盖沉睡龙")
+    V.assert(not _G["RUINS"].dragonAwake, "采样覆盖沉睡龙")
+end)
+
+-- 沉睡采样结束后，确认苏醒重新启用完整求解而不是永远停在缓存姿势。
+V.atFrame(115, function()
+    local game = _G["RUINS"]
+    game.dragonAwake, game.wakeT = true, 0
+    calls["dragon.controller"], calls["dragon.membranes"] = 0, 0
+    recording = true
+end)
+V.atFrame(130, function()
+    recording = false
+    V.assert(calls["dragon.controller"] > 0 and calls["dragon.membranes"] > 0,
+        "苏醒后恢复完整动画与翼膜更新")
 end)

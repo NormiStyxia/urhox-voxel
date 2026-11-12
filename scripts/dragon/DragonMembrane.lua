@@ -78,6 +78,7 @@ function Membrane.Build(rig, opts)
         side.order[#side.order + 1] = key
     end
     local function Lerp(key, ka, kb, f)
+        ---@type {rest: number[], plane: number[]}, {rest: number[], plane: number[]}
         local a, b = side.pts[ka], side.pts[kb]
         local r, pl = {}, {}
         for i = 1, 3 do r[i] = a.rest[i] + (b.rest[i] - a.rest[i]) * f end

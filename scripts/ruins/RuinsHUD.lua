@@ -19,19 +19,45 @@ local function MobileText(text)
     local t=text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 Q 施放','点【回溯】施放')
         :gsub('按 E','点【冻结】'):gsub('按 F 骑乘，Space 起飞','点【上龙】骑乘，再点【起飞】')
         :gsub('%[Q 回溯%]','【回溯】'):gsub('按 Q','点【回溯】')
+        :gsub('%[左键 碎时%]','【碎时】'):gsub('左键碎时','【碎时】')
     return t
 end
+-- Only the latest objective/hint/message layouts are retained (three bounded
+-- slots, never a map keyed by arbitrary strings). Widths share their lifetime.
+local objectiveCache,hintCache,messageCache={},{},{}
 -- Wrap on UTF-8 codepoints at the actual 12/24px font advance, never shrink.
-local function Lines(vg,text,maxWidth,size)
-    local result,line={},''
+-- Exact prefix measurements are needed only on layout changes, not per frame.
+---@param cached table
+local function Lines(vg,cached,text,maxWidth,size,touch,mobile)
+    if cached.valid and cached.vg==vg and cached.text==text and cached.width==maxWidth
+        and cached.size==size and cached.touch==touch then
+        return cached.lines,cached.widths
+    end
+    cached.vg,cached.text,cached.width,cached.size,cached.touch=vg,text,maxWidth,size,touch
+    if mobile then text=MobileText(text) end
+    -- PixelDraw returns 0 until its font is ready. Do not freeze zero-width
+    -- wrapping into a valid cache; retry on the next render (Font throttles IO).
+    local fontReady=text=='' or Draw.TextWidth(vg,'M',size)>0
+    local result,widths,line={}, {},''
+    ---@type number
+    local lineWidth=0
     for _,code in utf8.codes(text) do
         local ch=utf8.char(code)
-        if ch=='\n' or (line~='' and Draw.TextWidth(vg,line..ch,size)>maxWidth) then
-            result[#result+1]=line; line=ch=='\n' and '' or ch
-        else line=line..ch end
+        if ch=='\n' then
+            result[#result+1]=line; widths[#widths+1]=lineWidth
+            line,lineWidth='',0
+        else
+            local nextLine=line..ch
+            local nextWidth=fontReady and Draw.TextWidth(vg,nextLine,size) or 0
+            if line~='' and nextWidth>maxWidth then
+                result[#result+1]=line; widths[#widths+1]=lineWidth
+                line,lineWidth=ch,Draw.TextWidth(vg,ch,size)
+            else line,lineWidth=nextLine,nextWidth end
+        end
     end
-    if line~='' then result[#result+1]=line end
-    return result
+    if line~='' then result[#result+1]=line; widths[#widths+1]=lineWidth end
+    cached.lines,cached.widths,cached.valid=result,widths,fontReady
+    return result,widths
 end
 function Layer:Update(dt)
     messageFrame=math.min(3,messageFrame+1)
@@ -44,7 +70,7 @@ function Layer:Render(vg)
     local touch=Touch.IsEnabled()
     local left,top=Draw.Snap(s.left+16),Draw.Snap(s.top+16)
     local ow=math.min(260,Draw.Snap(w-s.left-s.right-32))
-    local lines=Lines(vg,MobileText(sub),ow-32,12)
+    local lines=Lines(vg,objectiveCache,sub,ow-32,12,touch,true)
     local oh=math.max(72,48+#lines*16)
     Draw.NineSlice(vg,'plaque_ink',left,top,ow,oh,12,.9)
     Draw.Text(vg,'时之遗迹',left+16,top+18,12,C.gold)
@@ -78,9 +104,9 @@ function Layer:Render(vg)
         -- Keep the bottom-center strip in the gap left of the right action cluster.
         -- Longer air instructions wrap instead of covering glide/land buttons.
         local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(640,w-40)
-        local hs=Lines(vg,shownHint,maxW-32,12)
+        local hs,widths=Lines(vg,hintCache,shownHint,maxW-32,12,touch,false)
         local hw=96
-        for _,line in ipairs(hs) do hw=math.max(hw,Draw.Snap(Draw.TextWidth(vg,line,12)+32)) end
+        for _,width in ipairs(widths) do hw=math.max(hw,Draw.Snap(width+32)) end
         local hh=math.max(48,24+#hs*16)
         local hx=Draw.Snap((w-hw)/2)
         if touch then hx=math.min(hx,w-s.right-290-hw) end
@@ -90,11 +116,10 @@ function Layer:Render(vg)
         for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.paper,NVG_ALIGN_CENTER) end
     end
     if message~='' or hideFrame>0 then
-        local text=MobileText(displayMessage)
         local maxW=math.max(96,w-s.left-s.right-40)
-        local ml=Lines(vg,text,maxW-88,24)
+        local ml,widths=Lines(vg,messageCache,displayMessage,maxW-88,24,touch,true)
         local mw=88
-        for _,line in ipairs(ml) do mw=math.max(mw,Draw.Snap(Draw.TextWidth(vg,line,24)+88)) end
+        for _,width in ipairs(widths) do mw=math.max(mw,Draw.Snap(width+88)) end
         local step=({-4,0,4,0})[messageFrame+1]
         mw=math.min(maxW,mw+step)
         local my=Draw.Snap(h*.22)
@@ -112,6 +137,7 @@ function Layer:Render(vg)
     Draw.Finish(vg)
 end
 function M.Build(spells)
+    objectiveCache,hintCache,messageCache={},{},{}
     if not ready then UI.Init({theme='default-dark',scale=UI.Scale.DEFAULT,
         fonts={{family='sans',weights={normal='Fonts/ArkPixel-12px-zh_hans.ttf',bold='Fonts/ArkPixel-12px-zh_hans.ttf'}}}}); ready=true end
     cd={}
@@ -132,5 +158,8 @@ function M.SetTarget(t,obj) target,targetGold=t or '',obj~=nil end
 function M.SetCrossVisible(v) crossVisible=v end
 function M.UpdateSlots(c,q) cool,charge=c or {},q or 0 end
 function M.IsPointerOverUI() return UI.IsPointerOverUI() end
-function M.Stop() Draw.Release(); UI.Shutdown(); ready=false end
+function M.Stop()
+    objectiveCache,hintCache,messageCache={},{},{}
+    Draw.Release(); UI.Shutdown(); ready=false
+end
 return M

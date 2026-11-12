@@ -10,6 +10,7 @@
 require "urhox-libs.Camera.ThirdPersonCamera"
 local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
+local TimeObject = require("ruins.TimeObject")
 
 local M = {}
 
@@ -32,6 +33,7 @@ end
 ---@field yaw number
 ---@field camYaw number
 ---@field camPitch number
+---@field aimMask integer
 local N = {}
 N.__index = N
 
@@ -51,6 +53,8 @@ function M.New(scene, world, spawn, spawnYaw)
     cc.maxSlopeAngle = 55
     cc.mass = 55
     cc.maxStrength = 60
+    -- 非默认 mask 启用双向过滤，让飞行台阶的 mask=0 真正不阻挡角色。
+    cc.collisionMask = 0xffffffff & ~2
     self.cc = cc
     self.yaw = spawnYaw or 0
     self.camYaw = spawnYaw or 0
@@ -157,22 +161,49 @@ function N:UpdateCamera(dt, mode, followNode)
     end
 end
 
--- 屏幕中心瞄准：返回 { hit, pos, normal, volume, dir, far }
-function N:Aim(maxDist)
-    local cam = self:Camera()
-    local ray = cam:GetScreenRay(0.5, 0.5)
-    -- 射线起点挪到诺米身前（避免命中诺米与相机之间的东西）
-    local toNomi = (self.node.worldPosition + Vector3(0, 1.2, 0) - ray.origin):DotProduct(ray.direction)
-    local start = ray.origin + ray.direction * math.max(0, toNomi)
-    local hit = self.world:RaycastSingle(Ray(start, ray.direction), maxDist)
-    local res = { hit = false, dir = ray.direction, far = start + ray.direction * maxDist }
+-- 瞄准只查询实心体素，不把动态碎块的近似凸包当作可见表面。
+-- 相机 ---- 中心射线 ---- 最近实心格（墙也会遮挡）
+--                  \\ 半径 0.12m 容错，仅接受无遮挡的可操作目标
+-- 回溯的 mask=0 体积仍可被 Grid 选中，但不会阻挡角色。
+---@param ray Ray
+---@param maxDist number
+function N:AimRay(ray, maxDist)
+    local hit = self.world:RaycastGridSingle(ray, maxDist, self.aimMask or 0xffffffff)
+    local res = { hit = false, dir = ray.direction, origin = ray.origin, mask = self.aimMask or 0xffffffff,
+        far = ray.origin + ray.direction * maxDist }
+    local obj = hit.hit and TimeObject.FindByVolume(hit.volume) or nil
+    local actionable = hit.hit and (obj ~= nil or hit.volume.destructible)
+    if not actionable then
+        -- 容错不得穿过中心射线上的墙；命中点还需单独检查可见性。
+        local reach = hit.hit and math.min(maxDist, hit.distance + 0.12) or maxDist
+        local near = self.world:SphereCast(Sphere(ray.origin, 0.12), ray.direction, reach, self.aimMask or 0xffffffff)
+        if near.hit then
+            local owner = TimeObject.FindByVolume(near.volume)
+            if owner ~= nil or near.volume.destructible then
+                local delta = near.position - ray.origin --[[@as Vector3]]
+                local length = delta:Length()
+                if length > 0.001 then
+                    local visible = self.world:RaycastGridSingle(Ray(ray.origin, delta / length), length + 0.08, self.aimMask or 0xffffffff)
+                    if visible.hit and (visible.volume == near.volume or (owner ~= nil and TimeObject.FindByVolume(visible.volume) == owner)) then
+                        hit = visible
+                        obj = owner
+                        res.assisted = true
+                    end
+                end
+            end
+        end
+    end
     if hit.hit then
-        res.hit = true
-        res.pos = hit.position
-        res.normal = hit.normal
-        res.volume = hit.volume
+        res.hit, res.pos, res.normal, res.volume = true, hit.position, hit.normal, hit.volume
+        res.object = obj
+        res.breakable = obj ~= nil and obj.canShatter or hit.volume.destructible
     end
     return res
+end
+
+-- 从真正的屏幕中心出发；不再跳过相机与角色之间已经看得到的近处物件。
+function N:Aim(maxDist)
+    return self:AimRay(self:Camera():GetScreenRay(0.5, 0.5), maxDist)
 end
 
 function N:SetVisible(v) self.node:SetDeepEnabled(v) end

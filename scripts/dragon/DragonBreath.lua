@@ -92,6 +92,7 @@ CFG.large = {
 ---@class DragonAnimationController
 ---@field breathCfg table|nil 当前型号的吐息配置（DragonBreath.New 写入）
 ---@field breathAim number|nil 吐息瞄准：额外的头部俯仰（度）
+---@field breathYaw number|nil 吐息瞄准：额外的头部偏航（度）
 
 -- ---------------------------------------------------------------- 外挂动作状态
 -- ctrl.breathCfg 由 Breath.New 写入；没有配置的型号（小号）不能吐息
@@ -268,6 +269,7 @@ end
 
 -- ---------------------------------------------------------------- 构建
 ---@class DragonBreath
+---@field aimTarget Vector3|nil
 local B = {}
 B.__index = B
 
@@ -582,6 +584,7 @@ function B:Destroy()
 end
 
 -- ---------------------------------------------------------------- 工具
+---@return Vector3 origin, Vector3 dir
 function B:MouthFrame()
     local rig = self.rig
     local p = rig.sockets.mouth.worldPosition

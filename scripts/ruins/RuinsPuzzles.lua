@@ -51,7 +51,11 @@ end
 local function Harvest(world, b)
     local vox = b:Collect()
     local o = { voxels = vox, dims = { b.nx, b.ny, b.nz }, origin = b.origin + b.rot * Vector3(b.lmin[1] or 0, b.lmin[2] or 0, b.lmin[3] or 0), yaw = b.yaw, size = b.s }
-    world:RemoveVolume(b.volume)
+    local volume = b.volume
+    local node = volume:GetNode()
+    volume.collisionMask = 0
+    volume:Dispose()
+    if node ~= nil then node:Dispose() end
     return o
 end
 
@@ -279,7 +283,7 @@ local function BuildBoulderTower(world, scene)
                     p.aimFrom = c
                     v.gravityFactor = 0
                     v.linearDamping = 0
-                    v:SetCollidable(false) -- 飞行中不互相挤（到位后恢复碰撞）
+                    v.collisionMask = 0 -- 实时禁碰撞；SetCollidable 仅控制载入 adoption
                     local d = slot - c
                     v.linearVelocity = d * (1.0 / T_ARRIVE)
                     v.angularVelocity = Vector3(rng:Range(-0.3, 0.3), rng:Range(-0.6, 0.6), rng:Range(-0.3, 0.3))
@@ -455,30 +459,64 @@ function M.UpdateKey(t, playerPos)
 end
 
 -- ---------------------------------------------------------------- 封门乱石进度
+local GATE_CHECK_DT = 0.25
+local GATE_RESCAN_DT = 1.0 -- 无伤害时低频复查，兼容手改 grid 与正在移动的残骸
+local GATE_HEIGHTS, GATE_OFFSETS = { 0.4, 1.0, 1.6 }, { -0.5, 0, 0.5 }
+local gateClock, gateNextCheck, gateNextRescan = 0, 0, 0
+local gateDirty = true
+
+local function InvalidateGate(volume, position)
+    if M.steps.gate then return end
+    if volume == M.gateRubble or (position ~= nil and abs(position.x) < 4.0 and abs(position.z + Terrain.WALL_R) < 4.0) then
+        gateDirty = true
+    end
+end
+
+---@param eventType string
+---@param eventData VoxelDamagedEventData
+local function GateDamaged(eventType, eventData)
+    InvalidateGate(eventData:GetPtr("Volume"), eventData:GetVector3("Position"))
+end
+
+---@param eventType string
+---@param eventData VoxelSeveredEventData
+local function GateSevered(eventType, eventData)
+    if eventData:GetPtr("Volume") == M.gateRubble then gateDirty = true end
+end
+
 function M.CheckGate()
-    if M.steps.gate or M.gateRubble == nil then return end
+    if M.steps.gate or M.gateRubble == nil or gateClock < gateNextCheck then return end
+    if not gateDirty and gateClock < gateNextRescan then return end
+    gateNextCheck = gateClock + GATE_CHECK_DT
+    gateNextRescan = gateClock + GATE_RESCAN_DT
+    gateDirty = false
     local now = M.gateRubble:GetSolidCount()
-    -- 门洞中心一条 1.4m 宽的通道：射线检查（诺米体高 1.7，用 3 条水平射线）
-    if now < M.gateRubbleSolid0 * 0.78 then
-        local world = M.world
-        local clear = true
-        for _, h in ipairs({ 0.4, 1.0, 1.6 }) do
-            for _, ox in ipairs({ -0.5, 0, 0.5 }) do
-                local hit = world:RaycastSingle(Ray(Vector3(ox, Terrain.RING_Y + h, -Terrain.WALL_R - 3.0), Vector3(0, 0, 1)), 6.0)
-                if hit.hit and hit.volume == M.gateRubble then clear = false end
-            end
-        end
-        if clear or now < M.gateRubbleSolid0 * 0.45 then
-            M.steps.gate = true
-            Emit("gate", {})
+    if now >= M.gateRubbleSolid0 * 0.78 then return end
+    -- 保持原低占用率兜底规则，避免已足够破坏后还做九次射线。
+    if now < M.gateRubbleSolid0 * 0.45 then
+        M.steps.gate = true
+        Emit("gate", {})
+        return
+    end
+    -- 南 → 北 6m，中心宽 1.4m/高 1.7m 的通道；任一残骸堵塞立即退出。
+    -- 命中的 severed 残片也算障碍，不只比较原 gate volume。
+    for _, h in ipairs(GATE_HEIGHTS) do
+        for _, ox in ipairs(GATE_OFFSETS) do
+            local hit = M.world:RaycastSingle(Ray(Vector3(ox, Terrain.RING_Y + h, -Terrain.WALL_R - 3.0), Vector3.FORWARD), 6.0)
+            if hit.hit then return end
         end
     end
+    M.steps.gate = true
+    Emit("gate", {})
 end
 
 ---@param world VoxelPhysicsWorld
 function M.Build(world, scene)
     local t0 = os.clock()
     M.world = world
+    gateClock, gateNextCheck, gateNextRescan, gateDirty = 0, 0, 0, true
+    SubscribeToEvent(world, "VoxelDamaged", GateDamaged)
+    SubscribeToEvent(world, "VoxelSevered", GateSevered)
     BuildGateRubble(world)
     BuildBridge(world, scene)
     BuildBoulderTower(world, scene)
@@ -511,12 +549,12 @@ local function UpdateStairStones(dt)
                 v:Activate()
                 if u >= 1.0 and not p.aimLanded then
                     p.aimLanded = true
-                    v:SetCollidable(true)
+                    v.collisionMask = 0xffffffff
                 end
             else
                 v.gravityFactor = o.pieceGravity
                 v.linearDamping = 0.05
-                v:SetCollidable(true)
+                v.collisionMask = 0xffffffff
                 v:Activate()
                 p.aimSlot = nil
             end
@@ -525,6 +563,7 @@ local function UpdateStairStones(dt)
 end
 
 function M.Update(dt)
+    gateClock = gateClock + dt
     UpdateStairStones(dt)
     for _, o in ipairs(M.list) do o:Update(dt) end
 end
@@ -551,11 +590,7 @@ end
 -- 体积 → 所属时之物件
 ---@param vol VoxelVolume
 function M.FindByVolume(vol)
-    if vol == nil then return nil end
-    for _, o in ipairs(M.list) do
-        if o:Owns(vol) then return o end
-    end
-    return nil
+    return TimeObject.FindByVolume(vol)
 end
 
 return M

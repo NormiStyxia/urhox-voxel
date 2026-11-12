@@ -57,6 +57,7 @@ local caster_ = nil
 ---@type TimeFX
 local fx_ = nil
 local time_ = 0
+local perf = { elapsed = 0.0, frames = 0, peak = 0.0 }
 local stage_ = "gate"
 local mouseLocked = false
 local farView = false
@@ -138,10 +139,11 @@ local function SetupLighting()
     M.zone = zone
     local sunNode = lg:GetChild("Directional Light")
     M.sun = sunNode:GetComponent("Light")
-    -- 太阳阴影：4 级 CSM，近处细（诺米、柱子、草的投影清楚），远到 260m 盖住整个盆地
+    -- 保留近景阴影；减少远级联和每像素 PCF 采样，不关闭建筑/角色阴影。
     local sun = M.sun
     sun.castShadows = true
-    sun.shadowCascade = CascadeParameters(10.0, 32.0, 90.0, 260.0, 0.85)
+    sun.shadowCascade = CascadeParameters(10.0, 38.0, 140.0, 0.0, 0.85)
+    renderer.shadowPCFSamples = 4
     sun.shadowBias = BiasParameters(0.00025, 0.6)
     sun.shadowIntensity = 0.0
     sun.shadowResolution = 1.0
@@ -224,16 +226,42 @@ local function SetupDragon()
     print("RuinsScene: dragon ready (" .. M.variant .. ")")
 end
 
--- 沉睡姿态：整体压低、头贴地；苏醒时 sleepK 1 → 0
+-- 沉睡姿态用绝对基姿态，不依赖每帧完整 FK/IK 重置来避免累积下沉。
+local sleepBase = { valid = false, position = Vector3.ZERO, neck = {} }
+local function UpdateDragonPose(dt)
+    local ctrl, rig = M.ctrl, M.rig
+    local sleeping = not M.dragonAwake and not M.debugOn and ctrl.state == "IDLE"
+        and not ctrl.jointTest.enabled and not ctrl.loco.airborne
+    if not sleeping then
+        sleepBase.valid = false
+        ctrl:Update(dt)
+        return
+    end
+    ctrl.input.move, ctrl.input.turn = 0, 0
+    if not sleepBase.valid then
+        ctrl:Update(0)
+        sleepBase.position = rig.root.position
+        for _, name in ipairs({ "neck1", "neck2", "head" }) do
+            sleepBase.neck[name] = rig.bones[name].rotation
+        end
+        sleepBase.valid = true
+        print("RuinsPerf: sleeping dragon pose cached")
+    end
+end
+
 local function ApplySleepPose(dt)
     local rig = M.rig
     if M.sleepK <= 0.001 then return end
     local k = Smooth(M.sleepK)
     local breathe = math.sin(time_ * 0.9) * 0.04
-    rig.root.position = rig.root.position + Vector3(0, (-0.55 + breathe) * k * (rig.size or 1), 0)
+    local base = sleepBase.valid and sleepBase.position or rig.root.position
+    rig.root.position = base + Vector3(0, (-0.55 + breathe) * k * (rig.size or 1), 0)
     local function Bend(name, pitch)
         local b = rig.bones[name]
-        if b ~= nil then b.rotation = b.rotation * Quaternion(pitch * k, Vector3.RIGHT) end
+        if b ~= nil then
+            local rotation = sleepBase.valid and sleepBase.neck[name] or b.rotation
+            b.rotation = rotation * Quaternion(pitch * k, Vector3.RIGHT)
+        end
     end
     Bend("neck1", 14); Bend("neck2", 10); Bend("head", 16)
 end
@@ -302,7 +330,7 @@ function M.Start()
         inputTakenOver = true
     end
     pointer:Release("start")
-    local t0 = os.clock()
+    local t0 = GetTime():GetElapsedTime()
     scene_ = Scene()
     scene_:CreateComponent("Octree")
     scene_:CreateComponent("DebugRenderer")
@@ -332,6 +360,12 @@ function M.Start()
         handPos = function() return nomi_:HandPos() end })
     SetupDragon()
 
+    sleepBase.valid = false
+    -- 龙体是纯视觉部件，不让瞄准 Grid 把它当成可破坏场景。
+    for _, part in pairs(M.rig.parts) do
+        if part.volume then part.volume.collisionLayer = 2; part.volume.collisionMask = 0 end
+    end
+    nomi_.aimMask = 0xffffffff & ~2
     HUD.Build(Spells.SPELLS)
     AttachTouchControls()
     SetStage("gate")
@@ -349,7 +383,7 @@ function M.Start()
     SubscribeToEvent("InputFocus", "Ruins_HandleInputFocus")
     RUINS = M
     M.scene, M.world, M.puzzles, M.nomiCtl, M.caster, M.fx = scene_, world_, Puzzles, nomi_, caster_, fx_
-    print(string.format("RuinsScene: ready in %.2fs, volumes %d", os.clock() - t0, world_:GetVolumeCount()))
+    print(string.format("RuinsScene: ready in %.2fs, volumes %d", GetTime():GetElapsedTime() - t0, world_:GetVolumeCount()))
 end
 
 -- 巨龙动画测试面板（隐藏，F10 打开；面板代码在 dragon/DragonDebugUI.lua）
@@ -480,18 +514,22 @@ end
 -- 当前瞄准目标（时之物件）
 local function UpdateAim()
     local aim = nomi_:Aim(60.0)
-    if aim.hit then aim.object = Puzzles.FindByVolume(aim.volume) end
+    if aim.hit then aim.object = aim.object or Puzzles.FindByVolume(aim.volume) end
     M.aim = aim
-    local obj = aim.object
+    local obj = aim.object --[[@as TimeObject?]]
+    local signature = obj and (obj.id .. ":" .. obj.state) or (aim.breakable and "breakable" or "none")
+    if signature ~= M.lastAimSignature then
+        M.lastAimSignature = signature
+        print("RuinsAim: target=" .. signature .. ", assisted=" .. tostring(aim.assisted == true))
+    end
     if obj ~= nil then
         obj.hoverTarget = 1
         local st = ({ WHOLE = "完整", SHATTERED = "破碎中", FROZEN = "已碎", REWIND = "回溯中" })[obj.state] or ""
         if obj.state == "FROZEN" and not obj.rubble then st = "冻结" end
-        HUD.SetTarget(string.format("◆ %s · %s%s", obj.title or obj.id, st, obj.canRewind and "  [Q 回溯]" or ""),obj)
-    elseif aim.hit and aim.volume ~= nil and aim.volume.destructible and aim.volume ~= Puzzles.gateRubble then
-        HUD.SetTarget("")
-    elseif aim.hit and aim.volume == Puzzles.gateRubble then
-        HUD.SetTarget("◇ 碎石堆（可碎时）")
+        local actions = (obj.canShatter and "  [左键 碎时]" or "") .. (obj.canRewind and "  [Q 回溯]" or "")
+        HUD.SetTarget(string.format("◆ %s · %s%s", obj.title or obj.id, st, actions),obj)
+    elseif aim.hit and aim.breakable then
+        HUD.SetTarget(aim.volume == Puzzles.gateRubble and "◇ 碎石堆 · 左键碎时" or "◇ 可破坏 · 左键碎时", true)
     else
         HUD.SetTarget("")
     end
@@ -548,7 +586,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     local ctrl = M.ctrl
     M.ride.externalGround = nomi_.cc.onGround
     M.ride:Update(dt, nomi_.camYaw)
-    ctrl:Update(dt)
+    UpdateDragonPose(dt)
     if M.ride.mode=="mounted" then
         M.ride:SeatPose(); M.ride:AttachToSaddle()
         M.ride.pos=nomi_.node.worldPosition
@@ -629,6 +667,17 @@ function Ruins_HandleUpdate(eventType, eventData)
     end
     TouchControls.Sync()
     HUD.SetCrossVisible(not M.debugOn)
+    -- 低频现场日志：使用实际帧间隔，Web 上不依赖返回 0 的 os.clock()。
+    perf.elapsed, perf.frames = perf.elapsed + dt, perf.frames + 1
+    perf.peak = math.max(perf.peak, dt)
+    if perf.elapsed >= 10 then
+        local pieces = 0
+        for _, object in ipairs(Puzzles.list) do pieces = pieces + #object.pieces end
+        print(string.format("RuinsPerf: fps=%.1f peak=%.1fms volumes=%d pieces=%d particles=%d awake=%s",
+            perf.frames / perf.elapsed, perf.peak * 1000, world_:GetVolumeCount(), pieces,
+            fx_.motesB:Count() + fx_.motesG:Count(), tostring(M.dragonAwake)))
+        perf.elapsed, perf.frames, perf.peak = 0.0, 0, 0.0
+    end
 end
 
 function Ruins_HandlePostUpdate(eventType, eventData)

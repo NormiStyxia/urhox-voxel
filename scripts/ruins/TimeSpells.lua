@@ -49,9 +49,13 @@ M.SPELLS = {
                     ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge)
                     local radius=M.ShatterRadius(charge)
                     for _,other in ipairs(ctx.puzzles.list) do
-                        if other~=obj and other.canShatter and (other.center-aim.pos):Length()<radius then
-                            local delta=other.center-aim.pos
-                            local h=ctx.world:RaycastSingle(Ray(aim.pos+aim.normal*.1,delta:Normalized()),delta:Length())
+                        ---@type Vector3
+                        local otherCenter = other.center
+                        ---@type Vector3
+                        local delta = otherCenter - aim.pos
+                        if other~=obj and other.canShatter and delta:Length()<radius then
+                            local rayOrigin = aim.pos + aim.normal * .1 --[[@as Vector3]]
+                            local h=ctx.world:RaycastGridSingle(Ray(rayOrigin,delta:Normalized()),delta:Length())
                             if not h.hit or ctx.puzzles.FindByVolume(h.volume)==other then
                                 other:Shatter({level=level,point=aim.pos,dir=aim.dir,power=1+charge*.6,radius=radius})
                             end
@@ -104,7 +108,26 @@ M.SPELLS = {
         desc = "Q：让时之物件沿时间倒流，重组为原样",
         cast = function(ctx, aim)
             local obj = aim.object
-            if obj == nil and aim.hit then obj = ctx.puzzles.FindNear(aim.pos, 2.5) end
+            if obj == nil and aim.hit then
+                local near = ctx.puzzles.FindNear(aim.pos, 2.5)
+                if near ~= nil then
+                    local origin = aim.origin or (ctx.handPos and ctx.handPos()) --[[@as Vector3?]]
+                    if origin ~= nil then
+                        local points = near:IsWhole() and { near.center } or near:PieceCenters()
+                        for _, point in ipairs(points) do
+                            local delta = point - origin --[[@as Vector3]]
+                            local length = delta:Length()
+                            if length > 0.001 then
+                                local visible = ctx.world:RaycastGridSingle(Ray(origin, delta / length), length + 0.08, aim.mask or 0xffffffff)
+                                if visible.hit and ctx.puzzles.FindByVolume(visible.volume) == near then
+                                    obj = near
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
             if obj == nil then
                 ctx.fx:Burst(aim.hit and aim.pos or aim.far, "fizzle", 0.6)
                 return false, "回溯只对带「时之印记」的物件生效"
@@ -198,7 +221,9 @@ function M.NewFX(scene)
     self.root = root
     self.motesB = VoxelFX.Motes(root, "MotesBlue", 900, "square", true)
     self.motesG = VoxelFX.Motes(root, "MotesGold", 500, "star", true)
-    self.debris = VoxelFX.Debris(root, 80)
+    -- No spell currently spawns cube debris. Keep the public pool/API, but
+    -- avoid creating 80 unused nodes/models until an external Spawn needs it.
+    self.debris = VoxelFX.Debris(root, 80, true)
     self.beams = {}
     for i = 1, 6 do
         local n = root:CreateChild("Beam" .. i)
@@ -219,6 +244,7 @@ function M.NewFX(scene)
     self.handLight = hand
     self.handL = l
     self.handGlow = 0
+    self.handAcc = 0
     return self
 end
 
@@ -307,12 +333,49 @@ function F:Beam(from, to, color)
     end
 end
 
+local REWIND_BLUE_RATE = 300 -- particles/second per object, not per fragment
+local REWIND_GOLD_RATE = 72  -- refresh the 24 clock ticks three times/second
+local HAND_RATE = 48        -- old 60fps full-glow density (0.8 * 60)
+local MAX_EMIT_DT = 0.1     -- discard hitch debt; at most 30 blue / 8 gold per object
+local REWIND_BLUE_COLORS = { M.WHITE, M.BLUE, M.VIOLET }
+local REWIND_GOLD_COLORS = { Color(1, 0.95, 0.8, 1), M.GOLD }
+
+local function RewindPieceCenter(r)
+    local obj = r.obj
+    local pieces = obj.pieces
+    local n = #pieces
+    -- Bound the search when fragments have already been disposed. Only compute
+    -- transforms for the budgeted samples; no per-frame centers table needed.
+    for _ = 1, n do
+        r.pieceIndex = r.pieceIndex % n + 1
+        local piece = pieces[r.pieceIndex] --[[@as TimePiece]]
+        local node = piece.node
+        if node ~= nil then
+            local half = obj.size * 0.5
+            return node.worldPosition + node.worldRotation * Vector3(piece.nx * half, piece.ny * half, piece.nz * half)
+        end
+    end
+    return nil
+end
+
+local function ClockMote(m)
+    local r = m.rewind
+    local a = -r.t * 4.0 + m.tick * math.pi * 2 / 24
+    local radius = math.max(1.2, r.obj.radius * 0.9)
+    m.pos = r.obj.center + Vector3(math.cos(a) * radius,
+        0.2 * math.sin(r.t * 3 + m.tick), math.sin(a) * radius)
+end
+
 -- 回溯特效：碎块回飞期间沿每块撒蓝紫光点，物件中心一个旋转的金色时钟环
 function F:StartRewind(obj)
-    self.rewinds[#self.rewinds + 1] = { obj = obj, t = 0 }
+    -- Repeated requests must not multiply a single object's emission budget.
+    for _, r in ipairs(self.rewinds) do if r.obj == obj then return end end
+    self.rewinds[#self.rewinds + 1] = { obj = obj, t = 0, blueAcc = 0, goldAcc = 0, pieceIndex = 0, tick = 0 }
 end
 
 function F:Update(dt, handPos, glowColor, glow)
+    local emitDt = Clamp(dt, 0, MAX_EMIT_DT)
+    for _, r in ipairs(self.rewinds) do r.t = r.t + dt end
     self.motesB:Update(dt)
     self.motesG:Update(dt)
     self.debris:Update(dt)
@@ -325,44 +388,59 @@ function F:Update(dt, handPos, glowColor, glow)
             if b.age >= b.life then b.node.enabled = false end
         end
     end
-    local keep = {}
-    for _, r in ipairs(self.rewinds) do
-        r.t = r.t + dt
+    local rewinds = self.rewinds
+    local count, liveCount = #rewinds, 0
+    for i = 1, count do
+        local r = rewinds[i]
         local obj = r.obj
         if obj.state == "REWIND" then
-            local cs = obj:PieceCenters(40)
-            for i = 1, #cs do
-                if math.random() < 0.5 then
-                    self.motesB:Spawn({ pos = cs[i] + Vector3(Rand(-0.3, 0.3), Rand(-0.3, 0.3), Rand(-0.3, 0.3)), vel = Vector3(0, 0, 0),
-                        life = Rand(0.3, 0.6), size = Rand(0.07, 0.14), colors = { M.WHITE, M.BLUE, M.VIOLET } })
-                end
+            local blueBudget = r.blueAcc + REWIND_BLUE_RATE * emitDt
+            local blueCount = math.floor(blueBudget + 1e-9)
+            r.blueAcc = math.max(0, blueBudget - blueCount)
+            -- Round-robin just the budgeted samples, including pieces beyond
+            -- the former first-40 limit. Drop unsatisfied budget, never backlog.
+            for _ = 1, math.min(blueCount, #self.motesB.free) do
+                local center = RewindPieceCenter(r)
+                if center == nil then break end
+                self.motesB:Spawn({ pos = center + Vector3(Rand(-0.3, 0.3), Rand(-0.3, 0.3), Rand(-0.3, 0.3)), vel = Vector3.ZERO,
+                    life = Rand(0.3, 0.6), size = Rand(0.07, 0.14), colors = REWIND_BLUE_COLORS })
             end
-            -- 时钟环：绕物件中心旋转的 24 个金点（逆时针 = 倒流）
-            local c = obj.center
-            local R = math.max(1.2, obj.radius * 0.9)
-            for i = 0, 2 do
-                local a = -r.t * 4.0 + i * 2.094
-                self.motesG:Spawn({ pos = c + Vector3(math.cos(a) * R, 0.2 * math.sin(r.t * 3 + i), math.sin(a) * R), vel = Vector3(0, 0, 0),
-                    life = 0.5, size = 0.16, colors = { Color(1, 0.95, 0.8, 1), M.GOLD } })
+            -- 24 angular clock ticks, refreshed in order at 72/s. Existing
+            -- ticks follow the reverse rotation too, rather than static trails.
+            local goldBudget = r.goldAcc + REWIND_GOLD_RATE * emitDt
+            local goldCount = math.floor(goldBudget + 1e-9)
+            r.goldAcc = math.max(0, goldBudget - goldCount)
+            for _ = 1, math.min(goldCount, #self.motesG.free) do
+                local m = { pos = obj.center, life = 0.5, size = 0.16, colors = REWIND_GOLD_COLORS,
+                    rewind = r, tick = r.tick, fn = ClockMote }
+                ClockMote(m)
+                self.motesG:Spawn(m)
+                r.tick = (r.tick + 1) % 24
             end
-            keep[#keep + 1] = r
+            liveCount = liveCount + 1
+            rewinds[liveCount] = r
         elseif obj.state == "WHOLE" then
             self:Burst(obj.center, "restore", math.min(2.0, 0.6 + obj.radius * 0.25))
         end
     end
-    self.rewinds = keep
+    for i = liveCount + 1, count do rewinds[i] = nil end
     -- 手光
     self.handGlow = self.handGlow + ((glow or 0) - self.handGlow) * (1 - math.exp(-10 * dt))
     if handPos ~= nil then
         self.handLight.position = handPos
         self.handL.brightness = 1.6 * self.handGlow
         if glowColor ~= nil then self.handL.color = glowColor end
-        if self.handGlow > 0.1 and math.random() < self.handGlow * 0.8 then
-            local d = Vector3(Rand(-1, 1), Rand(-1, 1), Rand(-1, 1)):Normalized()
-            self.motesB:Spawn({ pos = handPos + d * 0.25, vel = -d * 0.6 + Vector3(0, 0.3, 0), life = 0.4, size = 0.06,
-                colors = { M.WHITE, glowColor or M.BLUE } })
-        end
-    end
+        if self.handGlow > 0.1 then
+            local budget = self.handAcc + HAND_RATE * Clamp(self.handGlow, 0, 1) * emitDt
+            local n = math.floor(budget + 1e-9)
+            self.handAcc = math.max(0, budget - n)
+            for _ = 1, math.min(n, #self.motesB.free) do
+                local d = Vector3(Rand(-1, 1), Rand(-1, 1), Rand(-1, 1)):Normalized()
+                self.motesB:Spawn({ pos = handPos + d * 0.25, vel = -d * 0.6 + Vector3(0, 0.3, 0), life = 0.4, size = 0.06,
+                    colors = { M.WHITE, glowColor or M.BLUE } })
+            end
+        else self.handAcc = 0 end
+    else self.handAcc = 0 end
 end
 
 return M

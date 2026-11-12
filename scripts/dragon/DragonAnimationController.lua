@@ -44,6 +44,9 @@ local Flight = require("dragon.DragonFlight")
 ---@field touchT number|nil
 ---@field jumped boolean|nil
 ---@field roaring boolean|nil
+---@field stream DragonStream|nil 普通按住吐息实例（DragonStream.New 写入）
+---@field resolveMotion (fun(self: DragonAnimationController, oldPos: Vector3, oldYaw: number, oldAlt: number))|nil
+---@field overlayPose (fun(self: DragonAnimationController, pose: {j: table<string, number[]>, body: number[]}))|nil
 local C = {}
 C.__index = C
 

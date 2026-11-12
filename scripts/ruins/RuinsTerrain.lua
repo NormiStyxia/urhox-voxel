@@ -129,11 +129,11 @@ function M.Height(x, z)
 end
 
 -- 碰撞层顶面高度（0.5m 量化，略偏向下取：宁可脚陷进草里一点，也不要悬空）
-function M.CollideHeight(x, z)
+function M.CollideHeight(x, z, height)
     local r2 = x * x + z * z
     if r2 < (M.COURT_R - 0.25) ^ 2 then return -1.0 end -- 龙庭地砖体积自带碰撞
     if M.InStair(x, z) then return M.StairY(z) end
-    return floor(M.Height(x, z) * 2.0 + 0.3) * 0.5
+    return floor((height or M.Height(x, z)) * 2.0 + 0.3) * 0.5
 end
 
 -- 显示层高度（藏在龙庭地砖 / 石阶下面）
@@ -200,7 +200,7 @@ local function BuildCollision(world)
         for k = -1, N do
             local z = x0 + (k + 0.5) * c
             row[k] = M.Height(x, z)
-            crow[k] = M.CollideHeight(x, z)
+            crow[k] = M.CollideHeight(x, z, row[k])
         end
         H[i], C[i] = row, crow
     end
@@ -391,9 +391,9 @@ local function BuildGrass(scene)
     grass.clumpSize = 0.7
     grass.lean = 0.45
     grass.maxSlope = 42
-    grass.viewDistance = 80
-    grass.densityFalloffDistance = 22
-    grass.castShadows = true
+    grass.viewDistance = 55
+    grass.densityFalloffDistance = 16
+    grass.castShadows = false
     grass.windDirection = Vector2(1, 0.35)
     grass.windStrength = 0.32
     grass.windSpeed = 3.5
@@ -418,7 +418,9 @@ local function BuildGrass(scene)
     fl.flowerSize = 0.035
     fl.petalCount = 5
     fl.flowerCup = 0.3
-    fl.viewDistance = 45
+    fl.viewDistance = 35
+    fl.trampleRecoveryTime = 0
+    fl.castShadows = false
     fl.windDirection = grass.windDirection
     fl.windStrength = grass.windStrength
     fl.windSpeed = grass.windSpeed

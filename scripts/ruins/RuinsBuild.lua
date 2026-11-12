@@ -674,7 +674,7 @@ local function BuildNorthHall(world)
     for i = 1, 6 do
         local x = -8.75 + (i - 1) * 3.5
         local cb = Brush.New(world, { min = { x - 1.25, baseY + 1.5, cz - 4.75 },
-            max = { x + 1.25, baseY + 10.5, cz - 2.25 }, size = M.DETAIL.ornament })
+            max = { x + 1.25, baseY + 1.5 + hs[i] + 0.0625, cz - 2.25 }, size = M.DETAIL.ornament })
         Column(cb, x, cz - 3.5, baseY + 1.5, 8.0, 0.6, (hs[i] < 8.5) and hs[i] or nil, true)
         Keep(cb:Finish({}))
     end

@@ -11,15 +11,27 @@ uniform float frost_weight3 = 0.0;
 uniform float frost_weight4 = 0.0;
 uniform float frost_weight5 = 0.0;
 uniform float frost_weight6 = 0.0;
-float frost_patch_mask(vec3 p, vec4 area, float w) {
-    float jag = sin(p.x*8.1+sin(p.z*4.0))*sin(p.z*7.3)*0.08;
-    float edge = length(p.xz-area.xz)+jag;
-    return (1.0-smoothstep(area.w*0.72, max(0.001,area.w), edge))
-        * (1.0-smoothstep(0.12,0.7,abs(p.y-area.y))) * w;
+// jag is shared by all six patches; these helpers never evaluate screen derivatives.
+float frost_patch_mask(vec3 p, vec4 area, float w, float jag) {
+    if (w == 0.0) { return 0.0; }
+    vec2 offset = p.xz - area.xz;
+    float height = abs(p.y - area.y);
+    float radius = max(0.001, area.w);
+    // |jag| <= 0.08: outside this square or height gate the original mask is exactly zero.
+    if (height >= 0.7 || max(abs(offset.x), abs(offset.y)) >= radius + 0.08) { return 0.0; }
+    float edge = length(offset) + jag;
+    return (1.0 - smoothstep(area.w * 0.72, radius, edge))
+        * (1.0 - smoothstep(0.12, 0.7, height)) * w;
 }
 float ruins_frost(vec3 p, vec3 n) {
-    float f = max(frost_patch_mask(p,frost_patch1,frost_weight1),frost_patch_mask(p,frost_patch2,frost_weight2));
-    f=max(f,max(frost_patch_mask(p,frost_patch3,frost_weight3),frost_patch_mask(p,frost_patch4,frost_weight4)));
-    f=max(f,max(frost_patch_mask(p,frost_patch5,frost_weight5),frost_patch_mask(p,frost_patch6,frost_weight6)));
-    return f*smoothstep(0.45,0.8,n.y);
+    // Draw-uniform fast path; equality preserves the old behavior even for signed weights.
+    if (frost_weight1 == 0.0 && frost_weight2 == 0.0 && frost_weight3 == 0.0
+        && frost_weight4 == 0.0 && frost_weight5 == 0.0 && frost_weight6 == 0.0) { return 0.0; }
+    float facing = smoothstep(0.45, 0.8, n.y);
+    if (facing == 0.0) { return 0.0; }
+    float jag = sin(p.x * 8.1 + sin(p.z * 4.0)) * sin(p.z * 7.3) * 0.08;
+    float f = max(frost_patch_mask(p, frost_patch1, frost_weight1, jag), frost_patch_mask(p, frost_patch2, frost_weight2, jag));
+    f = max(f, max(frost_patch_mask(p, frost_patch3, frost_weight3, jag), frost_patch_mask(p, frost_patch4, frost_weight4, jag)));
+    f = max(f, max(frost_patch_mask(p, frost_patch5, frost_weight5, jag), frost_patch_mask(p, frost_patch6, frost_weight6, jag)));
+    return f * facing;
 }
