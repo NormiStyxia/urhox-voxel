@@ -349,7 +349,7 @@ function Ruins_HandleMouseDown(eventType, eventData)
     -- 正常 HUD 全部是展示层；只有打开调试面板时才禁止玩法拖动。
     if M.debugOn then return end
     if not mouseLocked then
-        drag.buttons = drag.buttons | button
+        drag.buttons = drag.buttons | (1 << button)
         drag.x, drag.y = eventData:GetInt("X"), eventData:GetInt("Y")
         drag.distance, drag.samples = 0, 0
         print(string.format("RuinsInput: drag begin button=%d pos=%d,%d focus=%s", button, drag.x, drag.y, tostring(input.focus)))
@@ -377,8 +377,9 @@ end
 ---@param eventData MouseButtonUpEventData
 function Ruins_HandleMouseUp(eventType, eventData)
     local button = eventData:GetInt("Button")
-    if drag.buttons & button == 0 then return end
-    drag.buttons = drag.buttons & (~button)
+    local bit = 1 << button
+    if drag.buttons & bit == 0 then return end
+    drag.buttons = drag.buttons & (~bit)
     print(string.format("RuinsInput: drag end samples=%d distance=%d", drag.samples, drag.distance))
     -- 纯点击才申请锁定；拖动途中不切换模式，否则失败请求会破坏绝对坐标输入。
     if button == MOUSEB_LEFT and drag.distance < 4 and not M.debugOn then pointer:Click(false) end

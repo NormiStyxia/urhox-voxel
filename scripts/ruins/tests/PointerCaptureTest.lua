@@ -104,6 +104,8 @@ V.atFrame(5, function()
         V.assert(mock.requests == 0, "按下鼠标不切换模式破坏拖动")
         local up = VariantMap()
         up["Button"] = MOUSEB_LEFT
+        up["X"], up["Y"] = 130, 110
+        up["Buttons"], up["Qualifiers"] = 0, 0
         Ruins_HandleMouseUp("MouseButtonUp", up --[[@as MouseButtonUpEventData]])
         if _G["POINTER_WEB_TEST"] then
             V.assert(mock.requests == 0, "Web 纯点击先激活")
@@ -139,6 +141,7 @@ V.atFrame(5, function()
         SendEvent("MouseMove", move)
         V.assert(scene.nomiCtl.camYaw == yaw, "无按下事件时不转视角")
         left["X"], left["Y"] = 100, 100
+        left["Buttons"], left["Qualifiers"] = 0, 0
         SendEvent("MouseButtonDown", left)
         SendEvent("MouseMove", move)
         V.assert(math.abs(scene.nomiCtl.camYaw - yaw - 3.6) < 0.001, "相对位移和轮询按键均为零时，绝对坐标拖动仍转视角")
