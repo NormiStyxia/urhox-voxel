@@ -1,180 +1,134 @@
--- 通过 Runtime 的 -validate-test 加载；模拟浏览器异步回报，不冒充浏览器实测。
+-- 单元测试 + 实际场景输入回归；不使用 M.fake 绕过施法门禁。
 local Capture = require("ruins.PointerCapture")
 local V = _G["V"]
 
-local function Fixture(web, softCapture)
-    local env = { now = 10.0, focus = true, locked = false, requests = 0, releases = 0 }
-    local capture = Capture.New({
+local function Fixture(web)
+    local env = { now = 10.0, focus = true, locked = false, requests = 0 }
+    local p = Capture.New({
         web = web,
-        softCapture = softCapture,
         now = function() return env.now end,
         focused = function() return env.focus end,
         captured = function() return env.locked end,
-        request = function()
-            env.requests = env.requests + 1
-            if not web then env.locked = true end
-        end,
-        release = function() env.releases = env.releases + 1; env.locked = false end,
+        request = function() env.requests = env.requests + 1 end,
+        release = function() env.locked = false end,
         changed = function(locked, reason) env.last = reason end,
     })
-    return capture, env
+    return p, env
 end
 
 V.atFrame(5, function()
     local p, e = Fixture(true)
     p:Click(true)
-    V.assert(e.requests == 0, "UI 点击不能请求捕获")
-    e.focus = false
+    V.assert(e.requests == 0, "UI 不请求锁定")
     p:Click(false)
-    V.assert(e.requests == 0, "失焦点击不能请求捕获")
-    e.focus = true
-    p:Click(false)
-    V.assert(e.requests == 1 and p.state == "pending", "有效点击发起一次异步请求")
+    V.assert(e.requests == 1 and p.state == "pending", "Web 首次点击实际请求锁定")
+    V.assert(p:IsEnabled(), "等待浏览器时玩法已经激活")
+    p:Update(false)
+    V.assert(p:CanAttack(), "等待锁定时仍可施法")
     p:ModeChanged(true, false)
-    V.assert(p.state == "pending", "Web 相对模式通知不等于浏览器已锁定")
+    V.assert(p.state == "pending", "仅相对模式不冒充浏览器锁定成功")
     for i = 1, 10 do p:Click(false) end
-    V.assert(e.requests == 1, "pending 期间连续点击不重复请求")
-    e.now = 12.0
-    p:Update(true)
-    V.assert(p.state == "pending", "超过旧 1.2 秒阈值仍允许异步成功")
-    e.locked = true
-    p:ModeChanged(true, true)
-    V.assert(p:IsCaptured(), "浏览器成功回报进入捕获状态")
-    V.assert(not p:CanLook(), "重锁首帧丢弃鼠标跳变量")
-    V.assert(p:CanLook(), "后续帧允许相对视角")
-    p:Update(true)
-    V.assert(not p:CanAttack(), "重锁点击不能蓄力施法")
-    p:Update(false)
-    V.assert(p:CanAttack(), "松开重锁点击后恢复施法")
-    local releases = e.releases
-    e.locked = false
-    p:ModeChanged(false, false)
-    V.assert(not p:IsCaptured(), "浏览器自主解锁同步状态")
-    V.assert(e.releases == releases, "解锁通知不反向切模式造成递归")
-    p:Click(false)
-    V.assert(e.requests == 1, "浏览器 ESC 冷却期不重新请求")
+    V.assert(e.requests == 1, "pending 不重复请求")
     e.now = 14.1
+    p:Update(false)
+    V.assert(p.state == "fallback" and p:CanAttack(), "超时兼容模式仍允许技能")
+    V.assert(e.requests == 1, "失败不自动重试")
+    e.now = 16.2
     p:Click(false)
-    V.assert(e.requests == 2, "冷却结束允许点击重锁")
+    V.assert(e.requests == 2, "后续真实点击可以重试")
     e.locked = true
     p:ModeChanged(true, true)
+    V.assert(p:IsCaptured() and p:IsEnabled(), "成功回报进入真正锁定")
+    p:Release("escape")
+    V.assert(not p:IsCaptured() and not p:IsEnabled(), "ESC 释放并暂停玩法输入")
+    p:Resume()
+    p:Update(false)
+    V.assert(p:CanAttack() and e.requests == 2, "键盘恢复技能不需要再次申请锁定")
     p:SetBlocked(true)
-    V.assert(not p:IsCaptured() and not e.locked, "F10 面板立即释放捕获")
-    e.now = 20.0
+    p:Resume()
     p:Click(false)
-    V.assert(e.requests == 2, "面板内点击不会重锁")
-    e.locked = true
-    p:ModeChanged(true, true)
-    V.assert(not e.locked and not p:IsCaptured(), "面板打开后迟到的成功回报被释放")
+    V.assert(not p:IsEnabled() and e.requests == 2, "面板阻止输入与锁定")
     p:SetBlocked(false)
-    V.assert(not p:IsCaptured(), "关闭面板不会无手势自动重锁")
-    p:Click(false)
-    e.now = 24.1
-    p:Update(false)
-    V.assert(p.state == "free" and e.last == "timeout", "拒绝请求超时后安全恢复")
-    local requests = e.requests
-    e.now = 30.0
-    p:Update(false)
-    V.assert(e.requests == requests, "请求失败后不自动循环重试")
-    p:Click(false)
     e.focus = false
-    p:Update(false)
-    V.assert(p.state == "free" and e.last == "focus", "请求中失焦也会取消")
-    e.focus = true
-    e.locked = true
-    p:ModeChanged(true, true)
-    V.assert(not e.locked and not p:IsCaptured(), "取消请求后迟到的回报不能抢回鼠标")
-
-    local soft, se = Fixture(true, true)
-    soft:Click(false)
-    V.assert(soft:IsCaptured() and not se.locked, "网页兼容模式无需浏览器锁定即可继续游戏")
-    V.assert(se.requests == 0, "首次点击不调用 Pointer Lock")
-    soft:Update(true)
-    V.assert(not soft:CanAttack(), "兼容模式首次点击不会施法")
-    soft:Update(false)
-    V.assert(soft:CanAttack(), "兼容模式松开后允许左键施法")
-    soft:ModeChanged(false, false)
-    V.assert(soft:IsCaptured(), "MM_FREE 模式通知不误清除逻辑接管")
-    for i = 1, 20 do
-        soft:Release("escape")
-        soft:Click(false)
-        V.assert(soft:IsCaptured() and se.requests == 0, "兼容模式反复继续始终零锁定请求 " .. i)
-    end
-    soft:SetBlocked(true)
-    soft:Click(false)
-    V.assert(not soft:IsCaptured() and se.requests == 0, "兼容模式调试面板阻止视角接管")
-    soft:SetBlocked(false)
-    se.focus = false
-    soft:Click(false)
-    V.assert(not soft:IsCaptured(), "兼容模式失焦不接管")
-    se.focus = true
-    soft:Click(false)
-    se.focus = false
-    soft:Update(false)
-    V.assert(not soft:IsCaptured() and se.requests == 0, "兼容模式失焦释放且不请求锁定")
-
+    p:Resume()
+    V.assert(not p:IsEnabled(), "失焦不恢复玩法")
     local d, de = Fixture(false)
     d:Click(false)
-    V.assert(d:IsCaptured(), "桌面根据相对模式立即捕获")
+    de.locked = true
     d:ModeChanged(true, false)
-    V.assert(d:IsCaptured(), "桌面不误用 Web 的 MouseLocked 布尔值")
-    for i = 1, 12 do
-        d:Release("escape")
-        V.assert(not d:IsCaptured() and not de.locked, "桌面 ESC 释放循环 " .. i)
-        d:Click(false)
-        V.assert(d:IsCaptured(), "桌面点击恢复循环 " .. i)
-    end
-    de.focus = false
-    d:Update(false)
-    V.assert(not d:IsCaptured(), "桌面失焦释放")
+    V.assert(d:IsCaptured(), "桌面根据 relative 模式锁定")
 
-    -- 实际场景接线：ESC、F10 与右键均走同一套入口。
+    local realInput = input
+    local scene = _G["RUINS"]
+    local held, pressed = {}, {}
+    local mock = { focus = true, minimized = false, mouseMode = MM_FREE, mouseVisible = true,
+        mouseMove = IntVector2(0, 0), mousePosition = IntVector2(400, 300), left = false, locked = false, requests = 0 }
+    function mock:SetMouseMode(mode)
+        self.mouseMode = mode
+        if mode == MM_RELATIVE then self.requests = self.requests + 1 end
+        if mode == MM_FREE then self.locked = false end
+    end
+    function mock:SetMouseVisible(v) self.mouseVisible = v end
+    function mock:SetMouseGrabbed(v) self.mouseGrabbed = v end
+    function mock:IsMouseLocked() return self.locked end
+    function mock:GetMouseButtonDown(button) return button == MOUSEB_LEFT and self.left end
+    function mock:GetKeyDown(key) return held[key] == true end
+    function mock:GetKeyPress(key)
+        local value = pressed[key] == true
+        pressed[key] = nil
+        return value
+    end
     local function Key(key)
         local data = VariantMap()
         data["Key"] = key
+        pressed[key] = true
         Ruins_HandleKeyDown("KeyDown", data --[[@as KeyDownEventData]])
     end
-    Key(KEY_ESCAPE)
-    V.assert(input.mouseMode == MM_FREE and input.mouseVisible, "场景 ESC 确实释放原生鼠标")
-    local button = VariantMap()
-    button["Button"] = MOUSEB_RIGHT
-    Ruins_HandleMouseDown("MouseButtonDown", button --[[@as MouseButtonDownEventData]])
-    V.assert(input.mouseMode == MM_FREE, "场景右键不会重新锁定")
-    local scene = _G["RUINS"]
-    scene.ToggleDebugPanel()
-    V.assert(scene.debugOn and input.mouseMode == MM_FREE, "场景打开 F10 面板保持自由鼠标")
-    scene.ToggleDebugPanel()
-    V.assert(not scene.debugOn and input.mouseMode == MM_FREE, "场景关闭 F10 面板等待手势")
-    if _G["POINTER_WEB_TEST"] then
-        -- 场景从启动时即使用 Web 配置；任何 MM_RELATIVE 请求都会让断言失败。
-        local realInput = input
-        local requests = 0
-        local mock = { focus = true, minimized = false, mouseMode = MM_FREE, mouseVisible = true }
-        function mock:SetMouseMode(mode)
-            if mode == MM_RELATIVE then
-                requests = requests + 1
-                error("WrongDocumentError: test document cannot grant pointer lock")
-            end
-            self.mouseMode = mode
-        end
-        function mock:SetMouseVisible(visible) self.mouseVisible = visible end
-        function mock:SetMouseGrabbed(grabbed) self.mouseGrabbed = grabbed end
-        function mock:IsMouseLocked() return false end
-        local ok, err = pcall(function()
-            _G["input"] = mock
-            local left = VariantMap()
-            left["Button"] = MOUSEB_LEFT
-            local escape = VariantMap()
-            escape["Key"] = KEY_ESCAPE
-            for i = 1, 20 do
-                Ruins_HandleMouseDown("MouseButtonDown", left --[[@as MouseButtonDownEventData]])
-                Ruins_HandleKeyDown("KeyDown", escape --[[@as KeyDownEventData]])
-            end
-        end)
-        _G["input"] = realInput
-        V.assert(ok, "实际 Web 场景点击不会调用无效文档锁定接口：" .. tostring(err))
-        V.assert(requests == 0 and mock.mouseMode == MM_FREE and mock.mouseVisible,
-            "实际 Web 场景反复点击与 ESC 始终零 Pointer Lock 请求")
+    local dt = VariantMap()
+    dt["TimeStep"] = 0.05
+    local function Tick()
+        Ruins_HandleUpdate("Update", dt --[[@as UpdateEventData]])
     end
+    local ok, err = pcall(function()
+        _G["input"] = mock
+        Key(KEY_ESCAPE)
+        -- 尚无任何点击/浏览器锁定，直接按 E、Q 也必须进入真实 Cast。
+        scene.caster.cool.freeze, scene.caster.cool.rewind = 0, 0
+        Key(KEY_E)
+        Tick()
+        V.assert(scene.caster.lastCast == "freeze", "真实输入 E 在未锁定时施放冻结")
+        Key(KEY_Q)
+        Tick()
+        V.assert(scene.caster.lastCast == "rewind", "真实输入 Q 在未锁定时施放回溯")
+        V.assert(mock.requests == 0, "键盘施法无需浏览器锁定")
+        scene.caster.cool.shatter = 0
+        mock.left = true
+        Tick()
+        V.assert(scene.caster.charging, "真实左键开始碎时蓄力")
+        Tick()
+        V.assert(scene.caster.charge > 0, "真实输入推进蓄力")
+        mock.left = false
+        Tick()
+        V.assert(scene.caster.lastCast == "shatter" and not scene.caster.charging, "松开左键实际释放碎时")
+        mock.mouseMove = IntVector2(20, 0)
+        local yaw = scene.nomiCtl.camYaw
+        Tick()
+        V.assert(scene.nomiCtl.camYaw ~= yaw, "未锁定时视角仍能响应鼠标")
+        mock.mouseMove = IntVector2(0, 0)
+        scene.ToggleDebugPanel()
+        scene.caster.cool.freeze = 0
+        scene.caster.lastCast = "shatter"
+        Key(KEY_E)
+        Tick()
+        V.assert(scene.caster.lastCast == "shatter", "F10 面板内 E 不误施法")
+        scene.ToggleDebugPanel()
+        Key(KEY_E)
+        Tick()
+        V.assert(scene.caster.lastCast == "freeze", "关闭面板后 E 可直接恢复施法")
+        Key(KEY_ESCAPE)
+        V.assert(mock.mouseMode == MM_FREE and mock.mouseVisible, "实际场景 ESC 释放鼠标")
+    end)
+    _G["input"] = realInput
+    V.assert(ok, "真实场景输入回归没有异常：" .. tostring(err))
     V.finish()
 end)

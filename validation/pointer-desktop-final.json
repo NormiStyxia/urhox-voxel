@@ -1,0 +1,100 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "PASS",
+    "duration_ms": 21149,
+    "frames_completed": 200,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "PASS",
+            "errors": []
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1960,
+            "component_count": 2958,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16361.234375
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16.636999130249025
+        },
+        {
+            "frame": 100,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16.618999481201173
+        },
+        {
+            "frame": 200,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16.614999771118165
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 24.125999450683595,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "VoxelVolume": 348,
+        "CustomGeometry": 1429,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 712,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 4,
+        "ParticleEmitter": 4,
+        "SoundSource3D": 3
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 82,
+        "passed": 82,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 0
+    }
+}

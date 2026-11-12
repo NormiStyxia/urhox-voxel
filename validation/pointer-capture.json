@@ -1,0 +1,93 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 6833,
+    "frames_completed": 200,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-12 16_25_53_002][79] ERROR: Execute Lua function failed: [string \"ruins/RuinsScene\"]:61: error in function 'GetSystemTime'.\n     argument #1 is 'Time'; 'Time' expected.\n\nstack traceback:\n\t[C]: in method 'GetSystemTime'\n\t[string \"ruins/RuinsScene\"]:61: in field 'now'\n\t[string \"ruins/PointerCapture\"]:46: in method 'Release'\n\t[string \"ruins/RuinsScene\"]:258: in field 'Start'\n\t[string \"ruins_main\"]:10: in function 'Start'",
+                    "frame": 0
+                }
+            ]
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-12 16_25_53_069][84] ERROR: Execute Lua string failed: [string \"ruins/RuinsScene\"]:61: error in function 'GetSystemTime'.\n     argument #1 is 'Time'; 'Time' expected.\n",
+                    "frame": 5
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 0,
+            "component_count": 0,
+            "scene_exists": false
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 0,
+            "components": 0,
+            "hash": 0,
+            "frame_time_ms": 467.68798828125
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 0,
+            "components": 0,
+            "hash": 0,
+            "frame_time_ms": 16.625999450683595
+        },
+        {
+            "frame": 100,
+            "phase": "run",
+            "nodes": 0,
+            "components": 0,
+            "hash": 0,
+            "frame_time_ms": 16.621999740600587
+        },
+        {
+            "frame": 200,
+            "phase": "run",
+            "nodes": 0,
+            "components": 0,
+            "hash": 0,
+            "frame_time_ms": 16.600000381469728
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 17.128000259399415,
+    "update_defined": false,
+    "component_census": {},
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 50,
+        "passed": 50,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 2,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 2
+    }
+}

@@ -1,0 +1,103 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 24854,
+    "frames_completed": 200,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "PASS",
+            "errors": []
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1960,
+            "component_count": 2958,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16432.75390625
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16.65999984741211
+        },
+        {
+            "frame": 100,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16.614999771118165
+        },
+        {
+            "frame": 200,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2724379631,
+            "frame_time_ms": 16.61400032043457
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 35.310001373291019,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "VoxelVolume": 348,
+        "CustomGeometry": 1429,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 712,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 4,
+        "ParticleEmitter": 4,
+        "SoundSource3D": 3
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 84,
+        "passed": 82,
+        "failed": 2
+    },
+    "test_issues": [
+        "实际 Web 场景点击不会调用无效文档锁定接口：[string \"/workspace/scripts/ruins/tests/PointerCapture...\"]:162: WrongDocumentError: test document cannot grant pointer lock",
+        "实际 Web 场景反复点击与 ESC 始终零 Pointer Lock 请求"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 0
+    }
+}

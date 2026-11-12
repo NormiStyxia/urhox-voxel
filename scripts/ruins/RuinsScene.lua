@@ -55,11 +55,10 @@ local stage_ = "gate"
 local mouseLocked = false
 local farView = false
 local isWeb = PlatformUtils.IsWebPlatform()
-local resumeHint = isWeb and "点击画面继续 · 移动鼠标转向，靠近边缘持续转向 · Esc 释放" or "点击画面锁定鼠标"
+local resumeHint = "点击画面锁定鼠标 · Esc 释放"
 local inputTakenOver = false
 local pointer = PointerCapture.New({
     web = isWeb,
-    softCapture = isWeb,
     now = function() return GetTime():GetElapsedTime() end,
     focused = function() return input.focus and not input.minimized end,
     captured = function()
@@ -67,8 +66,7 @@ local pointer = PointerCapture.New({
         return input.mouseMode == MM_RELATIVE
     end,
     request = function()
-        -- Web 端禁止进入会触发 requestPointerLock 的模式，包括第一次点击。
-        if not isWeb then input:SetMouseMode(MM_RELATIVE) end
+        input:SetMouseMode(MM_RELATIVE)
     end,
     release = function()
         input:SetMouseMode(MM_FREE)
@@ -77,12 +75,12 @@ local pointer = PointerCapture.New({
     end,
     changed = function(locked, reason)
         mouseLocked = locked
-        if not locked then
-            input:SetMouseVisible(true)
-            if caster_ ~= nil then caster_.charging, caster_.charge = false, 0 end
+        if not locked then input:SetMouseVisible(true) end
+        if reason ~= "fallback" and not locked and caster_ ~= nil then
+            caster_.charging, caster_.charge = false, 0
         end
         local hint = locked and "" or (M.debugOn and "F10 关闭调试面板后，点击画面继续" or resumeHint)
-        if reason == "timeout" then hint = "鼠标未锁定，请点击画面重试" end
+        if reason == "fallback" then hint = "浏览器未授予锁定 · 技能仍可使用 · 点击可重试锁定" end
         HUD.SetHint(hint)
         print("RuinsScene: pointer " .. reason .. ", mode=" .. tostring(input.mouseMode))
     end,
@@ -349,7 +347,12 @@ end
 ---@param eventType string
 ---@param eventData KeyDownEventData
 function Ruins_HandleKeyDown(eventType, eventData)
-    if eventData:GetInt("Key") == KEY_ESCAPE then pointer:Release("escape") end
+    local key = eventData:GetInt("Key")
+    if key == KEY_ESCAPE then
+        pointer:Release("escape")
+    elseif key == KEY_E or key == KEY_Q or key == KEY_W or key == KEY_A or key == KEY_S or key == KEY_D then
+        pointer:Resume()
+    end
 end
 
 ---@param eventType string
@@ -392,7 +395,7 @@ end
 local function HandleSpells(dt, aim)
     if M.mounted then return end
     local testInput = M.fake ~= nil or M.fakePress ~= nil
-    if M.debugOn or (not mouseLocked and not testInput) then return end
+    if M.debugOn or (not pointer:IsEnabled() and not testInput) then return end
     local lmb = (pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1)
     if pointer:CanAttack() or Down(KEY_1) then
         -- 碎时：按下开始蓄力，松开施放
@@ -426,8 +429,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     if Press(KEY_TAB) then farView = not farView end
     if pointer:CanLook() then
         local mm = input.mouseMove
-        if isWeb then
-            -- 可见光标模式不重定位鼠标；画面边缘提供持续转向，避免转到边界后卡住。
+        if isWeb and not mouseLocked then
             local pos = input.mousePosition
             local w, h = graphics:GetWidth(), graphics:GetHeight()
             if pos.x >= 0 and pos.y >= 0 and pos.x < w and pos.y < h and not HUD.IsPointerOverUI() then
