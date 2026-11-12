@@ -176,6 +176,7 @@ end
 
 -- ---------------------------------------------------------------- 完整体积
 function T:BuildWhole()
+    self:RemoveWhole() -- 幂等：世界内只保留一个完整体积。
     local s = self.size
     local d = self.dims
     local vol = self.world:CreateVolume(d[1], d[2], d[3], s, self.origin, self.rot)
@@ -195,7 +196,7 @@ end
 
 function T:RemoveWhole()
     if self.whole ~= nil then
-        self.whole:Dispose()
+        self.world:RemoveVolume(self.whole)
         self.whole = nil
     end
 end
@@ -370,7 +371,7 @@ end
 ---@param p TimePiece
 function T:RemovePieceVolume(p)
     if p.vol ~= nil then
-        p.vol:Dispose()
+        self.world:RemoveVolume(p.vol)
         p.vol, p.node = nil, nil
     end
 end
@@ -431,6 +432,8 @@ function T:Shatter(o)
             end
         end
     end
+    self.restored = false
+    self.material:SetShaderParameter("restored", Variant(0.0))
     self.state = M.STATE.SHATTERED
     self.recT = 0
     self.recAcc = 0
@@ -655,13 +658,20 @@ function T:UpdateRewind(dt)
 end
 
 function T:Reassemble()
+    if self.state ~= M.STATE.REWIND then return end
     for _, p in ipairs(self.pieces) do self:RemovePieceVolume(p) end
     self.pieces = {}
+    -- 清空过渡表现，再生成完整体；不能让首帧沿用冻结/回溯高亮。
+    self.frozenWhole, self.freezeLeft = nil, nil
+    self.hover, self.hoverTarget, self.flash = 0, 0, 0
+    self.material:SetShaderParameter("mode", Variant(0.0))
+    self.material:SetShaderParameter("hover", Variant(0.0))
+    self.material:SetShaderParameter("restored", Variant(1.0))
+    self.lastMode, self.lastHover = 0, 0
     self:BuildWhole()
     self.state = M.STATE.WHOLE
     self.rubble = false
     self.restored = true
-    self.flash = 1.0
     self:Emit("restored", {})
     print(string.format("TimeObject[%s]: restored", self.id))
 end

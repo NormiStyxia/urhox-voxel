@@ -522,10 +522,8 @@ local function BuildOuterWall(world)
             local ly = y - baseY
             if y < ground - 0.5 then return nil end
             local top = columnTop
-            local off = (floor(y * 2) % 2) * 0.5
-            local blockU = (along + off) % 1
-            local joint = min(blockU, 1 - blockU) < 0.045 or (y % 0.5) < 0.075
-            local half = T * 0.5 - (joint and 0.0625 or 0)
+            -- 石缝只在材质里画：半格深的径向刻缝会在弧墙上跳成密集凸条。
+            local half = T * 0.5
             -- 墙脚三层退台；断墙顶盖板保留石材色，不涂满金色。
             if ly < 0.25 then half = 1.30
             elseif ly < 0.50 then half = 1.15
@@ -565,7 +563,7 @@ local function BuildOuterWall(world)
                 if ly > top then return nil end
                 if ly > top - 0.5 and abs(r - R) > 0.3 and (gx * 2) % 2 > 1.0 then return nil end
                 if ly > top - 1.0 and ly <= top - 0.5 then return P.GOLD_DARK end
-                return Stone(along, y, 0)
+                return Stone(along / 1.5, y / 1.5, 0)
             end
             -- 垛口
             if ly > top then return nil end
@@ -578,8 +576,8 @@ local function BuildOuterWall(world)
                 if Hash3(floor(along * 4), floor(y * 8), 53) > 0.83 then return nil end
                 return P.STONE_C
             end
-            if ly > top - 0.5 or pier then return Stone(along, y, 0) end
-            return MossyStone(along, y, 0, baseY)
+            if ly > top - 0.5 or pier then return Stone(along / 1.5, y / 1.5, 0) end
+            return MossyStone(along / 1.5, y / 1.5, 0, baseY / 1.5)
         end, InRing)
         Keep(b:Finish({ masonry = "ring" }))
     end

@@ -51,7 +51,7 @@ end
 local function Harvest(world, b)
     local vox = b:Collect()
     local o = { voxels = vox, dims = { b.nx, b.ny, b.nz }, origin = b.origin + b.rot * Vector3(b.lmin[1] or 0, b.lmin[2] or 0, b.lmin[3] or 0), yaw = b.yaw, size = b.s }
-    b.volume:Dispose()
+    world:RemoveVolume(b.volume)
     return o
 end
 

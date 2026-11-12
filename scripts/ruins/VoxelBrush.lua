@@ -190,7 +190,7 @@ function B:Finish(o)
     o = o or {}
     local v = self.volume
     if v:GetSolidCount() == 0 and not o.keepEmpty then
-        v:Dispose()
+        self.world:RemoveVolume(v)
         return nil
     end
     v.destructible = o.destructible == true

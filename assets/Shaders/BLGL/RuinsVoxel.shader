@@ -80,15 +80,16 @@ void fragment() {
     float grain = h31(floor(wp * 40.0));
     shade *= 1.0 + (grain - 0.5) * 0.10 * grainFade * mineral;
 
-    // 横向 1m、纵向 0.5m 的错缝砌石。环墙坐标沿圆周连续，跨体积不重置。
+    // 环墙采用 1.5m × 0.75m 砌石，浅缝无几何挖槽。
     float horizontal = abs(n.x) > abs(n.z) ? wp.z : wp.x;
     if (masonry_mode > 1.5) {
         horizontal = mod(atan(wp.z, wp.x) + 6.2831853, 6.2831853) * wall_radius;
     }
-    float row = floor(wp.y * 2.0);
-    vec2 blockUV = vec2(horizontal + mod(row, 2.0) * 0.5, wp.y * 2.0);
+    float blockScale = masonry_mode > 1.5 ? 1.5 : 1.0;
+    float row = floor(wp.y * 2.0 / blockScale);
+    vec2 blockUV = vec2(horizontal / blockScale + mod(row, 2.0) * 0.5, wp.y * 2.0 / blockScale);
     vec2 blockF = fract(blockUV);
-    vec2 distances = min(blockF, vec2(1.0) - blockF) * vec2(1.0, 0.5);
+    vec2 distances = min(blockF, vec2(1.0) - blockF) * vec2(1.0, 0.5) * blockScale;
     float jointDistance = min(distances.x, distances.y);
     float aa = max(fwidth(horizontal), fwidth(wp.y)) * 0.65 + 0.001;
     float detailFade = 1.0 - smoothstep(0.08, 0.30, footprint);
@@ -97,8 +98,23 @@ void fragment() {
         * (1.0 - smoothstep(0.035, 0.055 + aa, jointDistance));
     float masonry = step(0.5, masonry_mode) * stone * (1.0 - smoothstep(0.55, 0.85, abs(n.y)));
     float jointK = joint * detailFade * masonry;
-    shade *= 1.0 - 0.28 * jointK + 0.07 * lip * detailFade * masonry;
+    shade *= 1.0 - 0.16 * jointK + 0.025 * lip * detailFade * masonry;
 
+    // 石质的中尺度矿脉与细孔，补足柱身近景，避免纯白石膏感。
+    float marble = step(104.5, idx) * (1.0 - step(106.5, idx));
+    float veins = n3(wp * vec3(2.2, 5.0, 2.2) + vec3(g * 3.0));
+    float patina = smoothstep(0.57, 0.78, veins);
+    float pores = n3(wp * 24.0);
+    float surfaceFade = 1.0 - smoothstep(0.04, 0.16, footprint);
+    base = mix(base, base * vec3(0.72, 0.68, 0.61), patina * 0.38 * marble);
+    shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
+    // 世界空间表面梯度，不依赖体素网格中不存在的切线流。
+    float relief = (pores * 0.0025 + veins * 0.003) * mineral;
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
+    float det = dot(dpdx, r1);
+    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
+    NORMAL = normalize(n - clamp(grad, vec3(-0.22), vec3(0.22)) * surfaceFade);
     float emiK = emi.a;
     ALBEDO = base * shade * daynight_tint;
     ROUGHNESS = clamp(pbr.r + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);

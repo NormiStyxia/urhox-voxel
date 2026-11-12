@@ -52,6 +52,29 @@ float fbm(vec2 p) {
     return s;
 }
 
+// 三向世界投影：陡坡也按实际米数取样，不把平面纹理拉成竖条。
+float surfaceNoise(vec3 p, vec3 weights) {
+    return vnoise(p.yz) * weights.x + vnoise(p.xz) * weights.y + vnoise(p.xy) * weights.z;
+}
+
+// 约 60cm 岩块的非规则断隙；返回块内差异与距边缘的相对距离。
+vec2 rockCell(vec2 p) {
+    vec2 cell = floor(p);
+    vec2 f = fract(p);
+    float first = 8.0, second = 8.0, color = 0.0;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 off = vec2(float(x), float(y));
+            vec2 id = cell + off;
+            vec2 point = off + vec2(hash2(id), hash2(id + 17.3)) - f;
+            float d = dot(point, point);
+            if (d < first) { second = first; first = d; color = hash2(id + 31.0); }
+            else { second = min(second, d); }
+        }
+    }
+    return vec2(color, sqrt(second) - sqrt(first));
+}
+
 vec3 srgb_to_linear(vec3 c) {
     return c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878);
 }
@@ -59,6 +82,13 @@ vec3 srgb_to_linear(vec3 c) {
 void fragment() {
     vec3 wp = VERTEX;
     vec3 n = normalize(NORMAL);
+    vec3 weights = pow(abs(n), vec3(4.0));
+    weights /= max(weights.x + weights.y + weights.z, 0.0001);
+    float footprint = max(length(dFdx(wp)), length(dFdy(wp)));
+    float detailFade = 1.0 - smoothstep(0.035, 0.14, footprint);
+    float grainFade = 1.0 - smoothstep(0.012, 0.055, footprint);
+    float chips = surfaceNoise(wp * 11.0, weights);
+    float grain = surfaceNoise(wp * 45.0, weights);
     // 控制图按世界坐标取：第 0 行 = +Z（北）
     vec2 suv = vec2(wp.x + world_half, world_half - wp.z) / (2.0 * world_half);
     vec4 sp = texture(splat_map, suv);
@@ -72,9 +102,10 @@ void fragment() {
     grass *= 0.88 + fine * 0.22;
 
     // ---- 泥土 / 碎石
-    float pebble = smoothstep(0.72, 0.8, vnoise(wp.xz * 5.0));
+    float pebble = smoothstep(0.63, 0.76, chips);
     vec3 dirt = dirt_color * (0.85 + mid * 0.3);
-    dirt = mix(dirt, path_color * 0.85, pebble * 0.6);
+    dirt *= 1.0 + (chips - 0.5) * 0.34 * detailFade + (grain - 0.5) * 0.18 * grainFade;
+    dirt = mix(dirt, path_color * 0.72, pebble * 0.38 * detailFade);
 
     // ---- 铺石路：不规则石板（Voronoi 风格的格缝）
     vec2 pc = wp.xz * 1.15;
@@ -92,11 +123,17 @@ void fragment() {
     float band = vnoise(vec2(strata, 0.5)) * 0.65 + vnoise(vec2(strata * 3.7, 7.0)) * 0.35;
     vec3 rock = mix(rock_b, rock_a, band);
     rock = mix(rock, rock_warm, smoothstep(0.6, 0.85, fbm(wp.xz * 0.11 + wp.y * 0.07)) * 0.6);
-    rock *= 0.82 + 0.3 * vnoise(vec2(wp.x + wp.z, wp.y) * 2.3);
+    vec3 rp = wp * 1.6;
+    vec2 cellX = rockCell(rp.yz), cellY = rockCell(rp.xz), cellZ = rockCell(rp.xy);
+    vec2 cellDetail = cellX * weights.x + cellY * weights.y + cellZ * weights.z;
+    float crack = 1.0 - smoothstep(0.012, 0.045 + footprint * 1.6, cellDetail.y);
+    float rockFade = 1.0 - smoothstep(0.08, 0.30, footprint);
+    rock *= 0.92 + (cellDetail.x - 0.5) * 0.20 * rockFade;
+    rock *= 1.0 - crack * 0.19 * rockFade + (chips - 0.5) * 0.26 * detailFade + (grain - 0.5) * 0.13 * grainFade;
     // 崖顶向下挂一点苔
     float mossy = smoothstep(0.55, 0.75, fbm(vec2(wp.x - wp.z, wp.y * 2.0) * 0.35)) * smoothstep(0.35, 0.75, n.y + 0.6);
     rock = mix(rock, grass_dark * 1.2, mossy * 0.45);
-    rock = mix(rock, deep_color, smoothstep(deep_y + 1.5, deep_y - 1.0, wp.y) * 0.8);
+    rock = mix(rock, deep_color, (1.0 - smoothstep(deep_y - 1.0, deep_y + 1.5, wp.y)) * 0.8);
 
     // ---- 权重
     float slope = 1.0 - n.y;
@@ -118,8 +155,17 @@ void fragment() {
     float snow = smoothstep(snow_y - 1.0, snow_y + 1.5, wp.y + (big - 0.5) * 3.0) * smoothstep(0.25, 0.7, n.y);
     col = mix(col, snow_color * (0.92 + fine * 0.08), snow);
 
+    // 毫米级凹凸直接扰动世界法线；无切线流要求，轮廓/碰撞不改变。
+    // relief 内不包含屏幕导数；先求一阶梯度，后按像素足迹淡出。
+    float relief = chips * 0.006 + grain * 0.0015;
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
+    float det = dot(dpdx, r1);
+    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
+    float bumpWeight = max(wRock, wDirt) * (1.0 - snow);
+    NORMAL = normalize(n - clamp(grad, vec3(-0.35), vec3(0.35)) * detailFade * bumpWeight);
     ALBEDO = srgb_to_linear(col) * daynight_tint;
-    ROUGHNESS = mix(0.92, 0.78, wPath);
+    ROUGHNESS = clamp(mix(0.92, 0.78, wPath) + (chips - 0.5) * 0.12 * bumpWeight * detailFade, 0.0, 1.0);
     METALLIC = 0.0;
     SPECULAR = mix(0.25, 0.4, wRock);
 }
