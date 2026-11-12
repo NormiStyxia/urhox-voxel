@@ -1,8 +1,7 @@
 // RuinsVoxel.shader — 时之遗迹静态体素的调色板 PBR 材质
 //
-// 在调色板查表的基础上加两层细节，让 0.25m 体素看起来不像"纯色积木"：
-//   1. 世界空间低频噪声做大块明暗起伏（风化、污渍），跨体素连续，不会逐格跳色
-//   2. 每格极轻的亮度抖动（可选格边压暗，默认关：不画体素之间的接缝）
+// 几何负责轮廓；显式启用的砌石层负责厘米级石缝，远处按像素足迹淡出。
+// 法阵、金属、雕像与谜题沿用原调色板，不给每个体素描边。
 // 断面（体素内部被打出来的面）自动用调色板的断面色。
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
@@ -11,12 +10,15 @@ uniform sampler2D palette_tex : filter_nearest, repeat_disable;
 #include "res://Shaders/BLGL/Voxel/VoxelPalette.shaderinc"
 
 uniform float voxel_size = 0.25;
-uniform float grime = 0.28;       // 大块污渍强度
+uniform float grime = 0.18;       // 风化保持克制，避免墙面像迷彩
 uniform float jitter = 0.015;     // 每格亮度抖动（很轻，避免格子感）
 uniform float bevel = 0.0;        // 格边压暗（0 = 不画格缝）
 uniform vec3 daynight_tint = vec3(1.0);
+uniform float masonry_mode = 0.0;
+uniform float wall_radius = 51.0;
 
 varying vec3 opos;
+varying vec3 object_normal;
 
 vec3 srgb_to_linear(vec3 c) {
     return c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878);
@@ -39,6 +41,7 @@ float n3(vec3 p) {
 
 void vertex() {
     opos = VERTEX;
+    object_normal = NORMAL;
 }
 
 void fragment() {
@@ -60,17 +63,45 @@ void fragment() {
 
     // 体素格内坐标
     vec3 cellP = opos / voxel_size;
-    vec3 cell = floor(cellP - n * 0.5);
+    vec3 cell = floor(cellP - normalize(object_normal) * 0.5);
     vec3 f = fract(cellP);
-    vec3 an = abs(n);
+    vec3 an = abs(normalize(object_normal));
     vec2 uv = (an.x > 0.5) ? f.yz : ((an.y > 0.5) ? f.xz : f.xy);
     float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
     shade *= 1.0 + (h31(cell) - 0.5) * 2.0 * jitter;
     shade *= 1.0 - bevel * (1.0 - smoothstep(0.0, 0.12, edge));
 
+    // 石材限定：100..108，142..144。金属、符文、草皮不受石缝影响。
+    float stone = step(99.5, idx) * (1.0 - step(108.5, idx));
+    float rubble = step(141.5, idx) * (1.0 - step(144.5, idx));
+    float mineral = max(stone, rubble);
+    float footprint = max(length(dFdx(wp)), length(dFdy(wp)));
+    float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
+    float grain = h31(floor(wp * 40.0));
+    shade *= 1.0 + (grain - 0.5) * 0.10 * grainFade * mineral;
+
+    // 横向 1m、纵向 0.5m 的错缝砌石。环墙坐标沿圆周连续，跨体积不重置。
+    float horizontal = abs(n.x) > abs(n.z) ? wp.z : wp.x;
+    if (masonry_mode > 1.5) {
+        horizontal = mod(atan(wp.z, wp.x) + 6.2831853, 6.2831853) * wall_radius;
+    }
+    float row = floor(wp.y * 2.0);
+    vec2 blockUV = vec2(horizontal + mod(row, 2.0) * 0.5, wp.y * 2.0);
+    vec2 blockF = fract(blockUV);
+    vec2 distances = min(blockF, vec2(1.0) - blockF) * vec2(1.0, 0.5);
+    float jointDistance = min(distances.x, distances.y);
+    float aa = max(fwidth(horizontal), fwidth(wp.y)) * 0.65 + 0.001;
+    float detailFade = 1.0 - smoothstep(0.08, 0.30, footprint);
+    float joint = 1.0 - smoothstep(0.008, 0.018 + aa, jointDistance);
+    float lip = smoothstep(0.015, 0.027 + aa, jointDistance)
+        * (1.0 - smoothstep(0.035, 0.055 + aa, jointDistance));
+    float masonry = step(0.5, masonry_mode) * stone * (1.0 - smoothstep(0.55, 0.85, abs(n.y)));
+    float jointK = joint * detailFade * masonry;
+    shade *= 1.0 - 0.28 * jointK + 0.07 * lip * detailFade * masonry;
+
     float emiK = emi.a;
     ALBEDO = base * shade * daynight_tint;
-    ROUGHNESS = pbr.r;
+    ROUGHNESS = clamp(pbr.r + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;

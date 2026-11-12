@@ -23,6 +23,9 @@ local P = Pal.P
 
 local M = {}
 
+-- 与旧 25cm 网格整倍数对齐；大体量保留粗网格，独立细部使用紧包围盒。
+M.DETAIL = { structure = 0.25, wall = 0.125, column = 0.125, ornament = 0.0625 }
+
 local sin, cos, sqrt, floor, abs, max, min, pi = math.sin, math.cos, math.sqrt, math.floor, math.abs, math.max, math.min, math.pi
 local Hash3 = Noise.Hash3
 
@@ -38,11 +41,13 @@ local function Stone(x, y, z)
     if h < 0.40 then return P.STONE_A elseif h < 0.78 then return P.STONE_B elseif h < 0.95 then return P.STONE_C end
     return P.STONE_D
 end
--- 带苔藓：苔藓成片（三维噪声），靠墙脚和上表面更多
+-- 苔痕主要沿墙脚、石缝聚集；墙身留出大面积可读的石材。
 local function MossyStone(x, y, z, base)
-    local n = Noise.Value3(x * 0.35, y * 0.5, z * 0.35, 3) * 0.75 + Noise.Value3(x * 1.4, y * 1.4, z * 1.4, 4) * 0.25
-    local foot = (base ~= nil) and math.max(0, 1 - (y - base) / 1.2) or 0
-    if n + foot * 0.3 > 0.68 then return P.STONE_MOSS end
+    local foot = (base ~= nil) and max(0, 1 - max(0, y - base) / 2.2) or 0
+    local courseEdge = min((y * 2) % 1, 1 - (y * 2) % 1)
+    local seam = courseEdge < 0.16 and 0.10 or 0
+    local damp = Noise.Value2(x * 0.65, z * 0.65, 3)
+    if foot > 0 and damp + foot * 0.26 + seam > 0.93 then return P.STONE_MOSS end
     return Stone(x, y, z)
 end
 local function Marble(x, y, z)
@@ -168,18 +173,25 @@ local function Column(b, cx, cz, baseY, height, r, broken, gold)
     -- 柱础
     b:Shape(cx - r - 0.5, baseY, cz - r - 0.5, cx + r + 0.5, baseY + 0.75, cz + r + 0.5, function(x, y, z)
         local dx, dz = abs(x - cx), abs(z - cz)
-        local e = (y - baseY < 0.4) and (r + 0.45) or (r + 0.25)
-        if dx <= e and dz <= e then return Marble(x, y, z) end
+        local ly = y - baseY
+        local e = ly < 0.25 and (r + 0.45) or (ly < 0.50 and (r + 0.30) or (r + 0.16))
+        if dx <= e and dz <= e then
+            if ly > 0.25 and ly < 0.375 and max(dx, dz) > e - 0.13 then return P.STONE_C end
+            return Marble(x, y, z)
+        end
     end)
     -- 柱身：12 道凹槽
-    local breakN = Noise.Rng(floor(cx * 13 + cz * 7))
     b:Shape(cx - r, baseY + 0.75, cz - r, cx + r, baseY + top, cz + r, function(x, y, z)
         local dx, dz = x - cx, z - cz
         local d = sqrt(dx * dx + dz * dz)
         local a = math.atan(dz, dx)
         local flute = (a / (2 * pi) * 12) % 1
-        local rr = r - ((flute > 0.35 and flute < 0.65) and 0.13 or 0)
+        local drum = (y - baseY - 0.75) % 1.25
+        local joint = drum < 0.125
+        local rr = r - ((flute > 0.30 and flute < 0.70) and 0.125 or 0)
+        if joint then rr = rr - 0.0625 end
         if d > rr then return nil end
+        if joint and d > rr - 0.13 then return P.STONE_C end
         -- 断口：参差不齐
         if broken ~= nil then
             local cut = baseY + broken - 0.6 * Noise.Value2(dx * 2 + cx, dz * 2 + cz, 21)
@@ -194,7 +206,7 @@ local function Column(b, cx, cz, baseY, height, r, broken, gold)
         b:Shape(cx - r - 0.6, baseY + height, cz - r - 0.6, cx + r + 0.6, baseY + height + 0.9, cz + r + 0.6, function(x, y, z)
             local dx, dz = abs(x - cx), abs(z - cz)
             local k = (y - baseY - height) / 0.9
-            local e = r + 0.1 + 0.5 * k
+            local e = k < 0.22 and (r + 0.12) or (k < 0.60 and (r + 0.28) or (r + 0.5))
             if dx <= e and dz <= e then
                 if k > 0.7 and (dx > e - 0.26 or dz > e - 0.26) then return P.GOLD_DARK end
                 return Marble(x, y, z)
@@ -211,7 +223,7 @@ local function BuildColonnade(world)
     local R = M.COLONNADE_R
     local H = 7.0
     local baseY = Terrain.RING_Y
-    -- 柱廊分 4 个象限体积
+    -- 柱身独立紧包围盒，横梁保留四象限粗网格，避免把整片空地也细分。
     local broken = {}
     local rng = Noise.Rng(77)
     for i = 0, COL_N - 1 do
@@ -223,17 +235,19 @@ local function BuildColonnade(world)
         if i == 5 or i == 17 then broken[i] = nil end
     end
     M.colBroken = broken
+    for i = 0, COL_N - 1 do
+        local a = (i + 0.5) / COL_N * 2 * pi
+        local cx, cz = cos(a) * R, sin(a) * R
+        local top = broken[i] or (H + 0.9)
+        local cb = Brush.New(world, { min = { cx - 1.375, baseY, cz - 1.375 },
+            max = { cx + 1.375, baseY + top, cz + 1.375 }, size = M.DETAIL.column })
+        Column(cb, cx, cz, baseY, H, 0.75, broken[i], true)
+        Keep(cb:Finish({}))
+    end
     for qd = 0, 3 do
         local x0, x1 = (qd % 2 == 0) and -R - 2 or 0, (qd % 2 == 0) and 0 or R + 2
         local z0, z1 = (qd < 2) and -R - 2 or 0, (qd < 2) and 0 or R + 2
         local b = Brush.New(world, { min = { x0, baseY, z0 }, max = { x1, baseY + H + 2.5, z1 }, size = 0.25 })
-        for i = 0, COL_N - 1 do
-            local a = (i + 0.5) / COL_N * 2 * pi
-            local cx, cz = cos(a) * R, sin(a) * R
-            if cx >= x0 and cx < x1 and cz >= z0 and cz < z1 then
-                Column(b, cx, cz, baseY, H, 0.75, broken[i], true)
-            end
-        end
         -- 横梁：相邻两根都完整时连一段梁（弧形，沿圆周）
         b:Shape(x0, baseY + H + 0.9, z0, x1, baseY + H + 1.9, z1, function(x, y, z)
             local r = sqrt(x * x + z * z)
@@ -275,14 +289,18 @@ local function BuildFallenColumns(world)
                 local len = rng:Range(2.0, 3.6)
                 local gy = Terrain.HeightAt(cx, cz)
                 if sqrt(cx * cx + cz * cz) < Terrain.COURT_R then gy = 0 end
-                local b = Brush.New(world, { origin = Vector3(cx, gy + 0.0, cz), yaw = yaw, min = { -len / 2, 0, -0.8 }, max = { len / 2, 1.6, 0.8 }, size = 0.25 })
+                local b = Brush.New(world, { origin = Vector3(cx, gy + 0.0, cz), yaw = yaw, min = { -len / 2, 0, -0.8 }, max = { len / 2, 1.6, 0.8 }, size = M.DETAIL.ornament })
                 b:Shape(-len / 2, 0, -0.8, len / 2, 1.6, 0.8, function(x, y, z)
                     local dy, dz = y - 0.72, z
                     local d = sqrt(dy * dy + dz * dz)
-                    if d > 0.75 then return nil end
+                    local flute = (math.atan(dz, dy) / (2 * pi) * 12) % 1
+                    local rr = 0.75 - ((flute > 0.30 and flute < 0.70) and 0.125 or 0)
+                    if (x + len / 2) % 1.25 < 0.0625 then rr = rr - 0.0625 end
+                    if d > rr then return nil end
                     -- 断口两端不平
                     if abs(x) > len / 2 - 0.4 * Noise.Value2(dy * 3, dz * 3, i) then return nil end
-                    if y > 1.1 and Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.35 then return P.STONE_MOSS end
+                    if abs(x) > len / 2 - 0.45 then return Stone(x, y, z) end
+                    if y < 0.3 and Noise.Value2(x * 2, z * 2, i) > 0.65 then return P.STONE_MOSS end
                     return Marble(x, y, z)
                 end)
                 Keep(b:Finish({}))
@@ -474,34 +492,57 @@ local function BuildOuterWall(world)
     local baseY = Terrain.RING_Y
     local H = 6.0
     local T = 1.6
-    -- 8 段（每 45°）分体积
-    for seg = 0, 7 do
-        local a0, a1 = seg * pi / 4, (seg + 1) * pi / 4
+    -- 32 段共享世界网格；细化外墙同时缩小稀疏包围盒。
+    local segments = 32
+    for seg = 0, segments - 1 do
+        local a0, a1 = seg * 2 * pi / segments, (seg + 1) * 2 * pi / segments
         local xs = { cos(a0) * (R + 2), cos(a1) * (R + 2), cos(a0) * (R - 2), cos(a1) * (R - 2) }
         local zs = { sin(a0) * (R + 2), sin(a1) * (R + 2), sin(a0) * (R - 2), sin(a1) * (R - 2) }
         local x0, x1 = min(xs[1], xs[2], xs[3], xs[4]), max(xs[1], xs[2], xs[3], xs[4])
         local z0, z1 = min(zs[1], zs[2], zs[3], zs[4]), max(zs[1], zs[2], zs[3], zs[4])
-        local b = Brush.New(world, { min = { x0, baseY - 1, z0 }, max = { x1, baseY + H + 1.5, z1 }, size = 0.25 })
-        local function InRing(x, z) return abs(sqrt(x * x + z * z) - R) <= T * 0.5 + 0.55 end
-        b:Shape(x0, baseY - 1, z0, x1, baseY + H + 1.5, z1, function(x, y, z)
-            local r = sqrt(x * x + z * z)
-            if abs(r - R) > T * 0.5 + 0.5 then return nil end
-            local a = math.atan(z, x)
+        local b = Brush.New(world, { min = { x0, baseY - 1, z0 }, max = { x1, baseY + H + 1.5, z1 }, size = M.DETAIL.wall })
+        -- 同一竖列共享地表/角度/风化高度，避免细化后每个体素重复查地形噪声。
+        local r, a, gx, isGate, ground, columnTop, along, pier
+        local function InRing(x, z)
+            r = sqrt(x * x + z * z)
+            if abs(r - R) > T * 0.5 + 0.5 then return false end
+            a = math.atan(z, x)
             if a < 0 then a = a + 2 * pi end
-            if a < a0 or a >= a1 then return nil end
-            -- 南门（-90°）/ 北门（90°）门洞 宽 5m 高 4.5m
-            local gx = abs(x)
-            local isGate = gx < 3.4 and abs(abs(z) - R) < 2
+            if a < a0 or a >= a1 then return false end
+            gx = abs(x)
+            isGate = gx < 3.4 and abs(abs(z) - R) < 2
+            ground = Terrain.HeightAt(x, z)
+            columnTop = H - 3.5 * max(0, Noise.Value2(a * 5, 3, 51) - 0.5) * 2
+            if abs(math.deg(a) - 15) < 12 then columnTop = 0.8 + Noise.Value2(a * 30, 1, 52) * 1.2 end
+            along = a * R
+            pier = min(along % 8.0, 8.0 - along % 8.0) < 0.5
+            return true
+        end
+        b:Shape(x0, baseY - 1, z0, x1, baseY + H + 1.5, z1, function(x, y, z)
             local ly = y - baseY
-            local ground = Terrain.HeightAt(x, z)
             if y < ground - 0.5 then return nil end
-            -- 墙基外扩
-            local half = (ly < 0.8) and (T * 0.5 + 0.5) or (T * 0.5)
+            local top = columnTop
+            local off = (floor(y * 2) % 2) * 0.5
+            local blockU = (along + off) % 1
+            local joint = min(blockU, 1 - blockU) < 0.045 or (y % 0.5) < 0.075
+            local half = T * 0.5 - (joint and 0.0625 or 0)
+            -- 墙脚三层退台；断墙顶盖板保留石材色，不涂满金色。
+            if ly < 0.25 then half = 1.30
+            elseif ly < 0.50 then half = 1.15
+            elseif ly < 0.875 then half = 1.0 end
+            if ly > top - 0.375 and ly < top - 0.125 then half = max(half, 0.925) end
+            if pier and not isGate and ly < min(top - 0.5, 4.75) then
+                half = max(half, ly < 1.25 and 1.25 or 1.0)
+            end
+            if isGate then
+                local dy = max(0, ly - 3.2)
+                local arch = sqrt(gx * gx + dy * dy)
+                if (arch >= 2.5 and arch < 3.1 and ly >= 3.2) or (gx >= 2.5 and gx < 3.1 and ly < 3.2) then
+                    half = max(half, 1.125)
+                end
+                if ly > H + 0.5 and ly < H + 1.0 then half = 1.125 end
+            end
             if abs(r - R) > half then return nil end
-            -- 残缺：按角度噪声降低墙顶；东侧（0°附近）有一大段完全坍塌
-            local top = H - 3.5 * max(0, Noise.Value2(a * 5, 3, 51) - 0.5) * 2
-            local ruinE = abs(math.deg(a) - 15) < 12
-            if ruinE then top = 0.8 + Noise.Value2(a * 30, 1, 52) * 1.2 end
             if isGate then
                 -- 门洞：直墙 3.2m + 半圆拱（半径 2.5），拱上一圈金边，拱心石刻蓝色符文
                 local spring = 3.2
@@ -512,15 +553,19 @@ local function BuildOuterWall(world)
                     if gx < archR then return nil end
                 end
                 if dy > 0 and rr < archR + 0.55 and gx < archR + 0.5 then
-                    if gx < 0.5 and rr > archR then return P.RUNE_BLUE end
-                    return P.GOLD
+                    -- 辐射排列的拱券石：浅石主体、细金边、中央时之符文。
+                    local wedge = (math.atan(dy, x) / pi * 13) % 1
+                    if gx < 0.18 and rr > archR + 0.16 then return P.RUNE_BLUE end
+                    if rr < archR + 0.125 then return P.GOLD_DARK end
+                    if wedge < 0.07 then return P.STONE_C end
+                    return Marble(x, y, z)
                 end
                 -- 门楼：比两侧墙高 1.5m，顶部垛口
                 top = H + 1.5
                 if ly > top then return nil end
                 if ly > top - 0.5 and abs(r - R) > 0.3 and (gx * 2) % 2 > 1.0 then return nil end
                 if ly > top - 1.0 and ly <= top - 0.5 then return P.GOLD_DARK end
-                return Stone(x, y, z)
+                return Stone(along, y, 0)
             end
             -- 垛口
             if ly > top then return nil end
@@ -528,10 +573,15 @@ local function BuildOuterWall(world)
                 local m = (a * R / 1.0) % 2
                 if m > 1.0 and top >= H - 0.1 then return nil end
             end
-            if ly > top - 0.5 and top >= H - 0.1 then return Stone(x, y, z) end
-            return MossyStone(x, y, z, baseY)
+            -- 断口露出内芯与缺角，避免整面墙只有色块。
+            if top < H - 0.25 and ly > top - 0.25 then
+                if Hash3(floor(along * 4), floor(y * 8), 53) > 0.83 then return nil end
+                return P.STONE_C
+            end
+            if ly > top - 0.5 or pier then return Stone(along, y, 0) end
+            return MossyStone(along, y, 0, baseY)
         end, InRing)
-        Keep(b:Finish({}))
+        Keep(b:Finish({ masonry = "ring" }))
     end
     -- 角楼：4 座（45° 方向），东北的倒塌
     for i = 0, 3 do
@@ -539,14 +589,15 @@ local function BuildOuterWall(world)
         local cx, cz = cos(a) * R, sin(a) * R
         local collapsed = (i == 0)
         local h = collapsed and 7.0 or 14.0
-        local b = Brush.New(world, { min = { cx - 4, baseY - 1, cz - 4 }, max = { cx + 4, baseY + h + 6, cz + 4 }, size = 0.25 })
+        local b = Brush.New(world, { min = { cx - 4, baseY - 1, cz - 4 }, max = { cx + 4, baseY + h + 6, cz + 4 }, size = M.DETAIL.wall })
+        local ground
         b:Shape(cx - 4, baseY - 1, cz - 4, cx + 4, baseY + h + 6, cz + 4, function(x, y, z)
             local dx, dz = x - cx, z - cz
             local d = sqrt(dx * dx + dz * dz)
             local ly = y - baseY
-            local ground = Terrain.HeightAt(x, z)
             if y < ground - 0.5 then return nil end
-            local rr = (ly < 1.0) and 3.6 or 3.2
+            local belt = ly > 1.0 and ly < h and (ly % 4.0 > 1.5 and ly % 4.0 < 1.75)
+            local rr = (ly < 0.5) and 3.6 or ((ly < 1.0 or belt) and 3.375 or 3.2)
             local topY = h
             if collapsed then topY = h - 4 * Noise.Value2(dx * 0.8, dz * 0.8, 61) end
             if ly < topY then
@@ -557,7 +608,8 @@ local function BuildOuterWall(world)
                 local ang = math.atan(dz, dx)
                 local w = (ang / (2 * pi) * 6) % 1
                 if ly % 4.0 > 2.0 and ly % 4.0 < 3.3 and w > 0.42 and w < 0.58 and d > 2.4 then return nil end
-                if abs(ly - h + 0.5) < 0.26 then return P.GOLD_DARK end
+                if belt and d > 3.125 then return P.MARBLE_B end
+                if abs(ly - h + 0.5) < 0.125 then return P.GOLD_DARK end
                 return MossyStone(x, y, z, baseY)
             end
             if not collapsed then
@@ -570,8 +622,12 @@ local function BuildOuterWall(world)
                     return P.ROOF
                 end
             end
-        end, function(x, z) return (x - cx) ^ 2 + (z - cz) ^ 2 <= 3.7 * 3.7 end)
-        Keep(b:Finish({}))
+        end, function(x, z)
+            if (x - cx) ^ 2 + (z - cz) ^ 2 > 3.7 * 3.7 then return false end
+            ground = Terrain.HeightAt(x, z)
+            return true
+        end)
+        Keep(b:Finish({ masonry = "ashlar" }))
     end
 end
 
@@ -580,7 +636,7 @@ local function BuildNorthHall(world)
     local cz = 60.0
     local baseY = Terrain.RING_Y
     -- 台基 20×10，三级台阶
-    local b = Brush.New(world, { min = { -12, baseY - 1, cz - 7 }, max = { 12, baseY + 13, cz + 8 }, size = 0.25 })
+    local b = Brush.New(world, { min = { -12, baseY - 1, cz - 7 }, max = { 12, baseY + 2, cz + 8 }, size = M.DETAIL.structure })
     b:Shape(-12, baseY - 1, cz - 7, 12, baseY + 2, cz + 8, function(x, y, z)
         local ly = y - baseY
         local dz = z - cz
@@ -588,28 +644,35 @@ local function BuildNorthHall(world)
         if ly < 1.0 and abs(x) < 10.5 and dz > -6.0 and dz < 7.5 then return Marble(x, y, z) end
         if ly < 1.5 and abs(x) < 10 and dz > -5.5 and dz < 7.5 then return Marble(x, y, z) end
     end)
-    -- 后墙（残缺，带壁龛）
-    b:Shape(-10, baseY + 1.5, cz + 5.5, 10, baseY + 13, cz + 7.5, function(x, y, z)
-        local ly = y - baseY
-        local top = 8 + 4 * Noise.Value2(x * 0.3, 1, 71)
-        if abs(x) > 7 then top = top - 3 * Noise.Value2(x, 2, 72) end
-        if ly > top then return nil end
-        -- 壁龛（中央，为巨像留位置）
-        if abs(x) < 3.2 and ly < 10 and z < cz + 6.5 then return nil end
-        if abs(ly - 7.5) < 0.26 then return P.GOLD_DARK end
-        return MossyStone(x, y, z, baseY)
-    end)
-    Keep(b:Finish({}))
-    -- 前排断柱 6 根
-    local cb = Brush.New(world, { min = { -12, baseY + 1, cz - 6 }, max = { 12, baseY + 12, cz - 1 }, size = 0.25 })
+    Keep(b:Finish({ masonry = "ashlar" }))
+    -- 后墙单独分左右两段，保留壁龛与高度，只加细可见立面。
+    for side = 0, 1 do
+        local x0, x1 = -10 + side * 10, side * 10
+        local wb = Brush.New(world, { min = { x0, baseY + 1.5, cz + 5.5 },
+            max = { x1, baseY + 13, cz + 7.5 }, size = M.DETAIL.wall })
+        wb:Shape(x0, baseY + 1.5, cz + 5.5, x1, baseY + 13, cz + 7.5, function(x, y, z)
+            local ly = y - baseY
+            local top = 8 + 4 * Noise.Value2(x * 0.3, 1, 71)
+            if abs(x) > 7 then top = top - 3 * Noise.Value2(x, 2, 72) end
+            if ly > top then return nil end
+            if abs(x) < 3.2 and ly < 10 and z < cz + 6.5 then return nil end
+            if ly > top - 0.25 then return P.STONE_C end
+            if abs(ly - 7.5) < 0.125 then return P.GOLD_DARK end
+            return MossyStone(x, y, z, baseY + 1.5)
+        end)
+        Keep(wb:Finish({ masonry = "ashlar" }))
+    end
+    -- 前排断柱各用紧包围盒；断口和柱础可以读到 6.25cm 的转折。
     local hs = { 9.0, 3.2, 9.0, 5.1, 9.0, 2.4 }
     for i = 1, 6 do
         local x = -8.75 + (i - 1) * 3.5
+        local cb = Brush.New(world, { min = { x - 1.25, baseY + 1.5, cz - 4.75 },
+            max = { x + 1.25, baseY + 10.5, cz - 2.25 }, size = M.DETAIL.ornament })
         Column(cb, x, cz - 3.5, baseY + 1.5, 8.0, 0.6, (hs[i] < 8.5) and hs[i] or nil, true)
+        Keep(cb:Finish({}))
     end
-    Keep(cb:Finish({}))
     -- 巨像：抱着沙漏的守护者（简化造型：袍身 + 头 + 双臂托沙漏）
-    local sb = Brush.New(world, { min = { -3.5, baseY + 1.5, cz + 3 }, max = { 3.5, baseY + 13, cz + 7 }, size = 0.25 })
+    local sb = Brush.New(world, { min = { -3.5, baseY + 1.5, cz + 3 }, max = { 3.5, baseY + 13, cz + 7 }, size = M.DETAIL.wall })
     local sx, szz = 0, cz + 5.2
     sb:Shape(-3.5, baseY + 1.5, cz + 3, 3.5, baseY + 13, cz + 7, function(x, y, z)
         local ly = y - baseY - 1.5

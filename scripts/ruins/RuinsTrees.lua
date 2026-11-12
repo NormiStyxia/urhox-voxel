@@ -1,8 +1,8 @@
 -- ====================================================================
--- RuinsTrees.lua — 网格树（非体素）
+-- RuinsTrees.lua — 方格枝干 + 叶片卡树冠
 --
--- 体素树在 0.25m 精度下树冠是一团团方块、枝干是锯齿，所以树改成网格：
---   树干 / 枝：TubeGeometry 沿弯曲路径，下粗上细（分 3 段，越往上越细）
+--   树干 / 枝：6.25cm 方格采样，方截面、硬法线；合并重叠枝根和共面表面。
+--   每树一个可视网格，保留原隐藏碰撞，不把装饰精度带入物理模拟。
 --   树冠：参考 MC 高清材质包 + 风格化游戏的"叶片卡"做法——每个叶团是几十张交叉的
 --         像素叶贴图卡（RuinsLeafCard.shader，alpha 镂空），轮廓是一片片叶子，不是光滑的球。
 --         卡片的光照法线取"叶团外法线"，整个树冠像一个体积那样明暗过渡；顶点色 r 记录
@@ -125,14 +125,104 @@ function LB:Finish(mat)
     return self.n
 end
 
--- 一段管子（路径点表 + 半径）
-local function Tube(parent, pts, radius, segs)
-    local n = parent:CreateChild("Bark")
-    local sm = n:CreateComponent("StaticModel")
-    sm.model = TubeGeometry(pts, segs or 8, radius, 7, false):ToModel()
-    sm.material = barkMat_
-    sm.castShadows = true
-    return n
+-- 稀疏方格枝干。先合并整棵树的占据格，再贪心合并共面外表面。
+local BARK_CELL = 0.0625
+M.BARK_CELL = BARK_CELL
+local Wood = {}
+Wood.__index = Wood
+local function CellKey(x, y, z) return x .. ":" .. y .. ":" .. z end
+local function NewWood(parent)
+    return setmetatable({ parent = parent, cells = {}, occupied = {} }, Wood)
+end
+
+function Wood:Path(pts, radius)
+    local s = BARK_CELL
+    for k = 1, #pts - 1 do
+        local a, b = pts[k], pts[k + 1]
+        local dx, dy, dz = b.x - a.x, b.y - a.y, b.z - a.z
+        local len2 = dx * dx + dy * dy + dz * dz
+        for x = math.floor((min(a.x, b.x) - radius) / s), math.floor((max(a.x, b.x) + radius) / s) do
+            for y = math.floor((min(a.y, b.y) - radius) / s), math.floor((max(a.y, b.y) + radius) / s) do
+                for z = math.floor((min(a.z, b.z) - radius) / s), math.floor((max(a.z, b.z) + radius) / s) do
+                    local px, py, pz = (x + 0.5) * s - a.x, (y + 0.5) * s - a.y, (z + 0.5) * s - a.z
+                    local t = len2 > 0 and max(0, min(1, (px * dx + py * dy + pz * dz) / len2)) or 0
+                    -- 方截面，不把圆管表面仅仅切成更多小面。
+                    if max(math.abs(px - dx * t), math.abs(py - dy * t), math.abs(pz - dz * t)) <= radius then
+                        local key = CellKey(x, y, z)
+                        if not self.occupied[key] then
+                            self.occupied[key] = true
+                            self.cells[#self.cells + 1] = { x, y, z }
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+function Wood:Finish()
+    local node = self.parent:CreateChild("Bark")
+    local geo = node:CreateComponent("CustomGeometry")
+    geo:BeginGeometry(0, TRIANGLE_LIST)
+    local quads = 0
+    for axis = 1, 3 do
+        local u, v = axis % 3 + 1, (axis + 1) % 3 + 1
+        for _, sign in ipairs({ -1, 1 }) do
+            local planes = {}
+            for _, c in ipairs(self.cells) do
+                local neighbour = { c[1], c[2], c[3] }
+                neighbour[axis] = neighbour[axis] + sign
+                if not self.occupied[CellKey(neighbour[1], neighbour[2], neighbour[3])] then
+                    local at = c[axis] + (sign > 0 and 1 or 0)
+                    local plane = planes[at]
+                    if not plane then plane = {}; planes[at] = plane end
+                    local row = plane[c[v]]
+                    if not row then row = {}; plane[c[v]] = row end
+                    row[c[u]] = true
+                end
+            end
+            local normal = { 0, 0, 0 }; normal[axis] = sign
+            local n = Vector3(normal[1], normal[2], normal[3])
+            for at, plane in pairs(planes) do
+                local rows = {}; for row in pairs(plane) do rows[#rows + 1] = row end
+                table.sort(rows)
+                for _, y in ipairs(rows) do
+                    local starts = {}; for x in pairs(plane[y]) do starts[#starts + 1] = x end
+                    table.sort(starts)
+                    for _, x in ipairs(starts) do
+                        if plane[y][x] then
+                            local w, h = 1, 1
+                            while plane[y][x + w] do w = w + 1 end
+                            while plane[y + h] do
+                                local full = true
+                                for i = x, x + w - 1 do if not plane[y + h][i] then full = false; break end end
+                                if not full then break end
+                                h = h + 1
+                            end
+                            for j = y, y + h - 1 do
+                                for i = x, x + w - 1 do plane[j][i] = nil end
+                            end
+                            local corners = { { x, y }, { x + w, y }, { x + w, y + h }, { x, y + h } }
+                            -- 引擎正面顺时针；硬法线与各轴面严格一致。
+                            local indices = sign > 0 and { 1, 3, 2, 1, 4, 3 } or { 1, 2, 3, 1, 3, 4 }
+                            for _, i in ipairs(indices) do
+                                local p = {}; p[axis] = at; p[u] = corners[i][1]; p[v] = corners[i][2]
+                                geo:DefineVertex(Vector3(p[1] * BARK_CELL, p[2] * BARK_CELL, p[3] * BARK_CELL))
+                                geo:DefineNormal(n)
+                                geo:DefineTexCoord(Vector2(corners[i][1] * BARK_CELL, corners[i][2] * BARK_CELL))
+                            end
+                            quads = quads + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    geo:Commit()
+    geo:SetMaterial(barkMat_)
+    geo.castShadows = true
+    self.cells, self.occupied = nil, nil
+    return quads
 end
 
 ---@param scene Scene
@@ -152,6 +242,7 @@ function M.Tree(scene, world, x, gy, z, o)
     local lx, lz = cos(la) * lean, sin(la) * lean
     local root = scene:CreateChild("Tree")
     root.position = Vector3(x, gy, z)
+    local wood = NewWood(root)
     -- 主干：弯曲路径（二次曲线 + 小噪声），分三段越来越细，根部外扩
     local function TrunkAt(t)
         local wob = (Noise.Value2(t * 3, x, 5) - 0.5) * 0.3
@@ -164,13 +255,13 @@ function M.Tree(scene, world, x, gy, z, o)
             local t = cuts[s] + (cuts[s + 1] - cuts[s]) * k / 4
             pts[#pts + 1] = TrunkAt(t)
         end
-        Tube(root, pts, tr * (1.0 - 0.28 * (s - 1)), 8)
+        wood:Path(pts, tr * (1.0 - 0.28 * (s - 1)))
     end
     -- 根部隆起：4 条短根
     for i = 0, 3 do
         local a = i * pi / 2 + rng:Range(-0.4, 0.4)
         local d = Vector3(cos(a), 0, sin(a))
-        Tube(root, { Vector3(0, 0.9, 0) + d * (tr * 0.2), Vector3(0, 0.35, 0) + d * (tr * 1.0), d * (tr * 2.0) + Vector3(0, -0.1, 0) }, tr * 0.38, 5)
+        wood:Path({ Vector3(0, 0.9, 0) + d * (tr * 0.2), Vector3(0, 0.35, 0) + d * (tr * 1.0), d * (tr * 2.0) + Vector3(0, -0.1, 0) }, tr * 0.38)
     end
     -- 树冠：顶团 + 3–5 个侧团（每个侧团一根枝伸过去）+ 填缝小团，全部是叶片卡
     local top = TrunkAt(1.0)
@@ -187,7 +278,7 @@ function M.Tree(scene, world, x, gy, z, o)
         local p = top + Vector3(cos(a) * d, -rng:Range(0.3, 1.6), sin(a) * d)
         local fork = TrunkAt(rng:Range(0.6, 0.85))
         local mid = (fork + p) * 0.5 + Vector3(0, 0.5, 0)
-        Tube(root, { fork, mid, p }, tr * 0.32, 6)
+        wood:Path({ fork, mid, p }, tr * 0.32)
         leaves:Clump(p + Vector3(0, 0.3, 0), cr * rng:Range(0.55, 0.75), rng)
     end
     for i = 1, 2 do
@@ -195,6 +286,7 @@ function M.Tree(scene, world, x, gy, z, o)
         leaves:Clump(top + Vector3(cos(a) * cr * 0.4, cr * rng:Range(-0.1, 0.35), sin(a) * cr * 0.4), cr * 0.55, rng)
     end
     leaves:Finish(LeafMaterial(key, pal))
+    wood:Finish()
     -- 碰撞：隐藏的方形体素树干
     if world ~= nil and hiddenMat_ ~= nil then
         local s = 0.25

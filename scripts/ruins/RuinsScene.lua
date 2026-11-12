@@ -138,10 +138,11 @@ local function SetupLighting()
     renderer.shadowMapSize = 2048
     -- 天空 + 昼夜（环境光由 SkyLightCapture 跟随天空，替代旧的渐变天空和补光）
     M.dayNight = DayNight.New({ scene = scene_, zone = zone, zoneNode = lg, sun = sun, sunNode = sunNode, hour = M.START_HOUR })
-    -- 体素材质：静态建筑统一用带风化细节的 RuinsVoxel（每种体素尺寸一份）
+    -- 尺寸与砌筑类型共同缓存；谜题、雕像、金饰不自动套墙砖纹。
     local vmats = {}
-    Brush.materialFor = function(size)
-        local m = vmats[size]
+    Brush.materialFor = function(size, masonry)
+        local key = tostring(size) .. ":" .. (masonry or "plain")
+        local m = vmats[key]
         if m ~= nil then return m end
         m = Material:new()
         if not m:SetSurfaceShader("Shaders/BLGL/RuinsVoxel.shader") then
@@ -151,7 +152,9 @@ local function SetupLighting()
         end
         m:SetSurfaceTexture("palette_tex", world_:GetPaletteTexture())
         m:SetShaderParameter("voxel_size", Variant(size))
-        vmats[size] = m
+        m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "ashlar" and 1.0 or 0.0)))
+        m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
+        vmats[key] = m
         return m
     end
     -- 法阵灯：龙庭中央的蓝色点光（苏醒时变亮）

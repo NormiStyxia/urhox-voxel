@@ -184,7 +184,8 @@ function B:Collect()
     return list
 end
 
--- 定型：o = { destructible, dynamic, visual, density, keepEmpty }
+-- 定型：o = { destructible, dynamic, visual, density, keepEmpty, masonry }
+-- masonry 只选表面纹理：nil 保留原材质；ashlar 平直砌石；ring 环墙砌石。
 function B:Finish(o)
     o = o or {}
     local v = self.volume
@@ -196,7 +197,7 @@ function B:Finish(o)
     v.evictable = false
     -- 统一换成带风化细节的静态体素材质（时之物件等会在之后自行覆盖）
     if M.materialFor ~= nil then
-        local mat = M.materialFor(self.s)
+        local mat = M.materialFor(self.s, o.masonry)
         if mat ~= nil then v.material = mat end
     end
     if o.visual then

@@ -1,4 +1,4 @@
-// RuinsBark.shader — 树干 / 树枝（TubeGeometry 网格）：竖向树皮纹 + 北侧苔痕
+// RuinsBark.shader — 树干 / 树枝（6.25cm 方格表面）：竖向树皮纹 + 北侧苔痕
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
 
@@ -26,13 +26,14 @@ vec3 srgb_to_linear(vec3 c) {
 
 void fragment() {
     vec3 wp = VERTEX;
-    // UV.x 沿管长、UV.y 绕圈：竖向裂纹
-    float ridge = n2(vec2(UV.y * 22.0, UV.x * 3.0 + wp.y * 0.6));
+    // 世界投影，跨贪心合并面保持一致，不使用旧圆管的环形 UV。
+    vec3 n = normalize(NORMAL);
+    float along = abs(n.x) > abs(n.z) ? wp.z : wp.x;
+    float ridge = n2(vec2(along * 18.0, wp.y * 0.8));
     float crack = smoothstep(0.62, 0.8, ridge);
     vec3 col = mix(bark_light, bark_dark, crack * 0.8 + n2(wp.xz * 3.0 + wp.y) * 0.25);
     // 苔痕：只长在朝上 / 朝北的一侧（n.z > 0），成片
-    vec3 n = normalize(NORMAL);
-    float moss = smoothstep(0.55, 0.75, n2(vec2(UV.y * 6.0, UV.x * 4.0))) * smoothstep(-0.2, 0.6, n.z + n.y * 0.5);
+    float moss = smoothstep(0.55, 0.75, n2(vec2(along * 3.0, wp.y * 0.7))) * smoothstep(-0.2, 0.6, n.z + n.y * 0.5);
     col = mix(col, moss_color, moss * 0.6);
     ALBEDO = srgb_to_linear(col) * daynight_tint;
     ROUGHNESS = 0.92;
