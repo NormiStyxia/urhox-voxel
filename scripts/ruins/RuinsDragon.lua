@@ -1,4 +1,5 @@
 -- Scene adapter: kinematic collision, safe dismount, bounded breath damage / frost.
+local Stream = require("dragon.DragonStream")
 local M = {}
 local D = {}; D.__index = D
 local BODY = {{'pelvis',1.0},{'waist',.95},{'chest',1.0},{'neck2',.55},{'head',.75},{'tail1',.6},{'tail3',.5}}
@@ -16,6 +17,9 @@ function M.New(host,world,nomi,puzzles,terrain)
     host.ctrl.resolveMotion=function(c,pos,yaw,alt) self:ResolveMotion(c,pos,yaw,alt) end
     host.ride.resolveDismount=function() return self:DismountPoint() end
     host.breath:OnHit(function(info) self:Hit(info) end)
+    -- A variant without a breath root (e.g. the hatchling) has no ordinary stream.
+    if host.breath.root then host.stream=Stream.New(host.breath.root.parent,host.breath) end
+    self.rideMode=host.ride.mode
     return self
 end
 function D:ResolveMotion(c,oldPos,oldYaw,oldAlt)
@@ -134,13 +138,14 @@ function D:Hit(info)
     local obj=self.puzzles.FindByVolume(info.volume)
     if obj then
         if not self.touched[obj] and obj.state~='REWIND' then
-            if info.element=='frost' then obj:Freeze(8)
+            if info.ordinary and obj.canShatter then obj:Shatter({level=1,point=info.pos,dir=info.dir,power=.7,radius=info.radius})
+            elseif info.element=='frost' then obj:Freeze(8)
             elseif obj.canShatter then obj:Shatter({level=2,point=info.pos,dir=info.dir,power=1.4,radius=info.radius}) end
             self.touched[obj]=true
         end
     elseif info.volume and info.volume.destructible then
         -- Target only the struck volume: do not drill through walls or damage rewind snapshots.
-        local removed=self.world:ApplyDamage(info.volume,info.pos,math.min(info.radius,3.5),3.0)
+        local removed=self.world:ApplyDamage(info.volume,info.pos,math.min(info.radius,3.5),info.ordinary and info.power or 3.0)
         if removed>0 then self.world:ApplyRadialImpulse(info.pos,info.radius,350) end
     end
     if info.normal.y>.5 then self:AddIce(info.pos,math.min(info.radius*1.5,5.5)) end
@@ -152,6 +157,20 @@ function D:Update(dt)
         if p.age>=18 then table.remove(self.patches,i) end
     end
     self:PushPlayer()
+    local h=self.host
+    if h.stream then
+        local held,allowed
+        if h.readStreamInput then held,allowed=h.readStreamInput()
+        else
+            held=input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetKeyDown(KEY_1)
+            allowed=h.ride.controlsEnabled==nil or h.ride.controlsEnabled()
+        end
+        if self.rideMode~=h.ride.mode then
+            self.rideMode=h.ride.mode
+            h.stream:Stop(true)
+        end
+        h.stream:Update(dt,held,h.breath.aimTarget,allowed and h.ride.mode=="mounted")
+    end
     if self.time<self.nextMaterial then return end
     self.nextMaterial=self.time+.1
     local mats={}

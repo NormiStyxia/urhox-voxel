@@ -317,6 +317,7 @@ function B:Trigger()
     local c = self.ctrl
     if self.cfg == nil or c.loco.airborne then return false end
     if c.state == "BREATH" or c.state == "TAKEOFF" or c.state == "LAND" then return false end
+    if c.stream then c.stream:Stop(true) end
     c.demo = nil
     c.breathAim = 0
     c.breathYaw = 0

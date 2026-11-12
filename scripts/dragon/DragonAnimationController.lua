@@ -1039,6 +1039,7 @@ function C:ApplyPose(dt)
         for name, a in pairs(lift) do Pose.AddTo(acc, name, a * k, 0, 0) end
     end
     if self.digits then self:ClawPose(acc, dt) end
+    if self.overlayPose then self:overlayPose(acc) end
     Pose.Apply(rig, acc)
 
     -- 呼吸只用胸骨俯仰 + 身体升降表现；不再每帧缩放胸部体素（缩放会让胸腹交界处

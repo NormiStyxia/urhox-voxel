@@ -40,13 +40,13 @@ local rig={size=1,root={worldPosition=Vector3.ZERO,worldRotation=Quaternion(0)},
  bones={chest={worldPosition=Vector3(0,2,0)},pelvis={worldPosition=Vector3(0,2,-1)}}}
 local ctrl={rig=rig,loco={pos=Vector3.ZERO,yaw=0,alt=0,airborne=false},state='IDLE'}
 function ctrl:GroundHeight()return 0 end
-local world={damage=0}
+local world={damage=0,expectedPower=3}
 function world:SphereCast()return {hit=false}end
 function world:RaycastSingle(ray,distance)
  if ray.direction.y<-.9 then return {hit=true,position=Vector3(ray.origin.x,0,ray.origin.z),normal=Vector3.UP} end
  return {hit=false}
 end
-function world:ApplyDamage(v,p,r,power)self.damage=self.damage+1;self.lastVolume=v;assert(power==3);return 10 end
+function world:ApplyDamage(v,p,r,power)self.damage=self.damage+1;self.lastVolume=v;assert(power==self.expectedPower);return 10 end
 function world:ApplyRadialImpulse()end
 local nomi={pos=Vector3(.1,.8,0),node={}}
 function nomi:Position()return self.pos end
@@ -69,6 +69,9 @@ local info={pos=Vector3.ZERO,normal=Vector3.UP,radius=3,volume=vol,dir=Vector3.F
 for i=1,100 do D.time=i*.01;D:Hit(info) end
 assert(world.damage>=7 and world.damage<=9,'damage must be frame rate limited')
 assert(world.lastVolume==vol and #D.patches==1)
+world.expectedPower=1.8;info.ordinary=true;info.power=1.8
+D.time=D.time+.2;D:Hit(info)
+world.expectedPower=3;info.ordinary=nil
 local times=0;local obj={canShatter=true,state='WHOLE',Shatter=function()times=times+1 end}
 puzzles.FindByVolume=function()return obj end
 for i=1,5 do D.time=D.time+.2;D:Hit(info) end
