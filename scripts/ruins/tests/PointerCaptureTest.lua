@@ -68,7 +68,7 @@ V.atFrame(5, function()
     local realInput = input
     local scene = _G["RUINS"]
     local held, pressed = {}, {}
-    local mock = { focus = true, minimized = false, mouseMode = MM_FREE, mouseVisible = true,
+    local mock = { focus = true, minimized = false, numTouches = 0, mouseMode = MM_FREE, mouseVisible = true,
         mouseMove = IntVector2(0, 0), mousePosition = IntVector2(400, 300), left = false, locked = false, requests = 0 }
     function mock:SetMouseMode(mode)
         self.mouseMode = mode

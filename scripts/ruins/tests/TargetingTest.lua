@@ -16,6 +16,19 @@ V.atFrame(8, function()
     V.assert(aim.hit and aim.object==object and aim.breakable,"实心可操作物件正确锁定")
     game.sigils:Update(0,aim,Vector3.ZERO,nomi:CameraNode(),game.caster,1,true)
     V.assert(game.sigils.target.node.enabled,"时之物件显示选择时钟")
+    local edgeAim=nomi:AimRay(Ray(Vector3(299.96,5.5,298),Vector3.FORWARD),10)
+    V.assert(edgeAim.object==object and edgeAim.assisted,"准星轻微擦边可辅助锁定无遮挡物件")
+
+    -- 前景动态碰撞凸包的空隙不能挡掉后方可见的实心体素。
+    local gap=world:CreateVolume(8,4,4,.25,Vector3(299.5,5,298.8))
+    gap:GetGrid():FillBox(0,0,0,0,3,3,true)
+    gap:GetGrid():FillBox(7,0,0,7,3,3,true)
+    gap.destructible=true
+    world:FinalizeVolumeAsDynamic(gap); gap:RebuildGeometry()
+    aim=nomi:AimRay(ray,10)
+    V.assert(aim.object==object,"动态碰撞凸包空隙不抢走可见目标")
+    local gapNode=gap:GetNode()
+    world:RemoveVolume(gap); gap:Dispose(); gapNode:Dispose()
 
     local camNode = nomi:CameraNode()
     local oldPos, oldRot = camNode.worldPosition, camNode.worldRotation
