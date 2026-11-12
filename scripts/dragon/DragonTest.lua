@@ -12,6 +12,10 @@ local PlatformUtils = require("urhox-libs.Platform.PlatformUtils")
 local Rig = require("dragon.DragonRig")
 local Controller = require("dragon.DragonAnimationController")
 local DebugUI = require("dragon.DragonDebugUI")
+local UI = require("urhox-libs/UI")
+local TouchInput = require("ui.TouchInput")
+local TouchControls = require("ui.TouchControls")
+local TouchHUD = require("ruins.RuinsHUD")
 local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
 local DragonRide = require("dragon.DragonRide")
@@ -168,6 +172,7 @@ function M.ToggleBreathStyle()
 end
 
 function M.Start()
+    TouchInput.Detect()
     local ok, cfg = pcall(require, "dragon._shotcfg")
     if ok then shotCfg = cfg end
 
@@ -227,6 +232,20 @@ function M.Start()
 
     if shotCfg == nil or not shotCfg.noUI then DebugUI.Build(ctrl_, M) end
     if shotCfg ~= nil and shotCfg.setup ~= nil then shotCfg.setup(M) end
+    TouchControls.Attach(UI.GetRoot(),function()
+        return {mounted=ride_.mode~="free",mounting=ride_.mode=="mounting",airborne=ctrl_.loco.airborne,
+            gliding=ctrl_.state=="GLIDE",canMount=ride_.rideable and ride_.onGround and ride_:NearDragon()<3.6,
+            blocked=not M.playMode,noSpells=true}
+    end,function(on)
+        if on then
+            TouchHUD.Build({})
+            TouchHUD.SetObjective("骑乘巨龙", "靠近龙，点【上龙】")
+            TouchHUD.SetCrossVisible(true)
+        else DebugUI.Build(ctrl_,M) end
+        -- Reparent the existing display layer after the mode swaps UI roots.
+        M.touchNeedsAttach=true
+    end)
+    ride_.controlsEnabled=function() return not TouchControls.IsBlocked() end
     M.ApplyCamera()
 
     SubscribeToEvent("Update", "DragonTest_HandleUpdate")
@@ -236,6 +255,8 @@ function M.Start()
 end
 
 function M.Stop()
+    TouchControls.Stop()
+    TouchHUD.Stop()
 end
 
 -- 切换型号：拆掉当前的龙，在原地按新型号重建（诺米、镜头、显示开关保留）
@@ -322,6 +343,14 @@ local function HandleKeys()
 end
 
 local function HandleMouse()
+    if TouchInput.IsEnabled() then
+        local dx,dy=TouchInput.ConsumeLook()
+        if not TouchControls.IsBlocked() then
+            cam.yaw=cam.yaw+dx*.14
+            cam.pitch=math.max(-30,math.min(85,cam.pitch+dy*.12))
+        end
+        return
+    end
     if cam.ortho ~= nil then return end
     local overUI = DebugUI.IsPointerOverUI()
     local mm = input.mouseMove
@@ -348,6 +377,15 @@ local function HandleMouse()
 end
 
 function M.Update(dt)
+    TouchControls.Update(dt)
+    if M.touchNeedsAttach then
+        M.touchNeedsAttach=false
+        TouchControls.Reattach(UI.GetRoot())
+    end
+    if TouchInput.IsEnabled() then
+        TouchHUD.SetHint(ride_.hint)
+        if TouchInput.Press("farview") then cam.dist=cam.dist<18 and 26 or 9 end
+    end
     -- 面板按钮 / V 键只登记，换特效（会重建面板）放到 Update 里做
     if M.pendingBreathToggle then
         M.pendingBreathToggle = false

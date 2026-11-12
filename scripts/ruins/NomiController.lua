@@ -99,11 +99,12 @@ function N:Move(dt, f, r, run, jump, aiming)
     local fwd = Vector3(math.sin(rad), 0, math.cos(rad))
     local right = Vector3(math.cos(rad), 0, -math.sin(rad))
     local dir = fwd * f + right * r
+    local moveAmount = math.min(1,dir:Length())
     local moving = dir:LengthSquared() > 0.01
     if moving then dir = dir:Normalized() end
     local target = moving and ((run and not aiming) and RUN or (aiming and WALK * 0.6 or WALK)) or 0
     local onGround = cc.onGround
-    local want = dir * target
+    local want = dir * target * moveAmount
     local k = onGround and (1 - math.exp(-12 * dt)) or (1 - math.exp(-12 * AIR_CONTROL * dt))
     self.vel = self.vel:Lerp(want, k)
     cc.desiredVelocity = Vector3(self.vel.x, 0, self.vel.z)

@@ -22,6 +22,9 @@ local Sigil = require("ruins.TimeSigil")
 local RuinsDragon = require("ruins.RuinsDragon")
 local Nomi = require("ruins.NomiController")
 local HUD = require("ruins.RuinsHUD")
+local TouchInput = require("ui.TouchInput")
+local TouchControls = require("ui.TouchControls")
+local touchRevision = 0
 local Rig = require("dragon.DragonRig")
 local Controller = require("dragon.DragonAnimationController")
 local Variants = require("dragon.DragonVariants")
@@ -69,7 +72,7 @@ local pointer = PointerCapture.New({
         return input.mouseMode == MM_RELATIVE
     end,
     request = function()
-        input:SetMouseMode(MM_RELATIVE)
+        if not TouchInput.IsEnabled() then input:SetMouseMode(MM_RELATIVE) end
     end,
     release = function()
         input:SetMouseMode(MM_FREE)
@@ -199,7 +202,7 @@ local function SetupDragon()
     ride.lockedHint = ""
     ride.wander = { center = M.DRAGON_POS, min = 3, max = 11 }
     ride.node = nomi_.node
-    ride.controlsEnabled = function() return not M.debugOn and (pointer:IsEnabled() or M.fake~=nil) end
+    ride.controlsEnabled = function() return not M.debugOn and not TouchControls.IsBlocked() and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil) end
     ride.onNotice = function(text) caster_:Say(text) end
     ride.onMount = function()
         caster_.charging,caster_.charge=false,0
@@ -266,8 +269,27 @@ local function OnPuzzle(name, data)
     end
 end
 
+-- Touch state is sampled from the actual gameplay state, never inferred from UI.
+local function AttachTouchControls()
+    local cooldown = {}
+    for _,sp in ipairs(Spells.SPELLS) do cooldown[sp.id]=sp.cooldown end
+    TouchControls.Attach(HUD.root,function()
+        local ride,ctrl=M.ride,M.ctrl
+        return { mounted=ride.mode~="free", mounting=ride.mode=="mounting",
+            airborne=ctrl.loco.airborne, gliding=ctrl.state=="GLIDE", blocked=M.debugOn,
+            canMount=M.dragonAwake and not ride.locked and ride.mode=="free" and ride.onGround and ride:NearDragon()<3.6,
+            cool=caster_.cool, cooldown=cooldown, charging=caster_.charging,
+            charge=caster_.charging and caster_.charge or 0 }
+    end,function(on)
+        pointer:Release("touch-mode")
+        drag.buttons=0
+        caster_.charging,caster_.charge=false,0
+    end)
+end
+
 -- ---------------------------------------------------------------- 启动
 function M.Start()
+    TouchInput.Detect()
     -- 引擎的自动点击重锁没有 UI / pending 过滤；接管一次，避免两个管理者竞争。
     if not inputTakenOver then
         local uninstall = _G["InputExtensions_Uninstall"]
@@ -306,6 +328,7 @@ function M.Start()
     SetupDragon()
 
     HUD.Build(Spells.SPELLS)
+    AttachTouchControls()
     SetStage("gate")
     HUD.SetHint(resumeHint .. "  ·  H 隐藏说明")
     if M.DEBUG_PANEL then M.ToggleDebugPanel() end
@@ -333,6 +356,7 @@ function M.ToggleDebugPanel()
         DebugUI.Build(M.ctrl, M)
     else
         HUD.Build(Spells.SPELLS)
+        AttachTouchControls()
         RefreshObjective()
         HUD.SetHint(resumeHint)
     end
@@ -352,6 +376,7 @@ function M.ApplyCamera() end
 ---@param eventType string
 ---@param eventData MouseButtonDownEventData
 function Ruins_HandleMouseDown(eventType, eventData)
+    if TouchInput.IsEnabled() then return end
     local button = eventData:GetInt("Button")
     if button ~= MOUSEB_LEFT and button ~= MOUSEB_RIGHT and button ~= MOUSEB_MIDDLE then return end
     -- 正常 HUD 全部是展示层；只有打开调试面板时才禁止玩法拖动。
@@ -368,6 +393,7 @@ end
 ---@param eventType string
 ---@param eventData MouseMoveEventData
 function Ruins_HandleMouseMove(eventType, eventData)
+    if TouchInput.IsEnabled() then return end
     if mouseLocked or M.debugOn or nomi_ == nil or drag.buttons == 0 then return end
     local x, y = eventData:GetInt("X"), eventData:GetInt("Y")
     local dx, dy = x - drag.x, y - drag.y
@@ -384,6 +410,7 @@ end
 ---@param eventType string
 ---@param eventData MouseButtonUpEventData
 function Ruins_HandleMouseUp(eventType, eventData)
+    if TouchInput.IsEnabled() then return end
     local button = eventData:GetInt("Button")
     local bit = 1 << button
     if drag.buttons & bit == 0 then return end
@@ -396,12 +423,14 @@ end
 ---@param eventType string
 ---@param eventData MouseModeChangedEventData
 function Ruins_HandleMouseModeChanged(eventType, eventData)
+    if TouchInput.IsEnabled() then return end
     pointer:ModeChanged(eventData:GetInt("Mode") == MM_RELATIVE, eventData:GetBool("MouseLocked"))
 end
 
 ---@param eventType string
 ---@param eventData KeyDownEventData
 function Ruins_HandleKeyDown(eventType, eventData)
+    if TouchInput.IsEnabled() then return end
     local key = eventData:GetInt("Key")
     if key == KEY_ESCAPE then
         pointer:Release("escape")
@@ -422,11 +451,23 @@ end
 -- M.fake / M.fakePress：自动化测试注入按键（正常游戏为 nil）
 local function Down(k)
     if M.fake ~= nil and M.fake[k] ~= nil then return M.fake[k] end
-    return input:GetKeyDown(k)
+    return input:GetKeyDown(k) or TouchInput.KeyDown(k)
 end
 local function Press(k)
     if M.fakePress ~= nil and M.fakePress[k] then M.fakePress[k] = nil return true end
-    return input:GetKeyPress(k)
+    return input:GetKeyPress(k) or TouchInput.KeyPress(k)
+end
+
+-- Ordinary breath: the right-hand breath button is held input. Keyboard B
+-- remains the separate special breath in DragonRide; simulated touch mouse is ignored.
+function M.readStreamInput()
+    local touch=TouchInput.IsEnabled()
+    local allowed=not M.debugOn and not TouchControls.IsBlocked()
+        and input.focus and not input.minimized
+        and (touch or pointer:CanAttack() or M.fake~=nil)
+    local held=TouchInput.Down("breath") or Down(KEY_1)
+        or (not touch and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT))
+    return held,allowed
 end
 
 -- 当前瞄准目标（时之物件）
@@ -453,10 +494,12 @@ end
 local function HandleSpells(dt, aim)
     if M.mounted then caster_.charging,caster_.charge=false,0; return end
     local testInput = M.fake ~= nil or M.fakePress ~= nil
-    if M.debugOn or (not pointer:IsEnabled() and not testInput) then
+    if M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and not testInput) then
         caster_.charging,caster_.charge=false,0; return
     end
-    local lmb = (pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1)
+    local lmb = (not TouchInput.IsEnabled() and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1) or TouchInput.Down("shatter")
+    -- A begin/end delivered together must still fire a zero-charge tap once.
+    if TouchInput.Press("shatter") and not lmb then caster_:HandleCharge(true,aim,true) end
     caster_:HandleCharge(lmb,aim,true)
     -- 冻结 E、回溯 Q（不用鼠标右键）；数字键 2 / 3 保留给测试脚本
     if Press(KEY_E) or Press(KEY_2) then caster_:Cast("freeze", aim) end
@@ -467,21 +510,30 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
     local dt = eventData["TimeStep"]:GetFloat()
     if nomi_ == nil or M.mounted or (M.ride ~= nil and M.ride.mode ~= "free") then return end
-    if M.debugOn or (not pointer:IsEnabled() and M.fake==nil) then
+    if M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and M.fake==nil) then
         nomi_:Move(dt,0,0,false,false,false); return
     end
     local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
     local r = (Down(KEY_D) and 1 or 0) - (Down(KEY_A) and 1 or 0)
+    local tf,tr=TouchInput.MoveAxis()
+    f,r=Clamp(f+tf,-1,1),Clamp(r+tr,-1,1)
     nomi_:Move(dt, f, r, Down(KEY_SHIFT), Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0)
 end
 
 function Ruins_HandleUpdate(eventType, eventData)
     local dt = eventData["TimeStep"]:GetFloat()
     time_ = time_ + dt
-    pointer:Update(input:GetMouseButtonDown(MOUSEB_LEFT))
+    TouchControls.Update(dt)
+    if touchRevision~=TouchInput.revision then
+        touchRevision=TouchInput.revision
+        caster_.charging,caster_.charge=false,0
+    end
+    if not TouchInput.IsEnabled() then pointer:Update(input:GetMouseButtonDown(MOUSEB_LEFT)) end
+    local tx,ty=TouchInput.ConsumeLook()
+    if TouchInput.IsEnabled() and not M.debugOn and not TouchControls.IsBlocked() then nomi_:Look(tx*.14,ty*.12,1) end
     if Press(KEY_F10) then M.ToggleDebugPanel() end
     if Press(KEY_TAB) then farView = not farView end
-    if mouseLocked and pointer:CanLook(false) then
+    if not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
         local mm = input.mouseMove
         nomi_:Look(mm.x, mm.y, 0.12)
     end
@@ -497,7 +549,8 @@ function Ruins_HandleUpdate(eventType, eventData)
     if M.mounted then
         local a=nomi_:Aim(100)
         M.breath.aimTarget=a.hit and a.pos or a.far
-        HUD.SetTarget(ctrl.loco.airborne and "L 降落后可吐息" or "B 吐息 · 朝准星方向喷射")
+        if TouchInput.IsEnabled() then HUD.SetTarget("按住【龙息】持续吐息 · 朝准星方向喷射")
+        else HUD.SetTarget(ctrl.loco.airborne and "左键普通吐息 · L 降落后可施放特殊吐息" or "左键普通吐息 · B 特殊吐息") end
     else M.breath.aimTarget=nil end
     M.breath:Update()
     if not M.dragonAwake then
@@ -567,6 +620,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         if M.ride.locked or M.ride.mode == "free" and (h == nil or h:find("WASD")) then h = "" end
         HUD.SetHint(h)
     end
+    TouchControls.Sync()
     HUD.SetCrossVisible(not M.debugOn)
 end
 
@@ -582,6 +636,8 @@ function Ruins_HandlePostUpdate(eventType, eventData)
 end
 
 function M.Stop()
+    TouchControls.Stop()
+    HUD.Stop()
     UnsubscribeFromEvent("Update")
     UnsubscribeFromEvent("PostUpdate")
     UnsubscribeFromEvent("SceneUpdate")

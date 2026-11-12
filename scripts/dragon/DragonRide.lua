@@ -10,6 +10,8 @@
 -- 无人操作时像宠物一样跟在诺米身边。
 -- ====================================================================
 
+local TouchInput = require("ui.TouchInput")
+
 ---@class DragonRideModule
 ---@field fake table|nil
 ---@field fakePress table|nil
@@ -31,11 +33,11 @@ local BODY_CIRCLES = {
 -- 键盘读取（M.fake 供自动化测试 / 截图脚本注入按键；正常游戏为 nil）
 local function Down(key)
     if M.fake ~= nil and M.fake[key] ~= nil then return M.fake[key] end
-    return input:GetKeyDown(key)
+    return input:GetKeyDown(key) or TouchInput.KeyDown(key)
 end
-local function Press(key)
+local function Press(key, keyboardOnly)
     if M.fakePress ~= nil and M.fakePress[key] then M.fakePress[key] = nil return true end
-    return input:GetKeyPress(key)
+    return input:GetKeyPress(key) or (not keyboardOnly and TouchInput.KeyPress(key))
 end
 
 local function WrapDeg(a)
@@ -49,6 +51,12 @@ local function Smooth(t) t = Clamp(t, 0, 1) return t * t * (3 - 2 * t) end
 local function LerpAngle(a, b, t) return a + WrapDeg(b - a) * t end
 
 ---@class DragonRide
+---@field ctrl DragonAnimationController
+---@field rig DragonRig
+---@field node Node
+---@field controlsEnabled fun():boolean
+---@field resolveDismount fun():Vector3?,string?
+---@field onNotice fun(text:string)
 ---@field onMount fun()|nil
 ---@field onDismount fun(pos: Vector3, right: Vector3)|nil
 ---@field wander table|nil
@@ -123,13 +131,15 @@ end
 function R:UpdateFree(dt, camYaw)
         local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
     local r = (Down(KEY_D) and 1 or 0) - (Down(KEY_A) and 1 or 0)
+    local tf,tr=TouchInput.MoveAxis()
+    f,r=Clamp(f+tf,-1,1),Clamp(r+tr,-1,1)
     local rad = math.rad(camYaw)
     local fwd = Vector3(math.sin(rad), 0, math.cos(rad))
     local right = Vector3(math.cos(rad), 0, -math.sin(rad))
     local dir = fwd * f + right * r
     local moving = dir:LengthSquared() > 0.01
     local maxSpeed = Down(KEY_SHIFT) and RUN_SPEED or WALK_SPEED
-    local targetSpeed = moving and maxSpeed or 0.0
+    local targetSpeed = moving and maxSpeed * math.min(1,dir:Length()) or 0.0
     self.speed = Damp(self.speed, targetSpeed, moving and 10.0 or 12.0, dt)
     if moving then
         dir = dir:Normalized()
@@ -288,16 +298,21 @@ function R:UpdateMounted(dt)
     local a, d = Down(KEY_A), Down(KEY_D)
     c.input.move = stop and (L.airborne and -1 or 0) or (w and 1 or 0)
     c.input.turn = (d and 1 or 0) - (a and 1 or 0)
+    local tf,tr=TouchInput.MoveAxis()
+    if tf<0 then
+        stop=true; c.input.move=L.airborne and tf or 0
+    elseif tf>0 and not stop and not w then c.input.move=tf end
+    c.input.turn=Clamp(c.input.turn+tr,-1,1)
     c.input.free = true
     c.input.sprint = L.airborne and Down(KEY_SHIFT) and not stop and (c.state == "FLY" or c.state == "GLIDE")
     if c.input.sprint and c.state == "GLIDE" then c:Request("FLY") end
     c.input.climb = (Down(KEY_SPACE) and 1 or 0) - (Down(KEY_C) and 1 or 0)
     if Press(KEY_SPACE) and (not L.airborne or c.state == "GLIDE") then c:Request("FLY") end
     if Press(KEY_L) and L.airborne then c:Request("LAND") end
-    if Press(KEY_G) and L.airborne then c:Request("GLIDE") end
-    if Press(KEY_B) and self.T.breath ~= nil then
+    if Press(KEY_G) and L.airborne then c:Request(TouchInput.IsEnabled() and c.state=="GLIDE" and "FLY" or "GLIDE") end
+    if Press(KEY_B, self.T.stream ~= nil) and self.T.breath ~= nil then
         if not self.T.breath:Trigger() and self.onNotice then
-            self.onNotice(L.airborne and "吐息需落地施放：按 L 降落" or "吐息正在准备或收招")
+            self.onNotice(L.airborne and (TouchInput.IsEnabled() and "点【降落】后可吐息" or "吐息需落地施放：按 L 降落") or "吐息正在准备或收招")
         end
     end
     local busy = (c.state == "ROAR" or c.state == "TURN" or c.state == "BREATH")
@@ -438,7 +453,7 @@ function R:Update(dt, camYaw)
         local size = self.size or 1.0
         if self:NearDragon() < MOUNT_RANGE * math.max(0.6, size) and self.onGround then
             if self.rideable then
-                self.hint = "按 F 骑上龙背"
+                self.hint = TouchInput.IsEnabled() and "靠近龙，点【上龙】" or "按 F 骑上龙背"
                 if Press(KEY_F) then self:Mount() end
             else
                 self.hint = "幼龙还太小，骑不了——它会一直跟着你"
@@ -457,6 +472,11 @@ function R:Update(dt, camYaw)
         local br = self.T.breath
         local bh = (br ~= nil and br:Available()) and ("  B " .. br.cfg.name) or ""
         self.hint = "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 落稳后下龙" .. bh
+    end
+    if TouchInput.IsEnabled() then
+        if self.mode=="mounted" then
+            self.hint=self.ctrl.loco.airborne and "按住【上升】/【下降】· 点【滑翔】省力" or "点【起飞】升空 · 摇杆控制方向"
+        elseif self.mode=="free" and self:NearDragon()>=3.6 then self.hint="左摇杆移动 · 右侧拖动看四周" end
     end
 end
 

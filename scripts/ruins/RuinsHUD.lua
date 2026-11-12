@@ -1,179 +1,136 @@
--- ====================================================================
--- RuinsHUD.lua — 遗迹场景 HUD（urhox-libs/UI）
---   左上：当前目标 / 进度        底部中央：三个法术槽（蓝金配色，冷却遮罩）
---   屏幕中心：准星（瞄准时之物件时变成金色）   底部：提示条 / 法术反馈
--- ====================================================================
-
-local UI = require("urhox-libs/UI")
-
-local M = {}
-
-local BLUE = { 70, 130, 255, 255 }
-local VIOLET = { 120, 100, 255, 255 }
-local GOLD = { 255, 196, 90, 255 }
-local INK = { 10, 16, 34, 200 }
-
----@type Label
-local objLabel = nil
----@type Label
-local objSub = nil
----@type Label
-local hintLabel = nil
----@type Label
-local msgLabel = nil
----@type Label
-local targetLabel = nil
----@type Panel
-local crossPanel = nil
----@type Panel
-local msgPanel = nil
----@type Label
-local clockLabel = nil
-local lastClock = nil
-local slots = {}
-local crossTicks={}
-local chargeLabel,chargeFill,chargePanel
-local ready = false
-
-local function Slot(sp, keyText)
-    local cdMask = UI.Panel { position = "absolute", left = 0, right = 0, bottom = 0, height = 0,
-        backgroundColor = { 0, 0, 0, 150 }, borderRadius = 10, pointerEvents = "none" }
-    local col = { math.floor(sp.color.r * 255), math.floor(sp.color.g * 255), math.floor(sp.color.b * 255), 255 }
-    local frame = UI.Panel {
-        width = 64, height = 64, borderRadius = 12, borderWidth = 2, borderColor = { col[1], col[2], col[3], 200 },
-        backgroundGradient = { direction = "to-bottom", from = { 22, 34, 72, 230 }, to = { 10, 14, 34, 230 } },
-        alignItems = "center", justifyContent = "center",
-        children = {
-            UI.Label { text = sp.icon, fontSize = 24, fontColor = col, flexShrink = 1 },
-            UI.Label { text = sp.name, fontSize = 11, fontColor = { 220, 230, 255, 255 }, marginTop = 0, flexShrink = 1 },
-            UI.Panel { position = "absolute", top = -16, left = 0, right = 0, alignItems = "center", children = {
-                UI.Label { text = keyText, fontSize = 11, fontColor = GOLD } } },
-            cdMask,
-        },
-    }
-    slots[sp.id] = { frame = frame, mask = cdMask, col = col, cd = sp.cooldown }
-    return frame
+-- Pixel HUD implemented as a UI.Panel subclass. UI owns the render event and
+-- layout lifecycle; the whole display tree is pointerEvents="none".
+local UI=require('urhox-libs/UI')
+local Draw=require('ui.PixelDraw')
+local Touch=require('ui.TouchInput')
+local Controls=require('ui.TouchControls')
+local M={}
+local ready=false
+local title,sub,hint,message,target,clockText='','','','','',''
+local displayMessage=''
+local messageFrame,hideFrame=3,0
+local cool,cd={},{}
+local charge,crossVisible,targetGold=0,true,false
+local help=false
+local C=Draw.colors
+local Layer=UI.Panel:Extend('RuinsPixelHUD')
+local function MobileText(text)
+    if not Touch.IsEnabled() then return text end
+    local t=text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 Q 施放','点【回溯】施放')
+        :gsub('按 E','点【冻结】'):gsub('按 F 骑乘，Space 起飞','点【上龙】骑乘，再点【起飞】')
+        :gsub('%[Q 回溯%]','【回溯】'):gsub('按 Q','点【回溯】')
+    return t
 end
-
----@param spells table[]
-function M.Build(spells)
-    if not ready then
-        UI.Init({ theme = "default-dark", scale = UI.Scale.DEFAULT })
-        ready = true
+-- Wrap on UTF-8 codepoints at the actual 12/24px font advance, never shrink.
+local function Lines(vg,text,maxWidth,size)
+    local result,line={},''
+    for _,code in utf8.codes(text) do
+        local ch=utf8.char(code)
+        if ch=='\n' or (line~='' and Draw.TextWidth(vg,line..ch,size)>maxWidth) then
+            result[#result+1]=line; line=ch=='\n' and '' or ch
+        else line=line..ch end
     end
-    slots = {}
-    objLabel = UI.Label { text = "", fontSize = 16, fontWeight = "bold", fontColor = GOLD }
-    objSub = UI.Label { text = "", fontSize = 12, fontColor = { 200, 215, 245, 255 }, whiteSpace = "normal", width = 300 }
-    local objPanel = UI.Panel {
-        position = "absolute", top = 16, left = 16, paddingTop = 10, paddingBottom = 10, paddingLeft = 14, paddingRight = 14,
-        backgroundColor = INK, borderRadius = 10, borderWidth = { left = 3 }, borderColor = BLUE, pointerEvents = "none",
-        children = {
-            UI.Label { text = "时之遗迹", fontSize = 11, fontColor = { 140, 170, 255, 255 } },
-            objLabel, objSub,
-        },
-    }
-    local keys = { shatter = "左键", freeze = "E", rewind = "Q" }
-    local slotRow = {}
-    for _, sp in ipairs(spells) do slotRow[#slotRow + 1] = Slot(sp, keys[sp.id] or "") end
-    chargeLabel=UI.Label{text="",fontSize=12,fontColor=GOLD,marginBottom=5}
-    chargeFill=UI.Panel{width=0,height=3,backgroundColor=GOLD}
-    chargePanel=UI.Panel{alignItems="center",marginBottom=22,children={chargeLabel,
-        UI.Panel{width=210,height=3,backgroundColor={60,70,95,180},children={chargeFill}}}}
-    local slotBar = UI.Panel {
-        position = "absolute", left = 0, right = 0, bottom = 18, alignItems = "center", pointerEvents = "none",
-        children = { chargePanel, UI.Panel { flexDirection = "row", gap = 10, children = slotRow } },
-    }
-    hintLabel = UI.Label { text = "", fontSize = 13, fontColor = { 225, 232, 250, 255 }, textAlign = "center" }
-    local hintBar = UI.Panel {
-        position = "absolute", left = 0, right = 0, bottom = 112, alignItems = "center", pointerEvents = "none",
-        children = { UI.Panel { backgroundColor = INK, borderRadius = 8, paddingTop = 5, paddingBottom = 5, paddingLeft = 12, paddingRight = 12,
-            children = { hintLabel } } },
-    }
-    msgLabel = UI.Label { text = "", fontSize = 17, fontWeight = "bold", fontColor = { 255, 236, 190, 255 }, textAlign = "center" }
-    msgPanel = UI.Panel { backgroundColor = { 20, 26, 60, 210 }, borderRadius = 10, borderWidth = 1, borderColor = GOLD,
-        paddingTop = 8, paddingBottom = 8, paddingLeft = 18, paddingRight = 18, children = { msgLabel } }
-    local msgBar = UI.Panel { position = "absolute", left = 0, right = 0, top = "22%", alignItems = "center", pointerEvents = "none",
-        children = { msgPanel } }
-    -- 准星：中心点 + 四段短线
-    crossTicks={}
-    local function Tick(w, h, l, t)
-        local tick = UI.Panel { position = "absolute", width = w, height = h, left = l, top = t, backgroundColor = { 255, 255, 255, 230 }, borderRadius = 1 }
-        crossTicks[#crossTicks+1]=tick
-        return tick
+    if line~='' then result[#result+1]=line end
+    return result
+end
+function Layer:Update(dt)
+    messageFrame=math.min(3,messageFrame+1)
+    if message=='' and hideFrame>0 then hideFrame=hideFrame-1 end
+    if input:GetKeyPress(KEY_H) and not Touch.IsEnabled() then help=not help end
+end
+function Layer:Render(vg)
+    Draw.Begin(vg)
+    local w,h,s=Draw.Metrics()
+    local touch=Touch.IsEnabled()
+    local left,top=Draw.Snap(s.left+16),Draw.Snap(s.top+16)
+    local ow=math.min(260,Draw.Snap(w-s.left-s.right-32))
+    local lines=Lines(vg,MobileText(sub),ow-32,12)
+    local oh=math.max(72,48+#lines*16)
+    Draw.NineSlice(vg,'plaque_ink',left,top,ow,oh,12,.9)
+    Draw.Text(vg,'时之遗迹',left+16,top+18,12,C.gold)
+    Draw.Text(vg,title,left+16,top+34,12,C.paper)
+    for i,line in ipairs(lines) do Draw.Text(vg,line,left+16,top+50+(i-1)*16,12,C.muted) end
+    local cw=math.max(120,Draw.Snap(Draw.TextWidth(vg,clockText,12)+48))
+    local cy=top
+    if w<620 then cy=top+oh+8 end
+    Draw.NineSlice(vg,'plaque_ink',(w-cw)/2,cy,cw,48,12,.9)
+    Draw.Text(vg,clockText,w/2,cy+24,12,C.gold,NVG_ALIGN_CENTER)
+    if crossVisible then
+        local x,y=math.floor(w/2),math.floor(h/2)
+        local c=targetGold and C.bright or C.white
+        Draw.Rect(vg,x-1,y-1,2,2,c)
+        Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
+        Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
+        local text=MobileText(target)
+        Draw.Text(vg,text,x+1,y+27,12,C.deep,NVG_ALIGN_CENTER)
+        Draw.Text(vg,text,x,y+26,12,C.gold,NVG_ALIGN_CENTER)
     end
-    crossPanel = UI.Panel { width = 26, height = 26, pointerEvents = "none", children = {
-        Tick(4, 4, 11, 11), Tick(2, 7, 12, 0), Tick(2, 7, 12, 19), Tick(7, 2, 0, 12), Tick(7, 2, 19, 12),
-    } }
-    targetLabel = UI.Label { text = "", fontSize = 12, fontColor = GOLD, marginTop = 6 }
-    local cross = UI.Panel { position = "absolute", left = 0, right = 0, top = 0, bottom = 0, alignItems = "center", justifyContent = "center",
-        pointerEvents = "none", children = { UI.Panel { alignItems = "center", marginTop = 34, children = { crossPanel, targetLabel } } } }
-    -- 按 H 显示的操作说明
-    local help = UI.Panel {
-        position = "absolute", top = 16, right = 16, paddingTop = 8, paddingBottom = 8, paddingLeft = 12, paddingRight = 12,
-        backgroundColor = INK, borderRadius = 8, pointerEvents = "none",
-        children = { UI.Label { whiteSpace = "normal", width = 230, fontSize = 11, fontColor = { 190, 205, 240, 255 },
-            text = "WASD 移动  Space 跳  Shift 跑\n鼠标 视角  左键 碎时（按住蓄力）\nE 冻结  Q 回溯\nF 骑龙 / 下龙（龙苏醒后）\nTab 切换远景  按住 T 时间快进\nEsc 释放鼠标" ..
-                (GetPlatform() == "Web" and "\n未锁定时按住鼠标拖动视角\n首次点击激活，再点击请求锁定" or "") } },
-    }
-    clockLabel = UI.Label { text = "", fontSize = 12, fontColor = { 255, 226, 170, 255 } }
-    local clock = UI.Panel {
-        position = "absolute", top = 16, left = 0, right = 0, alignItems = "center", pointerEvents = "none",
-        children = { UI.Panel { backgroundColor = INK, borderRadius = 8, paddingTop = 4, paddingBottom = 4, paddingLeft = 12, paddingRight = 12,
-            children = { clockLabel } } },
-    }
-    M.root = UI.Panel { width = "100%", height = "100%", pointerEvents = "none",
-        children = { objPanel, help, clock, cross, msgBar, hintBar, slotBar } }
-    UI.SetRoot(M.root)
-    msgPanel:SetVisible(false)
-    chargePanel:SetVisible(false)
-end
-
-function M.SetObjective(title, sub)
-    if objLabel ~= nil then objLabel:SetText(title or "") end
-    if objSub ~= nil then objSub:SetText(sub or "") end
-end
-
-function M.SetClock(text)
-    if clockLabel ~= nil and text ~= lastClock then
-        lastClock = text
-        clockLabel:SetText(text or "")
-    end
-end
-
-function M.SetHint(text) if hintLabel ~= nil then hintLabel:SetText(text or "") end end
-
-function M.SetMessage(text)
-    if msgLabel == nil then return end
-    msgLabel:SetText(text or "")
-    msgPanel:SetVisible(text ~= nil and text ~= "")
-end
-
-function M.SetTarget(text, timeObj)
-    if targetLabel ~= nil then targetLabel:SetText(text or "") end
-    for _,tick in ipairs(crossTicks) do tick:SetStyle({backgroundColor=timeObj and GOLD or {255,255,255,230}}) end
-end
-
-function M.SetCrossVisible(v) if crossPanel ~= nil then crossPanel:SetVisible(v) end end
-
--- cools: { id → 剩余秒 }，charge 0..1
-function M.UpdateSlots(cools, charge, radius)
-    if chargePanel then
-        chargePanel:SetVisible(charge>0)
-        chargeFill:SetStyle({width=210*charge})
-        chargeLabel:SetText(string.format("%s · %d%% · 半径 %.1fm",charge>=1 and "蓄力完成 · 松开释放" or "碎时蓄力",math.floor(charge*100),radius or 0))
-    end
-    for id, s in pairs(slots) do
-        local left = cools[id] or 0
-        local k = (s.cd > 0) and math.min(1, left / s.cd) or 0
-        s.mask:SetStyle({ height = math.floor(64 * k) })
-        if id == "shatter" and charge > 0.05 then
-            s.frame:SetStyle({ borderColor = { 255, math.floor(196 + 59 * charge), 90, 255 }, borderWidth = 2 + math.floor(charge * 2) })
-        else
-            s.frame:SetStyle({ borderColor = { s.col[1], s.col[2], s.col[3], 200 }, borderWidth = 2 })
+    if not touch then
+        for i,b in ipairs({{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}) do
+            local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
+            Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
+            Draw.Text(vg,b.key,x,y+44,12,C.gold,NVG_ALIGN_CENTER)
         end
     end
+    local shownHint=touch and Controls.Hint() or hint
+    if not touch and charge>0 then shownHint='碎时蓄力 · 松开左键释放' end
+    if shownHint~='' then
+        -- Keep the bottom-center strip in the gap left of the right action cluster.
+        -- Longer air instructions wrap instead of covering glide/land buttons.
+        local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(640,w-40)
+        local hs=Lines(vg,shownHint,maxW-32,12)
+        local hw=96
+        for _,line in ipairs(hs) do hw=math.max(hw,Draw.Snap(Draw.TextWidth(vg,line,12)+32)) end
+        local hh=math.max(48,24+#hs*16)
+        local hx=Draw.Snap((w-hw)/2)
+        if touch then hx=math.min(hx,w-s.right-290-hw) end
+        hx=math.max(s.left+20,hx)
+        local hy=Draw.Snap(math.max(h-s.bottom-150-hh/2,h/2+40))
+        Draw.NineSlice(vg,'plaque_ink',hx,hy,hw,hh,12,.9)
+        for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.paper,NVG_ALIGN_CENTER) end
+    end
+    if message~='' or hideFrame>0 then
+        local text=MobileText(displayMessage)
+        local maxW=math.max(96,w-s.left-s.right-40)
+        local ml=Lines(vg,text,maxW-88,24)
+        local mw=88
+        for _,line in ipairs(ml) do mw=math.max(mw,Draw.Snap(Draw.TextWidth(vg,line,24)+88)) end
+        local step=({-4,0,4,0})[messageFrame+1]
+        mw=math.min(maxW,mw+step)
+        local my=Draw.Snap(h*.22)
+        local alpha=message=='' and hideFrame/2 or ({.34,.67,1,1})[messageFrame+1]
+        Draw.Scroll(vg,(w-mw)/2,my,mw,alpha)
+        for i,line in ipairs(ml) do Draw.Text(vg,line,w/2,my+48+(i-(#ml+1)/2)*26,24,C.brown,NVG_ALIGN_CENTER,alpha) end
+    end
+    if help and not touch then
+        local hx=w-s.right-320
+        Draw.NineSlice(vg,'panel_paper',hx,top,304,144,8,.95)
+        for i,line in ipairs({'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','F 上龙/下龙 · Space 起飞/上升','C 下降 · G 滑翔 · L 降落 · B 龙息','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}) do
+            Draw.Text(vg,line,hx+16,top+22+(i-1)*20,12,C.brown)
+        end
+    end
+    Draw.Finish(vg)
 end
-
+function M.Build(spells)
+    if not ready then UI.Init({theme='default-dark',scale=UI.Scale.DEFAULT,
+        fonts={{family='sans',weights={normal='Fonts/ArkPixel-12px-zh_hans.ttf',bold='Fonts/ArkPixel-12px-zh_hans.ttf'}}}}); ready=true end
+    cd={}
+    for _,sp in ipairs(spells) do cd[sp.id]=sp.cooldown end
+    M.root=UI.Panel{width='100%',height='100%',pointerEvents='none',children={Layer{width='100%',height='100%',pointerEvents='none'}}}
+    UI.SetRoot(M.root,true)
+end
+function M.SetObjective(t,s) title,sub=t or '',s or '' end
+function M.SetClock(t) clockText=t or '' end
+function M.SetHint(t) hint=t or '' end
+function M.SetMessage(t)
+    t=t or ''
+    if t==message then return end
+    message=t
+    if t=='' then hideFrame=2 else displayMessage=t; messageFrame=0; hideFrame=0 end
+end
+function M.SetTarget(t,obj) target,targetGold=t or '',obj~=nil end
+function M.SetCrossVisible(v) crossVisible=v end
+function M.UpdateSlots(c,q) cool,charge=c or {},q or 0 end
 function M.IsPointerOverUI() return UI.IsPointerOverUI() end
-
+function M.Stop() Draw.Release(); UI.Shutdown(); ready=false end
 return M
