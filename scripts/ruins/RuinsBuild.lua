@@ -219,6 +219,23 @@ M.Column = Column
 -- ---------------------------------------------------------------- 内环柱廊
 M.COLONNADE_R = 23.6
 local COL_N = 24
+-- 柱位角度：均分 24 根；阶梯口两侧的柱子按角度会落进阶梯走廊（台阶比台面低 4.5m，柱子悬空），
+-- 沿圆周外推到柱础完全离开走廊和扶墙，立在内环台面上。
+local COL_BASE_HALF = 1.25
+local function ColAngle(i)
+    local a = (i + 0.5) / COL_N * 2 * pi
+    local R = M.COLONNADE_R
+    local clear = Terrain.STAIR_HALF + 0.7 + COL_BASE_HALF -- 扶墙外沿 3.75+0.4，再留一点缝
+    local x = cos(a) * R
+    if abs(x) < clear and abs(sin(a)) > 0.9 then
+        local sx = (x < 0) and -1 or 1
+        local sz = (sin(a) < 0) and -1 or 1
+        a = math.atan(sz * sqrt(R * R - clear * clear), sx * clear)
+        if a < 0 then a = a + 2 * pi end
+    end
+    return a
+end
+M.ColAngle = ColAngle
 local function BuildColonnade(world)
     local R = M.COLONNADE_R
     local H = 7.0
@@ -236,7 +253,7 @@ local function BuildColonnade(world)
     end
     M.colBroken = broken
     for i = 0, COL_N - 1 do
-        local a = (i + 0.5) / COL_N * 2 * pi
+        local a = ColAngle(i)
         local cx, cz = cos(a) * R, sin(a) * R
         local top = broken[i] or (H + 0.9)
         local cb = Brush.New(world, { min = { cx - 1.375, baseY, cz - 1.375 },
@@ -244,6 +261,8 @@ local function BuildColonnade(world)
         Column(cb, cx, cz, baseY, H, 0.75, broken[i], true)
         Keep(cb:Finish({}))
     end
+    local colA = {}
+    for k = 0, COL_N - 1 do colA[k] = ColAngle(k) end
     for qd = 0, 3 do
         local x0, x1 = (qd % 2 == 0) and -R - 2 or 0, (qd % 2 == 0) and 0 or R + 2
         local z0, z1 = (qd < 2) and -R - 2 or 0, (qd < 2) and 0 or R + 2
@@ -254,9 +273,16 @@ local function BuildColonnade(world)
             if abs(r - R) > 0.75 then return nil end
             local a = math.atan(z, x)
             if a < 0 then a = a + 2 * pi end
-            local f = a / (2 * pi) * COL_N - 0.5
-            local i0 = floor(f) % COL_N
+            -- 按实际柱位（阶梯口两根已外移）找所在梁段，梁两端始终落在柱头上
+            local i0 = COL_N - 1
+            for k = 0, COL_N - 1 do
+                if a >= colA[k] then i0 = k end
+            end
             local i1 = (i0 + 1) % COL_N
+            local a0, a1 = colA[i0], colA[i1]
+            if a1 <= a0 then a1 = a1 + 2 * pi end
+            local aa = (a < a0) and a + 2 * pi or a
+            local f = i0 + (aa - a0) / (a1 - a0)
             if broken[i0] ~= nil or broken[i1] ~= nil then return nil end
             -- 梁有断：哈希
             if Hash3(i0, 3, 9) < 0.3 then return nil end
@@ -280,7 +306,7 @@ local function BuildFallenColumns(world)
     local rng = Noise.Rng(91)
     for i, h in pairs(M.colBroken or {}) do
         if rng:Next() < 0.75 then
-            local a = (i + 0.5) / COL_N * 2 * pi
+            local a = ColAngle(i)
             local out = rng:Next() < 0.5
             local cx = cos(a) * (R + (out and 2.0 or -1.8))
             local cz = sin(a) * (R + (out and 2.0 or -1.8))
