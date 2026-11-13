@@ -11,6 +11,9 @@ V.atFrame(8,function()
     local savedPos,savedYaw,savedPitch=nomi:Position(),nomi.camYaw,nomi.camPitch
     local gate=puzzles.gateRubble
     print("GateTargetTest: gate="..Name(gate))
+    local recorded=nomi:AimRay(Ray(Vector3(-.976468921,7.78192902,-66.5778198),
+        Vector3(.00837388169,-.0293173287,.999535084)),60)
+    V.assert(recorded.volume==gate and recorded.object==nil,"网页持续锁断桥的同一条射线应先命中南门碎石")
     -- 原生查询漏掉堵门碎石、直接报断桥：不得相信同一查询的候选列表。
     local realWorld=nomi.world
     local bridgePiece=puzzles.objects.bridge.pieces[1].vol --[[@as VoxelVolume]]
@@ -20,7 +23,7 @@ V.atFrame(8,function()
             local hit=VoxelRaycastResult:new()
             hit.hit,hit.volume,hit.volumeId=true,bridgePiece,bridgePiece.volumeId
             hit.distance=falseZero and 0 or 30
-            hit.position=ray.origin+ray.direction*hit.distance
+            hit.position=ray.origin+ray.direction*hit.distance --[[@as Vector3]]
             return hit
         end,
         RaycastGrid=function() error("不能依赖漏掉前景的原生候选列表") end,
