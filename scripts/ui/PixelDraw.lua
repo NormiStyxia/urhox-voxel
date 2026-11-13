@@ -7,17 +7,28 @@ M.colors = { ink={22,34,48}, deep={14,18,30}, gold={224,178,83}, bright={255,229
 local contexts = setmetatable({}, {__mode='k'})
 local cells = {}
 function M.Snap(n) return math.floor(n / 2 + .5) * 2 end
+-- 大屏整数放大：逻辑短边每满 540dp 放大一倍，像素字体保持整数倍不糊。
+function M.Zoom()
+    local dpr = graphics:GetDPR()
+    local w, h = graphics:GetWidth()/dpr, graphics:GetHeight()/dpr
+    return math.max(1, math.min(3, math.floor(math.min(w/960, h/540))))
+end
+-- 换算物理像素到 HUD 坐标（触控命中与绘制共用）
+function M.PixelToHUD()
+    return 1/(graphics:GetDPR()*M.Zoom())
+end
 function M.Metrics()
     local dpr = graphics:GetDPR()
-    local factor = UI.GetScale() / dpr
+    local z = M.Zoom()
+    local factor = UI.GetScale() / dpr / z
     local s = UI.GetSafeAreaInsets()
-    return graphics:GetWidth()/dpr, graphics:GetHeight()/dpr,
+    return graphics:GetWidth()/dpr/z, graphics:GetHeight()/dpr/z,
         {left=s.left*factor, right=s.right*factor, top=s.top*factor, bottom=s.bottom*factor}
 end
 function M.Begin(vg, screenSpace)
     nvgSave(vg)
     if screenSpace then nvgResetTransform(vg) end
-    local k = graphics:GetDPR()/UI.GetScale()
+    local k = graphics:GetDPR()*M.Zoom()/UI.GetScale()
     nvgScale(vg,k,k)
     nvgShapeAntiAlias(vg,0)
     nvgTextScaleMode(vg,NVG_TEXT_SCALE_FULL)

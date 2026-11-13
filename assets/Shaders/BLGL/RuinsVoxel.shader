@@ -17,6 +17,9 @@ uniform float bevel = 0.0;        // 格边压暗（0 = 不画格缝）
 uniform vec3 daynight_tint = vec3(1.0);
 uniform float masonry_mode = 0.0;
 uniform float wall_radius = 51.0;
+// 可破坏体积被准星选中时的外轮廓光（碎时 = 红）
+uniform float hover = 0.0;
+uniform vec4 hover_color = vec4(1.0, 0.30, 0.24, 1.0);
 
 varying vec3 opos;
 varying vec3 object_normal;
@@ -147,7 +150,7 @@ void fragment() {
     // 原矿脉/细孔颜色与近景法线不变；只有已为零的颜色贡献跳过。
     if (marble > 0.0) {
         float patina = smoothstep(0.57, 0.78, veins);
-        base = mix(base, base * vec3(0.72, 0.68, 0.61), patina * 0.38 * marble);
+        base = mix(base, base * vec3(0.80, 0.82, 0.86), patina * 0.30 * marble);
     }
     if (mineral > 0.0 && surfaceFade > 0.0) {
         shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
@@ -167,5 +170,11 @@ void fragment() {
         ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
         ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
         SPECULAR = mix(SPECULAR, 0.7, ice);
+    }
+    if (hover > 0.0) {
+        vec3 view = normalize(CAMERA_POSITION_WORLD - VERTEX);
+        float fres = pow(1.0 - clamp(dot(NORMAL, view), 0.0, 1.0), 3.0);
+        ALBEDO = mix(ALBEDO, ALBEDO * 0.85 + hover_color.rgb * 0.15, hover);
+        EMISSION += hover_color.rgb * (0.12 + fres * 2.4) * hover;
     }
 }

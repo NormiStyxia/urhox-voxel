@@ -13,6 +13,8 @@ local cool,cd={},{}
 local charge,crossVisible,targetGold=0,true,false
 local help=false
 local C=Draw.colors
+-- 三个法术的按键色：左键碎时红、E 冻结蓝、Q 回溯黄
+local SPELL_COLORS={shatter={255,92,76},freeze={96,160,255},rewind={255,206,96}}
 local Layer=UI.Panel:Extend('RuinsPixelHUD')
 local function MobileText(text)
     if not Touch.IsEnabled() then return text end
@@ -83,19 +85,25 @@ function Layer:Render(vg)
     Draw.Text(vg,clockText,w/2,cy+24,12,C.gold,NVG_ALIGN_CENTER)
     if crossVisible then
         local x,y=math.floor(w/2),math.floor(h/2)
-        local c=targetGold and C.bright or C.white
+        local c=SPELL_COLORS.shatter
         Draw.Rect(vg,x-1,y-1,2,2,c)
         Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
         Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
         local text=MobileText(target)
         Draw.Text(vg,text,x+1,y+27,12,C.deep,NVG_ALIGN_CENTER)
         Draw.Text(vg,text,x,y+26,12,C.gold,NVG_ALIGN_CENTER)
+    elseif target~='' then
+        -- 平时不显示准星：目标说明放在技能栏上方
+        local text=MobileText(target)
+        local ty=Draw.Snap(h-s.bottom-(touch and 210 or 112))
+        Draw.Text(vg,text,w/2+1,ty+1,12,C.deep,NVG_ALIGN_CENTER)
+        Draw.Text(vg,text,w/2,ty,12,C.gold,NVG_ALIGN_CENTER)
     end
     if not touch then
         for i,b in ipairs({{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}) do
             local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
-            Draw.Text(vg,b.key,x,y+44,12,C.gold,NVG_ALIGN_CENTER)
+            Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
         end
     end
     local shownHint=touch and Controls.Hint() or hint
@@ -155,7 +163,8 @@ function M.SetMessage(t)
     if t=='' then hideFrame=2 else displayMessage=t; messageFrame=0; hideFrame=0 end
 end
 function M.SetTarget(t,obj) target,targetGold=t or '',obj~=nil end
-function M.SetCrossVisible(v) crossVisible=v end
+function M.SetCrossVisible(v) crossVisible=v==true end
+function M.IsCrossVisible() return crossVisible end
 function M.UpdateSlots(c,q) cool,charge=c or {},q or 0 end
 function M.IsPointerOverUI() return UI.IsPointerOverUI() end
 function M.Stop()

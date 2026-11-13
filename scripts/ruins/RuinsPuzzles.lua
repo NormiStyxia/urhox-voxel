@@ -85,6 +85,11 @@ local function BuildGateRubble(world)
         return Pal.Pick(Pal.RUBBLES, h)
     end)
     local v = b:Finish({ destructible = true })
+    -- 碎石堆单独一份材质，选中红光不影响同尺寸的其它建筑
+    if v ~= nil and v.material ~= nil then
+        local own = v.material:Clone()
+        if own ~= nil then v.material = own; M.gateMaterial = own end
+    end
     M.gateRubble = v
     M.gateRubbleSolid0 = v and v:GetSolidCount() or 0
     print("RuinsPuzzles: gate rubble voxels " .. M.gateRubbleSolid0)
@@ -112,7 +117,6 @@ local function BridgeVoxels(world)
     local s = Build.DETAIL.column
     local b = Brush.New(world, { min = { -2.5, Y - 2.75, z0 }, max = { 2.5, Y + 1.5, z1 }, size = s })
     local zc, half = (z0 + z1) * 0.5, (z1 - z0) * 0.5
-    local Value2, Value3 = Noise.Value2, Noise.Value3
     -- 栏杆竖件位置：端柱 / 中柱 / 宝瓶柱
     local function PostKind(z)
         local dz0, dz1 = z - z0, z1 - z
@@ -147,33 +151,26 @@ local function BridgeVoxels(world)
             local vous = ly < bottom + 0.5
             if key and ly < -0.375 then
                 if outer and abs(z - zc) < 0.125 and ly > bottom + 0.125 and ly < bottom + 0.5 then return P.RUNE_GOLD end
-                if outer and abs(z - zc) > 0.25 then return P.STONE_C end
+                if outer and abs(z - zc) > 0.25 then return P.MARBLE_B end
                 return P.MARBLE_A
             end
             if vous then
                 -- 拱券石：沿拱 0.5m 一块，外层券缝凹进
                 local f = ((z - zc) / 0.5) % 1
                 if outer and f < 0.25 then return nil end
-                if outer and ly < bottom + 0.125 then return P.STONE_C end
+                if outer and ly < bottom + 0.125 then return P.MARBLE_B end
                 local h = Hash3(floor((z - zc) / 0.5), 3, 23)
-                if outer and Value3(x * 1.6, y * 1.6, z * 1.6, 41) > 0.68 then return P.STONE_MOSS end
-                return h < 0.5 and P.MARBLE_B or (h < 0.85 and P.STONE_A or P.STONE_B)
+                return h < 0.6 and P.MARBLE_A or P.MARBLE_B
             end
             if ly >= -0.375 then
                 -- 檐口下层：顶面落苔
-                if outer and Value2(z * 1.8, x, 43) > 0.72 then return P.STONE_MOSS end
                 return P.MARBLE_B
             end
             -- 拱肩
             local h, joint = Ashlar(y, z)
             if outer and joint then return nil end
-            if outer then
-                -- 檐口下的雨渍：竖向暗条
-                if ly > -1.4 and Value2(z * 4.0, x > 0 and 3 or 9, 45) > 0.76 then return P.STONE_C end
-                if ly < bottom + 1.0 and Value3(x * 1.4, y * 1.4, z * 1.4, 47) > 0.70 then return P.STONE_MOSS end
-            end
-            if h < 0.45 then return P.MARBLE_A elseif h < 0.8 then return P.MARBLE_B elseif h < 0.94 then return P.STONE_A end
-            return P.STONE_B
+            if h < 0.55 then return P.MARBLE_A end
+            return P.MARBLE_B
         end
         -- ---------------- 檐口 + 桥面
         if ly < deck then
@@ -183,20 +180,21 @@ local function BridgeVoxels(world)
             local top = ly > deck - s
             if top then
                 -- 中线符文：蓝芯金边，0.5m 一节，间隔 1.25m
+                -- 中线只留一格宽的细符文线，不再铺深色宽边
                 if abs(u) < 0.88 then
                     local f = ((z - zc) / 1.25 + 0.2) % 1
-                    if ax < 0.125 and f > 0.1 and f < 0.5 then return P.RUNE_BLUE end
-                    if ax < 0.25 and f > 0.0 and f < 0.6 then return P.MARBLE_DARK end
+                    if ax < 0.0625 and f > 0.15 and f < 0.45 then return P.RUNE_BLUE end
                 end
                 -- 铺石：1.0 × 0.75m 错缝石板，缝用深色（不挖槽，避免低于两岸地表）
                 local row = floor((z - z0) / 0.75)
                 local xx = x + (row % 2) * 0.5
                 local fz, fx = ((z - z0) / 0.75) % 1, xx % 1
-                if fz < 0.17 or fx < 0.125 then return P.STONE_C end
-                if edgeZ < 0.5 and edgeZ > 0.375 then return P.STONE_B end -- 台阶前沿
+                -- 石缝用浅一档的同色系，近看是细缝，远看不成网格
+                if fz < 0.17 or fx < 0.125 then return P.TILE_B end
+                if edgeZ < 0.5 and edgeZ > 0.375 then return P.MARBLE_B end -- 台阶前沿
                 local h = Hash3(row, floor(xx), 29)
-                if h < 0.40 then return P.TILE_A elseif h < 0.75 then return P.TILE_B elseif h < 0.92 then return P.MARBLE_B end
-                return P.STONE_A
+                if h < 0.55 then return P.TILE_A elseif h < 0.9 then return P.MARBLE_A end
+                return P.MARBLE_B
             end
             return P.MARBLE_B
         end
@@ -231,7 +229,6 @@ local function BridgeVoxels(world)
         if py < 0.25 then
             -- 柱座：顶层收进一格
             if py > 0.125 and dx > 0.125 then return nil end
-            if Value2(z * 2.2, x, 49) > 0.75 then return P.STONE_MOSS end
             return P.MARBLE_B
         end
         if py < 0.875 then
@@ -247,7 +244,6 @@ local function BridgeVoxels(world)
         if py < 1.125 then
             if dx > 0.25 then return nil end
             -- 扶手冠：石材，顶面偶有苔痕（金色只留在端柱，否则金属面背光时像一条深色木板）
-            if Value2(z * 1.5, x, 51) > 0.8 then return P.STONE_MOSS end
             return P.MARBLE_A
         end
         return nil

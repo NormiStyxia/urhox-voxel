@@ -18,6 +18,8 @@ uniform float voxel_size = 0.25;
 uniform vec4 blue_color = vec4(0.22, 0.46, 1.0, 1.0);
 uniform vec4 violet_color = vec4(0.42, 0.34, 1.0, 1.0);
 uniform vec4 gold_color = vec4(1.0, 0.74, 0.30, 1.0);
+// 选中光颜色由 Lua 按当前可施放的法术设置：碎时红 / 回溯黄
+uniform vec4 hover_color = vec4(1.0, 0.78, 0.30, 1.0);
 
 varying vec3 opos;
 varying vec3 object_normal;
@@ -80,7 +82,7 @@ void fragment() {
     float shade = 1.0 + (g - 0.5) * 0.36 * mineral;
     shade *= 1.0 + n.y * 0.05;
     shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
-    base = mix(base, base * vec3(0.72, 0.68, 0.61), smoothstep(0.57, 0.78, veins) * 0.38 * marble);
+    base = mix(base, base * vec3(0.80, 0.82, 0.86), smoothstep(0.57, 0.78, veins) * 0.30 * marble);
     base *= shade;
     rough = clamp(rough + (veins - 0.5) * 0.08 * mineral, 0.0, 1.0);
 
@@ -111,19 +113,19 @@ void fragment() {
         emission += vec3(0.85, 0.92, 1.0) * spark * (1.0 - smoothstep(0.05, 0.15, edge)) * 2.0 * s;
         emission += ice * (1.0 - smoothstep(0.02, 0.06, edge)) * 0.6 * s;
     } else {
-        // 回溯：蓝光 + 回扫线 + 金色闪点
+        // 回溯（Q = 黄）：金光 + 回扫线 + 白色闪点
         float scan = fract(-VERTEX.y * 0.35 + TIME * 1.6);
         float line = smoothstep(0.88, 1.0, scan);
         float spark = step(0.93, fract(h * 13.0 + floor(TIME * 8.0) * 0.371));
-        base = mix(base, base * 0.6 + blue_color.rgb * 0.3, 0.6 * s);
-        emission += blue_color.rgb * (0.55 + fres * 2.0 + line * 2.5) * s;
-        emission += gold_color.rgb * spark * 2.5 * s;
+        base = mix(base, base * 0.6 + gold_color.rgb * 0.3, 0.6 * s);
+        emission += gold_color.rgb * (0.45 + fres * 1.8 + line * 2.2) * s;
+        emission += vec3(1.0, 0.97, 0.88) * spark * 2.5 * s;
         emission += gold_color.rgb * (1.0 - smoothstep(0.02, 0.07, edge)) * 0.8 * s;
     }
 
     float selection = clamp(hover, 0.0, 1.0);
-    emission += mix(blue_color.rgb, gold_color.rgb, 0.3) * (0.12 + fres * 2.4) * selection;
-    base = mix(base, base * 0.85 + blue_color.rgb * 0.15, selection);
+    emission += hover_color.rgb * (0.12 + fres * 2.4) * selection;
+    base = mix(base, base * 0.85 + hover_color.rgb * 0.15, selection);
 
     // 石材表面有细颗粒，但不是按体素单元描边。
     float grain = h31(floor(opos * 40.0));

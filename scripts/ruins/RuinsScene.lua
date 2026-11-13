@@ -349,6 +349,8 @@ function M.Start()
     Terrain.Build(world_, scene_)
     Build.Build(world_, scene_)
     Puzzles.Build(world_, scene_)
+    -- 碎石堆独立材质也要接收霜冻等全局材质参数
+    if Puzzles.gateMaterial ~= nil then M.surfaceMaterials.gateRubble = Puzzles.gateMaterial end
     world_:OptimizeBroadPhase()
     Puzzles.On(OnPuzzle)
 
@@ -530,8 +532,13 @@ local function UpdateAim()
             volume and tostring(volume.collisionLayer) or "none", tostring(aim.voxel),
             tostring(nomi_:Position()), nomi_.camYaw, nomi_.camPitch))
     end
+    local gateAimed = obj == nil and aim.hit and aim.breakable and aim.volume == Puzzles.gateRubble
+    M.gateHoverTarget = gateAimed and 1 or 0
     if obj ~= nil then
         obj.hoverTarget = 1
+        -- 蓄力碎时或物件完整（只能碎）时为红；已碎可回溯时为黄
+        local rewindable = obj.canRewind and (obj.state == "SHATTERED" or obj.state == "FROZEN")
+        obj.hoverColor = (caster_.charging or not rewindable) and Spells.SHATTER_COLOR or Spells.REWIND_COLOR
         local st = ({ WHOLE = "完整", SHATTERED = "破碎中", FROZEN = "已碎", REWIND = "回溯中" })[obj.state] or ""
         if obj.state == "FROZEN" and not obj.rubble then st = "冻结" end
         local actions = (obj.canShatter and "  [左键 碎时]" or "") .. (obj.canRewind and "  [Q 回溯]" or "")
@@ -657,7 +664,19 @@ function Ruins_HandleUpdate(eventType, eventData)
     Terrain.SetInteractor(1, M.rig.root.worldPosition, (M.rig.size or 1) * 2.2)
     Build.UpdateFloaters(time_, 1.0)
     -- 特效 / 手光
-    local glowCol = caster_.charging and Spells.GOLD or Spells.BLUE
+    -- 碎石堆选中红光（平滑淡入淡出，量化后才写材质参数）
+    local gm = Puzzles.gateMaterial
+    if gm ~= nil then
+        M.gateHover = (M.gateHover or 0) + ((M.gateHoverTarget or 0) - (M.gateHover or 0)) * (1 - math.exp(-12 * dt))
+        local gq = math.floor(M.gateHover * 20 + 0.5) / 20
+        if gq ~= M.lastGateHover then
+            M.lastGateHover = gq
+            gm:SetShaderParameter("hover", Variant(gq))
+        end
+    end
+    local lastSpell = caster_.lastCast and Spells.BY_ID[caster_.lastCast]
+    local glowCol = caster_.charging and Spells.SHATTER_COLOR
+        or (caster_.castAnim > 0 and lastSpell and lastSpell.color) or Spells.WHITE
     local glow = caster_.charging and (0.4 + 0.6 * caster_.charge) or (caster_.castAnim > 0 and 1.0 or 0.12)
     fx_:Update(dt, nomi_:HandPos(), glowCol, glow)
     -- HUD
@@ -674,7 +693,9 @@ function Ruins_HandleUpdate(eventType, eventData)
         HUD.SetHint(h)
     end
     TouchControls.Sync()
-    HUD.SetCrossVisible(not M.debugOn)
+    -- 准星只在长按碎时（蓄力瞄准）时出现，平时靠选中光和目标钟面提示。
+    -- 骑龙吐息仍需要准星瞄准。
+    HUD.SetCrossVisible(not M.debugOn and (caster_.charging or M.mounted))
     -- 低频现场日志：使用实际帧间隔，Web 上不依赖返回 0 的 os.clock()。
     perf.elapsed, perf.frames = perf.elapsed + dt, perf.frames + 1
     perf.peak = math.max(perf.peak, dt)

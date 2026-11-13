@@ -266,17 +266,17 @@ end
 ---@param data TouchBeginEventData
 function RuinsTouch_Begin(_,data)
     if not provider then return end
-    local dpr=graphics:GetDPR()
+    local k=Draw.PixelToHUD()
     local id=data:GetInt('TouchID')
-    M.BeginTouch(id,data:GetInt('X')/dpr,data:GetInt('Y')/dpr)
+    M.BeginTouch(id,data:GetInt('X')*k,data:GetInt('Y')*k)
     for i=0,input.numTouches-1 do
         if input:GetTouch(i).touchID==id and owners[id] then owners[id].native=true; break end
     end
 end
 ---@param data TouchMoveEventData
 function RuinsTouch_Move(_,data)
-    local dpr=graphics:GetDPR()
-    M.MoveTouch(data:GetInt('TouchID'),data:GetInt('X')/dpr,data:GetInt('Y')/dpr)
+    local k=Draw.PixelToHUD()
+    M.MoveTouch(data:GetInt('TouchID'),data:GetInt('X')*k,data:GetInt('Y')*k)
 end
 ---@param data TouchEndEventData
 function RuinsTouch_End(_,data) M.EndTouch(data:GetInt('TouchID')) end

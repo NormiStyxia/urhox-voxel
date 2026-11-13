@@ -1,50 +1,28 @@
 -- Reusable geometry: Roman dial, hand seal and bounded impact pool.
 local M = {}
 local S = {}; S.__index = S
-local ROMAN = {'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'}
----@type table<string, number[][]>
-local GLYPH = {
- I={{0,-.5,0,.5},{-.22,.5,.22,.5},{-.22,-.5,.22,-.5}},
- V={{-.3,.5,0,-.5},{0,-.5,.3,.5}}, X={{-.3,.5,.3,-.5},{-.3,-.5,.3,.5}},
-}
-local function Shape(parent, name, clock)
+-- 表盘与手印用生图素材（白线黑底，亮度即不透明度）；范围圈与冲击波由 shader 程序化画环。
+local TEX = { clock='Textures/Sigils/sigil_clock.png', seal='Textures/Sigils/sigil_seal.png' }
+local function Shape(parent, name, kind)
     local node = parent:CreateChild(name)
     local mat = Material:new()
     assert(mat:SetSurfaceShader('Shaders/BLGL/TimeSigil.shader'), 'TimeSigil shader unavailable')
+    if kind ~= nil then
+        local tex = cache:GetResource('Texture2D', TEX[kind])
+        if tex ~= nil then
+            mat:SetSurfaceTexture('sigil_tex', tex)
+            mat:SetShaderParameter('use_tex', Variant(1.0))
+        else
+            print('TimeSigil: missing texture '..TEX[kind])
+        end
+    end
     local g = node:CreateComponent('CustomGeometry')
     g:BeginGeometry(0, TRIANGLE_LIST)
-    local function line(x,y,u,v,w)
-        local dx,dy=u-x,v-y; local d=math.sqrt(dx*dx+dy*dy)
-        if d<.00001 then return end
-        local nx,ny=-dy/d*w/2,dx/d*w/2
-        local pts={{x+nx,y+ny},{u+nx,v+ny},{u-nx,v-ny},{x+nx,y+ny},{u-nx,v-ny},{x-nx,y-ny}}
-        for _,p in ipairs(pts) do
-            g:DefineVertex(Vector3(p[1],p[2],0)); g:DefineNormal(Vector3(0,0,-1))
-            g:DefineTexCoord(Vector2(p[1]*.5+.5,p[2]*.5+.5))
-        end
-    end
-    local function ring(r,w)
-        for i=0,95 do
-            local a,b=i*math.pi/48,(i+1)*math.pi/48
-            line(math.sin(a)*r,math.cos(a)*r,math.sin(b)*r,math.cos(b)*r,w)
-        end
-    end
-    ring(1,.012); ring(.95,.005)
-    if clock then
-        ring(.62,.006)
-        for i=1,60 do
-            local a=i*math.pi/30; local r=i%5==0 and .86 or .9
-            line(math.sin(a)*r,math.cos(a)*r,math.sin(a)*.94,math.cos(a)*.94,i%5==0 and .014 or .006)
-        end
-        for i,word in ipairs(ROMAN) do
-            local a=i*math.pi/6; local x,y=math.sin(a)*.75,math.cos(a)*.75
-            for j=1,#word do for _,s in ipairs(GLYPH[word:sub(j,j)]) do
-                local off=(j-(#word+1)/2)*.066
-                line(x+off+s[1]*.095,y+s[2]*.12,x+off+s[3]*.095,y+s[4]*.12,.009)
-            end end
-        end
-        line(0,0,0,.51,.017); line(0,0,.28,-.17,.023)
-        ring(.06,.014)
+    local quad={{-1,-1},{1,1},{1,-1},{-1,-1},{-1,1},{1,1}}
+    for _,p in ipairs(quad) do
+        g:DefineVertex(Vector3(p[1],p[2],0)); g:DefineNormal(Vector3(0,0,-1))
+        -- 图片 v 轴向下：顶点 y=+1 对应图片顶部
+        g:DefineTexCoord(Vector2(p[1]*.5+.5,.5-p[2]*.5))
     end
     g:Commit(); g:SetMaterial(mat); g.castShadows=false
     node.enabled=false
@@ -60,10 +38,10 @@ end
 function M.New(scene)
     local self=setmetatable({age=0,next=0,impacts={}},S)
     local root=scene:CreateChild('TimeSigils')
-    self.target=Shape(root,'SelectedClock',true)
-    self.hand=Shape(root,'CastingClock',true)
-    self.range=Shape(root,'ChargeRadius',false)
-    for i=1,4 do self.impacts[i]=Shape(root,'Impact'..i,false) end
+    self.target=Shape(root,'SelectedClock','clock')
+    self.hand=Shape(root,'CastingClock','seal')
+    self.range=Shape(root,'ChargeRadius',nil)
+    for i=1,4 do self.impacts[i]=Shape(root,'Impact'..i,nil) end
     return self
 end
 function S:Pulse(pos,normal,color,radius)
@@ -75,6 +53,7 @@ end
 ---@param aim table
 ---@param hand Vector3
 ---@param camera Node
+---@param caster table
 function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     self.age=self.age+dt
     local face=camera.worldRotation
@@ -83,12 +62,19 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     if selected then
         local hitPos = aim.pos --[[@as Vector3]]
         local pos=hitPos+(camera.worldPosition-hitPos):Normalized()*.16
-        Show(self.target,pos,face,.65,Color(.45,.75,1,1),.95)
+        -- 目标钟面颜色跟随可施放的法术：蓄力/只能碎 = 红，可回溯 = 黄
+        local obj=aim.object
+        local rewindable=obj~=nil and obj.canRewind and (obj.state=='SHATTERED' or obj.state=='FROZEN')
+        local col=(caster.charging or not rewindable) and Color(1,.36,.3,1) or Color(1,.8,.36,1)
+        -- 表盘按时间缓慢逆转，像在倒拨时间
+        Show(self.target,pos,face*Quaternion(self.age*12,Vector3.FORWARD),.65,col,.9)
     end
     local active=enabled and (caster.charging or caster.castAnim>0)
     self.hand.node.enabled=active
     if active then
-        local col=caster.charging and Color(1,.77,.32,1) or Color(.4,.65,1,1)
+        local spell=caster.lastCast
+        local col=(caster.charging or spell=='shatter') and Color(1,.36,.3,1)
+            or (spell=='freeze' and Color(.4,.65,1,1) or Color(1,.8,.36,1))
         -- 手部法阵属于施法空间，不是始终朝镜头的屏幕标记。
         local target = aim.hit and aim.pos or aim.far --[[@as Vector3?]]
         ---@type Vector3
@@ -99,7 +85,7 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     end
     self.range.node.enabled=enabled and caster.charging and aim.hit
     if self.range.node.enabled then
-        Show(self.range,aim.pos+aim.normal*.08,Quaternion(Vector3.FORWARD,aim.normal),radius,Color(1,.77,.32,1),.8,caster.charge)
+        Show(self.range,aim.pos+aim.normal*.08,Quaternion(Vector3.FORWARD,aim.normal),radius,Color(1,.36,.3,1),.8,caster.charge)
     end
     for _,p in ipairs(self.impacts) do
         if p.age then

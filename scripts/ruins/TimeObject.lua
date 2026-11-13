@@ -92,6 +92,8 @@ M.STATE = { WHOLE = "WHOLE", SHATTERED = "SHATTERED", FROZEN = "FROZEN", REWIND 
 ---@field rewindT number
 ---@field fx number
 ---@field hover number
+---@field hoverColor Color|nil
+---@field lastHoverColor Color|nil
 ---@field marker Node|nil
 ---@field listeners table
 ---@field canShatter boolean
@@ -195,6 +197,7 @@ function T:EffectMaterial(mode)
         local m=OwnMaterial(self.world,self.size)
         m:SetShaderParameter("mode",Variant(mode))
         m:SetShaderParameter("hover",Variant(self.hover or 0))
+        if self.hoverColor ~= nil then m:SetShaderParameter("hover_color",Variant(self.hoverColor)) end
         self.effectMaterials[mode]=m
     end
     return self.effectMaterials[mode]
@@ -809,6 +812,13 @@ function T:Update(dt)
     local hv = self.hoverTarget or 0
     self.hover = self.hover + (hv - self.hover) * (1 - math.exp(-12 * dt))
     self.flash = math.max(0, (self.flash or 0) - dt * 0.8)
+    -- 选中光颜色：由瞄准逻辑按可施放的法术设置（碎时红 / 回溯黄）
+    local hc = self.hoverColor
+    if hc ~= nil and hc ~= self.lastHoverColor then
+        self.lastHoverColor = hc
+        self.material:SetShaderParameter("hover_color", Variant(hc))
+        for _,m in pairs(self.effectMaterials) do m:SetShaderParameter("hover_color",Variant(hc)) end
+    end
     local h = math.floor((self.hover + self.flash) * 20 + 0.5) / 20
     if h ~= self.lastHover then
         self.lastHover = h

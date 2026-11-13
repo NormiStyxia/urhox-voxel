@@ -28,6 +28,9 @@ M.BLUE = Color(0.25, 0.5, 1.0)
 M.VIOLET = Color(0.45, 0.38, 1.0)
 M.GOLD = Color(1.0, 0.76, 0.32)
 M.WHITE = Color(0.9, 0.95, 1.0)
+M.RED = Color(1.0, 0.30, 0.24)
+-- 三个法术的主色：左键碎时 = 红，E 冻结 = 蓝，Q 回溯 = 黄
+M.SHATTER_COLOR, M.FREEZE_COLOR, M.REWIND_COLOR = M.RED, M.BLUE, M.GOLD
 
 local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
 local function Rand(a, b) return a + (b - a) * math.random() end
@@ -36,7 +39,7 @@ local function Rand(a, b) return a + (b - a) * math.random() end
 M.SPELLS = {
     {
         id = "shatter", name = "碎时", key = KEY_1, cooldown = 0.35, range = 40.0,
-        color = M.GOLD, icon = "💥",
+        color = M.RED, icon = "💥",
         desc = "左键：打碎时之物件 / 碎石（按住蓄力扩大破坏范围）",
         cast = function(ctx, aim, charge)
             if not aim.hit then return false, "没有目标" end
@@ -104,7 +107,7 @@ M.SPELLS = {
     },
     {
         id = "rewind", name = "回溯", key = KEY_3, cooldown = 0.8, range = 60.0,
-        color = M.VIOLET, icon = "⏪",
+        color = M.GOLD, icon = "⏪",
         desc = "Q：让时之物件沿时间倒流，重组为原样",
         cast = function(ctx, aim)
             -- 回溯与准星保持同一个目标，不从前景碎石换射线去寻找后方物件。
@@ -238,18 +241,18 @@ function F:Burst(pos, kind, k)
         for i = 1, math.floor(40 * k) do
             local d = Vector3(Rand(-1, 1), Rand(-0.3, 1), Rand(-1, 1)):Normalized()
             self.motesG:Spawn({ pos = pos, vel = d * Rand(3, 8) * k, life = Rand(0.4, 0.9), size = Rand(0.12, 0.24),
-                colors = { Color(1, 0.95, 0.75, 1), M.GOLD, Color(0.95, 0.6, 0.2, 1) }, grav = 6, drag = 3 })
+                colors = { Color(1, 0.85, 0.75, 1), M.RED, Color(0.85, 0.18, 0.12, 1) }, grav = 6, drag = 3 })
         end
         for i = 1, math.floor(30 * k) do
             local d = Vector3(Rand(-1, 1), Rand(-1, 1), Rand(-1, 1)):Normalized()
             self.motesB:Spawn({ pos = pos + d * 0.3, vel = d * Rand(1.5, 4), life = Rand(0.5, 1.1), size = Rand(0.08, 0.16),
-                colors = { M.WHITE, M.BLUE, M.VIOLET }, drag = 2.5 })
+                colors = { Color(1, 0.9, 0.85, 1), M.RED, Color(0.6, 0.12, 0.1, 1) }, drag = 2.5 })
         end
-        -- 时之裂纹：扩散的金色环
+        -- 时之裂纹：扩散的红色环
         for i = 0, 23 do
             local a = i / 24 * math.pi * 2
             local d = Vector3(math.cos(a), 0, math.sin(a))
-            self.motesG:Spawn({ pos = pos, vel = d * 6.0 * k, life = 0.35, size = 0.14, colors = { M.GOLD, Color(1, 0.9, 0.6, 1) }, drag = 4 })
+            self.motesG:Spawn({ pos = pos, vel = d * 6.0 * k, life = 0.35, size = 0.14, colors = { M.RED, Color(1, 0.7, 0.6, 1) }, drag = 4 })
         end
     elseif kind == "freeze" then
         -- 蓝色冰环（3 层）+ 冰晶屑缓慢下沉
@@ -277,12 +280,12 @@ function F:Burst(pos, kind, k)
         for i = 1, math.floor(60 * k) do
             local d = Vector3(Rand(-1, 1), Rand(-0.2, 1), Rand(-1, 1)):Normalized()
             self.motesG:Spawn({ pos = pos + d * Rand(0.2, 1.5 * k), vel = d * Rand(1, 3) + Vector3(0, 1.5, 0), life = Rand(0.6, 1.4),
-                size = Rand(0.1, 0.22), colors = { Color(1, 0.97, 0.85, 1), M.GOLD, M.BLUE }, drag = 1.5 })
+                size = Rand(0.1, 0.22), colors = { Color(1, 0.97, 0.85, 1), M.GOLD, M.WHITE }, drag = 1.5 })
         end
         for i = 1, math.floor(50 * k) do
             local p = pos + Vector3(Rand(-2, 2), Rand(-1, 1), Rand(-2, 2)) * k
             self.motesB:Spawn({ pos = p, vel = Vector3(0, Rand(1.5, 3.5), 0), life = Rand(1.0, 2.0), size = Rand(0.06, 0.12),
-                colors = { M.WHITE, M.BLUE, M.VIOLET } })
+                colors = { Color(1, 0.97, 0.85, 1), M.GOLD } })
         end
     end
 end
@@ -320,7 +323,8 @@ local REWIND_BLUE_RATE = 300 -- particles/second per object, not per fragment
 local REWIND_GOLD_RATE = 72  -- refresh the 24 clock ticks three times/second
 local HAND_RATE = 48        -- old 60fps full-glow density (0.8 * 60)
 local MAX_EMIT_DT = 0.1     -- discard hitch debt; at most 30 blue / 8 gold per object
-local REWIND_BLUE_COLORS = { M.WHITE, M.BLUE, M.VIOLET }
+-- 回溯是黄色系：碎块沿途撒金白光点（池名沿用 blue，仅表示方块粒子池）
+local REWIND_BLUE_COLORS = { Color(1, 0.97, 0.85, 1), M.GOLD, Color(1, 0.88, 0.5, 1) }
 local REWIND_GOLD_COLORS = { Color(1, 0.95, 0.8, 1), M.GOLD }
 
 local function RewindPieceCenter(r)
@@ -349,7 +353,7 @@ local function ClockMote(m)
         0.2 * math.sin(r.t * 3 + m.tick), math.sin(a) * radius)
 end
 
--- 回溯特效：碎块回飞期间沿每块撒蓝紫光点，物件中心一个旋转的金色时钟环
+-- 回溯特效：碎块回飞期间沿每块撒金白光点，物件中心一个旋转的金色时钟环
 function F:StartRewind(obj)
     -- Repeated requests must not multiply a single object's emission budget.
     for _, r in ipairs(self.rewinds) do if r.obj == obj then return end end
