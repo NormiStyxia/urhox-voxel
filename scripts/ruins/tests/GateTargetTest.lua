@@ -40,6 +40,17 @@ V.atFrame(8,function()
             V.assert(game.sigils.target.node.enabled,"实景南门目标时钟显示")
         end
     end
+    nomi.cc:Teleport(Vector3(0,6.1,-58))
+    nomi.node.rotation=Quaternion(0,Vector3.UP)
+    for _,pitch in ipairs({-30,0,30}) do
+        nomi.camPitch=pitch
+        for i=1,90 do nomi:Animate(1/60,true) end
+        local arm=nomi.nomi.bones.arm_right
+        local hand=nomi:HandPos()
+        print(string.format("GateTargetTest: casting pitch=%.1f shoulder=%s hand=%s palmForward=%.4f",
+            pitch,tostring(arm.worldPosition),tostring(hand),(hand-arm.worldPosition):DotProduct(nomi.node.worldDirection)))
+        V.assert((hand-arm.worldPosition):DotProduct(nomi.node.worldDirection)>.2,"施法手在肩前而非背后 pitch="..pitch)
+    end
     nomi.cc:Teleport(savedPos)
     nomi.camTarget.position=savedPos
     nomi.camYaw,nomi.camPitch=savedYaw,savedPitch
