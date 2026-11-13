@@ -3,9 +3,9 @@ local V=_G["V"]
 V.atFrame(8,function()
     local g=_G["RUINS"]
     local n=g.nomiCtl
-    UnsubscribeFromEvent("Update","Ruins_HandleUpdate")
-    UnsubscribeFromEvent("SceneUpdate","Ruins_HandleSceneUpdate")
-    UnsubscribeFromEvent("PostUpdate","Ruins_HandlePostUpdate")
+    UnsubscribeFromEvent("Update")
+    UnsubscribeFromEvent("SceneUpdate")
+    UnsubscribeFromEvent("PostUpdate")
     g.world.enabled=false
     n.cc:Teleport(Vector3(0,6.1,-55.5))
     n.camTarget.position=n:Position()
