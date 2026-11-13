@@ -201,7 +201,13 @@ local function BridgeVoxels(world)
             return P.MARBLE_B
         end
         -- ---------------- 栏杆
-        local py = ly - deck
+        -- 栏杆统一以主桥面为基准；端部台阶处用柱座补齐，端柱不出现错台
+        local py = ly - BRIDGE_D
+        if py < 0 then
+            if ax >= 1.75 and ax <= 2.25 then return P.MARBLE_B end
+            return nil
+        end
+        if edgeZ < 0.25 and py >= 0.25 then return nil end -- 端柱外不再伸出扶手
         local kind = PostKind(z)
         if kind == "newel" then
             -- 端柱 / 中柱：0.5 方柱，0.75 柱帽，金顶

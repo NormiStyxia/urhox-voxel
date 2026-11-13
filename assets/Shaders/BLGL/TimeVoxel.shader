@@ -32,6 +32,15 @@ float h31(vec3 p) {
     return fract((p.x + p.y) * p.z);
 }
 
+float n3(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f * f * (3.0 - 2.0 * f);
+    float a = mix(mix(h31(i), h31(i + vec3(1, 0, 0)), u.x), mix(h31(i + vec3(0, 1, 0)), h31(i + vec3(1, 1, 0)), u.x), u.y);
+    float b = mix(mix(h31(i + vec3(0, 0, 1)), h31(i + vec3(1, 0, 1)), u.x), mix(h31(i + vec3(0, 1, 1)), h31(i + vec3(1, 1, 1)), u.x), u.y);
+    return mix(a, b, u.z);
+}
+
 void vertex() {
     opos = VERTEX;
     object_normal = NORMAL;
@@ -49,8 +58,33 @@ void fragment() {
     float metal = pbr.g;
     vec3 emission = srgb_to_linear(emi.rgb) * emi.a * 16.0;
 
-    // 体素格内坐标：取法线所在面的两个切向分量，算到格边的距离
+    // 石材风化（与 RuinsVoxel 一致的大块明暗 + 矿脉 + 细孔起伏）。
+    // 图案按物体空间取样，碎块飞散时纹理跟着走；导数在任何分支之前求好。
     vec3 n = normalize(NORMAL);
+    vec3 wp = VERTEX;
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    float footprint = max(length(dpdx), length(dpdy));
+    float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
+    float surfaceFade = 1.0 - smoothstep(0.04, 0.16, footprint);
+    float stone = step(99.5, idx) * (1.0 - step(108.5, idx));
+    float tile = step(138.5, idx) * (1.0 - step(141.5, idx));
+    float mineral = max(stone, tile);
+    float marble = step(104.5, idx) * (1.0 - step(106.5, idx));
+    float g = n3(opos * 0.35) * 0.6 + n3(opos * 1.3 + 7.0) * 0.4;
+    float veins = n3(opos * vec3(2.2, 5.0, 2.2) + vec3(g * 3.0));
+    float pores = n3(opos * 24.0);
+    float relief = (pores * 0.0025 + veins * 0.003) * mineral;
+    vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
+    float det = dot(dpdx, r1);
+    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
+    float shade = 1.0 + (g - 0.5) * 0.36 * mineral;
+    shade *= 1.0 + n.y * 0.05;
+    shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
+    base = mix(base, base * vec3(0.72, 0.68, 0.61), smoothstep(0.57, 0.78, veins) * 0.38 * marble);
+    base *= shade;
+    rough = clamp(rough + (veins - 0.5) * 0.08 * mineral, 0.0, 1.0);
+
+    // 体素格内坐标：取法线所在面的两个切向分量，算到格边的距离
     vec3 cellP = opos / voxel_size;
     vec3 cell = floor(cellP - normalize(object_normal) * 0.5);
     vec3 f = fract(cellP);
@@ -92,10 +126,9 @@ void fragment() {
     base = mix(base, base * 0.85 + blue_color.rgb * 0.15, selection);
 
     // 石材表面有细颗粒，但不是按体素单元描边。
-    float stone = step(99.5, idx) * (1.0 - step(108.5, idx));
-    float footprint = max(length(dFdx(VERTEX)), length(dFdy(VERTEX)));
-    float grain = h31(floor(opos * 32.0));
-    base *= 1.0 + (grain - 0.5) * 0.10 * stone * (1.0 - smoothstep(0.025, 0.09, footprint));
+    float grain = h31(floor(opos * 40.0));
+    base *= 1.0 + (grain - 0.5) * 0.10 * mineral * grainFade;
+    NORMAL = normalize(n - clamp(grad, vec3(-0.22), vec3(0.22)) * surfaceFade);
     ALBEDO = base;
     ROUGHNESS = rough;
     METALLIC = metal;
