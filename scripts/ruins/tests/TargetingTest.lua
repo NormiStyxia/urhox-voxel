@@ -16,7 +16,17 @@ V.atFrame(8, function()
     V.assert(aim.hit and aim.object==object and aim.breakable,"实心可操作物件正确锁定")
     game.sigils:Update(0,aim,Vector3.ZERO,nomi:CameraNode(),game.caster,1,true)
     V.assert(game.sigils.target.node.enabled,"时之物件显示选择时钟")
-    local edgeAim=nomi:AimRay(Ray(Vector3(299.96,5.5,298),Vector3.FORWARD),10)
+    local edgeRay=Ray(Vector3(299.96,5.5,298),Vector3.FORWARD)
+    local edgeAim=nomi:AimRay(edgeRay,10)
+    local edgeNear=world:SphereCast(Sphere(edgeRay.origin,.12),edgeRay.direction,10,nomi.aimMask)
+    if edgeNear.hit then
+        local delta=edgeNear.position-edgeRay.origin
+        local visibleRay=Ray(edgeRay.origin,delta:Normalized())
+        local native=world:RaycastGridSingle(visibleRay,delta:Length()+.08,nomi.aimMask)
+        local checked=nomi:GridHit(visibleRay,delta:Length()+.08)
+        print(string.format("TargetingTest: edge native=%s %.5f checked=%s %.5f near=%s dir=%s",
+            tostring(native.hit),native.distance,tostring(checked.hit),checked.distance,tostring(edgeNear.position),tostring(visibleRay.direction)))
+    end
     V.assert(edgeAim.object==object and edgeAim.assisted,"准星轻微擦边可辅助锁定无遮挡物件")
 
     -- 前景动态碰撞凸包的空隙不能挡掉后方可见的实心体素。
