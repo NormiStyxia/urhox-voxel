@@ -1,3 +1,4 @@
 <material>
     <surfaceshader name="Shaders/BLGL/RuinsCloud.shader" />
+    <surfacetexture name="cloud_atlas" texture="Textures/Sky/cloud_flat_atlas.png" />
 </material>

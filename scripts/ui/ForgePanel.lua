@@ -1,5 +1,5 @@
 -- Scrollable pixel forge; UI owns the NanoVG frame and pointer dispatch.
--- Public surface is deliberately only Open / Close / IsOpen.
+-- Public surface: Open / Close / ForceClose / IsOpen / PreviewMode.
 local UI=require('urhox-libs/UI')
 local ImageCache=require('urhox-libs/UI/Core/ImageCache')
 local Draw=require('ui.PixelDraw')
@@ -69,8 +69,9 @@ end
 local function Fallback(s,reason)
     DestroyPreview(s)
     s.fallback=true
+    s.previewMode='fallback'
     -- Failed native capability is tried again only on the next Open.
-    print('[ForgePanel] 3D preview unavailable: '..tostring(reason))
+    print('Forge preview: fallback ('..reason..')')
 end
 local function UpdatePreview(s)
     local p=s.preview
@@ -81,7 +82,7 @@ local function UpdatePreview(s)
 end
 local function CreatePreview(s)
     -- Keep every native resource reachable until teardown, including partial failures.
-    local p={}
+    local p={failureReason='scene'}
     s.preview=p
     p.scene=Scene()
     p.scene:CreateComponent('Octree')
@@ -105,6 +106,7 @@ local function CreatePreview(s)
     p.camera.orthoSize=1.9
     p.camera.nearClip=.01
     p.camera.farClip=10
+    p.failureReason='rendertexture'
     p.texture=Texture2D:new()
     p.texture:SetNumLevels(1)
     assert(p.texture:SetSize(512,512,Graphics:GetRGBAFormat(),TEXTURE_RENDERTARGET),'render target')
@@ -136,7 +138,7 @@ local function Rebuild(s)
     end
     if s.preview then
         local ok,reason=pcall(UpdatePreview,s)
-        if not ok then Fallback(s,reason) end
+        if not ok then Fallback(s,'mesh') end
     end
 end
 local Layout
@@ -345,7 +347,7 @@ local function Pixels(vg,s,cells,b,highlight,fixedGrip)
     if fixedGrip then
         pixel,step=2,2
         x=Draw.Snap(b.x+b.w/2+minX*2)
-        y=Draw.Snap(b.y+b.h*.75-maxY*2)
+        y=Draw.Snap(b.y+b.h*.64-maxY*2)
     end
     nvgSave(vg); nvgIntersectScissor(vg,b.x,b.y,b.w,b.h)
     for _,cell in pairs(front) do
@@ -373,7 +375,7 @@ local function Preview(vg,s)
         if p.context and p.context~=vg then ReleaseImage(p) end
         if not p.image then
             local ok,handle=pcall(nvgCreateVideo,vg,p.texture)
-            if not ok or not handle or handle==0 then Fallback(s,'NanoVG texture bridge');p=nil
+            if not ok or type(handle)~='number' or handle<=0 then Fallback(s,'bridge');p=nil
             else p.image,p.context=handle,vg end
         end
     end
@@ -382,6 +384,13 @@ local function Preview(vg,s)
         local x,y=Draw.Snap(b.x+(b.w-size)/2),b.y+2
         nvgBeginPath(vg);nvgRect(vg,x,y,size,size)
         nvgFillPaint(vg,nvgImagePattern(vg,x,y,size,size,0,p.image,1));nvgFill(vg)
+        -- Open/texture allocation alone is not ready. Wait for completed geometry,
+        -- a live NVG bridge and a later frame after the surface update request.
+        if s.previewMode~='3d' and p.mesh and not p.job and p.readyQueuedFrame
+            and s.updateFrame>p.readyQueuedFrame and p.mesh.volume:GetVertexCount()>0 then
+            s.previewMode='3d'
+            print('Forge preview: 3d')
+        end
     else
         -- Assembly silhouette plus separated, labelled component slices.
         Pixels(vg,s,s.blueprint.geometry.cells,Box(b.x,b.y+4,b.w*.5,b.h-28),s.slot,true)
@@ -397,7 +406,7 @@ local function Preview(vg,s)
     Draw.Text(vg,p and (p.job and '分帧组装中' or '拖转 · 双击回正') or '部件拆解预览',b.x+b.w/2,b.y+b.h-16,12,C.muted,NVG_ALIGN_CENTER)
 end
 local STAT_SWORD={{'attack','攻击',20,'点'},{'speed','速度',1.4,'×'},{'reach','范围',1.4,'m'},{'poise','失衡',12,'点'}}
-local STAT_BOW={{'draw','拉弓速度',1.5,'×'},{'range','射程',60,'m'},{'spread','散布',2,'×'},{'move','移动',1,'×'}}
+local STAT_BOW={{'draw','拉弓速度',1.5,'×'},{'range','射程',60,'m'},{'move','移动',1,'×'},{'armorBreak','破甲',2,'×'}}
 local function Number(value,unit)
     local text
     if math.abs(value-math.floor(value+.5))<.001 then text=unit=='×' and string.format('%.1f',value) or tostring(math.floor(value+.5))
@@ -425,7 +434,9 @@ local function Stats(vg,s)
         for j=1,5 do Draw.Rect(vg,b.x+4+(j-1)*12,y+10,8,6,j<=filled and C.gold or C.muted) end
         if math.abs(delta)>.001 then Draw.Text(vg,(delta>0 and '+' or '')..Number(delta,unit),b.x+b.w-4,y+14,12,C.brown,NVG_ALIGN_RIGHT) end
     end
-    Draw.Text(vg,'破甲 '..Number(s.baseline.stats.armorBreak,'×')..' → '..Number(s.blueprint.stats.armorBreak,'×'),b.x+4,b.y+152,12,C.brown)
+    if s.weapon=='sword' then
+        Draw.Text(vg,'破甲 '..Number(s.baseline.stats.armorBreak,'×')..' → '..Number(s.blueprint.stats.armorBreak,'×'),b.x+4,b.y+152,12,C.brown)
+    end
 end
 local function Truncate(text,limit)
     if (utf8.len(text) or 0)<=limit then return text end
@@ -491,19 +502,21 @@ local function Released()
     return true
 end
 local function FinishClose(s)
-    -- Pointer dispatch has finished before releasing the Yoga node. Keep the
-    -- transparent overlay until then so a second finger cannot click through.
+    if s.finished then return end
+    s.finished=true
+    -- Scene.Stop may have no next Update. Never schedule cleanup onto a receiver
+    -- that should already be gone; the detached Lua widget can finish dispatch.
     local retired=s.layer
     UI.PopOverlay(retired);s.root:RemoveChild(retired)
+    -- UI may still hold this Lua widget until an already-pressed pointer is
+    -- released. Retire its geometry and callbacks without keeping native nodes
+    -- or letting stale events act on a newly opened forge session.
+    retired.absoluteLayout={x=0,y=0,w=0,h=0}
+    retired.props.onPointerDown=Consume;retired.props.onPointerMove=Consume
+    retired.props.onPointerUp=Consume;retired.props.onPointerCancel=Consume
     s.layer=nil
     s.receiver:UnsubscribeFromAllEvents()
-    if s.keptDraft or s.forceDetach then
-        -- Threat closure unblocks immediately, but never frees a Yoga node inside
-        -- an in-flight pointer callback. The detached node is retired next frame.
-        s.receiver:SubscribeToEvent('Update',function()
-            retired:Destroy();s.receiver:UnsubscribeFromAllEvents();s.eventNode:Remove()
-        end)
-    else retired:Destroy();s.eventNode:Remove() end
+    retired:Destroy();s.eventNode:Remove()
     if input.mouseMode==MM_ABSOLUTE then input.mouseMode=s.mouseMode end
     TouchInput.Clear()
     session=nil
@@ -519,6 +532,7 @@ local function Update(_,_,data)
         return
     end
     if not Safe(s.callbacks) then M.Close(true);return end
+    s.updateFrame=s.updateFrame+1
     local dt=math.max(0,math.min(.1,data:GetFloat('TimeStep')))
     s.clock=s.clock+dt
     for key,value in pairs(s.flash) do s.flash[key]=math.max(0,value-dt) end
@@ -529,11 +543,12 @@ local function Update(_,_,data)
         if p.job then
             local done,mesh,reason=Builder.StepBuild(p.job,2,nil)
             if done then
-                s.buildMetrics={totalMs=p.job.totalMs,maxStepMs=p.job.maxStepMs,nativeMs=p.job.nativeMs,overBudget=p.job.overBudget}
+                s.buildMetrics={totalMs=p.job.totalMs,maxStepMs=p.job.maxStepMs,nativeMs=p.job.nativeMs,
+                    overBudget=p.job.overBudget,slowestPhase=p.job.slowestPhase,clockUnavailable=p.job.clockUnavailable}
                 p.job=nil
-                if not mesh then Fallback(s,reason);return end
-                p.mesh=mesh;p.dirty=true
-                if s.buildMetrics.overBudget then print('[ForgePanel] native build budget exceeded: '..s.buildMetrics.maxStepMs..'ms') end
+                if not mesh then Fallback(s,'mesh');return end
+                p.mesh=mesh;p.dirty=true;p.readyQueuedFrame=s.updateFrame
+                if s.buildMetrics.overBudget then print('[ForgePanel] preview build step exceeded 2ms: '..s.buildMetrics.maxStepMs..'ms / '..tostring(s.buildMetrics.slowestPhase)) end
             end
         end
         local rotated=p.yaw~=s.yaw
@@ -565,11 +580,11 @@ function M.Open(rigOrCallbacks)
     local weapon=draft and draft.weapon or config.active
     local s={callbacks=callbacks,config=config,original=baseline,weapon=weapon,slot=draft and draft.slot or SLOT_ORDER[weapon][1],
         undo=draft and Copy(draft.undo),owner=owner,scroll=0,clock=0,pauseSpin=0,yaw=25,autoSpin=true,
-        thumbnails={},flash={},root=root,mouseMode=input.mouseMode,message=draft and '已恢复草稿 · Web刷新后配置会恢复默认' or nil}
+        thumbnails={},flash={},root=root,updateFrame=0,mouseMode=input.mouseMode,message=draft and '已恢复草稿 · Web刷新后配置会恢复默认' or nil}
     session=s
     Rebuild(s);Layout(s)
     local ok,reason=pcall(CreatePreview,s)
-    if not ok then Fallback(s,reason) end
+    if not ok then Fallback(s,s.preview and s.preview.failureReason or 'scene') end
     s.layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',
         onPointerDown=Down,onPointerMove=Move,onPointerUp=Up,onPointerCancel=Cancel,
         onClick=function(_,event) if event then Consume(event) end end}
@@ -596,7 +611,7 @@ function M.Close(keepDraft)
     local s=session
     if not s then return true end
     if s.closing then
-        if keepDraft==true then s.forceDetach=true;FinishClose(s) end
+        if keepDraft==true then FinishClose(s) end
         return true
     end
     if keepDraft==true or not Safe(s.callbacks) then
@@ -635,4 +650,10 @@ function M.Close(keepDraft)
 end
 --- Includes the short release latch: callers must gate game input on this.
 function M.IsOpen() return session~=nil end
+--- Idempotent scene teardown / danger close, including the normal release latch.
+---@return boolean
+function M.ForceClose() return M.Close(true) end
+--- nil while closed/closing or still preparing the first native preview.
+---@return '3d'|'fallback'|nil
+function M.PreviewMode() return session and not session.closing and session.previewMode or nil end
 return M

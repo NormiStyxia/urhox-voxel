@@ -48,7 +48,10 @@ local Flight = require("dragon.DragonFlight")
 ---@field jumped boolean|nil
 ---@field roaring boolean|nil
 ---@field stream DragonStream|nil 普通按住吐息实例（DragonStream.New 写入）
----@field resolveMotion (fun(self: DragonAnimationController, oldPos: Vector3, oldYaw: number, oldAlt: number))|nil
+---@field resolveMotion (fun(self: DragonAnimationController, oldPos: Vector3, oldYaw: number, oldAlt: number, dt: number))|nil
+---@field prepareMotion (fun(self: DragonAnimationController))|nil
+---@field motionY number|nil Collision-resolved absolute root height.
+---@field motionEpoch number|nil Invalidates scene collision history on teleport.
 ---@field overlayPose (fun(self: DragonAnimationController, pose: {j: table<string, number[]>, body: number[]}))|nil
 local C = {}
 C.__index = C
@@ -165,6 +168,9 @@ end
 -- 把龙放到指定位置 / 朝向（落地、四脚重新落在静止足位）
 function C:Teleport(pos, yaw)
     local L = self.loco
+    self.motionY=nil
+    self.motionEpoch=(self.motionEpoch or 0)+1
+    self.groundRef=pos.y
     L.pos, L.yaw, L.speed, L.yawRate, L.alt, L.vy, L.airborne = Vector3(pos.x, 0, pos.z), yaw, 0, 0, 0, 0, false
     Flight.Reset(L, yaw)
     Gait.Reset(self.gait, L.pos, L.yaw, self.groundFn)
@@ -400,6 +406,9 @@ STATES.WALK = {
     logic = function(self, dt)
         local L, inp = self.loco, self.input
         local target = self.params.walkSpeed * Clamp(1.0 + inp.move * 0.6, 0.25, 1.9)
+        -- Player-controlled A/D can turn on the spot instead of continually
+        -- walking into the wall we are trying to turn away from.
+        if inp.free and inp.move==0 then target=0 end
         L.speed = Approach(L.speed, target, 1.4, dt)
         -- 键盘转向；无输入时离场地中心太远就慢慢绕回
         local steer = inp.turn * 38
@@ -910,6 +919,7 @@ function C:Update(rawDt)
 end
 
 function C:Step(dt)
+    if self.prepareMotion then self:prepareMotion() end
     local oldPos,oldYaw,oldAlt=self.loco.pos,self.loco.yaw,self.loco.alt
     -- 演示序列
     local demo = self.demo
@@ -961,7 +971,7 @@ function C:Step(dt)
         L.pitch = Damp(L.pitch, 0, 4, dt)
     end
 
-    if self.resolveMotion then self:resolveMotion(oldPos,oldYaw,oldAlt) end
+    if self.resolveMotion then self:resolveMotion(oldPos,oldYaw,oldAlt,dt) end
 
     -- 地面步态；空中时落足点始终投影在身体正下方（降落伸腿时 IK 去够地面）
     if not L.airborne then
@@ -1025,7 +1035,11 @@ function C:ApplyPose(dt)
     -- 空中：高度相对「飞行地板」（起飞点地面高度，之后缓慢跟随身下地形；上升快、下降慢），
     -- 落地时 alt → 0 即落在身下的地面上
     local gy
-    if L.airborne then
+    if self.resolveMotion and self.motionY~=nil then
+        -- Scene collision already resolved all height changes. Animation must
+        -- never move the root again after the sweep (including while paused).
+        gy=self.motionY-L.alt
+    elseif L.airborne then
         local below = self:GroundHeight(L.pos.x, L.pos.z)
         local f = self.airFloor or below
         local k = (below > f) and 3.0 or 0.6

@@ -45,6 +45,10 @@ local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,h
 local combatLookScale_=1
 local arrowNodes_={}
 local animPreview_={index=0,t=0}
+local trainingDummy_,handMotes_
+local debugDestination_=0
+local combatDebugText_,combatDebugUntil_=nil,0
+local handWasOn_
 ---@type table|nil
 local combatRig_ = nil
 local combatInputBlocked = false
@@ -328,7 +332,14 @@ local function OnPuzzle(name, data)
 end
 
 -- Touch state is sampled from the actual gameplay state, never inferred from UI.
-local function CombatEnemies() return combatEnemies_ and combatEnemies_:GetEnemies() or {} end
+local function CombatEnemies()
+    local list=combatEnemies_ and combatEnemies_:GetEnemies() or {}
+    if not trainingDummy_ then return list end
+    local result={}
+    for i,enemy in ipairs(list) do result[i]=enemy end
+    result[#result+1]=trainingDummy_
+    return result
+end
 -- Independent ray safeguard: even a misconfigured native layer cannot let the
 -- equipped model, sword afterimages or trail particles occlude aim/projectiles.
 local function IsCombatVisualVolume(volume)
@@ -423,7 +434,7 @@ local function StartCombat()
             combatEnemies_:Reset()
             caster_:Say('时之印记 · 生命已恢复',1.2)
         end})
-    combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,
+    combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,
         hit=function(...) combatMoves_:Feedback(...) end,
         draw=function(p,visible)
             local node=arrowNodes_[p.index]
@@ -535,6 +546,7 @@ function M.Start()
     nomi_ = Nomi.New(scene_, world_, M.SPAWN, 0)
     renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera()))
     fx_ = Spells.NewFX(scene_, nomi_:CameraNode())
+    handMotes_=require('dragon.VoxelFX').WorldMotes(fx_.root,'CombatHandMotes',32,'square',true,nomi_:CameraNode())
     M.sigils=Sigil.New(scene_)
     caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_, sigils = M.sigils,
         handPos = function() return nomi_:HandPos() end,
@@ -559,6 +571,8 @@ function M.Start()
         changed=function(state)
             if state~=CombatState.EXPLORE then
                 fx_.handGlow,fx_.handAcc,fx_.handL.brightness=0,0,0
+                fx_.handLight.enabled=false
+                handMotes_:Clear(); handMotes_.handAcc=0
             end
         end,
         say=function(text) CombatHUD.Say(text,1.2) end})
@@ -746,6 +760,72 @@ local function Press(k)
     if M.fakePress ~= nil and M.fakePress[k] then M.fakePress[k] = nil return true end
     return input:GetKeyPress(k) or TouchInput.KeyPress(k)
 end
+-- Temporary PC-only controls; the settings task owns future menu entries.
+local function DebugPointClear(pos)
+    for _,height in ipairs({.4,1.0,1.7}) do
+        local center=pos+Vector3(0,height,0)
+        for _,axis in ipairs({Vector3(1,0,0),Vector3(0,0,1)}) do
+            if CombatCast(center-axis*.4,center+axis*.4) then return false end
+        end
+    end
+    return true
+end
+local function DebugTransfer()
+    if animPreview_.index>0 then CombatHUD.Say('先退出 F7 动画预览'); return end
+    local index=debugDestination_%3+1
+    local pos,anchor,label=CombatMoves.DebugDestination(combatEnemies_:GetEnemies(),Terrain,index,DebugPointClear)
+    if not pos then CombatHUD.Say('没有找到安全传送点：'..label); return end
+    combatMoves_:Cancel('debug-transfer'); combatArrows_:Clear(); TouchControls.Cancel()
+    caster_.charging,caster_.charge,caster_.castAnim=false,0,0
+    drag.buttons=0; combatInputBlocked,voidInputBlocked=true,true
+    local yaw=math.deg(math.atan(anchor.x-pos.x,anchor.z-pos.z))
+    if not nomi_:TeleportForCombatDebug(pos,yaw) then return end
+    M.ride.pos=pos; M.ride.vy,M.ride.speed=0,0
+    combatMoves_.invuln=math.max(combatMoves_.invuln,1)
+    debugDestination_=index
+    combatDebugText_,combatDebugUntil_='传送：'..label,time_+4
+    print(string.format('Combat: debug teleport %s pos=(%.2f,%.2f,%.2f)',label,pos.x,pos.y,pos.z))
+end
+local function ToggleTrainingDummy()
+    if trainingDummy_ then
+        trainingDummy_:Destroy(); trainingDummy_=nil
+        combatMoves_.target=nil
+        CombatHUD.Say('训练木桩已移除'); return
+    end
+    local forward=nomi_.node.worldDirection
+    local at=nomi_:Position()+Vector3(forward.x,0,forward.z):Normalized()*3
+    local y=Terrain.GroundHeight(at.x,at.z)
+    if not y or not Terrain.IsSafeGround(at.x,y,at.z) or not DebugPointClear(Vector3(at.x,y+.1,at.z)) then
+        CombatHUD.Say('前方3米没有安全空地'); return
+    end
+    local pos=Vector3(at.x,y,at.z)
+    local node=scene_:CreateChild('CombatTrainingDummy')
+    node.position=pos+Vector3(0,.9,0); node.scale=Vector3(.75,1.8,.5)
+    local model=node:CreateComponent('StaticModel')
+    model:SetModel(cache:GetResource('Model','Models/Box.mdl'))
+    local material=Material:new()
+    material:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTexture.xml'))
+    material:SetShaderParameter('MatDiffColor',Variant(Color(.45,.27,.12,1)))
+    material:SetShaderParameter('Roughness',Variant(.95))
+    model:SetMaterial(material); model.castShadows=true
+    trainingDummy_=CombatMoves.NewTrainingDummy(pos,node)
+    CombatHUD.Say('训练木桩 · C 拔刃后攻击')
+end
+local function HandleCombatDebugKeys(allowed)
+    if not allowed or TouchInput.IsEnabled() or PlatformUtils.IsMobilePlatform() then return end
+    if Press(KEY_F6) then
+        local on=not CombatState.GetSetting('aimAssist')
+        CombatState.SetSetting('aimAssist',on)
+        CombatHUD.Say('辅助瞄准 · '..(on and '开' or '关'),1.2)
+    end
+    if Press(KEY_F5) then
+        local on=not CombatState.GetSetting('damageNumbers')
+        CombatState.SetSetting('damageNumbers',on)
+        CombatHUD.Say('伤害数字 · '..(on and '开' or '关'),1.2)
+    end
+    if Press(KEY_F8) then DebugTransfer() end
+    if Press(KEY_F9) and not Down(KEY_SHIFT) then ToggleTrainingDummy() end
+end
 
 -- Ordinary breath: the right-hand breath button is held input. Keyboard B
 -- remains the separate special breath in DragonRide; simulated touch mouse is ignored.
@@ -911,16 +991,18 @@ function Ruins_HandleUpdate(eventType, eventData)
     local combatAllowed=M.ride.mode=='free' and not voidInputBlocked and not M.debugOn
         and not TouchControls.IsBlocked() and input.focus and not input.minimized
         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
-    local previewNext=combatAllowed and not TouchInput.IsEnabled() and
+    HandleCombatDebugKeys(combatAllowed and not combatMoves_.dead)
+    local previewAllowed=combatAllowed and not TouchInput.IsEnabled() and not PlatformUtils.IsMobilePlatform()
+    local previewNext=previewAllowed and
         (Press(KEY_RIGHTBRACKET) or Press(KEY_RIGHT))
-    local previewPrevious=combatAllowed and not TouchInput.IsEnabled() and
+    local previewPrevious=previewAllowed and
         (Press(KEY_LEFTBRACKET) or Press(KEY_LEFT))
-    local previewCycle=combatAllowed and not TouchInput.IsEnabled() and Press(KEY_F7)
+    local previewCycle=previewAllowed and Press(KEY_F7)
     if previewCycle or (animPreview_.index>0 and (previewNext or previewPrevious)) then
         local list=CombatAnim.DebugList()
         if previewCycle then animPreview_.index=(animPreview_.index+1)%(#list+1)
         else animPreview_.index=(animPreview_.index-1+(previewNext and 1 or -1))%#list+1 end
-        animPreview_.t=0; animPreview_.text=nil; animPreview_.paused=false
+        animPreview_.t=0; animPreview_.text=nil; animPreview_.paused=false; animPreview_.events='—'
         combatMoves_:Cancel('animation-preview'); TouchControls.Cancel()
         combatArrows_:Clear()
         if animPreview_.index>0 then
@@ -934,18 +1016,32 @@ function Ruins_HandleUpdate(eventType, eventData)
     end
     if animPreview_.index>0 then
         local clip=CombatAnim.DebugList()[animPreview_.index]
-        if combatAllowed and Press(KEY_SPACE) then animPreview_.paused=not animPreview_.paused end
-        local previewDt=(animPreview_.paused or not combatAllowed) and 0 or dt
+        if previewAllowed and Press(KEY_SPACE) then animPreview_.paused=not animPreview_.paused end
         CombatState.SetBusy(true)
-        animPreview_.t=animPreview_.t+previewDt
-        if animPreview_.t>=clip.dur+.35 then
-            combatAnim_:Stop(nil,0); combatAnim_:Poll()
-            combatAnim_:Play(clip.id,{fadeIn=0}); animPreview_.t=0
+        local step=0
+        if animPreview_.paused and previewAllowed then
+            if Press(KEY_COMMA) then step=-1/30 elseif Press(KEY_PERIOD) then step=1/30 end
         end
-        combatAnim_:SetParam('p',math.min(1,animPreview_.t/math.max(.01,clip.dur)))
-        combatAnim_:Update(previewDt); combatAnim_:Poll() -- preview never sends gameplay events
-        animPreview_.text=string.format('F7 %s / %.2f / %s%s',clip.id,animPreview_.t,
-            combatAnim_:Phase(clip.id) or 'hold',animPreview_.paused and ' · 暂停' or '')
+        if step~=0 then
+            animPreview_.t,animPreview_.events=CombatMoves.SeekPreview(combatAnim_,clip.id,animPreview_.t+step,animPreview_.t)
+        elseif not animPreview_.paused and combatAllowed then
+            local previewDt=dt
+            animPreview_.t=animPreview_.t+dt
+            if animPreview_.t>=clip.dur+.35 then
+                combatAnim_:Stop(nil,0); combatAnim_:Poll()
+                combatAnim_:Play(clip.id,{fadeIn=0}); animPreview_.t=0
+                previewDt=0
+            end
+            combatAnim_:SetParam('p',math.min(1,animPreview_.t/math.max(.01,clip.dur)))
+            combatAnim_:Update(previewDt,previewDt)
+            animPreview_.events=CombatMoves.PreviewEvents(combatAnim_:Poll(),-1,math.huge)
+        else
+            -- Apply has a base-animation-clock fallback. Explicit zero advance
+            -- is required every paused/unfocused frame to keep the pose frozen.
+            combatAnim_:Update(0,0)
+        end
+        animPreview_.text=string.format('F7 %s / %.3f / %s%s\n事件：%s\n空格 暂停 · , / . 逐帧 · 左右 切片段',clip.id,animPreview_.t,
+            CombatMoves.PreviewPhase(clip.id,animPreview_.t),animPreview_.paused and ' · 暂停' or '',animPreview_.events or '—')
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
         if not CombatState.InCombat() and (Press(KEY_G) or TouchInput.Press('forge')) then OpenForge() end
@@ -959,6 +1055,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         end
     end
     if combatEnemies_ and not voidInputBlocked and animPreview_.index==0 then combatEnemies_:Update(dt,nomi_:Position()) end
+    if trainingDummy_ then trainingDummy_:Update() end
     if combatArrows_ then combatArrows_:Update(dt) end
     if combatParticles_ then combatParticles_:UpdateOwner(hitParticleOwner_,dt) end
     UpdateDragonPose(dt)
@@ -1048,10 +1145,18 @@ function Ruins_HandleUpdate(eventType, eventData)
     local lastSpell = caster_.lastCast and Spells.BY_ID[caster_.lastCast]
     local glowCol = caster_.charging and Spells.SHATTER_COLOR
         or (caster_.castAnim > 0 and lastSpell and lastSpell.color) or Spells.WHITE
-    local glow = caster_.charging and (0.4 + 0.6 * caster_.charge) or (caster_.castAnim > 0 and 1.0 or 0.12)
+    local glow = caster_.charging and (0.4 + 0.6 * caster_.charge) or (caster_.castAnim > 0 and 1.0 or 0.28)
     if CombatState.InCombat() then fx_.handGlow=0 end
     glow=glow*CombatState.Glow()
-    fx_:Update(dt, nomi_:HandPos(), glowCol, glow)
+    CombatMoves.UpdateHandFX(fx_,handMotes_,dt,nomi_:HandPos(),glowCol,glow)
+    M.combat.handEffect=M.combat.handEffect or {}
+    local handEffect=M.combat.handEffect
+    handEffect.requested,handEffect.glow=glow,fx_.handGlow
+    handEffect.brightness,handEffect.particles=fx_.handL.brightness,handMotes_:Count()
+    if handWasOn_~=(glow>0) then
+        handWasOn_=glow>0
+        CombatState.Log('hand-glow','Combat: hand glow state=%s requested=%.2f brightness=%.3f motes=%d',CombatState.Get(),glow,fx_.handL.brightness,handMotes_:Count())
+    end
     -- HUD
     HUD.UpdateSlots(caster_.cool, caster_.charging and caster_.charge or 0,Spells.ShatterRadius(caster_.charge))
     if banner.t > 0 then
@@ -1105,19 +1210,26 @@ function Ruins_HandlePostUpdate(eventType, eventData)
                 if CombatHit.Visible(a,candidate.shape.center,CombatCast) then combatLookScale_=.65; break end
             end
         end
-        CombatHUD.Set({moves=combatMoves_,combat=CombatState.InCombat(),weapon=CombatState.GetWeapon(),charge=combatMoves_.charge,
-            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,debug=animPreview_.text})
+        CombatHUD.Set({moves=combatMoves_,combat=CombatState.InCombat(),mounted=M.ride.mode~='free',weapon=CombatState.GetWeapon(),charge=combatMoves_.charge,
+            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,
+            debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)})
     end
     fx_.motesB:Draw(); fx_.motesG:Draw()
+    handMotes_:Draw()
 end
 
 function M.Stop()
-    if ForgePanel.IsOpen() then ForgePanel.Close(true) end
+    ForgePanel.Close(true)
+    local forceClose=rawget(ForgePanel,'ForceClose')
+    if type(forceClose)=='function' then forceClose() end
     if M.atmosphere then M.atmosphere:Stop() end
     DebugLog.RegisterProbe('Ruins',nil)
     SettingsMenu.Stop()
     PerformanceHUD.Stop()
     CombatState.Stop()
+    if trainingDummy_ then trainingDummy_:Destroy(); trainingDummy_=nil end
+    if handMotes_ then handMotes_:Clear(); handMotes_=nil end
+    handWasOn_,combatDebugText_,combatDebugUntil_,debugDestination_=nil,nil,0,0
     if combatArrows_ then combatArrows_:Clear() end
     if combatEnemies_ then combatEnemies_:Destroy() end
     if combatParticles_ then combatParticles_:Release(hitParticleOwner_); combatParticles_=nil end

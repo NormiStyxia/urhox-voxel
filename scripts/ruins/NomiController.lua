@@ -238,6 +238,21 @@ function N:ReturnFromVoid()
     if self.onVoidReturn then self.onVoidReturn(safe) end
 end
 
+-- Debug-only caller supplies a terrain- and building-validated permanent point.
+function N:TeleportForCombatDebug(pos,yaw)
+    if not Terrain.IsSafeGround(pos.x,pos.y,pos.z) then return false end
+    self.cc.desiredVelocity=Vector3.ZERO
+    self.cc:SetLinearVelocity(Vector3.ZERO)
+    self.cc:Teleport(pos)
+    self.vel=Vector3.ZERO; self.speed,self.safeT,self.onGround=0,0,false
+    self.safePos=Vector3(pos.x,pos.y,pos.z)
+    self.yaw,self.camYaw,self.camPitch=yaw,yaw,12
+    self.node.rotation=Quaternion(yaw,Vector3.UP)
+    self.camTarget.position=pos
+    self:UpdateCamera(1,'normal',self.node)
+    return true
+end
+
 function N:Animate(dt, casting)
     self.nomi:Update(dt, { moveSpeed = self.onGround and self.speed or 0, onGround = self.onGround, armed = casting, aiming = casting,
         aimPitch = self.camPitch })

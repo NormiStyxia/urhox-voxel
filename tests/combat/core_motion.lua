@@ -26,3 +26,17 @@ n.yaw=0; n:AssistMelee({Target(40,3),Target(20,5)},function() return nil end); S
 n.yaw=0; n:AssistMelee({Target(30,3)},function() return .5 end); S.near(n.yaw,0)
 n.yaw=0; n:AssistMelee({Target(30,3),Target(-10,2)},function() return nil end); S.near(n.yaw,-10)
 print('PASS actual Nomi Move: gap sweep/no teleport, jump blocked during roll, combat 5m/s/no sprint, bow slow walk')
+local debugBody=assert(source:match('(function N:TeleportForCombatDebug.-)\nend'))..'\nend'
+env.Terrain.IsSafeGround=function(x) return x<10 end
+assert(load(debugBody,'actual safe debug teleport','t',env))()
+local moved,cameraUpdates=0,0
+n.cc.SetLinearVelocity=function(_,v) S.near(v:Length(),0) end
+n.cc.Teleport=function(_,p) moved=moved+1; n.node.worldPosition=p end
+n.camTarget={}
+n.UpdateCamera=function(_,dt,mode,target) assert(dt==1 and mode=='normal' and target==n.node);cameraUpdates=cameraUpdates+1 end
+assert(not n:TeleportForCombatDebug(Vector3(11,6,0),90) and moved==0)
+assert(n:TeleportForCombatDebug(Vector3(2,6,3),90))
+assert(moved==1 and cameraUpdates==1 and n.safePos.x==2 and n.camYaw==90 and n.camPitch==12)
+S.near(n.cc.desiredVelocity:Length(),0);S.near(n.vel:Length(),0)
+assert(n.speed==0 and n.safeT==0 and not n.onGround)
+print('PASS debug teleport rejects unsafe ground, clears velocity, sets safe fallback and snaps camera')

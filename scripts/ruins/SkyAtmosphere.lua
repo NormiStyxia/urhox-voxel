@@ -37,6 +37,8 @@ function M:Init(scene,dn)
     self.elapsed,self.clock = 0.2,0
     ---@type Material|nil
     self.ground = nil
+    ---@type Material|nil 本次开启已绑定（或已尝试失败）的地表，避免每帧重试/查资源
+    self.shadowGround = nil
     self.profile = Quality.PROFILES[Quality.Default()]
     Quality.ConfigureScene(dn.zone,dn.sun)
     if GameSettings then
@@ -108,10 +110,25 @@ function M:ApplySwitches()
     self.shadowActive=count>0 and f.cloudShadow==true
     self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive
     if self.shafts then self.shafts:Update(self.dayNight,true,self.realFog) end
-    if self.ground then
-        self.ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowActive and 0.16 or 0))
-    end
+    self:ApplyCloudShadow()
     self.elapsed = 0.2
+end
+
+function M:ApplyCloudShadow()
+    local ground = self.ground
+    if not ground then return end
+    ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowActive and 0.16 or 0))
+    if not self.shadowActive then
+        ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))
+        self.shadowGround=nil
+        return
+    end
+    if self.shadowGround==ground then return end
+    local texture = cache:GetResource("Texture2D","Textures/Sky/cloud_flat_atlas.png")
+    local bound = texture~=nil and ground:SetSurfaceTexture("cloud_shadow_atlas",texture)
+    ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(bound and 1 or 0))
+    self.shadowGround=ground
+    if not bound and DebugLog and DebugLog.enabled then DebugLog.Log("SkyFx","cloud shadow atlas unavailable; analytic round mask") end
 end
 
 ---@param position Vector3 玩家/骑乘位置，不跟随拉远的观察相机
@@ -120,8 +137,10 @@ function M:Update(dt,position,ground)
     if not self.active or self.stopped then return end
     self.clock,self.elapsed = self.clock+math.max(0,dt),self.elapsed+math.max(0,dt)
     if ground~=self.ground then
+        if self.ground then self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
         self.ground=ground
-        if ground then ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowActive and 0.16 or 0)) end
+        self.shadowGround=nil
+        self:ApplyCloudShadow()
     end
     if self.elapsed<0.2 then return end
     local step = self.elapsed
@@ -140,6 +159,8 @@ end
 -- 只被DebugLog的开启态probe调用；关闭日志时不构造统计表，不遍历粒子。
 function M:Probe()
     return {clouds=self.clouds and self.clouds.count or 0,shafts=self.shafts and self.shafts.count or 0,
+        cloudCards=self.clouds and self.clouds.cardCount or 0,cloudTriangles=self.clouds and self.clouds.triangleCount or 0,
+        cloudFallback=self.clouds and self.clouds.fallback or false,
         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,
         batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)}
@@ -152,9 +173,12 @@ function M:Stop()
     if self.clouds then self.clouds:Dispose(); self.clouds=nil end
     if self.shafts then self.shafts:Dispose(); self.shafts=nil end
     if self.motes then self.motes:Dispose(); self.motes=nil end
-    if self.ground then self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
+    if self.ground then
+        self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0))
+        self.ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))
+    end
     Quality.ApplyVolume(self.dayNight.zone,self.dayNight.sun,"off",false)
-    self.scene,self.ground=nil,nil -- 不让已停止的大气模块继续持有场景/地表资源。
+    self.scene,self.ground,self.shadowGround=nil,nil,nil -- 不让已停止的大气模块继续持有场景/地表资源。
     self.active,self.stopped,self.realFog,self.shadowActive=false,true,false,false
 end
 

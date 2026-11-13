@@ -10,7 +10,7 @@ local enemy={active=true,GetHurtShapes=function() return {{id='body',center=Vect
     ApplyHit=function() count=count+1; return {hit=true} end}
 local function New()
     State.Configure{rig=rig}; State.Enter(); State.Update(.31); State.Activity(true)
-    return C.New{anim=A.New(S.anim.character(),{}),state=State,rig=rig,
+    return C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,
         forward=function() return Vector3(0,0,1) end,position=function() return Vector3.ZERO end,
         enemies=function() return {enemy} end,respawn=function() respawns=respawns+1 end,
         fire=function(charge,stats,crystal) shots=shots+1; lastShot={charge=charge,crystal=crystal} end}
@@ -90,3 +90,73 @@ m=New(); Tick(.01,{dodge=true}); assert(m.iframe)
 m.hitstop=1; m.invuln=.8; Tick(.30)
 assert(not m.iframe and math.abs(m.invuln-.5)<.000001,'hitstop never pauses iframe or damage immunity clocks')
 print('PASS real animation events: sword dedupe, cancel no cast, dodge iframe, invuln, death respawn, bow fire')
+
+-- F7 seek follows authored events without sending them through gameplay handlers.
+local preview=A.New(S.anim.character(),nil)
+local t,events=C.SeekPreview(preview,'sword_light_1',.1,2/30)
+S.near(t,.1); assert(C.PreviewPhase('sword_light_1',t)=='active' and events:find('hit_on',1,true))
+t,events=C.SeekPreview(preview,'sword_light_1',2/30,.1)
+assert(C.PreviewPhase('sword_light_1',t)=='anticipation' and not events:find('hit_on',1,true))
+t,events=C.SeekPreview(preview,'sword_heavy_release',7/30,.2)
+assert(C.PreviewPhase('sword_heavy_release',t)=='active' and events:find('hit_on',1,true))
+assert(preview.queueCount==0,'seek drains preview events without firing gameplay')
+
+local enemiesAt={
+ {id='moss_w1',home=Vector3(10,0,10),position=Vector3(10,0,10)},
+ {id='sentry_w',home=Vector3(12,0,10),position=Vector3(12,0,10)},
+ {id='stone_beast',boss=true,home=Vector3(-10,0,-10),position=Vector3(-10,0,-10)}}
+local terrain={GroundHeight=function(x,z) if x<50 then return 0 end end,
+ IsSafeGround=function(x,y,z) return z<30 and math.abs(y)<.45 end,HasGround=function() return true end}
+for i=1,3 do
+ local pos,anchor,label=C.DebugDestination(enemiesAt,terrain,i,function(p) return p.z<15 end)
+ assert(pos and anchor and label and terrain.IsSafeGround(pos.x,pos.y,pos.z) and pos.z<15)
+end
+assert(C.DebugDestination(enemiesAt,terrain,1,function() return false end)==nil,'no teleport without a clear safe point')
+assert(C.DebugDestination({},terrain,3)==nil,'missing encounter is never fabricated')
+
+local H=require('combat.Hit')
+local dummy=C.NewTrainingDummy(Vector3(1,0,0))
+local result=H.Apply(dummy,{dmg=18,kind='arrow',tier='full',part='body'})
+assert(result.hit and result.damage==18 and not dummy.dead)
+dummy:Update(); assert(dummy.hp==9999)
+m=New();State.SetSetting('damageNumbers',false)
+m:Feedback(dummy,{dmg=18,poise=0,pos=Vector3.ZERO,dir=Vector3.FORWARD},result,false,true)
+S.near(m.numbers[1].untilTime-m.age,1.2)
+dummy:Destroy();assert(not dummy.active)
+
+local fx={handGlow=.8,handAcc=.3,handLight={},handL={}}
+function fx:Update(dt,pos,color,glow) assert(pos==nil); self.handGlow=glow end
+local motes={list={},free={1,2,3,4,5,6,7,8},handAcc=.6}
+function motes:Update() end
+function motes:Spawn(mote) self.list[#self.list+1]=mote end
+function motes:Clear() self.list={} end
+C.UpdateHandFX(fx,motes,.1,Vector3(5,6,7),{},.28)
+assert(fx.handLight.enabled and fx.handL.brightness>0 and #motes.list>0)
+assert((motes.list[1].pos-Vector3(5,6,7)):Length()<.4,'hand particles originate at hand, never world origin')
+C.UpdateHandFX(fx,motes,.1,Vector3(5,6,7),{},0)
+assert(not fx.handLight.enabled and fx.handL.brightness==0 and fx.handGlow==0 and #motes.list==0 and motes.handAcc==0,'combat removes light and pending hand motes in one update')
+print('PASS debug active-frame seek/backstep, real-anchor safety rejection, dummy reset/numbers, hand FX atomic off')
+
+-- Execute the actual Scene preview-clock branch. Apply must not fall back to
+-- the still-running exploration base clock while a screenshot frame is paused.
+local sceneFile=assert(io.open('scripts/ruins/RuinsScene.lua'))
+local sceneSource=sceneFile:read('*a');sceneFile:close()
+local previewBranch=assert(sceneSource:match('(        if step~=0 then.-)\n        animPreview_.text='))
+local character=S.anim.character()
+---@type table Animation port uses mock bones rather than native Node userdata.
+local pausedAnim=A.New(character,nil)
+C.SeekPreview(pausedAnim,'sword_light_1',.1,0)
+local pe=setmetatable({step=0,dt=.2,combatAllowed=true,
+ animPreview_={t=.1,paused=true},combatAnim_=pausedAnim,CombatMoves=C,
+ clip=require('combat.AnimClips').Clips.sword_light_1},{__index=_G})
+local frame=assert(load(previewBranch,'actual Scene preview clock','t',pe))
+for i=1,3 do
+ frame();character.time=i*.2;S.anim.reset(character);pausedAnim:Apply()
+ S.near(pausedAnim.tracks[1].t,.1);S.near(pe.animPreview_.t,.1)
+end
+pe.animPreview_.paused=false;pe.combatAllowed=false
+frame();character.time=1;S.anim.reset(character);pausedAnim:Apply()
+S.near(pausedAnim.tracks[1].t,.1)
+pe.combatAllowed=true;pe.animPreview_.t=.74
+frame();S.near(pe.animPreview_.t,0);S.near(pausedAnim.tracks[1].t,0)
+print('PASS actual Scene F7 pause/focus frames suppress Apply fallback; loop display clock matches pose')

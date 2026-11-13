@@ -41,6 +41,7 @@ function world:CreateVolume(nx,ny,nz,s,pos,rot)
     function grid:SetVoxelMaterial() end
     function grid:FillBox() end
     function grid:PaintBox() end
+    function grid:GetSolidCount() return 1 end
     local volume={}
     function volume:GetSolidCount() return 1 end
     function volume:GetGrid() return grid end

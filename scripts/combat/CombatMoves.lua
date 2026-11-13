@@ -31,6 +31,7 @@ function C:Play(id)
     local handle=self.anim:Play(id,{stats=stats,speed=speed})
     if not handle then return false end
     self.clip,self.handle=id,handle
+    if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
     self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
     self.damaged,self.previousHit={},nil
     self.state.SetBusy(true)
@@ -38,7 +39,10 @@ function C:Play(id)
 end
 function C:Cancel(reason,keepProtection)
     local cancelledHandle=self.handle
-    if self.clip=='bow_draw' or self.clip=='bow_hold' then self.cancelUntil=self.age+1.2 end
+    if self.clip=='bow_draw' or self.clip=='bow_hold' or self.pendingFire~=nil then
+        self.cancelUntil=self.age+1.2
+        if self.state.Log then self.state.Log('arrow-cancel','Combat: arrow cancel %s',reason or 'unknown') end
+    end
     self.buffer,self.pending,self.clip,self.handle=nil,nil,nil,nil
     self.pendingFire=nil
     self.trailUntil=0
@@ -114,6 +118,8 @@ function C:Release()
     elseif self.pending=='hold' then self.pending,self.pendingReleased='light',true end
 end
 function C:Feedback(enemy,info,result,weak,arrow)
+    if self.state.Log then self.state.Log('hit:'..tostring(enemy.id)..':'..tostring(info.part),
+        'Combat: hit %s part=%s dmg=%.2f poise=%.2f',enemy.id or 'enemy',info.part or 'body',result.damage or info.dmg,info.poise or 0) end
     local heavy=info.heavy==true
     local stop=result.partBroken and .10 or (heavy and .08 or .04)
     if arrow then stop=(info.full and weak) and .12 or .03 end
@@ -125,10 +131,11 @@ function C:Feedback(enemy,info,result,weak,arrow)
     self.target,self.targetAt=enemy,self.age
     if result.partBroken then self.partNotice={part=result.partBroken,untilTime=self.age+1.2} end
     if weak then self.weakUntil=self.age+1.2 end
-    if self.state.GetSetting('damageNumbers') and result.damage then
+    if (enemy.training or self.state.GetSetting('damageNumbers')) and result.damage then
         self.numbers=self.numbers or {}
         if #self.numbers>=12 then table.remove(self.numbers,1) end
-        self.numbers[#self.numbers+1]={pos=info.pos,value=math.floor(result.damage+.5),untilTime=self.age+.7}
+        local duration=enemy.training and 1.2 or .7
+        self.numbers[#self.numbers+1]={pos=info.pos,value=math.floor(result.damage+.5),untilTime=self.age+duration,duration=duration}
     end
     if self.o.feedback then self.o.feedback(info.pos,heavy,result) end
 end
@@ -140,6 +147,7 @@ function C:ApplyHit(info)
     self.state.OnPlayerHit()
     self:Cancel('hit')
     self.hp=math.max(0,self.hp-info.dmg)
+    if self.state.Log then self.state.Log('player-hit','Combat: player hit dmg=%.2f hp=%.2f',info.dmg,self.hp) end
     self.invuln=.8
     self.shake,self.shakeAge,self.shakeDuration=.025,0,.10
     self.shakeDir=info.dir
@@ -184,6 +192,7 @@ function C:Events()
             self:Play('bow_hold')
             if self.pendingReleased then self.pendingReleased=false; self:Release() end
         elseif e.name=='recover_end' then
+            if self.state.Log then self.state.Log('clip-finish:'..self.clip,'Combat: clip %s finish',self.clip) end
             self.anim:Stop(self.handle,0); self.clip,self.handle=nil,nil
             self.charge,self.autoFire=0,false
         elseif e.name=='fire' then
@@ -192,11 +201,13 @@ function C:Events()
             self.anim:Stop(nil,0)
             self.clip,self.handle=nil,nil
             self.hp,self.dead,self.invuln=100,false,1
+            if self.state.Log then self.state.Log('player-respawn','Combat: player respawn hp=100') end
             self.state.SetDead(false); self.state.Exit('respawn')
             if self.o.respawn then self.o.respawn() end
             self:Play('getup')
         elseif e.name=='clip_finished' then
             local finished=self.clip
+            if self.state.Log then self.state.Log('clip-finish:'..finished,'Combat: clip %s finish',finished) end
             self.clip,self.handle,self.iframe=nil,nil,false
             if finished=='sword_draw' or finished=='bow_equip' then
                 local pending,released=self.pending or 'light',self.pendingReleased
@@ -316,7 +327,7 @@ function C:AfterPose()
             local info={dmg=(stats.attack or 10)*(heavy and (self.releaseFull and 2.2 or 1.6) or 1),
                 poise=(stats.poise or 6)*(heavy and (self.releaseFull and 2.5 or 1.8) or 1)*(perfect and 1.5 or 1),
                 armorBreak=(stats.armorBreak or 1)*(heavy and self.releaseFull and 1.5 or 1),knockback=self.combo==3 and .55 or .1,
-                part=part,kind='sword',pos=contact.pos,dir=self.o.forward(),source='player',heavy=heavy,combo=self.combo}
+                part=part,kind='sword',clip=self.hitClip,pos=contact.pos,dir=self.o.forward(),source='player',heavy=heavy,combo=self.combo}
             local result=Hit.Apply(enemy,info)
             if result.hit then
                 self.damaged[key]=true; self:Feedback(enemy,info,result,contact.shape.weak,false)
@@ -328,5 +339,98 @@ function C:ShakeOffset()
     if self.shakeAge>=self.shakeDuration or self.shakeDuration<=0 then return Vector3.ZERO end
     local k=2^(-10*self.shakeAge/self.shakeDuration)*self.shake
     return (self.shakeDir or Vector3(1,0,0)):Normalized()*(math.sin(self.age*127)*k)
+end
+
+-- PC debug helpers live outside Spawner: no encounters or puzzle state are changed.
+function C.NewTrainingDummy(position,node)
+    local dummy={id='training_dummy',training=true,position=position,node=node,hp=9999,maxHP=9999,
+        active=true,dead=false,aggro=false,config={height=1.8},parts={}}
+    local shapes={{id='body',center=position+Vector3(0,1,0),radius=.6,weak=false,enabled=true}}
+    function dummy:GetHurtShapes() return shapes end
+    function dummy:ApplyHit(info)
+        self.hp=math.max(0,self.hp-info.dmg)
+        local weapon=info.kind=='sword' and 'sword' or 'bow'
+        print(string.format('Dummy hit: %s %s dmg=%.2f part=%s',weapon,info.tier or info.clip or 'unknown',info.dmg,info.part or 'body'))
+        return {hit=true,killed=false}
+    end
+    function dummy:Update() self.hp=9999 end
+    function dummy:Destroy() self.active=false; if self.node then self.node:Remove() end end
+    return dummy
+end
+
+-- Terrain is authoritative; a caller may additionally reject building collisions.
+function C.DebugDestination(enemies,terrain,index,clear)
+    local labels={'苔壳虫组','哨灵','石甲兽'}
+    local target
+    for _,enemy in ipairs(enemies) do
+        local id=enemy.id or ''
+        if (index==1 and id:find('moss_',1,true)) or (index==2 and id:find('sentry_',1,true))
+            or (index==3 and enemy.boss) then target=enemy; break end
+    end
+    if not target then return nil,nil,labels[index] end
+    local anchor=target.home or target.position
+    local radius=index==3 and 14 or 7
+    for ring=0,2 do for i=0,15 do
+        local angle=math.pi*2*i/16
+        local x,z=anchor.x+math.sin(angle)*(radius+ring*2),anchor.z+math.cos(angle)*(radius+ring*2)
+        local y=terrain.GroundHeight(x,z)
+        if y and terrain.IsSafeGround(x,y,z) and terrain.HasGround(x,z,2) then
+            local pos=Vector3(x,y+.1,z)
+            local separated=true
+            for _,other in ipairs(enemies) do
+                local q=other.position or other.home
+                if q and (pos-q):Length()<3 then separated=false; break end
+            end
+            if separated and (not clear or clear(pos)) then return pos,anchor,labels[index] end
+        end
+    end end
+    return nil,anchor,labels[index]
+end
+
+function C.PreviewPhase(id,t)
+    local clip=require('combat.AnimClips').Clips[id]
+    if t<clip.phases.anticipation[2] then return 'anticipation' end
+    if t<clip.phases.active[2] then return 'active' end
+    return 'recovery'
+end
+function C.PreviewEvents(events,from,to)
+    local names={}
+    for _,e in ipairs(events) do
+        local seconds=e.t*require('combat.AnimClips').Clips[e.clip].dur
+        if seconds<=to+1e-8 and (seconds>from+1e-8 or (from<0 and seconds==0)) then names[#names+1]=e.name end
+    end
+    return #names>0 and table.concat(names,', ') or '—'
+end
+-- Rebuild the isolated preview clock; replayed events never enter CombatMoves.Events.
+function C.SeekPreview(anim,id,t,previous)
+    local clip=require('combat.AnimClips').Clips[id]
+    t=math.max(0,math.min(clip.dur,t))
+    anim:Stop(nil,0); anim:Poll()
+    anim:Play(id,{fadeIn=0,fadeOut=0})
+    anim:SetParam('p',t/math.max(.01,clip.dur))
+    anim:Update(t,t)
+    local from=previous<t and previous or t-1/30-1e-8
+    return t,C.PreviewEvents(anim:Poll(),from,t)
+end
+
+-- Hand-only pool lets combat remove white hand motes immediately without
+-- deleting ongoing freeze/rewind effects from TimeFX's shared spell pools.
+function C.UpdateHandFX(fx,motes,dt,pos,color,glow)
+    if glow<=0 then fx.handGlow,fx.handAcc=0,0 end
+    fx:Update(dt,nil,color,glow) -- keep spell FX ticking; bypass its shared hand emitter
+    fx.handLight.position=pos
+    fx.handLight.enabled=glow>0
+    fx.handL.brightness=glow>0 and 1.6*fx.handGlow or 0
+    fx.handL.color=color
+    motes:Update(dt)
+    if glow<=0 then motes:Clear(); fx.handAcc,motes.handAcc=0,0; return end
+    local budget=(motes.handAcc or 0)+48*fx.handGlow*math.min(dt,.1)
+    local count=math.floor(budget); motes.handAcc=budget-count
+    for i=1,math.min(count,#motes.free) do
+        local a=(i+(motes.tick or 0))*2.399963
+        local d=Vector3(math.sin(a),math.cos(a*.7),math.cos(a))*.16
+        motes:Spawn{pos=pos+d,vel=-d*2+Vector3(0,.3,0),life=.4,size=.06,colors={color}}
+    end
+    motes.tick=(motes.tick or 0)+count
 end
 return C

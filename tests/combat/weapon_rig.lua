@@ -6,7 +6,9 @@ local scene=Mock.Node("scene") --[[@as any]] -- intentional engine contract doub
 local world=Mock.World(scene) --[[@as any]]
 local nomi=Mock.Nomi(scene) --[[@as any]]
 local rig=Rig.New(scene,world,nomi)
-assert(rig.active=="sword" and rig.pose=="hidden" and world.created==20)
+assert(rig.active=="sword" and rig.pose=="hidden")
+assert(#rig.trails==8 and #rig.images==2 and #rig.particles==8)
+assert(world.created==2+#rig.trails+#rig.images+#rig.particles,"two weapons plus the complete visual effect pools")
 for _,volume in ipairs(world.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
 assert(rig.sockets.hand_right==nomi.castSocket)
 Mock.Near(rig.sockets.hand_left.position.x,-nomi.castSocket.position.x)

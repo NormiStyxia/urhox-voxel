@@ -325,7 +325,8 @@ function RuinsTouch_Focus(_,data)
 end
 ---@param data KeyDownEventData
 function RuinsTouch_Key(_,data)
-    if provider and data:GetInt('Key')==KEY_F9 and not data:GetBool('Repeat') then Input.Toggle(); M.Sync() end
+    -- Plain F9 belongs to the PC training dummy; preserve touch emulation on a chord.
+    if provider and data:GetInt('Key')==KEY_F9 and input:GetKeyDown(KEY_SHIFT) and not data:GetBool('Repeat') then Input.Toggle(); M.Sync() end
 end
 function RuinsTouch_EndFrame() Input.EndFrame() end
 return M

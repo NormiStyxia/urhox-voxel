@@ -56,3 +56,13 @@ State.Configure{rig=rig,aggro=function() return true end}
 State.OnEnemyAggro('enemy');eq(State.Exit('manual'),false);eq(State.InCombat(),true)
 State.SetMounted(true);eq(State.InCombat(),false)
 print('PASS core_state: visibility, draw/dodge gate, 2.5s back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation')
+local logs={}
+State.Configure{log=function(line) logs[#logs+1]=line end}
+State.Enter('manual');State.Enter('manual')
+eq(#logs,1);assert(logs[1]:find('EXPLORE->COMBAT_IDLE manual',1,true))
+for i=1,100 do State.Log('same','same') end
+eq(#logs,2)
+for i=1,100 do State.Log('burst'..i,'burst') end
+eq(#logs,48)
+State.Update(1);State.Log('same','same');eq(#logs,49)
+print('PASS bounded event logs: actual state changes only, duplicate guard and 48 lines/sec ceiling')

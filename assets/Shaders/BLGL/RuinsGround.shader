@@ -11,7 +11,9 @@ render_mode shading_model_pbr, cull_back;
 
 uniform sampler2D splat_map : filter_linear, repeat_disable;
 uniform vec3 daynight_tint = vec3(1.0);
-// 仅模拟低频地面云影；默认关，由 SkyAtmosphere 统一驱动。不影响岛底。
+// 同一扁平云图集的 A 遮罩投影；默认关，由 SkyAtmosphere 绑定。不影响岛底。
+uniform sampler2D cloud_shadow_atlas : filter_linear, repeat_disable;
+uniform float cloud_shadow_use_atlas = 0.0;
 uniform float cloud_shadow_strength = 0.0;
 uniform float cloud_shadow_day = 1.0;
 uniform float cloud_shadow_time = 0.0;
@@ -209,10 +211,21 @@ void fragment() {
         ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
         SPECULAR = mix(SPECULAR, 0.7, ice);
     }
-    // 放在全部导数/霜之后；关闭时跳过唯一一次低频噪声采样。
+    // 放在全部导数/霜之后；关闭/夜间/岩底不采样，LOD0 不在分支内求隐式导数。
     if (cloud_shadow_strength > 0.0 && cloud_shadow_day > 0.0 && n.y > 0.35) {
-        vec2 cloudUV = (wp.xz - vec2(0.45, 0.18) * cloud_shadow_time) * 0.035;
-        float cloud = smoothstep(0.38, 0.68, vnoise(cloudUV));
+        vec2 cloudUV = (wp.xz - vec2(0.45, 0.18) * cloud_shadow_time) / 64.0;
+        vec2 localUV = fract(cloudUV);
+        // 每个64m格轮换四朵，图集内缩1px；不是随相机旋转的真实投影。
+        vec2 atlasUV = fract(floor(cloudUV) * 0.5) + (vec2(1.0) + localUV * 510.0) / 1024.0;
+        float cloud;
+        if (cloud_shadow_use_atlas > 0.5) {
+            cloud = smoothstep(0.45, 0.55, textureLod(cloud_shadow_atlas, atlasUV, 0.0).a);
+        } else {
+            // 与缺图卡片相同的圆形轮廓；内部纯色，无噪声渐变或方块。
+            float edge = 0.78 - length(localUV * 2.0 - 1.0);
+            float aa = max(footprint / 32.0, 0.002);
+            cloud = smoothstep(-aa * 0.5, aa * 0.5, edge);
+        }
         ALBEDO *= 1.0 - cloud * cloud_shadow_strength * cloud_shadow_day * smoothstep(0.35, 0.75, n.y);
     }
 }

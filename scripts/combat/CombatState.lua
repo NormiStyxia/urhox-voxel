@@ -8,6 +8,21 @@ local options = {}
 local lastPose = 'hidden'
 local readyFlash=0
 local settings={aimAssist=true,damageNumbers=false}
+local logTime,logWindow,logCount=0,0,0
+local logLast={}
+-- Event-only diagnostics: no Update spam, bounded even during a damage burst.
+function M.Log(key,format,...)
+    if logTime-logWindow>=1 then logWindow,logCount=logTime,0 end
+    if logCount>=48 or logTime-(logLast[key] or -100)<.02 then return end
+    logLast[key],logCount=logTime,logCount+1
+    local write=options.log or print
+    write(string.format(format,...))
+end
+local function SetState(nextState,reason)
+    if nextState==state then return end
+    M.Log('state:'..state..':'..nextState,'Combat: state %s->%s %s',state,nextState,reason)
+    state=nextState
+end
 function M.GetSetting(key) return settings[key] end
 function M.SetSetting(key,value)
     if settings[key]==nil or type(value)~='boolean' then return false end
@@ -29,6 +44,7 @@ end
 ---@param opts table|nil rig, cancel(reason), changed(state,reason), say(text)
 function M.Configure(opts)
     options = opts or {}
+    logTime,logWindow,logCount,logLast=0,0,0,{}
     state, weapon = M.EXPLORE, options.weapon=='bow' and 'bow' or 'sword'
     quiet, idle, transition, spellDelay, glow = 0, 0, 0, 0, 1
     mounted, dead, busy = false, false, false
@@ -57,7 +73,8 @@ end
 function M.Enter(reason)
     if mounted or dead then return false end
     if state ~= M.EXPLORE then return true end
-    state, quiet, idle, glow, transition = M.IDLE, 0, 0, 0, .3
+    SetState(M.IDLE,reason or 'manual')
+    quiet, idle, glow, transition = 0, 0, 0, .3
     Pose('back')
     Changed(reason or 'manual')
     if options.say then options.say('拔刃 · 时间之力暂息') end
@@ -70,7 +87,8 @@ function M.Exit(reason)
         return false
     end
     local wasCombat = state ~= M.EXPLORE
-    state, quiet, idle, transition, busy = M.EXPLORE, 0, 0, 0, false
+    SetState(M.EXPLORE,reason or 'manual')
+    quiet, idle, transition, busy = 0, 0, 0, false
     if wasCombat then spellDelay, glow = 1, 0 end
     Pose('hidden')
     -- Force paths also clear held input when already exploring.
@@ -90,7 +108,8 @@ end
 function M.Activity(cancelTransition)
     if not M.Enter('attack') then return false end
     if transition > 0 and not cancelTransition then return false end
-    state, idle, quiet, transition = M.ACTIVE, 0, 0, 0
+    SetState(M.ACTIVE,'attack')
+    idle, quiet, transition = 0, 0, 0
     Pose('hand')
     return true
 end
@@ -109,13 +128,14 @@ function M.SetWeapon(value)
     if busy or transition > 0 or mounted or dead then return false end
     weapon, transition, idle = value, .4, 0
     if options.rig then options.rig:SetActive(value) end
-    if state ~= M.EXPLORE then state = M.IDLE; Pose('back') end
+    if state ~= M.EXPLORE then SetState(M.IDLE,'weapon'); Pose('back') end
     if options.cancel then options.cancel('weapon') end
     return true
 end
 ---@param dt number
 function M.Update(dt)
     dt = math.max(0, dt)
+    logTime=logTime+dt
     transition = math.max(0, transition - dt)
     local previousDelay=spellDelay
     spellDelay = math.max(0, spellDelay - dt)
@@ -131,7 +151,7 @@ function M.Update(dt)
     if not busy then idle = idle + dt else idle = 0 end
     if quiet >= 6 and not busy then M.Exit('quiet'); return end
     if state == M.ACTIVE and idle >= 2.5 then
-        state, transition = M.IDLE, .3
+        SetState(M.IDLE,'idle'); transition = .3
         Pose('back')
     end
 end

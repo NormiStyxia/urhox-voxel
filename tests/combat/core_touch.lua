@@ -44,5 +44,27 @@ Controls.BeginTouch(6,776,322); assert(Input.Down('attack'))
 Controls.BeginTouch(7,792,52) -- menu
 assert(not Input.Down('attack') and menu)
 assert(cancelled>=3)
+KEY_F9=109
+local shift=false
+input={GetKeyDown=function(_,key) return key==KEY_SHIFT and shift end}
+local keyEvent={GetInt=function() return KEY_F9 end,GetBool=function() return false end}
+---@cast keyEvent KeyDownEventData Offline adapter implements only fields consumed by handler.
+local before=Input.IsEnabled()
+RuinsTouch_Key(nil,keyEvent);assert(Input.IsEnabled()==before,'plain F9 is reserved for training')
+shift=true;RuinsTouch_Key(nil,keyEvent);assert(Input.IsEnabled()~=before,'Shift+F9 retains touch emulation')
 Controls.Stop()
+local file=assert(io.open('scripts/ruins/RuinsHUD.lua'));local hudSource=file:read('*a');file:close()
+local hud={}
+for _,name in ipairs({'SelectHint','HelpLines'}) do
+ local body=assert(hudSource:match('(function M:'..name..'.-)\nend') or hudSource:match('(function M%.'..name..'.-)\nend'))..'\nend'
+ assert(load(body,'HUD hint priority','t',setmetatable({M=hud},{__index=_G})))()
+end
+assert(hud.SelectHint('满蓄','目标','Pointer')=='满蓄')
+assert(hud.SelectHint(nil,'目标','Pointer')=='目标')
+assert(hud.SelectHint('','','Pointer')=='Pointer')
+local helpCombat=table.concat(hud.HelpLines('combat'),' ')
+assert(helpCombat:find('Shift 闪避',1,true) and not helpCombat:find('碎时',1,true) and not helpCombat:find('滑翔',1,true))
+assert(table.concat(hud.HelpLines('mounted'),' '):find('持续吐息',1,true))
+assert(table.concat(hud.HelpLines('explore'),' '):find('E 冻结',1,true))
+print('PASS one hint slot priority, mode-specific help, F9/Shift+F9 separation')
 print('PASS module ownership: stick+attack+look, group retirement, no combat sprint, TouchCancel/menu clear held and edge')

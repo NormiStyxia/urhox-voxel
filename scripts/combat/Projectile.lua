@@ -22,10 +22,13 @@ function P:Fire(origin,dir,charge,stats)
     p.distance,p.range,p.embedded,p.age=0,stats.range or 36,false,0
     p.damage,p.poise=(stats.attack or 8)*(full and 1.8 or (charge>=.3 and 1 or .5)),stats.poise or 6
     p.full=full
+    p.tier=full and 'full' or (charge>=.3 and 'mid' or 'weak')
     p.pierce,p.hit,p.kind=full and 1 or 0,{},(stats.crystalRadius or 0)>0 and 'crystal' or 'arrow'
     p.crystalRadius=stats.crystalRadius or 0
-    p.crystalDamage=stats.crystalDamageMultiplier and p.damage*stats.crystalDamageMultiplier or (stats.crystalDamage or 0)
+    p.crystalDamageMultiplier=stats.crystalDamageMultiplier or 0
+    p.crystalDamage=p.damage*p.crystalDamageMultiplier
     p.armorBreak=stats.armorBreak or 1
+    if self.opts.log then self.opts.log('arrow-fire','Combat: arrow fire tier=%s speed=%.2f',p.tier,speed) end
     if self.opts.draw then self.opts.draw(p,true) end
     return true
 end
@@ -45,18 +48,21 @@ function P:Step(p,dt)
         local enemy=contact.enemy
         if wall and contact.t>=wall then break end -- solid terrain wins ties
         if not p.hit[enemy] then
-            local info={dmg=p.damage,poise=p.poise,armorBreak=p.armorBreak,part=contact.shape.id,kind=p.kind,
+            local info={dmg=p.damage,poise=p.poise,armorBreak=p.armorBreak,part=contact.shape.id,kind=p.kind,tier=p.tier,clip='bow_release',
                 pos=contact.pos,dir=p.vel:Normalized(),source='player',full=p.full}
             local result=Hit.Apply(enemy,info)
             if result.hit then
                 p.hit[enemy]=true
+                -- Enemy owns weak/armor/down scaling. Use the resolved hit, but
+                -- keep p.damage unchanged so a piercing arrow cannot compound it.
+                p.crystalDamage=(result.damage or p.damage)*p.crystalDamageMultiplier
                 if self.opts.hit then self.opts.hit(enemy,info,result,contact.shape.weak,true) end
                 if p.crystalRadius>0 and p.crystalDamage>0 then
                     local exploded={[enemy]=true}
                     for _,near in ipairs(Hit.Query(self.opts.enemies(),contact.pos,contact.pos,p.crystalRadius)) do
                         if not exploded[near.enemy] and Hit.Visible(contact.pos,near.shape.center,self.opts.cast) then
                             exploded[near.enemy]=true
-                            local burst={dmg=p.crystalDamage,poise=p.poise,armorBreak=p.armorBreak,part=near.shape.id,kind='crystal',
+                            local burst={dmg=p.crystalDamage,poise=p.poise,armorBreak=p.armorBreak,part=near.shape.id,kind='crystal',tier=p.tier,clip='crystal_burst',
                                 pos=near.shape.center,dir=p.vel:Normalized(),source='player'}
                             local blast=Hit.Apply(near.enemy,burst)
                             if blast.hit and self.opts.hit then self.opts.hit(near.enemy,burst,blast,near.shape.weak,true) end

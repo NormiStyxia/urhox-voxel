@@ -1,5 +1,6 @@
 -- Scene adapter: kinematic collision, safe dismount, bounded breath damage / frost.
 local Stream = require("dragon.DragonStream")
+local Collision = require("dragon.DragonCollision")
 local M = {}
 ---@class RuinsFrostPatch
 ---@field pos Vector3
@@ -14,6 +15,13 @@ local M = {}
 ---@field terrain table
 ---@field patches RuinsFrostPatch[]
 ---@field hadFrost boolean|nil
+---@field hull DragonHullBall[]
+---@field motionPos Vector3|nil
+---@field motionEpoch number|nil
+---@field safeMotion {pos:Vector3,yaw:number,airborne:boolean}|nil
+---@field recoveryClock number
+---@field nextRecovery number
+---@field wasAirborne boolean|nil
 local D = {}; D.__index = D
 local BODY = {{'pelvis',1.0},{'waist',.95},{'chest',1.0},{'neck2',.55},{'head',.75},{'tail1',.6},{'tail3',.5}}
 local PLAYER_BODY={}
@@ -26,21 +34,30 @@ end
 local function Clamp(x,a,b) return math.max(a,math.min(b,x)) end
 function M.New(host,world,nomi,puzzles,terrain)
     local self=setmetatable({host=host,world=world,nomi=nomi,puzzles=puzzles,terrain=terrain,
-        time=0,nextDamage=0,nextMaterial=0,patches={},touched={},cast=-1},D)
+        time=0,nextDamage=0,nextMaterial=0,patches={},touched={},cast=-1,
+        hull=Collision.Hull(host.rig),recoveryClock=0,nextRecovery=0},D)
     host.ctrl.queryGround=function(x,z)
-        local ref=host.ctrl.groundRef or terrain.RING_Y
-        local hit=world:RaycastSingle(Ray(Vector3(x,ref+6,z),Vector3.DOWN),math.max(40,ref-terrain.Y_BASE+6))
+        local ref=host.ctrl.groundRef or terrain.RING_Y or 0
+        -- Probe near the feet, not six metres above them (which found roofs).
+        local rise=host.ctrl.loco.airborne and .05 or (.65*host.rig.size+.05)
+        local hit=world:RaycastSingle(Ray(Vector3(x,ref+rise,z),Vector3.DOWN),
+            math.max(40,ref-(terrain.Y_BASE or -20)+rise),Collision.MASK)
         if hit.hit and hit.normal.y>.6 then return hit.position.y end
         return nil
     end
     host.ctrl.canLand=function(x,z)
         -- 大龙需完整永久岛面；修桥残块不构成降落坪。
-        return terrain.HasGround(x,z,2.5*host.rig.size) and host.ctrl.queryGround(x,z)~=nil
+        if not terrain.HasGround(x,z,2.5*host.rig.size) then return false end
+        local y=host.ctrl.queryGround(x,z)
+        if y==nil then return false end
+        -- Certify the torso at the proposed landing point. Unknown is unsafe.
+        return Collision.Clear(world,self.hull,Vector3(x,y,z),host.ctrl.loco.yaw,{left=6000})==true
     end
     host.ctrl.onNoLanding=function()
-        if host.ride.onNotice then host.ride.onNotice("下方是虚空，请飞到岛面再降落") end
+        if host.ride.onNotice then host.ride.onNotice("下方没有安全落点，请飞到开阔岛面再降落") end
     end
-    host.ctrl.resolveMotion=function(c,pos,yaw,alt) self:ResolveMotion(c,pos,yaw,alt) end
+    host.ctrl.prepareMotion=function(c) self:PrepareMotion(c) end
+    host.ctrl.resolveMotion=function(c,pos,yaw,alt,dt) self:ResolveMotion(c,pos,yaw,alt,dt) end
     host.ride.resolveDismount=function() return self:DismountPoint() end
     host.breath:OnHit(function(info) self:Hit(info) end)
     -- A variant without a breath root (e.g. the hatchling) has no ordinary stream.
@@ -48,46 +65,137 @@ function M.New(host,world,nomi,puzzles,terrain)
     self.rideMode=host.ride.mode
     return self
 end
+-- Keep absolute altitude as the terrain underneath changes. Relative alt still
+-- drives flight/landing, but a new floor reference cannot lift the root for free.
+function D:PrepareMotion(c)
+    local L=c.loco
+    if self.motionPos==nil or self.motionEpoch~=c.motionEpoch then
+        self.motionEpoch=c.motionEpoch
+        self.motionPos=Vector3(L.pos.x,c:GroundHeight(L.pos.x,L.pos.z)+L.alt,L.pos.z)
+        self.safeMotion=nil
+        self.nextRecovery=0
+    end
+    self.wasAirborne=L.airborne
+    if L.airborne then
+        local below=c.queryGround(L.pos.x,L.pos.z)
+        if below~=nil and below<=self.motionPos.y+.05 then
+            local oldFloor=c.airFloor or (self.motionPos.y-L.alt)
+            L.alt=math.max(0,self.motionPos.y-below)
+            L.altTarget=math.max(0,(L.altTarget or L.alt)+oldFloor-below)
+            c.airFloor=below
+        end
+    end
+end
+
+---@param c table
+---@param p Vector3
+---@param airborne boolean
+function D:Supported(c,p,airborne)
+    if airborne then return true end
+    local y=c.queryGround(p.x,p.z)
+    return y~=nil and math.abs(y-p.y)<.10
+        and self.terrain.HasGround(p.x,p.z,.65*self.host.rig.size)
+end
+
+-- A recreated time object or moving fragment may overlap a stationary dragon.
+-- Check exact occupancy at 5 Hz, with a shared voxel budget and no unsafe fallback.
+---@param c table
+---@param pos Vector3
+---@param yaw number
+---@param dt number
+---@return Vector3, number, boolean
+function D:Recover(c,pos,yaw,dt)
+    self.recoveryClock=self.recoveryClock+dt
+    if self.recoveryClock<self.nextRecovery then return pos,yaw,false end
+    self.nextRecovery=self.recoveryClock+.20
+    local budget={left=12000}
+    local clear,normal,depth=Collision.Clear(self.world,self.hull,pos,yaw,budget)
+    if clear==true then
+        if self:Supported(c,pos,c.loco.airborne) then
+            self.safeMotion={pos=pos,yaw=yaw,airborne=c.loco.airborne}
+        end
+        return pos,yaw,false
+    end
+    if clear==false and normal and depth and normal:LengthSquared()>.5 then
+        -- Only accept a bounded, fully clear escape, not repeated blind pushes.
+        local push=normal*math.min(depth+.05,.30*self.host.rig.size)
+        if not c.loco.airborne then push=Vector3(push.x,0,push.z) end
+        local candidate=Collision.Slide(self.world,self.hull,pos,yaw,push)
+        if self:Supported(c,candidate,c.loco.airborne)
+            and Collision.Clear(self.world,self.hull,candidate,yaw,budget)==true then
+            return candidate,yaw,true
+        end
+    end
+    local safe=self.safeMotion
+    if clear==false and safe and safe.airborne==c.loco.airborne
+        and (safe.pos-pos):Length()<6*self.host.rig.size and self:Supported(c,safe.pos,safe.airborne)
+        and Collision.Clear(self.world,self.hull,safe.pos,safe.yaw,budget)==true then
+        return safe.pos,safe.yaw,true
+    end
+    return pos,yaw,false
+end
+
 ---@param c table
 ---@param oldPos Vector3
 ---@param oldYaw number
 ---@param oldAlt number
-function D:ResolveMotion(c,oldPos,oldYaw,oldAlt)
+---@param dt number|nil
+function D:ResolveMotion(c,oldPos,oldYaw,oldAlt,dt)
+    dt=dt or 1/60
+    if self.motionPos==nil then self:PrepareMotion(c) end
     local L,rig=c.loco,c.rig
-    local newPos = L.pos --[[@as Vector3]]
-    local translation = newPos - oldPos
-    local delta=translation+Vector3(0,L.alt-oldAlt,0)
-    if delta:LengthSquared() < 1e-12 and math.abs(L.yaw-oldYaw) < 1e-8 then return end
-    local q=Quaternion(L.yaw-oldYaw,Vector3.UP)
-    local fraction=1
-    for _,def in ipairs(BODY) do
-        local node=rig.bones[def[1]] --[[@as Node?]]
-        if node then
-            local root = rig.root --[[@as Node]]
-            local offset=node.worldPosition-root.worldPosition
-            local move=delta+q*offset-offset --[[@as Vector3]]
-            local distance=move:Length()
-            if distance>.0001 then
-                local hit=self.world:SphereCast(Sphere(node.worldPosition,def[2]*rig.size*.85),move:Normalized(),distance+.06)
-                if hit.hit and hit.normal:DotProduct(move)<-.0001 then
-                    fraction=math.min(fraction,Clamp((hit.distance-.06)/distance,0,1))
-                end
-            end
+    local start=self.motionPos --[[@as Vector3]]
+    local requestedYaw=L.yaw
+    local wanted=Vector3(L.pos.x,start.y+L.alt-oldAlt,L.pos.z)
+    local unsupported=false
+    local landing=self.wasAirborne and not L.airborne
+    if not L.airborne then
+        local ground=c.queryGround(wanted.x,wanted.z)
+        if ground==nil or (not landing and (ground-start.y>.65*rig.size or start.y-ground>1.4*rig.size)) then
+            wanted=start; unsupported=true -- Still allow a checked turn away from the edge.
+        else wanted=Vector3(wanted.x,ground,wanted.z) end
+    end
+    local pos,freeMove=Collision.Slide(self.world,self.hull,start,oldYaw,wanted-start)
+    if not L.airborne then
+        -- Sliding changes x/z: validate support at the resolved position.
+        local ground=c.queryGround(pos.x,pos.z)
+        if ground==nil or (not landing and (ground-start.y>.65*rig.size or start.y-ground>1.4*rig.size)) then
+            pos=start; unsupported=true
+        else
+            local settled=Collision.Slide(self.world,self.hull,pos,oldYaw,Vector3(0,ground-pos.y,0))
+            if math.abs(settled.y-ground)<.02 then pos=settled
+            elseif not landing then pos=start; unsupported=true end
         end
     end
-    -- Grounded dragons cannot step onto a wall / cross the chasm in one stride.
-    if not L.airborne and translation:LengthSquared()>.00001 then
-        local a=c:GroundHeight(oldPos.x,oldPos.z)
-        local b=c:GroundHeight(L.pos.x,L.pos.z)
-        if c.queryGround(L.pos.x,L.pos.z)==nil or b-a>0.65*rig.size or a-b>1.4*rig.size then fraction=0 end
+    local yaw=Collision.Turn(self.world,self.hull,pos,oldYaw,requestedYaw)
+    local recovered
+    pos,yaw,recovered=self:Recover(c,pos,yaw,dt)
+    local actual=pos-start
+    local desired=wanted-start
+    local horizontal=Vector3(actual.x,0,actual.z)
+    local freeHorizontal=Vector3(freeMove.x,0,freeMove.z)
+    local requested=Vector3(desired.x,0,desired.z)
+    if requested:LengthSquared()>1e-10 then
+        L.speed=L.speed*Clamp(freeHorizontal:Length()/requested:Length(),0,1)
     end
-    if fraction<1 then
-        L.pos=oldPos+(L.pos-oldPos)*fraction
-        L.yaw=oldYaw+(L.yaw-oldYaw)*fraction
-        L.alt=oldAlt+(L.alt-oldAlt)*fraction
-        L.speed,L.yawRate=0,0; L.vel=Vector3.ZERO
-        if math.abs(delta.y)>.001 then L.vy=0; L.altTarget=L.alt end
+    if unsupported then L.speed=0 end
+    L.vel=horizontal/math.max(dt,1e-6)
+    if math.abs(Collision.Angle(yaw-requestedYaw))>.001 then L.yawRate=0 end
+    L.pos,L.yaw=Vector3(pos.x,0,pos.z),yaw
+    if landing then
+        local ground=c.queryGround(pos.x,pos.z)
+        if ground==nil or math.abs(pos.y-ground)>.08 then
+            -- LAND may have marked touchdown before the sweep hit an obstacle.
+            L.airborne=true; c.touchT=nil; c.impactS=nil; c.ikTarget=0; c.ikFrontTarget=0
+        end
     end
+    local floor=L.airborne and (c.airFloor or start.y-oldAlt) or pos.y
+    L.alt=math.max(0,pos.y-floor)
+    if math.abs(actual.y-desired.y)>.001 then L.vy=0; L.altTarget=L.alt end
+    if recovered then L.speed=0; L.vel=Vector3.ZERO; L.vy=0; L.altTarget=L.alt end
+    c.airFloor=floor
+    c.motionY,c.groundRef=pos.y,pos.y
+    self.motionPos=pos
 end
 function D:OutsideBody(pos,padding)
     local rig=self.host.rig

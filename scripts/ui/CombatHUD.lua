@@ -12,6 +12,16 @@ function H.Active() return data.combat==true end
 function H.Aimed() return data.aimed~=nil end
 function H.Weapon() return data.weapon or 'sword' end
 function H.Charge() return data.charge or 0 end
+function H.Mounted() return data.mounted==true end
+-- Only RuinsHUD renders this text: combat and pointer hints share one slot.
+function H.Hint()
+    local moves=data.moves
+    if moves and (moves.clip=='bow_draw' or moves.clip=='bow_hold') then
+        return (moves.charge>=.8 and '满蓄' or (moves.charge>=.3 and '中蓄' or '弱蓄'))..' · 松手射击 · 闪避取消'
+    end
+    if moves and moves.cancelUntil and moves.age<moves.cancelUntil then return '已取消拉弓' end
+    return noticeUntil>GetTime():GetElapsedTime() and notice or nil
+end
 function H.HasBoss()
     for _,enemy in ipairs(data.enemies or {}) do if enemy.boss and enemy.aggro and not enemy.dead then return true end end
     return false
@@ -59,16 +69,6 @@ function H.Render(vg,w,h,s,objective)
         Draw.NineSlice(vg,'bar_fill_blue',bx+12,by+20,Draw.Snap((bw-24)*(boss.poise or 0)/(boss.maxPoise or 100)),4,0,1)
         break
     end end
-    local info=noticeUntil>GetTime():GetElapsedTime() and notice or nil
-    if moves.clip=='bow_draw' or moves.clip=='bow_hold' then
-        info=(moves.charge>=.8 and '满蓄' or (moves.charge>=.3 and '中蓄' or '弱蓄'))..' · 松手射击 · 闪避取消'
-    elseif moves.cancelUntil and moves.age<moves.cancelUntil then info='已取消拉弓' end
-    if info then
-        local tw=Draw.TextWidth(vg,info,12)
-        local ix,iy=Draw.Snap((w-tw-32)/2),Draw.Snap(h*.68)
-        Draw.NineSlice(vg,'plaque_ink',ix,iy,tw+32,40,8,.95)
-        Draw.Text(vg,info,w/2,iy+20,12,C.paper,NVG_ALIGN_CENTER)
-    end
     local partNotice=moves.partNotice --[[@as {part:string,untilTime:number}|nil]]
     if partNotice and moves.age<partNotice.untilTime then
         local px,py=Draw.Snap(w/2-90),Draw.Snap(h*.3)
@@ -79,12 +79,14 @@ function H.Render(vg,w,h,s,objective)
     for _,number in ipairs(moves.numbers or {}) do
         if number.untilTime>moves.age and data.camera and (number.pos-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
             local sp=data.camera:WorldToScreenPoint(number.pos)
-            Draw.Text(vg,tostring(number.value),Draw.Snap(sp.x*w),Draw.Snap(sp.y*h-(.7-number.untilTime+moves.age)*24),12,C.gold,NVG_ALIGN_CENTER)
+            Draw.Text(vg,tostring(number.value),Draw.Snap(sp.x*w),Draw.Snap(sp.y*h-((number.duration or .7)-number.untilTime+moves.age)*24),12,C.gold,NVG_ALIGN_CENTER)
         end
     end
     if data.debug then
-        Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,320,56,8,1)
-        Draw.Text(vg,data.debug,s.left+32,s.top+44,12,C.gold)
+        local lines={}
+        for line in data.debug:gmatch('[^\n]+') do lines[#lines+1]=line end
+        Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,math.min(500,w-s.left-s.right-32),32+#lines*16,8,1)
+        for i,line in ipairs(lines) do Draw.Text(vg,line,s.left+32,s.top+32+(i-1)*16,12,C.gold) end
     end
 end
 return H

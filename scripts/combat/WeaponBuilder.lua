@@ -336,6 +336,27 @@ function Builder.CancelBuild(job)
     job.done,job.cancelled=true,true
 end
 
+-- The engine singleton uses instance dispatch; seconds become milliseconds.
+-- Keep this call inside Clock's pcall: sandbox/binding failures are non-fatal.
+local function ElapsedMs() return time:GetElapsedTime()*1000 end
+
+---@param job table
+---@param override? fun():number
+---@return number?
+local function Clock(job,override)
+    if job.clockUnavailable then return nil end
+    local ok,value=pcall(override or ElapsedMs)
+    if not ok or type(value)~='number' or value~=value or value<0 or value==math.huge
+        or (job.lastClockMs and value<job.lastClockMs) then
+        -- Remain bounded by one phase / 96 cells; do not retry a bad clock for
+        -- each voxel. Partial metrics are not a complete timing measurement.
+        job.clockUnavailable=true
+        return nil
+    end
+    job.lastClockMs=value
+    return value
+end
+
 ---@param job table
 ---@param budgetMs number?
 ---@param clock? fun():number Millisecond clock; optional injectable offline clock.
@@ -345,8 +366,8 @@ end
 function Builder.StepBuild(job,budgetMs,clock)
     if job.done then return true,job.mesh,job.error end
     budgetMs=math.min(2,math.max(.1,budgetMs or 2))
-    clock=clock or function() return GetTime():GetSystemTime() end
-    local start=clock()
+    local start=Clock(job,clock)
+    local phase=job.phase
     local ok,reason=pcall(function()
         if job.phase=='compile' then
             job.blueprint=assert(Builder.Compile(job.config))
@@ -375,8 +396,11 @@ function Builder.StepBuild(job,budgetMs,clock)
             local cells=job.blueprint.geometry.cells
             local minimum=job.blueprint.bounds.gridMin
             local last=math.min(#cells,job.cursor+95)
+            local first=job.cursor
             while job.cursor<=last do
-                if clock()-start>=budgetMs then break end
+                local now=Clock(job,clock)
+                -- Always advance at least one cell, even on a slow/coarse clock.
+                if job.cursor>first and start and now and now-start>=budgetMs then break end
                 local cell=cells[job.cursor]
                 local x,y,z=cell.x-minimum[1],cell.y-minimum[2],cell.z-minimum[3]
                 job.grid:SetSolid(x,y,z,true)
@@ -385,9 +409,10 @@ function Builder.StepBuild(job,budgetMs,clock)
             end
             if job.cursor>#cells then job.phase='geometry' end
         elseif job.phase=='geometry' then
-            local before=clock()
+            local before=Clock(job,clock)
             job.volume:RebuildGeometry()
-            job.nativeMs=clock()-before
+            local after=Clock(job,clock)
+            job.nativeMs=before and after and after-before or 0
             job.phase='publish'
         else
             local mesh={world=job.world,volume=job.volume,node=job.node,blueprint=job.blueprint,
@@ -397,8 +422,10 @@ function Builder.StepBuild(job,budgetMs,clock)
             job.mesh,job.done=mesh,true
         end
     end)
-    local elapsed=math.max(0,clock()-start)
+    local finish=Clock(job,clock)
+    local elapsed=start and finish and finish-start or 0
     job.steps=job.steps+1;job.totalMs=job.totalMs+elapsed
+    if elapsed>job.maxStepMs then job.slowestPhase=phase end
     job.maxStepMs=math.max(job.maxStepMs,elapsed);job.overBudget=job.overBudget or elapsed>budgetMs
     if not ok then Builder.CancelBuild(job);job.error=tostring(reason) end
     return job.done,job.mesh,job.error

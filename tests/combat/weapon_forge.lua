@@ -14,6 +14,14 @@ local nativeFailure,bridgeFailure,sizeFailure=false,false,false
 local liveContext='vg'
 local videoCreates,videoDeletes=0,0
 local cleared=0
+local messages={}
+local realPrint=print
+rawset(_G,'print',function(message) messages[#messages+1]=tostring(message);realPrint(message) end)
+local function LogCount(message)
+    local count=0
+    for _,line in ipairs(messages) do if line==message then count=count+1 end end
+    return count
+end
 local width,height,dpr,scale=844,390,3,2
 local safe={left=47,right=47,top=0,bottom=21}
 for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
@@ -21,7 +29,13 @@ for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE'
 local fakeInput={numTouches=0,mouseMode=MM_RELATIVE,GetKeyDown=function(_,key) return held[key] end,GetMouseButtonDown=function(_,button) return buttons[button] end}
 rawset(_G,'input',fakeInput)
 local timerMs=0
-rawset(_G,'GetTime',function() return {GetSystemTime=function() timerMs=timerMs+.01;return timerMs end} end)
+local fakeTime={}
+function fakeTime:GetElapsedTime()
+    assert(self==fakeTime,'Time singleton requires colon dispatch')
+    timerMs=timerMs+.01;return timerMs/1000
+end
+rawset(_G,'time',fakeTime)
+rawset(_G,'GetTime',function() error('legacy GetTime/GetSystemTime path must not be used') end)
 local function MakeNode(name,parent)
     local node=Mock.Node(name,parent)
     node.CreateChild=function(self,childName)
@@ -184,6 +198,7 @@ local function Flush()
     error('preview build did not complete')
 end
 assert(not Forge.Open(),'missing safety provider must fail closed')
+assert(Forge.PreviewMode()==nil and Forge.Close(true) and Forge.ForceClose())
 combat='COMBAT_IDLE';assert(not Open());combat='EXPLORE'
 assert(not Open({canOpen=function() return false end}))
 local opened,closed,applyCalls=0,0,{}
@@ -197,9 +212,16 @@ end}))
 assert(opened==1 and Forge.IsOpen() and fakeInput.mouseMode==MM_ABSOLUTE and cleared==1)
 assert(#root.children==1 and State().preview and not State().fallback)
 assert(State().preview.job and State().preview.world.created==0,'preview must build over frames')
+assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0,'Open is not preview readiness')
 assert(Open() and opened==1)
 CheckLayout();Flush();Render()
 assert(videoCreates==1)
+assert(Forge.PreviewMode()==nil,'wait for a later frame after render surface queueing')
+Tick();State().preview.mesh.volume.vertexCount=0;Render()
+assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0,'empty native geometry is not ready')
+State().preview.mesh.volume.vertexCount=4;Render()
+assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
+Tick();Render();assert(LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
 local s=State() --[[@as any]]
 local scene=s.preview.scene
 local world=s.preview.world
@@ -243,9 +265,10 @@ Click('tab_bow');Click('part_limbs_long');Click('slot_tip');Click('part_tip_crys
 assert(s.config.bow.parts.tip=='tip_crystal' and s.blueprint.stats.crystalRadius==.8)
 local labels={}
 for _,draw in ipairs(drawCalls) do labels[draw.text]=true end
-assert(labels['拉弓速度'] and labels['射程'] and labels['散布'] and labels['移动'])
+assert(labels['拉弓速度'] and labels['射程'] and labels['移动'] and labels['破甲'] and not labels['散布'])
 held.G=true;Click('equip')
 assert(s.closing and Forge.IsOpen() and #root.children==1 and overlay)
+assert(Forge.PreviewMode()==nil,'closed visual must not report a live preview during release latch')
 assert(#applyCalls==2 and saved.active=='bow' and currentWeapon=='bow' and mockRig.active=='bow' and mockRig.pose=='hidden')
 assert(scene.disposed and textures[1].disposed and videoDeletes==1)
 assert(world.removed==world.created)
@@ -258,6 +281,7 @@ width,height,dpr,scale=320,568,2,1.5
 safe={left=0,right=0,top=20,bottom=24};nativeFailure=true
 assert(Open());s=State();CheckLayout();Render()
 assert(s.fallback and not s.preview and not s.wide and s.statsBox==nil)
+assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (scene)')==1)
 Click('stats_toggle');CheckLayout();Render()
 assert(s.statsBox.y>=s.previewBox.y+s.previewBox.h+56)
 Click('color_primary');CheckLayout();Click('swatch_5');assert(s.config.sword.colors.primary==5)
@@ -279,8 +303,10 @@ assert(Open());s=State()
 local nextPreview=State().preview --[[@as any]]
 scene=nextPreview.scene;world=nextPreview.world
 Render();assert(s.fallback and not s.preview and scene.disposed and world.removed==world.created)
+assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (bridge)')==1)
 local count=videoCreates
 Render();Tick(5);Render();assert(videoCreates==count)
+assert(LogCount('Forge preview: fallback (bridge)')==1)
 Click('tab_bow');Click('slot_grip');Click('part_bow_grip_stable')
 assert(s.blueprint.stats.move==.6)
 Forge.Close();Tick(2)
@@ -300,6 +326,8 @@ buttons[MOUSEB_LEFT]=true
 assert(Forge.Close(true) and not Forge.IsOpen(),'danger must not wait for held buttons')
 assert(draftApplies==0 and saved==savedBefore and draftCloses==1 and #root.children==0)
 assert(interruptedWorld.created==interruptedWorld.removed)
+assert(not next(eventHandlers) and s.eventNode.removed and s.finished,'forced close must clean receiver now, without another Update')
+assert(Forge.PreviewMode()==nil and Forge.ForceClose() and Forge.Close(true) and draftCloses==1)
 Tick();buttons[MOUSEB_LEFT]=false
 combat='COMBAT_ACTIVE';assert(not Open(DraftOptions()));combat='EXPLORE'
 assert(Open(DraftOptions()));s=State()
@@ -312,9 +340,25 @@ assert(Open(DraftOptions()));assert(State().config.sword.parts.blade=='blade_bro
 Forge.Close();Tick(2);assert(draftApplies==1)
 assert(Open(DraftOptions()));assert(State().config.sword.parts.blade=='blade_straight','equipping clears retained draft')
 Forge.Close();Tick(2)
--- An alert during a normal close latch also releases combat input immediately.
-assert(Open());held.G=true;Forge.Close();assert(Forge.IsOpen())
-Forge.Close(true);assert(not Forge.IsOpen());Tick();held.G=false
+-- Scene.Stop can arrive during the release latch, with no future Update events.
+local forcedCallbacks=0
+assert(Open({onClose=function() forcedCallbacks=forcedCallbacks+1 end}))
+s=State();local retiredLayer=s.layer
+held.G=true;buttons[MOUSEB_LEFT]=true;fakeInput.numTouches=1
+Forge.Close();assert(Forge.IsOpen() and not retiredLayer.destroyed)
+Forge.Close(true)
+assert(not Forge.IsOpen() and not overlay and #root.children==0 and not next(eventHandlers))
+assert(retiredLayer.destroyed and s.eventNode.removed and fakeInput.mouseMode==MM_RELATIVE and forcedCallbacks==1)
+local clearCount=cleared
+assert(Forge.Close(true) and Forge.ForceClose() and Forge.ForceClose())
+assert(forcedCallbacks==1 and cleared==clearCount and not next(eventHandlers),'repeated teardown must have no side effects')
+held.G=false;buttons[MOUSEB_LEFT]=false;fakeInput.numTouches=0
+assert(Open({onClose=function(_,_,kept) assert(kept);forcedCallbacks=forcedCallbacks+1 end}))
+s=State()
+retiredLayer.props.onPointerDown(Event(100,100));retiredLayer.props.onPointerMove(Event(120,100));retiredLayer.props.onPointerUp(Event(120,100))
+assert(not s.pointer and retiredLayer.absoluteLayout.w==0,'stale UI pointer events must not touch a reopened forge')
+assert(Forge.ForceClose())
+assert(s.eventNode.removed and not next(eventHandlers) and forcedCallbacks==2)
 
 -- Failed application/equip retains edits; failed disk save still applies this session.
 local allowApply=false
@@ -329,6 +373,7 @@ assert(Open({config={sword={},bow={}}}));assert(State().config.active=='sword')
 Forge.Close();Tick(2)
 sizeFailure=true
 assert(Open());assert(State().fallback and not State().preview)
+assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (rendertexture)')==1)
 Forge.Close();Tick(2);sizeFailure=false
 assert(Open());Flush();Render()
 local createsBefore,deletesBefore=videoCreates,videoDeletes
@@ -337,7 +382,19 @@ assert(videoCreates==createsBefore+1 and videoDeletes==deletesBefore)
 eventHandlers.KeyDown(nil,nil,{GetInt=function() return KEY_ESCAPE end})
 Tick(2);assert(not Forge.IsOpen() and videoDeletes==deletesBefore+1)
 assert(#root.children==0 and not overlay)
+-- Unavailable or throwing Time must still finish assembly and emit readiness.
+local oldOs=rawget(_G,'os')
+rawset(_G,'os',nil)
+for _,brokenTime in ipairs({false,{GetElapsedTime=function() error('Web binding failure') end}}) do
+    rawset(_G,'time',brokenTime or nil)
+    local readyLogs=LogCount('Forge preview: 3d')
+    assert(Open());Flush();Tick();Render()
+    assert(Forge.PreviewMode()=='3d' and State().buildMetrics.clockUnavailable)
+    assert(LogCount('Forge preview: 3d')==readyLogs+1,'clock failure must not suppress preview readiness')
+    Forge.ForceClose()
+end
+rawset(_G,'time',fakeTime);rawset(_G,'os',oldOs)
 for _,texture in ipairs(textures) do assert(texture.disposed) end
 for _,createdScene in ipairs(scenes) do assert(createdScene.disposed) end
-for key in pairs(Forge) do assert(key=='Open' or key=='Close' or key=='IsOpen') end
+for key in pairs(Forge) do assert(key=='Open' or key=='Close' or key=='IsOpen' or key=='ForceClose' or key=='PreviewMode') end
 print('PASS weapon_forge: staged preview, safe drafts, presets/undo/slot reset, real stats, 720dp collapse, explicit palettes, fixed grip, input and cleanup')

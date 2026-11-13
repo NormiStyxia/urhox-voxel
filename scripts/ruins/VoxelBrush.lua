@@ -189,7 +189,7 @@ end
 function B:Finish(o)
     o = o or {}
     local v = self.volume
-    if v:GetSolidCount() == 0 and not o.keepEmpty then
+    if self.grid:GetSolidCount() == 0 and not o.keepEmpty then
         self.world:RemoveVolume(v)
         return nil
     end
@@ -202,6 +202,8 @@ function B:Finish(o)
     end
     if o.visual then
         -- 不定型：只渲染、无物理体（悬浮装饰 / 回溯中的残片）
+        v:SetCollidable(false)
+        v.collisionMask = 0 -- Grid occupancy queries must also ignore decorative volumes.
     elseif o.dynamic then
         v.density = o.density or 2200.0
         self.world:FinalizeVolumeAsDynamic(v)

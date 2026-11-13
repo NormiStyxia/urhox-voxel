@@ -116,10 +116,12 @@ function M.World(scene)
             assert(index>=160 and index<=191)
             self.writes=self.writes+1; grid.materials[key(x,y,z)]=index
         end
-        local volume={node=node,grid=grid,dimensions={dx,dy,dz}}
+        local volume={node=node,grid=grid,dimensions={dx,dy,dz},vertexCount=0}
         volume.GetNode=function() return node end
         volume.GetGrid=function() return grid end
-        volume.RebuildGeometry=function() self.rebuilds=self.rebuilds+1 end
+        -- Only model readiness, not actual greedy-mesh vertex/face counts.
+        volume.RebuildGeometry=function() self.rebuilds=self.rebuilds+1;volume.vertexCount=4 end
+        volume.GetVertexCount=function() return volume.vertexCount end
         self.volumes[#self.volumes+1]=volume
         return volume
     end

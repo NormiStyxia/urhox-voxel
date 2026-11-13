@@ -38,9 +38,12 @@ caster:HandleCharge(false,{},false);caster:HandleCharge(false,{},true)
 assert(count==1 and not caster.charging and caster.charge==0,'focus/mount cancellation must not cast')
 local rig={size=1,root={worldPosition=Vector3.ZERO,worldRotation=Quaternion(0)},
  bones={chest={worldPosition=Vector3(0,2,0)},pelvis={worldPosition=Vector3(0,2,-1)}}}
+rig.spec=require('dragon.DragonSpec');rig.pivots={}
+for _,bone in ipairs(rig.spec.BONES)do rig.pivots[bone[1]]=bone[3]end
 local ctrl={rig=rig,loco={pos=Vector3.ZERO,yaw=0,alt=0,airborne=false},state='IDLE'}
 function ctrl:GroundHeight()return 0 end
 local world={damage=0,expectedPower=3}
+function world:GetVolumeCount()return 0 end
 function world:SphereCast()return {hit=false}end
 function world:RaycastSingle(ray,distance)
  if ray.direction.y<-.9 then return {hit=true,position=Vector3(ray.origin.x,0,ray.origin.z),normal=Vector3.UP} end
@@ -53,15 +56,17 @@ function nomi:Position()return self.pos end
 nomi.cc={Teleport=function(_,p)nomi.pos=p end}
 local host={rig=rig,ctrl=ctrl,ride={mode='free'},breath={OnHit=function(self,f)self.listener=f end}}
 local puzzles={FindByVolume=function()return nil end}
-local D=require('ruins.RuinsDragon').New(host,world,nomi,puzzles,{})
+local D=require('ruins.RuinsDragon').New(host,world,nomi,puzzles,{HasGround=function()return true end,IsSafeGround=function()return true end})
 D:PushPlayer();assert(D:OutsideBody(nomi.pos,.33),'external character cannot pass through dragon body')
 ctrl.loco.airborne=true;assert(D:DismountPoint()==nil,'airborne dismount unsafe')
 ctrl.loco.airborne=false;assert(D:DismountPoint()~=nil,'open ground permits safe dismount')
 world.SphereCast=function()return {hit=true,distance=.36,normal=Vector3(-1,0,0)}end
+D:PrepareMotion(ctrl)
 ctrl.loco.pos=Vector3(1,0,0);ctrl.loco.speed=12
 D:ResolveMotion(ctrl,Vector3.ZERO,0,0)
-assert(ctrl.loco.pos.x<=.301 and ctrl.loco.speed==0,'motion sweep must stop at wall')
+assert(ctrl.loco.pos.x<=.321 and ctrl.loco.speed==0,'motion sweep must stop at wall')
 world.SphereCast=function()return {hit=false}end
+D.motionPos=Vector3.ZERO
 ctrl.loco.pos=Vector3(1,0,0);ctrl.loco.speed=5
 D:ResolveMotion(ctrl,Vector3.ZERO,0,0);assert(ctrl.loco.pos.x==1 and ctrl.loco.speed==5)
 local vol={destructible=true}

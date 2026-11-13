@@ -161,15 +161,6 @@ function Layer:Render(vg)
         Draw.Rect(vg,x-1,y-1,2,2,c)
         Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
         Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
-        local text=MobileText(target)
-        Draw.Text(vg,text,x+1,y+27,12,C.deep,NVG_ALIGN_CENTER)
-        Draw.Text(vg,text,x,y+26,12,C.gold,NVG_ALIGN_CENTER)
-    elseif target~='' then
-        -- 平时不显示准星：目标说明放在技能栏上方
-        local text=MobileText(target)
-        local ty=Draw.Snap(h-s.bottom-(touch and 210 or 112))
-        Draw.Text(vg,text,w/2+1,ty+1,12,C.deep,NVG_ALIGN_CENTER)
-        Draw.Text(vg,text,w/2,ty,12,C.gold,NVG_ALIGN_CENTER)
     end
     if not touch and not CombatHUD.Active() then
         for i,b in ipairs({{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}) do
@@ -186,8 +177,9 @@ function Layer:Render(vg)
             Draw.Text(vg,b.key,x,y+44,12,C.gold,NVG_ALIGN_CENTER)
         end
     end
-    local shownHint=touch and Controls.Hint() or hint
-    if not touch and charge>0 then shownHint='碎时蓄力 · 松开左键释放' end
+    local actionHint=CombatHUD.Hint()
+    if not actionHint and charge>0 then actionHint=touch and '碎时蓄力 · 松开【碎时】释放' or '碎时蓄力 · 松开左键释放' end
+    local shownHint=M.SelectHint(actionHint,MobileText(target),touch and Controls.Hint() or hint)
     if shownHint~='' then
         -- Keep the bottom-center strip in the gap left of the right action cluster.
         -- Longer air instructions wrap instead of covering glide/land buttons.
@@ -217,8 +209,9 @@ function Layer:Render(vg)
     end
     if help and not touch then
         local hx=w-s.right-320
-        Draw.NineSlice(vg,'panel_paper',hx,top,304,144,8,.95)
-        for i,line in ipairs({'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','F 上龙/下龙 · Space 起飞/上升','C 下降 · G 滑翔 · L 降落 · B 大招','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}) do
+        local lines=M.HelpLines(CombatHUD.Active() and 'combat' or (CombatHUD.Mounted() and 'mounted' or 'explore'))
+        Draw.NineSlice(vg,'panel_paper',hx,top,304,24+#lines*20,8,.95)
+        for i,line in ipairs(lines) do
             Draw.Text(vg,line,hx+16,top+22+(i-1)*20,12,C.brown)
         end
     end
@@ -229,13 +222,26 @@ function M.Build(spells)
     headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}
     objectiveLayout={}
     if not ready then UI.Init({theme='default-dark',scale=UI.Scale.DEFAULT,
-        fonts={{family='sans',weights={normal='Fonts/ArkPixel-12px-zh_hans.ttf',bold='Fonts/ArkPixel-12px-zh_hans.ttf'}}}}); ready=true end
+        fonts={{family='sans',weights={normal='Fonts/ArkPixel-12px-zh_hans.ttf',bold='Fonts/ArkPixel-12px-zh_hans.ttf'}}}})
+        if UI.Inspector and UI.Inspector.Init then UI.Inspector.Init(UI,{hotkey=KEY_F4}) end
+        ready=true
+    end
     cd={}
     for _,sp in ipairs(spells) do cd[sp.id]=sp.cooldown end
     M.root=UI.Panel{width='100%',height='100%',pointerEvents='none',children={Layer{width='100%',height='100%',pointerEvents='none'}}}
     UI.SetRoot(M.root,true)
 end
 function M.SetObjective(t,s) title,sub=t or '',s or '' end
+function M.SelectHint(action,aim,pointerHint)
+    if action and action~='' then return action end
+    if aim and aim~='' then return aim end
+    return pointerHint or ''
+end
+function M.HelpLines(mode)
+    if mode=='combat' then return {'WASD 移动 · Space 跳跃','左键攻击/蓄力 · 右键重击','Shift 闪避 · Q 切武器 · C 收刃','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'} end
+    if mode=='mounted' then return {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Tab 远景 · Esc 释放鼠标','H 隐藏说明'} end
+    return {'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+end
 function M.SetClock(t) clockText=t or '' end
 function M.SetHint(t) hint=t or '' end
 function M.SetMessage(t)

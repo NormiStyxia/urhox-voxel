@@ -49,9 +49,44 @@ assert(load(cue,'Scene.EnemyAttackCue','t',env))()
 local fields={EnemyId='sentry_1',Attack='stone',Phase='telegraph',Position={x=1,y=2,z=3},Duration=.9}
 local event={GetString=function(_,key) return fields[key] end,GetFloat=function(_,key) return fields[key] end,
     GetVector3=function(_,key) return fields[key] end}
+---@cast event VariantMap Offline adapter implements only fields consumed by handler.
 env.Ruins_HandleEnemyAttackCue(nil,event)
 local snapshot=env.M.combat.enemyCue
 assert(snapshot.enemyId=='sentry_1' and snapshot.duration==.9 and snapshot.phase=='telegraph')
 fields.Phase='active';env.Ruins_HandleEnemyAttackCue(nil,event)
 assert(env.M.combat.enemyCue==snapshot and snapshot.phase=='active','sound placeholder reuses one bounded event snapshot')
+env.CombatState=dofile('scripts/combat/CombatState.lua')
+local notices={};env.CombatHUD={Say=function(text) notices[#notices+1]=text end}
+env.KEY_F5,env.KEY_F6=105,106
+env.KEY_F8,env.KEY_F9,env.KEY_SHIFT=108,109,110
+local transfers,dummies=0,0
+env.DebugTransfer=function() transfers=transfers+1 end
+env.ToggleTrainingDummy=function() dummies=dummies+1 end
+local mobile=false;env.PlatformUtils={IsMobilePlatform=function() return mobile end}
+local debugKeys=assert(source:match('(local function HandleCombatDebugKeys.-)\nend'))..'\nend\nreturn HandleCombatDebugKeys'
+local debug=assert(load(debugKeys,'Scene.PC combat debug keys','t',env))()
+assert(env.CombatState.GetSetting('aimAssist') and not env.CombatState.GetSetting('damageNumbers'))
+touch=true;press[105],press[106]=true,true;debug(true)
+assert(#notices==0 and env.CombatState.GetSetting('aimAssist'),'touch mode ignores debug keys')
+touch=false;debug(false);assert(#notices==0,'modal/focus gate blocks debug keys')
+mobile=true;debug(true);assert(#notices==0,'native mobile cannot toggle even with touch forced off');mobile=false
+debug(true)
+assert(not env.CombatState.GetSetting('aimAssist') and env.CombatState.GetSetting('damageNumbers') and #notices==2)
+debug(true);assert(#notices==2,'debug switches only on a key press edge')
+press[105],press[106]=true,true;debug(true)
+assert(env.CombatState.GetSetting('aimAssist') and not env.CombatState.GetSetting('damageNumbers'))
+press[108],press[109]=true,true;touch=true;debug(true)
+assert(transfers==0 and dummies==0,'touch mode blocks debug teleport and dummy')
+touch=false;debug(true);assert(transfers==1 and dummies==1)
+debug(true);assert(transfers==1 and dummies==1,'debug actions trigger once per edge')
+keys[110]=true;press[109]=true;debug(true)
+assert(dummies==1,'Shift+F9 remains touch emulation, not dummy')
+keys[110]=nil
+local stopped=0
+env.ForgePanel={Close=function(keep) assert(keep);stopped=stopped+1 end}
+local stop=assert(source:match('(function M.Stop%(%).-)%s+if M.atmosphere'))..'\nend'
+assert(load(stop,'Scene forge disposal prefix','t',env))()
+env.M.Stop();assert(stopped==1,'forced close works without optional ForceClose API')
+env.ForgePanel.ForceClose=function() stopped=stopped+10 end
+env.M.Stop();assert(stopped==12,'Scene also invokes optional ForceClose')
 print('PASS core_routing: Scene exploration charge/tap/freeze/rewind, combat+exit gates, mounted breath, pointer gate, special exclusivity')
