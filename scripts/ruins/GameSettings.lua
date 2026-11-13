@@ -145,6 +145,8 @@ function M.Load()
     ---@type File?
     local file
     local ok,data=pcall(function()
+        -- 首次进入没有设置文件：先判断存在，避免引擎对不存在的文件打印 ERROR（Could not open file）。
+        if fileSystem and not fileSystem:FileExists('settings.json') then return nil end
         file=File('settings.json',FILE_READ)
         if not file or not file:IsOpen() then return nil end
         return cjson.decode(file:ReadString())

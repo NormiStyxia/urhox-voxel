@@ -41,6 +41,8 @@ function Store.Load()
     ---@type File?
     local file = nil
     local ok, result = pcall(function()
+        -- 首次进入没有存档：先判断存在，避免引擎对不存在的文件打印 ERROR（Could not open file）。
+        if fileSystem and not fileSystem:FileExists(SAVE_PATH) then return nil end
         file = File(SAVE_PATH, FILE_READ)
         if not file or not file:IsOpen() then return nil end
         if file:GetSize()>MAX_SAVE_BYTES then return nil end
