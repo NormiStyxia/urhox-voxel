@@ -122,9 +122,12 @@ function M.Text(vg,text,x,y,size,color,align,alpha)
     nvgFillColor(vg,Color(color or M.colors.paper,alpha))
     nvgText(vg,math.floor(x+.5),math.floor(y+.5),text)
 end
-function M.TextWidth(vg,text,size)
+-- 可选的调用方边界数组由 NanoVG 复用，原有只取字宽的调用保持兼容。
+-- 按 Text 的左对齐/垂直居中坐标测量，不继承前一段居中文本的对齐状态。
+function M.TextWidth(vg,text,size,bounds)
     if not Font(vg,size) then return 0 end
-    return nvgTextBounds(vg,0,0,text or '')
+    nvgTextAlign(vg,NVG_ALIGN_LEFT+NVG_ALIGN_MIDDLE)
+    return nvgTextBounds(vg,0,0,text or '',bounds)
 end
 -- Clockwise pixel-grid sweep: 24 cooldown sectors, 32 charge sectors.
 function M.Arc(vg,x,y,r,inner,fraction,segments,color,alpha)

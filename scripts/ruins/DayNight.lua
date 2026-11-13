@@ -19,11 +19,13 @@
 ---@field speed number
 ---@field fast boolean
 ---@field lockHour number|nil 非 nil 时时间固定在该时刻（调试面板「固定白天」）
----@field lastApplied number|nil
+---@field lastCapturedHour number|nil
 ---@field elev number|nil
 ---@field day number|nil
 ---@field dusk number|nil
 ---@field nightK number|nil
+---@field captureElapsed number
+---@field capturePending boolean
 local M = {}
 M.__index = M
 
@@ -50,8 +52,12 @@ function M.New(o)
     self.hour = o.hour or 12.0
     self.speed = 1.0 / 120.0 -- 游戏小时 / 秒
     self.fast = false
-    -- 环境光：跟随天空
+    self.captureElapsed, self.capturePending = 0, true
+    -- 直射光逐帧移动；环境光捕获独立节流，不能让阴影跟着捕获间隔跳动。
     self.capture = o.zoneNode:CreateComponent("SkyLightCapture")
+    self.capture.updateMode = SKY_CAPTURE_MANUAL
+    self.capture.resolution = 64
+    self.capture.timeSliced = true
     self.capture.minCaptureInterval = 0.5
     if self.capture.supported then
         self.zone.envTextureDiffIntensity = 0.7
@@ -67,13 +73,14 @@ function M.New(o)
     self.sky.sunDiskSize = 1.6
     self.sky.sunCurve = 0.08
     self:Apply()
-    print(string.format("DayNight: ready, hour %.1f, capture %s", self.hour, tostring(self.capture.supported)))
+    print(string.format("DayNight: ready, hour %.1f, capture %s (manual, 64px, time-sliced)", self.hour, tostring(self.capture.supported)))
     return self
 end
 
 function M:SetHour(h)
     self.hour = h % 24
     self:Apply()
+    self.capturePending = true
 end
 
 -- 当前时段名（HUD 用）
@@ -91,21 +98,32 @@ function M:ClockText()
 end
 
 function M:Update(dt)
+    self.captureElapsed = self.captureElapsed + math.max(0, dt)
     if self.lockHour ~= nil then
         if math.abs(self.hour - self.lockHour) > 1e-4 then self:SetHour(self.lockHour) end
-        return
+    else
+        local h = self.hour
+        local night = (h < 5.2 or h > 19.6)
+        local rate = self.speed * (night and 3.0 or 1.0) * (self.fast and 30.0 or 1.0)
+        self.hour = (h + dt * rate) % 24
+        if self.hour ~= h then self:Apply() end
     end
-    local h = self.hour
-    local night = (h < 5.2 or h > 19.6)
-    local rate = self.speed * (night and 3.0 or 1.0) * (self.fast and 30.0 or 1.0)
-    self.hour = (h + dt * rate) % 24
-    -- 每 0.05 游戏小时刷新一次（常速约 6 秒；快进时每帧）
-    if math.abs(self.hour - (self.lastApplied or -99)) > 0.05 or self.fast then self:Apply() end
+    -- 捕获昂贵，太阳方向并不昂贵：常速仍约每 6 秒捕获，快进最多每 0.5 秒一次。
+    -- 24 点跨日按环形距离判断；正在捕获时不排队，完成后只取最新天空。
+    local distance = math.abs(self.hour - (self.lastCapturedHour or self.hour))
+    distance = math.min(distance, 24 - distance)
+    local capture = self.capture
+    if capture.supported and not capture.capturing
+        and (self.capturePending or distance >= 0.05)
+        and (self.lastCapturedHour == nil or self.captureElapsed >= 0.5) then
+        capture:RequestCapture()
+        self.captureElapsed, self.capturePending = 0, false
+        self.lastCapturedHour = self.hour
+    end
 end
 
 function M:Apply()
     local h = self.hour
-    self.lastApplied = h
     -- 太阳：6 点东升（+X），12 点最高（偏南，柱廊投影落在龙庭里），18 点西落
     local ang = (h - 6.0) / 12.0 * math.pi
     local elev = math.sin(ang)                -- -1..1

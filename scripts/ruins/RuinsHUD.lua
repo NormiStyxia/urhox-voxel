@@ -24,42 +24,110 @@ local function MobileText(text)
         :gsub('%[左键 碎时%]','【碎时】'):gsub('左键碎时','【碎时】')
     return t
 end
--- Only the latest objective/hint/message layouts are retained (three bounded
--- slots, never a map keyed by arbitrary strings). Widths share their lifetime.
-local objectiveCache,hintCache,messageCache={},{},{}
--- Wrap on UTF-8 codepoints at the actual 12/24px font advance, never shrink.
--- Exact prefix measurements are needed only on layout changes, not per frame.
+-- 每个缓存槽只保留最新文本；测量与绘制共用 HUD 坐标和12px字体状态，
+-- 同时记录 DPR 与整数 Zoom，防止转屏或设备密度变化后沿用旧字宽。
+local headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}
 ---@param cached table
 local function Lines(vg,cached,text,maxWidth,size,touch,mobile)
+    local scale=graphics:GetDPR()*Draw.Zoom()
     if cached.valid and cached.vg==vg and cached.text==text and cached.width==maxWidth
-        and cached.size==size and cached.touch==touch then
+        and cached.size==size and cached.touch==touch and cached.scale==scale then
         return cached.lines,cached.widths
     end
-    cached.vg,cached.text,cached.width,cached.size,cached.touch=vg,text,maxWidth,size,touch
+    cached.vg,cached.text,cached.width,cached.size,cached.touch,cached.scale=vg,text,maxWidth,size,touch,scale
     if mobile then text=MobileText(text) end
-    -- PixelDraw returns 0 until its font is ready. Do not freeze zero-width
-    -- wrapping into a valid cache; retry on the next render (Font throttles IO).
-    local fontReady=text=='' or Draw.TextWidth(vg,'M',size)>0
-    local result,widths,line={}, {},''
-    ---@type number
-    local lineWidth=0
+    -- 每个槽复用一个字形边界数组，避免每个前缀或每帧创建对象。
+    local bounds=cached.bounds or {}; cached.bounds=bounds
+    local fontReady=Draw.TextWidth(vg,'M',size,bounds)>0
+    local result,widths,offsets={}, {}, {}
+    local line=''
+    local lineWidth,lineLeft,lineTop,lineBottom=0,0,-size/2,size/2
+    local top,bottom=-size/2,size/2
+    local function Append()
+        result[#result+1]=line; widths[#widths+1]=lineWidth
+        offsets[#offsets+1]=-lineLeft
+        top,bottom=math.min(top,lineTop),math.max(bottom,lineBottom)
+    end
+    local function Measure(t)
+        local advance=fontReady and Draw.TextWidth(vg,t,size,bounds) or 0
+        local x0=fontReady and math.floor(math.min(0,bounds[1] or 0)) or 0
+        local x1=fontReady and math.ceil(math.max(advance,bounds[3] or advance)) or 0
+        return x1-x0,x0,fontReady and (bounds[2] or -size/2) or -size/2,
+            fontReady and (bounds[4] or size/2) or size/2
+    end
+    -- CRLF 只算一次换行；末尾显式换行保留最后一个空行。
+    text=text:gsub('\r\n','\n'):gsub('\r','\n')
     for _,code in utf8.codes(text) do
         local ch=utf8.char(code)
         if ch=='\n' then
-            result[#result+1]=line; widths[#widths+1]=lineWidth
-            line,lineWidth='',0
+            Append(); line,lineWidth,lineLeft,lineTop,lineBottom='',0,0,-size/2,size/2
         else
             local nextLine=line..ch
-            local nextWidth=fontReady and Draw.TextWidth(vg,nextLine,size) or 0
+            local nextWidth,nextLeft,nextTop,nextBottom=Measure(nextLine)
             if line~='' and nextWidth>maxWidth then
-                result[#result+1]=line; widths[#widths+1]=lineWidth
-                line,lineWidth=ch,Draw.TextWidth(vg,ch,size)
-            else line,lineWidth=nextLine,nextWidth end
+                Append(); line=ch
+                lineWidth,lineLeft,lineTop,lineBottom=Measure(ch)
+            else
+                line,lineWidth,lineLeft,lineTop,lineBottom=nextLine,nextWidth,nextLeft,nextTop,nextBottom
+            end
         end
     end
-    if line~='' then result[#result+1]=line; widths[#widths+1]=lineWidth end
-    cached.lines,cached.widths,cached.valid=result,widths,fontReady
+    if text~='' then Append() end
+    cached.lines,cached.widths,cached.offsets,cached.top,cached.bottom=result,widths,offsets,top,bottom
+    cached.valid=fontReady -- 字体加载失败不缓存；PixelDraw.Font 会节流重试。
     return result,widths
+end
+-- NineSlice 的 border 单位是源图像素，固定以2倍铺贴。
+-- 目标边框实际占24px，文字行盒与边框之间再留8px石板内底。
+local OBJECTIVE_BORDER,OBJECTIVE_INSET,OBJECTIVE_LINE=12,32,16
+local objectiveLayout={}
+local function ObjectiveSize(vg,width,touch)
+    local contentWidth=math.max(12,width-2*OBJECTIVE_INSET)
+    Lines(vg,headingCache,'时之遗迹',contentWidth,12,touch,false)
+    Lines(vg,titleCache,title,contentWidth,12,touch,true)
+    Lines(vg,objectiveCache,sub,contentWidth,12,touch,true)
+    local y0=math.min(headingCache.top,titleCache.top,objectiveCache.top)
+    local y1=math.max(headingCache.bottom,titleCache.bottom,objectiveCache.bottom)
+    local step=math.max(OBJECTIVE_LINE,math.ceil((y1-y0+4)/2)*2)
+    local count=#headingCache.lines+#titleCache.lines+#objectiveCache.lines
+    return 2*OBJECTIVE_INSET+count*step,step,(y0+y1)/2
+end
+local function ObjectiveRows(vg,cached,color,x,y,step,mid,row)
+    for i,line in ipairs(cached.lines) do
+        Draw.Text(vg,line,x+cached.offsets[i],y+(row+.5)*step-mid,12,color)
+        row=row+1
+    end
+    return row
+end
+local function Objective(vg,w,h,s,touch)
+    local left,top=Draw.Snap(s.left+16),Draw.Snap(s.top+16)
+    -- 可用宽度向下对齐像素网格，不能向上取整越过右侧安全区。
+    local available=math.max(0,math.floor((w-s.right-16-left)/2)*2)
+    local baseWidth=math.min(w<620 and 360 or 260,available)
+    local height=h-s.bottom-16-top
+    local scale=graphics:GetDPR()*Draw.Zoom()
+    local c=objectiveLayout
+    if not c.valid or c.vg~=vg or c.width~=baseWidth or c.available~=available or c.height~=height
+        or c.title~=title or c.sub~=sub or c.touch~=touch or c.scale~=scale then
+        local oh,step,mid=ObjectiveSize(vg,baseWidth,touch)
+        local ow=baseWidth
+        -- 矮屏优先增加横向空间，再自适应高度。
+        -- 不限制高度或行数，不允许静默丢弃任务末尾。
+        if oh>height and ow<available then ow=available; oh,step,mid=ObjectiveSize(vg,ow,touch) end
+        c.vg,c.width,c.available,c.height,c.title,c.sub,c.touch,c.scale=vg,baseWidth,available,height,title,sub,touch,scale
+        c.ow,c.oh,c.step,c.mid=ow,oh,step,mid
+        c.valid=headingCache.valid and titleCache.valid and objectiveCache.valid
+    end
+    local ow,oh,step,mid=c.ow,c.oh,c.step,c.mid
+    Draw.NineSlice(vg,'plaque_ink',left,top,ow,oh,OBJECTIVE_BORDER,.9)
+    local x,y=left+OBJECTIVE_INSET,top+OBJECTIVE_INSET
+    nvgSave(vg)
+    nvgIntersectScissor(vg,x,y,math.max(0,ow-2*OBJECTIVE_INSET),oh-2*OBJECTIVE_INSET)
+    local row=ObjectiveRows(vg,headingCache,C.gold,x,y,step,mid,0)
+    row=ObjectiveRows(vg,titleCache,C.paper,x,y,step,mid,row)
+    ObjectiveRows(vg,objectiveCache,C.muted,x,y,step,mid,row)
+    nvgRestore(vg)
+    return left,top,ow,oh,available
 end
 function Layer:Update(dt)
     messageFrame=math.min(3,messageFrame+1)
@@ -70,19 +138,21 @@ function Layer:Render(vg)
     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
-    local left,top=Draw.Snap(s.left+16),Draw.Snap(s.top+16)
-    local ow=math.min(260,Draw.Snap(w-s.left-s.right-32))
-    local lines=Lines(vg,objectiveCache,sub,ow-32,12,touch,true)
-    local oh=math.max(72,48+#lines*16)
-    Draw.NineSlice(vg,'plaque_ink',left,top,ow,oh,12,.9)
-    Draw.Text(vg,'时之遗迹',left+16,top+18,12,C.gold)
-    Draw.Text(vg,title,left+16,top+34,12,C.paper)
-    for i,line in ipairs(lines) do Draw.Text(vg,line,left+16,top+50+(i-1)*16,12,C.muted) end
-    local cw=math.max(120,Draw.Snap(Draw.TextWidth(vg,clockText,12)+48))
+    local left,top,ow,oh,available=Objective(vg,w,h,s,touch)
+    local _,clockWidths=Lines(vg,clockCache,clockText,math.max(12,available-48),12,touch,false)
+    local cw=120
+    for _,width in ipairs(clockWidths) do cw=math.max(cw,math.ceil((width+48)/2)*2) end
+    cw=math.min(available,cw)
+    local ch=math.max(48,32+#clockCache.lines*16)
+    local cx=Draw.Snap(math.max(left,math.min((w-cw)/2,w-s.right-16-cw)))
     local cy=top
-    if w<620 then cy=top+oh+8 end
-    Draw.NineSlice(vg,'plaque_ink',(w-cw)/2,cy,cw,48,12,.9)
-    Draw.Text(vg,clockText,w/2,cy+24,12,C.gold,NVG_ALIGN_CENTER)
+    -- 按真实矩形避让，而不是固定断点；宽任务卡和非对称安全区
+    -- 同样不能与居中的时钟重叠。
+    if cx<left+ow+8 then cy=top+oh+8 end
+    Draw.NineSlice(vg,'plaque_ink',cx,cy,cw,ch,12,.9)
+    for i,line in ipairs(clockCache.lines) do
+        Draw.Text(vg,line,cx+cw/2,cy+ch/2+(i-(#clockCache.lines+1)/2)*16,12,C.gold,NVG_ALIGN_CENTER)
+    end
     if crossVisible then
         local x,y=math.floor(w/2),math.floor(h/2)
         local c=SPELL_COLORS.shatter
@@ -145,7 +215,8 @@ function Layer:Render(vg)
     Draw.Finish(vg)
 end
 function M.Build(spells)
-    objectiveCache,hintCache,messageCache={},{},{}
+    headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}
+    objectiveLayout={}
     if not ready then UI.Init({theme='default-dark',scale=UI.Scale.DEFAULT,
         fonts={{family='sans',weights={normal='Fonts/ArkPixel-12px-zh_hans.ttf',bold='Fonts/ArkPixel-12px-zh_hans.ttf'}}}}); ready=true end
     cd={}
@@ -168,7 +239,8 @@ function M.IsCrossVisible() return crossVisible end
 function M.UpdateSlots(c,q) cool,charge=c or {},q or 0 end
 function M.IsPointerOverUI() return UI.IsPointerOverUI() end
 function M.Stop()
-    objectiveCache,hintCache,messageCache={},{},{}
+    headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}
+    objectiveLayout={}
     Draw.Release(); UI.Shutdown(); ready=false
 end
 return M

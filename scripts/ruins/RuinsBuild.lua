@@ -112,7 +112,7 @@ local function BuildCourtFloor(world)
         local b = Brush.New(world, { min = { q[1], -1.0, q[3] }, max = { q[2], 0.0, q[4] }, size = 0.25 })
         b:Shape(q[1], -1.0, q[3], q[2], 0.0, q[4], function(x, y, z)
             local r = sqrt(x * x + z * z)
-            if r >= R then return nil end
+            if r >= R or Terrain.InStairFootprint(x, z) then return nil end
             if y < -0.5 then return P.STONE_C end
             -- 顶层：法阵 / 地砖缝 / 磨损
             local rn = RuneAt(x, z)
@@ -430,7 +430,10 @@ local function BuildSteleBases(world)
         end)
         Keep(b:Finish({}))
         -- 底座到龙庭边的引导线：一串地面金色方砖（位于平台路面上，嵌入一格）
-        local lb = Brush.New(world, { min = { min(cx, cos(a) * 21) - 1, Terrain.RING_Y - 0.25, min(cz, sin(a) * 21) - 1 },
+        -- 独立体积不能“嵌入”Terrain 后还与它共面。整串上偏一格细节网格（6.25cm），
+        -- 底部仍埋在地里，顶面 6.0625；远小于 0.55m 步高，不增额外碰撞体。
+        local lb = Brush.New(world, { origin = Vector3(0, M.DETAIL.ornament, 0),
+            min = { min(cx, cos(a) * 21) - 1, Terrain.RING_Y - 0.25, min(cz, sin(a) * 21) - 1 },
             max = { max(cx, cos(a) * 21) + 1, Terrain.RING_Y + 0.01, max(cz, sin(a) * 21) + 1 }, size = 0.25 })
         local dx, dz = cos(a), sin(a)
         for t = 21.5, R - 2.8, 1.0 do
@@ -447,11 +450,19 @@ local function BuildInnerParapet(world)
     for qd = 0, 3 do
         local x0, x1 = (qd % 2 == 0) and -22.5 or 0, (qd % 2 == 0) and 0 or 22.5
         local z0, z1 = (qd < 2) and -22.5 or 0, (qd < 2) and 0 or 22.5
-        local b = Brush.New(world, { min = { x0, Terrain.RING_Y, z0 }, max = { x1, Terrain.RING_Y + 1.5, z1 }, size = 0.25 })
-        b:Shape(x0, Terrain.RING_Y, z0, x1, Terrain.RING_Y + 1.5, z1, function(x, y, z)
+        -- 台缘顶比 Terrain 高 3.125cm，且低于 6.25cm 的引导砖；三者互不共面。
+        local b = Brush.New(world, { origin = Vector3(0, M.DETAIL.ornament * 0.5, 0),
+            min = { x0, -1.0, z0 }, max = { x1, Terrain.RING_Y + 1.5, z1 }, size = 0.25 })
+        b:Shape(x0, -1.0, z0, x1, Terrain.RING_Y + 1.5, z1, function(x, y, z)
             local r = sqrt(x * x + z * z)
+            -- 台缘同一体积向下作为窄挡土基座，包住压低后的 Terrain 三角面。
+            -- 留出完整南北阶梯（含扶墙）；r>=22 仍是原本平地，不铺新环形平台。
+            if y < Terrain.RING_Y then
+                if Terrain.InStairFootprint(x, z) or r < Terrain.COURT_R or r > 21.9 then return nil end
+                return MossyStone(x, y, z, Terrain.RING_Y)
+            end
             if r < 21.0 or r > 21.6 then return nil end
-            if abs(x) < Terrain.STAIR_HALF + 0.6 then return nil end
+            if abs(x) < Terrain.STAIR_WALL_HALF + 0.1 then return nil end
             local a = math.atan(z, x)
             local seg = (a / (2 * pi) * 96) % 1
             local ly = y - Terrain.RING_Y
@@ -466,48 +477,38 @@ local function BuildInnerParapet(world)
         end)
         Keep(b:Finish({}))
     end
-    -- 阶梯两侧扶墙（龙庭 → 内环），南北各两条
-    for _, sz in ipairs({ -1, 1 }) do
-        for _, sx in ipairs({ -1, 1 }) do
-            local x = sx * (Terrain.STAIR_HALF + 0.25)
-            local zA, zB = sz * Terrain.COURT_R, sz * Terrain.STAIR_END
-            local b = Brush.New(world, { min = { x - 0.5, -0.5, min(zA, zB) - 0.5 }, max = { x + 0.5, Terrain.RING_Y + 1.5, max(zA, zB) + 0.5 }, size = 0.25 })
-            b:Shape(x - 0.5, -0.5, min(zA, zB) - 0.5, x + 0.5, Terrain.RING_Y + 1.5, max(zA, zB) + 0.5, function(px, py, pz)
-                local d = abs(pz) - Terrain.COURT_R
-                if d < -0.5 or abs(pz) > Terrain.STAIR_END then return nil end
-                local stepY = min(Terrain.RING_Y, 0.5 * floor(max(0, d) / 1.0 + 1))
-                if py < stepY + 1.0 then
-                    if abs(px - x) > 0.4 then return nil end
-                    if py > stepY + 0.75 then return P.GOLD_DARK end
-                    return Marble(px, py, pz)
-                end
-            end)
-            Keep(b:Finish({}))
-        end
-    end
 end
 
 -- ---------------------------------------------------------------- 大阶梯（龙庭 ↔ 内环，南北各一条）
--- 台面高度与地形碰撞层一致（Terrain.StairY）；每级前沿一条浅色压边，踏面中间磨损发暗
+-- 踏面、压边、两侧扶墙一次写入同一 Grid：内部相邻面由同一体积剔除，不跨 Volume 共面。
+-- 碰撞尺寸/边界见 Terrain.InStair 前的示意；颜色压边只涂材质，不额外叠盒/抬高踏面。
 local function BuildStairs(world)
-    local hw = Terrain.STAIR_HALF
+    local hw, wall = Terrain.STAIR_HALF, Terrain.STAIR_WALL_HALF
+    M.stairVolumes = {}
     for _, sz in ipairs({ -1, 1 }) do
-        local zA, zB = sz * (Terrain.COURT_R - 0.5), sz * Terrain.STAIR_END
-        local b = Brush.New(world, { min = { -hw, -1.0, min(zA, zB) }, max = { hw, Terrain.RING_Y, max(zA, zB) }, size = 0.25 })
-        b:Shape(-hw, -1.0, min(zA, zB), hw, Terrain.RING_Y, max(zA, zB), function(x, y, z)
+        local zA, zB = sz * Terrain.STAIR_START, sz * Terrain.STAIR_JOIN
+        local b = Brush.New(world, { min = { -wall, -1.0, min(zA, zB) },
+            max = { wall, Terrain.RING_Y + 1.0, max(zA, zB) }, size = 0.25 })
+        b:Shape(-wall, -1.0, min(zA, zB), wall, Terrain.RING_Y + 1.0, max(zA, zB), function(x, y, z)
+            local top = Terrain.StairY(z)
+            local side = abs(x) >= hw
+            -- 延长的顶端平平台不继续扶墙，便于从平台横向出入；末级净空不变。
+            if side and abs(z) < Terrain.STAIR_END then
+                if y >= top + 1.0 then return nil end
+                if y >= top + 0.75 then return P.GOLD_DARK end
+                return Marble(x, y, z)
+            end
+            if y >= top then return nil end
             local d = abs(z) - Terrain.COURT_R
-            if d < -0.5 then return nil end
-            local top = (d < 0) and 0.0 or Terrain.StairY(z)
-            if y > top then return nil end
-            local edge = (d >= 0) and ((d % 1.0) < 0.25) or false
             if y > top - 0.25 then
-                if edge then return P.MARBLE_A end
+                if d >= 0 and (d % 1.0) < 0.25 then return P.MARBLE_A end
                 if abs(x) < 1.2 and Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.5 then return P.TILE_B end
                 return Marble(x, y, z)
             end
             return Stone(x, y, z)
         end)
-        Keep(b:Finish({}))
+        local volume = Keep(b:Finish({}))
+        if volume ~= nil then M.stairVolumes[#M.stairVolumes + 1] = volume end
     end
 end
 

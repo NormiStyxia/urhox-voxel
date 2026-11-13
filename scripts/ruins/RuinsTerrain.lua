@@ -29,8 +29,9 @@
 --        └──────────────────────────────────────┘
 -- 显示层与碰撞层的高度关系：
 --   平地（内环 / 外环 y=6、龙庭）完全一致；缓坡上碰撞层取 0.5m 量化，误差 ≤ 0.25m。
---   大阶梯：碰撞层是 0.5m 台阶；显示层压低 0.6m 藏在 RuinsBuild 的石阶体积下面。
---   龙庭：显示层压到 -1.2m，藏在地砖体积下面。
+--   大阶梯：RuinsBuild 的单一体积承担 0.5m 台阶/扶墙碰撞；隐藏地形退到 -1m。
+--           显示层压到 -1.2m，末端三角面在加长的顶平台内回接到 y=6。
+--   龙庭：显示层压到 -1.2m（含地砖边缘跨格范围），台缘体积盖住显示层裸边。
 -- ====================================================================
 
 local Noise = require("ruins.Noise")
@@ -52,6 +53,10 @@ M.WALL_R = 51.0         -- 外城墙
 M.RIM_R = 70.0
 M.STAIR_HALF = 3.5      -- 大阶梯半宽
 M.STAIR_END = 32.75     -- 阶梯顶端（离中心距离）
+-- 可见石阶独占的网格脚印。底端留半米平踏步，顶端留到 0.5m 地形顶点边界的平平台。
+M.STAIR_START = M.COURT_R - 0.5
+M.STAIR_JOIN = math.ceil(M.STAIR_END / M.CELL) * M.CELL + M.CELL
+M.STAIR_WALL_HALF = M.STAIR_HALF + 0.75
 M.SNOW_Y = 31.0
 
 local floor, sqrt, max, min, abs = math.floor, math.sqrt, math.max, math.min, math.abs
@@ -71,22 +76,34 @@ local function SoftStep(v, step, sharp)
     return (f + Smooth(1 - sharp, 1, s - f)) * step
 end
 
--- 是否在大阶梯走廊里（南北各一条）
+-- 碰撞区域侧视（d = |z|，南北镜像，所有长度单位为米）：
+--  龙庭 y=0  ______|0.5____|1.0____ ... |6.0____________ 内环 y=6
+--            d=20.25  20.75   21.75        31.75       33.5
+--  隐藏地形 y=-1 ___________________________________________________
+--  正面：扶墙 [-4.25,-3.5) | 净通道 [-3.5,3.5) | 扶墙 [3.5,4.25)
+-- 检测目的：只有同一个可见体积承担踏面/立面/扶墙碰撞，不叠一份粗地形台阶。
+-- 边界：底踏步先于圆形龙庭边缘，避免斜接出现 y=6 隐墙；末踏面 y=6 与平台齐平。
+-- 每级 1m 深 > 胶囊直径 0.64m，0.5m 高 < stepHeight 0.55m；扶墙高 1m 仍挡人。
 function M.InStair(x, z)
     local d = abs(z)
-    return abs(x) < M.STAIR_HALF and d >= M.COURT_R - 0.01 and d < M.STAIR_END
+    return abs(x) < M.STAIR_HALF and d >= M.STAIR_START and d < M.STAIR_JOIN
 end
 
--- 阶梯台面高度（0.5m 一级、每级 1m 深）
+function M.InStairFootprint(x, z)
+    local d = abs(z)
+    return abs(x) < M.STAIR_WALL_HALF and d >= M.STAIR_START and d < M.STAIR_JOIN
+end
+
+-- 阶梯台面高度（0.5m 一级、每级 1m 深；两端夹紧，不生成负台面/超高末级）
 function M.StairY(z)
-    return min(M.RING_Y, 0.5 * floor((abs(z) - M.COURT_R) / 1.0 + 1))
+    return max(0, min(M.RING_Y, 0.5 * floor((abs(z) - M.COURT_R) + 1)))
 end
 
--- 真实地表高度（平滑，米）。龙庭内返回 0（地砖顶面），阶梯返回台面
+-- 真实地表高度（平滑，米）。先判阶梯，底端两侧的圆弧不能覆盖平踏步。
 function M.Height(x, z)
+    if M.InStair(x, z) then return M.StairY(z) end
     local r = sqrt(x * x + z * z)
     if r < M.COURT_R then return 0.0 end
-    if M.InStair(x, z) then return M.StairY(z) end
     local a = math.atan(z, x)
     local ca, sa = math.cos(a), math.sin(a)
     -- 峡谷边缘带一点曲折
@@ -130,21 +147,24 @@ end
 
 -- 碰撞层顶面高度（0.5m 量化，略偏向下取：宁可脚陷进草里一点，也不要悬空）
 function M.CollideHeight(x, z, height)
+    -- 0.5m 粗网格的台阶前沿比石阶偏半格，叠上去会给胶囊两套立面/内部边。
+    -- 脚印边界对齐粗网格；地基仍存在，破坏/回溯后不凭空生成上塔的隐藏坡道。
+    local d = abs(z)
+    if abs(x) < math.ceil(M.STAIR_WALL_HALF / M.CELL) * M.CELL
+        and d >= floor(M.STAIR_START / M.CELL) * M.CELL and d < M.STAIR_JOIN then return -1.0 end
     local r2 = x * x + z * z
     if r2 < (M.COURT_R - 0.25) ^ 2 then return -1.0 end -- 龙庭地砖体积自带碰撞
-    if M.InStair(x, z) then return M.StairY(z) end
     return floor((height or M.Height(x, z)) * 2.0 + 0.3) * 0.5
 end
 
 -- 显示层高度（藏在龙庭地砖 / 石阶下面）
 function M.VisualHeight(x, z)
+    -- 扶墙也负责遮住侧边三角面；结束压低在平台体积内，三角面升到 y=6 后才交回 Terrain。
+    if abs(x) <= M.STAIR_WALL_HALF and abs(z) >= M.STAIR_START - M.CELL
+        and abs(z) <= M.STAIR_JOIN - M.CELL then return -1.2 end
     local r2 = x * x + z * z
-    if r2 < (M.COURT_R - 0.35) ^ 2 then return -1.2 end
-    if M.InStair(x, z) then return M.StairY(z) - 0.6 end
-    -- 阶梯两侧 0.5m 也压一点，避免网格斜面从扶墙下钻出来
-    if abs(x) < M.STAIR_HALF + 0.5 and abs(z) >= M.COURT_R and abs(z) < M.STAIR_END then
-        return min(M.Height(x, z), M.StairY(z) - 0.1)
-    end
+    -- 旧值 R-0.35 留出一圈 y=0 的 Terrain 与地砖同面；连三角面跨格范围一起藏在台缘下。
+    if r2 < (M.COURT_R + 0.4) ^ 2 then return -1.2 end
     return M.Height(x, z)
 end
 

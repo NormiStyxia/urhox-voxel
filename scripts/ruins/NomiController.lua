@@ -56,7 +56,10 @@ function M.New(scene, world, spawn, spawnYaw)
     cc.height = 1.65
     cc.radius = 0.32
     cc.supportRadius = 0.26
+    -- 0.5m 石阶 + 5cm 余量；不放大步高，否则会把塔壁/时停跳台当普通台阶。
     cc.stepHeight = 0.55
+    -- 合并台阶后仍有体素三角网格内部边，使用引擎接触剔除，不加每帧 Lua 探针。
+    cc.enhancedInternalEdgeRemoval = true
     cc.maxSlopeAngle = 55
     cc.mass = 55
     cc.maxStrength = 60
