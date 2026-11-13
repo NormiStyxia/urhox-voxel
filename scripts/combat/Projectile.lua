@@ -32,7 +32,7 @@ function P:Fire(origin,dir,charge,stats)
     if self.opts.audio then self.opts.audio.Play('bow_fire',{pos=origin,tier=p.tier}) end
     if self.opts.log then self.opts.log('arrow-fire','Combat: arrow fire tier=%s speed=%.2f',p.tier,speed) end
     if self.opts.draw then self.opts.draw(p,true) end
-    return true
+    return true,p -- optional observer reads the actual initialized shot
 end
 function P:Retire(p)
     p.active=false

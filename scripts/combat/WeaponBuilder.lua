@@ -504,7 +504,44 @@ end
 ---@return table
 function Builder.BeginPreview(parent,config,previous)
     return {parent=parent,blueprint=assert(Builder.Compile(config)),previous=previous,
-        phase='quads',quads={},cursor=1,steps=0,totalMs=0,maxStepMs=0,nativeMs=0,overBudget=false}
+        phase='quads',stage='quads',quads={},cursor=1,steps=0,totalMs=0,maxStepMs=0,nativeMs=0,overBudget=false,
+        materialName='Materials/NomiVoxel.xml',materialLoaded=false,commitResult='not_called',setMaterialResult='not_called'}
+end
+
+local function PreviewFail(job,code,detail)
+    job.failureCode=code
+    error(code..': '..tostring(detail),0)
+end
+local function Short(value) return tostring(value):gsub('[\r\n]+',' '):sub(1,260) end
+local function NativePreviewInfo(job)
+    if not job.geometry then return end
+    local ok,count=pcall(function() return job.geometry:GetNumVertices(0) end)
+    job.nativeVertices=ok and type(count)=='number' and count==count and count>=0 and count or nil
+    job.nativeVerticesDetail=job.nativeVertices or ('unavailable('..Short(count)..')')
+    local boundsOK,bounds=pcall(function()
+        local b=job.geometry.boundingBox
+        return string.format('(%.3f,%.3f,%.3f)..(%.3f,%.3f,%.3f)',b.min.x,b.min.y,b.min.z,b.max.x,b.max.y,b.max.z)
+    end)
+    job.nativeBounds=boundsOK and bounds or ('unavailable('..Short(bounds)..')')
+    local materialOK,material=pcall(function() return job.geometry:GetMaterial(0) end)
+    job.materialBound=materialOK and tostring(material~=nil) or ('unavailable('..Short(material)..')')
+end
+
+--- Pure formatting for the panel's once-per-outcome/rate-limited log.
+---@param job table?
+---@return string
+function Builder.PreviewDiagnostic(job)
+    if not job then return 'job=none' end
+    local b=job.blueprint and job.blueprint.bounds
+    local bounds=b and string.format('(%.3f,%.3f,%.3f)..(%.3f,%.3f,%.3f)',
+        b.min[1],b.min[2],b.min[3],b.max[1],b.max[2],b.max[3]) or 'unavailable'
+    local quads=job.quads and #job.quads or 0
+    return 'phase='..tostring(job.phase)..' stage='..tostring(job.stage)..' code='..tostring(job.failureCode or 'none')
+        ..' detail='..Short(job.error or 'none')..' vertices='..tostring((job.cursor-1)*6)..'/'..tostring(quads*6)
+        ..' quads='..quads..' triangles='..tostring(quads*2)..' native_vertices='..tostring(job.nativeVerticesDetail or 'not_queried')
+        ..' material='..job.materialName..' loaded='..tostring(job.materialLoaded)..' bound='..tostring(job.materialBound or 'not_queried')
+        ..' set_material='..job.setMaterialResult..' commit='..job.commitResult
+        ..' bounds='..bounds..' native_bounds='..tostring(job.nativeBounds or 'not_queried')
 end
 
 local POSITIVE={1,2,3,1,3,4}
@@ -543,6 +580,7 @@ function Builder.StepPreview(job,budgetMs,clock)
         return start and now and now-start>=budgetMs
     end
     local ok,reason=pcall(function()
+        job.stage=phase
         if phase=='quads' then
             job.worker=job.worker or coroutine.create(function() PreviewQuads(job.blueprint,job.quads) end)
             for _=1,24 do
@@ -551,12 +589,22 @@ function Builder.StepPreview(job,budgetMs,clock)
                 if Spent() then break end
             end
         elseif phase=='create' then
-            job.node=job.parent:CreateChild('ForgeCustomGeometry');job.node.enabled=false;job.node.temporary=true
+            if #job.quads==0 then PreviewFail(job,'no_quads','exposed face list empty') end
+            job.stage='create_node'
+            job.node=job.parent:CreateChild('ForgeCustomGeometry')
+            if not job.node then PreviewFail(job,'node_nil','CreateChild returned nil') end
+            job.node.enabled=false;job.node.temporary=true
+            job.stage='create_custom_geometry'
             job.geometry=job.node:CreateComponent('CustomGeometry')
-            assert(job.geometry,'CustomGeometry unavailable')
+            if not job.geometry then PreviewFail(job,'custom_geometry_nil','CreateComponent returned nil') end
+            job.stage='begin_geometry'
             job.geometry:BeginGeometry(0,TRIANGLE_LIST)
-            job.geometry:SetMaterial(0,assert(cache:GetResource('Material','Materials/NomiVoxel.xml'),'vertex-color material'))
+            job.stage='load_material'
+            job.material=cache:GetResource('Material',job.materialName)
+            job.materialLoaded=job.material~=nil
+            if not job.material then PreviewFail(job,'material_nil',job.materialName) end
             job.geometry.castShadows=false
+            job.stage='vertex_colors'
             job.colors={}
             for _,channel in ipairs({'primary','secondary','accent','dark'}) do
                 local index=job.blueprint.config.colors[channel=='dark' and 'primary' or channel]
@@ -567,6 +615,7 @@ function Builder.StepPreview(job,budgetMs,clock)
             end
             job.phase='emit'
         elseif phase=='emit' then
+            job.stage='define_vertex_normal_color'
             local last=math.min(#job.quads,job.cursor+31)
             while job.cursor<=last do
                 local q=job.quads[job.cursor];EmitQuad(job.geometry,q,job.colors[q.channel])
@@ -575,14 +624,36 @@ function Builder.StepPreview(job,budgetMs,clock)
             end
             if job.cursor>#job.quads then job.phase='commit' end
         elseif phase=='commit' then
+            if job.cursor<=1 then PreviewFail(job,'no_vertices','no complete triangles submitted') end
             local before=Clock(job,clock)
-            job.geometry:Commit()
+            job.stage='commit'
+            job.commitResult='calling'
+            local committed=job.geometry:Commit()
+            job.commitResult=committed==nil and 'nil(void)' or Short(committed)
+            if committed==false then PreviewFail(job,'commit_false','Commit returned false') end
             local after=Clock(job,clock);job.nativeMs=before and after and after-before or 0
-            assert(job.geometry:GetNumVertices(0)>0,'empty preview mesh')
+            -- Match BlockCharacter.CreateVoxel: bind material AFTER Commit.
+            job.stage='set_material'
+            job.setMaterialResult='calling'
+            local bound=job.geometry:SetMaterial(0,job.material)
+            job.setMaterialResult=bound==nil and 'nil(binding)' or Short(bound)
+            if bound==false then PreviewFail(job,'set_material_false','SetMaterial(0, material) returned false') end
+            job.node.enabled=true
+            job.verifyFrames=0;job.phase='verify'
+        elseif phase=='verify' then
+            -- StepPreview is called once per Update: first query is a later
+            -- frame. Unsupported introspection is diagnostic, not a mesh failure.
+            job.stage='verify_vertices';job.verifyFrames=job.verifyFrames+1
+            NativePreviewInfo(job)
+            if job.nativeVertices==0 then
+                if job.verifyFrames<3 then return end
+                PreviewFail(job,'vertices_zero_after_3_frames','CPU vertices exist but native count stayed zero')
+            end
             job.phase='publish'
         else
             job.node.enabled=true
-            job.mesh={node=job.node,geometry=job.geometry,blueprint=job.blueprint,quads=job.quads}
+            job.mesh={node=job.node,geometry=job.geometry,blueprint=job.blueprint,quads=job.quads,
+                vertexCount=(job.cursor-1)*6,materialReady=true}
             Builder.DisposePreview(job.previous)
             job.done=true
         end
@@ -591,7 +662,16 @@ function Builder.StepPreview(job,budgetMs,clock)
     job.steps=job.steps+1;job.totalMs=job.totalMs+elapsed
     if elapsed>job.maxStepMs then job.slowestPhase=phase end
     job.maxStepMs=math.max(job.maxStepMs,elapsed);job.overBudget=job.overBudget or elapsed>budgetMs
-    if not ok then Builder.CancelPreview(job);job.mesh=nil;job.error=tostring(reason) end
+    if not ok then
+        job.error=tostring(reason);job.failureCode=job.failureCode or 'binding_or_lua_error'
+        if job.commitResult=='calling' then job.commitResult='threw' end
+        if job.setMaterialResult=='calling' then job.setMaterialResult='threw' end
+        -- Preserve the exact failing verification sample (a second query could
+        -- already return a different native count). Capture other phases before
+        -- freeing their partially created geometry.
+        if phase~='verify' then NativePreviewInfo(job) end
+        Builder.CancelPreview(job);job.mesh=nil
+    end
     return job.done,job.mesh,job.error
 end
 return Builder

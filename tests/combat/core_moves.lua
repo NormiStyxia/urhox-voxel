@@ -141,7 +141,7 @@ print('PASS debug active-frame seek/backstep, real-anchor safety rejection, dumm
 -- the still-running exploration base clock while a screenshot frame is paused.
 local sceneFile=assert(io.open('scripts/ruins/RuinsScene.lua'))
 local sceneSource=sceneFile:read('*a');sceneFile:close()
-local previewBranch=assert(sceneSource:match('(        if step~=0 then.-)\n        animPreview_.text='))
+local previewBranch=assert(sceneSource:match('(        if step~=0 or changed then.-)\n        animPreview_.text='))
 local character=S.anim.character()
 ---@type table Animation port uses mock bones rather than native Node userdata.
 local pausedAnim=A.New(character,nil)
@@ -235,6 +235,26 @@ Tick(.04);m:Cancel('menu');assert(dust[1]==3 and dust[2]==2)
 Tick(.3);assert(#dust==2,'interrupt emits exactly one brake, no stale extra dust event')
 assert(State.GetSetting('dodgeFov')==false,'dodge FOV is opt-in')
 print('PASS dust start/brake/interrupt once, <=2 snapshots/.04 cadence/.08 expiry, default FOV off')
+
+-- A rejected dodge must not clear the current strike; an accepted one clears
+-- immediately, once, before its delayed afterimage window.
+do
+    local trailResets=0
+    rig.SetTrail=function(_,enabled)
+        assert(enabled==false and m.clip=='dodge_slide')
+        trailResets=trailResets+1
+    end
+    m=New();m.o.slideStart=function() return false end
+    assert(not m:Action('dodge') and trailResets==0)
+    m=New();m.anim.Play=function() return nil end
+    assert(not m:Action('dodge') and trailResets==0)
+    m=New();assert(m:Action('dodge') and trailResets==1)
+    assert(not m:Action('dodge') and trailResets==1)
+    Tick(.02);assert(trailResets==1 and #m:SlideAfterimages(Vector3.ZERO,{})==0)
+    Tick(.02);assert(trailResets==1 and #m:SlideAfterimages(Vector3.ZERO,{})==1)
+    rig.SetTrail=nil
+end
+print('PASS accepted slide clears previous trail once before .04s; rejected slide leaves it intact')
 
 -- §19: one immutable-in-consumption event and max-only group envelopes.
 m=New()

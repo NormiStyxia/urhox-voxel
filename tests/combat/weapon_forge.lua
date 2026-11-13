@@ -12,6 +12,8 @@ local eventHandlers={}
 local scenes,textures,geometries={},{},{}
 local autoRender=true
 local meshFailure,queueFailure=false,false
+local geometryOptions={}
+local materialMissing=false
 local nativeFailure,bridgeFailure,sizeFailure=false,false,false
 local liveContext='vg'
 local videoCreates,videoDeletes=0,0
@@ -23,6 +25,13 @@ local function LogCount(message)
     local count=0
     for _,line in ipairs(messages) do if line==message then count=count+1 end end
     return count
+end
+local function DiagnosticLines(fragment)
+    local count,last=0,nil
+    for _,line in ipairs(messages) do
+        if line:find('Forge preview mesh:',1,true)==1 and line:find(fragment,1,true) then count=count+1;last=line end
+    end
+    return count,last
 end
 local width,height,dpr,scale=844,390,3,2
 local safe={left=47,right=47,top=0,bottom=21}
@@ -49,7 +58,7 @@ local function MakeNode(name,parent)
         assert(kind~='VoxelPhysicsWorld','forge must not create a second voxel physics world')
         if kind=='CustomGeometry' then
             if meshFailure then error('CustomGeometry failure') end
-            local g=Mock.CustomGeometry(self);geometries[#geometries+1]=g;return g
+            local g=Mock.CustomGeometry(self,geometryOptions);geometries[#geometries+1]=g;return g
         end
         return {SetBoundingBox=function() end,SetAmbientColor=function() end,SetLightType=function() end,SetBrightness=function() end}
     end
@@ -82,7 +91,7 @@ rawset(_G,'Texture2D',{new=function()
     return texture
 end})
 rawset(_G,'Graphics',{GetRGBAFormat=function() return 1 end})
-rawset(_G,'cache',{GetResource=function() return {} end})
+rawset(_G,'cache',{GetResource=function(_,kind) if materialMissing and kind=='Material' then return nil end;return {} end})
 rawset(_G,'Viewport',{new=function()
     local command={type=CMD_CLEAR}
     return {SetRenderPath=function() end,GetRenderPath=function()
@@ -231,10 +240,15 @@ autoRender=false
 CheckLayout();Flush();Render()
 assert(videoCreates==1)
 assert(Forge.PreviewMode()==nil,'wait for a later frame after render surface queueing')
-autoRender=true;Tick();State().preview.mesh.geometry.empty=true;Render()
-assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0,'empty native geometry is not ready')
-State().preview.mesh.geometry.empty=false;Render()
+local publishedGeometry=State().preview.mesh.geometry
+local queries=publishedGeometry.queries
+publishedGeometry.GetNumVertices=function() error('must not re-query published mesh on each draw') end
+autoRender=true;Tick();Render()
+assert(publishedGeometry.queries==queries,'readiness uses committed CPU vertices plus this RTT render receipt')
 assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
+local submitted,meshInfo=DiagnosticLines('submitted')
+assert(submitted==1 and meshInfo:find('commit=nil(void)',1,true) and meshInfo:find('set_material=true',1,true)
+    and meshInfo:find('native_bounds=(',1,true) and meshInfo:find('octree=true zone=true camera=true light=true',1,true))
 Tick();Render();assert(LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
 local s=State() --[[@as any]]
 local scene=s.preview.scene
@@ -435,7 +449,32 @@ assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (ti
 Builder.StepPreview=stepPreview;Forge.ForceClose()
 autoRender=true;meshFailure=true
 assert(Open());Flush();assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (mesh)')==1)
+local failureLogs,failureDetail=DiagnosticLines('failure_mesh')
+assert(failureLogs==1 and failureDetail:find('stage=create_custom_geometry',1,true)
+    and failureDetail:find('CustomGeometry failure',1,true) and failureDetail:find('vertices=0/',1,true))
+Tick(10);Render();assert(DiagnosticLines('failure_mesh')==failureLogs,'failure details must not spam per frame')
+Forge.ForceClose();assert(Open());Flush()
+assert(DiagnosticLines('failure_mesh')==failureLogs,'rapid identical reopenings must be rate limited')
+Forge.ForceClose();timerMs=timerMs+10001;assert(Open());Flush()
+assert(DiagnosticLines('failure_mesh')==failureLogs+1,'diagnostics may retry after cooldown')
 pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose();meshFailure=false
+-- Both delayed native visibility and permanent native errors have a determined
+-- path; the render view never disappears while verification is pending.
+geometryOptions={zeroQueries=2}
+assert(Open())
+while State().preview.job.phase~='verify' do Tick() end
+assert(State().preview.job.geometry.queries==0)
+Tick(2);assert(State().preview.job.phase=='verify')
+pixelRects=0;Render();assert(pixelRects>10 and Forge.PreviewMode()==nil)
+Flush();Render();assert(Forge.PreviewMode()=='3d');Forge.ForceClose()
+geometryOptions={zeroQueries=100}
+assert(Open());Flush();assert(Forge.PreviewMode()=='fallback')
+assert(DiagnosticLines('code=vertices_zero_after_3_frames')==1)
+pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose()
+geometryOptions={};materialMissing=true
+assert(Open());Flush();assert(Forge.PreviewMode()=='fallback')
+assert(DiagnosticLines('code=material_nil')==1)
+pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose();materialMissing=false
 queueFailure=true
 assert(Open());Tick();assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (render)')==1)
 Forge.ForceClose();queueFailure=false

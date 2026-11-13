@@ -96,15 +96,36 @@ function N:LocalToWorld(point) return worldPosition(self)+worldRotation(self)*po
 function N:Remove() assert(not self.removed,"double node removal"); self.removed=true end
 
 -- Record the public immediate-mode API; no GPU/render/job-system simulation.
-function M.CustomGeometry(node)
-    local geom={node=node,vertices={},commits=0}
+function M.CustomGeometry(node,options)
+    options=options or {}
+    local geom={node=node,vertices={},commits=0,queries=0}
     function geom:BeginGeometry(index,kind) assert(index==0 and kind==TRIANGLE_LIST) end
     function geom:DefineVertex(position) self.vertices[#self.vertices+1]={position=position} end
     function geom:DefineNormal(normal) self.vertices[#self.vertices].normal=normal end
     function geom:DefineColor(color) self.vertices[#self.vertices].color=color end
-    function geom:SetMaterial(index,material) assert(index==0 and material);self.material=material end
-    function geom:Commit() self.commits=self.commits+1 end
-    function geom:GetNumVertices(index) assert(index==0);return self.empty and 0 or #self.vertices end
+    function geom:SetMaterial(index,material)
+        assert(index==0 and material and self.commits>0,'match BlockCharacter: Commit before SetMaterial')
+        if options.materialThrow then error('SetMaterial binding failure') end
+        if options.materialFalse then return false end
+        self.material=material;return true
+    end
+    function geom:GetMaterial(index) assert(index==0);return self.material end
+    function geom:Commit()
+        if options.commitThrow then error('Commit binding failure') end
+        self.commits=self.commits+1
+        local lo,hi=v(math.huge,math.huge,math.huge),v(-math.huge,-math.huge,-math.huge)
+        for _,vertex in ipairs(self.vertices) do for _,axis in ipairs({'x','y','z'}) do
+            lo[axis]=math.min(lo[axis],vertex.position[axis]);hi[axis]=math.max(hi[axis],vertex.position[axis])
+        end end
+        self.boundingBox={min=lo,max=hi}
+        if options.commitFalse then return false end
+        -- Native Commit is void. Do not return a truthy fake success.
+    end
+    function geom:GetNumVertices(index)
+        assert(index==0 and self.commits>0);self.queries=self.queries+1
+        if options.countThrow then error('GetNumVertices binding unavailable') end
+        return (self.empty or self.queries<=(options.zeroQueries or 0)) and 0 or #self.vertices
+    end
     return geom
 end
 function N:CreateComponent(kind)

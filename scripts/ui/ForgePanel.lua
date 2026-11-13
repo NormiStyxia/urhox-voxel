@@ -21,6 +21,27 @@ local M={}
 ---@type table?
 local session
 local drafts=setmetatable({}, {__mode='k'})
+-- One detailed outcome per opening, and suppress repeated identical outcomes
+-- for 10 seconds across reopenings. No clock capability may block the preview.
+local diagnosticTimes={}
+local function PreviewDiagnostic(s,outcome,detail)
+    s.previewDiagnostics=s.previewDiagnostics or {}
+    if s.previewDiagnostics[outcome] then return end
+    s.previewDiagnostics[outcome]=true
+    local p=s.preview
+    local job=p and p.job
+    local info=job and Builder.PreviewDiagnostic(job) or (p and p.lastDiagnostic) or 'job=none'
+    local key=outcome..':'..tostring(job and job.stage or '')..':'..tostring(job and job.failureCode or '')
+    local ok,now=pcall(function() return time:GetElapsedTime() end)
+    if not ok or type(now)~='number' or now~=now or now<0 or now==math.huge then now=nil end
+    local previous=diagnosticTimes[key]
+    if previous~=nil and (not now or (type(previous)=='number' and now>=previous and now-previous<10)) then return end
+    diagnosticTimes[key]=now or false
+    local components=p and (' octree='..tostring(p.octree~=nil)..' zone='..tostring(p.zone~=nil)
+        ..' camera='..tostring(p.camera~=nil)..' light='..tostring(p.light~=nil)) or ''
+    local extra=detail and (' error='..tostring(detail):gsub('[\r\n]+',' '):sub(1,260)) or ''
+    print('Forge preview mesh: '..outcome..' '..info..components..extra)
+end
 local SLOT_ORDER={sword={'blade','guard','grip','pommel'},bow={'limbs','grip','tip'}}
 local CHANNEL_NAMES={primary='主色',secondary='副色',accent='点缀'}
 local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
@@ -66,8 +87,9 @@ local function DestroyPreview(s)
     if p.scene then p.scene:Dispose() end
     s.preview=nil
 end
-local function Fallback(s,reason)
+local function Fallback(s,reason,detail)
     if s.fallback then return end
+    PreviewDiagnostic(s,'failure_'..reason,detail)
     DestroyPreview(s)
     s.fallback=true
     s.previewMode='fallback'
@@ -87,13 +109,13 @@ local function CreatePreview(s)
     local p={failureReason='scene'}
     s.preview=p
     p.scene=Scene()
-    p.scene:CreateComponent('Octree')
-    local zone=p.scene:CreateComponent('Zone')
+    p.octree=assert(p.scene:CreateComponent('Octree'),'Octree nil')
+    local zone=assert(p.scene:CreateComponent('Zone'),'Zone nil');p.zone=zone
     zone:SetBoundingBox(BoundingBox(Vector3(-10,-10,-10),Vector3(10,10,10)))
     zone:SetAmbientColor(Color(.65,.65,.65))
     local lamp=p.scene:CreateChild('ForgeLight')
     lamp.rotation=Quaternion(35,-30,0)
-    local light=lamp:CreateComponent('Light')
+    local light=assert(lamp:CreateComponent('Light'),'Light nil');p.light=light
     light:SetLightType(LIGHT_DIRECTIONAL)
     light:SetBrightness(1.1)
     p.turn=p.scene:CreateChild('ForgeTurntable')
@@ -102,7 +124,7 @@ local function CreatePreview(s)
     -- One fixed grip origin and scale across all parts, including long limbs.
     p.cameraNode.position=Vector3(0,.3,3)
     p.cameraNode:LookAt(Vector3(0,.3,0))
-    p.camera=p.cameraNode:CreateComponent('Camera')
+    p.camera=assert(p.cameraNode:CreateComponent('Camera'),'Camera nil')
     p.camera.orthographic=true
     p.camera.orthoSize=1.9
     p.camera.nearClip=.01
@@ -139,7 +161,7 @@ local function Rebuild(s)
     end
     if s.preview then
         local ok,reason=pcall(UpdatePreview,s)
-        if not ok then Fallback(s,'mesh') end
+        if not ok then Fallback(s,'mesh',reason) end
     end
 end
 local Layout
@@ -379,7 +401,7 @@ local function DrawNativePreview(vg,s)
         if type(handle)~='number' or handle<=0 then error('bridge') end
         p.image,p.context=handle,vg
     end
-    if p.job or not p.mesh or not p.rendered or p.mesh.geometry:GetNumVertices(0)<=0 then return false end
+    if p.job or not p.mesh or not p.rendered or p.mesh.vertexCount<=0 or not p.mesh.materialReady then return false end
     local b=s.previewBox
     local size=math.floor(math.min(b.w,b.h-24)/2)*2
     local x,y=Draw.Snap(b.x+(b.w-size)/2),b.y+2
@@ -393,7 +415,7 @@ local function Preview(vg,s)
     local b=s.previewBox
     Draw.Rect(vg,b.x,b.y,b.w,b.h-4,C.ink)
     local ok,drawn=pcall(DrawNativePreview,vg,s)
-    if not ok then Fallback(s,'bridge');drawn=false end
+    if not ok then Fallback(s,'bridge',drawn);drawn=false end
     if not drawn then
         -- Useful pixels during creation AND after any failure/timeout.
         Pixels(vg,s,s.blueprint.geometry.cells,Box(b.x,b.y+4,b.w*.5,b.h-28),s.slot,true)
@@ -547,14 +569,16 @@ local function Update(_,_,data)
         -- Watchdog uses full event time, not the animation clamp or native Time.
         p.age=p.age+math.max(0,data:GetFloat('TimeStep'))
         if p.state~='ready' and p.age>=5 then Fallback(s,'timeout');return end
-        local ok=pcall(function()
+        local ok,reason=pcall(function()
             if p.job then
                 local done,mesh=Builder.StepPreview(p.job,2,nil)
                 if done then
                     s.buildMetrics={totalMs=p.job.totalMs,maxStepMs=p.job.maxStepMs,nativeMs=p.job.nativeMs,
                         overBudget=p.job.overBudget,slowestPhase=p.job.slowestPhase,clockUnavailable=p.job.clockUnavailable}
-                    p.job=nil
                     if not mesh then Fallback(s,'mesh');return end
+                    p.lastDiagnostic=Builder.PreviewDiagnostic(p.job)
+                    PreviewDiagnostic(s,'submitted')
+                    p.job=nil
                     p.mesh=mesh;p.dirty=true;p.state='awaiting_render'
                     if s.buildMetrics.overBudget then print('[ForgePanel] preview build step exceeded 2ms: '..s.buildMetrics.maxStepMs..'ms / '..tostring(s.buildMetrics.slowestPhase)) end
                 end
@@ -566,7 +590,7 @@ local function Update(_,_,data)
                 if p.mesh and not p.job then p.queued=true end
             end
         end)
-        if not ok then Fallback(s,'render') end
+        if not ok then Fallback(s,'render',reason) end
     end
 end
 --- Open only outside combat; no root replacement and no world pause.
@@ -596,7 +620,7 @@ function M.Open(rigOrCallbacks)
     session=s
     Rebuild(s);Layout(s)
     local ok,reason=pcall(CreatePreview,s)
-    if not ok then Fallback(s,s.preview and s.preview.failureReason or 'scene') end
+    if not ok then Fallback(s,s.preview and s.preview.failureReason or 'scene',reason) end
     s.layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',
         onPointerDown=Down,onPointerMove=Move,onPointerUp=Up,onPointerCancel=Cancel,
         onClick=function(_,event) if event then Consume(event) end end}

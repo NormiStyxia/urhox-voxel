@@ -256,7 +256,7 @@ for weapon,slots in pairs(P.Slots) do
     combinations(1)
 end
 local tinted=config('sword');tinted.colors={primary=6,secondary=5,accent=2};PreviewConfig(tinted)
-for _,phase in ipairs({'quads','create','emit','commit','publish'}) do
+for _,phase in ipairs({'quads','create','emit','commit','verify','publish'}) do
     local pending=B.BeginPreview(scene,config('bow'),nil)
     for _=1,1000 do if pending.phase==phase then break end;B.StepPreview(pending,2,nil) end
     assert(pending.phase==phase)
@@ -264,5 +264,59 @@ for _,phase in ipairs({'quads','create','emit','commit','publish'}) do
     B.CancelPreview(pending);B.CancelPreview(pending)
     assert(pending.cancelled and (not node or node.removed))
 end
+-- Native bindings are not guaranteed to expose counts immediately after Commit.
+-- Diagnostic failures must identify the exact stage and preserve cleanup.
+local function DiagnosticPreview(options,expectedCode)
+    local parent=Mock.Node('diagnostic') --[[@as any]]
+    local createChild=parent.CreateChild
+    parent.CreateChild=function(self,name)
+        local node=createChild(self,name)
+        node.CreateComponent=function(_,kind)
+            assert(kind=='CustomGeometry')
+            if options.nilGeometry then return nil end
+            return Mock.CustomGeometry(node,options)
+        end
+        return node
+    end
+    local pending=B.BeginPreview(parent,config('sword'),nil)
+    for _=1,1000 do
+        local phase=pending.phase
+        B.StepPreview(pending,2,nil)
+        if phase=='commit' and not pending.done then
+            assert(pending.phase=='verify' and pending.geometry.queries==0,'never query native counts in Commit frame')
+        end
+        if pending.done then break end
+    end
+    local diagnostic=B.PreviewDiagnostic(pending)
+    assert(pending.done and diagnostic:find('vertices=',1,true) and diagnostic:find('quads=',1,true)
+        and diagnostic:find('triangles=',1,true) and diagnostic:find('material=Materials/NomiVoxel.xml',1,true)
+        and diagnostic:find('bounds=(',1,true) and diagnostic:find('native_bounds=',1,true))
+    if expectedCode then
+        assert(not pending.mesh and pending.failureCode==expectedCode,diagnostic)
+        assert(parent.children[1].removed,'partial preview leaked')
+    else
+        assert(pending.mesh and not pending.error,diagnostic)
+        assert(pending.commitResult=='nil(void)' and pending.setMaterialResult=='true')
+        assert(pending.mesh.vertexCount>0 and pending.mesh.materialReady and pending.materialBound=='true')
+        B.DisposePreview(pending.mesh)
+    end
+    return pending,diagnostic
+end
+local delayed=DiagnosticPreview({zeroQueries=2})
+assert(delayed.verifyFrames==3,'allow subsequent frame native publication')
+local unsupported=DiagnosticPreview({countThrow=true})
+assert(unsupported.verifyFrames==1 and unsupported.nativeVerticesDetail:find('unavailable',1,true))
+local stayedEmpty=DiagnosticPreview({zeroQueries=3},'vertices_zero_after_3_frames')
+assert(stayedEmpty.nativeVertices==0 and stayedEmpty.geometry.queries==3,'diagnostics must preserve the failing native sample')
+DiagnosticPreview({nilGeometry=true},'custom_geometry_nil')
+DiagnosticPreview({commitFalse=true},'commit_false')
+local commitFailure=DiagnosticPreview({commitThrow=true},'binding_or_lua_error')
+assert(commitFailure.stage=='commit' and commitFailure.commitResult=='threw')
+DiagnosticPreview({materialFalse=true},'set_material_false')
+local materialFailure=DiagnosticPreview({materialThrow=true},'binding_or_lua_error')
+assert(materialFailure.stage=='set_material' and materialFailure.setMaterialResult=='threw')
+rawset(_G,'cache',{GetResource=function() return nil end})
+local missing=DiagnosticPreview({},'material_nil')
+assert(missing.stage=='load_material' and not missing.materialLoaded and missing.commitResult=='not_called')
 rawset(_G,'cache',savedCache)
 print("weapon_builder: PASS (72 volume+greedy preview combinations, exact surface/color coverage, winding, bounds, cancellation, cache)")

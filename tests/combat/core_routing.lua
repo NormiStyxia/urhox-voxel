@@ -63,7 +63,8 @@ env.CombatState=dofile('scripts/combat/CombatState.lua')
 local notices={};env.CombatHUD={Say=function(text) notices[#notices+1]=text end}
 env.KEY_F2,env.KEY_F3=102,103
 env.KEY_F5,env.KEY_F6=105,106
-env.KEY_F8,env.KEY_F9,env.KEY_SHIFT=108,109,110
+env.KEY_F8,env.KEY_F9,env.KEY_SHIFT,env.KEY_F11=108,109,110,111
+env.StartCombatTest=function() end
 local transfers,dummies=0,0
 env.DebugTransfer=function() transfers=transfers+1 end
 env.ToggleTrainingDummy=function() dummies=dummies+1 end
@@ -134,3 +135,19 @@ local excludes=assert(load(exclusionBody,'Scene independent visual exclusion','t
 for _,volume in ipairs(volumes) do assert(excludes(volume)) end
 assert(not excludes({}),'new bow images and flashes cannot occlude aim even with incorrect native layers')
 print('PASS independent ray exclusion for main weapon/trail/sword+bow images/charge particles/blade+socket flashes')
+
+-- F11 interruption must leave the original key available to its normal handler.
+local keyBody=assert(source:match('(function Ruins_HandleKeyDown.-)\nend'))..'\nend'
+local stoppedTest,resumed=0,0
+local keyEnv=setmetatable({combatTest_={active=true,Stop=function()stoppedTest=stoppedTest+1 end},
+ KEY_F11=111,KEY_W=119,KEY_F10=110,KEY_ESCAPE=27,KEY_E=101,KEY_Q=113,KEY_A=97,KEY_S=115,KEY_D=100,
+ ForgePanel={IsOpen=function()return false end},SettingsMenu={IsOpen=function()return false end,IsBlocked=function()return false end},
+ TouchInput={IsEnabled=function()return false end},pointer={Resume=function()resumed=resumed+1 end},M={}}, {__index=_G})
+assert(load(keyBody,'Scene F11 abort key preservation','t',keyEnv))()
+local eventKey=111
+local event={GetInt=function()return eventKey end}
+keyEnv.Ruins_HandleKeyDown(nil,event);assert(stoppedTest==0)
+eventKey=119;keyEnv.Ruins_HandleKeyDown(nil,event);assert(stoppedTest==1 and resumed==1)
+local touchCallbacks=assert(source:match('(local function AttachTouchControls.-)\nend'))
+assert(not touchCallbacks:find('combatTest_:Stop',1,true),'selftest own per-step TouchControls.Cancel must not abort runner')
+print('PASS F11 original key preserved and own cleanup cannot recursively abort')

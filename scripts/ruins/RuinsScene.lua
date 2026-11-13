@@ -47,7 +47,9 @@ local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,h
 local combatLookScale_=1
 local arrowNodes_={}
 local emptyAfterimages_={}
-local animPreview_={index=0,t=0}
+local animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5},direction='后'}
+local CombatTest=require('combat.CombatTest')
+local combatTest_
 local trainingDummy_,handMotes_
 local debugDestination_=0
 local combatDebugText_,combatDebugUntil_=nil,0
@@ -450,7 +452,11 @@ local function StartCombat()
                 shotStats={}; for key,value in pairs(stats) do shotStats[key]=value end
                 shotStats.crystalRadius=.8; shotStats.crystalDamageMultiplier=.25
             end
-            combatArrows_:Fire(hit.origin,(target-hit.origin):Normalized(),charge,shotStats)
+            if combatTest_ and combatTest_.active and trainingDummy_ then
+                target=trainingDummy_:GetHurtShapes()[1].center -- synthetic aim, real swept projectile collision
+            end
+            local fired,shot=combatArrows_:Fire(hit.origin,(target-hit.origin):Normalized(),charge,shotStats)
+            if fired and combatTest_ and combatTest_.active then combatTest_:Arrow(shot) end
         end,
         respawn=function()
             -- Use the established safe-point/fallback and camera snap; puzzle
@@ -771,6 +777,9 @@ end
 ---@param eventType string
 ---@param eventData KeyDownEventData
 function Ruins_HandleKeyDown(eventType, eventData)
+    if combatTest_ and combatTest_.active and eventData:GetInt('Key')~=KEY_F11 then
+        combatTest_:Stop('key') -- deliberately continue dispatching the original key
+    end
     if ForgePanel.IsOpen() then return end -- ForgePanel owns Escape and its release latch.
     local menuKey=eventData:GetInt("Key")
     if menuKey==KEY_F10 and not M.DEBUG_PANEL then
@@ -792,6 +801,7 @@ end
 ---@param eventData InputFocusEventData
 function Ruins_HandleInputFocus(eventType, eventData)
     if not eventData:GetBool("Focus") or eventData:GetBool("Minimized") then
+        if combatTest_ and combatTest_.active then combatTest_:Stop('focus') end
         combatInputBlocked=true
         if combatMoves_ and not combatMoves_.dead and combatMoves_.clip~='getup' then combatMoves_:Cancel('focus') end
         drag.buttons = 0
@@ -859,6 +869,47 @@ local function ToggleTrainingDummy()
     trainingDummy_=CombatMoves.NewTrainingDummy(pos,node)
     CombatHUD.Say('训练木桩 · C 拔刃后攻击')
 end
+local function StartCombatTest()
+    if combatTest_ and combatTest_.active then return end
+    if animPreview_.index>0 or CombatState.HasAggro() or not nomi_:CanSlide() then
+        print('CombatTest: BEGIN FAIL leave F7/aggro and stand on safe ground'); return
+    end
+    local owned=trainingDummy_==nil
+    if owned then ToggleTrainingDummy() end
+    if not trainingDummy_ then print('CombatTest: BEGIN FAIL no safe dummy location'); return end
+    local origin=nomi_:Position()
+    local safe,yaw,pitch=nomi_.safePos,nomi_.camYaw,nomi_.camPitch
+    local weapon,wasCombat=CombatState.GetWeapon(),CombatState.InCombat()
+    local forward=Vector3(nomi_.node.worldDirection.x,0,nomi_.node.worldDirection.z):Normalized()
+    local rotation=Quaternion(math.deg(math.atan(forward.x,forward.z)),Vector3.UP)
+    combatTest_=CombatTest.New({moves=combatMoves_,dummy=trainingDummy_,position=function() return nomi_:Position() end,
+        direction=function(axis) return rotation*axis end,
+        prepare=function(step)
+            combatArrows_:Clear(); TouchControls.Cancel()
+            local point=step.axis and origin or trainingDummy_.position-forward*(step.weapon=='bow' and 3 or 1.35)
+            local y=Terrain.GroundHeight(point.x,point.z)
+            if not y then return false end
+            point=Vector3(point.x,y+.1,point.z)
+            if not Terrain.IsSafeGround(point.x,point.y,point.z) or not DebugPointClear(point) then return false end
+            if not nomi_:TeleportForCombatDebug(point,math.deg(math.atan(forward.x,forward.z))) then return false end
+            CombatState.Enter('selftest'); CombatState.SetBusy(false); CombatState.FinishTransition()
+            CombatState.SetWeapon(step.weapon); CombatState.FinishTransition(); CombatState.Activity(true)
+            combatRig_:SetActive(step.weapon); combatRig_:SetPose('hand')
+            combatMoves_.dodgeCool,combatMoves_.hitstop=0,0
+            combatInputBlocked=false
+            return true
+        end,
+        cleanup=function(reason)
+            combatArrows_:Clear(); TouchControls.Cancel()
+            if owned and trainingDummy_ then trainingDummy_:Destroy(); trainingDummy_=nil end
+            combatMoves_.target=nil
+            CombatState.SetBusy(false); CombatState.FinishTransition(); CombatState.SetWeapon(weapon); CombatState.FinishTransition()
+            if not wasCombat and not CombatState.HasAggro() then CombatState.Exit('selftest-end') end
+            if reason=='complete' and not CombatState.HasAggro() then nomi_:TeleportForCombatDebug(origin,yaw); nomi_.camPitch=pitch end
+            nomi_.safePos=safe
+            combatInputBlocked=true
+        end})
+end
 local function HandleCombatDebugKeys(allowed)
     if not allowed or TouchInput.IsEnabled() or PlatformUtils.IsMobilePlatform() then return end
     if Press(KEY_F2) then
@@ -879,6 +930,7 @@ local function HandleCombatDebugKeys(allowed)
         CombatState.SetSetting('damageNumbers',on)
         CombatHUD.Say('伤害数字 · '..(on and '开' or '关'),1.2)
     end
+    if Press(KEY_F11) then StartCombatTest() end
     if Press(KEY_F8) then DebugTransfer() end
     if Press(KEY_F9) and not Down(KEY_SHIFT) then ToggleTrainingDummy() end
 end
@@ -987,10 +1039,15 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         local angle=math.rad(nomi_.camYaw)
         local axis=Vector3(math.sin(angle)*f+math.cos(angle)*r,0,math.cos(angle)*f-math.sin(angle)*r)
         if animPreview_.index==0 then
-            combatMoves_:Update(dt,{allowed=allowed and not combatInputBlocked,attack=attack,heavy=heavy,
+            local controls={allowed=allowed and not combatInputBlocked,attack=attack,heavy=heavy,
                 attackTap=TouchInput.Press('attack') and not attack,
                 heavyTap=TouchInput.Press('heavy') and not heavy,
-                dodge=CombatState.InCombat() and (Press(KEY_SHIFT) or TouchInput.Press('dodge')),axis=axis})
+                dodge=CombatState.InCombat() and (Press(KEY_SHIFT) or TouchInput.Press('dodge')),axis=axis}
+            if combatTest_ and combatTest_.active then
+                local synthetic=combatTest_:Input(dt,allowed and not CombatState.HasAggro() and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked())
+                if synthetic then controls=synthetic; f,r=0,0 end
+            end
+            combatMoves_:Update(dt,controls)
         end
         if CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
             nomi_:Move(dt,allowed and f or 0,allowed and r or 0,false,
@@ -1048,6 +1105,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     local combatAllowed=M.ride.mode=='free' and not voidInputBlocked and not M.debugOn
         and not TouchControls.IsBlocked() and input.focus and not input.minimized
         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
+    if combatTest_ and combatTest_.active and (not combatAllowed or ForgePanel.IsOpen() or SettingsMenu.IsBlocked()) then combatTest_:Stop('blocked/menu') end
     HandleCombatDebugKeys(combatAllowed and not combatMoves_.dead)
     local previewAllowed=combatAllowed and not TouchInput.IsEnabled() and not PlatformUtils.IsMobilePlatform()
     local previewNext=previewAllowed and
@@ -1066,7 +1124,7 @@ function Ruins_HandleUpdate(eventType, eventData)
             CombatState.Enter('preview')
             local clip=list[animPreview_.index]
             combatRig_:SetActive(clip.weaponType or CombatState.GetWeapon()); combatRig_:SetPose('hand')
-            combatAnim_:Play(clip.id,{fadeIn=0})
+            combatAnim_:Play(clip.id,{fadeIn=0,params=animPreview_.params})
         else
             CombatState.Exit('preview-end'); combatRig_:SetActive(CombatState.GetWeapon())
         end
@@ -1075,21 +1133,34 @@ function Ruins_HandleUpdate(eventType, eventData)
         local clip=CombatAnim.DebugList()[animPreview_.index]
         if previewAllowed and Press(KEY_SPACE) then animPreview_.paused=not animPreview_.paused end
         CombatState.SetBusy(true)
+        local params=animPreview_.params
+        local changed=false
+        if previewAllowed and clip.id=='dodge_slide' then
+            if Press(KEY_I) then params.moveX,params.moveZ,animPreview_.direction=0,1,'前'; changed=true end
+            if Press(KEY_K) then params.moveX,params.moveZ,animPreview_.direction=0,-1,'后'; changed=true end
+            if Press(KEY_J) then params.moveX,params.moveZ,animPreview_.direction=-1,0,'左'; changed=true end
+            if Press(KEY_L) then params.moveX,params.moveZ,animPreview_.direction=1,0,'右'; changed=true end
+            if Press(KEY_B) then params.bow=params.bow==1 and 0 or 1; changed=true end
+            combatRig_:SetActive(params.bow==1 and 'bow' or 'sword'); combatRig_:SetPose('hand')
+        elseif previewAllowed and clip.id=='bow_hold' then
+            if Press(KEY_EQUALS) or Press(KEY_PLUS) or Press(KEY_KP_PLUS) then params.p=math.min(1,params.p+.1); changed=true end
+            if Press(KEY_MINUS) or Press(KEY_KP_MINUS) then params.p=math.max(0,params.p-.1); changed=true end
+        end
         local step=0
         if animPreview_.paused and previewAllowed then
             if Press(KEY_COMMA) then step=-1/30 elseif Press(KEY_PERIOD) then step=1/30 end
         end
-        if step~=0 then
-            animPreview_.t,animPreview_.events=CombatMoves.SeekPreview(combatAnim_,clip.id,animPreview_.t+step,animPreview_.t)
+        if step~=0 or changed then
+            animPreview_.t,animPreview_.events=CombatMoves.SeekPreview(combatAnim_,clip.id,animPreview_.t+step,animPreview_.t,params)
         elseif not animPreview_.paused and combatAllowed then
             local previewDt=dt
             animPreview_.t=animPreview_.t+dt
             if animPreview_.t>=clip.dur+.35 then
                 combatAnim_:Stop(nil,0); combatAnim_:Poll()
-                combatAnim_:Play(clip.id,{fadeIn=0}); animPreview_.t=0
+                combatAnim_:Play(clip.id,{fadeIn=0,params=params}); animPreview_.t=0
                 previewDt=0
             end
-            combatAnim_:SetParam('p',math.min(1,animPreview_.t/math.max(.01,clip.dur)))
+            combatAnim_:SetParam('p',clip.id=='bow_hold' and params.p or math.min(1,animPreview_.t/math.max(.01,clip.dur)))
             combatAnim_:Update(previewDt,previewDt)
             animPreview_.events=CombatMoves.PreviewEvents(combatAnim_:Poll(),-1,math.huge)
         else
@@ -1099,6 +1170,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         end
         animPreview_.text=string.format('F7 %s / %.3f / %s%s\n事件：%s\n空格 暂停 · , / . 逐帧 · 左右 切片段',clip.id,animPreview_.t,
             CombatMoves.PreviewPhase(clip.id,animPreview_.t),animPreview_.paused and ' · 暂停' or '',animPreview_.events or '—')
+        animPreview_.text=animPreview_.text..string.format('\nIJKL 方向:%s · B:%s · +/- 拉弓:%.1f',animPreview_.direction,params.bow==1 and '弓' or '剑',params.p)
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
         if not CombatState.InCombat() and (Press(KEY_G) or TouchInput.Press('forge')) then OpenForge() end
@@ -1296,6 +1368,8 @@ function Ruins_HandlePostUpdate(eventType, eventData)
 end
 
 function M.Stop()
+    if combatTest_ and combatTest_.active then combatTest_:Stop('stop') end
+    combatTest_=nil
     ForgePanel.Close(true)
     local forceClose=rawget(ForgePanel,'ForceClose')
     if type(forceClose)=='function' then forceClose() end
@@ -1315,7 +1389,7 @@ function M.Stop()
     if combatAnim_ then combatAnim_:Stop(nil,0) end
     combatMoves_,combatAnim_,combatArrows_,combatEnemies_=nil,nil,nil,nil
     for _,entry in pairs(arrowNodes_) do entry.node:Remove() end
-    arrowNodes_={}; animPreview_={index=0,t=0}; CombatHUD.Set(nil)
+    arrowNodes_={}; animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5},direction='后'}; CombatHUD.Set(nil)
     if combatRig_ and combatRig_.Dispose then combatRig_:Dispose() end
     combatRig_=nil
     VoidRewind.Stop() -- release images while the UI NanoVG context is still alive

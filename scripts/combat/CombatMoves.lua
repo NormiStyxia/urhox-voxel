@@ -103,6 +103,7 @@ function C:Play(id,fadeIn)
         self:StopDrawSound(); self.drawSound=self:Sound('bow_draw')
     elseif id=='bow_release' then self:StopDrawSound() end
     self.clipStartedAt=self.age
+    if self.observe then self.observe('start',{clip=id,age=self.age}) end
     if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
     self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
     self.damaged,self.previousHit={},nil
@@ -208,6 +209,9 @@ function C:Action(kind,axis)
         self.moveDir,self.slideFacing=dir,facing
         self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose('hand')
         if not self:Play('dodge_slide',.04) then return false end
+        -- Clear the previous strike before the first slide snapshot at .04s.
+        -- Scene restores the quality/combat trail switch on its next pose pass.
+        if self.rig.SetTrail then self.rig:SetTrail(false) end
         self.dodgeCool,self.dodgeAt,self.slideElapsed=.50,self.age,0
         self.combo,self.comboUntil,self.slideFollowUntil=combo,self.age+.60,self.age+.60
         self.perfectUsed,self.slideStopped,self.pending=false,false,nil
@@ -304,6 +308,7 @@ function C:Feedback(enemy,info,result,weak,arrow)
     e.broke,e.staggered,e.killed=result.broke or result.partBroken~=nil,result.staggered==true,result.killed==true
     e.weak,e.damage,e.poise=weak==true or result.weak==true,result.damage or info.dmg,info.poise or 0
     e.kind,e.enemy='hit',enemy
+    if self.observe then self.observe('hit',{clip=info.clip,damage=e.damage,weapon=e.weapon,enemy=enemy,age=self.age}) end
     self.lastHitAt,self.lastHitWeak=self.age,e.weak
     if self.state.Log then self.state.Log('hit:'..tostring(enemy.id)..':'..tostring(e.part),
         'Combat: hit %s part=%s dmg=%.2f poise=%.2f',enemy.id or 'enemy',e.part or 'body',e.damage,e.poise) end
@@ -373,6 +378,7 @@ function C:Events()
         if e.name=='protect_on' then self.protection[e.handle]=true
         elseif e.name=='protect_off' then self.protection[e.handle]=nil end
         if e.handle==self.handle then
+        if self.observe then self.observe('event',{name=e.name,clip=e.clip,t=e.t,age=self.age}) end
         if e.name=='hit_on' then
             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
             self.strikePerfect=self.perfectUntil and self.age<=self.perfectUntil
@@ -710,12 +716,12 @@ function C.PreviewEvents(events,from,to)
     return #names>0 and table.concat(names,', ') or '—'
 end
 -- Rebuild the isolated preview clock; replayed events never enter CombatMoves.Events.
-function C.SeekPreview(anim,id,t,previous)
+function C.SeekPreview(anim,id,t,previous,params)
     local clip=require('combat.AnimClips').Clips[id]
     t=math.max(0,math.min(clip.dur,t))
     anim:Stop(nil,0); anim:Poll()
-    anim:Play(id,{fadeIn=0,fadeOut=0})
-    anim:SetParam('p',t/math.max(.01,clip.dur))
+    anim:Play(id,{fadeIn=0,fadeOut=0,params=params})
+    anim:SetParam('p',params and params.p or t/math.max(.01,clip.dur))
     anim:Update(t,t)
     local from=previous<t and previous or t-1/30-1e-8
     return t,C.PreviewEvents(anim:Poll(),from,t)
