@@ -519,9 +519,16 @@ local function UpdateAim()
     M.aim = aim
     local obj = aim.object --[[@as TimeObject?]]
     local signature = obj and (obj.id .. ":" .. obj.state) or (aim.breakable and "breakable" or "none")
-    if signature ~= M.lastAimSignature then
+    if signature ~= M.lastAimSignature or time_ >= (M.nextAimLog or 0) then
         M.lastAimSignature = signature
-        print("RuinsAim: target=" .. signature .. ", assisted=" .. tostring(aim.assisted == true))
+        M.nextAimLog = time_ + 3
+        local volume = aim.volume --[[@as VoxelVolume?]]
+        local node = volume and volume:GetNode()
+        print(string.format("RuinsAim: target=%s assisted=%s origin=%s dir=%s hit=%s distance=%.3f volume=%s id=%s layer=%s voxel=%s player=%s yaw=%.2f pitch=%.2f",
+            signature, tostring(aim.assisted == true), tostring(aim.origin), tostring(aim.dir), tostring(aim.pos),
+            aim.distance or -1, node and node.name or "none", tostring(aim.volumeId),
+            volume and tostring(volume.collisionLayer) or "none", tostring(aim.voxel),
+            tostring(nomi_:Position()), nomi_.camYaw, nomi_.camPitch))
     end
     if obj ~= nil then
         obj.hoverTarget = 1

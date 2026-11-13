@@ -213,6 +213,7 @@ function N:AimRay(ray, maxDist)
     end
     if hit.hit then
         res.hit, res.pos, res.normal, res.volume = true, hit.position, hit.normal, hit.volume
+        res.distance, res.voxel, res.volumeId = hit.distance, hit.voxel, hit.volumeId
         res.object = obj
         res.breakable = obj ~= nil and obj.canShatter or hit.volume.destructible
     end

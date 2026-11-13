@@ -11,6 +11,31 @@ V.atFrame(8,function()
     local savedPos,savedYaw,savedPitch=nomi:Position(),nomi.camYaw,nomi.camPitch
     local gate=puzzles.gateRubble
     print("GateTargetTest: gate="..Name(gate))
+    -- 覆盖整块实心门芯：左右、高低以及斜向镜头；不只测轴对齐的中央射线。
+    -- 外圈随机椭球可能被门柱遮挡，不把不可见或空隙位置误判为应锁定。
+    local misses=0
+    for _,originX in ipairs({-4.0,.55,4.0}) do
+        local origin=Vector3(originX,7.75,-62)
+        for xi=0,9 do for yi=0,5 do
+            local target=Vector3(-2.375+xi*.5,6.125+yi*.5,-50.5)
+            local delta=target-origin
+            local ray=Ray(origin,delta:Normalized())
+            local aim=nomi:AimRay(ray,30)
+            local selected=aim.volume==gate and aim.breakable
+            if not selected then
+                misses=misses+1
+                local body=world:RaycastSingle(ray,30)
+                local hits=world:RaycastGrid(ray,30,nomi.aimMask)
+                print(string.format("GateTargetTest: FACE MISS origin=%s target=%s dir=%s grid=%s pos=%s body=%s hits=%d",
+                    tostring(origin),tostring(target),tostring(ray.direction),Name(aim.volume),tostring(aim.pos),Name(body.volume),#hits))
+                for _,hit in ipairs(hits) do
+                    print(string.format("GateTargetTest: candidate=%s distance=%.4f voxel=%s",Name(hit.volume),hit.distance,tostring(hit.voxel)))
+                end
+            end
+            V.assert(selected,"整面斜射锁定 originX="..originX.." x="..target.x.." y="..target.y)
+        end end
+    end
+    print("GateTargetTest: face sweep misses="..misses.." / 180")
     -- 先确认从外侧向碎石表面的世界射线和 Grid 查询一致。
     for _,y in ipairs({6.75,7.5,8.25}) do
         local ray=Ray(Vector3(.55,y,-57),Vector3.FORWARD)
