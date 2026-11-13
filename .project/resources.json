@@ -2,12 +2,15 @@
   "$schema": "../schemas/resources.schema.json",
 
   "preload_groups": [
-
+    "shader_includes"
   ],
 
   "groups": {
     "default": [
       "**"
+    ],
+    "shader_includes": [
+      "Shaders/**/*.shaderinc"
     ]
   }
 }
