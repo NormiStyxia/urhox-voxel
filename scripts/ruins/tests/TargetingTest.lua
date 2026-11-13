@@ -47,7 +47,7 @@ V.atFrame(8, function()
     local realWorld=nomi.world
     nomi.world={
         RaycastGridSingle=function(self,r,d,mask)
-            local falseHit=VoxelRaycastResult.new()
+            local falseHit=VoxelRaycastResult:new()
             falseHit.hit,falseHit.volume,falseHit.volumeId=true,hollow,hollow.volumeId
             falseHit.position,falseHit.distance=r.origin,0
             return falseHit

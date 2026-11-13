@@ -1,0 +1,209 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 56386,
+    "frames_completed": 20,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_391][90] ERROR: Execute Lua string failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.",
+                    "frame": 8
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_393][90] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 8
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_394][90] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 8
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_456][91] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 9
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_456][91] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 9
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_475][92] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 10
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_475][92] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 10
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_494][93] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 11
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_494][93] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 11
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_513][94] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 12
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_514][94] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 12
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_536][95] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 13
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_536][95] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 13
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_556][96] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 14
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_556][96] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 14
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_576][97] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 15
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_576][97] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 15
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_597][98] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 16
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_597][98] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 16
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_624][99] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 17
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_624][99] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 17
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_644][100] ERROR: Execute Lua function failed: [string \"ruins/tests/TargetingTest\"]:50: error in function 'new'.\nstack traceback:\n\t[C]: in field 'new'\n\t[string \"ruins/tests/TargetingTest\"]:50: in method 'RaycastGridSingle'\n\t[string \"ruins/NomiController\"]:263: in method 'GridHit'\n\t[string \"ruins/NomiController\"]:285: in function <[string \"ruins/NomiController\"]:284>\n\t(...tail calls...)\n\t[string \"ruins/RuinsScene\"]:517: in upvalue 'UpdateAim'\n\t[string \"ruins/RuinsScene\"]:631: in function 'Ruins_HandleUpdate'",
+                    "frame": 18
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_47_07_644][100] ERROR: Execute Lua function failed: [string \"ruins/NomiController\"]:175: attempt to call a nil value (method 'RaycastSingle')\nstack traceback:\n\t[string \"ruins/NomiController\"]:175: in method 'UpdateCamera'\n\t[string \"ruins/RuinsScene\"]:698: in function 'Ruins_HandlePostUpdate'",
+                    "frame": 18
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1659,
+            "component_count": 3017,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 53171.19140625
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2038076607,
+            "frame_time_ms": 19.131999969482423
+        },
+        {
+            "frame": 20,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 2038076607,
+            "frame_time_ms": 19.190000534057618
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 68.08699798583985,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "VoxelVolume": 407,
+        "CustomGeometry": 1816,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 325,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 3,
+        "VoxelChunkDrawable": 1
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 23,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 23
+    }
+}

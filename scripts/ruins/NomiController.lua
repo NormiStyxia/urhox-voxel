@@ -187,10 +187,11 @@ end
 ---@param maxDist number
 ---@return VoxelRaycastResult
 local function TraceVolume(volume, ray, maxDist)
-    local result=VoxelRaycastResult.new()
+    local result=VoxelRaycastResult:new()
     local node,grid=volume:GetNode(),volume:GetGrid()
     if node==nil or grid==nil then return result end
     local size=volume.voxelSize
+    if size<=0 then return result end
     local origin=node:WorldToLocal(ray.origin)/size
     local direction=(node:WorldToLocal(ray.origin+ray.direction)-node:WorldToLocal(ray.origin))/size
     local dims=grid:GetDimensions()
@@ -230,6 +231,7 @@ local function TraceVolume(volume, ray, maxDist)
             result.normal=node.worldRotation*normal
             result.voxel=IntVector3(x,y,z)
             result.material=math.floor(grid:GetVoxelMaterial(x,y,z))
+            result.paletteDomain=volume:GetPaletteDomain()
             return result
         end
         local nextDistance=math.min(tx,ty,tz)
@@ -249,7 +251,9 @@ local function EmptyOriginHit(hit,ray)
     local volume=hit.volume
     local grid=volume:GetGrid()
     if grid==nil then return true end
-    local p=volume:GetNode():WorldToLocal(ray.origin+ray.direction*.0001)/volume.voxelSize
+    local node=volume:GetNode()
+    if node==nil or volume.voxelSize<=0 then return true end
+    local p=node:WorldToLocal(ray.origin+ray.direction*.0001)/volume.voxelSize
     local dims=grid:GetDimensions()
     local x,y,z=math.floor(p.x),math.floor(p.y),math.floor(p.z)
     return x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or not grid:IsSolid(x,y,z)
