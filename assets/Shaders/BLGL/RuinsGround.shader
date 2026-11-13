@@ -1,4 +1,4 @@
-// RuinsGround.shader — 时之遗迹的平滑地面（Terrain 高度图网格）
+// RuinsGround.shader — 时之遗迹岛面与岩壳（共用世界空间材质）
 //
 // 颜色全部程序化：世界空间多层噪声把草地 / 枯草 / 泥土 / 铺石 / 岩壁 混在一起，
 // 权重来自 Lua 生成的控制图 splat_map（覆盖整块地形，UV 0..1）：
@@ -19,7 +19,7 @@ uniform vec3 path_color = vec3(0.62, 0.58, 0.51);
 uniform vec3 rock_a = vec3(0.56, 0.54, 0.51);
 uniform vec3 rock_b = vec3(0.40, 0.39, 0.40);
 uniform vec3 rock_warm = vec3(0.62, 0.56, 0.47);
-uniform vec3 deep_color = vec3(0.22, 0.23, 0.27);
+uniform vec3 deep_color = vec3(0.34, 0.35, 0.37);
 uniform float deep_y = -11.5;
 uniform float world_half = 84.0;
 uniform float snow_y = 31.0;
@@ -174,7 +174,13 @@ void fragment() {
             float mossy = smoothstep(0.55, 0.75, fbm(vec2(wp.x - wp.z, wp.y * 2.0) * 0.35)) * mossFacing;
             rock = mix(rock, grass_dark * 1.2, mossy * 0.45);
         }
-        rock = mix(rock, deep_color, (1.0 - smoothstep(deep_y - 1.0, deep_y + 1.5, wp.y)) * 0.8);
+        // 复用已有低频场，不新增纹理/噪声采样；大块深浅只作用于崖面。
+        float cliff = 1.0 - smoothstep(0.15, 0.60, n.y);
+        rock *= mix(1.0, mix(0.90, 1.06, smoothstep(0.22, 0.70, big)), cliff);
+        // 深部仍是灰岩而非另一圈深色材料；11m宽过渡随空间低频场偏移。
+        float deepHeight = wp.y + (big - 0.47) * 10.0 + (warp - 2.8) * 0.45;
+        float deepMix = (1.0 - smoothstep(deep_y - 5.0, deep_y + 6.0, deepHeight)) * 0.50 * cliff;
+        rock = mix(rock, deep_color, deepMix);
         col = mix(col, rock, wRock);
     }
     // 草地被 GrassField 覆盖处稍压暗（草缝里是草丛深处）

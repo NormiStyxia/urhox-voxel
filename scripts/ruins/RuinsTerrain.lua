@@ -379,12 +379,56 @@ local function BuildIslandMesh(scene,mat)
             bottom[i][k]=min(top[i][k]-.75,M.BottomHeight(x,z))
         end
     end
+    -- 仅岸线共享点平滑岩壳法线：真实相邻面按角度加权，跨块共用。
+    -- 岛顶/土唇保持硬边；顶点、三角形、底高及碰撞都不变。
+    local shore={}
+    for i=0,N do for k=0,N do
+        local count=(Land(i,k) and 1 or 0)+(Land(i-1,k) and 1 or 0)
+            +(Land(i,k-1) and 1 or 0)+(Land(i-1,k-1) and 1 or 0)
+        if count>0 and count<4 then shore[i*(N+1)+k]={} end
+    end end
+    local function V(i,k,h) return Vector3(-M.HALF+i*c,h,-M.HALF+k*c) end
+    local function ShoreKey(v)
+        local i,k=floor((v.x+M.HALF)/c+.5),floor((v.z+M.HALF)/c+.5)
+        local entry=shore[i*(N+1)+k]
+        if entry then return entry,v.y==bottom[i][k] and "base" or "lip" end
+    end
+    ---@param a Vector3
+    ---@param b Vector3
+    ---@param d Vector3
+    local function Accumulate(a,b,d)
+        if not ShoreKey(a) and not ShoreKey(b) and not ShoreKey(d) then return end
+        local ab=b-a --[[@as Vector3]]
+        local face=ab:CrossProduct(d-a):Normalized()
+        local vertices={a,b,d}
+        for j,v in ipairs(vertices) do
+            local entry,level=ShoreKey(v)
+            if entry then
+                local vu=vertices[j%3+1]-v --[[@as Vector3]]
+                local vw=vertices[(j+1)%3+1]-v --[[@as Vector3]]
+                local u,w=vu:Normalized(),vw:Normalized()
+                local angle=math.acos(max(-1,min(1,u.x*w.x+u.y*w.y+u.z*w.z)))
+                entry[level]=(entry[level] or Vector3.ZERO)+face*angle
+            end
+        end
+    end
+    -- 第一遍仅累加岸点真实面法线，第二遍输出；不缓存整套顶点或重建碰撞。
+    for pass=1,2 do
+    if pass==2 then
+        for _,entry in pairs(shore) do
+            for level,normal in pairs(entry) do entry[level]=normal:Normalized() end
+        end
+    end
     for ci=0,N-1,CH do for ck=0,N-1,CH do
         local geom
         ---@param a Vector3
         ---@param b Vector3
         ---@param d Vector3
-        local function Tri(a,b,d,soil)
+        local function Tri(a,b,d,soil,rockFace)
+            if pass==1 then
+                if rockFace then Accumulate(a,b,d) end
+                return
+            end
             if not geom then
                 local node=scene:CreateChild("IslandShell")
                 geom=node:CreateComponent("CustomGeometry")
@@ -395,14 +439,18 @@ local function BuildIslandMesh(scene,mat)
             local ab=b-a --[[@as Vector3]]
             local normal=ab:CrossProduct(d-a):Normalized()
             for _,v in ipairs({a,b,d}) do
-                geom:DefineVertex(v); geom:DefineNormal(normal)
+                local vertexNormal=normal
+                if rockFace then
+                    local entry,level=ShoreKey(v)
+                    if entry and entry[level] then vertexNormal=entry[level] end
+                end
+                geom:DefineVertex(v); geom:DefineNormal(vertexNormal)
                 geom:DefineTexCoord(Vector2((v.x+M.HALF)/(M.HALF*2),(M.HALF-v.z)/(M.HALF*2)))
                 geom:DefineColor(Color(soil or 0,0,0,1))
             end
             triangles=triangles+1
         end
-        local function Quad(a,b,d,e,soil) Tri(a,b,d,soil); Tri(a,d,e,soil) end
-        local function V(i,k,h) return Vector3(-M.HALF+i*c,h,-M.HALF+k*c) end
+        local function Quad(a,b,d,e,soil,rockFace) Tri(a,b,d,soil,rockFace); Tri(a,d,e,soil,rockFace) end
         -- 平坦岛内每 4m 合并顶面；底面使用带全部边界点的扇形，避免 T 接缝。
         -- 崖缘/台阶保留 .5m，不把小洞跨接成面。
         local used={}
@@ -438,16 +486,16 @@ local function BuildIslandMesh(scene,mat)
                 for t=0,size-1 do rim[#rim+1]=V(i+size,k+size-t,bottom[i+size][k+size-t]) end
                 for t=0,size-1 do rim[#rim+1]=V(i+size-t,k,bottom[i+size-t][k]) end
                 local mid=V(i+size/2,k+size/2,bottom[i+size/2][k+size/2])
-                for n=1,#rim do Tri(mid,rim[n%#rim+1],rim[n]) end
+                for n=1,#rim do Tri(mid,rim[n%#rim+1],rim[n],nil,true) end
                 for ii=i,i+size-1 do for kk=k,k+size-1 do used[Key(ii,kk)]=true end end
             else
             local a,b,d,e=V(i,k,top[i][k]),V(i,k+1,top[i][k+1]),V(i+1,k+1,top[i+1][k+1]),V(i+1,k,top[i+1][k])
             local aa,bb,dd,ee=V(i,k,bottom[i][k]),V(i,k+1,bottom[i][k+1]),V(i+1,k+1,bottom[i+1][k+1]),V(i+1,k,bottom[i+1][k])
-            Quad(a,b,d,e); Quad(aa,ee,dd,bb)
+            Quad(a,b,d,e); Quad(aa,ee,dd,bb,nil,true)
             local function Edge(v,w,vb,wb)
                 local vs=v-Vector3(0,M.SoilDepth(v.x,v.z),0)
                 local ws=w-Vector3(0,M.SoilDepth(w.x,w.z),0)
-                Quad(w,v,vs,ws,1); Quad(ws,vs,vb,wb)
+                Quad(w,v,vs,ws,1); Quad(ws,vs,vb,wb,nil,true)
             end
             if not Land(i-1,k) then Edge(a,b,aa,bb) end
             if not Land(i,k+1) then Edge(b,d,bb,dd) end
@@ -457,6 +505,7 @@ local function BuildIslandMesh(scene,mat)
         end end end
         if geom then geom:Commit(); geom:SetMaterial(mat) end
     end end
+    end -- 两遍几何枚举结束；只有第二遍分配 CustomGeometry
     M.meshStats={triangles=triangles,chunks=chunks}
     print(string.format("RuinsTerrain: island shell %d triangles / %d chunks",triangles,chunks))
 end
