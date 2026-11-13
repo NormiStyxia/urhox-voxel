@@ -91,37 +91,159 @@ local function BuildGateRubble(world)
 end
 
 -- ---------------------------------------------------------------- ② 断桥
+-- 桥：沿 z 跨越峡谷，z ∈ [-49.75, -38.25]，宽 4.5m，0.125m 体素（与柱廊、城墙细部同精度）。
+--
+--   横截面（ly = y - RING_Y）：
+--        扶手冠 0.5 ┌┐            ┌┐  1.0..1.125
+--        扶手   0.75┴┴┐        ┌┴┴┘  0.875..1.0（外挑，外缘金线）
+--        宝瓶柱      ││        ││    0.25..0.875（间距 0.625，0.25 方柱 + 0.5 柱础/柱头）
+--        柱座   ────┘└─┐    ┌─┘└──  0.0..0.25（|x| 1.75..2.25）
+--        桥面 D=0.25 ══════════════  中线蓝符文（金边内嵌）；两端最后 0.5m 降为 0.125 台阶
+--        檐口 |x|≤2.25 ▔▔▔▔▔▔▔▔▔▔▔  -0.125..D；-0.375..-0.125 收到 2.125
+--        拱肩 |x|≤2.0  错缝砌石，外层石缝凹进一格
+--        拱券石        ╲__________╱  拱腹 bottom = -0.75 - 1.9u²，拱心石外凸 + 金色符印
+--
+-- 防闪烁：桥面顶 ≥ RING_Y + 0.125，任何外露水平面都不与两岸地表（y = RING_Y）共面。
+-- 诺米 stepHeight 0.55，两级 0.125 台阶可以直接走上去。
+local BRIDGE_D = 0.25
 local function BridgeVoxels(world)
-    -- 桥：沿 z 跨越峡谷，z ∈ [-49.5, -38.5]，宽 4.5m（x ∈ [-2.25, 2.25]），桥面 y=6，
-    -- 下方一道浅拱，两侧栏杆 + 金饰；0.25m 体素
     local z0, z1 = -49.75, -38.25
-    local b = Brush.New(world, { min = { -2.5, Terrain.RING_Y - 2.5, z0 }, max = { 2.5, Terrain.RING_Y + 1.25, z1 }, size = 0.25 })
+    local Y = Terrain.RING_Y
+    local s = Build.DETAIL.column
+    local b = Brush.New(world, { min = { -2.5, Y - 2.75, z0 }, max = { 2.5, Y + 1.5, z1 }, size = s })
     local zc, half = (z0 + z1) * 0.5, (z1 - z0) * 0.5
-    b:Shape(-2.5, Terrain.RING_Y - 2.5, z0, 2.5, Terrain.RING_Y + 1.25, z1, function(x, y, z)
+    local Value2, Value3 = Noise.Value2, Noise.Value3
+    -- 栏杆竖件位置：端柱 / 中柱 / 宝瓶柱
+    local function PostKind(z)
+        local dz0, dz1 = z - z0, z1 - z
+        if (dz0 > 0.25 and dz0 < 0.75) or (dz1 > 0.25 and dz1 < 0.75) or abs(z - zc) < 0.25 then return "newel" end
+        local f = ((z - z0) / 0.625) % 1
+        if f > 0.3 and f < 0.7 then return "baluster" end
+        return nil
+    end
+    -- 拱肩错缝砌石：0.5m 一层，块长 1.0m；返回块哈希与是否在石缝上
+    local function Ashlar(y, z)
+        local row = floor(y * 2.0)
+        local zz = z + (row % 2) * 0.5
+        local fy, fz = (y * 2.0) % 1, zz % 1
+        local joint = fy < 0.25 or fz < 0.125
+        return Hash3(row, floor(zz), 17), joint
+    end
+    b:Shape(-2.5, Y - 2.75, z0, 2.5, Y + 1.5, z1, function(x, y, z)
+        local ax = abs(x)
         local u = (z - zc) / half
-        local ly = y - Terrain.RING_Y
-        -- 拱腹：桥面下方的弧，中间最薄 0.75m、两端 2.5m
-        local bottom = -0.75 - 1.75 * u * u
-        if abs(x) > 2.25 then return nil end
-        if ly < 0 then
+        local ly = y - Y
+        local edgeZ = min(z - z0, z1 - z)
+        local deck = edgeZ < 0.5 and 0.125 or BRIDGE_D
+        local bottom = -0.75 - 1.9 * u * u
+        local key = abs(z - zc) < 0.375
+        -- ---------------- 桥身（檐口以下）
+        if ly < -0.125 then
             if ly < bottom then return nil end
-            if abs(x) > 2.0 and abs(ly - bottom) < 0.3 then return P.GOLD_DARK end
-            return Build.Marble(x, y, z)
-        end
-        -- 栏杆
-        if abs(x) > 1.8 then
-            if ly < 0.25 then return Build.Marble(x, y, z) end
-            if ly < 1.0 then
-                if (z * 2) % 1.5 < 0.5 then return Build.Marble(x, y, z) end
-                return nil
+            local lim = (ly >= -0.375) and 2.125 or 2.0
+            if key and ly < -0.375 then lim = 2.125 end -- 拱心石外凸
+            if ax > lim then return nil end
+            local outer = ax > lim - s
+            local vous = ly < bottom + 0.5
+            if key and ly < -0.375 then
+                if outer and abs(z - zc) < 0.125 and ly > bottom + 0.125 and ly < bottom + 0.5 then return P.RUNE_GOLD end
+                if outer and abs(z - zc) > 0.25 then return P.STONE_C end
+                return P.MARBLE_A
             end
-            return P.GOLD
+            if vous then
+                -- 拱券石：沿拱 0.5m 一块，外层券缝凹进
+                local f = ((z - zc) / 0.5) % 1
+                if outer and f < 0.25 then return nil end
+                if outer and ly < bottom + 0.125 then return P.STONE_C end
+                local h = Hash3(floor((z - zc) / 0.5), 3, 23)
+                if outer and Value3(x * 1.6, y * 1.6, z * 1.6, 41) > 0.68 then return P.STONE_MOSS end
+                return h < 0.5 and P.MARBLE_B or (h < 0.85 and P.STONE_A or P.STONE_B)
+            end
+            if ly >= -0.375 then
+                -- 檐口下层：顶面落苔
+                if outer and Value2(z * 1.8, x, 43) > 0.72 then return P.STONE_MOSS end
+                return P.MARBLE_B
+            end
+            -- 拱肩
+            local h, joint = Ashlar(y, z)
+            if outer and joint then return nil end
+            if outer then
+                -- 檐口下的雨渍：竖向暗条
+                if ly > -1.4 and Value2(z * 4.0, x > 0 and 3 or 9, 45) > 0.76 then return P.STONE_C end
+                if ly < bottom + 1.0 and Value3(x * 1.4, y * 1.4, z * 1.4, 47) > 0.70 then return P.STONE_MOSS end
+            end
+            if h < 0.45 then return P.MARBLE_A elseif h < 0.8 then return P.MARBLE_B elseif h < 0.94 then return P.STONE_A end
+            return P.STONE_B
+        end
+        -- ---------------- 檐口 + 桥面
+        if ly < deck then
+            if ax > 2.25 then return nil end
+            if ax > 2.125 and ly < 0.0 then return P.STONE_B end -- 滴水线
+            if ax > 1.75 then return P.MARBLE_B end
+            local top = ly > deck - s
+            if top then
+                -- 中线符文：蓝芯金边，0.5m 一节，间隔 1.25m
+                if abs(u) < 0.88 then
+                    local f = ((z - zc) / 1.25 + 0.2) % 1
+                    if ax < 0.125 and f > 0.1 and f < 0.5 then return P.RUNE_BLUE end
+                    if ax < 0.25 and f > 0.0 and f < 0.6 then return P.GOLD_DARK end
+                end
+                -- 铺石：1.0 × 0.75m 错缝石板，缝用深色（不挖槽，避免低于两岸地表）
+                local row = floor((z - z0) / 0.75)
+                local xx = x + (row % 2) * 0.5
+                local fz, fx = ((z - z0) / 0.75) % 1, xx % 1
+                if fz < 0.17 or fx < 0.125 then return P.STONE_C end
+                if edgeZ < 0.5 and edgeZ > 0.375 then return P.STONE_B end -- 台阶前沿
+                local h = Hash3(row, floor(xx), 29)
+                if h < 0.40 then return P.TILE_A elseif h < 0.75 then return P.TILE_B elseif h < 0.92 then return P.MARBLE_B end
+                return P.STONE_A
+            end
+            return P.MARBLE_B
+        end
+        -- ---------------- 栏杆
+        local py = ly - deck
+        local kind = PostKind(z)
+        if kind == "newel" then
+            -- 端柱 / 中柱：0.5 方柱，0.75 柱帽，金顶
+            local cz = (abs(z - zc) < 0.25) and zc or ((z - z0 < 1.0) and z0 + 0.5 or z1 - 0.5)
+            local dz = abs(z - cz)
+            local dx = abs(ax - 2.0)
+            if py < 1.25 then
+                if dx < 0.25 and dz < 0.25 then
+                    if py < 0.125 then return P.STONE_B end
+                    if dx > 0.125 and dz > 0.125 and py > 0.5 and py < 0.75 then return P.RUNE_GOLD end
+                    return P.MARBLE_A
+                end
+            elseif py < 1.375 then
+                if dx < 0.375 and dz < 0.375 then return P.MARBLE_B end
+            elseif dx < 0.125 and dz < 0.125 then
+                return P.GOLD
+            end
+        end
+        if ax < 1.75 or ax > 2.25 then return nil end
+        local dx = abs(ax - 2.0)
+        if py < 0.25 then
+            -- 柱座：顶层收进一格
+            if py > 0.125 and dx > 0.125 then return nil end
+            if Value2(z * 2.2, x, 49) > 0.75 then return P.STONE_MOSS end
+            return P.MARBLE_B
+        end
+        if py < 0.875 then
+            if kind ~= "baluster" then return nil end
+            local f = ((z - z0) / 0.625) % 1
+            local dzb = abs(f - 0.5) * 0.625
+            -- 宝瓶柱：柱础 / 柱头 0.5 方，柱身 0.25 方
+            local w = (py < 0.375 or py > 0.75) and 0.25 or 0.125
+            if dx < w and dzb < w then return P.MARBLE_A end
+            return nil
+        end
+        if py < 1.0 then return P.MARBLE_B end
+        if py < 1.125 then
+            if dx > 0.25 then return nil end
+            if dx > 0.125 and ly > 0 and ax > 2.0 then return P.GOLD_DARK end -- 扶手外缘金线
+            return P.MARBLE_A
         end
         return nil
-    end)
-    -- 桥面中线的蓝色符文（回溯后会亮着）
-    b:Shape(-0.5, Terrain.RING_Y - 0.25, z0 + 1, 0.5, Terrain.RING_Y, z1 - 1, function(x, y, z)
-        if abs(x) < 0.15 and (z % 1.0) < 0.5 then return P.RUNE_BLUE end
     end)
     return Harvest(world, b)
 end

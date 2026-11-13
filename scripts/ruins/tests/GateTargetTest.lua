@@ -53,6 +53,7 @@ V.atFrame(8,function()
     V.assert(forwardAim.volume==gate and forwardAim.breakable,"逆投影方向异常不让中心瞄准朝背后")
     nomi.Camera=cameraMethod
     nomi.node.rotation=Quaternion(0,Vector3.UP)
+    nomi.onGround,nomi.speed=true,0
     local heights={}
     for _,pitch in ipairs({-30,0,30}) do
         nomi.camPitch=pitch
