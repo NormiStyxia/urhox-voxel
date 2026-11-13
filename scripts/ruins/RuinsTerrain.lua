@@ -44,17 +44,45 @@ M.ISLAND = {
     mainRadius = 39.5, ringInner = 48.5, ringOuter = 70,
     bridgeHalfWidth = 4.5, bridgeMainZ = -39.25, bridgeRingZ = -49.0,
     safeMargin = 2.0, fallY = -5.0, hardFallY = -24.0,
+    minGap = 5.5, -- .5m 碰撞格量化后仍留至少 5m 裂隙
+    -- 宽角域轮廓，弧度从 +X 朝 +Z；负幅为凹口，正幅为岩肩。
+    -- 南桥头 / 西塔保护在这些造型之后执行，避免侵蚀解谜路线。
+    mainShoulders = {
+        { angle = -2.18, width = .42, amount = -3.6 },
+        { angle = -.72, width = .36, amount = -3.0 },
+        { angle = -1.10, width = .27, amount = 2.1 },
+        { angle = -2.62, width = .28, amount = 1.8 },
+    },
+    outerShoulders = {
+        { angle = -2.15, width = .42, amount = -3.2 },
+        { angle = -.25, width = .40, amount = 2.4 },
+        { angle = 2.40, width = .38, amount = -2.4 },
+    },
     connections = { { name = "east", angle = 0 }, { name = "northwest", angle = 2.35 } },
 }
 M.VOID_Y = -128.0 -- 数值兼容哨兵；不用于造几何/落点
+
+---@param angle number
+---@param lobes table[]
+---@return number
+local function Shoulders(angle, lobes)
+    local delta = 0.0
+    for _, lobe in ipairs(lobes) do
+        local arc = abs((angle-lobe.angle+math.pi)%(2*math.pi)-math.pi)
+        if arc < lobe.width then delta = delta + lobe.amount * (1-Smooth(0,lobe.width,arc)) end
+    end
+    return delta
+end
 
 ---@return number mainEdge, number innerEdge, number outerEdge
 function M.Edges(angle)
     local ca, sa = math.cos(angle), math.sin(angle)
     local fine = (Noise.Value2(ca * 11 + 10, sa * 11 + 10, 3) - .5) * .65
     local main = M.ISLAND.mainRadius + 1.7 * math.sin(3 * angle + .6) + .9 * math.sin(5 * angle - .7) + fine
+        + Shoulders(angle,M.ISLAND.mainShoulders)
     local inner = M.ISLAND.ringInner - .8 + .7 * math.sin(3 * angle - .8) + .3 * math.sin(5 * angle) + fine * .5
     local outer = M.ISLAND.ringOuter + 2.7 * math.sin(3 * angle + .9) + 1.3 * math.sin(5 * angle - .4) + fine
+        + Shoulders(angle,M.ISLAND.outerShoulders)
     -- 四座角楼的 3.7m 基础也保留，不能通过裁墙补救地形缺口。
     local corner=1-Smooth(.12,.24,abs(math.cos(2*angle)))
     inner=min(inner,inner*(1-corner)+47.0*corner)
@@ -68,7 +96,7 @@ function M.Edges(angle)
     outer = max(outer, 70.5 * north)
     local tower = 1 - Smooth(.13, .34, math.abs(math.atan(math.sin(angle + 2.9764), math.cos(angle + 2.9764))))
     main = max(main, 40.5 * tower)
-    return main, inner, outer
+    return min(main,inner-M.ISLAND.minGap), inner, outer
 end
 
 -- 正数为岛内径向余量，负数为虚空。碰撞和网格按同一格中心取样。
@@ -128,7 +156,14 @@ function M.GroundHeight(x,z)
     return nil
 end
 
--- 岛底随离岸距离内收，偏心岩体向下垂落；没有跨越裂隙的底平面。
+-- 断缘厚度以十余米尺度变化；所有边界共享同一函数，土唇不会在网格接缝处断开。
+---@return number
+function M.SoilDepth(x,z)
+    return .18 + .28*(.5+.5*math.sin(x*.13+z*.09))
+        + .12*Noise.Value2(x*.07,z*.07,92)
+end
+
+-- 岛底随离岸距离内收，偏心岩体向下垂落；碰撞列和可见壳体均取这里的底高。
 ---@return number
 function M.BottomHeight(x,z)
     local edge = max(0,M.EdgeDistance(x,z))
@@ -137,8 +172,13 @@ function M.BottomHeight(x,z)
     local lobes = 4*math.exp(-((x+19)^2+(z-9)^2)/150)
         + 6*math.exp(-((x-20)^2+(z+19)^2)/90)
         + 4*math.exp(-((x+52)^2+(z+25)^2)/100)
-    return min(SurfaceHeight(x,z)-1.3, 4.7
-        - (depth + lobes + Noise.Value2(x*.12,z*.12,91)*2) * Smooth(0, r<44 and 12 or 8, edge))
+    local rim = 1.15 + 1.4*(.5+.5*math.sin(x*.12+z*.07))
+        + .65*Noise.Value2(x*.07,z*.07,93)
+    local t = min(1,edge/(r<44 and 12 or 8))
+    -- 非零起始斜率让岩面从岸边就开始向内下切，不留下整圈平底亮腰带。
+    local taper = t*(.65+.35*t)
+    return min(SurfaceHeight(x,z)-1.0, M.RING_Y-rim
+        - (depth + lobes + Noise.Value2(x*.12,z*.12,91)*2) * taper)
 end
 
 -- 仅永久岛面可记录安全点：排除崖缘、台阶、墙顶和活动碎片。
@@ -336,7 +376,7 @@ local function BuildIslandMesh(scene,mat)
         for k=0,N do
             local x,z=-M.HALF+i*c,-M.HALF+k*c
             top[i][k]=M.VisualHeight(x,z)
-            bottom[i][k]=min(top[i][k]-1.3,M.BottomHeight(x,z))
+            bottom[i][k]=min(top[i][k]-.75,M.BottomHeight(x,z))
         end
     end
     for ci=0,N-1,CH do for ck=0,N-1,CH do
@@ -380,7 +420,8 @@ local function BuildIslandMesh(scene,mat)
                 end end
             end
             if merge then
-                if high-low<.0001 then
+                -- 只有完全等高才压成四角面；近似等高也保留边界点，避免邻片微缝。
+                if high==low then
                     Quad(V(i,k,h),V(i,k+size,h),V(i+size,k+size,h),V(i+size,k,h))
                 else
                     local tr={}
@@ -404,7 +445,8 @@ local function BuildIslandMesh(scene,mat)
             local aa,bb,dd,ee=V(i,k,bottom[i][k]),V(i,k+1,bottom[i][k+1]),V(i+1,k+1,bottom[i+1][k+1]),V(i+1,k,bottom[i+1][k])
             Quad(a,b,d,e); Quad(aa,ee,dd,bb)
             local function Edge(v,w,vb,wb)
-                local vs,ws=v-Vector3(0,.35,0),w-Vector3(0,.35,0)
+                local vs=v-Vector3(0,M.SoilDepth(v.x,v.z),0)
+                local ws=w-Vector3(0,M.SoilDepth(w.x,w.z),0)
                 Quad(w,v,vs,ws,1); Quad(ws,vs,vb,wb)
             end
             if not Land(i-1,k) then Edge(a,b,aa,bb) end

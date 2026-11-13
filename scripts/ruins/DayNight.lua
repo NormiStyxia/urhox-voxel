@@ -38,7 +38,8 @@ end
 -- sRGB 调色（拾色器里取的值）
 local TOP_DAY, TOP_DUSK, TOP_NIGHT = Color(0.24, 0.44, 0.82), Color(0.30, 0.34, 0.62), Color(0.05, 0.08, 0.20)
 local HOR_DAY, HOR_DUSK, HOR_NIGHT = Color(0.70, 0.80, 0.93), Color(1.00, 0.56, 0.30), Color(0.14, 0.18, 0.32)
-local GND_DAY, GND_NIGHT = Color(0.42, 0.40, 0.33), Color(0.04, 0.05, 0.08)
+-- 空岛下方仍是天空：低饱和蓝灰，底色亮度不高于旧土色，避免岩底被 IBL 照蓝。
+local GND_DAY, GND_NIGHT = Color(0.30, 0.35, 0.42), Color(0.07, 0.09, 0.13)
 local SUN_DAY, SUN_GOLD, SUN_RED = Color(1.0, 0.95, 0.86), Color(1.0, 0.72, 0.42), Color(1.0, 0.42, 0.22)
 local MOON = Color(0.55, 0.68, 1.0)
 
@@ -69,7 +70,7 @@ function M.New(o)
     self.sky = skyNode:CreateComponent("ProceduralSky")
     self.sky.sunLight = self.sun
     self.sky.skyCurve = 0.18
-    self.sky.groundCurve = 0.06
+    self.sky.groundCurve = 0.28 -- 扩宽地平线到天底的渐变，裂隙中不再像平涂的沟底
     self.sky.sunDiskSize = 1.6
     self.sky.sunCurve = 0.08
     self:Apply()
