@@ -85,7 +85,10 @@ V.atFrame(8,function()
     V.assert((beamFrom-hand):Length()<.0001 and (beamTo-aim.pos):Length()<.0001,"光束两端严格为掌心和准星命中点")
     V.assert((beamNode.worldPosition-(hand+aim.pos)*.5):Length()<.0001,"光束使用世界坐标，不受特效父节点影响")
     game.sigils:Update(0,aim,hand,nomi:CameraNode(),caster,1,true)
-    V.assert((game.sigils.hand.node.worldPosition-hand):Length()<.0001,"施法法阵与光束共享本帧掌心挂点")
+    local seal=game.sigils.hand.node
+    local castDirection=(aim.pos-hand):Normalized()
+    V.assert((seal.worldPosition-(hand+castDirection*.12)):Length()<.0001,"施法法阵在同帧掌心前方12厘米")
+    V.assert(seal.worldDirection:DotProduct(castDirection)>.999,"法阵朝施法目标而非固定迎着镜头")
     nomi.cc:Teleport(savedPos)
     nomi.camTarget.position=savedPos
     nomi.camYaw,nomi.camPitch=savedYaw,savedPitch

@@ -355,7 +355,7 @@ function M.Start()
     nomi_ = Nomi.New(scene_, world_, M.SPAWN, 0)
     M.nomiCtl = nomi_ -- TEMP shot
     renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera()))
-    fx_ = Spells.NewFX(scene_)
+    fx_ = Spells.NewFX(scene_, nomi_:CameraNode())
     M.sigils=Sigil.New(scene_)
     caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_, sigils = M.sigils,
         handPos = function() return nomi_:HandPos() end,
@@ -627,7 +627,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     caster_:Update(dt)
     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
     if M.ride.mode == "free" then nomi_:Animate(dt, caster_.charging or caster_.castAnim > 0) end
-    M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn)
+    -- 法阵只更新一次，在 PostUpdate 中使用本帧最终相机与施法方向。
     Puzzles.Update(dt)
     Puzzles.CheckGate()
     Puzzles.UpdateKey(time_, nomi_:Position())
@@ -691,6 +691,8 @@ function Ruins_HandlePostUpdate(eventType, eventData)
         if M.forceCamMode ~= nil then mode = M.forceCamMode end
         nomi_:UpdateCamera(dt, mode, nomi_.node)
     end
+    local aim = M.aim or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
+    M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn)
 end
 
 function M.Stop()

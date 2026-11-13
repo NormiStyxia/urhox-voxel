@@ -224,6 +224,55 @@ function M.Motes(parent, name, n, kind, additive)
     return self
 end
 
+-- 诺米法术专用：直接提交米制四边形，绕过 BILLBOARD 尺寸流/扩张矩阵。
+-- 龙息仍使用原来的 Motes/Emitter，避免改变其性能和视觉路径。
+---@param parent Node
+---@param camera Node|nil
+function M.WorldMotes(parent, name, n, kind, additive, camera)
+    local self = setmetatable({}, Motes)
+    local node = parent:CreateChild(name)
+    local geometry = node:CreateComponent("CustomGeometry")
+    geometry:SetNumGeometries(1)
+    geometry:SetDynamic(true)
+    geometry:SetMaterial(M.Material(kind, additive))
+    geometry.castShadows = false
+    node.enabled = false
+    self.geometry, self.node, self.camera = geometry, node, camera
+    self.n, self.list, self.free = n, {}, {}
+    for i = n, 1, -1 do self.free[#self.free + 1] = i - 1 end
+    print("VoxelFX: " .. name .. " uses world-space quads, capacity=" .. n)
+    return self
+end
+
+function Motes:Draw()
+    local geometry = self.geometry
+    if geometry == nil then return end
+    if #self.list == 0 then self.node.enabled = false; return end
+    local camera = self.camera --[[@as Node?]]
+    local right = camera and camera.worldRight or Vector3.RIGHT
+    local up = camera and camera.worldUp or Vector3.UP
+    local normal = right:CrossProduct(up)
+    geometry:BeginGeometry(0, TRIANGLE_LIST)
+    for _, m in ipairs(self.list) do
+        local u = m.age / m.life
+        -- Billboard.size 是半尺寸；改为明确顶点后保留同等米制面积。
+        local size = m.size * ((u > .85) and .5 or ((u > .7) and .75 or 1))
+        local r, h = right * size, up * size
+        local p = m.pos
+        local color = m.colors[math.min(#m.colors, math.floor(u * #m.colors) + 1)]
+        local function Vertex(pos, x, y)
+            geometry:DefineVertex(self.node:WorldToLocal(pos))
+            geometry:DefineNormal(normal)
+            geometry:DefineTexCoord(Vector2(x, y))
+            geometry:DefineColor(color)
+        end
+        Vertex(p-r-h,0,1); Vertex(p-r+h,0,0); Vertex(p+r+h,1,0)
+        Vertex(p-r-h,0,1); Vertex(p+r+h,1,0); Vertex(p+r-h,1,1)
+    end
+    geometry:Commit()
+    self.node.enabled = true
+end
+
 -- p = { pos, vel, life, size, colors = {Color...}（按寿命均分阶梯）, grav, drag, bounce, ground, fn(m, dt) }
 function Motes:Spawn(p)
     local idx = table.remove(self.free)
@@ -245,7 +294,7 @@ function Motes:Update(dt)
         m.age = m.age + dt
         local u = m.age / m.life
         if u >= 1 then
-            bb:GetBillboard(m.idx).enabled = false
+            if bb ~= nil then bb:GetBillboard(m.idx).enabled = false end
             self.free[#self.free + 1] = m.idx
         else
             if m.fn ~= nil then
@@ -260,16 +309,18 @@ function Motes:Update(dt)
                     m.vel = Vector3(m.vel.x * 0.6, -m.vel.y * b, m.vel.z * 0.6)
                 end
             end
-            local b = bb:GetBillboard(m.idx)
-            b.enabled = true
-            b.position = m.pos
-            -- 尺寸也按阶梯：结尾两级缩小
-            local s = m.size * ((u > 0.85) and 0.5 or ((u > 0.7) and 0.75 or 1.0))
-            b.size = Vector2(s, s)
-            local cs = m.colors
-            local ci = math.min(#cs, math.floor(u * #cs) + 1)
-            b.color = cs[ci]
-            b.rotation = 0
+            if bb ~= nil then
+                local b = bb:GetBillboard(m.idx)
+                b.enabled = true
+                b.position = m.pos
+                -- 尺寸也按阶梯：结尾两级缩小
+                local s = m.size * ((u > 0.85) and 0.5 or ((u > 0.7) and 0.75 or 1.0))
+                b.size = Vector2(s, s)
+                local cs = m.colors
+                local ci = math.min(#cs, math.floor(u * #cs) + 1)
+                b.color = cs[ci]
+                b.rotation = 0
+            end
             liveCount = liveCount + 1
             list[liveCount] = m
         end
@@ -277,7 +328,7 @@ function Motes:Update(dt)
     for i = liveCount + 1, count do list[i] = nil end
     -- Commit even when this frame killed the last mote: the disabled flags
     -- must reach the renderer before subsequent empty Update calls return.
-    bb:Commit()
+    if bb ~= nil then bb:Commit() else self:Draw() end
 end
 
 function Motes:Count() return #self.list end
@@ -287,11 +338,11 @@ function Motes:Clear()
     if #list == 0 then return end
     for i = #list, 1, -1 do
         local m = list[i]
-        self.bb:GetBillboard(m.idx).enabled = false
+        if self.bb ~= nil then self.bb:GetBillboard(m.idx).enabled = false end
         self.free[#self.free + 1] = m.idx
         list[i] = nil
     end
-    self.bb:Commit()
+    if self.bb ~= nil then self.bb:Commit() else self:Draw() end
 end
 
 -- ---------------------------------------------------------------- 立方体碎块

@@ -186,7 +186,7 @@ local function BridgeVoxels(world)
                 if abs(u) < 0.88 then
                     local f = ((z - zc) / 1.25 + 0.2) % 1
                     if ax < 0.125 and f > 0.1 and f < 0.5 then return P.RUNE_BLUE end
-                    if ax < 0.25 and f > 0.0 and f < 0.6 then return P.GOLD_DARK end
+                    if ax < 0.25 and f > 0.0 and f < 0.6 then return P.MARBLE_DARK end
                 end
                 -- 铺石：1.0 × 0.75m 错缝石板，缝用深色（不挖槽，避免低于两岸地表）
                 local row = floor((z - z0) / 0.75)
@@ -246,7 +246,8 @@ local function BridgeVoxels(world)
         if py < 1.0 then return P.MARBLE_B end
         if py < 1.125 then
             if dx > 0.25 then return nil end
-            if dx > 0.125 and ly > 0 and ax > 2.0 then return P.GOLD_DARK end -- 扶手外缘金线
+            -- 扶手冠：石材，顶面偶有苔痕（金色只留在端柱，否则金属面背光时像一条深色木板）
+            if Value2(z * 1.5, x, 51) > 0.8 then return P.STONE_MOSS end
             return P.MARBLE_A
         end
         return nil

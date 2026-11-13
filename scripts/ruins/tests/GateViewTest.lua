@@ -19,6 +19,7 @@ V.atFrame(8,function()
     g.fake={[KEY_1]=true}
     Ruins_HandleUpdate("Update",e)
     local a=g.aim
+    g.sigils:Update(0,a,n:HandPos(),n:CameraNode(),g.caster,1,true)
     print(string.format("GateViewTest: framebuffer=%dx%d dpr=%.2f origin=%s dir=%s hit=%s projected=%s hand=%s",
         graphics:GetWidth(),graphics:GetHeight(),graphics:GetDPR(),tostring(a.origin),tostring(a.dir),tostring(a.pos),
         tostring(a.hit and n:Camera():WorldToScreenPoint(a.pos) or Vector2.ZERO),tostring(n:HandPos())))

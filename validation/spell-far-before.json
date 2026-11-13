@@ -1,0 +1,544 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "TIMEOUT",
+    "duration_ms": 336773,
+    "frames_completed": 88,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "[2026-11-13 10_47_34_203][98] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
+                    "frame": 1
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-13 10_47_34_203][98] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 1
+                }
+            ]
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 3778.22ms (threshold: 100ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 5451.65ms (threshold: 100ms)",
+                    "frame": 3
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2391.85ms (threshold: 100ms)",
+                    "frame": 4
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2050.78ms (threshold: 100ms)",
+                    "frame": 5
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2503.36ms (threshold: 100ms)",
+                    "frame": 6
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2646.52ms (threshold: 100ms)",
+                    "frame": 7
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2633.76ms (threshold: 100ms)",
+                    "frame": 8
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2401.21ms (threshold: 100ms)",
+                    "frame": 9
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2545.08ms (threshold: 100ms)",
+                    "frame": 10
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2426.29ms (threshold: 100ms)",
+                    "frame": 11
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2332.96ms (threshold: 100ms)",
+                    "frame": 12
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2649.76ms (threshold: 100ms)",
+                    "frame": 13
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1997.29ms (threshold: 100ms)",
+                    "frame": 14
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2382.18ms (threshold: 100ms)",
+                    "frame": 15
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2148.67ms (threshold: 100ms)",
+                    "frame": 16
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2268.13ms (threshold: 100ms)",
+                    "frame": 17
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2516.99ms (threshold: 100ms)",
+                    "frame": 18
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2381.17ms (threshold: 100ms)",
+                    "frame": 19
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2706.65ms (threshold: 100ms)",
+                    "frame": 20
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2235.22ms (threshold: 100ms)",
+                    "frame": 21
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2936.01ms (threshold: 100ms)",
+                    "frame": 22
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2124.99ms (threshold: 100ms)",
+                    "frame": 23
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2608.97ms (threshold: 100ms)",
+                    "frame": 24
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2390.04ms (threshold: 100ms)",
+                    "frame": 25
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2251.71ms (threshold: 100ms)",
+                    "frame": 26
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2489.98ms (threshold: 100ms)",
+                    "frame": 27
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2030.77ms (threshold: 100ms)",
+                    "frame": 28
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2663.52ms (threshold: 100ms)",
+                    "frame": 29
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2302.73ms (threshold: 100ms)",
+                    "frame": 30
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2434.67ms (threshold: 100ms)",
+                    "frame": 31
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1920.97ms (threshold: 100ms)",
+                    "frame": 32
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2020.76ms (threshold: 100ms)",
+                    "frame": 33
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2210.15ms (threshold: 100ms)",
+                    "frame": 34
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2624.41ms (threshold: 100ms)",
+                    "frame": 35
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2347.14ms (threshold: 100ms)",
+                    "frame": 36
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2616.67ms (threshold: 100ms)",
+                    "frame": 37
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 3073.57ms (threshold: 100ms)",
+                    "frame": 38
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2576.76ms (threshold: 100ms)",
+                    "frame": 39
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2841.18ms (threshold: 100ms)",
+                    "frame": 40
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1866.26ms (threshold: 100ms)",
+                    "frame": 41
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1780.7ms (threshold: 100ms)",
+                    "frame": 42
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2317.14ms (threshold: 100ms)",
+                    "frame": 43
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2404.89ms (threshold: 100ms)",
+                    "frame": 44
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2403.74ms (threshold: 100ms)",
+                    "frame": 45
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2107.5ms (threshold: 100ms)",
+                    "frame": 46
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2938.2ms (threshold: 100ms)",
+                    "frame": 47
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2859.02ms (threshold: 100ms)",
+                    "frame": 48
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2880.82ms (threshold: 100ms)",
+                    "frame": 49
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2538.74ms (threshold: 100ms)",
+                    "frame": 50
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2564.96ms (threshold: 100ms)",
+                    "frame": 51
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2816.1ms (threshold: 100ms)",
+                    "frame": 52
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2547.63ms (threshold: 100ms)",
+                    "frame": 53
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2760.85ms (threshold: 100ms)",
+                    "frame": 54
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2191.44ms (threshold: 100ms)",
+                    "frame": 55
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2725.43ms (threshold: 100ms)",
+                    "frame": 56
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2542.99ms (threshold: 100ms)",
+                    "frame": 57
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1991.64ms (threshold: 100ms)",
+                    "frame": 58
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1889.28ms (threshold: 100ms)",
+                    "frame": 59
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2308.36ms (threshold: 100ms)",
+                    "frame": 60
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2316.8ms (threshold: 100ms)",
+                    "frame": 61
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2446.81ms (threshold: 100ms)",
+                    "frame": 62
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2317.82ms (threshold: 100ms)",
+                    "frame": 63
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2252.81ms (threshold: 100ms)",
+                    "frame": 64
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2244.13ms (threshold: 100ms)",
+                    "frame": 65
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2380.91ms (threshold: 100ms)",
+                    "frame": 66
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2288.01ms (threshold: 100ms)",
+                    "frame": 67
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2759.56ms (threshold: 100ms)",
+                    "frame": 68
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2676.54ms (threshold: 100ms)",
+                    "frame": 69
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2075.62ms (threshold: 100ms)",
+                    "frame": 70
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2069.31ms (threshold: 100ms)",
+                    "frame": 71
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2093.99ms (threshold: 100ms)",
+                    "frame": 72
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 3052.28ms (threshold: 100ms)",
+                    "frame": 73
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2701ms (threshold: 100ms)",
+                    "frame": 74
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2395.07ms (threshold: 100ms)",
+                    "frame": 75
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2182.74ms (threshold: 100ms)",
+                    "frame": 76
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2569.96ms (threshold: 100ms)",
+                    "frame": 77
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2775.55ms (threshold: 100ms)",
+                    "frame": 78
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2272.37ms (threshold: 100ms)",
+                    "frame": 79
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2623.69ms (threshold: 100ms)",
+                    "frame": 80
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2309.19ms (threshold: 100ms)",
+                    "frame": 81
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2795.02ms (threshold: 100ms)",
+                    "frame": 82
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2461.18ms (threshold: 100ms)",
+                    "frame": 83
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2056.91ms (threshold: 100ms)",
+                    "frame": 84
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2616.21ms (threshold: 100ms)",
+                    "frame": 85
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2584.99ms (threshold: 100ms)",
+                    "frame": 86
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2014.09ms (threshold: 100ms)",
+                    "frame": 87
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2348.74ms (threshold: 100ms)",
+                    "frame": 88
+                },
+                {
+                    "category": "engine",
+                    "message": "Validation timed out",
+                    "frame": 88
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1657,
+            "component_count": 3013,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 110913.140625
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 2545.083984375
+        },
+        {
+            "frame": 72,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 2093.993896484375
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 5451.64892578125,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "VoxelVolume": 405,
+        "CustomGeometry": 1813,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 325,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 5,
+        "ParticleEmitter": 4,
+        "SoundSource3D": 3
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 90,
+        "total_errors": 90
+    }
+}

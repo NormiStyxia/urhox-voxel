@@ -25,6 +25,21 @@ V.atFrame(5, function()
     V.assert(unique and Spawn(1)==nil,"重新填满后索引唯一且不会超容量")
     pool:Clear()
 
+    local quads=VoxelFX.WorldMotes(root,"WorldPool",8,"square",true,game.nomiCtl:CameraNode())
+    root.position=Vector3(3,2,1); root.scale=Vector3(2,3,4)
+    local point=Vector3(10,80,20)
+    for i=1,8 do quads:Spawn({pos=point,life=.1,size=.06,colors={Color.WHITE}}) end
+    quads:Update(.05)
+    V.assert(quads:Count()==8 and quads.geometry:GetNumVertices(0)==48,"世界粒子满池只提交48个顶点")
+    local vertex=quads.geometry:GetVertex(0,0).position
+    local worldVertex=quads.node:LocalToWorld(vertex)
+    V.assert(math.abs((worldVertex-point):Length()-math.sqrt(2)*.06)<.0001,"父节点位移与非均匀缩放不改变粒子米制尺寸")
+    quads:Update(.1)
+    V.assert(not quads.node.enabled and #quads.free==8,"世界粒子最后死亡帧立即隐藏并回收")
+    quads:Clear(); quads:Clear()
+    V.assert(#quads.free==8,"世界粒子重复清理不重复归还")
+    root.position=Vector3.ZERO; root.scale=Vector3.ONE
+
     local debris=VoxelFX.Debris(root,4,true)
     V.assert(not debris.initialized and #debris.items==0,"闲置碎屑池不创建模型")
     for i=1,4 do debris:Spawn({pos=Vector3.ZERO,life=.1,color=Color.WHITE}) end

@@ -73,6 +73,7 @@ function S:Pulse(pos,normal,color,radius)
     p.color=color; p.radius=radius; p.age=0
 end
 ---@param aim table
+---@param hand Vector3
 ---@param camera Node
 function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     self.age=self.age+dt
@@ -82,14 +83,19 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     if selected then
         local hitPos = aim.pos --[[@as Vector3]]
         local pos=hitPos+(camera.worldPosition-hitPos):Normalized()*.16
-        local distance=(camera.worldPosition-pos):Length()
-        Show(self.target,pos,face,math.max(.45,math.min(1.2,distance*.035)),Color(.45,.75,1,1),.95)
+        Show(self.target,pos,face,.65,Color(.45,.75,1,1),.95)
     end
     local active=enabled and (caster.charging or caster.castAnim>0)
     self.hand.node.enabled=active
     if active then
         local col=caster.charging and Color(1,.77,.32,1) or Color(.4,.65,1,1)
-        Show(self.hand,hand,face*Quaternion(-self.age*35,Vector3.FORWARD),.24+.18*caster.charge,col,.85)
+        -- 手部法阵属于施法空间，不是始终朝镜头的屏幕标记。
+        local target = aim.hit and aim.pos or aim.far --[[@as Vector3?]]
+        ---@type Vector3
+        local delta = target and (target-hand) or aim.dir
+        local direction = delta:LengthSquared()>.0001 and delta:Normalized() or Vector3.FORWARD
+        local rotation = Quaternion(Vector3.FORWARD,direction)
+        Show(self.hand,hand+direction*.12,rotation*Quaternion(-self.age*35,Vector3.FORWARD),.18+.08*caster.charge,col,.85)
     end
     self.range.node.enabled=enabled and caster.charging and aim.hit
     if self.range.node.enabled then

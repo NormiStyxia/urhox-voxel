@@ -216,12 +216,13 @@ local F = {}
 F.__index = F
 
 ---@param scene Scene
-function M.NewFX(scene)
+---@param camera Node|nil
+function M.NewFX(scene, camera)
     local self = setmetatable({}, F)
     local root = scene:CreateChild("TimeFX")
     self.root = root
-    self.motesB = VoxelFX.Motes(root, "MotesBlue", 900, "square", true)
-    self.motesG = VoxelFX.Motes(root, "MotesGold", 500, "star", true)
+    self.motesB = VoxelFX.WorldMotes(root, "MotesBlue", 900, "square", true, camera)
+    self.motesG = VoxelFX.WorldMotes(root, "MotesGold", 500, "star", true, camera)
     -- No spell currently spawns cube debris. Keep the public pool/API, but
     -- avoid creating 80 unused nodes/models until an external Spawn needs it.
     self.debris = VoxelFX.Debris(root, 80, true)
