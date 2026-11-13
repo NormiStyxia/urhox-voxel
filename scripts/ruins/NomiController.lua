@@ -265,13 +265,23 @@ end
 function N:GridHit(ray,maxDist)
     local mask=self.aimMask or 0xffffffff
     local first=self.world:RaycastGridSingle(ray,maxDist,mask)
-    if not EmptyOriginHit(first,ray) then return first end
-    local nearest=TraceVolume(first.volume,ray,maxDist)
-    for _,candidate in ipairs(self.world:RaycastGrid(ray,maxDist,mask)) do
-        local actual=EmptyOriginHit(candidate,ray) and TraceVolume(candidate.volume,ray,maxDist) or candidate
-        if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
+    local emptyOrigin=EmptyOriginHit(first,ray)
+    local timeTarget=first.hit and TimeObject.FindByVolume(first.volume)~=nil
+    if not emptyOrigin and not timeTarget then return first end
+    -- 原生列表也可能漏掉前景体积：不能用同一条查询的返回列表证明无遮挡。
+    -- 零距离异常或选到时之物件时，从当前世界逐体积核对真实 Grid，取最近实心。
+    -- 截断到原生候选距离即可：后方体积绝不可能成为更近的遮挡物。
+    local reach=not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
+    local nearest=VoxelRaycastResult:new()
+    for i=0,self.world:GetVolumeCount()-1 do
+        local volume=self.world:GetVolume(i)
+        if volume~=nil and (volume.collisionLayer & mask)~=0 then
+            local limit=nearest.hit and math.min(reach,nearest.distance) or reach
+            local actual=TraceVolume(volume,ray,limit)
+            if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
+        end
     end
-    if not self.emptyOriginLogged then
+    if emptyOrigin and not self.emptyOriginLogged then
         self.emptyOriginLogged=true
         print(string.format("RuinsAim: repaired empty-origin volume=%d falseDistance=%.4f actualDistance=%.4f",
             first.volumeId,first.distance,nearest.hit and nearest.distance or -1))

@@ -53,6 +53,8 @@ V.atFrame(8, function()
             return falseHit
         end,
         RaycastGrid=function(self,r,d,mask) return world:RaycastGrid(r,d,mask) end,
+        GetVolumeCount=function() return world:GetVolumeCount() end,
+        GetVolume=function(self,i) return world:GetVolume(i) end,
         SphereCast=function(self,s,dir,d,mask) return world:SphereCast(s,dir,d,mask) end
     }
     aim=nomi:AimRay(ray,10)
@@ -90,6 +92,21 @@ V.atFrame(8, function()
     V.assert(aim.volume==rubble and aim.breakable and aim.object==nil,"普通可破坏体素正确识别")
     game.sigils:Update(0,aim,Vector3.ZERO,nomi:CameraNode(),game.caster,1,true)
     V.assert(game.sigils.target.node.enabled,"普通可破坏物件也显示时钟")
+    -- 技能执行不能通过附近碎块换目标；准星是碎石时绝不能回溯桥。
+    local spells=require("ruins.TimeSpells")
+    local rewindCalls,nearCalls=0,0
+    local adjacent={canRewind=true,state="FROZEN",center=Vector3(300.5,5.5,300),title="邻近断桥",
+        IsWhole=function() return false end,
+        PieceCenters=function() return {Vector3(300.5,5.5,300)} end,
+        Rewind=function() rewindCalls=rewindCalls+1; return true end}
+    local ctx={world=world,fx={Burst=function() end,StartRewind=function() end},
+        puzzles={FindNear=function() nearCalls=nearCalls+1; return adjacent end,
+            FindByVolume=function() return adjacent end}}
+    local ok=spells.BY_ID.rewind.cast(ctx,{hit=true,pos=Vector3(300.5,5.5,299),origin=Vector3(300.5,5.5,298),
+        far=Vector3(300.5,5.5,308),volume=rubble})
+    V.assert(not ok and rewindCalls==0 and nearCalls==0,"准星命中普通碎石时不换目标回溯附近断桥")
+    local direct=spells.BY_ID.rewind.cast(ctx,{hit=true,pos=adjacent.center,object=adjacent})
+    V.assert(direct and rewindCalls==1,"直接选中的时之物件仍可回溯")
     local rubbleNode=rubble:GetNode()
     world:RemoveVolume(rubble); rubble:Dispose(); rubbleNode:Dispose()
 

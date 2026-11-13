@@ -107,27 +107,8 @@ M.SPELLS = {
         color = M.VIOLET, icon = "⏪",
         desc = "Q：让时之物件沿时间倒流，重组为原样",
         cast = function(ctx, aim)
-            local obj = aim.object
-            if obj == nil and aim.hit then
-                local near = ctx.puzzles.FindNear(aim.pos, 2.5)
-                if near ~= nil then
-                    local origin = aim.origin or (ctx.handPos and ctx.handPos()) --[[@as Vector3?]]
-                    if origin ~= nil then
-                        local points = near:IsWhole() and { near.center } or near:PieceCenters()
-                        for _, point in ipairs(points) do
-                            local delta = point - origin --[[@as Vector3]]
-                            local length = delta:Length()
-                            if length > 0.001 then
-                                local visible = ctx.world:RaycastGridSingle(Ray(origin, delta / length), length + 0.08, aim.mask or 0xffffffff)
-                                if visible.hit and ctx.puzzles.FindByVolume(visible.volume) == near then
-                                    obj = near
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end
-            end
+            -- 回溯与准星保持同一个目标，不从前景碎石换射线去寻找后方物件。
+            local obj = aim.hit and aim.object or nil
             if obj == nil then
                 ctx.fx:Burst(aim.hit and aim.pos or aim.far, "fizzle", 0.6)
                 return false, "回溯只对带「时之印记」的物件生效"

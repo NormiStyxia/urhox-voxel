@@ -11,6 +11,34 @@ V.atFrame(8,function()
     local savedPos,savedYaw,savedPitch=nomi:Position(),nomi.camYaw,nomi.camPitch
     local gate=puzzles.gateRubble
     print("GateTargetTest: gate="..Name(gate))
+    -- 原生查询漏掉堵门碎石、直接报断桥：不得相信同一查询的候选列表。
+    local realWorld=nomi.world
+    local bridgePiece=puzzles.objects.bridge.pieces[1].vol --[[@as VoxelVolume]]
+    local falseZero=false
+    nomi.world={
+        RaycastGridSingle=function(self,ray,d,mask)
+            local hit=VoxelRaycastResult:new()
+            hit.hit,hit.volume,hit.volumeId=true,bridgePiece,bridgePiece.volumeId
+            hit.distance=falseZero and 0 or 30
+            hit.position=ray.origin+ray.direction*hit.distance
+            return hit
+        end,
+        RaycastGrid=function() error("不能依赖漏掉前景的原生候选列表") end,
+        GetVolumeCount=function() return world:GetVolumeCount() end,
+        GetVolume=function(self,i) return world:GetVolume(i) end,
+        SphereCast=function(self,s,dir,d,mask) return world:SphereCast(s,dir,d,mask) end
+    }
+    for _,zero in ipairs({false,true}) do
+        falseZero=zero
+        for _,x in ipairs({-2.0,.5,2.0}) do for _,y in ipairs({6.75,7.5,8.25}) do
+            local origin=Vector3(.55,7.7,-62)
+            local delta=Vector3(x,y,-51)-origin
+            local aim=nomi:AimRay(Ray(origin,delta:Normalized()),60)
+            V.assert(aim.volume==gate and aim.object==nil and aim.breakable,
+                "原生漏前景也不能隔着南门锁断桥 zero="..tostring(zero).." x="..x.." y="..y)
+        end end
+    end
+    nomi.world=realWorld
     -- 网页现场：相机在地形 chunk 的大包围盒内，但当前位置高于真实路面。
     for _,sample in ipairs({
         {Vector3(.55,8.58560371,-68.4016647),Vector3(0,-.2079117,.978147626)},
