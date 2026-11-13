@@ -131,7 +131,7 @@ local function Banner(text, dur)
 end
 
 -- ---------------------------------------------------------------- 光照 / 氛围
-M.START_HOUR = 16.2   -- 开局在下午偏晚，很快进入黄昏
+M.START_HOUR = 12.0   -- 正午开场，常速约 12 分钟后日落。
 local function SetupLighting()
     local lg = scene_:CreateChild("LightGroup")
     lg:LoadXML(cache:GetResource("XMLFile", "LightGroup/RuinsDay.xml"):GetRoot())

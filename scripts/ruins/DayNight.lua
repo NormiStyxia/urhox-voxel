@@ -5,7 +5,7 @@
 -- 本模块按"游戏时刻"驱动：太阳方向、太阳色温与亮度、天空四色、雾色（= 地平线色，无接缝）、
 -- 体积雾散射色。夜里同一盏方向光转成冷色月光（低亮度、仍投影）。
 --
--- 时间流速：白天 1 游戏小时 ≈ 20 秒；夜里 3 倍速（不让玩家在黑夜里待太久）。
+-- 时间流速：白天 1 游戏小时 ≈ 120 秒；夜里 3 倍速（不让玩家在黑夜里待太久）。
 -- 按住 T 快进（×30）。M.SetHour(h) 直接跳到某个时刻（测试 / 截图）。
 -- ====================================================================
 
@@ -47,8 +47,8 @@ function M.New(o)
     self.zone = o.zone
     self.sun = o.sun
     self.sunNode = o.sunNode
-    self.hour = o.hour or 16.5
-    self.speed = 1.0 / 20.0 -- 游戏小时 / 秒
+    self.hour = o.hour or 12.0
+    self.speed = 1.0 / 120.0 -- 游戏小时 / 秒
     self.fast = false
     -- 环境光：跟随天空
     self.capture = o.zoneNode:CreateComponent("SkyLightCapture")
@@ -99,7 +99,7 @@ function M:Update(dt)
     local night = (h < 5.2 or h > 19.6)
     local rate = self.speed * (night and 3.0 or 1.0) * (self.fast and 30.0 or 1.0)
     self.hour = (h + dt * rate) % 24
-    -- 每 0.05 游戏小时刷新一次（约 1 秒；快进时每帧）
+    -- 每 0.05 游戏小时刷新一次（常速约 6 秒；快进时每帧）
     if math.abs(self.hour - (self.lastApplied or -99)) > 0.05 or self.fast then self:Apply() end
 end
 

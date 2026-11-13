@@ -169,7 +169,7 @@ local function DestroyStream()
     if ordinarySource then ordinarySource:Destroy(); ordinarySource=nil end
 end
 local function CreateStream()
-    local source=breath_
+    local source=breath_ --[[@as DragonBreath]]
     if M.breathStyle=="classic" then
         ordinarySource=Breath.New(scene_,rig_,ctrl_,M.variant,M.groundInfo)
         source=ordinarySource
