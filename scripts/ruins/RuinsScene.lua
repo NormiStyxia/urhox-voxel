@@ -693,6 +693,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     end
     local aim = M.aim or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
     M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn)
+    fx_.motesB:Draw(); fx_.motesG:Draw()
 end
 
 function M.Stop()

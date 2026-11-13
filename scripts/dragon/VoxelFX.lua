@@ -238,6 +238,7 @@ function M.WorldMotes(parent, name, n, kind, additive, camera)
     geometry.castShadows = false
     node.enabled = false
     self.geometry, self.node, self.camera = geometry, node, camera
+    self.deferDraw = camera ~= nil
     self.n, self.list, self.free = n, {}, {}
     for i = n, 1, -1 do self.free[#self.free + 1] = i - 1 end
     print("VoxelFX: " .. name .. " uses world-space quads, capacity=" .. n)
@@ -251,7 +252,7 @@ function Motes:Draw()
     local camera = self.camera --[[@as Node?]]
     local right = camera and camera.worldRight or Vector3.RIGHT
     local up = camera and camera.worldUp or Vector3.UP
-    local normal = right:CrossProduct(up)
+    local normal = -right:CrossProduct(up)
     geometry:BeginGeometry(0, TRIANGLE_LIST)
     local function Vertex(pos, x, y, color)
         geometry:DefineVertex(self.node:WorldToLocal(pos))
@@ -328,7 +329,9 @@ function Motes:Update(dt)
     for i = liveCount + 1, count do list[i] = nil end
     -- Commit even when this frame killed the last mote: the disabled flags
     -- must reach the renderer before subsequent empty Update calls return.
-    if bb ~= nil then bb:Commit() else self:Draw() end
+    if bb ~= nil then bb:Commit()
+    elseif not self.deferDraw then self:Draw()
+    elseif #list == 0 then self.node.enabled = false end
 end
 
 function Motes:Count() return #self.list end

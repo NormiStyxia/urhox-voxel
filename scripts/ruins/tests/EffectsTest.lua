@@ -29,7 +29,7 @@ V.atFrame(5, function()
     root.position=Vector3(3,2,1); root.scale=Vector3(2,3,4)
     local point=Vector3(10,80,20)
     for i=1,8 do quads:Spawn({pos=point,life=.1,size=.06,colors={Color.WHITE}}) end
-    quads:Update(.05)
+    quads:Update(.05); quads:Draw()
     V.assert(quads:Count()==8 and quads.geometry:GetNumVertices(0)==48,"世界粒子满池只提交48个顶点")
     local vertex=quads.geometry:GetVertex(0,0).position
     local worldVertex=quads.node:LocalToWorld(vertex)

@@ -27,6 +27,7 @@ V.atFrame(8,function()
     g.fx.motesB:Spawn({pos=hand+Vector3(-.35,.15,0),size=.06,life=100,colors={Color(.4,.5,1)}})
     g.fx.motesG:Spawn({pos=hand+Vector3(.35,.15,0),size=.12,life=100,colors={Color(1,.77,.32)}})
     g.fx.motesB:Update(0); g.fx.motesG:Update(0)
+    g.fx.motesB:Draw(); g.fx.motesG:Draw()
     local clock=g.sigils.hand.node
     local a=n:Camera():WorldToScreenPoint(clock.worldPosition-n:CameraNode().worldRight*clock.worldScale.x)
     local b=n:Camera():WorldToScreenPoint(clock.worldPosition+n:CameraNode().worldRight*clock.worldScale.x)

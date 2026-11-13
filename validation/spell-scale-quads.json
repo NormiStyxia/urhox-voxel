@@ -1,0 +1,141 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 199566,
+    "frames_completed": 20,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-13 11_01_02_234][93] ERROR: Lua Execute failed for ruins/tests/SpellScaleTest.lua: [string \"ruins/tests/SpellScaleTest\"]:3: Module not found: dragon.VoxelFX",
+                    "frame": 1
+                },
+                {
+                    "category": "lua",
+                    "message": "Failed to load test script: ruins/tests/SpellScaleTest.lua",
+                    "frame": 1
+                }
+            ]
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 133.196ms (threshold: 100ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 168.321ms (threshold: 100ms)",
+                    "frame": 5
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 105.023ms (threshold: 100ms)",
+                    "frame": 6
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 137.311ms (threshold: 100ms)",
+                    "frame": 7
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 162.817ms (threshold: 100ms)",
+                    "frame": 9
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 106.885ms (threshold: 100ms)",
+                    "frame": 10
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 118.047ms (threshold: 100ms)",
+                    "frame": 13
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1657,
+            "component_count": 3013,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 193616.640625
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 106.88500213623047
+        },
+        {
+            "frame": 20,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1632824349,
+            "frame_time_ms": 34.709999084472659
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 168.3209991455078,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "VoxelVolume": 405,
+        "CustomGeometry": 1815,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 325,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 3
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0
+    },
+    "test_issues": [
+        "Test script failed to load: ruins/tests/SpellScaleTest.lua"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 2,
+        "resource_errors": 0,
+        "engine_errors": 7,
+        "total_errors": 9
+    }
+}
