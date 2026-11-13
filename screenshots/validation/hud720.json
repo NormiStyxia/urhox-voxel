@@ -1,0 +1,84 @@
+{
+    "version": 2,
+    "script": "ui/tests/HUDLayout.lua",
+    "result": "PASS",
+    "duration_ms": 13627,
+    "frames_completed": 150,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "PASS",
+            "errors": []
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2,
+            "component_count": 2,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 346.0429992675781
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 42.24100112915039
+        },
+        {
+            "frame": 75,
+            "phase": "run",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 43.926998138427737
+        },
+        {
+            "frame": 150,
+            "phase": "run",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 62.71500015258789
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 189.47300720214845,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "Camera": 1
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 148,
+        "passed": 148,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 0
+    }
+}

@@ -1,0 +1,129 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "TIMEOUT",
+    "duration_ms": 110264,
+    "frames_completed": 76,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "[2026-11-14 00_00_20_585][104] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
+                    "frame": 1
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-14 00_00_20_586][104] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 1
+                }
+            ]
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2857.09ms (threshold: 1500ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1907.06ms (threshold: 1500ms)",
+                    "frame": 4
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2500.21ms (threshold: 1500ms)",
+                    "frame": 10
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 4371.33ms (threshold: 1500ms)",
+                    "frame": 11
+                },
+                {
+                    "category": "engine",
+                    "message": "Validation timed out",
+                    "frame": 76
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1653,
+            "component_count": 3041,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1766380641,
+            "frame_time_ms": 28409.77734375
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1766380641,
+            "frame_time_ms": 2500.205078125
+        },
+        {
+            "frame": 65,
+            "phase": "run",
+            "nodes": 22,
+            "components": 162,
+            "hash": 1766380641,
+            "frame_time_ms": 777.4140014648438
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 4371.3291015625,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "VoxelVolume": 401,
+        "CustomGeometry": 1847,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 325,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 3
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 7,
+        "total_errors": 7
+    }
+}
