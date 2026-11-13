@@ -253,6 +253,12 @@ function Motes:Draw()
     local up = camera and camera.worldUp or Vector3.UP
     local normal = right:CrossProduct(up)
     geometry:BeginGeometry(0, TRIANGLE_LIST)
+    local function Vertex(pos, x, y, color)
+        geometry:DefineVertex(self.node:WorldToLocal(pos))
+        geometry:DefineNormal(normal)
+        geometry:DefineTexCoord(Vector2(x, y))
+        geometry:DefineColor(color)
+    end
     for _, m in ipairs(self.list) do
         local u = m.age / m.life
         -- Billboard.size 是半尺寸；改为明确顶点后保留同等米制面积。
@@ -260,14 +266,8 @@ function Motes:Draw()
         local r, h = right * size, up * size
         local p = m.pos
         local color = m.colors[math.min(#m.colors, math.floor(u * #m.colors) + 1)]
-        local function Vertex(pos, x, y)
-            geometry:DefineVertex(self.node:WorldToLocal(pos))
-            geometry:DefineNormal(normal)
-            geometry:DefineTexCoord(Vector2(x, y))
-            geometry:DefineColor(color)
-        end
-        Vertex(p-r-h,0,1); Vertex(p-r+h,0,0); Vertex(p+r+h,1,0)
-        Vertex(p-r-h,0,1); Vertex(p+r+h,1,0); Vertex(p+r-h,1,1)
+        Vertex(p-r-h,0,1,color); Vertex(p-r+h,0,0,color); Vertex(p+r+h,1,0,color)
+        Vertex(p-r-h,0,1,color); Vertex(p+r+h,1,0,color); Vertex(p+r-h,1,1,color)
     end
     geometry:Commit()
     self.node.enabled = true
