@@ -11,6 +11,21 @@ V.atFrame(8,function()
     local savedPos,savedYaw,savedPitch=nomi:Position(),nomi.camYaw,nomi.camPitch
     local gate=puzzles.gateRubble
     print("GateTargetTest: gate="..Name(gate))
+    -- 网页现场：相机在地形 chunk 的大包围盒内，但当前位置高于真实路面。
+    for _,sample in ipairs({
+        {Vector3(.55,8.58560371,-68.4016647),Vector3(0,-.2079117,.978147626)},
+        {Vector3(.336444288,7.61823511,-63.4223518),Vector3(.00628301967,-.00628314354,.999960542)}
+    }) do
+        local ray=Ray(sample[1],sample[2])
+        local native=world:RaycastGridSingle(ray,60,nomi.aimMask)
+        local volume=native.volume --[[@as VoxelVolume?]]
+        local cell=volume and volume:GetNode():WorldToLocal(ray.origin)/volume.voxelSize or Vector3.ZERO
+        local solid=volume and volume:GetGrid():IsSolid(math.floor(cell.x),math.floor(cell.y),math.floor(cell.z))
+        print(string.format("GateTargetTest: LIVE origin=%s nativeDistance=%.4f volumeId=%s cell=%s solid=%s",
+            tostring(ray.origin),native.distance,tostring(native.volumeId),tostring(cell),tostring(solid)))
+        local aim=nomi:AimRay(ray,60)
+        V.assert(not aim.hit or aim.distance>.001 or solid,"空网格中的相机不能被零距离假命中截断")
+    end
     -- 覆盖整块实心门芯：左右、高低以及斜向镜头；不只测轴对齐的中央射线。
     -- 外圈随机椭球可能被门柱遮挡，不把不可见或空隙位置误判为应锁定。
     local misses=0
