@@ -14,8 +14,9 @@ function M.Metrics()
     return graphics:GetWidth()/dpr, graphics:GetHeight()/dpr,
         {left=s.left*factor, right=s.right*factor, top=s.top*factor, bottom=s.bottom*factor}
 end
-function M.Begin(vg)
+function M.Begin(vg, screenSpace)
     nvgSave(vg)
+    if screenSpace then nvgResetTransform(vg) end
     local k = graphics:GetDPR()/UI.GetScale()
     nvgScale(vg,k,k)
     nvgShapeAntiAlias(vg,0)

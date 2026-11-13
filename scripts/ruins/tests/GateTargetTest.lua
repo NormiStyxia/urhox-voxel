@@ -41,16 +41,50 @@ V.atFrame(8,function()
         end
     end
     nomi.cc:Teleport(Vector3(0,6.1,-58))
+    nomi.camTarget.position=nomi:Position()
+    nomi.camYaw,nomi.camPitch=0,0
+    for i=1,60 do nomi:UpdateCamera(1/60,"aim",nomi.node) end
+    -- 模拟平台逆投影给出反向射线：中心瞄准仍须朝可见南门。
+    local cameraMethod=nomi.Camera
+    local realCamera=nomi:Camera()
+    nomi.Camera=function() return {nearClip=realCamera.nearClip,
+        GetScreenRay=function() return Ray(nomi:CameraNode().worldPosition,-nomi:CameraNode().worldDirection) end} end
+    local forwardAim=nomi:Aim(60)
+    V.assert(forwardAim.volume==gate and forwardAim.breakable,"逆投影方向异常不让中心瞄准朝背后")
+    nomi.Camera=cameraMethod
     nomi.node.rotation=Quaternion(0,Vector3.UP)
+    local heights={}
     for _,pitch in ipairs({-30,0,30}) do
         nomi.camPitch=pitch
         for i=1,90 do nomi:Animate(1/60,true) end
         local arm=nomi.nomi.bones.arm_right
         local hand=nomi:HandPos()
+        heights[#heights+1]=hand.y-arm.worldPosition.y
         print(string.format("GateTargetTest: casting pitch=%.1f shoulder=%s hand=%s palmForward=%.4f",
             pitch,tostring(arm.worldPosition),tostring(hand),(hand-arm.worldPosition):DotProduct(nomi.node.worldDirection)))
         V.assert((hand-arm.worldPosition):DotProduct(nomi.node.worldDirection)>.2,"施法手在肩前而非背后 pitch="..pitch)
+        V.assert((hand-nomi.castSocket.worldPosition):Length()<.0001,"施法起点始终是模型掌心")
     end
+    V.assert(heights[1]>heights[2] and heights[2]>heights[3],"抬头抬手、低头降手，俯仰不反向")
+    nomi.camPitch=0
+    -- 角色背对相机时单击 E，必须先转向目标、同帧抬手再发射。
+    nomi.yaw=180; nomi.node.rotation=Quaternion(180,Vector3.UP)
+    nomi.nomi.armed=0; nomi:Animate(0,false)
+    local aim=nomi:Aim(60)
+    local caster=game.caster
+    caster.cool.freeze=0
+    caster:Cast("freeze",aim)
+    local hand=nomi:HandPos()
+    V.assert(nomi.node.worldDirection:DotProduct((aim.pos-nomi:Position()):Normalized())>.9,"背对目标单击施法先转身")
+    V.assert((hand-nomi.nomi.bones.arm_right.worldPosition):DotProduct(nomi.node.worldDirection)>.2,"首次单击也从前伸掌心发射")
+    local beam=game.fx.beams[1]
+    local beamFrom=beam.from --[[@as Vector3]]
+    local beamTo=beam.to --[[@as Vector3]]
+    local beamNode=beam.node --[[@as Node]]
+    V.assert((beamFrom-hand):Length()<.0001 and (beamTo-aim.pos):Length()<.0001,"光束两端严格为掌心和准星命中点")
+    V.assert((beamNode.worldPosition-(hand+aim.pos)*.5):Length()<.0001,"光束使用世界坐标，不受特效父节点影响")
+    game.sigils:Update(0,aim,hand,nomi:CameraNode(),caster,1,true)
+    V.assert((game.sigils.hand.node.worldPosition-hand):Length()<.0001,"施法法阵与光束共享本帧掌心挂点")
     nomi.cc:Teleport(savedPos)
     nomi.camTarget.position=savedPos
     nomi.camYaw,nomi.camPitch=savedYaw,savedPitch

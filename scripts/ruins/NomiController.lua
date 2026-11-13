@@ -34,6 +34,7 @@ end
 ---@field camYaw number
 ---@field camPitch number
 ---@field aimMask integer
+---@field castSocket Node
 local N = {}
 N.__index = N
 
@@ -45,6 +46,12 @@ function M.New(scene, world, spawn, spawnYaw)
     self.node = scene:CreateChild("Nomi")
     self.node.worldPosition = spawn
     self.nomi = BlockCharacter.CreateVoxel(self.node, NomiVoxelData, BlockCharacter.SLENDER)
+    -- 体素模型手掌中心约 (19,33,-.75)，肩轴 (9,46,-1.5)。
+    -- 按同一份 unit/修长体型变换挂在手骨上，不用肩部向下猜 0.45m。
+    local socket = self.nomi.bones.arm_right:CreateChild("SpellPalm")
+    local shape = BlockCharacter.SLENDER.widen
+    socket.position = Vector3(10 * shape.x, -13, .75 * shape.z) * NomiVoxelData.unit
+    self.castSocket = socket
     local cc = self.node:CreateComponent("VoxelCharacterController")
     cc.height = 1.65
     cc.radius = 0.32
@@ -83,11 +90,22 @@ function N:Camera() return self.cam:GetCamera() end
 function N:CameraNode() return self.cam:GetNode() end
 function N:Position() return self.node.worldPosition end
 
--- 右手位置（施法起点）
+-- 右手掌心位置；与骨骼动画和角色世界变换保持一致。
 function N:HandPos()
-    local arm = self.nomi.bones.arm_right
-    if arm ~= nil then return arm.worldPosition + arm.worldRotation * Vector3(0, -0.45, 0) end
-    return self.node.worldPosition + Vector3(0, 1.2, 0)
+    return self.castSocket.worldPosition
+end
+
+-- 单次 E/Q 也先面向目标并摆好手臂，再读取同帧掌心发射点。
+---@param aim table
+function N:PrepareCast(aim)
+    local target = aim.hit and aim.pos or aim.far --[[@as Vector3]]
+    local delta = target - self.node.worldPosition
+    if delta.x * delta.x + delta.z * delta.z > .001 then
+        self.yaw = math.deg(math.atan(delta.x, delta.z))
+        self.node.worldRotation = Quaternion(self.yaw, Vector3.UP)
+    end
+    self.nomi.armed = 1
+    self:Animate(0, true)
 end
 
 -- 鼠标视角
@@ -134,7 +152,7 @@ end
 
 function N:Animate(dt, casting)
     self.nomi:Update(dt, { moveSpeed = self.onGround and self.speed or 0, onGround = self.onGround, armed = casting, aiming = casting,
-        aimPitch = -self.camPitch })
+        aimPitch = self.camPitch })
 end
 
 function N:UpdateCamera(dt, mode, followNode)
@@ -201,9 +219,18 @@ function N:AimRay(ray, maxDist)
     return res
 end
 
--- 从真正的屏幕中心出发；不再跳过相机与角色之间已经看得到的近处物件。
+-- 全屏中心准星对应相机的世界正前方，不依赖逆投影的深度约定。
+-- 保留近裁剪面起点，不跳过相机与角色之间可见的物件。
 function N:Aim(maxDist)
-    return self:AimRay(self:Camera():GetScreenRay(0.5, 0.5), maxDist)
+    local camera, node = self:Camera(), self:CameraNode()
+    local direction = node.worldDirection:Normalized()
+    if not self.aimLogged then
+        self.aimLogged = true
+        local projected = camera:GetScreenRay(.5, .5)
+        print(string.format("RuinsAim: center-forward dot=%.4f viewport=%dx%d dpr=%.2f",
+            projected.direction:DotProduct(direction), graphics:GetWidth(), graphics:GetHeight(), graphics:GetDPR()))
+    end
+    return self:AimRay(Ray(node.worldPosition + direction * camera.nearClip, direction), maxDist)
 end
 
 function N:SetVisible(v) self.node:SetDeepEnabled(v) end

@@ -182,6 +182,7 @@ function C:Cast(id, aim)
     ---@type table|nil
     local sp = M.BY_ID[id]
     if sp == nil or not self:Ready(id) then return false end
+    if self.ctx.prepareCast then self.ctx.prepareCast(aim) end
     local ok, msg = sp.cast(self.ctx, aim, self.charge)
     self.cool[id] = sp.cooldown
     self.lastCast = id
@@ -321,8 +322,8 @@ function F:Beam(from, to, color)
     if len < 0.1 then return end
     b.from, b.to, b.color, b.age, b.len = from, to, color, 0, len
     b.node.enabled = true
-    b.node.position = Vector3((from.x + to.x) * 0.5, (from.y + to.y) * 0.5, (from.z + to.z) * 0.5)
-    b.node.rotation = Quaternion(Vector3.FORWARD, d * (1.0 / len))
+    b.node.worldPosition = Vector3((from.x + to.x) * 0.5, (from.y + to.y) * 0.5, (from.z + to.z) * 0.5)
+    b.node.worldRotation = Quaternion(Vector3.FORWARD, d * (1.0 / len))
     b.sm:SetMaterial(VoxelFX.CubeMaterial(color, 3.0))
     -- 沿光束的像素点
     local n = math.min(40, math.floor(len * 2))

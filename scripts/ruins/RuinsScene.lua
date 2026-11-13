@@ -357,7 +357,8 @@ function M.Start()
     fx_ = Spells.NewFX(scene_)
     M.sigils=Sigil.New(scene_)
     caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_, sigils = M.sigils,
-        handPos = function() return nomi_:HandPos() end })
+        handPos = function() return nomi_:HandPos() end,
+        prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     SetupDragon()
 
     sleepBase.valid = false
@@ -623,6 +624,8 @@ function Ruins_HandleUpdate(eventType, eventData)
     local aim = (not M.mounted) and UpdateAim() or { hit = false, dir = Vector3.FORWARD, far = Vector3.ZERO }
     HandleSpells(dt, aim)
     caster_:Update(dt)
+    -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
+    if M.ride.mode == "free" then nomi_:Animate(dt, caster_.charging or caster_.castAnim > 0) end
     M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn)
     Puzzles.Update(dt)
     Puzzles.CheckGate()
@@ -650,8 +653,6 @@ function Ruins_HandleUpdate(eventType, eventData)
     local glowCol = caster_.charging and Spells.GOLD or Spells.BLUE
     local glow = caster_.charging and (0.4 + 0.6 * caster_.charge) or (caster_.castAnim > 0 and 1.0 or 0.12)
     fx_:Update(dt, nomi_:HandPos(), glowCol, glow)
-    -- 动画
-    if M.ride.mode == "free" then nomi_:Animate(dt, caster_.charging or caster_.castAnim > 0) end
     -- HUD
     HUD.UpdateSlots(caster_.cool, caster_.charging and caster_.charge or 0,Spells.ShatterRadius(caster_.charge))
     if banner.t > 0 then

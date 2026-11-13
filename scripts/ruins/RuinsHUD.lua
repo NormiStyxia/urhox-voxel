@@ -65,7 +65,7 @@ function Layer:Update(dt)
     if input:GetKeyPress(KEY_H) and not Touch.IsEnabled() then help=not help end
 end
 function Layer:Render(vg)
-    Draw.Begin(vg)
+    Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
     local left,top=Draw.Snap(s.left+16),Draw.Snap(s.top+16)
