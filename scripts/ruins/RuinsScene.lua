@@ -353,7 +353,6 @@ function M.Start()
     Puzzles.On(OnPuzzle)
 
     nomi_ = Nomi.New(scene_, world_, M.SPAWN, 0)
-    M.nomiCtl = nomi_ -- TEMP shot
     renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera()))
     fx_ = Spells.NewFX(scene_, nomi_:CameraNode())
     M.sigils=Sigil.New(scene_)
