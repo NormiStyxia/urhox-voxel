@@ -11,6 +11,10 @@ render_mode shading_model_pbr, cull_back;
 
 uniform sampler2D splat_map : filter_linear, repeat_disable;
 uniform vec3 daynight_tint = vec3(1.0);
+// 仅模拟低频地面云影；默认关，由 SkyAtmosphere 统一驱动。不影响岛底。
+uniform float cloud_shadow_strength = 0.0;
+uniform float cloud_shadow_day = 1.0;
+uniform float cloud_shadow_time = 0.0;
 uniform vec3 grass_dark = vec3(0.16, 0.30, 0.10);
 uniform vec3 grass_light = vec3(0.36, 0.52, 0.20);
 uniform vec3 grass_dry = vec3(0.55, 0.52, 0.28);
@@ -204,5 +208,11 @@ void fragment() {
         ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);
         ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
         SPECULAR = mix(SPECULAR, 0.7, ice);
+    }
+    // 放在全部导数/霜之后；关闭时跳过唯一一次低频噪声采样。
+    if (cloud_shadow_strength > 0.0 && cloud_shadow_day > 0.0 && n.y > 0.35) {
+        vec2 cloudUV = (wp.xz - vec2(0.45, 0.18) * cloud_shadow_time) * 0.035;
+        float cloud = smoothstep(0.38, 0.68, vnoise(cloudUV));
+        ALBEDO *= 1.0 - cloud * cloud_shadow_strength * cloud_shadow_day * smoothstep(0.35, 0.75, n.y);
     }
 }

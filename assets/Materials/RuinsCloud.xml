@@ -1,0 +1,3 @@
+<material>
+    <surfaceshader name="Shaders/BLGL/RuinsCloud.shader" />
+</material>

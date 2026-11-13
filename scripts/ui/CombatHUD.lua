@@ -1,0 +1,90 @@
+-- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
+local Draw=require('ui.PixelDraw')
+local H={}
+local data={}
+local C=Draw.colors
+local RED={240,91,76}
+local notice,noticeUntil='',0
+local PART_NAMES={head='头部',foreleg_l='左前腿',foreleg_r='右前腿',back_armor='背甲',core='核心',body='躯干',belly='腹部',flank='侧腹'}
+function H.Say(text,seconds) notice,noticeUntil=text,GetTime():GetElapsedTime()+(seconds or 1.2) end
+function H.Set(value) data=value or {} end
+function H.Active() return data.combat==true end
+function H.Aimed() return data.aimed~=nil end
+function H.Weapon() return data.weapon or 'sword' end
+function H.Charge() return data.charge or 0 end
+function H.HasBoss()
+    for _,enemy in ipairs(data.enemies or {}) do if enemy.boss and enemy.aggro and not enemy.dead then return true end end
+    return false
+end
+function H.Render(vg,w,h,s,objective)
+    if not data.moves then return end
+    local moves=data.moves
+    local x,y=objective.x,objective.y+objective.h+8
+    local columns=math.min(5,math.max(1,math.floor((w-s.right-x-32)/32)))
+    local rows=math.ceil(10/columns)
+    local shake=moves.invuln>.76 and (math.floor(moves.age*30)%2==0 and 2 or -2) or 0
+    x=Draw.Snap(x+shake)
+    Draw.NineSlice(vg,'plaque_ink',x,y,columns*32+24,rows*32+24,8,.9)
+    for i=1,10 do
+        local hp=moves.hp-(i-1)*10
+        local icon=hp>=10 and 'heart_16' or (hp>0 and 'heart_half_16' or 'heart_empty_16')
+        Draw.Image(vg,icon,x+12+((i-1)%columns)*32,y+12+math.floor((i-1)/columns)*32,1)
+    end
+    local enemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
+    if enemy and not enemy.boss and not enemy.dead and enemy.active and data.camera then
+        local pos=enemy.position+Vector3(0,(enemy.config and enemy.config.height or 1.5)+.5,0)
+        local delta=pos-data.cameraNode.worldPosition --[[@as Vector3]]
+        if delta:DotProduct(data.cameraNode.worldDirection)>0 then
+            local screen=data.camera:WorldToScreenPoint(pos)
+            if screen.x>0 and screen.x<1 and screen.y>0 and screen.y<1 then
+                local bx,by=Draw.Snap(screen.x*w-40),Draw.Snap(screen.y*h)
+                Draw.Rect(vg,bx-2,by-2,84,10,C.deep)
+                Draw.Rect(vg,bx,by,Draw.Snap(80*enemy.hp/enemy.maxHP),6,RED)
+                local index=0
+                for _,p in pairs(enemy.parts) do if p.maxArmor>0 then
+                    local ax=bx+index*12
+                    Draw.Rect(vg,ax,by+12,8,8,p.broken and RED or C.gold)
+                    if not p.broken then Draw.Rect(vg,ax,by+12+Draw.Snap(8*(1-p.armor/p.maxArmor)),8,Draw.Snap(8*p.armor/p.maxArmor),C.paper) end
+                    index=index+1
+                end end
+            end
+        end
+    end
+    for _,boss in ipairs(data.enemies or {}) do if boss.boss and boss.aggro and not boss.dead then
+        local bw=math.min(320,w-s.left-s.right-32)
+        local bx,by=Draw.Snap((w-bw)/2),Draw.Snap(s.top+24)
+        Draw.NineSlice(vg,'bar_frame',bx,by,bw,36,6,1)
+        Draw.Text(vg,'石甲兽',bx+bw/2,by-8,12,C.paper,NVG_ALIGN_CENTER)
+        Draw.NineSlice(vg,'bar_fill_red',bx+12,by+12,Draw.Snap((bw-24)*boss.hp/boss.maxHP),6,0,1)
+        Draw.NineSlice(vg,'bar_fill_blue',bx+12,by+20,Draw.Snap((bw-24)*(boss.poise or 0)/(boss.maxPoise or 100)),4,0,1)
+        break
+    end end
+    local info=noticeUntil>GetTime():GetElapsedTime() and notice or nil
+    if moves.clip=='bow_draw' or moves.clip=='bow_hold' then
+        info=(moves.charge>=.8 and '满蓄' or (moves.charge>=.3 and '中蓄' or '弱蓄'))..' · 松手射击 · 闪避取消'
+    elseif moves.cancelUntil and moves.age<moves.cancelUntil then info='已取消拉弓' end
+    if info then
+        local tw=Draw.TextWidth(vg,info,12)
+        local ix,iy=Draw.Snap((w-tw-32)/2),Draw.Snap(h*.68)
+        Draw.NineSlice(vg,'plaque_ink',ix,iy,tw+32,40,8,.95)
+        Draw.Text(vg,info,w/2,iy+20,12,C.paper,NVG_ALIGN_CENTER)
+    end
+    local partNotice=moves.partNotice --[[@as {part:string,untilTime:number}|nil]]
+    if partNotice and moves.age<partNotice.untilTime then
+        local px,py=Draw.Snap(w/2-90),Draw.Snap(h*.3)
+        local flash=math.floor(moves.age*16)%2==0
+        Draw.Image(vg,'armor_break_s',px,py,1)
+        Draw.Text(vg,(PART_NAMES[partNotice.part] or partNotice.part)..' · 破甲',px+48,py+20,12,flash and C.bright or C.paper)
+    elseif moves.weakUntil and moves.age<moves.weakUntil then Draw.Text(vg,'弱点命中',w/2,h*.3,12,C.gold,NVG_ALIGN_CENTER) end
+    for _,number in ipairs(moves.numbers or {}) do
+        if number.untilTime>moves.age and data.camera and (number.pos-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
+            local sp=data.camera:WorldToScreenPoint(number.pos)
+            Draw.Text(vg,tostring(number.value),Draw.Snap(sp.x*w),Draw.Snap(sp.y*h-(.7-number.untilTime+moves.age)*24),12,C.gold,NVG_ALIGN_CENTER)
+        end
+    end
+    if data.debug then
+        Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,320,56,8,1)
+        Draw.Text(vg,data.debug,s.left+32,s.top+44,12,C.gold)
+    end
+end
+return H

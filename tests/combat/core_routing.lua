@@ -1,0 +1,57 @@
+-- Exercise actual Scene charge/breath routing with an offline input/caster mock.
+local file=assert(io.open('scripts/ruins/RuinsScene.lua','r'))
+local source=file:read('*a');file:close()
+local state={allowed=true,combat=false}
+local keys,press,touchDown,touchPress={},{},{},{}
+local touch=false
+local casts,charges={},{}
+local caster={charging=false,charge=0}
+function caster:HandleCharge(on) charges[#charges+1]=on;self.charging=on end
+function caster:Cast(id) casts[#casts+1]=id end
+function caster:Say(text) self.message=text end
+local env=setmetatable({M={mounted=false,debugOn=false,ride={mode='free'},ctrl={state='IDLE'}},
+    caster_=caster,voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
+    KEY_1=1,KEY_2=2,KEY_3=3,KEY_E=4,KEY_Q=5,MOUSEB_LEFT=1,
+    CombatState={CanUseTime=function() return state.allowed end,InCombat=function() return state.combat end},
+    TouchControls={IsBlocked=function() return false end},
+    TouchInput={IsEnabled=function() return touch end,Down=function(k) return touchDown[k] or false end,
+        Press=function(k) local p=touchPress[k];touchPress[k]=nil;return p end},
+    input={focus=true,minimized=false,GetMouseButtonDown=function() return keys.mouse or false end},
+    pointer={CanAttack=function() return not keys.blocked end,IsEnabled=function() return true end},
+    Down=function(k) return keys[k] or false end,
+    Press=function(k) local p=press[k];press[k]=nil;return p end}, {__index=_G})
+-- Use actual newline boundaries (not a Lua runtime function approximation).
+local body=source:match('(local function HandleSpells.-)'..string.char(10)..'function Ruins_HandleSceneUpdate')
+local handle=assert(load(body..string.char(10)..'return HandleSpells','Scene.HandleSpells','t',env))()
+keys.mouse=true;handle(.1,{});assert(caster.charging and #charges==1)
+keys.mouse=false;handle(.1,{});assert(not caster.charging and #charges==2)
+press[4],press[5]=true,true;handle(.1,{});assert(casts[1]=='freeze' and casts[2]=='rewind')
+state.allowed,state.combat=false,true;caster.charging=true;keys.mouse=true;press[4]=true
+handle(.1,{});assert(not caster.charging and caster.message=='战斗中无法使用时间之力' and #casts==2)
+local count=#charges
+state.combat=false;handle(.1,{});assert(#charges==count)
+state.allowed=true;env.combatInputBlocked=true;handle(.1,{});assert(#charges==count)
+env.combatInputBlocked=false;keys.mouse=false;touch=true;touchPress.shatter=true
+handle(.1,{});assert(charges[#charges-1]==true and charges[#charges]==false)
+env.M.mounted=true;touchDown.shatter=true;handle(.1,{});assert(not caster.charging)
+local stream=assert(source:match('(function M.readStreamInput.-)'..string.char(10)..'%-%- 当前瞄准目标'))
+assert(load(stream,'Scene.readStreamInput','t',env))()
+env.M.ride.mode='mounted';touchDown.breath=true
+local held,allowed=env.M.readStreamInput();assert(held and allowed)
+env.M.ctrl.state='BREATH';held,allowed=env.M.readStreamInput();assert(held and not allowed)
+env.M.ctrl.state='IDLE';touchDown.breath=false;touch=false;keys.mouse=true;keys.blocked=true
+held,allowed=env.M.readStreamInput();assert(not held and not allowed)
+keys.blocked=false;held,allowed=env.M.readStreamInput();assert(held and allowed)
+env.M.ride.mode='free';held,allowed=env.M.readStreamInput();assert(not held and not allowed)
+local cue=assert(source:match('(function Ruins_HandleEnemyAttackCue.-)\nend'))..'\nend'
+env.M.combat={};env.DebugLog={Log=function() end}
+assert(load(cue,'Scene.EnemyAttackCue','t',env))()
+local fields={EnemyId='sentry_1',Attack='stone',Phase='telegraph',Position={x=1,y=2,z=3},Duration=.9}
+local event={GetString=function(_,key) return fields[key] end,GetFloat=function(_,key) return fields[key] end,
+    GetVector3=function(_,key) return fields[key] end}
+env.Ruins_HandleEnemyAttackCue(nil,event)
+local snapshot=env.M.combat.enemyCue
+assert(snapshot.enemyId=='sentry_1' and snapshot.duration==.9 and snapshot.phase=='telegraph')
+fields.Phase='active';env.Ruins_HandleEnemyAttackCue(nil,event)
+assert(env.M.combat.enemyCue==snapshot and snapshot.phase=='active','sound placeholder reuses one bounded event snapshot')
+print('PASS core_routing: Scene exploration charge/tap/freeze/rewind, combat+exit gates, mounted breath, pointer gate, special exclusivity')

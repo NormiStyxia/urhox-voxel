@@ -71,7 +71,7 @@
 			<attribute name="Depth Slope Bias" value="0.5" />
 			<attribute name="Max Extrusion" value="5000" />
 			<attribute name="Ignore Ray" value="true" />
-			<attribute name="Auto Shadow Cascade" value="true" />
+			<attribute name="Auto Shadow Cascade" value="false" />
 			<attribute name="Num Auto Shadow Cascade" value="4" />
 			<attribute name="Affect Volumetric Fog" value="true" />
 		</component>

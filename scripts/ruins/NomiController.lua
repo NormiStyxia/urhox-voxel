@@ -11,6 +11,7 @@ require "urhox-libs.Camera.ThirdPersonCamera"
 local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
 local TimeObject = require("ruins.TimeObject")
+local DebugLog = require("ruins.DebugLog")
 local Terrain = require("ruins.RuinsTerrain")
 
 local M = {}
@@ -39,7 +40,10 @@ end
 ---@field safePos Vector3
 ---@field safeT number
 ---@field onVoidReturn fun(pos:Vector3)|nil
+---@field onVoidFall fun(pos:Vector3, forced:boolean):boolean|nil
+---@field voidReturning boolean|nil
 ---@field castSocket Node
+---@field ignoreAimVolume fun(volume:VoxelVolume):boolean|nil
 local N = {}
 N.__index = N
 
@@ -126,7 +130,7 @@ function N:Look(dx, dy, sens)
 end
 
 -- 移动输入（f, r ∈ [-1,1]）
-function N:Move(dt, f, r, run, jump, aiming)
+function N:Move(dt, f, r, run, jump, aiming, combat)
     if self:UpdateSafety(dt) then return end
     local cc = self.cc
     local rad = math.rad(self.camYaw)
@@ -137,39 +141,77 @@ function N:Move(dt, f, r, run, jump, aiming)
     local moving = dir:LengthSquared() > 0.01
     if moving then dir = dir:Normalized() end
     local target = moving and ((run and not aiming) and RUN or (aiming and WALK * 0.6 or WALK)) or 0
+    if combat then target=moving and 5*(combat.scale or 1) or 0 end
     local onGround = cc.onGround
     local want = dir * target * moveAmount
     local k = onGround and (1 - math.exp(-12 * dt)) or (1 - math.exp(-12 * AIR_CONTROL * dt))
     self.vel = self.vel:Lerp(want, k)
     cc.desiredVelocity = Vector3(self.vel.x, 0, self.vel.z)
-    if jump and onGround then cc:Jump(JUMP) end
+    if combat then
+        -- Animation supplies metres, never teleports the actor. The controller
+        -- still resolves walls/steps. Sample the entire path, not only its end.
+        self.vel=want
+        local motion=combat.motion or Vector3.ZERO
+        local length=motion:Length()
+        local p=self.node.worldPosition
+        local fraction=1
+        local steps=math.max(1,math.ceil(length/.12))
+        for i=1,steps do
+            local q=p+motion*(i/steps)
+            if not Terrain.HasGround(q.x,q.z,.4) then fraction=(i-1)/steps; break end
+        end
+        cc.desiredVelocity=want+motion*(fraction/math.max(dt,.001))
+    end
+    if jump and onGround and (not combat or combat.scale>0) then cc:Jump(JUMP) end
     -- 朝向：瞄准时面朝相机方向；否则面朝移动方向
     local wantYaw = self.yaw
     if aiming then wantYaw = self.camYaw
     elseif moving then wantYaw = math.deg(math.atan(dir.x, dir.z)) end
+    if combat and combat.facing then wantYaw=math.deg(math.atan(combat.facing.x,combat.facing.z)) end
     self.yaw = self.yaw + WrapDeg(wantYaw - self.yaw) * (1 - math.exp(-14 * dt))
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
     self.speed = Vector3(self.vel.x, 0, self.vel.z):Length()
     self.onGround = onGround
 end
 
+-- One bounded turn at melee startup; no lock, no movement or camera magnetism.
+function N:AssistMelee(enemies,cast)
+    local origin=self:Position()+Vector3(0,.8,0)
+    local best,bestDistance=nil,4
+    for _,enemy in ipairs(enemies) do
+        if enemy.active and not enemy.dead then
+            local target=enemy.position+Vector3(0,.8,0)
+            local delta=target-origin
+            local length=delta:Length()
+            local yaw=math.deg(math.atan(delta.x,delta.z))
+            local turn=WrapDeg(yaw-self.yaw)
+            if length>0 and length<=bestDistance and math.abs(turn)<=35 and (not cast or not cast(origin,target)) then
+                best,bestDistance=turn,length
+            end
+        end
+    end
+    if best then
+        self.yaw=self.yaw+Clamp(best,-20,20)
+        self.node.rotation=Quaternion(self.yaw,Vector3.UP)
+    end
+end
+
 -- 仅 Scene 的徒步路径调用；骑乘/上下龙过渡不作坠落判定。
 ---@return boolean recovered
 function N:UpdateSafety(dt)
+    if self.voidReturning then return true end -- transition owns movement until reveal finishes
     local p=self.node.worldPosition
     local inVoid=not Terrain.HasGround(p.x,p.z)
     local stranded=inVoid and self.cc.onGround and p.y<Terrain.RING_Y-2
-    if stranded or p.y<Terrain.ISLAND.hardFallY or (p.y<Terrain.ISLAND.fallY and inVoid) then
-        local safe=self.safePos
-        if not safe or not Terrain.IsSafeGround(safe.x,safe.y,safe.z) then safe=self.fallbackPos end
-        self.cc.desiredVelocity=Vector3.ZERO
-        self.cc:SetLinearVelocity(Vector3.ZERO)
-        self.cc:Teleport(safe)
+    local forced=stranded or p.y<Terrain.ISLAND.hardFallY or (p.y<Terrain.ISLAND.fallY and inVoid)
+    if (inVoid or forced) and self.onVoidFall and self.onVoidFall(p,forced) then
+        self.voidReturning=true
         self.vel=Vector3.ZERO
-        self.speed,self.safeT,self.onGround=0,0,false
-        self.camTarget.position=Vector3(safe.x,safe.y,safe.z)
-        self:UpdateCamera(1,"normal",self.node)
-        if self.onVoidReturn then self.onVoidReturn(safe) end
+        self.cc.desiredVelocity=Vector3.ZERO
+        return true
+    end
+    if forced then
+        self:ReturnFromVoid()
         return true
     end
     if self.cc.onGround and Terrain.IsSafeGround(p.x,p.y,p.z) then
@@ -180,6 +222,20 @@ function N:UpdateSafety(dt)
         end
     else self.safeT=0 end
     return false
+end
+
+-- Original safety result, shared by immediate fallback and the black-screen callback.
+function N:ReturnFromVoid()
+    local safe=self.safePos
+    if not safe or not Terrain.IsSafeGround(safe.x,safe.y,safe.z) then safe=self.fallbackPos end
+    self.cc.desiredVelocity=Vector3.ZERO
+    self.cc:SetLinearVelocity(Vector3.ZERO)
+    self.cc:Teleport(safe)
+    self.vel=Vector3.ZERO
+    self.speed,self.safeT,self.onGround=0,0,false
+    self.camTarget.position=Vector3(safe.x,safe.y,safe.z)
+    self:UpdateCamera(1,"normal",self.node)
+    if self.onVoidReturn then self.onVoidReturn(safe) end
 end
 
 function N:Animate(dt, casting)
@@ -301,23 +357,25 @@ end
 function N:GridHit(ray,maxDist)
     local mask=self.aimMask or 0xffffffff
     local first=self.world:RaycastGridSingle(ray,maxDist,mask)
-    local emptyOrigin=EmptyOriginHit(first,ray)
-    local timeTarget=first.hit and TimeObject.FindByVolume(first.volume)~=nil
-    if not emptyOrigin and not timeTarget then return first end
+    local ignored=first.hit and self.ignoreAimVolume and self.ignoreAimVolume(first.volume)
+    local emptyOrigin=not ignored and EmptyOriginHit(first,ray)
+    local timeTarget=not ignored and first.hit and TimeObject.FindByVolume(first.volume)~=nil
+    if not ignored and not emptyOrigin and not timeTarget then return first end
     -- 原生列表也可能漏掉前景体积：不能用同一条查询的返回列表证明无遮挡。
     -- 零距离异常或选到时之物件时，从当前世界逐体积核对真实 Grid，取最近实心。
     -- 截断到原生候选距离即可：后方体积绝不可能成为更近的遮挡物。
-    local reach=not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
+    local reach=not ignored and not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
     local nearest=VoxelRaycastResult:new()
     for i=0,self.world:GetVolumeCount()-1 do
         local volume=self.world:GetVolume(i)
-        if volume~=nil and (volume.collisionLayer & mask)~=0 then
+        if volume~=nil and (volume.collisionLayer & mask)~=0
+            and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
             local limit=nearest.hit and math.min(reach,nearest.distance) or reach
             local actual=TraceVolume(volume,ray,limit)
             if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
         end
     end
-    if emptyOrigin and not self.emptyOriginLogged then
+    if DebugLog.enabled and emptyOrigin and not self.emptyOriginLogged then
         self.emptyOriginLogged=true
         print(string.format("RuinsAim: repaired empty-origin volume=%d falseDistance=%.4f actualDistance=%.4f",
             first.volumeId,first.distance,nearest.hit and nearest.distance or -1))
@@ -371,7 +429,7 @@ end
 function N:Aim(maxDist)
     local camera, node = self:Camera(), self:CameraNode()
     local direction = node.worldDirection:Normalized()
-    if not self.aimLogged then
+    if DebugLog.enabled and not self.aimLogged then
         self.aimLogged = true
         local projected = camera:GetScreenRay(.5, .5)
         print(string.format("RuinsAim: center-forward dot=%.4f viewport=%dx%d dpr=%.2f",

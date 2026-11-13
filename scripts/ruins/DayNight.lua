@@ -9,6 +9,9 @@
 -- 按住 T 快进（×30）。M.SetHour(h) 直接跳到某个时刻（测试 / 截图）。
 -- ====================================================================
 
+local logOK,DebugLog = pcall(require,"ruins.DebugLog")
+if not logOK then DebugLog=nil end
+
 ---@class DayNight
 ---@field zone Zone
 ---@field sun Light
@@ -61,10 +64,10 @@ function M.New(o)
     self.capture.timeSliced = true
     self.capture.minCaptureInterval = 0.5
     if self.capture.supported then
-        self.zone.envTextureDiffIntensity = 0.7
-        self.zone.envTextureSpecIntensity = 0.45
+        self.zone.envTextureDiffIntensity = 0.68
+        self.zone.envTextureSpecIntensity = 0.38
     else
-        print("DayNight: SkyLightCapture not supported, keeping preset ambient")
+        if DebugLog and DebugLog.enabled then DebugLog.Log("SkyFx","SkyLightCapture not supported; keeping preset ambient") end
     end
     local skyNode = o.scene:CreateChild("Sky")
     self.sky = skyNode:CreateComponent("ProceduralSky")
@@ -74,7 +77,9 @@ function M.New(o)
     self.sky.sunDiskSize = 1.6
     self.sky.sunCurve = 0.08
     self:Apply()
-    print(string.format("DayNight: ready, hour %.1f, capture %s (manual, 64px, time-sliced)", self.hour, tostring(self.capture.supported)))
+    if DebugLog and DebugLog.enabled then
+        DebugLog.Log("SkyFx","DayNight ready hour=%.1f capture=%s (manual,64px,time-sliced)",self.hour,tostring(self.capture.supported))
+    end
     return self
 end
 
@@ -116,7 +121,7 @@ function M:Update(dt)
     local capture = self.capture
     if capture.supported and not capture.capturing
         and (self.capturePending or distance >= 0.05)
-        and (self.lastCapturedHour == nil or self.captureElapsed >= 0.5) then
+        and (self.lastCapturedHour == nil or self.captureElapsed >= capture.minCaptureInterval) then
         capture:RequestCapture()
         self.captureElapsed, self.capturePending = 0, false
         self.lastCapturedHour = self.hour
@@ -148,18 +153,23 @@ function M:Apply()
         self.sunNode.direction = sunDir
         local warm = SUN_RED:Lerp(SUN_GOLD, SmoothStep(-0.02, 0.18, elev)):Lerp(SUN_DAY, SmoothStep(0.18, 0.55, elev))
         sun.color = warm
-        sun.brightness = 2.3 * SmoothStep(-0.06, 0.12, elev) + 0.2
+        sun.brightness = 2.04 * SmoothStep(-0.06, 0.16, elev) + 0.16
     else
         -- 夜：同一盏灯做月光（从西南高处照下）
         local m = (h + 12.0 - 6.0) / 12.0 * math.pi
         self.sunNode.direction = Vector3(-math.cos(m) * 0.7, -0.75, -0.45):Normalized()
         sun.color = MOON
-        sun.brightness = 0.55 * SmoothStep(-0.06, -0.25, elev) + 0.1
+        sun.brightness = 0.38 * SmoothStep(-0.06, -0.25, elev) + 0.16
     end
     -- 雾：颜色跟地平线；夜里雾更近一点，压住远山
     local zone = self.zone
     zone.fogColor = horizon
-    zone.volumetricFogScatteringColor = Color(1, 1, 1):Lerp(Color(1.0, 0.72, 0.5), dusk * 0.7):Lerp(MOON, nightK * 0.8)
+    zone.depthFogStart = 80 + day * 20
+    zone.depthFogEnd = 240 + day * 60
+    if zone.volumetricFogEnabled then
+        sun.volumetricFogIntensity = 1.1 + day * 0.6
+        zone.volumetricFogScatteringColor = Color(1, 1, 1):Lerp(Color(1.0, 0.72, 0.5), dusk * 0.7):Lerp(MOON, nightK * 0.8)
+    end
 end
 
 return M

@@ -22,6 +22,7 @@
 -- ====================================================================
 
 local Noise = require("ruins.Noise")
+local DebugLog = require("ruins.DebugLog")
 
 local M = {}
 
@@ -527,7 +528,7 @@ function T:Shatter(o)
     self.recAcc = 0
     if o.scatter == nil then self:RecordAll(0) end
     if not o.silent then self:Emit("shatter", { level = level, count = #self.pieces }) end
-    print(string.format("TimeObject[%s]: shattered into %d pieces (level %d)", self.id, #self.pieces, level))
+    if DebugLog.enabled then DebugLog.Log("TimeObject","TimeObject[%s]: shattered into %d pieces (level %d)", self.id, #self.pieces, level) end
     return true
 end
 
@@ -587,7 +588,7 @@ function T:Refine(o)
     self.pieces = newList
     self.state = M.STATE.SHATTERED
     self:Emit("shatter", { level = 3, count = #self.pieces })
-    print(string.format("TimeObject[%s]: refined %d pieces → %d", self.id, changed, #self.pieces))
+    if DebugLog.enabled then DebugLog.Log("TimeObject","TimeObject[%s]: refined %d pieces → %d", self.id, changed, #self.pieces) end
     return true
 end
 
@@ -644,7 +645,7 @@ function T:Freeze(duration)
     self.state = M.STATE.FROZEN
     self.freezeLeft = duration or 8.0
     self:Emit("freeze", {})
-    print(string.format("TimeObject[%s]: frozen %d pieces for %.1fs", self.id, #self.pieces, self.freezeLeft))
+    if DebugLog.enabled then DebugLog.Log("TimeObject","TimeObject[%s]: frozen %d pieces for %.1fs", self.id, #self.pieces, self.freezeLeft) end
     return true
 end
 
@@ -693,7 +694,7 @@ function T:Rewind()
     self.rewindT = 0
     self.state = M.STATE.REWIND
     self:Emit("rewind_start", { duration = self.rewindLen + REWIND_SETTLE })
-    print(string.format("TimeObject[%s]: rewinding %d pieces, track %.2fs, noTrack=%s", self.id, #self.pieces, tEnd, tostring(self.noTrack)))
+    if DebugLog.enabled then DebugLog.Log("TimeObject","TimeObject[%s]: rewinding %d pieces, track %.2fs, noTrack=%s", self.id, #self.pieces, tEnd, tostring(self.noTrack)) end
     return true
 end
 
@@ -771,7 +772,7 @@ function T:Reassemble()
     self.rubble = false
     self.restored = true
     self:Emit("restored", {})
-    print(string.format("TimeObject[%s]: restored", self.id))
+    if DebugLog.enabled then DebugLog.Log("TimeObject","TimeObject[%s]: restored", self.id) end
 end
 
 -- ---------------------------------------------------------------- 更新

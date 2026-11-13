@@ -3,6 +3,8 @@
 local UI = require('urhox-libs/UI')
 local Input = require('ui.TouchInput')
 local Draw = require('ui.PixelDraw')
+local SettingsMenu = require('ui.SettingsMenu')
+local Settings = require('ruins.GameSettings')
 local M = { menuOpen=false }
 local provider, onModeChanged, onCancel
 local owners, buttons = {}, {}
@@ -20,6 +22,11 @@ local eventNode
 local eventObject
 ---@type table<string, table[]>
 local SETS = {
+    combat={
+        {name='attack',icon='sword',size=80,main=true,x=-48,y=-48},
+        {name='jump',x=-48,y=-148}, {name='dodge',x=-148,y=-32},
+        {name='heavy',x=-124,y=-124}, {name='swap',x=-212,y=-72},
+    },
     foot={
         {name='shatter',size=80,main=true,x=-48,y=-48},
         {name='jump',x=-48,y=-148}, {name='freeze',x=-148,y=-32},
@@ -39,7 +46,13 @@ local SETS = {
 }
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
-local function TopButtons() return current=='air' and AIR_TOP or TOP end
+local FOOT_TOP={{name='menu',icon='menu'},{name='sheath'},{name='forge'},{name='farview'},{name='fastTime',icon='clock'}}
+local COMBAT_TOP={{name='menu',icon='menu'},{name='sheath'},{name='farview'}}
+local function TopButtons()
+    if current=='combat' then return COMBAT_TOP end
+    if current=='foot' then return FOOT_TOP end
+    return current=='air' and AIR_TOP or TOP
+end
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Cancel()
     owners,buttons={},{}
@@ -48,8 +61,16 @@ local function Cancel()
     if onCancel then onCancel() end
 end
 function M.Cancel() Cancel() end
-function M.IsBlocked() return M.menuOpen or state.blocked == true end
+-- Changing the right-hand action group does not steal a live joystick/look.
+function M.CancelActions()
+    for _,o in pairs(owners) do if o.kind=='button' then o.kind='retired' end end
+    buttons={}
+    Input.CancelActions()
+    if onCancel then onCancel() end
+end
+function M.IsBlocked() return SettingsMenu.IsBlocked() or M.menuOpen or state.blocked == true end
 function M.Hint()
+    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 点【闪避】翻滚' or '点按挥剑 · 长按重击 · 点【闪避】翻滚' end
     if state.charging then return '松手释放碎时' end
     if current=='ground' then return '点【起飞】升空 · 摇杆控制方向' end
     if current=='air' then return '按住【上升】/【下降】· 点【滑翔】省力' end
@@ -59,15 +80,12 @@ end
 function M.Sync()
     if provider then state=provider() or {} end
     width,height,safe=Draw.Metrics()
-    local nextMode=state.mounted and (state.airborne and 'air' or 'ground') or 'foot'
+    local nextMode=state.mounted and (state.airborne and 'air' or 'ground') or (state.combat and 'combat' or 'foot')
     if nextMode~=current then
         previous,current,transition=current,nextMode,0
         -- A held ground button must not silently become an airborne button.
         -- Preserve joystick/look fingers; retire action fingers until lifted.
-        for _,o in pairs(owners) do if o.kind=='button' then o.kind='retired' end end
-        buttons={}
-        Input.CancelActions()
-        if onCancel then onCancel() end
+        M.CancelActions()
     end
     if state.blocked and not wasBlocked then Cancel() end
     wasBlocked=state.blocked==true
@@ -81,6 +99,7 @@ local function Visible(b)
     return b.name~='mount' or state.canMount==true
 end
 local function Disabled(b)
+    if b.name=='sheath' then return state.combat and state.aggro end
     if b.name=='shatter' or b.name=='freeze' or b.name=='rewind' then return (state.cool and (state.cool[b.name] or 0)>0) or state.noSpells end
     return state.mounting==true or (state.disabled and state.disabled[b.name])
 end
@@ -108,19 +127,22 @@ local function JoyMove(x,y)
     local magnitude=Clamp((len/40-.15)/.85,0,1)
     Input.SetMove(len>0 and -dy/len*magnitude or 0,len>0 and dx/len*magnitude or 0)
     Input.Set('sprint',current=='foot' and len>=36)
-    local atTop=current~='foot' and -dy>=36 and math.abs(dx)<18
+    local atTop=(current=='air' or current=='ground') and -dy>=36 and math.abs(dx)<18
     if atTop and not joy.atTop then joy.flash=frame end
     joy.atTop=atTop
 end
 function M.BeginTouch(id,x,y)
     Input.OnTouch(); M.Sync()
+    Settings.TouchDetected()
+    if SettingsMenu.IsOpen() then SettingsMenu.Click(x,y); return end
+    if SettingsMenu.IsBlocked() then return end
     if not Input.IsEnabled() or state.blocked or owners[id] then return end
     idle=0
     -- Help is modal; all fingers are consumed until dismissed.
     if M.menuOpen then M.menuOpen=false; Cancel(); owners[id]={kind='retired'}; return end
     for i,b in ipairs(TopButtons()) do
         if Hit(b,x,y,true,i) then
-            if b.name=='menu' then Cancel(); M.menuOpen=true; owners[id]={kind='retired'}
+            if b.name=='menu' then Cancel(); M.menuOpen=not SettingsMenu.Open(); owners[id]={kind='retired'}
             elseif not buttons[b.name] then buttons[b.name]=id; owners[id]={kind='button',name=b.name}; Input.Set(b.name,true) end
             return
         end
@@ -129,7 +151,7 @@ function M.BeginTouch(id,x,y)
         if Visible(b) and Hit(b,x,y) then
             owners[id]={kind='retired'}
             if not Disabled(b) and buttons[b.name]==nil then
-                buttons[b.name]=id; owners[id]={kind='button',name=b.name}; Input.Set(b.name,true)
+                buttons[b.name]=id; owners[id]={kind='button',name=b.name,x=x,y=y}; Input.Set(b.name,true)
             end
             return
         end
@@ -147,7 +169,13 @@ function M.MoveTouch(id,x,y)
     if not o then return end
     idle=0
     if o.kind=='joy' then JoyMove(x,y)
-    elseif o.kind=='look' then Input.AddLook(x-o.x,y-o.y); o.x,o.y=x,y end
+    elseif o.kind=='look' then Input.AddLook(x-o.x,y-o.y); o.x,o.y=x,y
+    elseif o.kind=='button' and o.name=='attack' and current=='combat' and state.weapon=='bow' then
+        -- The attack finger remains captured outside the button. It can aim and
+        -- release while an independent third finger simultaneously looks.
+        if o.x then Input.AddLook(x-o.x,y-o.y) end
+        o.x,o.y=x,y
+    end
 end
 function M.EndTouch(id)
     local o=owners[id]
@@ -175,34 +203,45 @@ function M.Update(dt)
             if o.native and not live[id] then Cancel(); break end
         end
     end
-    local charge=state.charge or 0
-    if charge>=1 and lastCharge<1 then fullFlash=2 elseif fullFlash>0 then fullFlash=fullFlash-1 end
+    local charge=state.combat and (state.combatCharge or 0) or (state.charge or 0)
+    local threshold=state.combat and state.weapon=='bow' and .8 or 1
+    if charge>=threshold and lastCharge<threshold then fullFlash=2 elseif fullFlash>0 then fullFlash=fullFlash-1 end
     lastCharge=charge
 end
 local function DrawSet(vg,mode,alpha,offset)
     for _,b in ipairs(SETS[mode]) do if Visible(b) then
+        if b.name=='attack' then b.icon=state.weapon=='bow' and 'bow' or 'sword' end
+        if b.name=='heavy' then b.icon=state.weapon=='bow' and 'arrow_crystal' or 'heavy' end
         local x,y=Position(b)
         y=y+offset
         local down=mode==current and (Input.Down(b.name) or (b.name=='breath' and state.breathActive))
         local active=(b.name=='glide' and state.gliding) or (b.name=='dash' and down)
-        local a=(down and 1 or (idle>=3 and .45 or .78))*alpha
+        local holding=state.combatCharge and state.combatCharge>0
+        local a=(down and 1 or (idle>=3 and not holding and .45 or .78))*alpha
         local cd=state.cool and state.cool[b.name] or 0
         local total=state.cooldown and state.cooldown[b.name] or 1
-        local charge=b.name=='shatter' and (state.charge or 0) or 0
-        Draw.Button(vg,b,x,y,a,down,active,Disabled(b),cd,total,charge)
+        local charge=b.name=='shatter' and (state.charge or 0) or (b.name=='attack' and (state.combatCharge or 0) or 0)
+        Draw.Button(vg,b,x,y,a,down,active,Disabled(b),0,total,0)
+        -- Information never inherits the idle dimming of the button base.
+        if cd>0 then Draw.Arc(vg,x,y,(b.size or 64)/2-6,0,cd/math.max(.001,total),24,Draw.colors.deep,.62*alpha) end
+        if cd>=1 then Draw.Text(vg,tostring(math.ceil(cd)),x,y,12,Draw.colors.paper,NVG_ALIGN_CENTER,alpha) end
+        if charge>0 then Draw.Arc(vg,x,y,(b.size or 64)/2+6,(b.size or 64)/2+2,charge,32,Draw.colors.bright,alpha) end
+        if state.readyFlash and (b.name=='shatter' or b.name=='freeze' or b.name=='rewind') then
+            Draw.Arc(vg,x,y,(b.size or 64)/2+4,(b.size or 64)/2+2,1,32,Draw.colors.gold,alpha)
+        end
         if b.name=='mount' or charge>0 then
             local step=math.floor(clock/.5)%2
             local r=(b.size or 64)/2+8+step*2
             Draw.Arc(vg,x,y,r,r-2,1,32,Draw.colors.bright,a*(step==1 and 1 or .5))
         end
-        if charge>=1 and fullFlash>0 then Draw.Arc(vg,x,y,48,42,1,32,Draw.colors.bright,1) end
+        if fullFlash>0 and charge>0 then Draw.Arc(vg,x,y,48,42,1,32,Draw.colors.bright,1) end
         local label=b.label or (b.name=='mount' and '上龙')
         if label then Draw.Text(vg,label,x,y+42,12,Draw.colors.gold,NVG_ALIGN_CENTER,a) end
     end end
 end
 local Layer=UI.Panel:Extend('RuinsTouchControls')
 function Layer:Render(vg)
-    if not Input.IsEnabled() or state.blocked then return end
+    if not Input.IsEnabled() or state.blocked or SettingsMenu.IsBlocked() then return end
     Draw.Begin(vg)
     local alpha=idle>=3 and .45 or .78
     if joy then
@@ -222,7 +261,7 @@ function Layer:Render(vg)
     for i,b in ipairs(TopButtons()) do
         local x,y=Position(b,true,i)
         local down=Input.Down(b.name)
-        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,false)
+        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,Disabled(b))
     end
     if M.menuOpen then
         local w=math.min(420,width-safe.left-safe.right-40)

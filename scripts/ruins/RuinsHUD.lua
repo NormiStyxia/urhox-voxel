@@ -4,6 +4,7 @@ local UI=require('urhox-libs/UI')
 local Draw=require('ui.PixelDraw')
 local Touch=require('ui.TouchInput')
 local Controls=require('ui.TouchControls')
+local CombatHUD=require('ui.CombatHUD')
 local M={}
 local ready=false
 local title,sub,hint,message,target,clockText='','','','','',''
@@ -146,6 +147,7 @@ function Layer:Render(vg)
     local ch=math.max(48,32+#clockCache.lines*16)
     local cx=Draw.Snap(math.max(left,math.min((w-cw)/2,w-s.right-16-cw)))
     local cy=top
+    if CombatHUD.HasBoss() then cy=top+48 end
     -- 按真实矩形避让，而不是固定断点；宽任务卡和非对称安全区
     -- 同样不能与居中的时钟重叠。
     if cx<left+ow+8 then cy=top+oh+8 end
@@ -155,7 +157,7 @@ function Layer:Render(vg)
     end
     if crossVisible then
         local x,y=math.floor(w/2),math.floor(h/2)
-        local c=SPELL_COLORS.shatter
+        local c=CombatHUD.Active() and (CombatHUD.Aimed() and SPELL_COLORS.shatter or C.paper) or SPELL_COLORS.shatter
         Draw.Rect(vg,x-1,y-1,2,2,c)
         Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
         Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
@@ -169,11 +171,19 @@ function Layer:Render(vg)
         Draw.Text(vg,text,w/2+1,ty+1,12,C.deep,NVG_ALIGN_CENTER)
         Draw.Text(vg,text,w/2,ty,12,C.gold,NVG_ALIGN_CENTER)
     end
-    if not touch then
+    if not touch and not CombatHUD.Active() then
         for i,b in ipairs({{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}) do
             local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
             Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
+        end
+    end
+    if not touch and CombatHUD.Active() then
+        local list={{name='attack',icon=CombatHUD.Weapon(),key='左键'},{name='heavy',key='右键'},{name='dodge',key='Shift'},{name='swap',key='Q'}}
+        for i,b in ipairs(list) do
+            local x,y=Draw.Snap(w/2+(i-2.5)*80),Draw.Snap(h-s.bottom-64)
+            Draw.Button(vg,b,x,y,.78,false,false,false,0,1,i==1 and CombatHUD.Charge() or 0)
+            Draw.Text(vg,b.key,x,y+44,12,C.gold,NVG_ALIGN_CENTER)
         end
     end
     local shownHint=touch and Controls.Hint() or hint
@@ -212,6 +222,7 @@ function Layer:Render(vg)
             Draw.Text(vg,line,hx+16,top+22+(i-1)*20,12,C.brown)
         end
     end
+    CombatHUD.Render(vg,w,h,s,{x=left,y=top,h=oh})
     Draw.Finish(vg)
 end
 function M.Build(spells)

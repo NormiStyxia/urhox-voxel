@@ -1,0 +1,372 @@
+-- Run from project root with Lua 5.4: lua tests/combat/anim_spec.lua
+-- Or python3 + lupa.lua54 (no UrhoX runtime, assets, scene or network required).
+package.path="scripts/?.lua;tests/combat/?.lua;"..package.path
+assert(_VERSION=="Lua 5.4","requires Lua 5.4")
+local Mock=require("anim_mock")
+local A=require("combat.CombatAnim")
+local D=require("combat.AnimClips")
+local passed=0
+local function test(name,fn) fn();passed=passed+1;print("PASS "..name) end
+local function near(a,b,e) assert(math.abs(a-b)<(e or 1e-8),tostring(a).." != "..tostring(b)) end
+local function sameRotation(a,b)
+    near(math.abs(a.w*b.w+a.x*b.x+a.y*b.y+a.z*b.z),1,1e-7)
+end
+local function new(opts)
+    local c=Mock.character()
+    return A.New(c,nil,opts or {quantize=false}),c
+end
+local function names(events)
+    local s=""
+    for _,e in ipairs(events) do s=s..e.name.."," end
+    return s
+end
+local function state(anim,handle)
+    for _,s in ipairs(anim.tracks) do if s.handle==handle then return s end end
+    error("missing handle")
+end
+
+test("bone axis derivation",function()
+    local x,y,z=Mock.rotate(Quaternion(-90,0,0),0,-1,0);near(z,1);near(y,0)
+    x,y,z=Mock.rotate(Quaternion(0,0,90),0,-1,0);near(x,1)
+    x,y,z=Mock.rotate(Quaternion(0,90,0),0,0,1);near(x,1)
+    x,y,z=Mock.rotate(Quaternion(90,0,0),0,1,0);near(z,1)
+end)
+test("all 23 clips have complete, ordered tracks and matching event windows",function()
+    assert(#A.DebugList()==23)
+    for _,item in ipairs(A.DebugList()) do
+        local c=D.Clips[item.id]
+        assert(c.id==item.id and c.dur>0 and c.root and c.weapon and c.events and c.motion)
+        for _,track in pairs(c.keys) do
+            assert(#track==6 and track[1][1]==0 and track[#track][1]==1)
+            for i=2,#track do assert(track[i][1]>track[i-1][1]) end
+        end
+        local previous=-1
+        for _,event in ipairs(c.events) do
+            assert(event.t>=previous and event.t<=(c.eventDur or c.dur)/c.dur);previous=event.t
+            if event[1]=="hit_on" then near(c.phases.active[1],event.t*c.dur) end
+            if event[1]=="hit_off" then near(c.phases.active[2],event.t*c.dur) end
+        end
+        for _,m in ipairs(c.motion) do assert(m.t1>m.t0 and m.t0>=0 and m.t1<=c.dur) end
+    end
+end)
+test("events survive a large timestep in order and fire once",function()
+    local a=new();a:Play("sword_light_1")
+    a:Update(1)
+    assert(names(a:Poll())=="hit_on,hit_off,cancel_open,cancel_close,clip_finished,")
+    assert(#a:Poll()==0)
+    a:Update(1);assert(#a:Poll()==0)
+end)
+test("events at zero and exact boundary",function()
+    local a=new();a:Play("dodge_roll")
+    a:Update(0);assert(names(a:Poll())=="iframe_on,")
+    a:Update(.25);assert(names(a:Poll())=="iframe_off,")
+    a:Update(0);assert(#a:Poll()==0)
+end)
+test("slow playback and accelerated playback retain exactly one hit",function()
+    for _,speed in ipairs({.1,.7,1,1.4,8}) do
+        local a=new();a:Play("sword_light_2",{speed=speed})
+        local on,off=0,0
+        for _=1,math.ceil(.5/speed/.007) do
+            a:Update(.007)
+            for _,e in ipairs(a:Poll()) do
+                if e.name=="hit_on" then on=on+1 elseif e.name=="hit_off" then off=off+1 end
+            end
+        end
+        assert(on==1 and off==1)
+    end
+end)
+test("stats speed is multiplied, timeScale and zero dt pause",function()
+    local a=new({stats={speed=1.4},timeScale=.5,quantize=false})
+    local h=a:Play("sword_light_1",{speed=2,fadeIn=0})
+    a:Update(.05);near(state(a,h).t,.07)
+    a:Update(0);near(state(a,h).t,.07)
+    a.timeScale=0;a:Update(1);near(state(a,h).t,.07)
+    assert(#a:Poll()==0)
+end)
+test("fade weights and slerp match base-to-pose interpolation",function()
+    local a,c=new()
+    local h=a:Play("stance_combat",{fadeIn=.1})
+    a:Update(.05);near(state(a,h).weight,.5);a:Apply()
+    sameRotation(c.bones.body.rotation,Quaternion(3,0,0));near(c.bones.root.position.y,.98)
+    a:Stop(h,.1);a:Update(.05);near(state(a,h).weight,.25)
+    Mock.reset(c);a:Apply();sameRotation(c.bones.body.rotation,Quaternion(1.5,0,0))
+    a:Update(.06);assert(not state(a,h).live)
+end)
+test("automatic recovery fade reaches zero",function()
+    local a=new();local h=a:Play("sword_light_1",{fadeIn=0,fadeOut=.1})
+    a:Update(.35);near(state(a,h).weight,.5)
+    a:Update(.05);assert(not a:IsPlaying("sword_light_1"));near(state(a,h).weight,0)
+end)
+test("priority covers stance and cancels offensive tracks",function()
+    local a,c=new();a:Play("stance_combat",{fadeIn=0})
+    local attack=a:Play("sword_light_1",{fadeIn=0});a:Update(.12);a:Poll()
+    local death=a:Play("death",{fadeIn=0});assert(death)
+    assert(not a:IsPlaying("sword_light_1"));assert(not a:Play("dodge_roll"))
+    a:Update(.6);a:Apply();sameRotation(c.bones.body.rotation,Quaternion(70,0,0))
+    assert(state(a,attack).stopping and a:IsPlaying("stance_combat"))
+    a:Stop(death,0);assert(a:Play("getup"))
+end)
+test("same-layer replacement fades old pose, cancels old events",function()
+    local a=new();local old=a:Play("sword_light_1",{fadeIn=0});a:Update(.05)
+    local fresh=a:Play("sword_light_2",{fadeIn=.1})
+    assert(state(a,old).stopping and state(a,old).live and fresh~=old)
+    a:Update(.04);near(state(a,old).weight,.6);near(state(a,fresh).weight,.4)
+    for _,e in ipairs(a:Poll()) do assert(e.handle~=old or e.name=="clip_cancelled") end
+end)
+test("same-layer crossfade does not leak the base pose",function()
+    local a,c=new();a:Play("stance_combat",{fadeIn=0});a:Update(.1)
+    a:Play("stance_combat",{fadeIn=.1});a:Update(.05);a:Apply()
+    sameRotation(c.bones.body.rotation,Quaternion(6,0,0));near(c.bones.root.position.y,.96)
+end)
+test("stop closes active windows and never emits future fire",function()
+    local a=new();local h=a:Play("dodge_roll");a:Update(.05);a:Poll();a:Stop(h,.1)
+    assert(names(a:Poll())=="iframe_off,clip_cancelled,")
+    a:Update(1);assert(#a:Poll()==0)
+    h=a:Play("bow_release");a:Stop(h,0);a:Update(.5)
+    assert(names(a:Poll())=="clip_cancelled,")
+end)
+test("stop removes unconsumed hit_on without losing pending hit_off",function()
+    local a=new();local h=a:Play("sword_light_1");a:Update(.12);a:Poll()
+    a:Update(.065);a:Stop(h,0)
+    assert(names(a:Poll())=="hit_off,cancel_close,clip_cancelled,")
+    h=a:Play("sword_light_1");a:Update(.12);a:Stop(h,0)
+    assert(names(a:Poll())=="hit_off,clip_cancelled,")
+end)
+test("replay and stale handles",function()
+    local a=new();local h=a:Play("bow_release");a:Update(.3);a:Poll()
+    local nextHandle=a:Play("bow_release");assert(nextHandle~=h);a:Stop(h,0)
+    a:Update(0);assert(names(a:Poll())=="fire,")
+end)
+test("loop full event only once and no repeated anticipation",function()
+    local a=new();a:Play("sword_heavy_charge")
+    a:Update(9);assert(names(a:Poll())=="charge_full,");a:Update(9);assert(#a:Poll()==0)
+    local pose=A.DebugSample("sword_heavy_charge",9)
+    near(pose.body[2],40)
+end)
+test("bow parameter drives arm, clamps, and full fires once per play",function()
+    local a,c=new();a:Play("bow_hold",{fadeIn=0,params={p=0}});a:Update(0);a:Apply()
+    sameRotation(c.bones.arm_right.rotation,Quaternion(-80,-20,40))
+    a:SetParam("p",.7);Mock.reset(c);a:Update(0);a:Apply()
+    local pose=A.DebugSample("bow_hold",.7)
+    sameRotation(c.bones.arm_right.rotation,Quaternion(table.unpack(pose.arm_right)))
+    a:SetParam("p",2);a:Update(0);assert(names(a:Poll())=="draw_full,")
+    a:SetParam("p",0);a:Update(0);a:SetParam("p",1);a:Update(0);assert(#a:Poll()==0)
+    assert(a:IsPlaying("bow_hold"))
+end)
+test("quantized anticipation but continuous active and monotonic recovery",function()
+    local a=new({quantize=true});local h=a:Play("sword_light_1",{fadeIn=0})
+    a:Update(.06);near(state(a,h).sample*.40,1/20)
+    a:Update(.05);near(state(a,h).sample*.40,.11);assert(a:Phase()=="active")
+    a:Update(.12);assert(state(a,h).sample*.40>=.18);assert(a:Phase()=="recovery")
+end)
+test("motion totals independent of speed, fades and timestep",function()
+    for _,speed in ipairs({.5,1,3}) do
+        for _,dt in ipairs({1/144,1/30,.6}) do
+            local a=new();a:Play("dodge_roll",{speed=speed})
+            local total=0
+            for _=1,math.ceil(.5/speed/dt) do total=total+a:GetMotion(dt);a:Poll() end
+            near(total,2.6)
+        end
+    end
+    local a=new();a:Play("hit_heavy");near(a:GetMotion(1),-.8)
+    a=new();a:Play("sword_light_1");near(a:GetMotion(1),.9)
+end)
+test("cancel stops subsequent motion",function()
+    local a=new();local h=a:Play("dodge_roll");near(a:GetMotion(.315),2.6*.85)
+    a:Stop(h,.1);near(a:GetMotion(.225),0)
+end)
+test("Apply fallback, explicit dt avoids double advancement",function()
+    local a,c=new();local h=a:Play("sword_light_1")
+    c.time=.05;a:Apply();near(state(a,h).t,.05)
+    a:GetMotion(.06);c.time=.11;Mock.reset(c);a:Apply();near(state(a,h).t,.11)
+end)
+test("uncontrolled bones untouched and root offset does not accumulate",function()
+    local a,c=new();a:Play("stance_combat",{fadeIn=0})
+    for _=1,10 do
+        Mock.reset(c);c.bones.cloak.rotation=Quaternion(17,2,3)
+        a:Update(.01);a:Apply();near(c.bones.root.position.y,.96)
+        sameRotation(c.bones.cloak.rotation,Quaternion(17,2,3))
+    end
+end)
+test("roll and spin preserve authored multi-turn angle path",function()
+    near(A.DebugSample("dodge_roll",.25).body[1],330)
+    near(A.DebugSample("sword_heavy_release",.25).body[2],-180)
+    near(A.DebugSample("sword_heavy_release",.72).body[2],-360)
+end)
+test("weapon pose and state buffers reuse tables",function()
+    local a,c=new();local ordered,queue,output,pool=a.ordered,a.queue,a.output,a.eventPool
+    local track=a.tracks[1];local params=track.params
+    a:Play("bow_hold",{fadeIn=0})
+    for _=1,100 do
+        a:SetParam("p",.5);a:Update(.01);Mock.reset(c);a:Apply()
+        assert(a:Poll()==output and a.ordered==ordered and a.queue==queue and a.eventPool==pool)
+        assert(a.tracks[1]==track and track.params==params)
+        local o,e=a:GetWeaponPose();near(o.x,0);near(e.y,0)
+    end
+end)
+test("death/knockdown hold until explicit replacement; stop all clears",function()
+    local a=new();a:Play("death");a:Update(3);assert(a:IsPlaying("death"))
+    a:Poll();a:Update(3);assert(#a:Poll()==0)
+    a:Stop(nil,0);assert(not a:IsPlaying());assert(a:Play("getup"))
+end)
+test("invalid inputs do not mutate live animation",function()
+    local a=new();a:Play("stance_combat")
+    assert(not a:Play("missing"));assert(not a:Play("sword_light_1",{speed=-1}))
+    assert(not a:Play("sword_light_1",{fadeIn=0/0}));assert(a:IsPlaying("stance_combat"))
+    assert(not pcall(function() a:Update(-.1) end))
+end)
+test("R1 move timings and cancel windows are authored once",function()
+    local expected={sword_light_1={.40,.10,.18,.18},sword_light_2={.40,.10,.18,.18},
+        sword_light_3={.52,.14,.22,.30},sword_heavy_release={.72,.22,.32,.48}}
+    for id,v in pairs(expected) do
+        local c=D.Clips[id];near(c.dur,v[1]);near(c.phases.active[1],v[2]);near(c.phases.active[2],v[3])
+        near(c.events[1].t*c.dur,v[2]);near(c.events[2].t*c.dur,v[3]);near(c.events[3].t*c.dur,v[4])
+        near(c.trail[2],v[3]+.06)
+    end
+    near(D.Clips.hit_light.dur,.24);near(D.Clips.hit_heavy.dur,.42)
+    near(D.Clips.knockdown.dur,.55);near(D.Clips.getup.dur,.45)
+end)
+test("six attack landmarks, torso .02s ahead and head compensates",function()
+    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
+        local c=D.Clips[id]
+        for i=2,5 do
+            near((c.keys.arm_right[i][1]-c.keys.body[i][1])*c.dur,.02)
+            near(c.keys.head[i][1],c.keys.body[i][1])
+        end
+        assert(c.keys.head[2][2][2]*c.keys.body[2][2][2]<0)
+    end
+    local c=D.Clips.sword_light_1
+    for i,t in ipairs({0,.07,.10,.14,.22,.40}) do near(c.keys.arm_right[i][1]*c.dur,t) end
+end)
+test("dodge is front-loaded 85 percent in 70 percent time",function()
+    local a=new();a:Play("dodge_roll")
+    near(a:GetMotion(.315),2.21);near(a:GetMotion(.135),.39)
+end)
+test("20Hz option and continuous root position",function()
+    local a,c=new({quantize=true});local b,d=new({quantize=false})
+    near(a.quantizeHz,20)
+    a:Play("sword_light_1",{fadeIn=0});b:Play("sword_light_1",{fadeIn=0})
+    a:Update(.075);b:Update(.075);a:Apply();b:Apply()
+    near(c.bones.root.position.y,d.bones.root.position.y)
+    local custom=new({quantizeHz=24});near(custom.quantizeHz,24)
+    local disabled=new({quantizeHz=0});assert(not disabled.quantize)
+end)
+test("getup protection outlives pose and does not block new attacks",function()
+    local a=new();a:Play("getup");a:Update(0);assert(names(a:Poll())=="protect_on,")
+    a:Update(.45);assert(names(a:Poll())=="clip_finished,")
+    assert(not a:IsPlaying("getup"));assert(a:Phase("getup")==nil)
+    assert(a:Play("sword_draw"));a:Update(.149)
+    local events=names(a:Poll());assert(not events:find("protect_off",1,true))
+    a:Update(.001);assert(names(a:Poll())=="protect_off,")
+    a:Update(1);assert(not names(a:Poll()):find("protect_off",1,true))
+end)
+test("getup event tail on large delta and explicit stop closes it",function()
+    local a=new();local h=a:Play("getup");a:Update(1)
+    assert(names(a:Poll())=="protect_on,clip_finished,protect_off,")
+    h=a:Play("getup");a:Update(.45);a:Poll();a:Stop(h,0)
+    assert(names(a:Poll())=="protect_off,clip_cancelled,")
+    a:Update(1);assert(#a:Poll()==0)
+end)
+test("protection clocks keep advancing through pose hitstop",function()
+    local a=new();local h=a:Play("dodge_roll");a:Update(.1);a:Poll()
+    a.timeScale=0;a:Update(.15);near(state(a,h).t,.1)
+    assert(names(a:Poll())=="iframe_off,")
+    a:Stop(nil,0);a:Poll();h=a:Play("getup");a:Update(0,.6)
+    near(state(a,h).t,0);assert(names(a:Poll())=="protect_on,protect_off,")
+end)
+test("bow minimum draw, full threshold, and shot recovery boundary",function()
+    local a=new();a:Play("bow_draw");a:Update(.119)
+    assert(names(a:Poll())=="draw_start,")
+    a:Update(.001);assert(names(a:Poll())=="draw_min,")
+    a:Play("bow_hold",{params={p=.799}});a:Poll();a:Update(0);assert(#a:Poll()==0)
+    a:SetParam("p",.8);a:Update(0);assert(names(a:Poll())=="draw_full,")
+    a:Play("bow_release");a:Poll();a:Update(.179);assert(names(a:Poll())=="fire,")
+    a:Update(.001);assert(names(a:Poll())=="recover_end,")
+end)
+test("afterimages maintain .04s deadlines at 30 and 60fps",function()
+    for _,fps in ipairs({30,60}) do
+        local a,c=new();a:Play("sword_light_1",{fadeIn=0})
+        local output=a:GetAfterimages();local first,second=a.afterimagePool[1],a.afterimagePool[2]
+        local last=-math.huge;local count=0
+        for _=1,math.ceil(.4*fps) do
+            a:Update(1/fps);Mock.reset(c);a:Apply();a:Poll()
+            local shots=A.GetAfterimages(a);assert(shots==output and #shots<=2)
+            for _,shot in ipairs(shots) do
+                assert(shot==first or shot==second)
+                assert(shot.age>=0 and shot.age<.1 and shot.alpha>0 and shot.alpha<=1)
+            end
+            if shots[1] and shots[1].time>last+1e-8 then
+                if last>0 then near(shots[1].time-last,.04) end
+                last=shots[1].time;count=count+1
+            end
+        end
+        assert(count==4);assert(#a:GetAfterimages()==0)
+    end
+end)
+test("afterimages are sword-only, expire during hitstop, cancel clears",function()
+    local a,c=new();a:Play("sword_light_1",{fadeIn=0});a:Update(.1);a:Apply()
+    assert(#a:GetAfterimages()==1)
+    a.timeScale=0;a:Update(.11);Mock.reset(c);a:Apply();assert(#a:GetAfterimages()==0)
+    a:Stop(nil,0);a:Poll();a.timeScale=1
+    local h=a:Play("sword_light_1",{fadeIn=0});a:Update(.1);Mock.reset(c);a:Apply()
+    assert(#a:GetAfterimages()==1);a:Stop(h,0);assert(#a:GetAfterimages()==0)
+    a:Play("bow_release");a:Update(.1);Mock.reset(c);a:Apply();assert(#a:GetAfterimages()==0)
+end)
+test("equipment clips appear in DebugList with source and target equipment",function()
+    local found={}
+    for _,item in ipairs(A.DebugList()) do found[item.id]=item end
+    near(found.bow_equip.dur,.30);near(found.bow_sheath.dur,.30)
+    local toBow,toSword=found.weapon_swap_sword_to_bow,found.weapon_swap_bow_to_sword
+    near(toBow.dur,.40);near(toSword.dur,.40)
+    assert(toBow.sourceWeapon=="sword" and toBow.weaponType=="bow")
+    assert(toSword.sourceWeapon=="bow" and toSword.weaponType=="sword")
+end)
+test("bow equip and sheath traverse the shoulder and deliver attachment once",function()
+    local pose=A.DebugSample("bow_equip",.12)
+    near(pose.arm_left[1],-170);assert(pose.arm_left[3]<0)
+    near(A.DebugSample("bow_equip",.30).arm_left[1],-65)
+    near(A.DebugSample("bow_sheath",.20).arm_left[1],-170)
+    near(A.DebugSample("bow_sheath",.30).arm_left[1],0)
+    local a=new();a:Play("bow_equip");a:Update(.249);assert(#a:Poll()==0)
+    a:Update(.001);assert(names(a:Poll())=="weapon_ready,")
+    a:Update(.05);assert(names(a:Poll())=="clip_finished,")
+    a:Play("bow_sheath");a:Update(.20);assert(names(a:Poll())=="weapon_stowed,")
+    a:Update(.10);assert(names(a:Poll())=="clip_finished,")
+    a:Update(1);assert(#a:Poll()==0)
+end)
+test("swap stows at .18, opens dodge at .20, readies at .40",function()
+    for _,id in ipairs({"weapon_swap_sword_to_bow","weapon_swap_bow_to_sword"}) do
+        local a=new();a:Play(id)
+        a:Update(.179);assert(#a:Poll()==0)
+        a:Update(.001);assert(names(a:Poll())=="weapon_stowed,")
+        a:Update(.019);assert(#a:Poll()==0)
+        a:Update(.001);assert(names(a:Poll())=="cancel_open,")
+        a:Update(.199);assert(#a:Poll()==0)
+        a:Update(.001);assert(names(a:Poll())=="weapon_ready,cancel_close,clip_finished,")
+        a:Update(1);assert(#a:Poll()==0)
+    end
+end)
+test("swap can be cancelled after gate without late attachment or damage",function()
+    for _,id in ipairs({"weapon_swap_sword_to_bow","weapon_swap_bow_to_sword"}) do
+        local a=new();local h=a:Play(id);a:Update(.20);a:Poll()
+        a:Stop(h,0);assert(names(a:Poll())=="cancel_close,clip_cancelled,")
+        assert(a:Play("dodge_roll"));a:Update(.25)
+        assert(names(a:Poll())=="iframe_on,iframe_off,")
+        local c=D.Clips[id]
+        assert(#c.motion==0 and not c.trail and c.layer==D.Layer.DRAW)
+        for _,event in ipairs(c.events) do assert(event[1]~="hit_on" and event[1]~="fire") end
+    end
+end)
+test("swap large-frame event order and head/torso lead",function()
+    for _,id in ipairs({"weapon_swap_sword_to_bow","weapon_swap_bow_to_sword"}) do
+        local a=new();a:Play(id);a:Update(1)
+        assert(names(a:Poll())=="weapon_stowed,cancel_open,weapon_ready,cancel_close,clip_finished,")
+        local c=D.Clips[id]
+        for i=2,5 do
+            near((c.keys.arm_left[i][1]-c.keys.body[i][1])*c.dur,.02)
+            near(c.keys.head[i][1],c.keys.body[i][1])
+            assert(c.keys.body[i][2][2]*c.keys.head[i][2][2]<=0)
+        end
+    end
+end)
+print(string.format("CombatAnim: %d tests passed (Lua 5.4 offline; visual UNVERIFIED)",passed))

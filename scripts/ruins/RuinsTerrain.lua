@@ -664,9 +664,9 @@ end
 -- 角色 / 龙压草：每帧调用
 function M.SetInteractor(slot, pos, radius)
     local g = M.grass --[[@as RuinsGrassField?]]
-    if g ~= nil then g:SetInteractor(slot, pos, radius) end
+    if g ~= nil and g.enabled then g:SetInteractor(slot, pos, radius) end
     local fl = M.flowers --[[@as RuinsGrassField?]]
-    if fl ~= nil then fl:SetInteractor(slot, pos, radius) end
+    if fl ~= nil and fl.enabled then fl:SetInteractor(slot, pos, radius) end
 end
 
 ---@param world VoxelPhysicsWorld
