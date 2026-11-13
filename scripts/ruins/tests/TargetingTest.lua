@@ -1,4 +1,4 @@
--- 使用真实体素世界验证准星、遮挡和时钟选择，不用 mock 命中结果。
+-- 真实体素世界验证准星/遮挡；仅在故障注入用例中替换原生首命中，仍查真实 Grid。
 local V = _G["V"]
 local TimeObject = require("ruins.TimeObject")
 V.atFrame(8, function()

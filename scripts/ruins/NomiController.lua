@@ -193,7 +193,11 @@ local function TraceVolume(volume, ray, maxDist)
     local size=volume.voxelSize
     if size<=0 then return result end
     local origin=node:WorldToLocal(ray.origin)/size
-    local direction=(node:WorldToLocal(ray.origin+ray.direction)-node:WorldToLocal(ray.origin))/size
+    -- 方向用逆旋转/缩放，不对两个世界坐标作差；远离原点时会丢失微小斜率。
+    local rotated=node.worldRotation:Inverse()*ray.direction
+    local scale=node.worldScale
+    if math.abs(scale.x)<1e-8 or math.abs(scale.y)<1e-8 or math.abs(scale.z)<1e-8 then return result end
+    local direction=Vector3(rotated.x/scale.x,rotated.y/scale.y,rotated.z/scale.z)/size
     local dims=grid:GetDimensions()
     local enter,exit=0,maxDist
     local normal=Vector3.ZERO
