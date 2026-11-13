@@ -179,6 +179,102 @@ function N:UpdateCamera(dt, mode, followNode)
     end
 end
 
+-- 只修复“射线起于空格，却返回 distance=0”的体积查询异常。
+-- 相机在地形 chunk 包围盒的空气中 -> 逐格前进 -> 第一块真实实心格。
+-- 不忽略整个 chunk：它前方的山壁/地面仍须遮挡；空洞和旋转体积同样按当前 Grid。
+---@param volume VoxelVolume
+---@param ray Ray
+---@param maxDist number
+---@return VoxelRaycastResult
+local function TraceVolume(volume, ray, maxDist)
+    local result=VoxelRaycastResult.new()
+    local node,grid=volume:GetNode(),volume:GetGrid()
+    if node==nil or grid==nil then return result end
+    local size=volume.voxelSize
+    local origin=node:WorldToLocal(ray.origin)/size
+    local direction=(node:WorldToLocal(ray.origin+ray.direction)-node:WorldToLocal(ray.origin))/size
+    local dims=grid:GetDimensions()
+    local enter,exit=0,maxDist
+    local normal=Vector3.ZERO
+    for _,axis in ipairs({"x","y","z"}) do
+        local o,d,n=origin[axis],direction[axis],dims[axis]
+        if math.abs(d)<1e-8 then
+            if o<0 or o>=n then return result end
+        else
+            local a,b=-o/d,(n-o)/d
+            local sign=-1
+            if a>b then a,b=b,a; sign=1 end
+            if a>enter then
+                enter=a
+                normal=Vector3(axis=="x" and sign or 0,axis=="y" and sign or 0,axis=="z" and sign or 0)
+            end
+            exit=math.min(exit,b)
+            if enter>exit then return result end
+        end
+    end
+    local start=origin+direction*(enter+1e-5)
+    local x,y,z=math.floor(start.x),math.floor(start.y),math.floor(start.z)
+    local sx,sy,sz=direction.x>0 and 1 or -1,direction.y>0 and 1 or -1,direction.z>0 and 1 or -1
+    local function Next(o,d,i,step)
+        if math.abs(d)<1e-8 then return math.huge end
+        return (i+(step>0 and 1 or 0)-o)/d
+    end
+    local tx,ty,tz=Next(origin.x,direction.x,x,sx),Next(origin.y,direction.y,y,sy),Next(origin.z,direction.z,z,sz)
+    local dx,dy,dz=math.abs(1/direction.x),math.abs(1/direction.y),math.abs(1/direction.z)
+    local distance=enter
+    for i=1,dims.x+dims.y+dims.z+3 do
+        if x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or distance>exit then break end
+        if grid:IsSolid(x,y,z) then
+            result.hit,result.volume,result.volumeId=true,volume,volume.volumeId
+            result.distance,result.position=distance,ray.origin+ray.direction*distance
+            result.normal=node.worldRotation*normal
+            result.voxel=IntVector3(x,y,z)
+            result.material=math.floor(grid:GetVoxelMaterial(x,y,z))
+            return result
+        end
+        local nextDistance=math.min(tx,ty,tz)
+        distance=nextDistance
+        -- 同时跨越角/棱上的轴，不把仅擦过的格当成有厚度的墙。
+        if tx<=nextDistance+1e-6 then x=x+sx; tx=tx+dx; normal=Vector3(-sx,0,0) end
+        if ty<=nextDistance+1e-6 then y=y+sy; ty=ty+dy; normal=Vector3(0,-sy,0) end
+        if tz<=nextDistance+1e-6 then z=z+sz; tz=tz+dz; normal=Vector3(0,0,-sz) end
+    end
+    return result
+end
+
+---@param hit VoxelRaycastResult
+---@param ray Ray
+local function EmptyOriginHit(hit,ray)
+    if not hit.hit or hit.distance>.001 then return false end
+    local volume=hit.volume
+    local grid=volume:GetGrid()
+    if grid==nil then return true end
+    local p=volume:GetNode():WorldToLocal(ray.origin+ray.direction*.0001)/volume.voxelSize
+    local dims=grid:GetDimensions()
+    local x,y,z=math.floor(p.x),math.floor(p.y),math.floor(p.z)
+    return x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or not grid:IsSolid(x,y,z)
+end
+
+---@param ray Ray
+---@param maxDist number
+---@return VoxelRaycastResult
+function N:GridHit(ray,maxDist)
+    local mask=self.aimMask or 0xffffffff
+    local first=self.world:RaycastGridSingle(ray,maxDist,mask)
+    if not EmptyOriginHit(first,ray) then return first end
+    local nearest=TraceVolume(first.volume,ray,maxDist)
+    for _,candidate in ipairs(self.world:RaycastGrid(ray,maxDist,mask)) do
+        local actual=EmptyOriginHit(candidate,ray) and TraceVolume(candidate.volume,ray,maxDist) or candidate
+        if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
+    end
+    if not self.emptyOriginLogged then
+        self.emptyOriginLogged=true
+        print(string.format("RuinsAim: repaired empty-origin volume=%d falseDistance=%.4f actualDistance=%.4f",
+            first.volumeId,first.distance,nearest.hit and nearest.distance or -1))
+    end
+    return nearest
+end
+
 -- 瞄准只查询实心体素，不把动态碎块的近似凸包当作可见表面。
 -- 相机 ---- 中心射线 ---- 最近实心格（墙也会遮挡）
 --                  \\ 半径 0.12m 容错，仅接受无遮挡的可操作目标
@@ -186,7 +282,7 @@ end
 ---@param ray Ray
 ---@param maxDist number
 function N:AimRay(ray, maxDist)
-    local hit = self.world:RaycastGridSingle(ray, maxDist, self.aimMask or 0xffffffff)
+    local hit = self:GridHit(ray, maxDist)
     local res = { hit = false, dir = ray.direction, origin = ray.origin, mask = self.aimMask or 0xffffffff,
         far = ray.origin + ray.direction * maxDist }
     local obj = hit.hit and TimeObject.FindByVolume(hit.volume) or nil
@@ -201,7 +297,7 @@ function N:AimRay(ray, maxDist)
                 local delta = near.position - ray.origin --[[@as Vector3]]
                 local length = delta:Length()
                 if length > 0.001 then
-                    local visible = self.world:RaycastGridSingle(Ray(ray.origin, delta / length), length + 0.08, self.aimMask or 0xffffffff)
+                    local visible = self:GridHit(Ray(ray.origin, delta / length), length + 0.08)
                     if visible.hit and (visible.volume == near.volume or (owner ~= nil and TimeObject.FindByVolume(visible.volume) == owner)) then
                         hit = visible
                         obj = owner

@@ -38,6 +38,36 @@ V.atFrame(8, function()
     V.assert(aim.object==object,"相机与角色之间的近物件不会被跳过")
     camNode.worldPosition,camNode.worldRotation=oldPos,oldRot
 
+    -- 复现网页错误形状：相机在空格，原生首命中误报包围体积 distance=0。
+    -- 修复必须继续检查这个体积的实心墙，不能直接忽略它穿墙选物件。
+    local hollow=world:CreateVolume(8,4,12,.25,Vector3(299.5,5,298))
+    hollow.destructible=false
+    hollow:GetGrid():FillBox(0,0,7,7,3,7,true)
+    world:FinalizeVolume(hollow); hollow:RebuildGeometry()
+    local realWorld=nomi.world
+    nomi.world={
+        RaycastGridSingle=function(self,r,d,mask)
+            local falseHit=VoxelRaycastResult.new()
+            falseHit.hit,falseHit.volume,falseHit.volumeId=true,hollow,hollow.volumeId
+            falseHit.position,falseHit.distance=r.origin,0
+            return falseHit
+        end,
+        RaycastGrid=function(self,r,d,mask) return world:RaycastGrid(r,d,mask) end,
+        SphereCast=function(self,s,dir,d,mask) return world:SphereCast(s,dir,d,mask) end
+    }
+    aim=nomi:AimRay(ray,10)
+    V.assert(aim.volume==hollow and math.abs(aim.distance-1.75)<.001,"零距离误报修复后仍命中同一体积前方实心墙")
+    V.assert(aim.normal.z<-.99,"逐格校验保留正确墙面法线")
+    hollow:GetGrid():Clear(); hollow:RebuildGeometry()
+    aim=nomi:AimRay(ray,10)
+    V.assert(aim.object==object and aim.distance>1.9,"空气包围盒不再阻止后方真实物件锁定")
+    hollow:GetGrid():FillBox(0,0,7,7,3,7,true); hollow:RebuildGeometry()
+    local angled=nomi:AimRay(Ray(Vector3(300.4,5.5,298),Vector3(.01,0,1):Normalized()),10)
+    V.assert(angled.volume==hollow,"斜射同一空块内的实心墙不穿透")
+    nomi.world=realWorld
+    local hollowNode=hollow:GetNode()
+    world:RemoveVolume(hollow); hollow:Dispose(); hollowNode:Dispose()
+
     -- 墙在目标前方：中心线与容错线都不允许穿墙。
     local wall = world:CreateVolume(12,12,2,.25,Vector3(299,4,299))
     wall:GetGrid():FillBox(0,0,0,11,11,1,true)
