@@ -693,9 +693,8 @@ function Ruins_HandleUpdate(eventType, eventData)
         HUD.SetHint(h)
     end
     TouchControls.Sync()
-    -- 准星只在长按碎时（蓄力瞄准）时出现，平时靠选中光和目标钟面提示。
-    -- 骑龙吐息仍需要准星瞄准。
-    HUD.SetCrossVisible(not M.debugOn and (caster_.charging or M.mounted))
+    -- 准星常驻，方便平时选中目标；调试面板打开时隐藏。
+    HUD.SetCrossVisible(not M.debugOn)
     -- 低频现场日志：使用实际帧间隔，Web 上不依赖返回 0 的 os.clock()。
     perf.elapsed, perf.frames = perf.elapsed + dt, perf.frames + 1
     perf.peak = math.max(perf.peak, dt)
