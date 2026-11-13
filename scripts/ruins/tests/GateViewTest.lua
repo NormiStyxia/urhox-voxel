@@ -1,5 +1,7 @@
 -- 受控南门画面：冻结移动和昼夜，保持蓄力姿态；验证图用于检查准星与法阵位置。
 local V=_G["V"]
+local lateral=false
+for _,arg in ipairs(GetArguments()) do if arg=="-gate-view=left" then lateral=true end end
 V.atFrame(8,function()
     local g=_G["RUINS"]
     local n=g.nomiCtl
@@ -7,16 +9,17 @@ V.atFrame(8,function()
     UnsubscribeFromEvent("SceneUpdate")
     UnsubscribeFromEvent("PostUpdate")
     g.world.enabled=false
-    n.cc:Teleport(Vector3(0,6.1,-55.5))
+    n.cc:Teleport(Vector3(0,6.1,lateral and -58 or -55.5))
     n.camTarget.position=n:Position()
-    n.yaw,n.camYaw,n.camPitch=0,0,0
+    n.yaw,n.camYaw,n.camPitch=0,lateral and -9.96 or 0,lateral and -1.0 or 0
     n.node.rotation=Quaternion(0,Vector3.UP)
     n.onGround,n.speed=true,0
-    for i=1,90 do n:Animate(1/60,true); n:UpdateCamera(1/60,"aim",n.node) end
+    for i=1,90 do n:Animate(1/60,not lateral); n:UpdateCamera(1/60,lateral and "normal" or "aim",n.node) end
     g.dayNight.lockHour=12; g.dayNight:SetHour(12)
-    g.caster.charging,g.caster.charge=true,.85
+    g.caster.charging=not lateral
+    g.caster.charge=lateral and 0 or .85 --[[@as number]]
     local e=VariantMap(); e["TimeStep"]=0
-    g.fake={[KEY_1]=true}
+    g.fake=lateral and {} or {[KEY_1]=true}
     Ruins_HandleUpdate("Update",e)
     local a=g.aim
     g.sigils:Update(0,a,n:HandPos(),n:CameraNode(),g.caster,1,true)

@@ -22,7 +22,8 @@ V.atFrame(8,function()
             local ray=Ray(origin,delta:Normalized())
             local aim=nomi:AimRay(ray,30)
             local selected=aim.volume==gate and aim.breakable
-            if not selected then
+            local behindPillar=originX==-4.0 and xi==0 and yi>=4
+            if not selected and not behindPillar then
                 misses=misses+1
                 local body=world:RaycastSingle(ray,30)
                 local hits=world:RaycastGrid(ray,30,nomi.aimMask)
@@ -32,7 +33,11 @@ V.atFrame(8,function()
                     print(string.format("GateTargetTest: candidate=%s distance=%.4f voxel=%s",Name(hit.volume),hit.distance,tostring(hit.voxel)))
                 end
             end
-            V.assert(selected,"整面斜射锁定 originX="..originX.." x="..target.x.." y="..target.y)
+            if behindPillar then
+                V.assert(aim.hit and not aim.breakable,"左侧门柱挡住石堆时不穿墙锁定 y="..target.y)
+            else
+                V.assert(selected,"整面斜射锁定 originX="..originX.." x="..target.x.." y="..target.y)
+            end
         end end
     end
     print("GateTargetTest: face sweep misses="..misses.." / 180")
