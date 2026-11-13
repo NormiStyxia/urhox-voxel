@@ -5,7 +5,7 @@
 --
 --   ① 封门乱石（南城门 z≈-51）：一堆 0.25m 体素的乱石把门洞堵死。
 --      → 学会「碎时」：乱石是普通可破坏体素，诺米的碎时直接打碎（引擎弹坑 + 崩落碎块）。
---   ② 断桥（南侧峡谷 z∈[-48.5, -39.5]）：石桥早已碎落在谷底与两岸。
+--   ② 断桥（南侧峡谷 z∈[-48.5, -39.5]）：石桥残块悬停在裂隙中与两岸。
 --      → 学会「回溯」：对准任意碎块施放回溯，整座桥沿弧线飞回、合成完整的桥。
 --   ③ 悬石阶梯（西侧内环，柱廊外的高台）：一块巨石被锁链挂在断拱下。打碎它，碎块下落时
 --      施放「冻结」，碎块悬停成为跳台，爬上高台拿到「时之钥」（高台上的金色光点）。
@@ -259,20 +259,27 @@ local function BuildBridge(world, scene)
     o.shattered = true
     o.shatterLevel = 2
     o.canShatter = false -- 桥修好后不能再碎（避免玩家把自己的路断了卡死）
-    -- 开局散落：碎块落在谷底、谷壁台阶上（按块在桥上的位置分布）
+    -- 开局即静态悬停（TimeObject 的 rubble 路径），两团残块偏向两岸，中央留断口。
+    local shardIndex=0
     o.startScatter = function(self, p, rng)
+        shardIndex=shardIndex+1
         local s = self.size
         local cx = p.restPos.x + p.nx * s * 0.5
         local cz = p.restPos.z + p.nz * s * 0.5
-        local px = cx + rng:Range(-3.5, 3.5)
-        local pz = cz + rng:Range(-1.5, 1.5)
-        -- 靠两岸的碎块挂在岸边台阶上，中段落到谷底
-        local edgeK = abs(cz - (-44.0)) / 5.5
-        local gy = math.max(Terrain.HeightAt(px, pz), Terrain.CollideHeight(px, pz))
-        local y = gy + 0.05
-        if edgeK > 0.75 then y = max(gy + 0.0, Terrain.RING_Y - 5.5) + 0.05 end
-        local rot = Quaternion(rng:Range(-35, 35), rng:Range(0, 360), rng:Range(-35, 35))
-        return Vector3(px - p.nx * s * 0.5, y, pz - p.nz * s * 0.5), rot
+        local outer = cz < -44
+        -- 主残块降到不能跳回岸的低处；另两块高悬符脉保证安全路面可瞄准。
+        local px = cx * .6 + rng:Range(-.8,.8)
+        local pz = outer and rng:Range(-48.1,-47.2) or rng:Range(-40.8,-40.0)
+        local half=Vector3(p.nx*s*.5,p.ny*s*.5,p.nz*s*.5)
+        local radius=half:Length()
+        local y=math.min(2.6-rng:Range(0,.6),3.3-radius)
+        if shardIndex<=2 then
+            px=shardIndex==1 and 3.6 or -3.6
+            pz=shardIndex==1 and -47.1 or -41.0
+            y=9.5+radius -- 底面高于跳跃可达高度；不能当修桥捷径
+        end
+        local rot = Quaternion(rng:Range(-12,12),rng:Range(-20,20),rng:Range(-12,12))
+        return Vector3(px,y,pz)-rot*half,rot
     end
     local obj = Add(TimeObject.New(o))
     obj.title = "断桥"
@@ -490,6 +497,7 @@ local function BuildSteles(world, scene)
             local d = 1.8 + hgt * 3.2 + rng:Range(-0.6, 0.6)
             local px = cx + out.x * d + side.x * rng:Range(-1.6, 1.6)
             local pz = cz + out.z * d + side.z * rng:Range(-1.6, 1.6)
+            if not Terrain.HasGround(px,pz,1) then px,pz=cx,cz end
             local gy = math.max(Terrain.HeightAt(px, pz), Terrain.CollideHeight(px, pz))
             local rot = Quaternion(rng:Range(-80, 80), rng:Range(0, 360), rng:Range(-30, 30))
             return Vector3(px - p.nx * s * 0.5, gy + 0.02, pz - p.nz * s * 0.5), rot

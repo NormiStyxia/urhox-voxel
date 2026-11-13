@@ -108,8 +108,11 @@ void fragment() {
     // ---- 权重：先决定实际可见的材质，再计算只用于颜色的昂贵细节。
     float slope = 1.0 - n.y;
     float wRock = max(sp.b, smoothstep(0.28, 0.45, slope + (fine - 0.5) * 0.06));
-    float wPath = sp.r * (1.0 - wRock);
-    float wDirt = sp.g * (1.0 - wRock) * (1.0 - wPath);
+    // IslandShell 顶点 R 标记最上方薄土断缘。
+    float soilLip = COLOR.r;
+    wRock *= 1.0 - soilLip;
+    float wPath = sp.r * (1.0 - wRock) * (1.0 - soilLip);
+    float wDirt = max(sp.g, soilLip) * (1.0 - wRock) * (1.0 - wPath);
     float edgeN = (mid - 0.5) * 0.5;
     wPath = smoothstep(0.35, 0.65, wPath + edgeN * 0.6);
     wDirt = smoothstep(0.3, 0.7, wDirt + edgeN);

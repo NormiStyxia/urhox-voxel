@@ -2,7 +2,7 @@
 -- RuinsScene.lua — 时之遗迹：场景装配、输入、相机、谜题流程、龙看守者
 --
 -- 模块：
---   RuinsTerrain  地形（盆地 / 峡谷 / 梯田山脊）     RuinsBuild   静态建筑与景观
+--   RuinsTerrain  地形（主岛 / 环形虚空 / 遗迹外环）     RuinsBuild   静态建筑与景观
 --   RuinsPuzzles  时之物件与谜题进度                 TimeObject   碎时 / 冻结 / 回溯的物件模型
 --   TimeSpells    法术定义（数据驱动）+ 特效          NomiController 诺米步行 + 第三人称瞄准
 --   RuinsHUD      目标 / 法术槽 / 准星 / 提示
@@ -25,6 +25,7 @@ local HUD = require("ruins.RuinsHUD")
 local TouchInput = require("ui.TouchInput")
 local TouchControls = require("ui.TouchControls")
 local touchRevision = 0
+local voidInputBlocked = false
 local Rig = require("dragon.DragonRig")
 local Controller = require("dragon.DragonAnimationController")
 local Variants = require("dragon.DragonVariants")
@@ -205,7 +206,7 @@ local function SetupDragon()
     ride.lockedHint = ""
     ride.wander = { center = M.DRAGON_POS, min = 3, max = 11 }
     ride.node = nomi_.node
-    ride.controlsEnabled = function() return not M.debugOn and not TouchControls.IsBlocked() and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil) end
+    ride.controlsEnabled = function() return not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked() and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil) end
     ride.onNotice = function(text) caster_:Say(text) end
     ride.onMount = function()
         caster_.charging,caster_.charge=false,0
@@ -322,6 +323,7 @@ end
 
 -- ---------------------------------------------------------------- 启动
 function M.Start()
+    voidInputBlocked=false
     TouchInput.Detect()
     -- 引擎的自动点击重锁没有 UI / pending 过滤；接管一次，避免两个管理者竞争。
     if not inputTakenOver then
@@ -362,6 +364,16 @@ function M.Start()
         handPos = function() return nomi_:HandPos() end,
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     SetupDragon()
+    nomi_.onVoidReturn=function(pos)
+        TouchControls.Cancel()
+        caster_.charging,caster_.charge=false,0
+        drag.buttons=0
+        voidInputBlocked=true -- PC 仍物理按住的键必须松开，不能返回后自动施法/继续跑落崖
+        M.ride.pos=pos
+        M.ride.vy,M.ride.speed=0,0
+        if M.stream then M.stream:Stop(true) end
+        caster_:Say("时之印记将你带回安全处")
+    end
 
     sleepBase.valid = false
     -- 龙体是纯视觉部件，不让瞄准 Grid 把它当成可破坏场景。
@@ -552,9 +564,9 @@ local function UpdateAim()
 end
 
 local function HandleSpells(dt, aim)
-    if M.mounted then caster_.charging,caster_.charge=false,0; return end
+    if M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
     local testInput = M.fake ~= nil or M.fakePress ~= nil
-    if M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and not testInput) then
+    if voidInputBlocked or M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and not testInput) then
         caster_.charging,caster_.charge=false,0; return
     end
     local lmb = (not TouchInput.IsEnabled() and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1) or TouchInput.Down("shatter")
@@ -570,7 +582,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
     local dt = eventData["TimeStep"]:GetFloat()
     if nomi_ == nil or M.mounted or (M.ride ~= nil and M.ride.mode ~= "free") then return end
-    if M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and M.fake==nil) then
+    if voidInputBlocked or M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and M.fake==nil) then
         nomi_:Move(dt,0,0,false,false,false); return
     end
     local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
@@ -584,6 +596,13 @@ function Ruins_HandleUpdate(eventType, eventData)
     local dt = eventData["TimeStep"]:GetFloat()
     time_ = time_ + dt
     TouchControls.Update(dt)
+    if voidInputBlocked then
+        local held=input:GetMouseButtonDown(MOUSEB_LEFT)
+        for _,key in ipairs({KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_Q,KEY_F}) do
+            held=held or Down(key)
+        end
+        if not held then voidInputBlocked=false end
+    end
     if touchRevision~=TouchInput.revision then
         touchRevision=TouchInput.revision
         caster_.charging,caster_.charge=false,0

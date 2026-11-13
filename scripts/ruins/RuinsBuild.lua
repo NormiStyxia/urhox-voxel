@@ -658,6 +658,7 @@ local function BuildOuterWall(world)
             end
         end, function(x, z)
             if (x - cx) ^ 2 + (z - cz) ^ 2 > 3.7 * 3.7 then return false end
+            if not Terrain.HasGround(x,z) then return false end
             ground = Terrain.HeightAt(x, z)
             return true
         end)
@@ -766,11 +767,11 @@ end
 
 -- ---------------------------------------------------------------- 渡槽（东侧，跨峡谷到外环，断一截）
 local function BuildAqueduct(world)
-    -- 沿 +X 方向，z = 10，从 x=36 到 x=58；桥墩落在谷底
+    -- 沿 +X 方向，z=10；断槽悬出两岸，桥墩只锚定真实岛面
     local z0 = 10
-    local b = Brush.New(world, { min = { 34, Terrain.RAVINE_Y - 1, z0 - 1.6 }, max = { 60, Terrain.RING_Y + 6, z0 + 1.6 }, size = 0.25 })
+    local b = Brush.New(world, { min = { 34, Terrain.RING_Y - 1, z0 - 1.6 }, max = { 60, Terrain.RING_Y + 6, z0 + 1.6 }, size = 0.25 })
     local deck = Terrain.RING_Y + 3.5
-    b:Shape(34, Terrain.RAVINE_Y - 1, z0 - 1.6, 60, deck + 2, z0 + 1.6, function(x, y, z)
+    b:Shape(34, Terrain.RING_Y - 1, z0 - 1.6, 60, deck + 2, z0 + 1.6, function(x, y, z)
         local dz = abs(z - z0)
         if dz > 1.5 then return nil end
         local ground = Terrain.HeightAt(x, z)
@@ -786,7 +787,7 @@ local function BuildAqueduct(world)
             -- 拱：每 5m 一个半圆拱
             return Stone(x, y, z)
         end
-        if y <= deck - 1.0 and y > ground - 0.5 then
+        if Terrain.HasGround(x,z,.75) and y <= deck - 1.0 and y > ground - 0.5 then
             -- 每 5m 一跨：墩宽 1m（|dxa| ≥ 2），墩间是半圆拱（半径 2，圆心在桥面下 3m）
             local dxa = (x - 34) % 5.0 - 2.5
             if gap and y > deck - 6 then return nil end
@@ -816,6 +817,7 @@ M.Reserved = Reserved
 -- 树 / 灌木是网格（RuinsTrees），不是体素：树冠是起伏的叶团，枝干是弯曲的管
 local function Tree(world, x, z, o)
     if not o.force and Reserved(x, z) then return nil end
+    if not Terrain.HasGround(x,z,1.0) then return nil end
     local gy = Terrain.HeightAt(x, z) - 0.05
     return Trees.Tree(M.scene, world, x, gy, z, o)
 end
@@ -848,7 +850,7 @@ local function BuildVegetation(world)
         local r = rng:Range(54, 66)
         local x, z = cos(a) * r, sin(a) * r
         local gy = Terrain.HeightAt(x, z)
-        if abs(x) > 6 and gy < Terrain.RING_Y + 1.5 and not (z > 50 and abs(x) < 14) then
+        if Terrain.HasGround(x,z,1.5) and abs(x) > 6 and gy < Terrain.RING_Y + 1.5 and not (z > 50 and abs(x) < 14) then
             Tree(world, x, z, { h = rng:Range(5, 8), r = rng:Range(2.4, 3.6), lean = rng:Range(0, 0.8), leanA = rng:Range(0, 6.28), gold = rng:Next() < 0.12 })
             placed = placed + 1
             if placed >= 22 then break end
@@ -866,23 +868,22 @@ local function BuildVegetation(world)
         local x, z = rng:Range(-68, 68), rng:Range(-68, 68)
         local r = sqrt(x * x + z * z)
         local gy = Terrain.HeightAt(x, z)
-        local ok = r > 27 and r < 68 and abs(x) > 4.5 and gy <= Terrain.RING_Y + 0.6 and gy >= Terrain.RING_Y - 0.1
+        local ok = Terrain.HasGround(x,z,1) and r > 27 and r < 68 and abs(x) > 4.5 and gy <= Terrain.RING_Y + 0.6 and gy >= Terrain.RING_Y - 0.1
             and abs(r - M.WALL_R) > 2.5 and (r < Terrain.RAVINE_IN - 1 or r > Terrain.RAVINE_OUT + 1)
         if ok and not Reserved(x, z) then Trees.Bush(M.scene, x, gy - 0.05, z, rng:Range(0.6, 1.2), rng) end
     end
-    -- 峡谷里的时晶簇（网格六棱柱，发光，给峡谷底提供蓝色光源感）
+    -- 少量晶簇嵌在岛唇下的斜岩侧面，不在虚空造晶簇地板。
     local nCrystal = 0
-    for i = 1, 40 do
-        local a = rng:Range(0, 2 * pi)
-        local rr = rng:Range(Terrain.RAVINE_IN + 2, Terrain.RAVINE_OUT - 2)
-        local x, z = cos(a) * rr, sin(a) * rr
-        if abs(x) > 5 then
-            for k = 1, rng:Int(2, 4) do
-                local px, pz = x + rng:Range(-0.8, 0.8), z + rng:Range(-0.8, 0.8)
-                Trees.Crystal(M.scene, px, Terrain.HeightAt(px, pz), pz, rng:Range(1.2, 3.2), rng:Range(0.22, 0.4),
-                    rng:Range(0, 0.4), rng:Range(0, 2 * pi), rng:Next() < 0.3)
-                nCrystal = nCrystal + 1
-            end
+    for i = 1, 18 do
+        local a = rng:Range(0, 2*pi)
+        local main,inner = Terrain.Edges(a)
+        local rr = (i % 2 == 0) and (main - 1.1) or (inner + 1.1)
+        local x,z = cos(a)*rr,sin(a)*rr
+        if abs(x)>6 then
+            local y=Terrain.BottomHeight(x,z)-.35
+            Trees.Crystal(M.scene,x,y,z,rng:Range(.8,1.6),rng:Range(.18,.32),
+                rng:Range(.15,.4),a,rng:Next()<.3)
+            nCrystal=nCrystal+1
         end
     end
     print("RuinsBuild: crystals " .. nCrystal)

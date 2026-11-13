@@ -40,6 +40,9 @@ local Flight = require("dragon.DragonFlight")
 ---@field jointTest table
 ---@field roarChest number|nil
 ---@field turnTarget number|nil
+---@field queryGround fun(x:number,z:number):number|nil
+---@field canLand fun(x:number,z:number):boolean
+---@field onNoLanding fun()|nil
 ---@field turnRequest number|nil
 ---@field touchT number|nil
 ---@field jumped boolean|nil
@@ -169,6 +172,12 @@ end
 
 -- 地面高度：射线从当前身高上方一点往下打（不从高空打，避免命中头顶的拱桥 / 穹顶）
 function C:GroundHeight(x, z)
+    if self.queryGround then
+        local h=self.queryGround(x,z)
+        -- 无命中仅保持飞行参考高度，不代表有地板；落地另由 canLand 检查。
+        if h~=nil then return h end
+        return self.airFloor or 0
+    end
     local ref = self.groundRef or 0.0
     local hit = self.world:RaycastSingle(Ray(Vector3(x, ref + 6.0, z), Vector3(0, -1, 0)), 40.0)
     if hit ~= nil and hit.hit then return hit.position.y end
@@ -633,6 +642,10 @@ STATES.LAND = {
     end,
     logic = function(self, dt, t)
         local L = self.loco
+        if self.canLand and not self.canLand(L.pos.x,L.pos.z) then
+            self:SetState("FLY")
+            return
+        end
         if self.touchT == nil then
             -- Landing cancels thrust; retain momentum but brake before touching down.
             L.boost = Approach(L.boost or 0, 0, 3, dt)
@@ -848,6 +861,10 @@ function C:Request(name, arg)
         if name == "FLY" or name == "GLIDE" then
             if cur ~= "TAKEOFF" or name == "FLY" then self:SetState(name) end
         elseif name == "LAND" or STATES[name].ground then
+            if self.canLand and not self.canLand(self.loco.pos.x,self.loco.pos.z) then
+                if self.onNoLanding then self.onNoLanding() end
+                return
+            end
             if cur ~= "LAND" and cur ~= "TAKEOFF" then self:SetState("LAND") end
         end
         return

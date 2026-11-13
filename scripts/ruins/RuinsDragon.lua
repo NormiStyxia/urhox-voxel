@@ -27,6 +27,19 @@ local function Clamp(x,a,b) return math.max(a,math.min(b,x)) end
 function M.New(host,world,nomi,puzzles,terrain)
     local self=setmetatable({host=host,world=world,nomi=nomi,puzzles=puzzles,terrain=terrain,
         time=0,nextDamage=0,nextMaterial=0,patches={},touched={},cast=-1},D)
+    host.ctrl.queryGround=function(x,z)
+        local ref=host.ctrl.groundRef or terrain.RING_Y
+        local hit=world:RaycastSingle(Ray(Vector3(x,ref+6,z),Vector3.DOWN),math.max(40,ref-terrain.Y_BASE+6))
+        if hit.hit and hit.normal.y>.6 then return hit.position.y end
+        return nil
+    end
+    host.ctrl.canLand=function(x,z)
+        -- 大龙需完整永久岛面；修桥残块不构成降落坪。
+        return terrain.HasGround(x,z,2.5*host.rig.size) and host.ctrl.queryGround(x,z)~=nil
+    end
+    host.ctrl.onNoLanding=function()
+        if host.ride.onNotice then host.ride.onNotice("下方是虚空，请飞到岛面再降落") end
+    end
     host.ctrl.resolveMotion=function(c,pos,yaw,alt) self:ResolveMotion(c,pos,yaw,alt) end
     host.ride.resolveDismount=function() return self:DismountPoint() end
     host.breath:OnHit(function(info) self:Hit(info) end)
@@ -66,7 +79,7 @@ function D:ResolveMotion(c,oldPos,oldYaw,oldAlt)
     if not L.airborne and translation:LengthSquared()>.00001 then
         local a=c:GroundHeight(oldPos.x,oldPos.z)
         local b=c:GroundHeight(L.pos.x,L.pos.z)
-        if b-a>0.65*rig.size or a-b>1.4*rig.size then fraction=0 end
+        if c.queryGround(L.pos.x,L.pos.z)==nil or b-a>0.65*rig.size or a-b>1.4*rig.size then fraction=0 end
     end
     if fraction<1 then
         L.pos=oldPos+(L.pos-oldPos)*fraction
@@ -100,7 +113,8 @@ function D:DismountPoint()
             local a=math.rad(c.loco.yaw+angle)
             local p=root+Vector3(math.sin(a),0,math.cos(a))*dist*h.rig.size
             local ground=self.world:RaycastSingle(Ray(Vector3(p.x,root.y+2,p.z),Vector3.DOWN),5)
-            if ground.hit and ground.normal.y>.65 and math.abs(ground.position.y-root.y)<1.5 then
+            if ground.hit and ground.normal.y>.65 and math.abs(ground.position.y-root.y)<1.5
+                and self.terrain.IsSafeGround(p.x,ground.position.y,p.z) then
                 p=ground.position+Vector3(0,.08,0)
                 local clear=self.world:SphereCast(Sphere(p+Vector3(0,.4,0),.34),Vector3.UP,1.15)
                 local path=p+Vector3(0,1,0)-origin

@@ -37,7 +37,7 @@ function M.Build(scene, T)
                 for _ = 1, 70 do
                     local x, z = bx + rng:Next() * BLOCK, bz + rng:Next() * BLOCK
                     local w = T.GrassAt(x, z)
-                    if w > 0.25 and rng:Next() < w then
+                    if T.HasGround(x,z,1) and w > 0.25 and rng:Next() < w then
                         local y = T.Height(x, z) - 0.02
                         local blades = rng:Int(5, 7)
                         local tint = 0.85 + rng:Next() * 0.3

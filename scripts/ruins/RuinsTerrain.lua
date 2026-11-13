@@ -1,38 +1,8 @@
--- ====================================================================
--- RuinsTerrain.lua — 时之遗迹的地形
---
--- 两层（参考 Teardown / Hytale / 体素混合地形的通行做法）：
---   显示层：Terrain 高度图网格（0.5m 顶点间距、平滑高度），RuinsGround.shader 在世界空间
---           程序化混合 草地 / 泥土 / 铺石 / 岩壁；岩层倾斜 + 噪声扭曲，没有水平色带。
---           GrassField 在上面长出真实草叶与野花（设备不支持时退回卡片草簇）。
---   碰撞层：0.5m 体素（不可破坏），HiddenVoxel.shader 让它不渲染、不投影。
---           诺米的角色控制器、法术射线、碎块都只和体素碰撞，所以玩法完全不变。
---
--- 俯视同心圆布局（原点 = 龙庭中心，Y 向上，+Z 北）：
---
---            山脊（梯田状崖壁，r ≥ ~70，高 22–40m）
---        ┌──────────────────────────────────────┐
---        │  外环高台 y=6（48.5 ≤ r < 70）城墙 r=51 │
---        │   ┌──────────────────────────────┐   │
---        │   │ 峡谷 y≈-14（39.5 ≤ r < 48.5）   │   │
---        │   │   ┌──────────────────────┐   │   │
---        │   │   │ 内环平台 y=6（柱廊/碑） │   │   │
---        │   │   │   ┌──────────────┐   │   │   │
---        │   │   │   │ 龙庭 y=0 r<20.75│   │   │   │
---        │   │   │   └──────────────┘   │   │   │
---        │   │   │   南 / 北两条大阶梯：  │   │   │
---        │   │   │   |x|<3.5，每 1m 升 0.5m │   │   │
---        │   │   └──────────────────────┘   │   │
---        │   │  断桥（时之物件）横跨南侧峡谷   │   │
---        │   └──────────────────────────────┘   │
---        │  出生点 (0, 6, -64)  南城门 z=-51      │
---        └──────────────────────────────────────┘
--- 显示层与碰撞层的高度关系：
---   平地（内环 / 外环 y=6、龙庭）完全一致；缓坡上碰撞层取 0.5m 量化，误差 ≤ 0.25m。
---   大阶梯：RuinsBuild 的单一体积承担 0.5m 台阶/扶墙碰撞；隐藏地形退到 -1m。
---           显示层压到 -1.2m，末端三角面在加长的顶平台内回接到 y=6。
---   龙庭：显示层压到 -1.2m（含地砖边缘跨格范围），台缘体积盖住显示层裸边。
--- ====================================================================
+-- 不规则空岛：同一岛域裁剪可见封闭网格、体素列和草密度。
+-- Terrain 只作为 GrassField 高度采样源（viewMask=0，无物理组件）；真实地面
+-- 由分块 CustomGeometry 顶/底/断缘组成，虚空没有可见面或碰撞列。
+-- Height/HeightAt 无地面返回 VOID_Y；放置物体先 HasGround，安全点用 IsSafeGround。
+-- 石阶/台缘沿用最新单体积方案：隐藏地形退到 -1，视觉 -1.2。
 
 local Noise = require("ruins.Noise")
 local Pal = require("ruins.RuinsPalette")
@@ -43,12 +13,12 @@ local M = {}
 M.CELL = 0.5
 M.HALF = 84.0           -- 地形范围 [-84, 84]
 M.Y_BASE = -18.0
-M.Y_TOP = 46.0
+M.Y_TOP = 10.0
 M.COURT_R = 20.75       -- 龙庭边缘
 M.RING_Y = 6.0          -- 内环 / 外环台面高度
 M.RAVINE_IN = 39.5
 M.RAVINE_OUT = 48.5
-M.RAVINE_Y = -14.0
+M.RAVINE_Y = -14.0 -- 仅兼容旧配色参数，不是地面
 M.WALL_R = 51.0         -- 外城墙
 M.RIM_R = 70.0
 M.STAIR_HALF = 3.5      -- 大阶梯半宽
@@ -69,11 +39,48 @@ end
 M.Smooth = Smooth
 
 
--- 软台阶：平台宽、台缘陡（梯田）
-local function SoftStep(v, step, sharp)
-    local s = v / step
-    local f = floor(s)
-    return (f + Smooth(1 - sharp, 1, s - f)) * step
+-- 集中的岛域/连接参数。预留方向不会自动生成桥或墙。
+M.ISLAND = {
+    mainRadius = 39.5, ringInner = 48.5, ringOuter = 70,
+    bridgeHalfWidth = 4.5, bridgeMainZ = -39.25, bridgeRingZ = -49.0,
+    safeMargin = 2.0, fallY = -5.0, hardFallY = -24.0,
+    connections = { { name = "east", angle = 0 }, { name = "northwest", angle = 2.35 } },
+}
+M.VOID_Y = -128.0 -- 数值兼容哨兵；不用于造几何/落点
+
+---@return number mainEdge, number innerEdge, number outerEdge
+function M.Edges(angle)
+    local ca, sa = math.cos(angle), math.sin(angle)
+    local fine = (Noise.Value2(ca * 11 + 10, sa * 11 + 10, 3) - .5) * .65
+    local main = M.ISLAND.mainRadius + 1.7 * math.sin(3 * angle + .6) + .9 * math.sin(5 * angle - .7) + fine
+    local inner = M.ISLAND.ringInner - .8 + .7 * math.sin(3 * angle - .8) + .3 * math.sin(5 * angle) + fine * .5
+    local outer = M.ISLAND.ringOuter + 2.7 * math.sin(3 * angle + .9) + 1.3 * math.sin(5 * angle - .4) + fine
+    -- 四座角楼的 3.7m 基础也保留，不能通过裁墙补救地形缺口。
+    local corner=1-Smooth(.12,.24,abs(math.cos(2*angle)))
+    inner=min(inner,inner*(1-corner)+47.0*corner)
+    -- 南路桥头、北殿整块基础、西塔台凸肩：柔和收束到保护轮廓。
+    local gateAngle=math.atan(M.ISLAND.bridgeHalfWidth / -M.ISLAND.bridgeMainZ)
+    local south = 1 - Smooth(gateAngle, gateAngle+.12, math.abs(math.atan(ca, -sa)))
+    main = main * (1 - south) - M.ISLAND.bridgeMainZ * south
+    inner = inner * (1 - south) - M.ISLAND.bridgeRingZ * south
+    outer = max(outer, 69 * south)
+    local north = 1 - Smooth(.20, .35, math.abs(math.atan(ca, sa)))
+    outer = max(outer, 70.5 * north)
+    local tower = 1 - Smooth(.13, .34, math.abs(math.atan(math.sin(angle + 2.9764), math.cos(angle + 2.9764))))
+    main = max(main, 40.5 * tower)
+    return main, inner, outer
+end
+
+-- 正数为岛内径向余量，负数为虚空。碰撞和网格按同一格中心取样。
+---@return number
+function M.EdgeDistance(x, z)
+    local main, inner, outer = M.Edges(math.atan(z, x))
+    local r = sqrt(x*x + z*z)
+    return max(main-r, min(r-inner, outer-r))
+end
+---@return boolean
+function M.HasGround(x, z, margin)
+    return M.EdgeDistance(x,z) >= (margin or 0)
 end
 
 -- 碰撞区域侧视（d = |z|，南北镜像，所有长度单位为米）：
@@ -99,54 +106,51 @@ function M.StairY(z)
     return max(0, min(M.RING_Y, 0.5 * floor((abs(z) - M.COURT_R) + 1)))
 end
 
--- 真实地表高度（平滑，米）。先判阶梯，底端两侧的圆弧不能覆盖平踏步。
-function M.Height(x, z)
-    if M.InStair(x, z) then return M.StairY(z) end
-    local r = sqrt(x * x + z * z)
-    if r < M.COURT_R then return 0.0 end
-    local a = math.atan(z, x)
-    local ca, sa = math.cos(a), math.sin(a)
-    -- 峡谷边缘带一点曲折
-    local rin = M.RAVINE_IN + (Noise.Value2(ca * 6 + 10, sa * 6 + 10, 3) - 0.5) * 2.0
-    local rout = M.RAVINE_OUT + (Noise.Value2(ca * 6 + 30, sa * 6 + 30, 4) - 0.5) * 2.0
-    if r < rin - 0.5 then return M.RING_Y end
-    if r < rout + 0.5 then
-        -- 峡谷：两壁陡峭（0.5m 内完成落差，边缘崩一点），中段一级碎台，谷底起伏
-        local e = min(r - rin, rout - r)
-        local bottom = M.RAVINE_Y + Noise.Fbm2(x * 0.12, z * 0.12, 3, 7) * 3.0
-        local shelf = M.RING_Y - 5.0 + Noise.Value2(x * 0.3, z * 0.3, 9) * 2.0
-        if e < -0.0 then
-            local k = Smooth(0.5, 0.0, -e)
-            return M.RING_Y + (max(shelf, bottom) - M.RING_Y) * k
-        end
-        if e < 0.9 then return max(shelf, bottom) end
-        if e < 1.6 then
-            local k = Smooth(0.9, 1.6, e)
-            return max(shelf, bottom) + (bottom + (shelf - bottom) * 0.35 - max(shelf, bottom)) * k
-        end
-        local e2 = Smooth(1.6, 3.5, e)
-        return bottom + (shelf - bottom) * 0.35 * (1 - e2)
-    end
-    -- 外环高台 + 山脊
-    local rimR = M.RIM_R + (Noise.Value2(ca * 3 + 50, sa * 3 + 50, 5) - 0.5) * 10.0
+-- 未裁剪的顶面延拓；先判新台阶，防止龙庭圆弧覆盖底踏步。
+local function SurfaceHeight(x,z)
+    if M.InStair(x,z) then return M.StairY(z) end
+    local r=sqrt(x*x+z*z)
+    if r<M.COURT_R then return 0 end
     local h = M.RING_Y
-    if r > M.RAVINE_OUT + 3 and r < rimR - 2 then
-        local n = Noise.Fbm2(x * 0.08, z * 0.08, 2, 11)
-        if abs(x) > 4 then h = h + Smooth(0.55, 0.75, n) * 0.6 end
+    if r > M.ISLAND.ringInner + 3 and abs(x) > 4 then
+        h = h + Smooth(.55,.75,Noise.Fbm2(x*.08,z*.08,2,11)) * .6
     end
-    local rise = Smooth(rimR - 2, rimR + 12, r)
-    if rise > 0 then
-        local big = 14 + Noise.Fbm2(x * 0.03, z * 0.03, 4, 21) * 22
-        local raw = rise * big + (Noise.Value2(x * 0.25, z * 0.25, 23) - 0.5) * 0.8
-        -- 梯田：每 2.5m 一级，平台宽、台缘陡；台缘再叠一点碎岩起伏
-        raw = SoftStep(max(0, raw), 2.5, 0.3) + Noise.Fbm2(x * 0.4, z * 0.4, 2, 24) * 0.5 * rise
-        h = h + raw
-    end
-    return min(h, 44.0)
+    return h
+end
+---@return number
+function M.Height(x,z)
+    if not M.HasGround(x,z) then return M.VOID_Y end
+    return SurfaceHeight(x,z)
+end
+---@return number|nil
+function M.GroundHeight(x,z)
+    if M.HasGround(x,z) then return SurfaceHeight(x,z) end
+    return nil
+end
+
+-- 岛底随离岸距离内收，偏心岩体向下垂落；没有跨越裂隙的底平面。
+---@return number
+function M.BottomHeight(x,z)
+    local edge = max(0,M.EdgeDistance(x,z))
+    local r = sqrt(x*x+z*z)
+    local depth = r < 44 and 16 or 12
+    local lobes = 4*math.exp(-((x+19)^2+(z-9)^2)/150)
+        + 6*math.exp(-((x-20)^2+(z+19)^2)/90)
+        + 4*math.exp(-((x+52)^2+(z+25)^2)/100)
+    return min(SurfaceHeight(x,z)-1.3, 4.7
+        - (depth + lobes + Noise.Value2(x*.12,z*.12,91)*2) * Smooth(0, r<44 and 12 or 8, edge))
+end
+
+-- 仅永久岛面可记录安全点：排除崖缘、台阶、墙顶和活动碎片。
+---@return boolean
+function M.IsSafeGround(x,y,z)
+    if not M.HasGround(x,z,M.ISLAND.safeMargin) or M.InStairFootprint(x,z) then return false end
+    return abs(y-SurfaceHeight(x,z)) < .45
 end
 
 -- 碰撞层顶面高度（0.5m 量化，略偏向下取：宁可脚陷进草里一点，也不要悬空）
 function M.CollideHeight(x, z, height)
+    if not M.HasGround(x,z) then return M.VOID_Y end
     -- 0.5m 粗网格的台阶前沿比石阶偏半格，叠上去会给胶囊两套立面/内部边。
     -- 脚印边界对齐粗网格；地基仍存在，破坏/回溯后不凭空生成上塔的隐藏坡道。
     local d = abs(z)
@@ -165,7 +169,7 @@ function M.VisualHeight(x, z)
     local r2 = x * x + z * z
     -- 旧值 R-0.35 留出一圈 y=0 的 Terrain 与地砖同面；连三角面跨格范围一起藏在台缘下。
     if r2 < (M.COURT_R + 0.4) ^ 2 then return -1.2 end
-    return M.Height(x, z)
+    return SurfaceHeight(x, z)
 end
 
 -- 岩石配色（浮岩等体素岩块用）：倾斜 + 三维噪声扭曲的岩层，避免水平环带
@@ -183,11 +187,11 @@ M.StrataAt = StrataAt
 function M.IsPath(x, z)
     local r = sqrt(x * x + z * z)
     -- 南侧主路：出生点 → 城门 → 桥
-    if abs(x) < 2.0 + Noise.Value2(z * 0.4, 1, 41) * 0.8 and z < -M.RAVINE_OUT and z > -68 then return true end
+    if abs(x) < 2.0 + Noise.Value2(z * 0.4, 1, 41) * 0.8 and z < -M.ISLAND.ringInner and z > -68 then return true end
     -- 内环铺石平台（柱廊一圈）
     if r >= M.COURT_R and r < 27.0 + (Noise.Value2(x * 0.3, z * 0.3, 42) - 0.5) * 1.5 then return true end
     -- 内环南北向直路（桥头 → 阶梯顶）
-    if abs(x) < 3.0 and abs(z) >= M.STAIR_END - 0.5 and r < M.RAVINE_IN then return true end
+    if abs(x) < 3.0 and abs(z) >= M.STAIR_END - 0.5 and r < M.ISLAND.mainRadius then return true end
     -- 北殿前的石板地
     if abs(x) < 11 and z > 52 and z < 67 then return true end
     return false
@@ -208,63 +212,52 @@ end
 
 ---@param world VoxelPhysicsWorld
 local function BuildCollision(world)
-    local t0 = os.clock()
-    local c = M.CELL
-    local N = math.tointeger(M.HALF * 2 / c) or 336
-    local x0 = -M.HALF
-    -- 格中心的平滑高度（HeightAt 用）+ 量化碰撞高度；多算一圈，用来判断侧面
-    local H, C = {}, {}
-    for i = -1, N do
-        local row, crow = {}, {}
-        local x = x0 + (i + 0.5) * c
-        for k = -1, N do
-            local z = x0 + (k + 0.5) * c
-            row[k] = M.Height(x, z)
-            crow[k] = M.CollideHeight(x, z, row[k])
-        end
-        H[i], C[i] = row, crow
-    end
-    M.heightMap = H
-    print(string.format("RuinsTerrain: collision heightmap %dx%d in %.2fs", N, N, os.clock() - t0))
-
-    local hidden = HiddenMaterial()
-    local CH = 48
-    local vols = {}
-    for ci = 0, N - 1, CH do
-        for ck = 0, N - 1, CH do
-            local i1, k1 = min(N - 1, ci + CH - 1), min(N - 1, ck + CH - 1)
-            local lo, hi = 1e9, -1e9
-            for i = ci, i1 do
-                local row = C[i]
-                for k = ck, k1 do
-                    local h = row[k]
-                    local hn = min(h, C[i - 1][k], C[i + 1][k], row[k - 1], row[k + 1])
-                    if hn < lo then lo = hn end
-                    if h > hi then hi = h end
-                end
-            end
-            local baseY = max(M.Y_BASE, lo - 2.0)
-            local ny = math.tointeger(floor((hi - baseY) / c + 0.5)) or 1
-            local nxC, nzC = i1 - ci + 1, k1 - ck + 1
-            local vol = world:CreateVolume(nxC, max(1, ny), nzC, c, Vector3(x0 + ci * c, baseY, x0 + ck * c))
-            local g = vol:GetGrid()
-            for i = ci, i1 do
-                local row = C[i]
-                for k = ck, k1 do
-                    local top = math.tointeger(floor((row[k] - baseY) / c + 0.5)) - 1
-                    if top >= 0 then g:FillBox(i - ci, 0, k - ck, i - ci, top, k - ck, true) end
-                end
-            end
-            g:PaintBox(0, 0, 0, nxC - 1, max(1, ny) - 1, nzC - 1, P.CLIFF_B)
-            vol.destructible = false
-            vol.evictable = false
-            if hidden ~= nil then vol.material = hidden end
-            world:FinalizeVolume(vol)
-            vol:RebuildGeometry()
-            vols[#vols + 1] = vol
+    local c, N, x0 = M.CELL, math.floor(M.HALF*2/M.CELL), -M.HALF
+    local H, C, B = {}, {}, {}
+    for i=-1,N do
+        H[i],C[i],B[i] = {},{},{}
+        for k=-1,N do
+            local x,z=x0+(i+.5)*c,x0+(k+.5)*c
+            local h=M.Height(x,z)
+            H[i][k]=h
+            C[i][k]=M.CollideHeight(x,z,h)
+            B[i][k]=M.HasGround(x,z) and math.floor(M.BottomHeight(x,z)/c)*c or M.VOID_Y
         end
     end
-    print(string.format("RuinsTerrain: %d collision chunks in %.2fs", #vols, os.clock() - t0))
+    M.heightMap=H
+    local vols, hidden = {},HiddenMaterial()
+    local CH=32 -- 16m：减少空洞块包围盒的浪费
+    local allocated,solid=0,0
+    for ci=0,N-1,CH do for ck=0,N-1,CH do
+        local i1,k1=min(N-1,ci+CH-1),min(N-1,ck+CH-1)
+        local lo,hi=1e9,-1e9
+        for i=ci,i1 do for k=ck,k1 do
+            if C[i][k]~=M.VOID_Y then lo=min(lo,B[i][k]); hi=max(hi,C[i][k]) end
+        end end
+        if hi>lo then
+            local ny=math.floor((hi-lo)/c+.5)
+            local nx,nz=i1-ci+1,k1-ck+1
+            local vol=world:CreateVolume(nx,ny,nz,c,Vector3(x0+ci*c,lo,x0+ck*c))
+            local g=vol:GetGrid()
+            for i=ci,i1 do for k=ck,k1 do
+                if C[i][k]~=M.VOID_Y then
+                    local top=math.floor((C[i][k]-lo)/c+.5)-1
+                    local bottom=math.floor((B[i][k]-lo)/c+.5)
+                    if top>=bottom then
+                        g:FillBox(i-ci,bottom,k-ck,i-ci,top,k-ck,true)
+                        solid=solid+top-bottom+1
+                    end
+                end
+            end end
+            g:PaintBox(0,0,0,nx-1,ny-1,nz-1,P.CLIFF_B)
+            vol.destructible,vol.evictable=false,false
+            if hidden then vol.material=hidden end
+            world:FinalizeVolume(vol); vol:RebuildGeometry()
+            vols[#vols+1]=vol; allocated=allocated+nx*ny*nz
+        end
+    end end
+    M.collisionStats={chunks=#vols,allocated=allocated,solid=solid}
+    print(string.format("RuinsTerrain: %d island chunks, %d allocated / %d solid cells",#vols,allocated,solid))
     return vols
 end
 
@@ -313,6 +306,7 @@ local function BuildSplat(VH, NV)
             -- 稀疏处带一点随机空斑（草甸不是均匀地毯）
             grass = grass * (0.55 + 0.45 * Smooth(0.25, 0.55, Noise.Fbm2(x * 0.2, z * 0.2, 2, 83)))
             grass = max(0, min(1, grass))
+            if not M.HasGround(x,z,1.25) then grass=0 end
             GW[i][k] = grass
             img:SetPixel(i, py, Color(path, dirt, rock, grass))
         end
@@ -324,6 +318,105 @@ local function BuildSplat(VH, NV)
     tex:SetAddressMode(COORD_U, ADDRESS_CLAMP)
     tex:SetAddressMode(COORD_V, ADDRESS_CLAMP)
     return tex
+end
+
+-- 同格中心裁剪顶/底，四邻空列才封侧缘。分块限制 Web 单网格顶点数。
+---@param scene Scene
+---@param mat Material
+local function BuildIslandMesh(scene,mat)
+    local c,N=M.CELL,math.floor(M.HALF*2/M.CELL)
+    local CH=24
+    local triangles,chunks=0,0
+    local function Land(i,k)
+        return M.heightMap[i] and M.heightMap[i][k]~=nil and M.heightMap[i][k]~=M.VOID_Y
+    end
+    local top,bottom={},{}
+    for i=0,N do
+        top[i],bottom[i]={},{}
+        for k=0,N do
+            local x,z=-M.HALF+i*c,-M.HALF+k*c
+            top[i][k]=M.VisualHeight(x,z)
+            bottom[i][k]=min(top[i][k]-1.3,M.BottomHeight(x,z))
+        end
+    end
+    for ci=0,N-1,CH do for ck=0,N-1,CH do
+        local geom
+        ---@param a Vector3
+        ---@param b Vector3
+        ---@param d Vector3
+        local function Tri(a,b,d,soil)
+            if not geom then
+                local node=scene:CreateChild("IslandShell")
+                geom=node:CreateComponent("CustomGeometry")
+                geom:BeginGeometry(0,TRIANGLE_LIST)
+                geom.castShadows=true
+                chunks=chunks+1
+            end
+            local ab=b-a --[[@as Vector3]]
+            local normal=ab:CrossProduct(d-a):Normalized()
+            for _,v in ipairs({a,b,d}) do
+                geom:DefineVertex(v); geom:DefineNormal(normal)
+                geom:DefineTexCoord(Vector2((v.x+M.HALF)/(M.HALF*2),(M.HALF-v.z)/(M.HALF*2)))
+                geom:DefineColor(Color(soil or 0,0,0,1))
+            end
+            triangles=triangles+1
+        end
+        local function Quad(a,b,d,e,soil) Tri(a,b,d,soil); Tri(a,d,e,soil) end
+        local function V(i,k,h) return Vector3(-M.HALF+i*c,h,-M.HALF+k*c) end
+        -- 平坦岛内每 4m 合并顶面；底面使用带全部边界点的扇形，避免 T 接缝。
+        -- 崖缘/台阶保留 .5m，不把小洞跨接成面。
+        local used={}
+        local function Key(i,k) return i*(N+1)+k end
+        for i=ci,min(N-1,ci+CH-1) do for k=ck,min(N-1,ck+CH-1) do if Land(i,k) and not used[Key(i,k)] then
+            local size=8
+            local merge=i+size<=min(N,ci+CH) and k+size<=min(N,ck+CH)
+            local h=top[i][k]
+            local low,high=h,h
+            if merge then
+                for ii=i,i+size do for kk=k,k+size do
+                    if not Land(ii,kk) or not Land(ii-1,kk-1) or used[Key(ii,kk)]
+                        or abs(top[ii][kk]-h)>1.0 then merge=false end
+                    low=min(low,top[ii][kk]); high=max(high,top[ii][kk])
+                end end
+            end
+            if merge then
+                if high-low<.0001 then
+                    Quad(V(i,k,h),V(i,k+size,h),V(i+size,k+size,h),V(i+size,k,h))
+                else
+                    local tr={}
+                    for t=0,size-1 do tr[#tr+1]=V(i,k+t,top[i][k+t]) end
+                    for t=0,size-1 do tr[#tr+1]=V(i+t,k+size,top[i+t][k+size]) end
+                    for t=0,size-1 do tr[#tr+1]=V(i+size,k+size-t,top[i+size][k+size-t]) end
+                    for t=0,size-1 do tr[#tr+1]=V(i+size-t,k,top[i+size-t][k]) end
+                    local tm=V(i+size/2,k+size/2,top[i+size/2][k+size/2])
+                    for n=1,#tr do Tri(tm,tr[n],tr[n%#tr+1]) end
+                end
+                local rim={}
+                for t=0,size-1 do rim[#rim+1]=V(i,k+t,bottom[i][k+t]) end
+                for t=0,size-1 do rim[#rim+1]=V(i+t,k+size,bottom[i+t][k+size]) end
+                for t=0,size-1 do rim[#rim+1]=V(i+size,k+size-t,bottom[i+size][k+size-t]) end
+                for t=0,size-1 do rim[#rim+1]=V(i+size-t,k,bottom[i+size-t][k]) end
+                local mid=V(i+size/2,k+size/2,bottom[i+size/2][k+size/2])
+                for n=1,#rim do Tri(mid,rim[n%#rim+1],rim[n]) end
+                for ii=i,i+size-1 do for kk=k,k+size-1 do used[Key(ii,kk)]=true end end
+            else
+            local a,b,d,e=V(i,k,top[i][k]),V(i,k+1,top[i][k+1]),V(i+1,k+1,top[i+1][k+1]),V(i+1,k,top[i+1][k])
+            local aa,bb,dd,ee=V(i,k,bottom[i][k]),V(i,k+1,bottom[i][k+1]),V(i+1,k+1,bottom[i+1][k+1]),V(i+1,k,bottom[i+1][k])
+            Quad(a,b,d,e); Quad(aa,ee,dd,bb)
+            local function Edge(v,w,vb,wb)
+                local vs,ws=v-Vector3(0,.35,0),w-Vector3(0,.35,0)
+                Quad(w,v,vs,ws,1); Quad(ws,vs,vb,wb)
+            end
+            if not Land(i-1,k) then Edge(a,b,aa,bb) end
+            if not Land(i,k+1) then Edge(b,d,bb,dd) end
+            if not Land(i+1,k) then Edge(d,e,dd,ee) end
+            if not Land(i,k-1) then Edge(e,a,ee,aa) end
+            end
+        end end end
+        if geom then geom:Commit(); geom:SetMaterial(mat) end
+    end end
+    M.meshStats={triangles=triangles,chunks=chunks}
+    print(string.format("RuinsTerrain: island shell %d triangles / %d chunks",triangles,chunks))
 end
 
 ---@param scene Scene
@@ -343,11 +436,12 @@ local function BuildVisual(scene)
     local range = M.Y_TOP - M.Y_BASE
     local unit = range / 255.0
     local img = Image:new()
-    img:SetSize(NV, NV, 3)
-    for py = 0, NV - 1 do
-        local k = NV - 1 - py
-        for i = 0, NV - 1 do
-            local v = (VH[i][k] - M.Y_BASE) / unit
+    local sourceN=math.floor((NV-1)/2)+1 -- 草高度源 1m，控制图仍为 .5m
+    img:SetSize(sourceN, sourceN, 3)
+    for py = 0, sourceN - 1 do
+        local k = (sourceN - 1 - py)*2
+        for i = 0, sourceN - 1 do
+            local v = (VH[i*2][k] - M.Y_BASE) / unit
             if v < 0 then v = 0 elseif v > 255.99 then v = 255.99 end
             local hiB = floor(v)
             local loB = floor((v - hiB) * 256)
@@ -357,13 +451,14 @@ local function BuildVisual(scene)
     local node = scene:CreateChild("RuinsGround")
     node.position = Vector3(0, M.Y_BASE, 0)
     local t = node:CreateComponent("Terrain")
-    t.patchSize = 16
-    t.spacing = Vector3(c, unit, c)
+    t.patchSize = 8 -- 169 顶点 = 21 个 8m patch + 1，避免宽度被截断
+    t.spacing = Vector3(c*2, unit, c*2)
     t.smoothing = false
     t.maxLodLevels = 3
     t.lodBias = 2.0
-    t.castShadows = true
+    t.castShadows = false
     t.heightMap = img
+    t.viewMask = 0 -- 仅 GrassField 高度源；无 CollisionShape、无碰撞地板
 
     local splat = BuildSplat(VH, NV)
     M.splat = splat
@@ -379,6 +474,7 @@ local function BuildVisual(scene)
         mat:SetShaderParameter("MatDiffColor", Variant(Color(0.35, 0.5, 0.25)))
     end
     t.material = mat
+    BuildIslandMesh(scene,mat)
     M.groundMaterial = mat
     M.terrain = t
     M.terrainNode = node
@@ -391,12 +487,21 @@ end
 
 -- 草地：GrassField（GPU 草叶）+ 野花；不支持的设备退回卡片草簇
 ---@param scene Scene
+-- GrassField 扩展在部分 Web 引擎才有，当前 SDK 的 .emmylua 未收录；局部声明实际使用接口。
+---@class RuinsGrassField: Component
+---@field supported boolean
+---@field material Material
+---@field windDirection Vector2
+---@field windStrength number
+---@field windSpeed number
+---@field SetInteractor fun(self:RuinsGrassField, slot:integer, pos:Vector3, radius:number)
 local function BuildGrass(scene)
     local node = M.terrainNode
-    local grass = node:CreateComponent("GrassField")
-    if not grass.supported then
+    local create=node.CreateComponent --[[@as fun(self:Node,name:string):RuinsGrassField|nil]]
+    local grass = create(node,"GrassField")
+    if grass==nil or not grass.supported then
         print("RuinsTerrain: GrassField not supported, using tuft fallback")
-        node:RemoveComponent(grass)
+        if grass then node:RemoveComponent(grass) end
         M.grass = nil
         local Tufts = require("ruins.GrassTufts")
         M.tufts = Tufts.Build(scene, M)
@@ -427,8 +532,9 @@ local function BuildGrass(scene)
     grass.material = gm
     M.grass = grass
     -- 野花：白 / 金 / 时之蓝
-    local fl = node:CreateComponent("GrassField")
-    fl.plantType = GRASS_PLANT_FLOWER
+    local fl = create(node,"GrassField")
+    if fl==nil then return end
+    fl.plantType = _G["GRASS_PLANT_FLOWER"]
     fl.densityMap = M.splat
     fl.densityChannel = 3
     fl.densityRange = Vector2(0.45, 0.95)
@@ -466,9 +572,9 @@ end
 
 -- 角色 / 龙压草：每帧调用
 function M.SetInteractor(slot, pos, radius)
-    local g = M.grass --[[@as GrassField?]]
+    local g = M.grass --[[@as RuinsGrassField?]]
     if g ~= nil then g:SetInteractor(slot, pos, radius) end
-    local fl = M.flowers --[[@as GrassField?]]
+    local fl = M.flowers --[[@as RuinsGrassField?]]
     if fl ~= nil then fl:SetInteractor(slot, pos, radius) end
 end
 
@@ -486,6 +592,7 @@ end
 
 -- 查表取地面高度（平滑真实高度；建造 / 摆放时用；超出范围走解析函数）
 function M.HeightAt(x, z)
+    if not M.HasGround(x,z) then return M.VOID_Y end
     local H = M.heightMap --[[@as table<number, table<number, number>>?]]
     if H ~= nil then
         local i = floor((x + M.HALF) / M.CELL)

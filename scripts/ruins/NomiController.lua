@@ -11,6 +11,7 @@ require "urhox-libs.Camera.ThirdPersonCamera"
 local BlockCharacter = require("game.BlockCharacter")
 local NomiVoxelData = require("game.NomiVoxelData")
 local TimeObject = require("ruins.TimeObject")
+local Terrain = require("ruins.RuinsTerrain")
 
 local M = {}
 
@@ -34,6 +35,10 @@ end
 ---@field camYaw number
 ---@field camPitch number
 ---@field aimMask integer
+---@field fallbackPos Vector3
+---@field safePos Vector3
+---@field safeT number
+---@field onVoidReturn fun(pos:Vector3)|nil
 ---@field castSocket Node
 local N = {}
 N.__index = N
@@ -72,6 +77,9 @@ function M.New(scene, world, spawn, spawnYaw)
     self.speed = 0
     self.vel = Vector3(0, 0, 0)
     self.enabled = true
+    self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
+    self.safePos = Vector3(spawn.x,spawn.y,spawn.z)
+    self.safeT = 0
     self.cam = ThirdPersonCamera.Create(scene, {
         modes = {
             normal = { distance = 4.6, offset = Vector3(0.55, 1.65, 0), fov = 55.0 },
@@ -119,6 +127,7 @@ end
 
 -- 移动输入（f, r ∈ [-1,1]）
 function N:Move(dt, f, r, run, jump, aiming)
+    if self:UpdateSafety(dt) then return end
     local cc = self.cc
     local rad = math.rad(self.camYaw)
     local fwd = Vector3(math.sin(rad), 0, math.cos(rad))
@@ -142,15 +151,35 @@ function N:Move(dt, f, r, run, jump, aiming)
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
     self.speed = Vector3(self.vel.x, 0, self.vel.z):Length()
     self.onGround = onGround
-    -- 掉进深谷：传送回最近的安全点
-    if self.node.worldPosition.y < -24 and self.safePos ~= nil then
-        cc:Teleport(self.safePos)
-        self.vel = Vector3(0, 0, 0)
+end
+
+-- 仅 Scene 的徒步路径调用；骑乘/上下龙过渡不作坠落判定。
+---@return boolean recovered
+function N:UpdateSafety(dt)
+    local p=self.node.worldPosition
+    local inVoid=not Terrain.HasGround(p.x,p.z)
+    local stranded=inVoid and self.cc.onGround and p.y<Terrain.RING_Y-2
+    if stranded or p.y<Terrain.ISLAND.hardFallY or (p.y<Terrain.ISLAND.fallY and inVoid) then
+        local safe=self.safePos
+        if not safe or not Terrain.IsSafeGround(safe.x,safe.y,safe.z) then safe=self.fallbackPos end
+        self.cc.desiredVelocity=Vector3.ZERO
+        self.cc:SetLinearVelocity(Vector3.ZERO)
+        self.cc:Teleport(safe)
+        self.vel=Vector3.ZERO
+        self.speed,self.safeT,self.onGround=0,0,false
+        self.camTarget.position=Vector3(safe.x,safe.y,safe.z)
+        self:UpdateCamera(1,"normal",self.node)
+        if self.onVoidReturn then self.onVoidReturn(safe) end
+        return true
     end
-    if onGround and self.node.worldPosition.y > -5 then
-        self.safeT = (self.safeT or 0) + dt
-        if self.safeT > 1.0 then self.safeT = 0; self.safePos = self.node.worldPosition end
-    end
+    if self.cc.onGround and Terrain.IsSafeGround(p.x,p.y,p.z) then
+        self.safeT=self.safeT+dt
+        if self.safeT>=.4 then
+            self.safePos=Vector3(p.x,p.y+.04,p.z)
+            self.safeT=0
+        end
+    else self.safeT=0 end
+    return false
 end
 
 function N:Animate(dt, casting)
