@@ -33,17 +33,20 @@ local CombatState = require("combat.CombatState")
 local CombatMoves = require('combat.CombatMoves')
 local CombatAnim = require('combat.CombatAnim')
 local CombatHit = require('combat.Hit')
+local CombatAudio = require('combat.CombatAudio')
+local CombatSettings = require('ruins.GameSettings')
+local combatLowQuality_=false
 local Projectile = require('combat.Projectile')
 local WeaponRig = require('combat.WeaponRig')
 local EnemySpawner = require('combat.enemies.Spawner')
 local CombatHUD = require('ui.CombatHUD')
 local ForgePanel = require('ui.ForgePanel')
-local EnemyParticles = require('combat.enemies.EnemyParticles')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 local combatParticles_
 local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
 local combatLookScale_=1
 local arrowNodes_={}
+local emptyAfterimages_={}
 local animPreview_={index=0,t=0}
 local trainingDummy_,handMotes_
 local debugDestination_=0
@@ -348,10 +351,12 @@ local function IsCombatVisualVolume(volume)
     for _,entry in pairs(rig.entries) do if entry.mesh.volume==volume then return true end end
     for _,item in ipairs(rig.trails) do if item.volume==volume then return true end end
     for _,item in ipairs(rig.images) do if item.volume==volume then return true end end
+    for _,item in ipairs(rig.bowImages or {}) do if item.volume==volume then return true end end
+    for _,item in pairs(rig.flashes or {}) do if item.volume==volume then return true end end
     for _,item in ipairs(rig.particles) do if item.volume==volume then return true end end
     return false
 end
--- Reserved sound cue port; observe the real enemy event without playing audio.
+-- Enemy poses/telegraphs author these cues. One native subscription owns their audio.
 ---@param data VariantMap
 function Ruins_HandleEnemyAttackCue(_,data)
     if not M.combat then return end
@@ -359,6 +364,14 @@ function Ruins_HandleEnemyAttackCue(_,data)
     cue.enemyId, cue.attack, cue.phase=data:GetString('EnemyId'),data:GetString('Attack'),data:GetString('Phase')
     cue.position, cue.duration=data:GetVector3('Position'),data:GetFloat('Duration')
     M.combat.enemyCue=cue
+    local name=data:GetString('Event')
+    if name=='camera_shake' then
+        combatMoves_:Envelope('enemy:'..cue.enemyId..':'..name..':'..time_,data:GetFloat('Magnitude'),data:GetFloat('Duration'),0,Vector3.RIGHT,0)
+    elseif name~='attack_active' and name~='attack_stop' and name~='' then
+        if name=='die' then name='enemy_die' end
+        CombatAudio.Play(name,{pos=cue.position,enemy=data:GetString('Enemy'),material=data:GetString('Material'),
+            tier=data:GetBool('Danger') and 'danger' or data:GetString('Tier')})
+    end
     DebugLog.Log('combat-cue','%s / %s / %s',cue.enemyId,cue.attack,cue.phase)
 end
 -- Reuse Nomi's exact grid-query repair. Geometry, including terrain, blocks
@@ -372,12 +385,13 @@ local function CombatCast(a,b)
     local hit=nomi_:GridHit(Ray(a,delta/length),length)
     return hit.hit and Clamp(hit.distance/length,0,1) or nil
 end
-local function CombatFeedback(pos,heavy,result)
-    if not combatParticles_ or result.killed then return end
-    hitParticleOwner_.position,hitParticleOwner_.age=pos,time_
-    -- W3 already emits three hit chips. Share its 64-slot scene pool instead
-    -- of independently spending a second 64-particle budget in TimeSpells.
-    combatParticles_:Emit(hitParticleOwner_,result.player and 6 or (heavy and 7 or 3),false)
+local function CombatFeedback(event)
+    if not combatParticles_ or event.killed then return end
+    -- W3 owns real enemy particles at successful settlement. The same shared
+    -- scene pool handles player and training impacts only, never a duplicate.
+    if not event.player and event.enemy and event.enemy.particles then return end
+    hitParticleOwner_.position,hitParticleOwner_.age=event.pos,time_
+    combatParticles_:Emit(hitParticleOwner_,event)
 end
 local function CombatHasAggro()
     for _,enemy in ipairs(CombatEnemies()) do if enemy.active and enemy.aggro and not enemy.dead then return true end end
@@ -403,10 +417,22 @@ local function OpenForge()
         end})
 end
 local function StartCombat()
+    CombatAudio.New(scene_)
     combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node)
     combatMoves_=CombatMoves.New({anim=combatAnim_,rig=combatRig_,state=CombatState,
         position=function() return nomi_:Position() end,forward=function() return nomi_.node.worldDirection end,
-        enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,
+        enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=CombatAudio,
+        slideStart=function() return nomi_:CanSlide() end,
+        slideMotion=function(motion) return nomi_:ClipSlideMotion(motion) end,
+        dust=function(count,direction)
+            if not nomi_.cc.onGround then return end
+            local pos=nomi_:Position()+Vector3(0,.04,0)
+            for i=1,count do
+                local side=Vector3(direction.z,0,-direction.x)*((i-(count+1)*.5)*.06)
+                fx_.motesB:Spawn{pos=pos+side,vel=-direction*.35+side+Vector3(0,.18,0),
+                    life=.12+.04*(i%3),size=.025+.01*(i%3),colors={Color(.48,.46,.40)}}
+            end
+        end,
         assist=function() if CombatState.GetSetting('aimAssist') then nomi_:AssistMelee(CombatEnemies(),CombatCast) end end,
         protected=function() return M.ride.mode~='free' or voidInputBlocked or animPreview_.index>0 end,
         fire=function(charge,stats,forceCrystal)
@@ -434,23 +460,39 @@ local function StartCombat()
             combatEnemies_:Reset()
             caster_:Say('时之印记 · 生命已恢复',1.2)
         end})
-    combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,
-        hit=function(...) combatMoves_:Feedback(...) end,
+    local arrowMaterial=Material:new()
+    arrowMaterial:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTexture.xml'))
+    arrowMaterial:SetShaderParameter('MatDiffColor',Variant(Color(.76,.65,.4,1)))
+    arrowMaterial:SetShaderParameter('Roughness',Variant(.85))
+    local tailMaterial=Material:new()
+    tailMaterial:SetTechnique(0,cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'))
+    tailMaterial:SetShaderParameter('MatDiffColor',Variant(Color(.65,.70,.65,1)))
+    for i=1,12 do
+        local node=scene_:CreateChild('CombatArrow_'..i)
+        node.enabled=false
+        local body=node:CreateChild('shaft')
+        local model=body:CreateComponent('StaticModel')
+        model:SetModel(cache:GetResource('Model','Models/Box.mdl')); model:SetMaterial(arrowMaterial)
+        body.scale=Vector3(.03,.03,.42)
+        local tails={}
+        for j=1,4 do
+            local tail=node:CreateChild('tail_'..j)
+            local mesh=tail:CreateComponent('StaticModel')
+            mesh:SetModel(cache:GetResource('Model','Models/Box.mdl')); mesh:SetMaterial(tailMaterial)
+            tail.scale=Vector3(.022-(j-1)*.004,.022-(j-1)*.004,.09)
+            tail.position=Vector3(0,0,-.26-(j-1)*.11); tails[j]=tail
+        end
+        arrowNodes_[i]={node=node,tails=tails}
+    end
+    combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,audio=CombatAudio,
+        hit=function(...) combatMoves_:Feedback(...) end,wallHit=CombatFeedback,
         draw=function(p,visible)
-            local node=arrowNodes_[p.index]
-            if not node then
-                node=scene_:CreateChild('CombatArrow_'..p.index)
-                local model=node:CreateComponent('StaticModel')
-                model:SetModel(cache:GetResource('Model','Models/Box.mdl'))
-                local material=Material:new()
-                material:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTexture.xml'))
-                material:SetShaderParameter('MatDiffColor',Variant(Color(.76,.65,.4,1)))
-                material:SetShaderParameter('Roughness',Variant(.85))
-                model:SetMaterial(material); node.scale=Vector3(.03,.03,.42)
-                arrowNodes_[p.index]=node
+            local entry=arrowNodes_[p.index]
+            entry.node.enabled=visible
+            if visible then
+                entry.node.position=p.pos; entry.node:SetDirection(p.vel:Normalized())
+                for _,tail in ipairs(entry.tails) do tail.enabled=not p.embedded end
             end
-            node.enabled=visible
-            if visible then node.position=p.pos; node:SetDirection(p.vel:Normalized()) end
         end})
     combatEnemies_=EnemySpawner.New(scene_,world_,Terrain,{
         PlayerPos=function() return nomi_:Position() end,
@@ -464,7 +506,12 @@ local function StartCombat()
         end,
         OnEnemyDead=function(enemy) combatMoves_.target=enemy end})
     M.combat={state=CombatState,moves=combatMoves_,enemies=combatEnemies_,anim=combatAnim_,arrows=combatArrows_}
-    combatParticles_=EnemyParticles.Acquire(scene_,world_,M.combat)
+    combatParticles_=combatEnemies_:GetParticlePool()
+    CombatSettings.RegisterQuality('combat-presentation',function(profile)
+        combatLowQuality_=profile.quality=='low'
+        combatParticles_:SetLimit(combatLowQuality_ and 32 or 64)
+        CombatAudio.SetQuality(combatLowQuality_ and 'low' or 'mid')
+    end)
 end
 local function AttachTouchControls()
     local cooldown = {}
@@ -570,6 +617,7 @@ function M.Start()
         end,
         changed=function(state)
             if state~=CombatState.EXPLORE then
+                CombatAudio.Preload()
                 fx_.handGlow,fx_.handAcc,fx_.handL.brightness=0,0,0
                 fx_.handLight.enabled=false
                 handMotes_:Clear(); handMotes_.handAcc=0
@@ -813,6 +861,14 @@ local function ToggleTrainingDummy()
 end
 local function HandleCombatDebugKeys(allowed)
     if not allowed or TouchInput.IsEnabled() or PlatformUtils.IsMobilePlatform() then return end
+    if Press(KEY_F2) then
+        local on=not CombatState.GetSetting('cameraShake')
+        CombatState.SetSetting('cameraShake',on); CombatHUD.Say('镜头震动 · '..(on and '开' or '关'))
+    end
+    if Press(KEY_F3) then
+        local on=not CombatState.GetSetting('cameraFov')
+        CombatState.SetSetting('cameraFov',on); CombatHUD.Say('FOV 冲击 · '..(on and '开' or '关'))
+    end
     if Press(KEY_F6) then
         local on=not CombatState.GetSetting('aimAssist')
         CombatState.SetSetting('aimAssist',on)
@@ -939,8 +995,8 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         if CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
             nomi_:Move(dt,allowed and f or 0,allowed and r or 0,false,
                 allowed and not combatInputBlocked and Press(KEY_SPACE),true,
-                {scale=allowed and combatMoves_:MoveScale() or 0,motion=allowed and combatMoves_.motion or Vector3.ZERO,
-                    facing=combatMoves_.clip and CombatState.GetWeapon()=='sword' and combatMoves_.moveDir or nil})
+                {scale=allowed and not combatMoves_.slideMotionFrame and combatMoves_:MoveScale() or 0,motion=allowed and combatMoves_.motion or Vector3.ZERO,
+                    facing=combatMoves_:Facing(),slideChecked=combatMoves_.slideMotionFrame})
             return
         end
     end
@@ -988,6 +1044,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     -- touch mount edge before DragonRide consumes it.
     CombatState.SetMounted(M.ride.mode~='free')
     CombatState.Update(dt)
+    CombatAudio.SetListenerPosition(nomi_:Position()); CombatAudio.Update(dt)
     local combatAllowed=M.ride.mode=='free' and not voidInputBlocked and not M.debugOn
         and not TouchControls.IsBlocked() and input.focus and not input.minimized
         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
@@ -1100,9 +1157,17 @@ function Ruins_HandleUpdate(eventType, eventData)
     if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or animPreview_.index>0) then combatAnim_:Apply() end
     if combatRig_ then
         local offset,euler=combatAnim_:GetWeaponPose()
-        if combatRig_.SetTrail then combatRig_:SetTrail(combatMoves_.hitOpen or combatMoves_.age<(combatMoves_.trailUntil or 0)) end
-        combatRig_:SetAfterimages(combatAnim_:GetAfterimages())
-        combatRig_:SetSwing(offset,euler); combatRig_:Update(dt)
+        combatRig_:SetSwing(offset,euler)
+        local slidePosition,slideRotation
+        if combatRig_.GetAfterimagePose then slidePosition,slideRotation=combatRig_:GetAfterimagePose() end
+        local slideImages=combatMoves_:SlideAfterimages(slidePosition,slideRotation)
+        if combatRig_.SetTrail then combatRig_:SetTrail(not combatLowQuality_ and (CombatState.InCombat() or animPreview_.index>0)) end
+        if combatRig_.SetCombatVisual then
+            combatRig_:SetCombatVisual(CombatState.GetWeapon()=='sword' and combatMoves_.hitOpen,
+                combatMoves_.clip=='sword_heavy_charge' and combatMoves_.charge or nil)
+        end
+        combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or (#slideImages>0 and slideImages or combatAnim_:GetAfterimages()))
+        combatRig_:Update(dt)
         if animPreview_.index==0 then combatMoves_:AfterPose() end
     end
     -- 法阵只更新一次，在 PostUpdate 中使用本帧最终相机与施法方向。
@@ -1182,6 +1247,16 @@ function Ruins_HandlePostUpdate(eventType, eventData)
         nomi_:UpdateCamera(dt, "mounted", M.rig.bones.chest)
     else
         local mode = farView and "far" or ((caster_.charging or caster_.castAnim > 0) and "aim" or "normal")
+        if CombatState.InCombat() and not farView then
+            local target=M.combat.aimed or combatMoves_.target
+            if target and (target.dead or target.active==false) then target=nil end
+            local boss=false
+            for _,enemy in ipairs(CombatEnemies()) do if enemy.boss and enemy.aggro and not enemy.dead then boss=true; target=target or enemy end end
+            local focus=target and not target.dead and target.position or nil
+            local drawing=combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold'
+            nomi_:SetCombatCamera(focus,boss,drawing,CombatState.GetSetting('bowZoom') and not combatLowQuality_)
+            mode='combat'
+        end
         if M.forceCamMode ~= nil then mode = M.forceCamMode end
         nomi_:UpdateCamera(dt, mode, nomi_.node)
     end
@@ -1190,12 +1265,13 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     if combatMoves_ then
         local cn=nomi_:CameraNode()
         if M.ride.mode=='free' then
-            cn.position=cn.position+combatMoves_:ShakeOffset()
-            local fovAge=combatMoves_.fovAge
-            if fovAge and fovAge<.12 then
-                -- Camera updates restore its baseline each frame; no cumulative drift.
+            local shake=combatMoves_:ShakeOffset()
+            if CombatState.InCombat() or shake:LengthSquared()>0 then nomi_:ApplyCombatOffset(shake) end
+            if not combatLowQuality_ then nomi_:Camera().fov=nomi_:Camera().fov+combatMoves_:FovOffset() end
+            local slideAge=combatMoves_.slideFovAge
+            if not combatLowQuality_ and CombatState.GetSetting('cameraFov') and CombatState.GetSetting('dodgeFov') and slideAge and slideAge<.16 then
                 local camera=nomi_:Camera()
-                camera.fov=camera.fov+2*(1-fovAge/.12)
+                camera.fov=camera.fov+1.5*math.min(slideAge/.04,(.16-slideAge)/.12)
             end
         end
         local enemies=CombatEnemies()
@@ -1203,6 +1279,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
         local hits=CombatHit.Query(enemies,a,b,.03)
         local wall=CombatCast(a,b)
         local aimed=hits[1] and (not wall or hits[1].t<wall) and hits[1].enemy or nil
+        M.combat.aimed=aimed
         combatLookScale_=1
         if CombatState.InCombat() and CombatState.GetWeapon()=='bow' and CombatState.GetSetting('aimAssist') then
             local near=CombatHit.Query(enemies,a,b,.6)
@@ -1227,15 +1304,17 @@ function M.Stop()
     SettingsMenu.Stop()
     PerformanceHUD.Stop()
     CombatState.Stop()
+    CombatSettings.RegisterQuality('combat-presentation',nil)
+    CombatAudio.Dispose()
     if trainingDummy_ then trainingDummy_:Destroy(); trainingDummy_=nil end
     if handMotes_ then handMotes_:Clear(); handMotes_=nil end
     handWasOn_,combatDebugText_,combatDebugUntil_,debugDestination_=nil,nil,0,0
     if combatArrows_ then combatArrows_:Clear() end
+    if combatParticles_ then combatParticles_:ClearOwner(hitParticleOwner_); combatParticles_=nil end
     if combatEnemies_ then combatEnemies_:Destroy() end
-    if combatParticles_ then combatParticles_:Release(hitParticleOwner_); combatParticles_=nil end
     if combatAnim_ then combatAnim_:Stop(nil,0) end
     combatMoves_,combatAnim_,combatArrows_,combatEnemies_=nil,nil,nil,nil
-    for _,node in pairs(arrowNodes_) do node:Remove() end
+    for _,entry in pairs(arrowNodes_) do entry.node:Remove() end
     arrowNodes_={}; animPreview_={index=0,t=0}; CombatHUD.Set(nil)
     if combatRig_ and combatRig_.Dispose then combatRig_:Dispose() end
     combatRig_=nil

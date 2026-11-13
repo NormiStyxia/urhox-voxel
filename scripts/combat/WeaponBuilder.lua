@@ -312,7 +312,9 @@ function Builder.Build(world,parent,config,previous)
     return mesh
 end
 
---- Preview builds are cooperative: at most 96 cells and one native phase per step.
+--- Cooperative volume builds: ONLY in an already normally stepped world.
+--- Detached RTT scenes must use BeginPreview/StepPreview below instead.
+--- At most 96 cells and one native phase per step.
 --- Native RebuildGeometry is indivisible; overBudget reports that Web measurement.
 ---@param world VoxelPhysicsWorld
 ---@param parent Node
@@ -428,6 +430,168 @@ function Builder.StepBuild(job,budgetMs,clock)
     if elapsed>job.maxStepMs then job.slowestPhase=phase end
     job.maxStepMs=math.max(job.maxStepMs,elapsed);job.overBudget=job.overBudget or elapsed>budgetMs
     if not ok then Builder.CancelBuild(job);job.error=tostring(reason) end
+    return job.done,job.mesh,job.error
+end
+-- Render-only preview: never create a second VoxelPhysicsWorld or submit a
+-- VoxelVolume mesh job. The detached RTT scene has no physics pulse owner.
+-- Greedily merge coplanar, same-channel exposed faces; internal faces vanish.
+local function PreviewQuads(blueprint,quads)
+    local planes,order={},{}
+    local sparse=blueprint.geometry.sparse
+    for i,cell in ipairs(blueprint.geometry.cells) do
+        local xyz={cell.x,cell.y,cell.z}
+        for axis=1,3 do
+            local u,v=axis%3+1,(axis+1)%3+1
+            for sign=-1,1,2 do
+                local neighbor={cell.x,cell.y,cell.z};neighbor[axis]=neighbor[axis]+sign
+                if not sparse[Key(neighbor[1],neighbor[2],neighbor[3])] then
+                    local layer=xyz[axis]+(sign==1 and 1 or 0)
+                    local key=axis..':'..sign..':'..layer
+                    local plane=planes[key]
+                    if not plane then
+                        plane={axis=axis,sign=sign,layer=layer,rows={},minU=xyz[u],maxU=xyz[u],minV=xyz[v],maxV=xyz[v]}
+                        planes[key]=plane;order[#order+1]=plane
+                    end
+                    local row=plane.rows[xyz[v]] or {};plane.rows[xyz[v]]=row;row[xyz[u]]=cell.channel
+                    plane.minU=math.min(plane.minU,xyz[u]);plane.maxU=math.max(plane.maxU,xyz[u])
+                    plane.minV=math.min(plane.minV,xyz[v]);plane.maxV=math.max(plane.maxV,xyz[v])
+                end
+            end
+        end
+        if i%32==0 then coroutine.yield() end
+    end
+    for _,plane in ipairs(order) do
+        for v=plane.minV,plane.maxV do
+            local row=plane.rows[v] or {}
+            local u=plane.minU
+            while u<=plane.maxU do
+                local channel=row[u]
+                if channel then
+                    local w,h=1,1
+                    while row[u+w]==channel do w=w+1 end
+                    while true do
+                        local nextRow=plane.rows[v+h];local same=nextRow~=nil
+                        if same then for x=u,u+w-1 do if nextRow[x]~=channel then same=false;break end end end
+                        if not same then break end
+                        h=h+1
+                    end
+                    for y=v,v+h-1 do for x=u,u+w-1 do plane.rows[y][x]=nil end end
+                    quads[#quads+1]={axis=plane.axis,sign=plane.sign,layer=plane.layer,u=u,v=v,w=w,h=h,channel=channel}
+                    u=u+w
+                else u=u+1 end
+            end
+            coroutine.yield() -- bounded row; the caller checks time between rows
+        end
+    end
+end
+
+---@param mesh table?
+function Builder.DisposePreview(mesh)
+    if not mesh or mesh.disposed then return end
+    mesh.node:Remove();mesh.disposed=true
+end
+
+---@param job table?
+function Builder.CancelPreview(job)
+    if not job or job.done then return end
+    if job.node then job.node:Remove();job.node=nil end
+    job.worker=nil;job.done=true;job.cancelled=true
+end
+
+---@param parent Node
+---@param config table
+---@param previous table?
+---@return table
+function Builder.BeginPreview(parent,config,previous)
+    return {parent=parent,blueprint=assert(Builder.Compile(config)),previous=previous,
+        phase='quads',quads={},cursor=1,steps=0,totalMs=0,maxStepMs=0,nativeMs=0,overBudget=false}
+end
+
+local POSITIVE={1,2,3,1,3,4}
+local NEGATIVE={1,4,3,1,3,2}
+---@param geom CustomGeometry
+---@param q table
+---@param color Color
+local function EmitQuad(geom,q,color)
+    local axis,u,v=q.axis,q.axis%3+1,(q.axis+1)%3+1
+    local normal={0,0,0};normal[axis]=q.sign
+    local n=Vector3(normal[1],normal[2],normal[3])
+    local corners={}
+    for i,uv in ipairs({{q.u,q.v},{q.u+q.w,q.v},{q.u+q.w,q.v+q.h},{q.u,q.v+q.h}}) do
+        local p={0,0,0};p[axis]=q.layer;p[u]=uv[1];p[v]=uv[2]
+        -- Cells are centred on integer coordinates, as in Compile.bounds.
+        corners[i]=Vector3((p[1]-.5)*SIZE,(p[2]-.5)*SIZE,(p[3]-.5)*SIZE)
+    end
+    for _,i in ipairs(q.sign==1 and POSITIVE or NEGATIVE) do
+        geom:DefineVertex(corners[i]);geom:DefineNormal(n);geom:DefineColor(color)
+    end
+end
+
+---@param job table
+---@param budgetMs number?
+---@param clock? fun():number
+---@return boolean
+---@return table?
+---@return string?
+function Builder.StepPreview(job,budgetMs,clock)
+    if job.done then return true,job.mesh,job.error end
+    local start=Clock(job,clock)
+    local phase=job.phase
+    budgetMs=math.min(2,math.max(.1,budgetMs or 2))
+    local function Spent()
+        local now=Clock(job,clock)
+        return start and now and now-start>=budgetMs
+    end
+    local ok,reason=pcall(function()
+        if phase=='quads' then
+            job.worker=job.worker or coroutine.create(function() PreviewQuads(job.blueprint,job.quads) end)
+            for _=1,24 do
+                local resumed,err=coroutine.resume(job.worker);assert(resumed,err)
+                if coroutine.status(job.worker)=='dead' then job.worker=nil;job.phase='create';break end
+                if Spent() then break end
+            end
+        elseif phase=='create' then
+            job.node=job.parent:CreateChild('ForgeCustomGeometry');job.node.enabled=false;job.node.temporary=true
+            job.geometry=job.node:CreateComponent('CustomGeometry')
+            assert(job.geometry,'CustomGeometry unavailable')
+            job.geometry:BeginGeometry(0,TRIANGLE_LIST)
+            job.geometry:SetMaterial(0,assert(cache:GetResource('Material','Materials/NomiVoxel.xml'),'vertex-color material'))
+            job.geometry.castShadows=false
+            job.colors={}
+            for _,channel in ipairs({'primary','secondary','accent','dark'}) do
+                local index=job.blueprint.config.colors[channel=='dark' and 'primary' or channel]
+                ---@type number[]
+                local rgb=Parts.ColorPresets[index].rgb
+                local shade=channel=='dark' and .38 or 1
+                job.colors[channel]=Color(rgb[1]/255*shade,rgb[2]/255*shade,rgb[3]/255*shade,1)
+            end
+            job.phase='emit'
+        elseif phase=='emit' then
+            local last=math.min(#job.quads,job.cursor+31)
+            while job.cursor<=last do
+                local q=job.quads[job.cursor];EmitQuad(job.geometry,q,job.colors[q.channel])
+                job.cursor=job.cursor+1
+                if Spent() then break end
+            end
+            if job.cursor>#job.quads then job.phase='commit' end
+        elseif phase=='commit' then
+            local before=Clock(job,clock)
+            job.geometry:Commit()
+            local after=Clock(job,clock);job.nativeMs=before and after and after-before or 0
+            assert(job.geometry:GetNumVertices(0)>0,'empty preview mesh')
+            job.phase='publish'
+        else
+            job.node.enabled=true
+            job.mesh={node=job.node,geometry=job.geometry,blueprint=job.blueprint,quads=job.quads}
+            Builder.DisposePreview(job.previous)
+            job.done=true
+        end
+    end)
+    local finish=Clock(job,clock);local elapsed=start and finish and finish-start or 0
+    job.steps=job.steps+1;job.totalMs=job.totalMs+elapsed
+    if elapsed>job.maxStepMs then job.slowestPhase=phase end
+    job.maxStepMs=math.max(job.maxStepMs,elapsed);job.overBudget=job.overBudget or elapsed>budgetMs
+    if not ok then Builder.CancelPreview(job);job.mesh=nil;job.error=tostring(reason) end
     return job.done,job.mesh,job.error
 end
 return Builder

@@ -1,4 +1,5 @@
--- Keys/events: normalized time. Phases/motion: seconds. §14 overrides earlier timing drafts.
+-- Keys/events: normalized time. Phases/motion: seconds. §18 owns dodge_slide;
+-- §14 overrides earlier timing drafts for the remaining combat moves.
 -- weaponType identifies equipment; weapon stores its pose track. The design
 -- example used "weapon" twice; Lua would discard the first value.
 -- Axes: Rx(p)*(0,-1,0)=(0,-cos(p),-sin(p)): negative arm/leg pitch = forward.
@@ -26,13 +27,26 @@
 ---@field additive boolean|nil
 ---@field eventDur number|nil Real-clock tail duration, may exceed dur.
 ---@field trail number[]|nil Sword afterimage interval in clip seconds.
+---@field realTime boolean|nil Fixed real-second pose/motion clock; ignores playback speed.
+---@field continuous boolean|nil Bypass local pose quantization.
+---@field fadeIn number|nil
+---@field fadeOut number|nil
+---@field cancelAt number|nil Real seconds before this dodge can yield to attack.
+---@field cancelBlend number|nil
+---@field directional boolean|nil Snapshot params.moveX/moveZ in character-local space.
+---@field bowKeys table<string, table[]>|nil Arm variant selected by params.bow=1.
+---@field lean table[]|nil Directional blend envelope, normalized time.
+---@field deprecated boolean|nil
+---@field replacement string|nil
 
 ---@class CombatClipCatalog
 ---@field Layer table<string, number>
 ---@field Order string[]
 ---@field Clips table<string, CombatClip>
+---@field DefaultDodge string
 local C = {}
 C.Layer = { STANCE=1, DRAW=2, ATTACK=3, DODGE=4, HIT=5, KNOCKDOWN=6, DEATH=7 }
+C.DefaultDodge="dodge_slide"
 C.Order = {}
 ---@type table<string, CombatClip>
 C.Clips = {}
@@ -206,7 +220,44 @@ attack({ -- 符号待 Web 校准
     {{{0,0,0},{-25,0,10}},{{0,0,-.04},{-30,0,25}},{{0,0,0},{-15,0,30}},
      {{0,0,.08},{25,0,-15}},{{0,0,.05},{38,0,-25}},{{0,0,0},{0,0,0}}})
 add { -- 符号待 Web 校准
-    id="dodge_roll",dur=.45,layer=L.DODGE,phases=phases(.45,0,.25),
+    id="dodge_slide",dur=.32,layer=L.DODGE,realTime=true,continuous=true,directional=true,
+    fadeIn=.02,fadeOut=.02,cancelAt=.22,cancelBlend=.04,
+    phases=phases(.32,.04,.20),
+    -- Facing/yaw stays with W2. moveX/moveZ is the accepted direction expressed
+    -- in that facing's local X/Z plane; no input defaults to (0,-1), a backstep.
+    -- All tracks are six explicit poses; no nonexistent knee joints are needed.
+    keys={
+        body={{0,{6,0,0}},{.04/.32,{12,0,0},"outQuad"},{.10/.32,{18,0,0}},
+            {.18/.32,{12,0,0}},{.26/.32,{4,0,0}},{1,{6,0,0}}},
+        head={{0,{3,0,0}},{.04/.32,{-8,0,0},"outQuad"},{.10/.32,{-12,0,0}},
+            {.18/.32,{-8,0,0}},{.26/.32,{-3,0,0}},{1,{3,0,0}}},
+        arm_right={{0,{-65,0,12}},{.04/.32,{-50,0,8}},{.10/.32,{-45,0,8}},
+            {.18/.32,{-70,0,12}},{.26/.32,{-75,0,10}},{1,{-65,0,12}}},
+        arm_left={{0,{0,0,-8}},{.04/.32,{-15,0,-20}},{.10/.32,{-20,0,-25}},
+            {.18/.32,{-10,0,-18}},{.26/.32,{-5,0,-10}},{1,{0,0,-8}}},
+        leg_right={{0,{0,0,0}},{.04/.32,{20,0,0}},{.10/.32,{20,0,0}},
+            {.18/.32,{12,0,0}},{.26/.32,{6,0,0}},{1,{0,0,0}}},
+        leg_left={{0,{0,0,0}},{.04/.32,{-25,0,0}},{.10/.32,{-20,0,0}},
+            {.18/.32,{-10,0,0}},{.26/.32,{-6,0,0}},{1,{0,0,0}}},
+    },
+    bowKeys={
+        arm_left={{0,{-65,0,-8}},{.04/.32,{-68,0,-10}},{.10/.32,{-70,0,-12}},
+            {.18/.32,{-68,0,-10}},{.26/.32,{-66,0,-8}},{1,{-65,0,-8}}},
+        arm_right={{0,{-30,0,12}},{.04/.32,{-35,0,16}},{.10/.32,{-40,0,20}},
+            {.18/.32,{-35,0,16}},{.26/.32,{-30,0,12}},{1,{-30,0,12}}},
+    },
+    lean={{0,0},{.04/.32,1},{.10/.32,1},{.18/.32,1},{.26/.32,1},{1,0}},
+    root={{0,-.04},{.04/.32,-.14},{.10/.32,-.18},{.18/.32,-.15},{.26/.32,-.08},{1,-.04}},
+    motion={{t0=0,t1=.06,forward=.72},{t0=.06,t1=.16,forward=.90},
+        {t0=.16,t1=.26,forward=.50},{t0=.26,t1=.30,forward=.08}},
+    events={{t=0,"iframe_on",clock="real"},{t=0,"dust_start",clock="real"},
+        {t=.04/.32,"afterimage_on",clock="real"},{t=.16/.32,"afterimage_off",clock="real"},
+        {t=.20/.32,"iframe_off",clock="real"},{t=.22/.32,"cancel_open",clock="real"},
+        {t=.26/.32,"dust_stop",clock="real"},{t=.30/.32,"move_end",clock="real"},
+        {t=1,"cancel_close",clock="real"}},
+}
+add { -- 符号待 Web 校准
+    id="dodge_roll",dur=.45,layer=L.DODGE,phases=phases(.45,0,.25),deprecated=true,replacement="dodge_slide",
     keys={body={{0,{6,0,0}},{.08,{22,0,0},"inQuad"},{.18,{65,0,0},"inQuad"},{.38,{190,0,0}},{.25/.45,{330,0,0},"outQuad"},{1,{366,0,0},"outQuad"}},
         arm_right=k({0,0,8},{-60,0,20},{-45,0,15},{0,0,8},.18,.55),
         arm_left=k({0,0,-8},{-60,0,-20},{-45,0,-15},{0,0,-8},.18,.55),

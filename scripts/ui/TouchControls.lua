@@ -70,7 +70,7 @@ function M.CancelActions()
 end
 function M.IsBlocked() return SettingsMenu.IsBlocked() or M.menuOpen or state.blocked == true end
 function M.Hint()
-    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 点【闪避】翻滚' or '点按挥剑 · 长按重击 · 点【闪避】翻滚' end
+    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 点【闪避】滑步' or '点按挥剑 · 长按重击 · 点【闪避】滑步' end
     if state.charging then return '松手释放碎时' end
     if current=='ground' then return '点【起飞】升空 · 摇杆控制方向' end
     if current=='air' then return '按住【上升】/【下降】· 点【滑翔】省力' end

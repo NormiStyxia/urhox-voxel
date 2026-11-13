@@ -132,6 +132,10 @@ function Spawner:SetCombat(combat)
     for _,enemy in ipairs(self.enemies) do enemy:SetCombat(combat) end
 end
 function Spawner:GetEnemies() return self.enemies end
+-- W2 may emit player/arrow flecks into this SAME pool, ticking its own owner once/frame.
+function Spawner:GetParticlePool()
+    return self.enemies[1] and self.enemies[1].particles or nil
+end
 
 function Spawner:Update(dt,playerPos)
     local target=playerPos or (self.combat.PlayerPos and self.combat.PlayerPos())
@@ -207,10 +211,14 @@ function Spawner:GetPerfStats()
     end
     local first=self.enemies[1]
     if first and first.particles then
-        p.particleCount=first.particles.count -- global scene pool, including any other enemy owner
+        local particles=first.particles:GetStats()
+        p.particleCount=particles.count -- global scene pool, including W2 external owners
+        p.particleCapacity,p.particleReserved=particles.capacity,particles.reserved
+        p.particleCubes,p.particleFlat,p.particleTrianglesEstimate=particles.cubeCount,particles.flatCount,particles.trianglesEstimate
+        p.particleEvicted,p.particleDropped=particles.evicted,particles.dropped
         p.rebuildCpuMs=p.rebuildCpuMs+first.particles.rebuildCpuMs
     end
-    p.surfaceFacesEstimate=p.surfaceFacesEstimate+p.particleCount*6
+    p.surfaceFacesEstimate=p.surfaceFacesEstimate+p.particleCount*8
     p.drawSubmissionsEstimate=p.drawSubmissionsEstimate+p.particleCount
     return p
 end

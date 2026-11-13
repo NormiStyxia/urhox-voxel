@@ -37,6 +37,9 @@ local BONE_NAMES = {"body","arm_right","arm_left","head","leg_right","leg_left"}
 ---@field iframeOpen boolean
 ---@field cancelOpen boolean
 ---@field protectOpen boolean
+---@field dustOpen boolean
+---@field afterimageOpen boolean
+---@field mixLayer number|nil Temporary layer used for a dodge-to-attack crossfade.
 ---@field sample number
 ---@field motion number
 ---@class CombatAnimEvent
@@ -95,6 +98,7 @@ local BONE_NAMES = {"body","arm_right","arm_left","head","leg_right","leg_left"}
 local A = {}
 A.__index = A
 A.Layer = Data.Layer
+A.DefaultDodge = Data.DefaultDodge
 
 local function clamp(v,lo,hi) return math.max(lo,math.min(hi,v)) end
 local function finite(v) return type(v)=="number" and v==v and math.abs(v)<math.huge end
@@ -132,6 +136,38 @@ local function scalarSample(track,t)
     return a[2]+(b[2]-a[2])*u
 end
 ---@param c CombatClip
+local function boneSample(c,name,p,params)
+    local track=(params.bow==1 and c.bowKeys and c.bowKeys[name]) or c.keys[name]
+    local x,y,z=vectorSample(track,p)
+    if c.directional then
+        local dx,dz=params.moveX or 0,params.moveZ
+        if dz==nil then dz=-1 end
+        local length=math.sqrt(dx*dx+dz*dz)
+        if length>EPS then dx,dz=dx/length,dz/length else dx,dz=0,-1 end
+        local lean=scalarSample(c.lean,p)
+        local bodyPitch=vectorSample(c.keys.body,p)
+        if name=="body" then
+            x=6*(1-lean)+x*dz*lean
+            -- Upper torso extends +Y: negative roll tips it toward +X.
+            z=-8*dx*(bodyPitch/18)*lean
+        elseif name=="head" then
+            x=3*(1-lean)+x*dz*lean
+            z=8*.65*dx*(bodyPitch/18)*lean
+        elseif name=="leg_right" or name=="leg_left" then
+            -- Rigid legs hang -Y. Opposite hip pitch/roll + root dip suggests knees.
+            z=-x*dx
+            x=x*dz
+        end
+    end
+    return x,y,z
+end
+---@param s CombatAnimTrack
+---@param c CombatClip
+local function slideToAttack(s,c)
+    return s.clip.cancelAt~=nil and s.realAge+EPS>=s.clip.cancelAt
+        and (c.layer==Data.Layer.ATTACK or c.id=="bow_draw")
+end
+---@param c CombatClip
 local function normalized(c,t)
     if c.loop and t>c.dur then
         local start=(c.loopFrom or 0)*c.dur
@@ -156,6 +192,7 @@ end
 local function sampleTime(self,s)
     if s.clip.param then return clamp(s.params[s.clip.param] or 0,0,1) end
     local p=normalized(s.clip,s.t)
+    if s.clip.continuous then return p end
     local seconds=p*s.clip.dur
     local active=s.clip.phases.active
     if self.quantize and not (active and seconds>=active[1] and seconds<=active[2] and active[2]>active[1]) then
@@ -213,7 +250,8 @@ function A:init(character,node,opts)
     for i=1,MAX_TRACKS do
         self.tracks[i]={clip=Data.Clips.stance_combat,handle=0,live=false,stopping=false,
             t=0,age=0,realAge=0,previousT=0,speed=1,fadeIn=.08,fadeOut=.08,stopAge=0,stopWeight=0,weight=0,
-            params={},nextEvent=1,complete=false,hitOpen=false,iframeOpen=false,cancelOpen=false,protectOpen=false,sample=0,motion=0}
+            params={},nextEvent=1,complete=false,hitOpen=false,iframeOpen=false,cancelOpen=false,protectOpen=false,
+            dustOpen=false,afterimageOpen=false,sample=0,motion=0}
     end
     for i=1,MAX_EVENTS do
         self.queue[i]={name="",clip="",handle=0,t=0}
@@ -233,26 +271,33 @@ function A:emit(s,name,t)
     if name=="iframe_on" then s.iframeOpen=true elseif name=="iframe_off" then s.iframeOpen=false end
     if name=="cancel_open" then s.cancelOpen=true elseif name=="cancel_close" then s.cancelOpen=false end
     if name=="protect_on" then s.protectOpen=true elseif name=="protect_off" then s.protectOpen=false end
+    if name=="dust_start" then s.dustOpen=true elseif name=="dust_stop" then s.dustOpen=false end
+    if name=="afterimage_on" then s.afterimageOpen=true elseif name=="afterimage_off" then s.afterimageOpen=false end
 end
 
 ---@param clipId string
 ---@param opts table|nil {speed=1, stats=..., fadeIn=.08, fadeOut=.08, params={p=0}}
+---dodge_slide snapshots params={moveX,moveZ,bow=1} in character-local axes;
+---defaults to a backstep. It ignores speed/timeScale and uses realDt, with an
+---immediate t=0 event pair. A new attack/bow_draw may replace it from .22s.
 ---@return number|nil handle Numeric generation id; stale handles never stop a replacement.
 ---@return string|nil reason
 function A:Play(clipId,opts)
     local c=Data.Clips[clipId]
     if not c then return nil,"unknown_clip" end
     opts=opts or EMPTY
-    local speed=opts.speed or 1
+    local speed=c.realTime and 1 or (opts.speed or 1)
     local stats=opts.stats or self.stats
     if c.speedStat then speed=speed*(stats[c.speedStat] or 1) end
     if not finite(speed) or speed<0 then return nil,"invalid_speed" end
-    local fadeIn,fadeOut=opts.fadeIn or .08,opts.fadeOut or .08
+    local fadeIn,fadeOut=opts.fadeIn or c.fadeIn or .08,opts.fadeOut or c.fadeOut or .08
     if not finite(fadeIn) or not finite(fadeOut) or fadeIn<0 or fadeOut<0 then return nil,"invalid_fade" end
     for _,s in ipairs(self.ordered) do
-        if s.live and not s.stopping and (not s.complete or s.clip.hold) and s.clip.layer>c.layer and c.layer~=Data.Layer.STANCE then
+        if s.live and not s.stopping and (not s.complete or s.clip.hold) and s.clip.layer>c.layer
+            and c.layer~=Data.Layer.STANCE and not slideToAttack(s,c) then
             return nil,"higher_priority"
         end
+        if s.live and slideToAttack(s,c) then fadeIn=s.clip.cancelBlend or .04 end
     end
     ---@type CombatAnimTrack|nil
     local slot=nil
@@ -261,7 +306,13 @@ function A:Play(clipId,opts)
     -- Remove dead references before reusing a slot; ordered retains blend order.
     for i=#self.ordered,1,-1 do if not self.ordered[i].live then table.remove(self.ordered,i) end end
     for _,s in ipairs(self.ordered) do
-        if s.live and not s.stopping and s.clip.layer<=c.layer and s.clip.layer~=Data.Layer.STANCE then
+        if s.live and slideToAttack(s,c) then
+            if not s.stopping then self:Stop(s.handle,fadeIn) end
+            s.fadeOut=s.clip.cancelBlend or .04
+            -- Blend on the incoming layer so .5 old + .5 new does not expose
+            -- .25 idle underneath as two independent override layers would.
+            s.mixLayer=c.layer
+        elseif s.live and not s.stopping and s.clip.layer<=c.layer and s.clip.layer~=Data.Layer.STANCE then
             self:Stop(s.handle,fadeIn)
         elseif s.live and s.clip.layer==c.layer and not s.stopping then self:Stop(s.handle,fadeIn) end
     end
@@ -269,15 +320,32 @@ function A:Play(clipId,opts)
     slot.handle,slot.clip,slot.live,slot.stopping=self.serial,c,true,false
     slot.t,slot.age,slot.realAge,slot.stopAge,slot.stopWeight,slot.sample,slot.motion=0,0,0,0,0,0,0
     slot.previousT=0
+    slot.mixLayer=nil
     slot.speed,slot.fadeIn,slot.fadeOut=speed,fadeIn,fadeOut
     slot.nextEvent,slot.complete=1,false
     slot.hitOpen,slot.iframeOpen,slot.cancelOpen,slot.protectOpen=false,false,false,false
+    slot.dustOpen,slot.afterimageOpen=false,false
     for name in pairs(slot.params) do slot.params[name]=nil end
     for name,value in pairs(opts.params or EMPTY) do if finite(value) then slot.params[name]=value end end
+    if c.directional then
+        local x,z=slot.params.moveX or 0,slot.params.moveZ
+        if z==nil then z=-1 end
+        local length=math.sqrt(x*x+z*z)
+        if length>EPS then x,z=x/length,z/length else x,z=0,-1 end
+        slot.params.moveX,slot.params.moveZ=x,z
+    end
     slot.weight=weight(slot)
     local at=#self.ordered+1
     for i,s in ipairs(self.ordered) do if s.clip.layer>c.layer then at=i;break end end
     table.insert(self.ordered,at,slot)
+    if c.realTime then
+        -- Input acceptance opens invulnerability immediately, without waiting
+        -- for Update; t=0 events are consumed by the same monotonic cursor.
+        while slot.nextEvent<=#c.events and c.events[slot.nextEvent].t==0 do
+            self:emit(slot,c.events[slot.nextEvent][1],0)
+            slot.nextEvent=slot.nextEvent+1
+        end
+    end
     return slot.handle
 end
 
@@ -286,7 +354,9 @@ end
 function A:SetParam(name,value)
     if not finite(value) then return end
     for _,s in ipairs(self.ordered) do
-        if s.live and not s.stopping then s.params[name]=value end
+        if s.live and not s.stopping and not (s.clip.directional and (name=="moveX" or name=="moveZ")) then
+            s.params[name]=value
+        end
     end
 end
 
@@ -300,7 +370,8 @@ function A:Stop(handle,fadeOut)
             local n=0
             for i=1,self.queueCount do
                 local e=self.queue[i]
-                if e.handle~=s.handle or e.name=="hit_off" or e.name=="iframe_off" or e.name=="cancel_close" or e.name=="protect_off" then
+                if e.handle~=s.handle or e.name=="hit_off" or e.name=="iframe_off" or e.name=="cancel_close"
+                    or e.name=="protect_off" or e.name=="dust_stop" or e.name=="afterimage_off" then
                     n=n+1
                     if n~=i then
                         local dst=self.queue[n]
@@ -313,6 +384,8 @@ function A:Stop(handle,fadeOut)
             if s.iframeOpen then self:emit(s,"iframe_off",normalized(s.clip,s.t)) end
             if s.cancelOpen then self:emit(s,"cancel_close",normalized(s.clip,s.t)) end
             if s.protectOpen then self:emit(s,"protect_off",s.realAge/s.clip.dur) end
+            if s.dustOpen then self:emit(s,"dust_stop",s.realAge/s.clip.dur) end
+            if s.afterimageOpen then self:emit(s,"afterimage_off",s.realAge/s.clip.dur) end
             for _,snapshot in ipairs(self.afterimagePool) do
                 if snapshot.handle==s.handle then snapshot.time=-math.huge end
             end
@@ -344,15 +417,16 @@ function A:Update(dt,realDt)
         s.motion=0
         if s.live then
             s.realAge=s.realAge+realDt
+            local step=s.clip.realTime and realDt or dt
             if s.stopping then
-                s.stopAge=s.stopAge+dt
+                s.stopAge=s.stopAge+step
                 s.weight=weight(s)
                 if s.weight<=0 then s.live=false end
             else
                 local previous=s.t
                 s.previousT=previous
-                s.t=s.t+dt*s.speed
-                s.age=s.age+dt
+                s.t=s.t+step*s.speed
+                s.age=s.age+step
                 local c=s.clip
                 while s.nextEvent<=#c.events do
                     local event=c.events[s.nextEvent]
@@ -405,6 +479,11 @@ end
 ---@param dt number|nil Supplying dt advances once; omitting it only reads.
 ---@param realDt number|nil
 ---@return number forwardMeters
+---Distance is integrated over every overlapping motion interval, not velocity.
+---For dodge_slide it is positive along W2's accepted direction, not facing +Z.
+---Stop drops the pending/current cached motion and all future intervals; callers
+---keep displacement already applied. Split a frame at .22s if an attack was
+---buffered there and exact 1.92m cancellation is required; no retroactive rewind.
 function A:GetMotion(dt,realDt)
     if dt~=nil then self:Update(dt,realDt) end
     return self.motion
@@ -435,8 +514,8 @@ function A:Apply()
                 for _,s in ipairs(self.ordered) do
                     local c=s.clip
                     local track=c.keys[name]
-                    if s.live and s.weight>0 and c.layer==layer and track then
-                        local x,y,z=vectorSample(track,s.sample)
+                    if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and track then
+                        local x,y,z=boneSample(c,name,s.sample,s.params)
                         if c.param=="p" and s.sample>.8 and name=="body" then
                             x=x+math.sin(s.t*48)*.4
                         end
@@ -452,7 +531,7 @@ function A:Apply()
         local total,ry,lx,ly,lz,lp,lyaw,lr=0,0,0,0,0,0,0,0
         for _,s in ipairs(self.ordered) do
             local c,w=s.clip,s.weight
-            if s.live and w>0 and c.layer==layer then
+            if s.live and w>0 and (s.mixLayer or c.layer)==layer then
                 total=total+w
                 -- Root translation remains continuous even when local rotations step.
                 local rootP=c.param and s.sample or normalized(c,s.t)
@@ -584,20 +663,22 @@ function A.DebugList()
     local result={}
     for _,id in ipairs(Data.Order) do
         local c=Data.Clips[id]
-        result[#result+1]={id=id,dur=c.dur,layer=c.layer,weaponType=c.weaponType,sourceWeapon=c.sourceWeapon}
+        result[#result+1]={id=id,dur=c.dur,layer=c.layer,weaponType=c.weaponType,sourceWeapon=c.sourceWeapon,
+            deprecated=c.deprecated==true,replacement=c.replacement}
     end
     return result
 end
 ---@param clipId string
 ---@param t number Seconds; bow_hold uses t as p in [0,1]. No quantization or tremor.
+---@param params table|nil Directional preview: {moveX,moveZ,bow=1}; default rear/sword.
 ---@return table<string, number[]>|nil
-function A.DebugSample(clipId,t)
+function A.DebugSample(clipId,t,params)
     local c=Data.Clips[clipId]
     if not c then return nil end
     local result={}
     local p=c.param and clamp(t,0,1) or normalized(c,math.max(0,t))
-    for name,track in pairs(c.keys) do
-        local x,y,z=vectorSample(track,p)
+    for name in pairs(c.keys) do
+        local x,y,z=boneSample(c,name,p,params or EMPTY)
         result[name]={x,y,z}
     end
     return result

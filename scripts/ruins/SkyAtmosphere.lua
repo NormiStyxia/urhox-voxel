@@ -135,6 +135,7 @@ end
 ---@param ground Material|nil
 function M:Update(dt,position,ground)
     if not self.active or self.stopped then return end
+    if self.clouds and self.clouds.baking then self.clouds:StepBake() end
     self.clock,self.elapsed = self.clock+math.max(0,dt),self.elapsed+math.max(0,dt)
     if ground~=self.ground then
         if self.ground then self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
@@ -146,7 +147,7 @@ function M:Update(dt,position,ground)
     local step = self.elapsed
     self.elapsed = 0
     local dn = self.dayNight
-    if self.clouds then self.clouds:Update(step,dn.day or 1,dn.dusk or 0) end
+    if self.clouds then self.clouds:Update(step,dn.day or 1,dn.dusk or 0,dn) end
     if self.shafts then self.shafts:Update(dn,true,self.realFog) end
     if self.motes then self.motes:Update(position,true,dn.day or 1) end
     if self.ground and self.shadowActive then
@@ -159,7 +160,8 @@ end
 -- 只被DebugLog的开启态probe调用；关闭日志时不构造统计表，不遍历粒子。
 function M:Probe()
     return {clouds=self.clouds and self.clouds.count or 0,shafts=self.shafts and self.shafts.count or 0,
-        cloudCards=self.clouds and self.clouds.cardCount or 0,cloudTriangles=self.clouds and self.clouds.triangleCount or 0,
+        cloudShapes=self.clouds and self.clouds.shapeCount or 0,cloudTriangles=self.clouds and self.clouds.triangleCount or 0,
+        cloudBaking=self.clouds and self.clouds.baking or false,cloudReady=self.clouds and self.clouds.readyCount or 0,
         cloudFallback=self.clouds and self.clouds.fallback or false,
         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,

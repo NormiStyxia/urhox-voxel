@@ -45,18 +45,23 @@ keys.blocked=false;held,allowed=env.M.readStreamInput();assert(held and allowed)
 env.M.ride.mode='free';held,allowed=env.M.readStreamInput();assert(not held and not allowed)
 local cue=assert(source:match('(function Ruins_HandleEnemyAttackCue.-)\nend'))..'\nend'
 env.M.combat={};env.DebugLog={Log=function() end}
+local sounds={}
+env.CombatAudio={Play=function(name,opts) sounds[#sounds+1]=name end}
 assert(load(cue,'Scene.EnemyAttackCue','t',env))()
-local fields={EnemyId='sentry_1',Attack='stone',Phase='telegraph',Position={x=1,y=2,z=3},Duration=.9}
-local event={GetString=function(_,key) return fields[key] end,GetFloat=function(_,key) return fields[key] end,
+local fields={EnemyId='sentry_1',Attack='stone',Phase='telegraph',Position={x=1,y=2,z=3},Duration=.9,Event='enemy_windup',Enemy='sentry',Material='stone',Tier='light'}
+local event={GetBool=function(_,key) return fields[key]==true end,GetString=function(_,key) return fields[key] end,GetFloat=function(_,key) return fields[key] end,
     GetVector3=function(_,key) return fields[key] end}
 ---@cast event VariantMap Offline adapter implements only fields consumed by handler.
 env.Ruins_HandleEnemyAttackCue(nil,event)
 local snapshot=env.M.combat.enemyCue
 assert(snapshot.enemyId=='sentry_1' and snapshot.duration==.9 and snapshot.phase=='telegraph')
-fields.Phase='active';env.Ruins_HandleEnemyAttackCue(nil,event)
-assert(env.M.combat.enemyCue==snapshot and snapshot.phase=='active','sound placeholder reuses one bounded event snapshot')
+assert(sounds[1]=='enemy_windup')
+fields.Event='attack_active';fields.Phase='active';env.Ruins_HandleEnemyAttackCue(nil,event)
+assert(env.M.combat.enemyCue==snapshot and snapshot.phase=='active','sound event reuses one bounded event snapshot')
+assert(#sounds==1,'active visual cue does not replay windup audio')
 env.CombatState=dofile('scripts/combat/CombatState.lua')
 local notices={};env.CombatHUD={Say=function(text) notices[#notices+1]=text end}
+env.KEY_F2,env.KEY_F3=102,103
 env.KEY_F5,env.KEY_F6=105,106
 env.KEY_F8,env.KEY_F9,env.KEY_SHIFT=108,109,110
 local transfers,dummies=0,0
@@ -90,3 +95,42 @@ env.M.Stop();assert(stopped==1,'forced close works without optional ForceClose A
 env.ForgePanel.ForceClose=function() stopped=stopped+10 end
 env.M.Stop();assert(stopped==12,'Scene also invokes optional ForceClose')
 print('PASS core_routing: Scene exploration charge/tap/freeze/rewind, combat+exit gates, mounted breath, pointer gate, special exclusivity')
+
+press[102]=true;debug(true)
+assert(not env.CombatState.GetSetting('cameraShake') and env.CombatState.GetSetting('cameraFov'))
+press[103]=true;debug(true)
+assert(not env.CombatState.GetSetting('cameraFov'),'F2/F3 independent effect toggles')
+print('PASS enemy authored sound cue routing, no active duplicate, independent camera debug switches')
+
+-- Particle integration borrows the Spawner pool; never emits a second enemy hit.
+local feedbackBody=assert(source:match('(local function CombatFeedback.-)\nend'))..'\nend\nreturn CombatFeedback'
+local particleCalls={}
+local particleOwner={}
+local feedbackEnv=setmetatable({combatParticles_={Emit=function(_,owner,event)
+ assert(owner==particleOwner and type(event)=='table' and event.pos and event.dir)
+ particleCalls[#particleCalls+1]=event
+end},hitParticleOwner_=particleOwner,time_=1},{__index=_G})
+local feedback=assert(load(feedbackBody,'Scene shared particle consumer','t',feedbackEnv))()
+local enemyImpact={enemy={particles={}},kind='hit',pos={},dir={},material='armor'}
+feedback(enemyImpact);assert(#particleCalls==0,'enemy settlement already owns impact particles')
+feedback({player=true,kind='hit',pos={},dir={},material='soft'})
+feedback({kind='hit',pos={},dir={},material='stone',tier='arrow_mid'})
+assert(#particleCalls==2,'player and wall arrow use shared pool new table signature')
+assert(source:find('combatEnemies_:GetParticlePool()',1,true))
+assert(not source:find('combatParticles_:Release',1,true),'borrower must not release owner pool reference')
+local rigStart=assert(source:find('local offset,euler=combatAnim_:GetWeaponPose()',1,true))
+local swing=assert(source:find('combatRig_:SetSwing(offset,euler)',rigStart,true))
+local sample=assert(source:find('combatRig_:GetAfterimagePose()',rigStart,true))
+local update=assert(source:find('combatRig_:Update(dt)',rigStart,true))
+assert(swing<sample and sample<update,'SetSwing this frame before world pose sample, then advance Rig once')
+print('PASS no duplicate enemy particles, player/wall shared pool table port, borrower cleanup, current-frame slide snapshot order')
+
+local exclusionBody=assert(source:match('(local function IsCombatVisualVolume.-)\nend'))..'\nend\nreturn IsCombatVisualVolume'
+local volumes={{},{},{},{},{},{},{}}
+local visualRig={entries={sword={mesh={volume=volumes[1]}}},trails={{volume=volumes[2]}},
+ images={{volume=volumes[3]}},bowImages={{volume=volumes[4]}},particles={{volume=volumes[5]}},
+ flashes={blade={volume=volumes[6]},socket={volume=volumes[7]}}}
+local excludes=assert(load(exclusionBody,'Scene independent visual exclusion','t',setmetatable({combatRig_=visualRig},{__index=_G})))()
+for _,volume in ipairs(volumes) do assert(excludes(volume)) end
+assert(not excludes({}),'new bow images and flashes cannot occlude aim even with incorrect native layers')
+print('PASS independent ray exclusion for main weapon/trail/sword+bow images/charge particles/blade+socket flashes')

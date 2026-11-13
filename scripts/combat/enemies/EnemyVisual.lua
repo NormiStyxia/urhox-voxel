@@ -100,6 +100,7 @@ function Visual:Init(scene,world,config)
     self.body=self.root:CreateChild('body_pose')
     self.pieces,self.bones,self.warnings={},{},{}
     self.removed=false
+    self.flashSupported=false
     local chunks,count=Visual.Sculpt(config)
     self.voxelCount=count
     for index,p in ipairs(chunks) do
@@ -121,17 +122,34 @@ function Visual:Init(scene,world,config)
         local rest=Vector3(p.origin[1]-p.center[1],p.origin[2]-p.center[2],p.origin[3]-p.center[3])
         node.position=rest
         local a=index*2.399963
+        -- Only clone an existing color-aware material. Unsupported voxel shaders
+        -- retain original palette/material and use the local pose fallback.
+        local material,baseColor,brightColor
+        if vol.GetMaterial then
+            local original=vol:GetMaterial()
+            if original and original.GetShaderParameter then
+                local color=original:GetShaderParameter('MatDiffColor')
+                if color and not color:IsEmpty() then
+                    material=original:Clone('enemy_hit_'..config.kind..'_'..index)
+                    baseColor=color
+                    local c=color:GetVector4()
+                    brightColor=Variant(Color(c.x*1.6,c.y*1.6,c.z*1.6,c.w))
+                    vol:SetMaterial(material); self.flashSupported=true
+                end
+            end
+        end
         self.pieces[#self.pieces+1]={volume=vol,node=node,rest=rest,name=p.name,
+            material=material,baseColor=baseColor,brightColor=brightColor,lit=false,
             vx=math.cos(a)*(1.1+index%3*.25),vy=.6+(index%5)*.2,vz=math.sin(a)*(1.1+index%3*.25)}
     end
     for _,a in ipairs(config.attacks) do
         if not self.warnings[a.warning] then self.warnings[a.warning]=self:MakeWarning(a.warning) end
     end
-    if config.boss then self.phaseRing=self:MakeWarning('ring') end
+    if config.boss then self.phaseRing=self:MakeWarning('ring',true) end
     self.rebuildCpuMs=(os.clock()-started)*1000
 end
 
-function Visual:MakeWarning(kind)
+function Visual:MakeWarning(kind,decorative)
     local node=self.root:CreateChild('warning_'..kind)
     local geom=node:CreateComponent('CustomGeometry')
     geom:BeginGeometry(0,TRIANGLE_LIST)
@@ -160,7 +178,7 @@ function Visual:MakeWarning(kind)
     geom:Commit()
     local mat=Material:new()
     mat:SetTechnique(0,cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'))
-    mat:SetShaderParameter('MatDiffColor',Variant(Color(200/255,80/255,60/255,1)))
+    mat:SetShaderParameter('MatDiffColor',Variant(decorative and Color(.38,.35,.25,1) or Color(200/255,80/255,60/255,1)))
     mat:SetCullMode(CULL_NONE)
     geom:SetMaterial(mat)
     node.position=Vector3(0,.06,0); node.enabled=false
@@ -173,10 +191,11 @@ function Visual:Update(enemy)
     self.root.position=enemy.position
     self.root.rotation=Quaternion(enemy.yaw,Vector3.UP)
     local roll=math.rad(enemy.poseRoll or 0)
-    self.body.position=Vector3(.38*math.sin(roll),(enemy.config.hover or 0)+enemy.poseY+.38*(1-math.cos(roll)),0)
+    local pivot=enemy.posePivot
+    self.body.position=Vector3(pivot*math.sin(roll),(enemy.config.hover or 0)+enemy.poseY+pivot*(1-math.cos(roll)),0)
     self.body.rotation=(enemy.poseRoll or 0)~=0 and Quaternion(enemy.poseRoll,Vector3.FORWARD)
         or Quaternion(enemy.posePitch or 0,Vector3.RIGHT)
-    if enemy.down then self.body.scale=Vector3(1,.45,1) else self.body.scale=Vector3(1,1,1) end
+    self.body.scale=Vector3(1,1,1) -- down is a rigid side-roll, never a squash
     local step=enemy.warning.step
     for kind,node in pairs(self.warnings) do
         node.enabled=enemy.warning.visible and kind==enemy.warning.kind
@@ -188,36 +207,64 @@ function Visual:Update(enemy)
     if self.bones.core and enemy.parts.back_armor then self.bones.core.enabled=enemy.parts.back_armor.broken end
     local pulse=enemy.phasePulse or 0
     if self.phaseRing then
-        self.phaseRing.enabled=pulse>0 and not enemy.dead
-        self.phaseRing:SetScale(.5+3.5*math.floor((1-pulse)*6)/6)
+        local t=enemy.rageTime or 0
+        self.phaseRing.enabled=enemy.rageActive and not enemy.down and t>=.45 and t<.70 and not enemy.dead
+        self.phaseRing:SetScale(.5+3.5*math.floor(math.max(0,t-.45)/.25*6)/6)
     end
-    if self.bones.back_armor then self.bones.back_armor.enabled=not enemy.parts.back_armor.broken or pulse>0 end
+    if self.bones.back_armor then self.bones.back_armor.enabled=not enemy.parts.back_armor.broken end
+    local reaction=enemy.reaction
+    local recoil=math.max(0,1-reaction.age/.12)
     for name,bone in pairs(self.bones) do
-        if name:find('leg') or name:find('rear') then
-            local walk=(enemy.state=='CHASE' or enemy.state=='PATROL') and math.sin(enemy.age*9)*14 or 0
-            local lift=(enemy.state=='TELEGRAPH' and enemy.attack.name=='sweep') and -35 or 0
-            bone.rotation=Quaternion(walk+lift,Vector3.RIGHT)
-        elseif name=='head' then
-            bone.rotation=Quaternion(pulse>0 and -30 or (enemy.state=='TELEGRAPH' and 22 or (enemy.state=='ALERT' and -15 or 0)),Vector3.RIGHT)
+        if not enemy.dead then
+            local angle=0
+            if name:find('leg') or name:find('rear') then
+                angle=(enemy.state=='CHASE' or enemy.state=='PATROL') and math.sin(enemy.age*9)*14 or 0
+                if enemy.state=='TELEGRAPH' and enemy.attack.name=='sweep' then angle=angle-35 end
+                if enemy.down then angle=angle+math.sin(enemy.stateTime*8)*8 end
+                if enemy.rageActive and not enemy.down and name:find('foreleg') then
+                    local t=enemy.rageTime or 0
+                    local brace=t<.2 and t/.2 or (t<.7 and 1 or math.max(0,1-(t-.7)/.3))
+                    angle=-12*brace
+                end
+            elseif name=='head' then
+                angle=enemy.state=='TELEGRAPH' and 22 or (enemy.state=='ALERT' and -15 or 0)
+                if enemy.rageActive and not enemy.down then
+                    local t=enemy.rageTime or 0
+                    if t<.2 then angle=8*t/.2
+                    elseif t<.45 then angle=8-38*(t-.2)/.25
+                    elseif t<.7 then angle=-30
+                    else angle=-30*math.max(0,1-(t-.7)/.3) end
+                end
+            end
+            if name==reaction.part then angle=angle-(reaction.angle or 0)*recoil end
+            bone.rotation=Quaternion(angle,Vector3.RIGHT)
         end
     end
-    if not enemy.dead then
-        for _,p in ipairs(self.pieces) do
-            if pulse>0 and p.name=='back_armor' and enemy.parts.back_armor.broken then
-                local t=1-pulse
-                p.node.position=p.rest+Vector3(p.vx*t,p.vy*t,p.vz*t)
-                p.node:SetScale(math.max(.01,pulse))
-            elseif pulse>0 and p.name=='back_armor' then
-                p.node.position=p.rest+Vector3(0,math.sin((1-pulse)*24)*.025,0)
-                p.node:SetScale(1) -- a phase pulse is not a free armor break
-            else p.node.position=p.rest; p.node:SetScale(1) end
+    for _,p in ipairs(self.pieces) do
+        local localHit=p.name==reaction.part
+        local micro=localHit and reaction.shift*recoil or 0
+        if not enemy.dead then
+            p.node.position=p.rest+Vector3(reaction.dx*micro,reaction.dy*micro,reaction.dz*micro)
+        elseif not p.deathRest then p.deathRest=p.node.position end
+        p.node:SetScale(1)
+        if not enemy.dead and pulse>0 and p.name=='back_armor' and not enemy.parts.back_armor.broken then
+            p.node.position=p.node.position+Vector3(0,math.sin((enemy.rageTime or 0)*24)*.025,0)
+        end
+        local bright=(localHit and reaction.age<reaction.flash)
+            or (enemy.rageActive and (enemy.rageTime or 0)>=.2 and (enemy.rageTime or 0)<.7 and p.name=='back_armor')
+        if p.material and bright~=p.lit then
+            p.material:SetShaderParameter('MatDiffColor',bright and p.brightColor or p.baseColor)
+            p.lit=bright
+        end
+        if enemy.dead and enemy.deathTime>=.12 and enemy.deathTime<.25 then
+            local loosen=(enemy.deathTime-.12)/.13
+            p.node.position=p.deathRest+Vector3(p.vx*.07*loosen,-.06*loosen,p.vz*.07*loosen)
         end
     end
     if enemy.dead then
         local t=enemy.deathTime
-        if t>=1.4 then self.root.enabled=false; self:Destroy(); return end
-        -- The shared cube pool owns death motion; do not emit unbudgeted body chunks.
-        self.body.enabled=false
+        if t+1e-8>=1.1 then self.root.enabled=false; self:Destroy(); return end
+        self.body.enabled=t<.25 -- .12s hold, .13s loosen, then pooled fragments
     end
 end
 function Visual:Destroy()

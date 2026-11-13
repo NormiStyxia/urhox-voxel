@@ -3,14 +3,14 @@ local Base=require('combat.enemies.EnemyBase')
 local Beast=setmetatable({}, {__index=Base})
 Beast.__index=Beast
 -- Part armor is local tuning; total HP/poise/timings are the design's fixed values.
-Beast.Config={kind='stone_beast',name='石甲兽',boss=true,hp=600,poise=100,radius=1.15,height=2.5,
+Beast.Config={kind='stone_beast',enemy='beast',name='石甲兽',boss=true,hp=600,poise=100,radius=1.15,height=2.5,
     speed=2.0,aggro=13,leash=30,attackDistance=9,defaultPart='back_armor',voxelSize=.112,
     parts={
-        {id='head',x=0,y=1.15,z=1.05,radius=.50,armor=70,weak=true},
-        {id='foreleg_l',x=-.65,y=.45,z=.68,radius=.35,armor=40},
-        {id='foreleg_r',x=.65,y=.45,z=.68,radius=.35,armor=40},
-        {id='back_armor',x=0,y=1.30,z=-.25,radius=.85,armor=70},
-        {id='core',x=0,y=1.45,z=-.15,radius=.37,armor=35,weak=true,hidden=true},
+        {id='head',material='armor',x=0,y=1.15,z=1.05,radius=.50,armor=70,weak=true},
+        {id='foreleg_l',material='armor',x=-.65,y=.45,z=.68,radius=.35,armor=40},
+        {id='foreleg_r',material='armor',x=.65,y=.45,z=.68,radius=.35,armor=40},
+        {id='back_armor',material='armor',x=0,y=1.30,z=-.25,radius=.85,armor=70},
+        {id='core',material='core',x=0,y=1.45,z=-.15,radius=.37,armor=35,weak=true,hidden=true},
     },
     attacks={
         {name='charge',telegraph=.6,duration=.6,recover=1.0,travel=9,range=9,hitRange=1.5,warning='line',damage=22,poise=22},
@@ -46,16 +46,55 @@ function Beast.New(scene,world,terrain,combat,position,id)
     self.doubleCharge=false
     self.pendingTrip,self.chargeWillTrip,self.chargeStunned=false,false,false
     self.phasePulse=0
+    self.ragePending,self.rageActive,self.rageDone=false,false,false
+    self.rageTime,self.rageRoared=0,false
+    self.phaseImpact={pos=Vector3.ZERO,dir=Vector3.UP,normal=Vector3.UP,material='armor',tier='light',kind='phase'}
     return self
 end
 function Beast:OnBreak(id)
     if id=='foreleg_l' or id=='foreleg_r' then self.pendingTrip=true end
 end
 function Beast:OnDamaged()
-    if self.hp<self.maxHP*.5 and self.phase==1 then
-        self.phase,self.phasePulse=2,1
-        -- Phase and armor are separate: cracked visuals do not break/expose the core.
+    if self.hp>0 and self.hp<self.maxHP*.5 and self.phase==1 then
+        self.phase,self.ragePending=2,true
+        self.doubleCharge=false
+        -- A simultaneous poise break takes precedence; rage waits for stand-up.
+        if self.state~=Base.State.STAGGER then self:SetState(Base.State.RECOVER) end
     end
+end
+function Beast:CanTelegraph()
+    return not self.ragePending and not self.rageActive and Base.CanTelegraph(self)
+end
+function Beast:TickPresentation(dt,target)
+    if self.state==Base.State.STAGGER then return false end
+    if self.ragePending then
+        self.ragePending,self.rageActive,self.rageTime,self.rageRoared=false,true,0,false
+        self:SetState(Base.State.RECOVER)
+    end
+    if not self.rageActive then return false end
+    self.rageTime=math.min(1.2,self.rageTime+dt)
+    self.phasePulse=1-self.rageTime/1.2
+    if not self.rageRoared and self.rageTime+1e-8>=.45 then
+        self.rageRoared=true
+        self:EmitEvent('boss_roar')
+        self:EmitEvent('camera_shake')
+        if self.parts.back_armor.broken and self.particles then
+            self.phaseImpact.pos=self.hurtShapes[4].center
+            self.particles:Emit(self,self.phaseImpact)
+        end
+    end
+    if self.rageTime>=1 then
+        local distance=self:Face(target)
+        if distance>self.config.attackDistance then
+            self:Move(self.fx*self.config.speed*dt,self.fz*self.config.speed*dt)
+        end
+    end
+    if self.rageTime+1e-8>=1.2 then
+        self.rageActive,self.rageDone,self.phasePulse=false,true,0
+        self.attackIndex=0 -- next charge has a fresh, complete telegraph
+        self:SetState(Base.State.CHASE)
+    end
+    return true
 end
 function Beast:SelectAttack()
     Base.SelectAttack(self)
@@ -123,13 +162,23 @@ function Beast:AfterRecover()
 end
 function Beast:TickExtras(dt,target)
     self.lastTarget=target
-    self.phasePulse=math.max(0,self.phasePulse-dt)
     if self.hitStop<=0 and self.state==Base.State.TELEGRAPH and self.attack.name=='stomp' then
         if self.stateTime<self.attack.telegraph*.3 then self:Move(-self.fx*dt*1.4,-self.fz*dt*1.4) end
     end
 end
 function Beast:UpdatePose()
     Base.UpdatePose(self)
+    if self.rageActive and not self.down then
+        local t=self.rageTime
+        if t<.2 then self.poseY=-.12*t/.2; self.posePitch=8*t/.2
+        elseif t<.45 then self.poseY=-.12; self.posePitch=8-20*(t-.2)/.25
+        elseif t<.7 then self.poseY=-.10; self.posePitch=-12
+        else
+            local settle=math.max(0,1-(t-.7)/.3)
+            self.poseY,self.posePitch=-.1*settle,-12*settle
+        end
+        return
+    end
     if self.state==Base.State.TELEGRAPH and self.attack.name=='stomp' then
         self.poseY=math.max(0,math.sin(self.warning.progress*math.pi))*1.1
     end
@@ -138,6 +187,8 @@ function Beast:Reset()
     local reset=Base.Reset(self)
     if reset then
         self.doubleCharge,self.phasePulse=false,0
+        self.ragePending,self.rageActive,self.rageDone=false,false,false
+        self.rageTime,self.rageRoared=0,false
         self.pendingTrip,self.chargeWillTrip,self.chargeStunned=false,false,false
     end
     return reset

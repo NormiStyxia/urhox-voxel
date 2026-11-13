@@ -40,3 +40,47 @@ assert(moved==1 and cameraUpdates==1 and n.safePos.x==2 and n.camYaw==90 and n.c
 S.near(n.cc.desiredVelocity:Length(),0);S.near(n.vel:Length(),0)
 assert(n.speed==0 and n.safeT==0 and not n.onGround)
 print('PASS debug teleport rejects unsafe ground, clears velocity, sets safe fallback and snaps camera')
+
+local C=require('combat.CombatMoves')
+local function ground(p) if p.x<1 or p.x>2 then return 0,1 end end
+local motion,stopped=C.ClipSlidePath(Vector3.ZERO,Vector3(3,0,0),.32,ground)
+assert(stopped and motion.x<=.58 and motion.x>.56,'footprint+margin stops before gap, 2cm refinement')
+assert(C.SlideFootprint(Vector3(.7,0,0),.32,ground)==nil,'edge footprint rejects a seemingly solid centre')
+assert(C.SlideFootprint(Vector3.ZERO,.32,function() return 0,math.cos(math.rad(36)) end)==nil)
+motion,stopped=C.ClipSlidePath(Vector3.ZERO,Vector3(2.2,0,0),.32,function() return 0,1 end,
+ function(a,b) assert((b-a):Length()<=.100001); return b.x<.75 end)
+assert(stopped and motion.x<.75 and motion.x>=.73,'wall stops at last safe subsegment')
+motion,stopped=C.ClipSlidePath(Vector3.ZERO,Vector3(2.2,0,0),.32,
+ function(p) return p.x>.8 and .21 or 0,1 end)
+assert(stopped and motion.x<=.8,'step rise above .20 rejects traversal')
+motion,stopped=C.ClipSlidePath(Vector3.ZERO,Vector3(2.2,0,0),.32,function(p) return p.x*.4,1/math.sqrt(1.16) end)
+S.near(motion.x,2.2);assert(not stopped,'walkable shallow slope stays supported')
+print('PASS slide full-footprint edge guard, slope/height/wall probes <=.10m and <=.02m refinement')
+
+-- Actual camera methods: framing is independent of player yaw; effects are
+-- applied after fresh camera placement and cannot enter the follow state.
+local cameraBody=assert(source:match('(function N:SetCombatCamera.-)\n%-%- 只修复'))
+local CameraN={}
+local rotation=setmetatable({}, {__mul=function(_,v) return v end})
+local cameraEnv=setmetatable({N=CameraN,Ray=function(origin,direction) return {origin=origin,direction=direction} end,Quaternion=function() return rotation end},{__index=_G})
+assert(load(cameraBody,'actual combat camera framing','t',cameraEnv))()
+local cameraNode={position=Vector3(0,0,-5)}
+local cameraStub={SetMode=function(self,mode) self.mode=mode end,SetTransitionSpeed=function(self,speed) self.speed=speed end,
+ GetNode=function() return cameraNode end,
+ Update=function(_,dt,target) cameraNode.position=target.position+Vector3(.55,1.65,-5) end}
+local camN=setmetatable({cam=cameraStub,node={worldPosition=Vector3.ZERO},camTarget={position=Vector3.ZERO},camYaw=0,camPitch=12,
+ world={RaycastSingle=function() return {hit=false} end},GridHit=function() return {hit=false} end,
+ CameraNode=function() return cameraNode end},{__index=CameraN})
+camN:SetCombatCamera(Vector3(0,0,10),true,true,false)
+for i=1,120 do camN:UpdateCamera(1/60,'combat',camN.node) end
+assert(cameraStub.mode=='combatBossBow' and camN.camYaw==0 and camN.camPitch==12)
+assert(camN.combatFocusOffset.z>2.99 and camN.combatFocusOffset.z<=3,'70:30 focus with .25s smoothing')
+local follow=camN.camTarget.position
+for i=1,60 do camN:UpdateCamera(1/60,'combat',camN.node);camN:ApplyCombatOffset(Vector3(.02,0,0)) end
+assert(camN.camTarget.position.x==0,'shake never leaks into smoothed follow position')
+camN.GridHit=function() return {hit=true,distance=2} end
+camN:UpdateCamera(1/60,'combat',camN.node);camN:ApplyCombatOffset(Vector3(.02,0,0))
+S.near((cameraNode.position-camN.combatCameraOrigin):Length(),1.7)
+camN.combatLookQuiet=.25;camN:UpdateCamera(.1,'combat',camN.node)
+assert(camN.combatFocusOffset.z<3,'live player look suppresses target reframing')
+print('PASS actual camera 70:30 framing, manual input priority, independent follow/offset, final obstruction guard')

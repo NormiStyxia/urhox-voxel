@@ -60,13 +60,14 @@ local function DestroyPreview(s)
     if not p then return end
     ReleaseImage(p)
     if p.surface then p.surface:SetNumViewports(0) end
-    Builder.CancelBuild(p.job)
-    if p.mesh then Builder.Dispose(p.mesh) end
+    Builder.CancelPreview(p.job)
+    if p.mesh then Builder.DisposePreview(p.mesh) end
     if p.texture then p.texture:Dispose() end
     if p.scene then p.scene:Dispose() end
     s.preview=nil
 end
 local function Fallback(s,reason)
+    if s.fallback then return end
     DestroyPreview(s)
     s.fallback=true
     s.previewMode='fallback'
@@ -76,8 +77,9 @@ end
 local function UpdatePreview(s)
     local p=s.preview
     if not p then return end
-    Builder.CancelBuild(p.job)
-    p.job=Builder.BeginBuild(p.world,p.pivot,Single(s.config,s.weapon),p.mesh)
+    Builder.CancelPreview(p.job)
+    p.job=Builder.BeginPreview(p.pivot,Single(s.config,s.weapon),p.mesh)
+    p.state,p.age,p.rendered,p.queued='building',0,false,false
     p.dirty=true
 end
 local function CreatePreview(s)
@@ -86,7 +88,6 @@ local function CreatePreview(s)
     s.preview=p
     p.scene=Scene()
     p.scene:CreateComponent('Octree')
-    p.world=p.scene:CreateComponent('VoxelPhysicsWorld')
     local zone=p.scene:CreateComponent('Zone')
     zone:SetBoundingBox(BoundingBox(Vector3(-10,-10,-10),Vector3(10,10,10)))
     zone:SetAmbientColor(Color(.65,.65,.65))
@@ -367,32 +368,34 @@ local function PartCells(s,part)
     s.thumbnails[part.id]=cached
     return cached
 end
+-- Require a receipt for this RTT view, not just texture/mesh allocation.
+-- GPU pixels/material appearance still require Web visual validation.
+local function DrawNativePreview(vg,s)
+    local p=s.preview
+    if not p then return false end
+    if p.context and p.context~=vg then ReleaseImage(p) end
+    if not p.image then
+        local handle=nvgCreateVideo(vg,p.texture)
+        if type(handle)~='number' or handle<=0 then error('bridge') end
+        p.image,p.context=handle,vg
+    end
+    if p.job or not p.mesh or not p.rendered or p.mesh.geometry:GetNumVertices(0)<=0 then return false end
+    local b=s.previewBox
+    local size=math.floor(math.min(b.w,b.h-24)/2)*2
+    local x,y=Draw.Snap(b.x+(b.w-size)/2),b.y+2
+    nvgBeginPath(vg);nvgRect(vg,x,y,size,size)
+    nvgFillPaint(vg,nvgImagePattern(vg,x,y,size,size,0,p.image,1));nvgFill(vg)
+    p.state='ready'
+    if s.previewMode~='3d' then s.previewMode='3d';print('Forge preview: 3d') end
+    return true
+end
 local function Preview(vg,s)
     local b=s.previewBox
     Draw.Rect(vg,b.x,b.y,b.w,b.h-4,C.ink)
-    local p=s.preview
-    if p then
-        if p.context and p.context~=vg then ReleaseImage(p) end
-        if not p.image then
-            local ok,handle=pcall(nvgCreateVideo,vg,p.texture)
-            if not ok or type(handle)~='number' or handle<=0 then Fallback(s,'bridge');p=nil
-            else p.image,p.context=handle,vg end
-        end
-    end
-    if p then
-        local size=math.floor(math.min(b.w,b.h-24)/2)*2
-        local x,y=Draw.Snap(b.x+(b.w-size)/2),b.y+2
-        nvgBeginPath(vg);nvgRect(vg,x,y,size,size)
-        nvgFillPaint(vg,nvgImagePattern(vg,x,y,size,size,0,p.image,1));nvgFill(vg)
-        -- Open/texture allocation alone is not ready. Wait for completed geometry,
-        -- a live NVG bridge and a later frame after the surface update request.
-        if s.previewMode~='3d' and p.mesh and not p.job and p.readyQueuedFrame
-            and s.updateFrame>p.readyQueuedFrame and p.mesh.volume:GetVertexCount()>0 then
-            s.previewMode='3d'
-            print('Forge preview: 3d')
-        end
-    else
-        -- Assembly silhouette plus separated, labelled component slices.
+    local ok,drawn=pcall(DrawNativePreview,vg,s)
+    if not ok then Fallback(s,'bridge');drawn=false end
+    if not drawn then
+        -- Useful pixels during creation AND after any failure/timeout.
         Pixels(vg,s,s.blueprint.geometry.cells,Box(b.x,b.y+4,b.w*.5,b.h-28),s.slot,true)
         local slots=SLOT_ORDER[s.weapon]
         local cellHeight=(b.h-28)/#slots
@@ -403,7 +406,8 @@ local function Preview(vg,s)
             Draw.Text(vg,Parts.SlotNames[slot],box.x+box.w-24,box.y+box.h/2,12,C.paper)
         end
     end
-    Draw.Text(vg,p and (p.job and '分帧组装中' or '拖转 · 双击回正') or '部件拆解预览',b.x+b.w/2,b.y+b.h-16,12,C.muted,NVG_ALIGN_CENTER)
+    local label=drawn and '拖转 · 双击回正' or (s.preview and '准备3D · 部件拆解预览' or '部件拆解预览')
+    Draw.Text(vg,label,b.x+b.w/2,b.y+b.h-16,12,C.muted,NVG_ALIGN_CENTER)
 end
 local STAT_SWORD={{'attack','攻击',20,'点'},{'speed','速度',1.4,'×'},{'reach','范围',1.4,'m'},{'poise','失衡',12,'点'}}
 local STAT_BOW={{'draw','拉弓速度',1.5,'×'},{'range','射程',60,'m'},{'move','移动',1,'×'},{'armorBreak','破甲',2,'×'}}
@@ -540,21 +544,29 @@ local function Update(_,_,data)
     if s.autoSpin and s.pauseSpin==0 and not s.pointer then s.yaw=(s.yaw+dt*12)%360 end
     if s.preview then
         local p=s.preview
-        if p.job then
-            local done,mesh,reason=Builder.StepBuild(p.job,2,nil)
-            if done then
-                s.buildMetrics={totalMs=p.job.totalMs,maxStepMs=p.job.maxStepMs,nativeMs=p.job.nativeMs,
-                    overBudget=p.job.overBudget,slowestPhase=p.job.slowestPhase,clockUnavailable=p.job.clockUnavailable}
-                p.job=nil
-                if not mesh then Fallback(s,'mesh');return end
-                p.mesh=mesh;p.dirty=true;p.readyQueuedFrame=s.updateFrame
-                if s.buildMetrics.overBudget then print('[ForgePanel] preview build step exceeded 2ms: '..s.buildMetrics.maxStepMs..'ms / '..tostring(s.buildMetrics.slowestPhase)) end
+        -- Watchdog uses full event time, not the animation clamp or native Time.
+        p.age=p.age+math.max(0,data:GetFloat('TimeStep'))
+        if p.state~='ready' and p.age>=5 then Fallback(s,'timeout');return end
+        local ok=pcall(function()
+            if p.job then
+                local done,mesh=Builder.StepPreview(p.job,2,nil)
+                if done then
+                    s.buildMetrics={totalMs=p.job.totalMs,maxStepMs=p.job.maxStepMs,nativeMs=p.job.nativeMs,
+                        overBudget=p.job.overBudget,slowestPhase=p.job.slowestPhase,clockUnavailable=p.job.clockUnavailable}
+                    p.job=nil
+                    if not mesh then Fallback(s,'mesh');return end
+                    p.mesh=mesh;p.dirty=true;p.state='awaiting_render'
+                    if s.buildMetrics.overBudget then print('[ForgePanel] preview build step exceeded 2ms: '..s.buildMetrics.maxStepMs..'ms / '..tostring(s.buildMetrics.slowestPhase)) end
+                end
             end
-        end
-        local rotated=p.yaw~=s.yaw
-        if rotated then p.turn.rotation=Quaternion(0,s.yaw,0);p.yaw=s.yaw end
-        -- A stopped preview only refreshes on edits/rotation, not every frame.
-        if p.dirty or rotated then p.surface:QueueUpdate();p.dirty=false end
+            local rotated=p.yaw~=s.yaw
+            if rotated then p.turn.rotation=Quaternion(0,s.yaw,0);p.yaw=s.yaw end
+            if p.dirty or rotated then
+                p.surface:QueueUpdate();p.dirty=false
+                if p.mesh and not p.job then p.queued=true end
+            end
+        end)
+        if not ok then Fallback(s,'render') end
     end
 end
 --- Open only outside combat; no root replacement and no world pause.
@@ -593,6 +605,14 @@ function M.Open(rigOrCallbacks)
     s.eventNode=Node()
     s.receiver=s.eventNode:CreateScriptObject('LuaScriptObject')
     s.receiver:SubscribeToEvent('Update',Update)
+    s.receiver:SubscribeToEvent('EndViewRender',function(_,_,data)
+        local p=s.preview
+        if not p or not p.queued or p.job then return end
+        -- Failed/missing pointer bindings leave the timeout armed. Never claim
+        -- that another view (such as the main scene) rendered this preview.
+        local ok,ours=pcall(function() return data:GetPtr('Scene')==p.scene and data:GetPtr('Surface')==p.surface end)
+        if ok and ours then p.rendered=true end
+    end)
     s.receiver:SubscribeToEvent('KeyDown',function(_,_,data)
         if not s.closing and data:GetInt('Key')==KEY_ESCAPE then M.Close() end
     end)
@@ -653,7 +673,12 @@ function M.IsOpen() return session~=nil end
 --- Idempotent scene teardown / danger close, including the normal release latch.
 ---@return boolean
 function M.ForceClose() return M.Close(true) end
---- nil while closed/closing or still preparing the first native preview.
+--- nil while closed/closing or preparing a candidate preview.
 ---@return '3d'|'fallback'|nil
-function M.PreviewMode() return session and not session.closing and session.previewMode or nil end
+function M.PreviewMode()
+    if not session or session.closing then return nil end
+    if session.fallback then return 'fallback' end
+    if session.preview and session.preview.state=='ready' then return '3d' end
+    return nil
+end
 return M

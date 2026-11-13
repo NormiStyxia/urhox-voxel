@@ -88,6 +88,12 @@ function M.New(scene, world, spawn, spawnYaw)
         modes = {
             normal = { distance = 4.6, offset = Vector3(0.55, 1.65, 0), fov = 55.0 },
             aim = { distance = 3.0, offset = Vector3(0.75, 1.6, 0), fov = 46.0 },
+            combat = { distance = 5.0, offset = Vector3(.55,1.65,0), fov = 55 },
+            combatBoss = { distance = 6.5, offset = Vector3(.55,1.65,0), fov = 55 },
+            combatBow = { distance = 5.0, offset = Vector3(.85,1.65,0), fov = 55 },
+            combatBossBow = { distance = 6.5, offset = Vector3(.85,1.65,0), fov = 55 },
+            combatBowZoom = { distance = 5.0, offset = Vector3(.85,1.65,0), fov = 52 },
+            combatBossBowZoom = { distance = 6.5, offset = Vector3(.85,1.65,0), fov = 52 },
             mounted = { distance = 13.0, offset = Vector3(0, 3.2, 0), fov = 55.0 },
             far = { distance = 26.0, offset = Vector3(0, 6.0, 0), fov = 55.0 },
         },
@@ -125,6 +131,7 @@ end
 
 -- 鼠标视角
 function N:Look(dx, dy, sens)
+    if math.abs(dx)+math.abs(dy)>.001 then self.combatLookQuiet=.25 end
     self.camYaw = self.camYaw + dx * sens
     self.camPitch = Clamp(self.camPitch + dy * sens, -55, 70)
 end
@@ -155,7 +162,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
         local length=motion:Length()
         local p=self.node.worldPosition
         local fraction=1
-        local steps=math.max(1,math.ceil(length/.12))
+        local steps=combat.slideChecked and 0 or math.max(1,math.ceil(length/.12))
         for i=1,steps do
             local q=p+motion*(i/steps)
             if not Terrain.HasGround(q.x,q.z,.4) then fraction=(i-1)/steps; break end
@@ -172,6 +179,48 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
     self.speed = Vector3(self.vel.x, 0, self.vel.z):Length()
     self.onGround = onGround
+end
+
+-- Probe actual collision surfaces (including rebuilt bridge), not the aim
+-- resolver's expensive per-volume repair path. Both sides' masks match the CC.
+function N:SlideRay(ray,distance)
+    local nearest=nil ---@type VoxelRaycastResult|nil
+    for _,hit in ipairs(self.world:Raycast(ray,distance,self.cc.collisionMask)) do
+        local volume=hit.volume
+        if hit.hit and volume and (volume.collisionMask & self.cc.collisionLayer)~=0
+            and not (self.ignoreAimVolume and self.ignoreAimVolume(volume))
+            and (not nearest or hit.distance<nearest.distance) then nearest=hit end
+    end
+    return nearest
+end
+function N:SlideGround(p)
+    local hit=self:SlideRay(Ray(p+Vector3(0,.35,0),Vector3(0,-1,0)),.75)
+    if hit then return hit.position.y,hit.normal.y end
+end
+function N:CanSlide()
+    if not self.cc.onGround then return false end
+    local C=require('combat.CombatMoves')
+    return C.SlideFootprint(self.node.worldPosition,self.cc.radius,function(p) return self:SlideGround(p) end)~=nil
+end
+function N:ClipSlideMotion(motion)
+    local C=require('combat.CombatMoves')
+    return C.ClipSlidePath(self.node.worldPosition,motion,self.cc.radius,
+        function(p) return self:SlideGround(p) end,
+        function(a,b,margin)
+            -- Expanded footprint rays at ankle, torso and head; the existing
+            -- VoxelCharacterController then performs the real capsule sweep.
+            for i=0,7 do
+                local angle=i*math.pi/4
+                local offset=Vector3(math.sin(angle)*margin,0,math.cos(angle)*margin)
+                for _,h in ipairs({.25,self.cc.height*.5,self.cc.height-.10}) do
+                    local origin=a+offset+Vector3(0,h,0)
+                    local delta=b-a
+                    local length=delta:Length()
+                    if length>1e-8 and self:SlideRay(Ray(origin,delta/length),length) then return false end
+                end
+            end
+            return true
+        end)
 end
 
 -- One bounded turn at melee startup; no lock, no movement or camera magnetism.
@@ -258,11 +307,41 @@ function N:Animate(dt, casting)
         aimPitch = self.camPitch })
 end
 
+-- Only framing changes; player yaw/pitch are never steered toward an enemy.
+function N:SetCombatCamera(target,boss,bow,zoom)
+    self.combatFocus=target
+    self.combatCameraMode=(boss and 'combatBoss' or 'combat')..(bow and ('Bow'..(zoom and 'Zoom' or '')) or '')
+end
+function N:ApplyCombatOffset(offset)
+    local cn=self:CameraNode()
+    local origin=self.combatCameraOrigin
+    if not origin then return end
+    local delta=cn.position+offset-origin
+    local length=delta:Length()
+    if length<.001 then return end
+    local hit=self:GridHit(Ray(origin,delta/length),length)
+    if hit.hit and hit.distance<length then
+        cn.position=origin+delta*(math.max(0,hit.distance-.3)/length)
+    else cn.position=cn.position+offset end
+end
 function N:UpdateCamera(dt, mode, followNode)
+    local fighting=mode=='combat'
+    if fighting then mode=self.combatCameraMode or 'combat' end
+    self.cam:SetTransitionSpeed(fighting and 1/.18 or 6)
     self.cam:SetMode(mode or "normal")
     local tgt = followNode or self.node
     -- 相机目标平滑跟随（避免台阶上颠）
     local p = tgt.worldPosition
+    self.combatLookQuiet=math.max(0,(self.combatLookQuiet or 0)-dt)
+    local focus=Vector3.ZERO
+    if fighting and self.combatFocus and self.combatLookQuiet<=0 then
+        local toward=self.combatFocus-p
+        -- Ignore offscreen/remote targets instead of pulling framing behind the player.
+        local forward=Quaternion(self.camYaw,Vector3.UP)*Vector3.FORWARD
+        if toward:Length()<20 and toward:DotProduct(forward)>0 then focus=toward*.3 end
+    end
+    self.combatFocusOffset=(self.combatFocusOffset or Vector3.ZERO):Lerp(focus,1-math.exp(-dt/.25))
+    if fighting then p=p+self.combatFocusOffset end
     local cur = self.camTarget.position
     local k = 1 - math.exp(-14 * dt)
     local ny = cur.y + (p.y - cur.y) * (1 - math.exp(-8 * dt))
@@ -271,6 +350,8 @@ function N:UpdateCamera(dt, mode, followNode)
     -- 体素世界里的相机防穿墙（库只查 Bullet PhysicsWorld，这里补一条体素射线）
     local cn = self.cam:GetNode()
     local aimPoint = self.camTarget.position + Quaternion(self.camYaw, Vector3.UP) * ((mode == "aim") and Vector3(0.75, 1.6, 0) or Vector3(0.55, 1.65, 0))
+    if fighting and mode:find('Bow',1,true) then aimPoint=self.camTarget.position+Quaternion(self.camYaw,Vector3.UP)*Vector3(.85,1.65,0) end
+    self.combatCameraOrigin=aimPoint
     if mode == "mounted" then aimPoint = self.camTarget.position + Vector3(0, 3.2, 0) end
     local d = cn.position - aimPoint
     local len = d:Length()

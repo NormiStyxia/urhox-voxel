@@ -72,6 +72,7 @@ old=boss.hp; boss:ApplyHit({dmg=10,part='core'}); T.Near(old-boss.hp,16)
 boss:Reset(); boss:ApplyHit({dmg=1,poise=100,part='head'}); assert(boss.down and boss.staggerDuration==3)
 T.Near(boss.hp,598.4) -- head weak point, independently of the later down multiplier
 boss:Reset(); boss:ApplyHit({dmg=301,part='head'}); assert(boss.phase==2 and not boss.parts.back_armor.broken)
+T.Tick(boss,1.2,combat.pos); assert(boss.rageDone)
 boss:SelectAttack(); assert(boss.doubleCharge)
 boss:AfterRecover(); assert(not boss.doubleCharge and boss.state==S.TELEGRAPH)
 boss:SelectAttack(); boss:SelectAttack(); assert(boss.attack.telegraph==1.1*.85)

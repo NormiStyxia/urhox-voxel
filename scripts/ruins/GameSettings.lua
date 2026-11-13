@@ -4,7 +4,7 @@ local M={}
 M.PROFILES={
  high={cloudCount=24,cloudsEnabled=true,lightShafts=8,motes=80,volumetric='full',grassDensity=1,grassDistance=55,shadowCascades=3,shadowDistance=140,shadowOn=true,shadowMapSize=2048,shadowPCFSamples=4,bloom=true,postFx='full',skyCaptureResolution=64,skyCaptureInterval=.5},
  medium={cloudCount=12,cloudsEnabled=true,lightShafts=3,motes=28,volumetric='lite',grassDensity=.5,grassDistance=38,shadowCascades=2,shadowDistance=65,shadowOn=true,shadowMapSize=1024,shadowPCFSamples=2,bloom=false,postFx='lite',skyCaptureResolution=32,skyCaptureInterval=2},
- low={cloudCount=0,cloudsEnabled=false,lightShafts=0,motes=0,volumetric='off',grassDensity=.25,grassDistance=24,shadowCascades=0,shadowDistance=0,shadowOn=false,shadowMapSize=512,shadowPCFSamples=1,bloom=false,postFx='off',skyCaptureResolution=32,skyCaptureInterval=5},
+ low={cloudCount=4,cloudsEnabled=true,lightShafts=0,motes=0,volumetric='off',grassDensity=.25,grassDistance=24,shadowCascades=0,shadowDistance=0,shadowOn=false,shadowMapSize=512,shadowPCFSamples=1,bloom=false,postFx='off',skyCaptureResolution=32,skyCaptureInterval=5},
 }
 local allowed={quality={high=true,medium=true,low=true,auto=true},grass={full=true,half=true,off=true},shadows={high=true,low=true,off=true},postFx={full=true,lite=true,off=true}}
 local booleanKeys={debugLog=true,perfHud=true,clouds=true,lowClouds=true,cloudShadow=true,lightShafts=true,floatingMotes=true,volumetric=true}
@@ -35,9 +35,9 @@ function M.Resolve()
     local result={}
     for key,value in pairs(M.PROFILES[tier]) do result[key]=value end
     result.quality=tier
-    if values.clouds~=nil then result.cloudsEnabled=values.clouds; result.cloudCount=values.clouds and math.max(12,result.cloudCount) or 0 end
-    result.lowCloudsEnabled=result.cloudsEnabled and values.lowClouds~=false
-    result.cloudShadowEnabled=result.cloudsEnabled and values.cloudShadow~=false
+    if values.clouds~=nil then result.cloudsEnabled=values.clouds; result.cloudCount=values.clouds and math.max(tier=='low' and 4 or 12,result.cloudCount) or 0 end
+    result.lowCloudsEnabled=result.cloudsEnabled and tier~='low' and values.lowClouds~=false
+    result.cloudShadowEnabled=result.cloudsEnabled and tier~='low' and values.cloudShadow~=false
     if values.lightShafts~=nil then result.lightShafts=values.lightShafts and math.max(3,result.lightShafts) or 0 end
     if values.floatingMotes~=nil then result.motes=values.floatingMotes and math.max(28,result.motes) or 0 end
     if values.volumetric~=nil then result.volumetric=values.volumetric and 'full' or 'off' end

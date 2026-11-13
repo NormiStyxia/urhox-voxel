@@ -7,7 +7,7 @@ local mounted, dead, busy = false, false, false
 local options = {}
 local lastPose = 'hidden'
 local readyFlash=0
-local settings={aimAssist=true,damageNumbers=false}
+local settings={aimAssist=true,damageNumbers=false,dodgeFov=false,cameraShake=true,cameraFov=true,bowZoom=false}
 local logTime,logWindow,logCount=0,0,0
 local logLast={}
 -- Event-only diagnostics: no Update spam, bounded even during a damage burst.

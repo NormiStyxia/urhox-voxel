@@ -28,9 +28,12 @@ function H.Apply(target,info)
     if info.armorBreak~=nil and (not Finite(info.armorBreak) or info.armorBreak<0) then return {hit=false} end
     -- Enemy owns weak/down/armor multipliers. Applying them here doubles damage.
     local before=target.hp
+    local priorHitStop=target.hitStop or 0
     local result=target:ApplyHit(info) or {}
     return {hit=result.hit==true,killed=result.killed==true,partBroken=result.partBroken,
-        damage=before and target.hp and math.max(0,before-target.hp) or nil}
+        damage=result.damage or (before and target.hp and math.max(0,before-target.hp) or nil),
+        priorHitStop=priorHitStop,part=result.part or info.part,material=result.material or info.material or 'soft',
+        broke=result.broke==true or result.partBroken~=nil,staggered=result.staggered==true,weak=result.weak==true}
 end
 ---@param enemies table[]
 ---@param a Vector3

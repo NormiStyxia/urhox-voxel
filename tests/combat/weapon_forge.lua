@@ -9,7 +9,9 @@ local original=Store.Default()
 Store.Load=function() return original end
 local held,buttons={},{}
 local eventHandlers={}
-local scenes,textures={},{}
+local scenes,textures,geometries={},{},{}
+local autoRender=true
+local meshFailure,queueFailure=false,false
 local nativeFailure,bridgeFailure,sizeFailure=false,false,false
 local liveContext='vg'
 local videoCreates,videoDeletes=0,0
@@ -44,7 +46,11 @@ local function MakeNode(name,parent)
     node.LookAt=function() return true end
     node.Dispose=function(self) assert(not self.disposed);self.disposed=true end
     node.CreateComponent=function(self,kind)
-        if kind=='VoxelPhysicsWorld' then self.world=Mock.World(self);return self.world end
+        assert(kind~='VoxelPhysicsWorld','forge must not create a second voxel physics world')
+        if kind=='CustomGeometry' then
+            if meshFailure then error('CustomGeometry failure') end
+            local g=Mock.CustomGeometry(self);geometries[#geometries+1]=g;return g
+        end
         return {SetBoundingBox=function() end,SetAmbientColor=function() end,SetLightType=function() end,SetBrightness=function() end}
     end
     node.CreateScriptObject=function()
@@ -70,7 +76,7 @@ rawset(_G,'Texture2D',{new=function()
     texture.Dispose=function(self) assert(self.surface.viewports==0);assert(not self.disposed);self.disposed=true end
     texture.surface.SetViewport=function(self) self.viewports=1 end
     texture.surface.SetUpdateMode=function(_,mode) assert(mode==SURFACE_MANUALUPDATE) end
-    texture.surface.QueueUpdate=function(self) self.updates=self.updates+1 end
+    texture.surface.QueueUpdate=function(self) assert(not queueFailure);self.updates=self.updates+1 end
     texture.surface.SetNumViewports=function(self,n) self.viewports=n end
     textures[#textures+1]=texture
     return texture
@@ -112,7 +118,9 @@ Draw.Metrics=function() return width,height,safe end
 Draw.Begin=function() end
 Draw.Finish=function() end
 Draw.Image=function() end
-Draw.Rect=function() end
+local rectCalls=0
+local pixelRects=0
+Draw.Rect=function(_,_,_,w,h) rectCalls=rectCalls+1;if w==2 and h==2 then pixelRects=pixelRects+1 end end
 Draw.NineSlice=function() end
 Draw.Text=function(_,text,x,y,size) assert(size==12 or size==24);drawCalls[#drawCalls+1]={text=text,x=x,y=y} end
 local combat='EXPLORE'
@@ -133,6 +141,11 @@ end
 local function Tick(n)
     for _=1,n or 1 do
         if eventHandlers.Update then eventHandlers.Update(nil,nil,{GetFloat=function() return 1/60 end}) end
+        local current=State()
+        local p=current and current.preview
+        if autoRender and p and eventHandlers.EndViewRender then
+            eventHandlers.EndViewRender(nil,nil,{GetPtr=function(_,name) return name=='Scene' and p.scene or p.surface end})
+        end
     end
 end
 local function Button(id)
@@ -211,35 +224,36 @@ assert(Open({rig=mockRig,onOpen=function() opened=opened+1 end,onClose=function(
 end}))
 assert(opened==1 and Forge.IsOpen() and fakeInput.mouseMode==MM_ABSOLUTE and cleared==1)
 assert(#root.children==1 and State().preview and not State().fallback)
-assert(State().preview.job and State().preview.world.created==0,'preview must build over frames')
+assert(State().preview.job and #geometries==0,'preview must build over frames without voxel worlds')
 assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0,'Open is not preview readiness')
 assert(Open() and opened==1)
+autoRender=false
 CheckLayout();Flush();Render()
 assert(videoCreates==1)
 assert(Forge.PreviewMode()==nil,'wait for a later frame after render surface queueing')
-Tick();State().preview.mesh.volume.vertexCount=0;Render()
+autoRender=true;Tick();State().preview.mesh.geometry.empty=true;Render()
 assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0,'empty native geometry is not ready')
-State().preview.mesh.volume.vertexCount=4;Render()
+State().preview.mesh.geometry.empty=false;Render()
 assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
 Tick();Render();assert(LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
 local s=State() --[[@as any]]
 local scene=s.preview.scene
-local world=s.preview.world
-local rebuilt=world.rebuilds
+local rebuilt=#geometries
 local ortho=s.preview.camera.orthoSize
 Click('part_blade_broad')
 assert(s.config.sword.parts.blade=='blade_broad' and s.blueprint.stats.attack==13.5)
-assert(world.rebuilds==rebuilt,'selection must not perform synchronous native rebuild')
+assert(Forge.PreviewMode()==nil and s.preview.state=='building')
+assert(#geometries==rebuilt,'selection must not perform synchronous native rebuild')
 Flush();Render()
-assert(original.sword.parts.blade=='blade_straight' and world.rebuilds==rebuilt+1)
+assert(original.sword.parts.blade=='blade_straight' and #geometries==rebuilt+1)
 assert(s.preview.camera.orthoSize==ortho and s.preview.pivot.position.y==0,'grip and preview scale must stay fixed')
 local comparison,delta=false,false
 for _,draw in ipairs(drawCalls) do comparison=comparison or draw.text=='10点 → 13.5点';delta=delta or draw.text=='+3.5点' end
 assert(comparison and delta,'real values, units and difference are required')
-rebuilt=world.rebuilds
+rebuilt=#geometries
 Click('color_primary')
 for i=1,6 do Click('swatch_'..i);Flush();assert(s.config.sword.colors.primary==i) end
-assert(world.rebuilds==rebuilt,'palette edits must not rebuild')
+assert(#geometries==rebuilt+6,'preview colors rebuild vertex colors, never voxel jobs')
 Click('swatch_3');Click('color_primary')
 Click('slot_grip');Click('part_sword_grip_long');Flush()
 Click('slot_reset');assert(s.config.sword.parts.grip==original.sword.parts.grip)
@@ -271,7 +285,7 @@ assert(s.closing and Forge.IsOpen() and #root.children==1 and overlay)
 assert(Forge.PreviewMode()==nil,'closed visual must not report a live preview during release latch')
 assert(#applyCalls==2 and saved.active=='bow' and currentWeapon=='bow' and mockRig.active=='bow' and mockRig.pose=='hidden')
 assert(scene.disposed and textures[1].disposed and videoDeletes==1)
-assert(world.removed==world.created)
+for _,g in ipairs(geometries) do assert(g.node.removed) end
 Tick(4);assert(Forge.IsOpen() and closed==0)
 held.G=false;Tick(2)
 assert(not Forge.IsOpen() and closed==1 and fakeInput.mouseMode==MM_RELATIVE and not next(eventHandlers))
@@ -301,8 +315,8 @@ nativeFailure=false;bridgeFailure=true
 width,height=844,390
 assert(Open());s=State()
 local nextPreview=State().preview --[[@as any]]
-scene=nextPreview.scene;world=nextPreview.world
-Render();assert(s.fallback and not s.preview and scene.disposed and world.removed==world.created)
+scene=nextPreview.scene
+Render();assert(s.fallback and not s.preview and scene.disposed)
 assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (bridge)')==1)
 local count=videoCreates
 Render();Tick(5);Render();assert(videoCreates==count)
@@ -320,12 +334,12 @@ local function DraftOptions()
         onClose=function(_,wasSaved,kept) if kept then assert(not wasSaved);draftCloses=draftCloses+1 end end}
 end
 assert(Open(DraftOptions()));s=State();Click('part_blade_rapier')
-Tick(3) -- Abort a partially allocated, not yet published preview volume.
-local interruptedWorld=State().preview.world
+Tick(3) -- Abort a partially assembled custom preview.
+local interruptedScene=State().preview.scene
 buttons[MOUSEB_LEFT]=true
 assert(Forge.Close(true) and not Forge.IsOpen(),'danger must not wait for held buttons')
 assert(draftApplies==0 and saved==savedBefore and draftCloses==1 and #root.children==0)
-assert(interruptedWorld.created==interruptedWorld.removed)
+assert(interruptedScene.disposed)
 assert(not next(eventHandlers) and s.eventNode.removed and s.finished,'forced close must clean receiver now, without another Update')
 assert(Forge.PreviewMode()==nil and Forge.ForceClose() and Forge.Close(true) and draftCloses==1)
 Tick();buttons[MOUSEB_LEFT]=false
@@ -394,6 +408,41 @@ for _,brokenTime in ipairs({false,{GetElapsedTime=function() error('Web binding 
     Forge.ForceClose()
 end
 rawset(_G,'time',fakeTime);rawset(_G,'os',oldOs)
+-- Preview state machine: creation -> assembly -> render receipt -> ready, or
+-- any failure / <=5 seconds without readiness -> terminal 2D fallback.
+autoRender=false
+assert(Open());assert(State().preview.state=='building')
+pixelRects=0;Render();assert(pixelRects>10,'pending preview must draw voxel pixels, not a blank panel')
+Flush();local stalled=State().preview
+assert(stalled.state=='awaiting_render' and stalled.queued and not stalled.rendered)
+eventHandlers.EndViewRender(nil,nil,{GetPtr=function() return {} end})
+Render();assert(Forge.PreviewMode()==nil,'main scene receipt cannot satisfy preview readiness')
+eventHandlers.EndViewRender(nil,nil,{GetPtr=function() error('binding unavailable') end})
+eventHandlers.Update(nil,nil,{GetFloat=function() return 4.99-stalled.age end})
+assert(Forge.PreviewMode()==nil and State().preview)
+eventHandlers.Update(nil,nil,{GetFloat=function() return .02 end})
+assert(Forge.PreviewMode()=='fallback' and not State().preview and stalled.scene.disposed)
+assert(LogCount('Forge preview: fallback (timeout)')==1)
+pixelRects=0;Render();assert(pixelRects>10,'timeout must draw the 2D parts')
+Tick(10);Render();assert(LogCount('Forge preview: fallback (timeout)')==1)
+Forge.ForceClose()
+local Builder=require('combat.WeaponBuilder')
+local stepPreview=Builder.StepPreview
+assert(Open());Builder.StepPreview=function() return false end
+Tick(3);assert(State().preview.state=='building')
+eventHandlers.Update(nil,nil,{GetFloat=function() return 5 end})
+assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (timeout)')==2)
+Builder.StepPreview=stepPreview;Forge.ForceClose()
+autoRender=true;meshFailure=true
+assert(Open());Flush();assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (mesh)')==1)
+pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose();meshFailure=false
+queueFailure=true
+assert(Open());Tick();assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (render)')==1)
+Forge.ForceClose();queueFailure=false
+assert(Open());Flush();Render();assert(Forge.PreviewMode()=='3d')
+Tick(310);Render();assert(Forge.PreviewMode()=='3d','ready is not downgraded by the initial watchdog')
+Forge.ForceClose()
+for _,g in ipairs(geometries) do assert(g.node.removed) end
 for _,texture in ipairs(textures) do assert(texture.disposed) end
 for _,createdScene in ipairs(scenes) do assert(createdScene.disposed) end
 for key in pairs(Forge) do assert(key=='Open' or key=='Close' or key=='IsOpen' or key=='ForceClose' or key=='PreviewMode') end

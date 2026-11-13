@@ -55,3 +55,29 @@ p:Clear(); p:Fire(Vector3.ZERO,Vector3(1,0,0),.1,{attack=10,crystalRadius=.8,cry
 S.near(p.pool[1].crystalDamage,0); S.near(p.pool[1].crystalDamageMultiplier,0)
 print('PASS crystal weak/mid/full tiers, resolved weak damage, piercing isolation, multiplier slot reset')
 print('PASS pool capacity/reuse, full penetration cap, wall ordering/embed expiry, parabolic integration')
+
+-- Body embed follows the actual part, never a fixed world-space ghost.
+local shape={id='body',center=Vector3(1,0,0),radius=.4,enabled=true,material='armor'}
+local attached={active=true,boss=true,hp=100,GetHurtShapes=function() return {shape} end,
+ ApplyHit=function(self,info) self.hp=self.hp-info.dmg;return {hit=true,material='armor'} end}
+local lastEvent
+p=P.New{enemies=function() return {attached} end,hit=function(_,info,result) lastEvent={info=info,result=result} end}
+p:Fire(Vector3.ZERO,Vector3.RIGHT,.5,{attack=8});p:Update(.1)
+assert(p.pool[1].embedded and p.pool[1].attached==attached)
+assert(lastEvent.info.swingId=='arrow:1' and lastEvent.result.material=='armor')
+local before=p.pool[1].pos;shape.center=shape.center+Vector3(0,2,0);p:Update(.1)
+S.near(p.pool[1].pos.y,before.y+2)
+shape.enabled=false;p:Update(.01);assert(not p.pool[1].active,'disabled/broken part drops its embedded arrow')
+p:Clear();p:Fire(Vector3.ZERO,Vector3.RIGHT,.2,{})
+assert(not p.pool[1].attached and not p.pool[1].bone,'reused slot has no stale attachment')
+print('PASS body arrow attachment motion/removal, group identity/material and clean pool reuse')
+
+local wallFX=0
+p=P.New{cast=function() return .5 end,wallHit=function(event)
+ wallFX=wallFX+1
+ assert(event.kind=='hit' and event.material=='stone' and event.tier=='arrow_mid' and event.dir.x>0)
+end}
+p:Fire(Vector3.ZERO,Vector3.RIGHT,.5,{})
+p:Update(.1);p:Update(.1)
+assert(wallFX==1,'wall impact emits once, embedded frames never repeat')
+print('PASS arrow wall pooled impact emitted once')

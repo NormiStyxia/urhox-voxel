@@ -2,13 +2,13 @@ local Base=require('combat.enemies.EnemyBase')
 ---@class MossBeetle: EnemyBase
 local Beetle=setmetatable({}, {__index=Base})
 Beetle.__index=Beetle
-Beetle.Config={kind='moss_beetle',name='苔壳虫',hp=30,poise=100,radius=.5,height=1,
+Beetle.Config={kind='moss_beetle',enemy='beetle',name='苔壳虫',hp=30,poise=100,radius=.5,height=1,
     speed=2.1,aggro=9,leash=25,attackDistance=2,defaultPart='shell',voxelSize=.09,
     parts={
-        {id='shell',x=0,y=.48,z=-.05,radius=.51,armor=18},
-        {id='side_l',x=-.46,y=.30,z=.03,radius=.19,weak=true,weakMultiplier=1.4},
-        {id='side_r',x=.46,y=.30,z=.03,radius=.19,weak=true,weakMultiplier=1.4},
-        {id='belly',x=0,y=.16,z=.19,radius=.30,weak=true,weakMultiplier=1.4,recoveryOnly=true},
+        {id='shell',material='armor',x=0,y=.48,z=-.05,radius=.51,armor=18},
+        {id='side_l',material='soft',bone='belly',x=-.46,y=.30,z=.03,radius=.19,weak=true,weakMultiplier=1.4},
+        {id='side_r',material='soft',bone='belly',x=.46,y=.30,z=.03,radius=.19,weak=true,weakMultiplier=1.4},
+        {id='belly',material='soft',x=0,y=.16,z=.19,radius=.30,weak=true,weakMultiplier=1.4,recoveryOnly=true},
     },
     attacks={{name='pounce',telegraph=.6,duration=.2,recover=.8,travel=1.8,
         range=1.8,hitRange=.75,warning='ring',damage=10,poise=8,cosine=-.2}},

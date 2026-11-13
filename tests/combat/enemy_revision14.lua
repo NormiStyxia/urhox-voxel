@@ -105,7 +105,7 @@ for _,fps in ipairs({30,60}) do
     local elapsed=0
     while e.state==Base.State.TELEGRAPH do e:Update(1/fps,Vector3(0,0,2)); elapsed=elapsed+1/fps end
     assert(elapsed>=.6-1e-8 and elapsed<=.6+1/fps+1e-8)
-    assert(e.cue.phase=='whoosh' and e.cue.sequence==sequence+1 and not e.warning.visible)
+    assert(e.cue.phase=='whoosh' and e.cue.sequence==sequence+2 and not e.warning.visible)
     elapsed=0
     while e.state==Base.State.ATTACK do e:Update(1/fps,Vector3(0,0,2)); elapsed=elapsed+1/fps end
     assert(elapsed>=.2-1e-8 and elapsed<=.2+1/fps+1e-8)

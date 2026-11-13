@@ -34,6 +34,28 @@ local function euler(p,y,r)
     result.angles=v(p,y,r)
     return result
 end
+function Q:FromEulerAngles(p,y,r)
+    local value=euler(p,y,r) --[[@as any]] -- recorded quaternion, not native userdata
+    self.w,self.x,self.y,self.z=value.w,value.x,value.y,value.z
+    self.angles=value.angles
+end
+function Q:FromAxes(x,y,z)
+    local trace=x.x+y.y+z.z
+    if trace>0 then
+        local s=math.sqrt(trace+1)*2
+        self.w,self.x,self.y,self.z=s/4,(y.z-z.y)/s,(z.x-x.z)/s,(x.y-y.x)/s
+    elseif x.x>y.y and x.x>z.z then
+        local s=math.sqrt(1+x.x-y.y-z.z)*2
+        self.w,self.x,self.y,self.z=(y.z-z.y)/s,s/4,(y.x+x.y)/s,(z.x+x.z)/s
+    elseif y.y>z.z then
+        local s=math.sqrt(1+y.y-x.x-z.z)*2
+        self.w,self.x,self.y,self.z=(z.x-x.z)/s,(y.x+x.y)/s,s/4,(z.y+y.z)/s
+    else
+        local s=math.sqrt(1+z.z-x.x-y.y)*2
+        self.w,self.x,self.y,self.z=(x.y-y.x)/s,(z.x+x.z)/s,(z.y+y.z)/s,s/4
+    end
+    self.angles=nil
+end
 rawset(_G,"Quaternion",euler)
 rawset(_G,"Vector3",setmetatable({ZERO=v(),UP=v(0,1,0),FORWARD=v(0,0,1)}, {__call=function(_,...) return v(...) end}))
 rawset(_G,"Color",function(r,g,b,a) return {r=r,g=g,b=b,a=a or 1} end)
@@ -41,6 +63,7 @@ rawset(_G,"Variant",function(value) return value end)
 rawset(_G,"BLEND_ALPHA",3)
 rawset(_G,"BLEND_ADDALPHA",4)
 rawset(_G,"CMP_LESSEQUAL",4)
+rawset(_G,"TRIANGLE_LIST",0)
 
 local N={}
 local function worldRotation(n)
@@ -71,6 +94,23 @@ end
 function N:SetParent(parent) self.parent=parent end
 function N:LocalToWorld(point) return worldPosition(self)+worldRotation(self)*point end
 function N:Remove() assert(not self.removed,"double node removal"); self.removed=true end
+
+-- Record the public immediate-mode API; no GPU/render/job-system simulation.
+function M.CustomGeometry(node)
+    local geom={node=node,vertices={},commits=0}
+    function geom:BeginGeometry(index,kind) assert(index==0 and kind==TRIANGLE_LIST) end
+    function geom:DefineVertex(position) self.vertices[#self.vertices+1]={position=position} end
+    function geom:DefineNormal(normal) self.vertices[#self.vertices].normal=normal end
+    function geom:DefineColor(color) self.vertices[#self.vertices].color=color end
+    function geom:SetMaterial(index,material) assert(index==0 and material);self.material=material end
+    function geom:Commit() self.commits=self.commits+1 end
+    function geom:GetNumVertices(index) assert(index==0);return self.empty and 0 or #self.vertices end
+    return geom
+end
+function N:CreateComponent(kind)
+    assert(kind=='CustomGeometry','preview must not create '..kind)
+    return M.CustomGeometry(self)
+end
 
 local function Pass()
     return {SetBlendMode=function(self,x) self.blend=x end,SetDepthWrite=function(self,x) self.depthWrite=x end,

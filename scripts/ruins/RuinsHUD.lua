@@ -161,6 +161,7 @@ function Layer:Render(vg)
         Draw.Rect(vg,x-1,y-1,2,2,c)
         Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
         Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
+        if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
     end
     if not touch and not CombatHUD.Active() then
         for i,b in ipairs({{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}) do

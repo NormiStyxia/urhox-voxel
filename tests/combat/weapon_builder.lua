@@ -186,4 +186,83 @@ local coarse=0
 Complete(function() coarse=coarse+3;return coarse end,false) -- always over budget; still advances
 rawset(_G,'time',savedTime);rawset(_G,'os',savedOs)
 assert(world.created==world.removed)
-print("weapon_builder: PASS (72 combinations, connected cells, sockets, bounds, overlap priority, cache, palette-only edits, cleanup)")
+-- Render-only greedy CustomGeometry: exact exposed surface coverage, no hidden
+-- faces/duplicates, outward winding, all palette channels, fixed grip/bounds.
+local savedCache=rawget(_G,'cache')
+local previewMaterial={}
+rawset(_G,'cache',{GetResource=function(_,kind,path)
+    assert(kind=='Material' and path=='Materials/NomiVoxel.xml');return previewMaterial
+end})
+local function PreviewConfig(value)
+    local pending=B.BeginPreview(scene,value,nil)
+    for _=1,1000 do if B.StepPreview(pending,2,nil) then break end end
+    assert(pending.done and pending.mesh and not pending.error)
+    local result=pending.mesh --[[@as any]] -- recorded custom geometry, not native userdata
+    local faces,seen={},{}
+    local function cellKey(p) return p[1]..':'..p[2]..':'..p[3] end
+    local function faceKey(axis,sign,layer,u,v) return table.concat({axis,sign,layer,u,v},':') end
+    local total=0
+    for _,cell in ipairs(result.blueprint.geometry.cells) do
+        local p={cell.x,cell.y,cell.z}
+        for axis=1,3 do for sign=-1,1,2 do
+            local neighbor={cell.x,cell.y,cell.z};neighbor[axis]=neighbor[axis]+sign
+            if not result.blueprint.geometry.sparse[cellKey(neighbor)] then
+                faces[faceKey(axis,sign,p[axis]+(sign==1 and 1 or 0),p[axis%3+1],p[(axis+1)%3+1])]=cell.channel
+                total=total+1
+            end
+        end end
+    end
+    local covered=0
+    for _,q in ipairs(result.quads) do
+        for u=q.u,q.u+q.w-1 do for v=q.v,q.v+q.h-1 do
+            local key=faceKey(q.axis,q.sign,q.layer,u,v)
+            assert(faces[key]==q.channel and not seen[key],'greedy mesh omitted/duplicated or merged across a color')
+            seen[key]=true;covered=covered+1
+        end end
+    end
+    assert(covered==total and #result.quads<total,'real weapon faces should merge')
+    local geom=result.geometry
+    assert(geom.material==previewMaterial and geom.commits==1 and #geom.vertices==#result.quads*6)
+    local lower,upper={math.huge,math.huge,math.huge},{-math.huge,-math.huge,-math.huge}
+    for i,vertex in ipairs(geom.vertices) do
+        local p={vertex.position.x,vertex.position.y,vertex.position.z}
+        for axis=1,3 do lower[axis]=math.min(lower[axis],p[axis]);upper[axis]=math.max(upper[axis],p[axis]) end
+        assert(vertex.color and vertex.color.a==1 and vertex.normal)
+        local channel=result.quads[math.ceil(i/6)].channel
+        ---@type number[]
+        local rgb=P.ColorPresets[value.colors[channel=='dark' and 'primary' or channel]].rgb
+        local shade=channel=='dark' and .38 or 1
+        Mock.Near(vertex.color.r,rgb[1]/255*shade)
+        Mock.Near(vertex.color.g,rgb[2]/255*shade)
+        Mock.Near(vertex.color.b,rgb[3]/255*shade)
+    end
+    for axis=1,3 do Mock.Near(lower[axis],result.blueprint.bounds.min[axis]);Mock.Near(upper[axis],result.blueprint.bounds.max[axis]) end
+    for i=1,#geom.vertices,3 do
+        local a,b,d=geom.vertices[i],geom.vertices[i+1],geom.vertices[i+2]
+        local e=(b.position-a.position) --[[@as Vector3]]
+        local f=(d.position-a.position) --[[@as Vector3]]
+        local cross={e.y*f.z-e.z*f.y,e.z*f.x-e.x*f.z,e.x*f.y-e.y*f.x}
+        assert(cross[1]*a.normal.x+cross[2]*a.normal.y+cross[3]*a.normal.z>0,'back-face culled preview')
+    end
+    B.DisposePreview(result);B.DisposePreview(result)
+    assert(result.node.removed and not result.volume and world.created==world.removed)
+end
+for weapon,slots in pairs(P.Slots) do
+    local value=config(weapon)
+    local function combinations(i)
+        if i>#slots then PreviewConfig(value);return end
+        for _,part in ipairs(P.GetOptions(weapon,slots[i])) do value.parts[slots[i]]=part.id;combinations(i+1) end
+    end
+    combinations(1)
+end
+local tinted=config('sword');tinted.colors={primary=6,secondary=5,accent=2};PreviewConfig(tinted)
+for _,phase in ipairs({'quads','create','emit','commit','publish'}) do
+    local pending=B.BeginPreview(scene,config('bow'),nil)
+    for _=1,1000 do if pending.phase==phase then break end;B.StepPreview(pending,2,nil) end
+    assert(pending.phase==phase)
+    local node=pending.node
+    B.CancelPreview(pending);B.CancelPreview(pending)
+    assert(pending.cancelled and (not node or node.removed))
+end
+rawset(_G,'cache',savedCache)
+print("weapon_builder: PASS (72 volume+greedy preview combinations, exact surface/color coverage, winding, bounds, cancellation, cache)")

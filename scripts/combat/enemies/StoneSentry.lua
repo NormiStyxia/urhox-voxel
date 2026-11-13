@@ -3,11 +3,11 @@ local Base=require('combat.enemies.EnemyBase')
 ---@field stones table[]
 local Sentry=setmetatable({}, {__index=Base})
 Sentry.__index=Sentry
-Sentry.Config={kind='stone_sentry',name='碎石哨灵',ranged=true,hp=24,poise=100,radius=.55,height=2.4,
+Sentry.Config={kind='stone_sentry',enemy='sentry',name='碎石哨灵',ranged=true,hp=24,poise=100,radius=.55,height=2.4,
     hover=1.1,speed=2.7,aggro=15,leash=32,attackDistance=12,defaultPart='body',voxelSize=.1,
     parts={
-        {id='body',x=0,y=.40,z=0,radius=.56,armor=0},
-        {id='core',x=0,y=.38,z=.48,radius=.22,weak=true},
+        {id='body',material='stone',x=0,y=.40,z=0,radius=.56,armor=0},
+        {id='core',material='core',x=0,y=.38,z=.48,radius=.22,weak=true},
     },
     attacks={{name='stone',telegraph=.9,duration=.12,recover=1.2,range=12,warning='line',damage=9,poise=7}},
     sculpt={
@@ -22,7 +22,7 @@ function Sentry.New(scene,world,terrain,combat,position,id)
     local started=os.clock()
     self.stones={}
     for i=1,3 do
-        local shape={id='stone_'..i,center=Vector3(0,0,0),radius=0,weak=false,enabled=false}
+        local shape={id='stone_'..i,center=Vector3(0,0,0),radius=0,weak=false,enabled=false,material='stone'}
         self.hurtShapes[#self.hurtShapes+1]=shape
         local stone={active=false,age=0,x=0,y=0,z=0,vx=0,vy=0,vz=0,shape=shape,
             info={dmg=9,poise=7,kind='stone',source=self.id,pos=Vector3.ZERO,dir=Vector3.FORWARD}}
@@ -107,9 +107,18 @@ function Sentry:ApplyHit(info)
     if info.part and info.part:sub(1,6)=='stone_' then
         local index=tonumber(info.part:sub(7))
         local stone=index and self.stones[index]
-        self.result.hit,self.result.killed,self.result.partBroken=false,false,nil
+        self:ClearHitResult()
         if stone and stone.active and info.kind=='sword' then
+            local fx=self.impact
+            local pos,dir=info.pos or stone.shape.center,info.dir or Vector3.FORWARD
+            fx.pos,fx.dir=Vector3(pos.x,pos.y,pos.z),Vector3(dir.x,dir.y,dir.z)
+            local normal=info.normal
+            fx.normal=normal and Vector3(normal.x,normal.y,normal.z) or Vector3(-dir.x,-dir.y,-dir.z)
+            fx.material,fx.part,fx.tier,fx.kind,fx.weak='stone',info.part,info.tier or 'light','deflect',false
+            fx.swingId,fx.weapon=info.swingId,info.weapon or info.kind
             hide(stone); self.result.hit=true
+            self.result.part,self.result.material=info.part,'stone'
+            self:StageHitPresentation(info,self.result)
         end
         return self.result
     end

@@ -96,15 +96,15 @@ for _,e in ipairs(pack) do assert(e.particles==pool) end
 for _,slot in ipairs(pool.slots) do pool:Hide(slot) end
 local firstSlot=pool.slots[1]
 for _,e in ipairs(pack) do
-    for _=1,30 do pool:Emit(e,3,false) end
+    for _=1,30 do pool:Emit(e,{pos=Vector3.ZERO,dir=Vector3.FORWARD,material='soft',tier='light'}) end
     assert(pool.count<=64)
 end
-assert(pool.count==64)
+assert(pool.count==40,'normal cubes preserve reserved slots and flat quota')
 for _,e in ipairs(pack) do e:ApplyHit({dmg=1000}) end
 assert(pool.count<=64 and pool.peak<=64)
 for _,e in ipairs(pack) do T.Tick(e,1.5,combat.pos) end
 assert(pool.count==0 and pool.slots[1]==firstSlot)
-assert(pool:Emit(pack[1],16,true)==16 and pool.slots[1]==firstSlot)
+assert(pool:Emit(pack[1],{pos=Vector3.ZERO,dir=Vector3.FORWARD,material='stone',kind='death'})==12 and pool.slots[1]==firstSlot)
 for _,e in ipairs(pack) do e:Destroy() end
 assert(pool.count==0)
 for _,class in ipairs({Beetle,Sentry,Beast}) do
