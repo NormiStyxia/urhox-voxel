@@ -174,7 +174,7 @@ void fragment() {
     if (hover > 0.0) {
         vec3 view = normalize(CAMERA_POSITION_WORLD - VERTEX);
         float fres = pow(1.0 - clamp(dot(NORMAL, view), 0.0, 1.0), 3.0);
-        ALBEDO = mix(ALBEDO, ALBEDO * 0.85 + hover_color.rgb * 0.15, hover);
-        EMISSION += hover_color.rgb * (0.12 + fres * 2.4) * hover;
+        ALBEDO = mix(ALBEDO, ALBEDO * 0.75 + hover_color.rgb * 0.25, hover);
+        EMISSION += hover_color.rgb * (0.35 + fres * 2.4) * hover;
     }
 }
