@@ -1,0 +1,105 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 51316,
+    "frames_completed": 20,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 15142.9ms (threshold: 500ms)",
+                    "frame": 9
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2013,
+            "component_count": 3356,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 49,
+            "hash": 3539576699,
+            "frame_time_ms": 33499.87890625
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 4212872727,
+            "frame_time_ms": 16.586000442504884
+        },
+        {
+            "frame": 20,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 4212872727,
+            "frame_time_ms": 16.61400032043457
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 15142.9267578125,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 6,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "CustomGeometry": 1910,
+        "VoxelVolume": 634,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 179,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 3,
+        "VoxelChunkDrawable": 165
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 2065,
+        "passed": 2060,
+        "failed": 5
+    },
+    "test_issues": [
+        "正式形状六面可选 stele1 yaw=37 axis=2 sign=-1",
+        "正式形状六面可选 stele1 yaw=37 axis=2 sign=-1",
+        "正式形状六面可选 stele1 yaw=37 axis=2 sign=-1",
+        "正式形状六面可选 stele1 yaw=37 axis=2 sign=-1",
+        "正式形状六面可选 stele1 yaw=37 axis=2 sign=-1"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 1,
+        "total_errors": 1
+    }
+}
