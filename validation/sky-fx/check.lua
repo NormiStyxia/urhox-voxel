@@ -20,7 +20,7 @@ package.loaded['urhox-libs.Platform.PlatformUtils']={IsWebPlatform=function()ret
 graphics={GetComputeShaderSupport=function()return compute end}
 renderer={SetVolumetricFogFroxelEnabled=function(self,v)self.froxel=v end,SetVolumetricFogQuality=function(self,v)self.fogQuality=v end}
 Material={new=function()return{Dispose=dispose,params={},SetShaderParameter=function(s,k,v)s.params[k]=v end,SetTechnique=function()end,SetTexture=function()end,SetSurfaceShader=function()return true end,SetSurfaceTexture=function(s,k,v)s.textureBinds=(s.textureBinds or 0)+1;s.textureName=k;return true end,Clone=function()return Material:new()end}end}
-cache={GetResource=function(_,kind,path)local r=Material:new();if path=='Textures/Sky/cloud_density.png' then r.width,r.height=4096,1536 elseif path=='Textures/Sky/cloud_density_low.png' then r.width,r.height=2048,256 elseif path=='Textures/Sky/cloud_occupancy.png' then r.width,r.height=256,128 end;return r end}
+cache={GetResource=function(_,kind,path)local r=Material:new();if path=='Textures/Sky/cloud_sculpted_atlas.png' then r.width,r.height=2048,1024 elseif path=='Textures/Sky/cloud_sculpted_atlas_low.png' then r.width,r.height=1024,512 end;return r end}
 Image=function()return{Dispose=dispose,SetSize=function()end,SetPixel=function()end}end
 Texture2D={new=function()return{Dispose=dispose,SetData=function()end}end}
 ParticleEffect={new=function()return{Dispose=dispose,frames={},SetNumColorFrames=function()end,AddColorTime=function(s,c,t)table.insert(s.frames,{color=c,time=t})end}end}
@@ -87,12 +87,12 @@ for _,g in pairs(atmosphere.clouds.geometry) do
   local ux,uy,uz=b.x-a.x,b.y-a.y,b.z-a.z
   local vx,vy,vz=c.x-a.x,c.y-a.y,c.z-a.z
   local area=(uy*vz-uz*vy)*(a.normal.x+b.normal.x+c.normal.x)+(uz*vx-ux*vz)*(a.normal.y+b.normal.y+c.normal.y)+(ux*vy-uy*vx)*(a.normal.z+b.normal.z+c.normal.z)
-  assert(area~=0) -- proxy only; normal is not a cloud surface
+  assert(area~=0 or (a.x==b.x and a.x==c.x and a.y==b.y and a.y==c.y and a.z==b.z and a.z==c.z)) -- only two deliberate zero-area bounds triangles
  end
 end
-assert(triangles==1 and atmosphere.clouds.batchCount==1 and atmosphere.clouds.shapeCount==6)
+assert(triangles==194 and atmosphere.clouds.batchCount==1 and atmosphere.clouds.shapeCount==8)
 assert(#atmosphere.shafts.geometry.verts/3==32)
-print('PASS high actual geometry: 24 density clouds / 1 integration triangle / 1 batch / 6 recipes; 8 shafts / 32 triangles; 80 motes')
+print('PASS high actual geometry: 24 celestial patches / 192 visible + 2 bounds triangles / 1 batch / 8 baked shapes; 8 shafts / 32 triangles; 80 motes')
 local oldCloud,oldShaft,oldMote=atmosphere.clouds,atmosphere.shafts,atmosphere.motes
 settings.Set('quality','medium')
 assert(oldCloud.root.disposed and oldCloud.material.disposed)
@@ -100,7 +100,7 @@ assert(oldShaft.node.disposed and oldShaft.material.disposed)
 assert(oldMote.node.disposed and oldMote.effect.disposed and oldMote.material.disposed and oldMote.texture.disposed)
 assert(atmosphere.clouds.count==12 and atmosphere.shafts.count==3 and atmosphere.motes.count==28)
 FinishCloud(atmosphere.clouds)
-assert(atmosphere.clouds.triangleCount==1 and atmosphere.clouds.batchCount==1)
+assert(atmosphere.clouds.triangleCount==atmosphere.clouds.count*8+2 and atmosphere.clouds.batchCount==1)
 assert(atmosphere.realFog and dn.zone.volumetricFogViewDistance==60)
 print('PASS medium budgets and high instances explicitly disposed, not just hidden')
 local ground=Material:new()
@@ -115,18 +115,18 @@ oldCloud,oldShaft,oldMote=atmosphere.clouds,atmosphere.shafts,atmosphere.motes
 settings.Set('quality','low')
 assert(oldCloud.root.disposed and oldShaft.node.disposed and oldMote.texture.disposed)
 assert(not atmosphere.shafts and not atmosphere.motes and atmosphere.clouds and atmosphere.clouds.horizonOnly)
-FinishCloud(atmosphere.clouds);assert(atmosphere.clouds.triangleCount==1 and atmosphere.clouds.batchCount==1)
+FinishCloud(atmosphere.clouds);assert(atmosphere.clouds.triangleCount==atmosphere.clouds.count*8+2 and atmosphere.clouds.batchCount==1)
 assert(ground.params.cloud_shadow_strength==0 and not renderer.froxel)
-print('PASS low releases detailed clouds/effects, keeps 16-step horizon density, stops shadow/froxel')
+print('PASS low releases detailed clouds/effects, keeps 4 horizon patches, stops shadow/froxel')
 settings.Set('quality','high')
 local cancelled=atmosphere.clouds
 for i=1,8 do atmosphere:Update(1/60,Vector3.ZERO,ground)end
 assert(cancelled.ready and not cancelled.baking and cancelled.bakeSlices==0)
 settings.Set('quality','medium')
 assert(cancelled.root.disposed and cancelled.material.disposed and not cancelled.job and not cancelled.baking)
-FinishCloud(atmosphere.clouds);assert(atmosphere.clouds.triangleCount==1)
+FinishCloud(atmosphere.clouds);assert(atmosphere.clouds.triangleCount==atmosphere.clouds.count*8+2)
 settings.Set('quality','low');assert(atmosphere.clouds.horizonOnly)
-print('PASS real settings replace an immediately ready high density pass, dispose it, build medium and release on low')
+print('PASS real settings replace an immediately ready high patch mesh, dispose it, build medium and release on low')
 for _,platform in ipairs({'desktop','web','mobile','noCompute'})do
  web,mobile,compute=platform=='web',platform=='mobile',platform~='noCompute'
  for _,q in ipairs({'high','medium','low'})do
@@ -204,7 +204,7 @@ for step=0,288 do
  for _,color in ipairs({params.sky_top,params.sky_horizon})do
   for _,value in ipairs({color.r,color.g,color.b})do assert(value==value and value>=0 and value<=1)end
  end
- assert(params.use_atlas==nil,'3D cloud must not retain atlas uniforms')
+ assert(params.cloud_enabled==1 and params.use_volume==nil,'only the celestial atlas path is active')
  assert(dn.sun.brightness>=.16-1e-9 and dn.sun.brightness<=2.2+1e-9)
  assert(dn.zone.fogColor.r==dn.sky.skyHorizonColor.r)
  assert(dn.sky.groundBottomColor.b<=.42+1e-9)
@@ -261,7 +261,7 @@ standalone:Stop()
 print('PASS missing optional settings/log modules: safe standalone high defaults')
 
 local resource=cache.GetResource
-assert(loadfile('validation/sky-fx/density_contract.lua'))()(scene,dn,FinishCloud)
+assert(loadfile('validation/sky-fx/skycards_contract.lua'))()(scene,dn,FinishCloud)
 
 local projected=Standalone.New(scene,dn)
 local groundA,groundB=Material:new(),Material:new()

@@ -109,6 +109,7 @@ function M:ApplySwitches()
     if not self.settingsManaged then Quality.ApplyStandaloneScene(self.dayNight.zone,self.dayNight.sun,p,f.bloom) end
     self.shadowActive=count>0 and f.cloudShadow==true
     self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive
+    if self.clouds then self.clouds:Update(0,self.dayNight.day or 1,self.dayNight.dusk or 0,self.dayNight) end
     if self.shafts then self.shafts:Update(self.dayNight,true,self.realFog) end
     self:ApplyCloudShadow()
     self.elapsed = 0.2
@@ -135,6 +136,7 @@ end
 ---@param ground Material|nil
 function M:Update(dt,position,ground)
     if not self.active or self.stopped then return end
+    if self.clouds then self.clouds:Follow(position) end
     self.clock,self.elapsed = self.clock+math.max(0,dt),self.elapsed+math.max(0,dt)
     if ground~=self.ground then
         if self.ground then self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
@@ -162,9 +164,8 @@ function M:Probe()
         cloudShapes=self.clouds and self.clouds.shapeCount or 0,cloudTriangles=self.clouds and self.clouds.triangleCount or 0,
         cloudBaking=self.clouds and self.clouds.baking or false,cloudReady=self.clouds and self.clouds.readyCount or 0,
         cloudFallback=self.clouds and self.clouds.fallback or false,
-        cloudMethod="density_raymarch",cloudUnavailable=self.clouds and self.clouds.unavailable or false,
-        cloudViewSteps=self.clouds and self.clouds.viewSteps or 0,cloudLightSteps=self.clouds and self.clouds.lightSteps or 0,
-        cloudTraversalSteps=self.clouds and self.clouds.traversalSteps or 0,
+        cloudMethod="celestial_patches",cloudUnavailable=self.clouds and self.clouds.unavailable or false,
+        cloudTextureReads=self.clouds and self.clouds.textureReads or 0,
         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,
         batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)}

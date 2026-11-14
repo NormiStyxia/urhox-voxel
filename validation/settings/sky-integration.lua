@@ -20,7 +20,7 @@ package.loaded['urhox-libs.Platform.PlatformUtils']={IsWebPlatform=function()ret
 graphics={GetComputeShaderSupport=function()return compute end}
 renderer={SetVolumetricFogFroxelEnabled=function(self,v)self.froxel=v end,SetVolumetricFogQuality=function(self,v)self.fogQuality=v end}
 Material={new=function()return{Dispose=dispose,params={},SetShaderParameter=function(s,k,v)s.params[k]=v end,SetTechnique=function()end,SetTexture=function()end,SetSurfaceShader=function()return true end,SetSurfaceTexture=function(s,k,v)s.textureBinds=(s.textureBinds or 0)+1;s.textureName=k;return true end,Clone=function()return Material:new()end}end}
-cache={GetResource=function(_,kind,path)local r=Material:new();if path=='Textures/Sky/cloud_density.png' then r.width,r.height=4096,1536 elseif path=='Textures/Sky/cloud_density_low.png' then r.width,r.height=2048,256 elseif path=='Textures/Sky/cloud_occupancy.png' then r.width,r.height=256,128 end;return r end}
+cache={GetResource=function(_,kind,path)local r=Material:new();if path=='Textures/Sky/cloud_sculpted_atlas.png' then r.width,r.height=2048,1024 elseif path=='Textures/Sky/cloud_sculpted_atlas_low.png' then r.width,r.height=1024,512 end;return r end}
 Image=function()return{Dispose=dispose,SetSize=function()end,SetPixel=function()end}end
 Texture2D={new=function()return{Dispose=dispose,SetData=function()end}end}
 ParticleEffect={new=function()return{Dispose=dispose,frames={},SetNumColorFrames=function()end,AddColorTime=function(s,c,t)table.insert(s.frames,{color=c,time=t})end}end}
@@ -110,12 +110,12 @@ for _,g in pairs(atmosphere.clouds.geometry) do
   local ux,uy,uz=b.x-a.x,b.y-a.y,b.z-a.z
   local vx,vy,vz=c.x-a.x,c.y-a.y,c.z-a.z
   local area=(uy*vz-uz*vy)*(a.normal.x+b.normal.x+c.normal.x)+(uz*vx-ux*vz)*(a.normal.y+b.normal.y+c.normal.y)+(ux*vy-uy*vx)*(a.normal.z+b.normal.z+c.normal.z)
-  assert(area~=0) -- proxy only; normal is not a cloud surface
+  assert(area~=0 or (a.x==b.x and a.x==c.x and a.y==b.y and a.y==c.y and a.z==b.z and a.z==c.z)) -- only two deliberate zero-area bounds triangles
  end
 end
-assert(triangles==1 and atmosphere.clouds.batchCount==1 and atmosphere.clouds.shapeCount==6)
+assert(triangles==194 and atmosphere.clouds.batchCount==1 and atmosphere.clouds.shapeCount==8)
 assert(#atmosphere.shafts.geometry.verts/3==32)
-print('PASS high actual geometry: 24 density clouds / 1 integration triangle / 1 batch / 6 recipes; 8 shafts / 32 triangles; 80 motes')
+print('PASS high actual geometry: 24 celestial patches / 192 visible + 2 bounds triangles / 1 batch / 8 baked shapes; 8 shafts / 32 triangles; 80 motes')
 local oldCloud,oldShaft,oldMote=atmosphere.clouds,atmosphere.shafts,atmosphere.motes
 settings.Set('quality','medium')
 assert(oldCloud.root.disposed and oldCloud.material.disposed)
@@ -123,7 +123,7 @@ assert(oldShaft.node.disposed and oldShaft.material.disposed)
 assert(oldMote.node.disposed and oldMote.effect.disposed and oldMote.material.disposed and oldMote.texture.disposed)
 assert(atmosphere.clouds.count==12 and atmosphere.shafts.count==3 and atmosphere.motes.count==28)
 FinishCloud(atmosphere.clouds)
-assert(atmosphere.clouds.triangleCount==1 and atmosphere.clouds.batchCount==1)
+assert(atmosphere.clouds.triangleCount==atmosphere.clouds.count*8+2 and atmosphere.clouds.batchCount==1)
 assert(atmosphere.realFog and dn.zone.volumetricFogViewDistance==60)
 print('PASS medium budgets and high instances explicitly disposed, not just hidden')
 local ground=Material:new()
@@ -138,9 +138,9 @@ oldCloud,oldShaft,oldMote=atmosphere.clouds,atmosphere.shafts,atmosphere.motes
 settings.Set('quality','low')
 assert(oldCloud.root.disposed and oldShaft.node.disposed and oldMote.texture.disposed)
 assert(not atmosphere.shafts and not atmosphere.motes and atmosphere.clouds and atmosphere.clouds.horizonOnly)
-FinishCloud(atmosphere.clouds);assert(atmosphere.clouds.triangleCount==1 and atmosphere.clouds.batchCount==1)
+FinishCloud(atmosphere.clouds);assert(atmosphere.clouds.triangleCount==atmosphere.clouds.count*8+2 and atmosphere.clouds.batchCount==1)
 assert(ground.params.cloud_shadow_strength==0 and not renderer.froxel)
-print('PASS low releases detailed clouds/effects, keeps 16-step horizon density, stops shadow/froxel')
+print('PASS low releases detailed clouds/effects, keeps 4 horizon patches, stops shadow/froxel')
 for _,platform in ipairs({'desktop','web','mobile','noCompute'})do
  web,mobile,compute=platform=='web',platform=='mobile',platform~='noCompute'
  for _,q in ipairs({'high','medium','low'})do

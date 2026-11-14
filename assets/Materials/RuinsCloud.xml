@@ -1,6 +1,6 @@
 <material>
     <surfaceshader name="Shaders/BLGL/RuinsCloud.shader" />
-    <!-- Bound by SkyClouds: low tier must not preload the large density atlas. -->
-    <!-- Scalar data, never an sRGB albedo. Lua validates binding before enabling. -->
-    <parameter name="use_volume" value="0" />
+    <!-- Bound by SkyClouds: high uses 2048x1024, medium/low use 1024x512. -->
+    <!-- Linear mask data. Missing/failed binding stays hidden, never a white quad. -->
+    <parameter name="cloud_enabled" value="0" />
 </material>
