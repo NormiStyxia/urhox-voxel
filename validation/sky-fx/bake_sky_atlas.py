@@ -20,11 +20,14 @@ def sculpture(index):
     for generation in range(2):
         children=[]
         for x,y,z,rx,ry,rz in parents:
-            for k in range(7 if generation==0 else 5):
-                az=rng.uniform(0,math.tau); up=rng.uniform(-.12,.97)
-                radial=math.sqrt(1-up*up); ratio=rng.uniform(.26,.42)
+            for k in range(9 if generation==0 else 5):
+                # Spend the first detail tier on the visible hemisphere. Random
+                # rear buds were hidden by the large parent lobes in the bake.
+                az=rng.uniform(.05,math.pi-.05) if generation==0 else rng.uniform(0,math.tau)
+                up=rng.uniform(-.12,.97)
+                radial=math.sqrt(1-up*up); ratio=rng.uniform(.18,.30)
                 nx,ny,nz=radial*math.cos(az),up,radial*math.sin(az)
-                child=[x+rx*nx*.94,y+ry*ny*.94,z+rz*nz*.94,rx*ratio,ry*ratio,rz*ratio]
+                child=[x+rx*nx,y+ry*ny,z+rz*nz,rx*ratio,ry*ratio,rz*ratio]
                 children.append(child)
         balls.extend(children);parents=children
     balls=np.array(balls)
@@ -77,9 +80,15 @@ def bake_cell(index):
     assert alpha[:20].max()==0 and alpha[-20:].max()==0 and alpha[:,:20].max()==0 and alpha[:,-20:].max()==0
     return np.rint(np.clip(data,0,1)*255).astype(np.uint8),len(balls)
 
+def resize_channels(data,size):
+    # These are independent scalar fields, NOT colour RGB. PIL RGBA resize
+    # premultiplies/unpremultiplies RGB with A, corrupting small mask values.
+    return np.stack([np.asarray(Image.fromarray(data[...,i].astype(np.float32))
+        .resize(size,Image.Resampling.LANCZOS)) for i in range(4)],axis=-1)
+
 def bake_volume_cell(index):
     # High-quality OFFLINE integration; the runtime only samples the baked channels.
-    balls=sculpture(index);n,nz=384,128
+    balls=sculpture(index);n,nz=512,160
     lo=np.min(balls[:,:3]-balls[:,3:],axis=0);hi=np.max(balls[:,:3]+balls[:,3:],axis=0)
     center=(lo+hi)*.5;span=max((hi-lo)[:2])*1.22;depth=(hi[2]-lo[2])*1.15
     axis=(np.arange(n)+.5)/n-.5;az=(np.arange(nz)+.5)/nz-.5
@@ -90,28 +99,28 @@ def bake_volume_cell(index):
         if not len(ix)*len(iy)*len(iz):continue
         sl=np.s_[iz[0]:iz[-1]+1,iy[0]:iy[-1]+1,ix[0]:ix[-1]+1]
         q=(np.sqrt(((zs[iz,None,None]-bz)/rz)**2+((ys[None,iy,None]-by)/ry)**2+((xs[None,None,ix]-bx)/rx)**2)-1)*min(rx,ry,rz)
-        old=sdf[sl];h=np.maximum(.07-np.abs(old-q),0)/.07
-        sdf[sl]=np.minimum(old,q)-h*h*.0175
+        old=sdf[sl];h=np.maximum(.055-np.abs(old-q),0)/.055
+        sdf[sl]=np.minimum(old,q)-h*h*.01375
     rng=np.random.default_rng(115+index)
-    for cells,amp in [(12,.065),(28,.030),(56,.012)]:
+    for cells,amp in [(12,.05),(28,.025),(56,.008)]:
         noise=zoom(rng.uniform(-1,1,(max(4,cells//3),cells,cells)).astype(np.float32),(nz/max(4,cells//3),n/cells,n/cells),order=1,prefilter=False)
         sdf+=noise*amp
-    density=np.clip((.045-sdf)/.09,0,1);density=density*density*(3-2*density)
+    density=np.clip((.02-sdf)/.04,0,1);density=density*density*(3-2*density)
     del sdf
     # Directional single scattering baked for the artist's upper-left key; runtime
     # adds broad dynamic direction colour/wrap. This is not dynamic 3D self-shadow.
     sun=np.array([-.48,.72,.50]);sun/=np.linalg.norm(sun)
     tau=np.zeros_like(density)
-    ds=.065
-    for step in range(1,19):
+    ds=.045
+    for step in range(1,25):
         offset=sun*ds*step
         tau+=shift(density,[-offset[2]/(depth/nz),offset[1]/(span/n),-offset[0]/(span/n)],order=1,mode='constant',cval=0,prefilter=False)*ds*3.5
     visibility=np.exp(-tau);del tau
     trans=np.ones((n,n));radiance=np.zeros((n,n));depthsum=np.zeros((n,n));mass=np.zeros((n,n))
     dz=depth/nz
     for z in range(nz-1,-1,-1):
-        a=1-np.exp(-density[z]*dz*7.5);weight=trans*a
-        lit=.30+.70*visibility[z]**.6
+        a=1-np.exp(-density[z]*dz*8.0);weight=trans*a
+        lit=.32+.68*visibility[z]**.8
         radiance+=weight*lit;depthsum+=weight*zs[z];mass+=density[z]*dz
         trans*=1-a
     alpha=1-trans
@@ -120,14 +129,18 @@ def bake_volume_cell(index):
     indices=distance_transform_edt(~mask,return_distances=False,return_indices=True)
     front=gaussian_filter(front[tuple(indices)],1.2)
     _,gx=np.gradient(front,span/n);nx=-gx/np.sqrt(1+gx*gx)
-    thin=np.exp(-mass*5.5)*alpha
+    thin=np.exp(-mass*3.8)*alpha
+    # Keep a thin upper/side shoulder, not an equally bright full outline.
+    ay,ax=np.gradient(gaussian_filter(alpha,1.0))
+    edge_facing=np.clip((-ax*sun[0]+ay*sun[1])/np.maximum(np.hypot(ax,ay),.0001),0,1)
+    thin*=.2+.8*edge_facing
     light=light[tuple(indices)]
     # Authored coverage is separate from radiance: a crisp body with a short AA edge,
     # rather than displaying the whole low-density halo as pale fog.
     coverage=np.clip((alpha-.12)/.76,0,1);coverage=coverage*coverage*(3-2*coverage)
     channels=np.stack([light,thin,nx*.5+.5,coverage],axis=-1)
-    out=Image.fromarray(np.rint(np.clip(channels,0,1)*255).astype(np.uint8)).resize((SIZE,SIZE),Image.Resampling.LANCZOS)
-    return np.asarray(out),len(balls)
+    out=np.rint(np.clip(resize_channels(channels,(SIZE,SIZE)),0,1)*255).astype(np.uint8)
+    return out,len(balls)
 
 def main():
     start=time.perf_counter();atlas=np.zeros((1024,2048,4),dtype=np.uint8)
@@ -136,7 +149,8 @@ def main():
         print('shape',i+1,'sculpture lobes',count,'coverage',int(np.sum(cell[...,3]>127)))
     path=ROOT/'assets/Textures/Sky/cloud_sculpted_atlas.png'
     Image.fromarray(atlas).save(path)
-    Image.fromarray(atlas).resize((1024,512),Image.Resampling.LANCZOS).save(path.with_name('cloud_sculpted_atlas_low.png'))
+    small=np.rint(np.clip(resize_channels(atlas.astype(float)/255,(1024,512)),0,1)*255).astype(np.uint8)
+    Image.fromarray(small).save(path.with_name('cloud_sculpted_atlas_low.png'))
     # Neutral shader-like colour preview, explicitly an asset view rather than Web.
     t=atlas.astype(float)/255;a=t[...,3,None];light=t[...,0,None]
     color=np.array([.26,.38,.58])*(1-light)+np.array([1.,.97,.90])*light

@@ -37,7 +37,9 @@ def mipmaps(low=False):
  while True:
   result.append(np.asarray(im,dtype=float)/255)
   if im.width==1 and im.height==1:break
-  im=im.resize((max(1,im.width//2),max(1,im.height//2)),Image.Resampling.BOX)
+  # Independent scalar channels: RGBA colour resize would premultiply by A.
+  size=(max(1,im.width//2),max(1,im.height//2))
+  im=Image.merge('RGBA',[channel.resize(size,Image.Resampling.BOX) for channel in im.split()])
  return result
 def sample(mips,uv,lod):
  result=np.zeros((len(uv),4));l=np.clip(lod,0,len(mips)-1);base=np.floor(l).astype(int);frac=l-base
@@ -54,7 +56,8 @@ def background(d,p):
 def shade(data,d,right,p,haze):
  sun=p['sun']/np.linalg.norm(p['sun']);day=p['day'];dusk=p['dusk']
  toward=smooth(.45,.98,d@sun);lateral=right@sun
- lit=smooth(.38,.94,np.clip(data[:,0]+(data[:,2]-.5)*lateral*.16,0,1))
+ shape=np.clip(data[:,0]+(data[:,2]-.5)*lateral*.16,0,1)
+ lit=shape*.30+smooth(.28,.98,shape)*.70
  dark=(np.array([.009,.018,.042])*(1-day)+np.array([.26,.38,.58])*day)*(1-dusk*.82)+np.array([.18,.105,.20])*dusk*.82
  light=np.array([.055,.085,.15])*(1-day)+np.array([.98,.96,.91])*day
  warm=dusk*(.62+.25*toward);light=light[None,:]*(1-warm[:,None])+np.array([1.,.40,.18])*warm[:,None]
@@ -85,10 +88,9 @@ def render(yaw,pitch,hour,count=24,w=640,h=360):
    dp=t[ids,None]*(dr-rays[ids]*(dr@n/safe[ids])[:,None])
    df=(dp@e1*d22-dp@e2*d12)/det;dg=(dp@e2*d11-dp@e1*d12)/det
    duv=df[:,None]*(tri[1,3:5]-tri[0,3:5])+dg[:,None]*(tri[2,3:5]-tri[0,3:5])
-   deriv.append(np.stack([duv[:,0]+np.cos(uv[:,1]*137)*.00018*137*duv[:,1],duv[:,1]-np.sin(uv[:,0]*123)*.00018*123*duv[:,0]],axis=-1))
+   deriv.append(duv)
   dims=np.array(mips[0].shape[:2])[::-1]
   lod=np.log2(np.maximum(1,np.maximum(np.linalg.norm(deriv[0]*dims,axis=1),np.linalg.norm(deriv[1]*dims,axis=1))))
-  uv+=np.stack([np.sin(uv[:,1]*137),np.cos(uv[:,0]*123)],axis=-1)*.00018
   data=sample(mips,uv,lod);lods.extend(lod.tolist())
   localRight=np.array([tri[0,11],0,-tri[0,9]]);localRight/=max(np.linalg.norm(localRight),.0001)
   out,alpha=shade(data,direction[ids],localRight,p,tri[0,7]);alpha=np.where(data[:,3]<.003,0,alpha)

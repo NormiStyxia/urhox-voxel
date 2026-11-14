@@ -36,8 +36,9 @@ void vertex() {
 
 void fragment() {
     if (cloud_enabled<0.5) { discard; }
-    // At most ~0.4 atlas pixels, within the 20+px transparent cell gutters.
-    vec2 uv=UV+vec2(sin(UV.y*137.0+drift_time*0.015),cos(UV.x*123.0+drift_time*0.011))*0.00018;
+    // Stable silhouette: whole-cloud angular drift remains in vertex().
+    // Do not wobble the AA edge by subpixel UV distortion.
+    vec2 uv=UV;
     vec4 data=texture(cloud_atlas,uv);
     if (data.a<0.003) { discard; }
     vec3 dir=normalize(cloud_direction);
@@ -45,7 +46,9 @@ void fragment() {
     sun=length(sun)>0.001 ? sun/length(sun) : vec3(0.0,1.0,0.0);
     float toward=smoothstep(0.45,0.98,dot(dir,sun));
     float lateral=dot(sun,cloud_right);
-    float lit=smoothstep(0.38,0.94,clamp(data.r+(data.b-0.5)*lateral*0.16,0.0,1.0));
+    float shape_light=clamp(data.r+(data.b-0.5)*lateral*0.16,0.0,1.0);
+    // Retain fine shoulder values instead of flattening the brightest lobes.
+    float lit=mix(shape_light,smoothstep(0.28,0.98,shape_light),0.70);
     vec3 dark=mix(vec3(0.009,0.018,0.042),vec3(0.26,0.38,0.58),day);
     dark=mix(dark,vec3(0.18,0.105,0.20),dusk*0.82);
     vec3 light=mix(vec3(0.055,0.085,0.15),vec3(0.98,0.96,0.91),day);

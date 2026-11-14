@@ -1,0 +1,27 @@
+{
+  "assets/Shaders/BLGL/RuinsCloud.shader": {
+    "bytes": 3438,
+    "md5": "ebb38a73f7a42949ccfa10258132b68f",
+    "sha256": "9ddeb32127193db89ed8f87e49de1de0de549fe1bb6844b3768ae7eadbf3ba16"
+  },
+  "assets/Textures/Sky/cloud_sculpted_atlas.png": {
+    "bytes": 1388660,
+    "md5": "724896d32b743442834cc942b5bc51ae",
+    "sha256": "4a945619e1f529b16f37e508a2d95276922c7b6104f6d0ea9b14922671d7a26f"
+  },
+  "assets/Textures/Sky/cloud_sculpted_atlas_low.png": {
+    "bytes": 511344,
+    "md5": "772f3f4df9f73b93c582caa891400c55",
+    "sha256": "7f68a65bc5cb3464f61b1cbee1ec603c3e1865d3bcf389fac4c8e3360ce73726"
+  },
+  "assets/Textures/Sky/cloud_sculpted_atlas.png.meta": {
+    "bytes": 40,
+    "md5": "4f4299556a68b45beb540e4a5f568895",
+    "sha256": "afd015f1d7009faac2760579dbc0a7681ad965cdc19cecc6194df42d55f35fd7"
+  },
+  "assets/Textures/Sky/cloud_sculpted_atlas_low.png.meta": {
+    "bytes": 40,
+    "md5": "89c8c2df1ce91b2e4d6b8577644da183",
+    "sha256": "1650d79c52373333941c17210b4d5f42b4284380c21b3be0492facbc2a67fb49"
+  }
+}
