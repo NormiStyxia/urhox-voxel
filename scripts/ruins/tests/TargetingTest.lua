@@ -42,7 +42,7 @@ V.atFrame(8, function()
     local function CheckShape(source, yaw, distance)
         local clone=TimeObject.New({id="face_"..source.id,world=world,scene=game.scene,
             voxels=source.voxels,dims=source.dims,size=source.size,
-            origin=Vector3(300,15,300),yaw=yaw})
+            origin=Vector3(300,100,300),yaw=yaw})
         local columns={}
         for axis=1,3 do
             local u,v=axis%3+1,(axis+1)%3+1
@@ -70,7 +70,8 @@ V.atFrame(8, function()
                     local localNormal=Vector3(axis==1 and sign or 0,axis==2 and sign or 0,axis==3 and sign or 0)
                     local point=clone.origin+clone.rot*(Vector3(cell[1]+.5,cell[2]+.5,cell[3]+.5)*clone.size+localNormal*(clone.size*.5))
                     local normal=clone.rot*localNormal
-                    columns[#columns+1]={point=point,normal=normal,axis=axis,sign=sign}
+                    local tangent=clone.rot*Vector3(u==1 and .37 or (v==1 and -.23 or 0),u==2 and .37 or (v==2 and -.23 or 0),u==3 and .37 or (v==3 and -.23 or 0))
+                    columns[#columns+1]={point=point,normal=(normal+tangent):Normalized(),axis=axis,sign=sign}
                 end
             end
         end
