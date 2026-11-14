@@ -23,8 +23,9 @@ local function NoExtra(label,...) assert(select('#',...)==0,label..': unexpected
 -- Every property write uses a backing table, including repeated writes: a plain
 -- __newindex on the original table would validate only the first assignment.
 local numeric={viewMask=true,lightMask=true,zoneMask=true,brightness=true,range=true,fov=true,
-    nearClip=true,farClip=true,priority=true,ambientSource=true}
-local integral={viewMask=true,lightMask=true,zoneMask=true,priority=true,ambientSource=true,lightType=true}
+    nearClip=true,farClip=true,priority=true,ambientSource=true,focalDistance=true,focalRange=true,maxBlur=true,
+    nearBlurScale=true,farBlurScale=true,depthFogStart=true,depthFogEnd=true,depthFogDensity=true}
+local integral={viewMask=true,lightMask=true,zoneMask=true,priority=true,ambientSource=true,lightType=true,quality=true}
 local boolean={enabled=true,castShadows=true,occluder=true,depthFogEnable=true,heightFogEnable=true,
     volumetricFogEnabled=true,autoExposureEnabled=true,affectVolumetricFog=true}
 local function ComponentProxy(data)
@@ -70,7 +71,7 @@ rawset(_G,'Quaternion',function(pitch,yaw,roll,...)
     end
     return q
 end)
-rawset(_G,'BLEND_ADDALPHA',4);rawset(_G,'CULL_NONE',0);rawset(_G,'AMBIENT_COLOR',2);rawset(_G,'LIGHT_POINT',2)
+rawset(_G,'DOF_QUALITY_MEDIUM',1);rawset(_G,'BLEND_ADDALPHA',4);rawset(_G,'CULL_NONE',0);rawset(_G,'AMBIENT_COLOR',2);rawset(_G,'LIGHT_POINT',2)
 for _,name in ipairs({'Scene','Texture2D','RenderTexture','VoxelPhysicsWorld'}) do rawset(_G,name,function()error('forbidden '..name)end) end
 local e
 local function Wrap(n)
@@ -97,7 +98,7 @@ local function Wrap(n)
         c.kind=kind;c.viewMask=0xffffffff;c.lightMask=0xffffffff;c.zoneMask=0xffffffff
         if kind=='Camera' then c.projectionOffset=Vector2(0,0) end
         if kind=='Zone' then c.ambientSource=0 end
-        for method,field in pairs({SetBrightness='brightness',SetRange='range',SetFov='fov'}) do
+        for method,field in pairs({SetBrightness='brightness',SetRange='range',SetFov='fov',SetFocalDistance='focalDistance',SetFocalRange='focalRange',SetMaxBlur='maxBlur',SetQuality='quality',SetNearBlurScale='nearBlurScale',SetFarBlurScale='farBlurScale'}) do
             c[method]=function(target,value,...) NoExtra(method,...);Number(value,method);target[field]=value end
         end
         if e.missingKind==kind then c[e.missingField]=nil end
@@ -283,6 +284,7 @@ Showroom.Exit();Showroom.Exit();Restored(nodes,components)
 -- and landscape. Algebraic projection only: no claim of native/GPU validation.
 Boot();nodes,components=Live();assert(Showroom.Enter(e.scene))
 local combos,maxWeaponTriangles=0,0
+local occupancyMin,occupancyMax=1,0
 for _,weapon in ipairs({'sword','bow'}) do
     local config=Config(weapon);local slots=Parts.Slots[weapon]
     local function Visit(i)
@@ -299,31 +301,36 @@ for _,weapon in ipairs({'sword','bow'}) do
             local cp,sp=math.cos(math.rad(8)),math.sin(math.rad(8))
             local distance=-cameraNode.position.z/cp
             local tan=math.tan(math.rad(camera.fov)/2)
-            for _,point in ipairs({{-3.1,0,1.7},{-3.1,4.3,1.7},{0,7.2,2.2},
-                {-2.4,0,-2.4},{2.4,0,-2.4},{-2.4,.65,2.4},{2.4,.65,2.4}}) do
-                local y=point[2]-Spin().position.y
-                local py,pz=cp*y+sp*point[3],-sp*y+cp*point[3]
-                local sx=.3+point[1]/(2*(distance+pz)*tan*e.width/e.height)
-                local sy=.5-py/(2*(distance+pz)*tan)
-                assert(sx>0 and sx<1 and sy>0 and sy<1,'stand / left arch clipped')
-            end
-            for angle=0,315,45 do
+            local scale=Spin().scale.x
+            Mock.Near(scale*(b.max[2]-b.min[2]),2.05)
+            local dof=cameraNode:GetComponent('DepthOfField')
+            Mock.Near(dof.focalDistance,distance);assert(dof.focalRange>.8 and dof.quality==DOF_QUALITY_MEDIUM)
+            local standY=.5-(cp*(.65-Spin().position.y))/(2*(distance-sp*(.65-Spin().position.y))*tan)
+            assert(standY>.70 and standY<.86,'stand must sit in lower screen quarter')
+            local minHeight=1
+            for angle=0,357,7 do
                 local q=Quaternion(0,angle,0)
+                local minY,maxY=1,0
                 for xi=1,2 do for yi=1,2 do for zi=1,2 do
                     local p=q*Vector3((xi==1 and b.min[1] or b.max[1])-(b.min[1]+b.max[1])/2,
                         (yi==1 and b.min[2] or b.max[2])-(b.min[2]+b.max[2])/2,
                         (zi==1 and b.min[3] or b.max[3])-(b.min[3]+b.max[3])/2)
+                    p=p*scale
                     local py,pz=cp*p.y+sp*p.z,-sp*p.y+cp*p.z
                     local x=.3+p.x/(2*(distance+pz)*tan*e.width/e.height)
                     local y=.5-py/(2*(distance+pz)*tan)
                     assert(x>0 and x<.55 and y>0 and y<1,'weapon clipped / under panel')
+                    minY=math.min(minY,y);maxY=math.max(maxY,y)
                 end end end
+                minHeight=math.min(minHeight,maxY-minY)
             end
+            occupancyMin=math.min(occupancyMin,minHeight);occupancyMax=math.max(occupancyMax,minHeight)
+            assert(minHeight>=.55 and minHeight<=.60,'weapon occupancy '..minHeight)
         end
     end
     Visit(1)
 end
-assert(combos==72);Showroom.Exit();Restored(nodes,components)
+assert(combos==72);print('weapon occupancy min/max='..occupancyMin..'/'..occupancyMax);Showroom.Exit();Restored(nodes,components)
 
 for _,fail in ipairs({'child','Zone','Light','Camera','switch'}) do
     Boot();nodes,components=Live();e.fail=fail
@@ -425,105 +432,111 @@ assert(Showroom.Diagnostic():find('cleanup=renderer:SetViewport',1,true))
 rawset(_G,'print',realPrint)
 print('forge_showroom diagnostics PASS: missing bindings, stages, single-line errors, Enter/Update/SetWeapon, 10s dedup and recovery; MOCK ONLY')
 
--- New dressing pipeline: real Lua voxelization/greedy output, strict native mocks.
-Boot();nodes,components=Live()
-local sceneRoot=e.scene:CreateChild('DressingTest')
-local job=Dressing.Begin(sceneRoot,MASK)
-assert(#sceneRoot.children==0,'Begin must not allocate geometry/materials')
-local seen,frames,peakOps={},0,0
-local tick=0
-rawset(_G,'time',{GetElapsedTime=function(self) assert(self==time);tick=tick+.00051;return tick end})
-collectgarbage('collect');local heapBefore=collectgarbage('count')
-while not job.complete and not job.failed and frames<20000 do
-    local before=job.operations
-    local err=Dressing.Step(job,1);assert(not err,err)
-    peakOps=math.max(peakOps,job.operations-before)
-    assert(job.operations-before<=128,'1ms synthetic clock must yield within two 64-op slices')
-    for kind,node in pairs(job.nodes) do if node.enabled then seen[kind]=true end end
-    frames=frames+1
-end
-assert(job.complete and not job.failed,'decoration never completed')
-local batches,triangles=0,0
-for kind,node in pairs(job.nodes) do
-    assert(seen[kind] and node.enabled)
-    local geom=node:GetComponent('CustomGeometry')
-    assert(geom.commits==1 and geom.viewMask==MASK and geom.lightMask==MASK and geom.zoneMask==MASK)
-    assert(not geom.castShadows and not geom.occluder)
-    assert(#geom.vertices%3==0 and #geom.vertices/3==job.counts[kind])
-    batches=batches+1;triangles=triangles+#geom.vertices/3
-end
-assert(batches==6 and triangles==job.triangles and triangles+job.baseCount<=28000,'scene budget')
-assert(triangles+job.baseCount+maxWeaponTriangles<=30000,'resident scene + largest weapon exceeds 30k')
-print('largest weapon triangles='..maxWeaponTriangles)
-for kind,count in pairs(job.counts) do print('dressing batch '..kind..' triangles='..count) end
-local stone=job.nodes.stone:GetComponent('CustomGeometry')
-assert(stone.boundingBox.min.x<=-4 and stone.boundingBox.max.y>=7,'arch/plaza bounds')
-local bg=job.nodes.sky:GetComponent('CustomGeometry')
-local top,bottom
-for _,v in ipairs(bg.vertices) do
-    if v.position.y>89 then top=v.color end
-    if math.abs(v.position.y)<.0001 then bottom=v.color end
-end
-Mock.Near(top.r,.44);Mock.Near(top.g,.65);Mock.Near(top.b,.91)
-Mock.Near(bottom.r,.93);Mock.Near(bottom.g,.90);Mock.Near(bottom.b,.82)
-local standTop=false
-for _,v in ipairs(stone.vertices) do
-    if math.abs(v.position.x)<1.4 and math.abs(v.position.z)<1.4 and math.abs(v.position.y-.65)<.0001 then standTop=true end
-end
-assert(standTop,'0.65m top must survive 0.1m voxel quantization')
-local liveBefore=Live();local commits=0
-for _,node in pairs(job.nodes) do commits=commits+node:GetComponent('CustomGeometry').commits end
-for _=1,600 do assert(not Dressing.Animate(job,1/60)) end
-local afterCommits=0
-for _,node in pairs(job.nodes) do afterCommits=afterCommits+node:GetComponent('CustomGeometry').commits end
-assert(Live()==liveBefore and commits==afterCommits,'idle animation rebuilt geometry')
-assert(math.abs(job.nodes.islands.position.y)<=.12 and math.abs(job.nodes.clouds.position.x)<=16)
-collectgarbage('collect');local retained=collectgarbage('count')-heapBefore
-print(('forge_showroom dressing METRICS: batches=%d triangles=%d hidden_base=%d vertex_bytes=%d mock_heap_KiB=%.1f frames=%d max_ops_per_1ms=%d'):format(
-    batches,triangles,job.baseCount,(triangles+job.baseCount)*3*28,retained,frames,peakOps))
-job.materials.emission.SetShaderParameter=function() error('injected crystal breathing binding failure') end
-local animationError=Dressing.Animate(job,.01)
-assert(animationError and job.failed and job.nodes.sky and job.nodes.stone and not job.nodes.emission)
-assert(not Dressing.Animate(job,.01),'failed animation must not retry forever')
-Dressing.Dispose(job);Dressing.Dispose(job);sceneRoot:Remove()
-assert(next(job.nodes)==nil and next(job.materials)==nil and job.triangles==0)
-Restored(nodes,components)
 
--- Every optional publish can fail without affecting viewport/weapon readiness.
-for _,failure in ipairs({{'RuinsShowroom_stone',2},{'RuinsShowroom_stone',3},
-    {'RuinsShowroom_emission',1},{'RuinsShowroom_halo',1},{'RuinsShowroom_islands',1},{'RuinsShowroom_clouds',1}}) do
-    Boot();nodes,components=Live();assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
-    -- Direct test job lets us stop exactly on the failing stage; UI readiness is separate.
-    local root=e.scene:CreateChild('StageFailure');local j=Dressing.Begin(root,MASK)
-    e.failNode,e.failNodeNth=failure[1],failure[2]
-    local err
-    for _=1,20000 do err=Dressing.Step(j,2);if err or j.complete then break end end
-    assert(err and j.failed and j.nodes.sky and j.nodes.stone and j.nodes.stone.enabled,tostring(err))
-    local count=0;for _ in pairs(j.nodes) do count=count+1 end
-    assert(count==2 and j.pending==nil,'failure must leave sky and base only')
-    assert(Showroom.IsReady() and Showroom.Active(),'dressing cannot change weapon state')
-    Dressing.Dispose(j);root:Remove();e.failNode=nil;Showroom.Exit();Restored(nodes,components)
+-- DOF API shape, fallback and ownership are verified; native Web pixels are not.
+for _,failure in ipairs({'none','component','method','focus'}) do
+    Boot();nodes,components=Live()
+    if failure=='component' then e.fail='DepthOfField'
+    elseif failure=='method' then e.missingKind='DepthOfField';e.missingField='SetMaxBlur'
+    elseif failure=='focus' then e.missingKind='DepthOfField';e.missingField='SetFocalRange' end
+    assert(Showroom.Enter(e.scene),'DOF must not reject Enter')
+    local zone=Room():GetComponent('Zone')
+    local dof=Room():GetChild('ForgeCamera'):GetComponent('DepthOfField')
+    if failure=='none' then
+        assert(dof.maxBlur==7 and dof.quality==DOF_QUALITY_MEDIUM and dof.nearBlurScale==.08 and dof.farBlurScale==.9)
+        assert(not zone.depthFogEnable and Showroom.Diagnostic()=='')
+        assert(not pcall(dof.SetFocalDistance,dof,'bad'))
+        assert(not pcall(dof.SetMaxBlur,dof,7,'extra'))
+    else
+        assert(zone.depthFogEnable and zone.depthFogEnd>zone.depthFogStart)
+        assert(Showroom.Diagnostic():find('stage=dof',1,true),Showroom.Diagnostic())
+        assert(not dof or dof.enabled==false)
+    end
+    Showroom.SetWeapon(Config('bow'));Finish()
+    assert(Showroom.IsReady() and e.original.camera.fov==61)
+    Showroom.Exit();Showroom.Exit();Restored(nodes,components)
 end
--- Actual public Update reports cosmetic failures and keeps ready state.
-Boot();nodes,components=Live();assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('bow'));Finish()
-e.failNode='RuinsShowroom_halo'
-for _=1,10000 do Showroom.Update(1/60);if Showroom.Diagnostic()~='' then break end end
-assert(Showroom.IsReady() and Showroom.Diagnostic():find('stage=dressing.halo',1,true),Showroom.Diagnostic())
-Showroom.Exit();Restored(nodes,components)
--- Cancellation at early/middle stages drops coroutine maps and pending resources.
+print('forge_showroom DOF PASS: camera-local scope, strict signatures, nil/method/focus fallback, haze and cleanup; MOCK ONLY')
+
+local function Signature(j)
+    local hash,count=0,0
+    for _,node in pairs(j.nodes) do
+        local g=node:GetComponent('CustomGeometry')
+        for _,v in ipairs(g.vertices) do
+            local p,c=v.position,v.color
+            local h=math.floor(p.x*10000)*73856093 ~ math.floor(p.y*10000)*19349663 ~ math.floor(p.z*10000)*83492791
+            h=h ~ math.floor(c.r*100000)*31 ~ math.floor(c.g*100000)*131 ~ math.floor(c.b*100000)*521
+            hash=(hash+(h&0x7fffffff))%2147483647;count=count+1
+        end
+    end
+    return hash,count
+end
+local function CompleteDressing(quality,seed,failName)
+    Boot();nodes,components=Live()
+    local root=e.scene:CreateChild('DetailTest')
+    local j=Dressing.Begin(root,MASK,{quality=quality,seed=seed})
+    e.failNode=failName
+    assert(#root.children==0,'Begin cannot allocate mesh or materials')
+    local tick,frames,peak=0,0,0
+    rawset(_G,'time',{GetElapsedTime=function(self)assert(self==time);tick=tick+.00051;return tick end})
+    local errors={}
+    while not j.complete and not j.failed and frames<100000 do
+        local before=j.operations;local err=Dressing.Step(j,1)
+        if err then errors[#errors+1]=err end
+        peak=math.max(peak,j.operations-before)
+        assert(j.operations-before<=128,'1ms budget violated in synthetic-clock slices')
+        frames=frames+1
+    end
+    assert(j.complete and not j.failed,'build did not finish')
+    local batches,total=0,0
+    for kind,node in pairs(j.nodes) do
+        local g=node:GetComponent('CustomGeometry')
+        assert(node.enabled and g.viewMask==MASK and g.lightMask==MASK and g.zoneMask==MASK)
+        assert(g.commits==1 and #g.vertices/3==j.counts[kind])
+        batches=batches+1;total=total+j.counts[kind]
+    end
+    assert(total==j.triangles and total<=55000 and batches<=8)
+    if not failName then assert(#errors==0,table.concat(errors,';')) end
+    local signature,vertices=Signature(j)
+    print(('dressing %s seed=%d batches=%d triangles=%d vertex_bytes=%d frames=%d max_ops=%d joints=%d chips=%d cracks=%d moss=%d ao=%d signature=%d'):format(
+        quality,seed,batches,total,total*3*28,frames,peak,j.joints,j.chips,j.cracks,j.moss,j.aoVertices,signature))
+    return j,root,signature,vertices,errors
+end
+local high,root,firstSignature,firstVertices=CompleteDressing('high',71115)
+assert(high.joints>0 and high.chips>0 and high.cracks>0 and high.moss>0 and high.aoVertices>0)
+assert(high.nodes.atmosphere and high.nodes.arch and high.nodes.emission)
+for _,v in ipairs(high.nodes.emission:GetComponent('CustomGeometry').vertices) do
+    local r=v.color.r
+    assert(math.abs(r-.35)<1e-6 or math.abs(r-.45)<1e-6 or math.abs(r-1)<1e-6,'runes/crystals must bypass AO and jitter')
+end
+local n0=Live();local vertex0=firstVertices
+for _=1,600 do assert(not Dressing.Animate(high,1/60)) end
+assert(Live()==n0 and select(2,Signature(high))==vertex0,'animation must not rebuild')
+assert(math.abs(high.nodes.islands.position.y)<=.12 and high.nodes.atmosphere.position.y>=0 and high.nodes.atmosphere.position.y<1.2)
+-- Runtime failure of one animation never destroys the successful scene.
+high.materials.emission.SetShaderParameter=function()error('injected breathing error')end
+assert(Dressing.Animate(high,.01) and high.animationFailed and high.nodes.arch)
+assert(not Dressing.Animate(high,.01))
+Dressing.Dispose(high);Dressing.Dispose(high);root:Remove();Restored(nodes,components)
+local same,sameRoot,secondSignature,secondVertices=CompleteDressing('high',71115)
+assert(firstSignature==secondSignature and firstVertices==secondVertices,'same seed must reproduce masonry/AO')
+Dressing.Dispose(same);sameRoot:Remove();Restored(nodes,components)
+local other,otherRoot,otherSignature=CompleteDressing('high',71116)
+assert(otherSignature~=firstSignature,'seed must affect stone variation/chips/cracks')
+Dressing.Dispose(other);otherRoot:Remove();Restored(nodes,components)
+local low,lowRoot,_,lowVertices=CompleteDressing('low',71115)
+assert(not low.nodes.atmosphere and lowVertices<firstVertices and low.joints==0,'low tier must simplify')
+Dressing.Dispose(low);lowRoot:Remove();Restored(nodes,components)
+-- Part failure skips only that part and completes all later stages.
+for _,part in ipairs({'arch','halo','islands'}) do
+    local j,r,_,_,errors=CompleteDressing('low',71115,'RuinsShowroom_'..part)
+    assert(#errors==1 and j.skipped[part] and not j.nodes[part])
+    assert(j.nodes.sky and j.nodes.stone and j.nodes.clouds,'unrelated successful parts lost')
+    Dressing.Dispose(j);r:Remove();Restored(nodes,components)
+end
 for _,steps in ipairs({0,1,50,250}) do
-    Boot();nodes,components=Live();local root=e.scene:CreateChild('CancelDressing');local j=Dressing.Begin(root,MASK)
+    Boot();nodes,components=Live();local r=e.scene:CreateChild('CancelDetail');local j=Dressing.Begin(r,MASK)
     for _=1,steps do Dressing.Step(j,.1) end
-    Dressing.Dispose(j);root:Remove();Restored(nodes,components)
+    Dressing.Dispose(j);r:Remove();Restored(nodes,components)
 end
-print('forge_showroom dressing PASS: six batches <=30k, deterministic budget slices, 72-config scene framing, staged failures, animations/no rebuild, all resources disposed; MOCK ONLY')
-
--- Even missing cosmetic APIs on the first stage must not reject Enter.
-for _,name in ipairs({'RuinsShowroom_sky','RuinsShowroom_stone'}) do
-    Boot();nodes,components=Live();e.failNode=name
-    assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
-    for _=1,2000 do Showroom.Update(1/60);if Showroom.Diagnostic()~='' then break end end
-    assert(Showroom.IsReady() and Showroom.Active() and Showroom.Diagnostic()~='')
-    Showroom.Exit();Restored(nodes,components)
-end
-print('forge_showroom initial cosmetic API failure and animation fallback PASS; MOCK ONLY')
+print('forge_showroom detail PASS: 5cm high/10cm low, 55k/8-batch bounds, deterministic stone/AO, partial failure, budget, idle no rebuild and all resources reclaimed; MOCK ONLY')

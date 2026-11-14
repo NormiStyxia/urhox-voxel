@@ -11,7 +11,7 @@
 -- around player, despite visible radii 522..548: y=1200 ALONE does not avoid it!
 -- x=2304 leaves >150m beyond that inflated bound at the island edge. Float32
 -- ULP here is <0.25mm (weapon cells=30mm). The dressing dome radius is 90m (still outside main-cloud bounds).
--- Draw budget: six dressing batches plus one weapon batch; hidden fallback stand.
+-- Draw budget: eight dressing batches plus one weapon; low quality uses seven.
 -- Dressing spans <100m (same x=2304 clearance); Zone includes the full sky dome.
 -- Native Commit is indivisible; StepPreview's 2ms budget is cooperative, not a
 -- guarantee that a GPU upload/Compile cannot exceed 2ms on a slow platform.
@@ -167,35 +167,68 @@ local function Focus(s,x,y)
     s.camera.projectionOffset=Vector2(s.focusX-.5,.5-s.focusY)
     s.fitDirty=true
 end
+-- DOF is camera-local (post-processing.md §5; Web supported). It never attaches
+-- to scene root, so the borrowed main camera cannot inherit this effect.
+local function Haze(s,distance)
+    s.zone.depthFogEnable=true;s.zone.depthFogStart=distance+2
+    s.zone.depthFogEnd=distance+32;s.zone.depthFogDensity=.35
+end
+local function Dof(s)
+    local ok,err=pcall(function()
+        s.dof=Call(s,'dof',s.cameraNode,'CreateComponent','Node:CreateComponent','DepthOfField')
+        assert(s.dof,'DepthOfField unavailable')
+        Call(s,'dof',s.dof,'SetQuality','DepthOfField:SetQuality',DOF_QUALITY_MEDIUM)
+        Call(s,'dof',s.dof,'SetMaxBlur','DepthOfField:SetMaxBlur',7)
+        Call(s,'dof',s.dof,'SetFarBlurScale','DepthOfField:SetFarBlurScale',.9)
+        Call(s,'dof',s.dof,'SetNearBlurScale','DepthOfField:SetNearBlurScale',.08)
+    end)
+    if not ok then
+        if s.dof then pcall(function() s.dof.enabled=false end) end
+        s.dof=nil;s.haze=true;Haze(s,6)
+        ReportFailure(s,'Update',err)
+    end
+end
 local function Fit(s,bp)
-    local b=bp.bounds;local lo,hi=b.min,b.max
-    local halfY=(hi[2]-lo[2])*.5
-    local radius=math.sqrt(((hi[1]-lo[1])*.5)^2+((hi[3]-lo[3])*.5)^2)
+    local lo,hi=bp.bounds.min,bp.bounds.max
+    local rawHeight=hi[2]-lo[2]
+    assert(rawHeight>0,'weapon height must be positive')
+    local scale=2.05/rawHeight -- display-only; Compile bounds/fingerprint stay untouched
+    local halfY=1.025
+    local hx,hz=(hi[1]-lo[1])*.5*scale,(hi[3]-lo[3])*.5*scale
     local w=Call(s,'camera',graphics,'GetWidth','graphics:GetWidth')
     local h=Call(s,'camera',graphics,'GetHeight','graphics:GetHeight')
     assert(w>0 and h>0,'invalid drawable size')
     s.width,s.height=w,h
     local tan=math.tan(math.rad(s.camera.fov)*.5)
-    local vertical=2*math.min(s.focusY,1-s.focusY)*.82
-    -- The panel occupies the right: reserve at most 25% screen width each side
-    -- of the pivot, and shrink automatically near an edge / on portrait phones.
-    local horizontal=2*math.min(s.focusX,1-s.focusX,.25)*.82
-    local distance=math.max(halfY/(tan*vertical),radius/(tan*(w/h)*horizontal))+radius+.18
-    -- Fit the real stand and complete left arch, not only the small weapon.
-    -- Solve perspective bounds in the pitched camera basis (not guessed Euler).
-    local pitch=math.rad(8);local cp,sp=math.cos(pitch),math.sin(pitch)
-    local pivotY=math.max(1.65,.85+halfY)
-    for _,p in ipairs({{-3.1,0,1.7},{-3.1,4.3,1.7},{0,7.2,2.2},
-        {-2.4,0,-2.4},{2.4,0,-2.4},{-2.4,.65,2.4},{2.4,.65,2.4}}) do
-        local y=cp*(p[2]-pivotY)+sp*p[3]
-        local z=-sp*(p[2]-pivotY)+cp*p[3]
-        local vspace=2*(y>0 and s.focusY or 1-s.focusY)*.92
-        local hspace=2*(p[1]<0 and s.focusX or 1-s.focusX)*.92
-        distance=math.max(distance,math.abs(y)/(tan*vspace)-z,math.abs(p[1])/(tan*(w/h)*hspace)-z)
+    local cp,sp=math.cos(math.rad(8)),math.sin(math.rad(8))
+    local vertical=math.min(.59,2*math.min(s.focusY,1-s.focusY)*.94)
+    local horizontal=2*math.min(s.focusX,math.max(.04,.55-s.focusX))*.94
+    local distance=0
+    for angle=0,345,15 do
+        local ca,sa=math.cos(math.rad(angle)),math.sin(math.rad(angle))
+        for _,x in ipairs({-hx,hx}) do for _,y in ipairs({-halfY,halfY}) do for _,z in ipairs({-hz,hz}) do
+            local px,pz=ca*x+sa*z,-sa*x+ca*z
+            local py,depth=cp*y+sp*pz,-sp*y+cp*pz
+            distance=math.max(distance,math.abs(py)/(tan*vertical)-depth,
+                math.abs(px)/(tan*(w/h)*horizontal)-depth)
+        end end end
     end
+    local pivotY=.65+halfY+.12
+    s.spin.scale=Vector3(scale,scale,scale)
     s.spin.position=Vector3(0,pivotY,0)
     s.cameraNode.position=Vector3(0,pivotY+distance*sp,-distance*cp)
     s.cameraNode.rotation=Quaternion(8,0,0)
+    if s.dof then
+        local ok,err=pcall(function()
+            Call(s,'dof',s.dof,'SetFocalDistance','DepthOfField:SetFocalDistance',distance)
+            Call(s,'dof',s.dof,'SetFocalRange','DepthOfField:SetFocalRange',2*math.sqrt(hx*hx+hz*hz)+.8)
+        end)
+        if not ok then
+            pcall(function() s.dof.enabled=false end);s.dof=nil;s.haze=true
+            ReportFailure(s,'Update',err)
+        end
+    end
+    if s.haze then Haze(s,distance) end
     s.fitDirty=false
 end
 local function EnterImpl(s,scene,opts)
@@ -208,7 +241,7 @@ local function EnterImpl(s,scene,opts)
     IsolateWorld(s,scene)
     s.root=assert(Call(s,'root',scene,'CreateChild','Node:CreateChild','ForgeShowroom'),'showroom root missing')
     s.root.temporary=true;s.root.position=Vector3(2304,1200,0)
-    local zone=Call(s,'zone',s.root,'CreateComponent','Node:CreateComponent','Zone');assert(zone,'showroom Zone missing')
+    local zone=Call(s,'zone',s.root,'CreateComponent','Node:CreateComponent','Zone');assert(zone,'showroom Zone missing');s.zone=zone
     Isolate(s,'zone',zone);zone.boundingBox=BoundingBox(Vector3(-110,-110,-110),Vector3(110,110,110))
     Read(s,'zone',zone,'ambientSource','Zone.ambientSource')
     zone.priority=100;zone.ambientSource=AMBIENT_COLOR;zone.ambientColor=Color(.55*.55,.62*.55,.78*.55,1)
@@ -223,13 +256,14 @@ local function EnterImpl(s,scene,opts)
         light.color=i==1 and Color(1,.93,.78,1) or Color(.40,.65,1,1)
         light.affectVolumetricFog=false
     end
-    s.dressing=Dressing.Begin(s.root,MASK)
+    s.dressing=Dressing.Begin(s.root,MASK,opts)
     s.spin=Call(s,'geometry',s.root,'CreateChild','Node:CreateChild','WeaponTurntable');s.rotation=Quaternion(0,HOME_YAW,0);s.spin.rotation=s.rotation
     s.cameraNode=Call(s,'camera',s.root,'CreateChild','Node:CreateChild','ForgeCamera');s.cameraNode.position=Vector3(0,1,-3)
     s.camera=assert(Call(s,'camera',s.cameraNode,'CreateComponent','Node:CreateComponent','Camera'),'showroom Camera missing')
     Read(s,'camera',s.camera,'viewMask','Camera.viewMask')
     s.camera.fov=34;s.camera.nearClip=.05;s.camera.farClip=180;s.camera.viewMask=MASK
     Focus(s,opts and opts.focusX,opts and opts.focusY)
+    Dof(s)
     Fit(s,{bounds={min={-.3,-.6,-.3},max={.3,.6,.3}}})
     s.viewport=Call(s,'viewport',Viewport,'new','Viewport:new',scene,s.camera)
     assert(s.viewport,'showroom Viewport missing')
@@ -243,10 +277,9 @@ end
 function M.Enter(scene,opts)
     M.Exit()
     local s={masks={},focusX=.30,focusY=.5,yaw=HOME_YAW,velocity=0,idle=1.5,dragging=false,home=false}
-    session=s;state=BUILDING
+    session=s;state=BUILDING;diagnostic=''
     local ok,err=pcall(EnterImpl,s,scene,opts)
     if not ok then Failed(err,'Enter');return false end
-    diagnostic=''
     return true
 end
 function M.Exit()
