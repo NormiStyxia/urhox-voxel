@@ -4,8 +4,11 @@ local body=assert(source:match('(%-%- Optional pacing.-)\nM.DEBUG_PANEL'))
 local now,cpu,heap=0,0,1024
 local pause,mul,steps=200,100,0
 local logs,calls={},{}
-local timer={GetSystemTime=function()return now end}
-local env={Safe=function(_,fn,...)return pcall(fn,...)end,CombatState={FlushSwapPerf=function()end},M={},GetTime=function()return timer end,os={clock=function()return cpu end},math=math,string=string,
+-- 模拟静态绑定：类表可调用，Time 实例必须拒绝，防止 mock 漏掉接收者错误。
+local timeClass={}
+function timeClass:GetSystemTime()assert(self==timeClass,'GetSystemTime requires Time class');return now end
+local timer=setmetatable({},{__index=timeClass})
+local env={Safe=function(_,fn,...)return pcall(fn,...)end,CombatState={FlushSwapPerf=function()end},M={},Time=timeClass,GetTime=function()return timer end,os={clock=function()return cpu end},math=math,string=string,
  print=function(text)logs[#logs+1]=text end,
  collectgarbage=function(action,a,b)
   calls[#calls+1]=action
