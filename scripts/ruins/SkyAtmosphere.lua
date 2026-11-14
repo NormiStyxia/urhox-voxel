@@ -2,6 +2,7 @@
 local Clouds = require("ruins.SkyClouds")
 local Shafts = require("ruins.LightShafts")
 local Motes = require("ruins.FloatingMotes")
+local Braziers = require("ruins.NightBraziers")
 local Quality = require("ruins.LightQuality")
 local settingsOK,GameSettings = pcall(require,"ruins.GameSettings")
 if not settingsOK then GameSettings=nil end
@@ -30,11 +31,17 @@ function M:Init(scene,dn)
     self.shafts = nil
     ---@type RuinsFloatingMotes|nil
     self.motes = nil
+    ---@type RuinsNightBraziers|nil
+    self.braziers=nil
+    ---@type Vector3[]
+    self.pillarAnchors={}
     self.active,self.stopped,self.realFog,self.shadowActive = false,false,false,false
     self.settingsManaged = GameSettings~=nil
     self.features = {}
     for k,v in pairs(Quality.FEATURES) do self.features[k] = v end
+    self.features.cloudMotion,self.features.atmosphereFog,self.features.nightBraziers=true,true,true
     self.elapsed,self.clock = 0.2,0
+    self.cloudElapsed=0 -- preserve wind phase across quality rebuilds and off/on
     ---@type Material|nil
     self.ground = nil
     ---@type Material|nil 本次开启已绑定（或已尝试失败）的地表，避免每帧重试/查资源
@@ -68,6 +75,7 @@ function M:ApplyProfile(profile)
         -- The resolved profile is authoritative; no hidden per-instance overrides.
         local f=self.features
         f.clouds,f.lowClouds,f.cloudShadow=profile.cloudsEnabled~=false,profile.lowCloudsEnabled~=false,profile.cloudShadowEnabled~=false
+        f.cloudMotion,f.atmosphereFog,f.nightBraziers=profile.cloudMotionEnabled~=false,profile.atmosphereFogEnabled~=false,(profile.braziers or 0)>0
         f.shafts,f.motes,f.volumetric,f.bloom=true,true,true,profile.bloom==true
     end
     self.profile,self.quality,self.applied = profile,profile.quality or "custom",true
@@ -83,11 +91,30 @@ function M:SetFeature(name,enabled)
     if self.stopped then return end
     assert(self.features[name]~=nil,"Unknown SkyAtmosphere feature")
     if self.settingsManaged and GameSettings then
-        local key=({clouds="clouds",lowClouds="lowClouds",cloudShadow="cloudShadow",shafts="lightShafts",motes="floatingMotes",volumetric="volumetric",bloom="postFx"})[name]
+        local key=({cloudMotion="cloudMotion",atmosphereFog="atmosphereFog",nightBraziers="nightBraziers",clouds="clouds",lowClouds="lowClouds",cloudShadow="cloudShadow",shafts="lightShafts",motes="floatingMotes",volumetric="volumetric",bloom="postFx"})[name]
         return GameSettings.Set(key,name=="bloom" and (enabled==true and "full" or "off") or enabled==true)
     end
     self.features[name] = enabled==true
     self:ApplySwitches()
+end
+
+-- Called only after static pillars have been built.
+function M:SetPillarLayout(build,baseY)
+    if self.stopped then return end
+    if self.braziers then self.braziers:Dispose();self.braziers=nil end
+    self.pillarAnchors=Braziers.Anchors(build,baseY)
+    self:ApplySwitches()
+end
+
+function M:ApplyFog()
+    local zone=self.dayNight.zone
+    zone.depthFogEnable=self.features.atmosphereFog
+    local density=self.features.atmosphereFog and (self.profile.heightFogDensity or 0) or 0
+    zone.heightFogEnable=density>0
+    if density>0 then
+        -- DayNight continues owning the approved horizon colour and depth range.
+        zone.heightFogDensity=density*(1+0.18*(self.dayNight.dusk or 0))
+    end
 end
 
 function M:ApplySwitches()
@@ -96,9 +123,21 @@ function M:ApplySwitches()
     local count = p.cloudsEnabled and math.max(0,math.min(24,math.floor(p.cloudCount or 0))) or 0
     local upper,lower = f.clouds==true,f.lowClouds==true
     if self.clouds and (count~=self.clouds.budget or upper~=self.clouds.upper or lower~=self.clouds.lower) then
+        self.cloudElapsed=self.clouds.elapsed
         self.clouds:Dispose(); self.clouds=nil
     end
-    if count>0 and (upper or lower) and not self.clouds then self.clouds=Clouds.New(self.scene,count,upper,lower) end
+    if count>0 and (upper or lower) and not self.clouds then
+        self.clouds=Clouds.New(self.scene,count,upper,lower)
+        self.clouds.elapsed=self.cloudElapsed
+    end
+    if self.clouds then self.clouds:SetMotion(f.cloudMotion,p.cloudMotionDetail or 0) end
+    local fires=f.nightBraziers and math.min(#self.pillarAnchors,p.braziers or 0) or 0
+    local lamps=math.min(fires,p.brazierLights or 0)
+    if self.braziers and (fires~=self.braziers.count or lamps~=self.braziers.lightCount) then
+        self.braziers:Dispose();self.braziers=nil
+    end
+    if fires>0 and not self.braziers then self.braziers=Braziers.New(self.scene,self.pillarAnchors,fires,lamps) end
+    self:ApplyFog()
     local shafts = f.shafts and math.max(0,math.min(8,math.floor(p.lightShafts or 0))) or 0
     if self.shafts and shafts~=self.shafts.count then self.shafts:Dispose(); self.shafts=nil end
     if shafts>0 and not self.shafts then self.shafts=Shafts.New(self.scene,shafts) end
@@ -108,9 +147,10 @@ function M:ApplySwitches()
     self.realFog=Quality.ApplyVolume(self.dayNight.zone,self.dayNight.sun,p.volumetric or "off",f.volumetric and p.shadowOn~=false)
     if not self.settingsManaged then Quality.ApplyStandaloneScene(self.dayNight.zone,self.dayNight.sun,p,f.bloom) end
     self.shadowActive=count>0 and f.cloudShadow==true
-    self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive
+    self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive or self.braziers~=nil
     if self.clouds then self.clouds:Update(0,self.dayNight.day or 1,self.dayNight.dusk or 0,self.dayNight) end
     if self.shafts then self.shafts:Update(self.dayNight,true,self.realFog) end
+    if self.braziers then self.braziers:Update(self.dayNight.nightK or 0,self.clock,self.realFog) end
     self:ApplyCloudShadow()
     self.elapsed = 0.2
 end
@@ -148,6 +188,8 @@ function M:Update(dt,position,ground)
     local step = self.elapsed
     self.elapsed = 0
     local dn = self.dayNight
+    self:ApplyFog()
+    if self.braziers then self.braziers:Update(dn.nightK or 0,self.clock,self.realFog) end
     if self.clouds then self.clouds:Update(step,dn.day or 1,dn.dusk or 0,dn) end
     if self.shafts then self.shafts:Update(dn,true,self.realFog) end
     if self.motes then self.motes:Update(position,true,dn.day or 1) end
@@ -166,9 +208,11 @@ function M:Probe()
         cloudFallback=self.clouds and self.clouds.fallback or false,
         cloudMethod="celestial_patches",cloudUnavailable=self.clouds and self.clouds.unavailable or false,
         cloudTextureReads=self.clouds and self.clouds.textureReads or 0,
+        braziers=self.braziers and self.braziers.count or 0,pointLights=self.braziers and self.braziers.lightCount or 0,
+        fireReady=self.braziers and self.braziers.available or false,
         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,
-        batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)}
+        batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)+(self.braziers and self.braziers.batchCount or 0)}
 end
 
 function M:Stop()
@@ -178,6 +222,8 @@ function M:Stop()
     if self.clouds then self.clouds:Dispose(); self.clouds=nil end
     if self.shafts then self.shafts:Dispose(); self.shafts=nil end
     if self.motes then self.motes:Dispose(); self.motes=nil end
+    if self.braziers then self.braziers:Dispose();self.braziers=nil end
+    self.pillarAnchors={}
     if self.ground then
         self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0))
         self.ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))

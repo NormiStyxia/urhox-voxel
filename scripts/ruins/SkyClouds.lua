@@ -67,6 +67,7 @@ function M:Init(scene,count,upper,lower)
     self.geometry={}
     ---@type number
     self.elapsed=0
+    self.motionEnabled,self.motionDetail=true,self.budget>12 and 1 or (self.budget>4 and 0.5 or 0)
     self.fallback,self.unavailable=false,false
     self.loading=false
     ---@type DayNight|nil
@@ -176,6 +177,11 @@ end
 -- 保留宿主调用兼容性；图集下载后一次建网格，没有运行时烘焙任务。
 function M:StepBake() end
 
+function M:SetMotion(enabled,detail)
+    self.motionEnabled=enabled~=false
+    self.motionDetail=Finite(detail,0,0,1)
+end
+
 function M:Dispose()
     if self.disposed then return end
     self.disposed,self.baking,self.ready=true,false,false
@@ -196,8 +202,9 @@ function M:Update(dt,day,dusk,dn)
         return
     end
     -- 四个漂移频率的共同周期，重置时相位连续且uniform长期有界。
-    self.elapsed = (self.elapsed+Finite(dt,0,0,1))%(10000*math.pi)
+    if self.motionEnabled then self.elapsed = (self.elapsed+Finite(dt,0,0,1))%(10000*math.pi) end
     self.material:SetShaderParameter("drift_time",Variant(self.elapsed))
+    self.material:SetShaderParameter("motion_detail",Variant(self.motionDetail))
     -- 转头/重新启用时也必须显示当前时段。
     self.material:SetShaderParameter("day",Variant(Finite(day,1,0,1)))
     self.material:SetShaderParameter("dusk",Variant(Finite(dusk,0,0,1)))

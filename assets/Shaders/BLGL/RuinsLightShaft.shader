@@ -7,6 +7,8 @@ void fragment() {
     float ends = smoothstep(0.0, 0.22, UV.y) * (1.0 - smoothstep(0.70, 1.0, UV.y));
     float nearFade = smoothstep(2.0, 9.0, length(VERTEX - CAMERA_POSITION_WORLD));
     float breath = 0.76 + 0.24 * sin(TIME * 0.15 + VERTEX.x * 0.09 + VERTEX.z * 0.05);
+    // Broad travelling bands, anchored to world metres; no screen/depth/noise reads.
+    float band = 0.78 + 0.22 * sin(VERTEX.x * 0.38 + VERTEX.z * 0.23 - TIME * 0.08);
     ALBEDO = mix(vec3(1.0, 0.94, 0.72), vec3(1.0, 0.65, 0.28), dusk);
-    ALPHA = edge * edge * ends * nearFade * breath * strength * 0.035;
+    ALPHA = edge * edge * ends * nearFade * breath * band * strength * 0.035;
 }

@@ -2,13 +2,13 @@ local DebugLog=require('ruins.DebugLog')
 local M={}
 -- Budgets centralized here. High preserves the current scene's shadow/grass/capture settings.
 M.PROFILES={
- high={cloudCount=24,cloudsEnabled=true,lightShafts=8,motes=80,volumetric='full',grassDensity=1,grassDistance=55,shadowCascades=3,shadowDistance=140,shadowOn=true,shadowMapSize=2048,shadowPCFSamples=4,bloom=true,postFx='full',skyCaptureResolution=64,skyCaptureInterval=.5},
- medium={cloudCount=12,cloudsEnabled=true,lightShafts=3,motes=28,volumetric='lite',grassDensity=.5,grassDistance=38,shadowCascades=2,shadowDistance=65,shadowOn=true,shadowMapSize=1024,shadowPCFSamples=2,bloom=false,postFx='lite',skyCaptureResolution=32,skyCaptureInterval=2},
- low={cloudCount=4,cloudsEnabled=true,lightShafts=0,motes=0,volumetric='off',grassDensity=.25,grassDistance=24,shadowCascades=0,shadowDistance=0,shadowOn=false,shadowMapSize=512,shadowPCFSamples=1,bloom=false,postFx='off',skyCaptureResolution=32,skyCaptureInterval=5},
+ high={cloudMotionDetail=1,heightFogDensity=0.009,braziers=6,brazierLights=3,cloudCount=24,cloudsEnabled=true,lightShafts=8,motes=80,volumetric='full',grassDensity=1,grassDistance=55,shadowCascades=3,shadowDistance=140,shadowOn=true,shadowMapSize=2048,shadowPCFSamples=4,bloom=true,postFx='full',skyCaptureResolution=64,skyCaptureInterval=.5},
+ medium={cloudMotionDetail=0.5,heightFogDensity=0.006,braziers=4,brazierLights=2,cloudCount=12,cloudsEnabled=true,lightShafts=3,motes=28,volumetric='lite',grassDensity=.5,grassDistance=38,shadowCascades=2,shadowDistance=65,shadowOn=true,shadowMapSize=1024,shadowPCFSamples=2,bloom=false,postFx='lite',skyCaptureResolution=32,skyCaptureInterval=2},
+ low={cloudMotionDetail=0,heightFogDensity=0,braziers=2,brazierLights=1,cloudCount=4,cloudsEnabled=true,lightShafts=0,motes=0,volumetric='off',grassDensity=.25,grassDistance=24,shadowCascades=0,shadowDistance=0,shadowOn=false,shadowMapSize=512,shadowPCFSamples=1,bloom=false,postFx='off',skyCaptureResolution=32,skyCaptureInterval=5},
 }
 local allowed={quality={high=true,medium=true,low=true,auto=true},grass={full=true,half=true,off=true},shadows={high=true,low=true,off=true},postFx={full=true,lite=true,off=true}}
-local booleanKeys={debugLog=true,perfHud=true,clouds=true,lowClouds=true,cloudShadow=true,lightShafts=true,floatingMotes=true,volumetric=true}
-local optional={clouds=true,lowClouds=true,cloudShadow=true,lightShafts=true,floatingMotes=true,volumetric=true,grass=true,shadows=true,postFx=true}
+local booleanKeys={cloudMotion=true,atmosphereFog=true,nightBraziers=true,debugLog=true,perfHud=true,clouds=true,lowClouds=true,cloudShadow=true,lightShafts=true,floatingMotes=true,volumetric=true}
+local optional={cloudMotion=true,atmosphereFog=true,nightBraziers=true,clouds=true,lowClouds=true,cloudShadow=true,lightShafts=true,floatingMotes=true,volumetric=true,grass=true,shadows=true,postFx=true}
 local values,callbacks,listeners,order={},{},{},{}
 local loaded,dirty,pending=false,false,0
 local explicitQuality=false
@@ -35,6 +35,9 @@ function M.Resolve()
     local result={}
     for key,value in pairs(M.PROFILES[tier]) do result[key]=value end
     result.quality=tier
+    result.cloudMotionEnabled=values.cloudMotion~=false
+    result.atmosphereFogEnabled=values.atmosphereFog~=false
+    if values.nightBraziers==false then result.braziers,result.brazierLights=0,0 end
     if values.clouds~=nil then result.cloudsEnabled=values.clouds; result.cloudCount=values.clouds and math.max(tier=='low' and 4 or 12,result.cloudCount) or 0 end
     result.lowCloudsEnabled=result.cloudsEnabled and tier~='low' and values.lowClouds~=false
     result.cloudShadowEnabled=result.cloudsEnabled and tier~='low' and values.cloudShadow~=false

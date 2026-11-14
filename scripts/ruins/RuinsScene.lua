@@ -713,6 +713,7 @@ function M.Start()
     SetupLighting()
     Terrain.Build(world_, scene_)
     Build.Build(world_, scene_)
+    M.atmosphere:SetPillarLayout(Build,Terrain.RING_Y) -- intact/broken layout now known
     Puzzles.Build(world_, scene_)
     -- 碎石堆独立材质也要接收霜冻等全局材质参数
     if Puzzles.gateMaterial ~= nil then M.surfaceMaterials.gateRubble = Puzzles.gateMaterial end
