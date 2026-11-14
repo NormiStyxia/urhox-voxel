@@ -35,6 +35,73 @@ V.atFrame(8, function()
             V.assert(selected.object==object,"同一实心物件六面均可锁定 "..face.." "..a..","..b)
         end end
     end
+    -- 按正式悬石/碑的体素列取最外层实心格，在隔离区复用原始形状。
+    -- 相机 → 空气 → 外露格；六个局部面都没有别的体积挡在前面。
+    -- 不规则形状、旋转和远距离要分开核对原生命中与二次 Grid 校验。
+    ---@param source TimeObject
+    local function CheckShape(source, yaw, distance)
+        local clone=TimeObject.New({id="face_"..source.id,world=world,scene=game.scene,
+            voxels=source.voxels,dims=source.dims,size=source.size,
+            origin=Vector3(300,15,300),yaw=yaw})
+        local columns={}
+        for axis=1,3 do
+            local u,v=axis%3+1,(axis+1)%3+1
+            local groups={}
+            for _,cell in ipairs(source.voxels) do
+                local key=cell[u]..","..cell[v]
+                local column=groups[key]
+                if column==nil then
+                    column={lo=cell,hi=cell}
+                    groups[key]=column
+                else
+                    if cell[axis]<column.lo[axis] then column.lo=cell end
+                    if cell[axis]>column.hi[axis] then column.hi=cell end
+                end
+            end
+            local keys={}
+            for key in pairs(groups) do keys[#keys+1]=key end
+            table.sort(keys)
+            -- 每轴最多 24 列，明确抽样；原始六面方块仍全覆盖九个点。
+            local stride=math.max(1,math.ceil(#keys/24))
+            for k=1,#keys,stride do
+                for _,sign in ipairs({-1,1}) do
+                    ---@type number[]
+                    local cell=sign<0 and groups[keys[k]].lo or groups[keys[k]].hi
+                    local localNormal=Vector3(axis==1 and sign or 0,axis==2 and sign or 0,axis==3 and sign or 0)
+                    local point=clone.origin+clone.rot*(Vector3(cell[1]+.5,cell[2]+.5,cell[3]+.5)*clone.size+localNormal*(clone.size*.5))
+                    local normal=clone.rot*localNormal
+                    columns[#columns+1]={point=point,normal=normal,axis=axis,sign=sign}
+                end
+            end
+        end
+        local misses=0
+        for _,column in ipairs(columns) do
+            local point=column.point --[[@as Vector3]]
+            local normal=column.normal --[[@as Vector3]]
+            local faceRay=Ray(point+normal*distance,-normal)
+            local native=world:RaycastGridSingle(faceRay,60,nomi.aimMask)
+            local selected=nomi:AimRay(faceRay,60)
+            if selected.object~=clone then
+                misses=misses+1
+                print(string.format("TargetingTest: SHAPE MISS %s yaw=%g axis=%d sign=%d origin=%s dir=%s native=%s id=%d d=%.9f checked=%s d=%s voxel=%s",
+                    source.id,yaw,column.axis,column.sign,tostring(faceRay.origin),tostring(faceRay.direction),
+                    tostring(native.hit),native.volumeId,native.distance,tostring(selected.hit),tostring(selected.distance),tostring(native.voxel)))
+            end
+            V.assert(selected.object==clone,"正式形状六面可选 "..source.id.." yaw="..yaw.." axis="..column.axis.." sign="..column.sign)
+        end
+        print(string.format("TargetingTest: shape=%s yaw=%g range=%g samples=%d misses=%d",source.id,yaw,distance,#columns,misses))
+        clone:RemoveWhole()
+    end
+    for _,yaw in ipairs({0,37,90,180,270}) do CheckShape(object,yaw,3) end
+    local puzzles=game.puzzles
+    for _,source in ipairs({puzzles.boulder,puzzles.objects.stele1}) do
+        if source~=nil then
+            for _,yaw in ipairs({source.yaw,37,180}) do
+                CheckShape(source,yaw,3)
+                CheckShape(source,yaw,45)
+            end
+        end
+    end
     local ray = Ray(Vector3(300.5,5.5,298),Vector3.FORWARD)
     local aim = nomi:AimRay(ray,10)
     V.assert(aim.hit and aim.object==object and aim.breakable,"实心可操作物件正确锁定")
