@@ -9,7 +9,9 @@ local M = { menuOpen=false }
 local provider, onModeChanged, onCancel
 local owners, buttons = {}, {}
 local joy, lookID
-local state = {}
+local EMPTY={}
+local liveTouches={}
+local state = EMPTY
 local current, previous, transition = 'foot', nil, 5
 local clock, idle, frame, fullFlash, lastCharge = 0, 0, 0, 0, 0
 local releasedJoy, releasedFrame
@@ -44,6 +46,7 @@ local SETS = {
         {name='breathSpecial',icon='breath',label='大招',x=-196,y=-160},
     },
 }
+local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local FOOT_TOP={{name='menu',icon='menu'},{name='sheath'},{name='forge'},{name='farview'},{name='fastTime',icon='clock'}}
@@ -78,7 +81,7 @@ function M.Hint()
     return '左摇杆移动 · 右侧拖动看四周'
 end
 function M.Sync()
-    if provider then state=provider() or {} end
+    if provider then state=provider() or EMPTY end
     width,height,safe=Draw.Metrics()
     local nextMode=state.mounted and (state.airborne and 'air' or 'ground') or (state.combat and 'combat' or 'foot')
     if nextMode~=current then
@@ -197,7 +200,8 @@ function M.Update(dt)
     if not input.focus or input.minimized then
         if next(owners) then Cancel() end
     else
-        local live={}
+        local live=liveTouches
+        for id in pairs(live) do live[id]=nil end
         for i=0,input.numTouches-1 do live[input:GetTouch(i).touchID]=true end
         for id,o in pairs(owners) do
             if o.native and not live[id] then Cancel(); break end
@@ -224,7 +228,7 @@ local function DrawSet(vg,mode,alpha,offset)
         Draw.Button(vg,b,x,y,a,down,active,Disabled(b),0,total,0)
         -- Information never inherits the idle dimming of the button base.
         if cd>0 then Draw.Arc(vg,x,y,(b.size or 64)/2-6,0,cd/math.max(.001,total),24,Draw.colors.deep,.62*alpha) end
-        if cd>=1 then Draw.Text(vg,tostring(math.ceil(cd)),x,y,12,Draw.colors.paper,NVG_ALIGN_CENTER,alpha) end
+        if cd>=1 then Draw.Text(vg,Draw.Number(math.ceil(cd)),x,y,12,Draw.colors.paper,NVG_ALIGN_CENTER,alpha) end
         if charge>0 then Draw.Arc(vg,x,y,(b.size or 64)/2+6,(b.size or 64)/2+2,charge,32,Draw.colors.bright,alpha) end
         if state.readyFlash and (b.name=='shatter' or b.name=='freeze' or b.name=='rewind') then
             Draw.Arc(vg,x,y,(b.size or 64)/2+4,(b.size or 64)/2+2,1,32,Draw.colors.gold,alpha)
@@ -267,7 +271,7 @@ function Layer:Render(vg)
         local w=math.min(420,width-safe.left-safe.right-40)
         local x,y=Draw.Snap((width-w)/2),Draw.Snap(math.max(safe.top+20,(height-176)/2))
         Draw.NineSlice(vg,'panel_paper',x,y,w,176,8,1)
-        local lines={'操作说明','左摇杆移动 · 右侧拖动看四周','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
+        local lines=HELP_LINES
         for i,line in ipairs(lines) do Draw.Text(vg,line,x+w/2,y+22+(i-1)*22,12,Draw.colors.brown,NVG_ALIGN_CENTER) end
     end
     Draw.Finish(vg)

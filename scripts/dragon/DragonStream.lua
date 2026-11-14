@@ -22,6 +22,8 @@ local M={RANGE=18.0,POWER=1.8}
 ---@field motes VoxelFXMotes
 ---@field shaderWarmup DragonShaderWarmup
 local S={}; S.__index=S
+-- W6 预热默认关闭：Windows 实测克隆代理在异常时每帧泄漏几何体并中断更新；冷启动 HLSL 错误已确认属于云层着色器。
+S.ENABLE_SHADER_WARMUP=false
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Wrap(a) return (a+180)%360-180 end
 ---@param scene Scene
@@ -51,7 +53,7 @@ function M.New(scene,breath)
     g:SetMaterial(self.mat);self.node.enabled=false
     self.motes=VoxelFX.Motes(root,'FrostFlecks',96,'square',false)
     -- W6: clone only visual sources; real breath/pool state stays untouched.
-    self.shaderWarmup=ShaderWarmup.New(root,self.node,self.motes.bb,breath.rings[1] and breath.rings[1].node)
+    self.shaderWarmup=S.ENABLE_SHADER_WARMUP and ShaderWarmup.New(root,self.node,self.motes.bb,breath.rings and breath.rings[1] and breath.rings[1].node or nil) or nil
     self.ctrl.stream=self
     self.ctrl.overlayPose=function(_,pose) self:OverlayPose(pose) end
     return self
@@ -76,7 +78,14 @@ end
 ---@param target Vector3|nil
 ---@param allowed boolean|nil
 function S:Update(dt,held,target,allowed)
-    self.shaderWarmup:Update(dt,held or self.ctrl.state=='BREATH') -- W6: idle-frame submission
+    if self.shaderWarmup then
+        local ok,err=pcall(self.shaderWarmup.Update,self.shaderWarmup,dt,held or self.ctrl.state=='BREATH')
+        if not ok then
+            print('DragonShaderWarmup disabled after error: '..tostring(err))
+            pcall(self.shaderWarmup.Destroy,self.shaderWarmup)
+            self.shaderWarmup=nil
+        end
+    end -- W6 warmup: guarded, never interrupts the frame update
     dt=math.min(math.max(dt,0),.1)
     self.time=self.time+dt
     self.motes:Update(dt)
@@ -133,7 +142,7 @@ function S:Update(dt,held,target,allowed)
     end
 end
 function S:Destroy()
-    self.shaderWarmup:Destroy() -- W6: cleanup before the owning root disappears
+    if self.shaderWarmup then pcall(self.shaderWarmup.Destroy,self.shaderWarmup); self.shaderWarmup=nil end -- W6: cleanup before the owning root disappears
     self:Stop()
     if self.ctrl.stream==self then self.ctrl.overlayPose=nil;self.ctrl.stream=nil end
     if self.root then self.root:Remove();self.root=nil end

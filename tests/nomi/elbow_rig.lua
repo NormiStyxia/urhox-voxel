@@ -9,7 +9,6 @@ Color=setmetatable({WHITE=C(1,1,1,1)},{__call=function(_,...)return C(...)end})
 cache={GetResource=function()return {}end}
 Clamp=function(v,a,b)return math.max(a,math.min(v,b))end
 Lerp=function(a,b,t)return a+(b-a)*t end
-local N=getmetatable(Mock.Node('probe')).__index
 -- __index is a function in this mock; extend per-instance recursively instead.
 local function node(name,parent)
     local n=Mock.Node(name,parent)

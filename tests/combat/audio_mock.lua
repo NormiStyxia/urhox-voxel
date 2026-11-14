@@ -2,7 +2,7 @@
 local Mock = {}
 function Mock.New(config)
     config = config or {}
-    local state = { nodes = {}, sources = {}, reads = {}, sounds = {}, attempts3D = 0 }
+    local state = { nodes = {}, sources = {}, reads = {}, sounds = {}, attempts3D = 0, nowMs = 0, readCount = 0 }
     local sourceMethods = {}
     function sourceMethods:Play(sound, frequency, gain)
         if config.playError then error('unsupported playback') end
@@ -52,6 +52,8 @@ function Mock.New(config)
     _G.cache = {GetResource = function(_, kind, path)
         assert(kind == 'Sound')
         state.reads[path] = (state.reads[path] or 0) + 1
+        state.readCount = state.readCount + 1
+        state.nowMs = state.nowMs + (config.loadMs or 0)
         if config.resourceError then error('cache unavailable') end
         if config.missing then return nil end
         if not state.sounds[path] then
@@ -62,7 +64,12 @@ function Mock.New(config)
         end
         return state.sounds[path]
     end}
-    _G.audio = {GetListener = function() return state.listener end}
+    _G.audio = {GetListener = function()
+        state.nowMs = state.nowMs + (state.listenerMs or 0)
+        return state.listener
+    end}
+    _G.time = {GetSystemTime = function() return state.nowMs end,
+        GetFrameNumber = function() return state.engineFrame end}
     _G.SOUND_EFFECT = 'Effect'
     return state
 end

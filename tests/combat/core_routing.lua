@@ -151,3 +151,37 @@ eventKey=119;keyEnv.Ruins_HandleKeyDown(nil,event);assert(stoppedTest==1 and res
 local touchCallbacks=assert(source:match('(local function AttachTouchControls.-)\nend'))
 assert(not touchCallbacks:find('combatTest_:Stop',1,true),'selftest own per-step TouchControls.Cancel must not abort runner')
 print('PASS F11 original key preserved and own cleanup cannot recursively abort')
+
+-- Execute the Scene warmup hook against W5's real incremental loader.
+package.path='scripts/?.lua;tests/?.lua;'..package.path
+local Audio=require('combat.CombatAudio')
+local audioMock=require('combat.audio_mock').New()
+Audio.New(audioMock.scene)
+local queued,updates,elapsed=0,0,0
+local audioEnv={combatAudioWarmup_=0,CombatAudio={
+    Preload=function() queued=queued+1; return Audio.Preload() end,
+    Update=function(dt) updates=updates+1;elapsed=elapsed+dt;Audio.Update(dt) end}}
+local warmupBody=assert(source:match('(local function UpdateCombatAudio.-)\nend'))..'\nend\nreturn UpdateCombatAudio'
+local warmup=assert(load(warmupBody,'Scene incremental audio warmup','t',audioEnv))()
+warmup(1);warmup(.99)
+assert(queued==0 and audioMock.readCount==0,'no preload resources during startup')
+warmup(.02)
+assert(queued==1 and audioMock.readCount==1,'first frame after 2 seconds queues and loads at most one')
+local loaded,total=Audio.PreloadProgress()
+assert(loaded==1 and total==38 and not Audio.IsReady(),'second value is total, not missing')
+local before=audioMock.readCount
+local n,t=Audio.Preload() -- existing enter/draw call remains idempotent and performs zero IO
+assert(n==1 and t==38 and audioMock.readCount==before)
+for _=1,total+5 do
+    before=audioMock.readCount;warmup(.016)
+    assert(audioMock.readCount-before<=1,'Scene never batches resource loads')
+end
+assert(queued==1 and Audio.IsReady() and audioMock.readCount==total)
+assert(updates==3+total+5 and math.abs(elapsed-(2.01+(total+5)*.016))<1e-9,'every call forwards unscaled real dt')
+audioEnv.combatAudioWarmup_=nil;warmup(.5);assert(queued==1,'cleared/finished timer stays dormant')
+audioEnv.combatAudioWarmup_=0;warmup(2);assert(queued==2,'new scene can warm up again')
+assert(source:find('CombatAudio.New(scene_)\n    combatAudioWarmup_ = 0',1,true))
+assert(source:find('CombatAudio.Dispose()\n    combatAudioWarmup_ = nil',1,true))
+assert(source:find('音频预加载 %d/%d',1,true))
+Audio.Dispose()
+print('PASS Scene 2s warmup, real-time single-frame budget, idempotent enter preload, progress and lifecycle reset')

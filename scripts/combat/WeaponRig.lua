@@ -192,10 +192,11 @@ function Rig:Init(scene,world,controller)
     local backBow=self.body:CreateChild("back_bow")
     backBow.position=Vector3(0,1.05-self.body.position.y,-.30-self.body.position.z)
     backBow.rotation=Quaternion(0,180,90) -- horizontal; convex +Z faces outward(-Z), string toward body
-    local left=assert(bones.arm_left):CreateChild("hand_left")
-    local rightPosition=controller.castSocket.position
-    left.position=Vector3(-rightPosition.x,rightPosition.y,rightPosition.z)
-    self.sockets={back_sword=backSword,back_bow=backBow,hand_right=controller.castSocket,hand_left=left}
+    -- Shared palms belong to BlockCharacter, including their mirrored calibration
+    -- and arm/forearm ownership. Only our weapon_grip children apply gripRest.
+    local right=assert(controller.nomi:HandSocket('right'),'WeaponRig requires calibrated right palm')
+    local left=assert(controller.nomi:HandSocket('left'),'WeaponRig requires calibrated left palm')
+    self.sockets={back_sword=backSword,back_bow=backBow,hand_right=right,hand_left=left}
     self.entries={}
     for _,weapon in ipairs({"sword","bow"}) do
         local pivot=self.body:CreateChild("weapon_grip_"..weapon)
@@ -945,8 +946,8 @@ function Rig:Dispose()
     for _,entry in pairs(self.entries) do Builder.Dispose(entry.mesh); entry.pivot:Remove() end
     self.sockets.back_sword:Remove()
     self.sockets.back_bow:Remove()
-    self.sockets.hand_left:Remove()
-    -- hand_right is controller.castSocket, owned by NomiController, never removed.
+    -- Both palms are shared character-owned nodes: never delete, move or reset
+    -- them. Our weapon pivots and child flash volumes have already been removed.
     self.trails,self.samples,self.images,self.particles={},{},{},{}
     self.bowImages={}
     self.afterimages=nil

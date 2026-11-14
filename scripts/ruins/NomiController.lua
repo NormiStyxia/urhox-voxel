@@ -55,12 +55,9 @@ function M.New(scene, world, spawn, spawnYaw)
     self.node = scene:CreateChild("Nomi")
     self.node.worldPosition = spawn
     self.nomi = BlockCharacter.CreateVoxel(self.node, NomiVoxelData, BlockCharacter.SLENDER)
-    -- 体素模型手掌中心约 (19,33,-.75)，肩轴 (9,46,-1.5)。
-    -- 按同一份 unit/修长体型变换挂在手骨上，不用肩部向下猜 0.45m。
-    local socket = self.nomi.bones.arm_right:CreateChild("SpellPalm")
-    local shape = BlockCharacter.SLENDER.widen
-    socket.position = Vector3(10 * shape.x, -13, .75 * shape.z) * NomiVoxelData.unit
-    self.castSocket = socket
+    -- Character owns the calibrated palm (±19,33,-.75), including its parent.
+    -- Reuse it read-only: arm for legacy data, forearm for elbow data.
+    self.castSocket = assert(self.nomi:HandSocket("right"), "Nomi right palm is unavailable")
     local cc = self.node:CreateComponent("VoxelCharacterController")
     cc.height = 1.65
     cc.radius = 0.32

@@ -7,6 +7,13 @@ local Controls=require('ui.TouchControls')
 local CombatHUD=require('ui.CombatHUD')
 local M={}
 local ready=false
+local EMPTY={}
+local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}
+local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='dodge',key='Shift'},{name='swap',key='Q'}}
+local MESSAGE_STEPS={-4,0,4,0}
+local MESSAGE_ALPHA={.34,.67,1,1}
+local combatObjective={x=0,y=0,h=0}
+local mobileLast,mobileResult
 local title,sub,hint,message,target,clockText='','','','','',''
 local displayMessage=''
 local messageFrame,hideFrame=3,0
@@ -19,10 +26,12 @@ local SPELL_COLORS={shatter={255,92,76},freeze={96,160,255},rewind={255,206,96}}
 local Layer=UI.Panel:Extend('RuinsPixelHUD')
 local function MobileText(text)
     if not Touch.IsEnabled() then return text end
+    if mobileLast==text then return mobileResult end
     local t=text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 Q 施放','点【回溯】施放')
         :gsub('按 E','点【冻结】'):gsub('按 F 骑乘，Space 起飞','点【上龙】骑乘，再点【起飞】')
         :gsub('%[Q 回溯%]','【回溯】'):gsub('按 Q','点【回溯】')
         :gsub('%[左键 碎时%]','【碎时】'):gsub('左键碎时','【碎时】')
+    mobileLast,mobileResult=text,t
     return t
 end
 -- 每个缓存槽只保留最新文本；测量与绘制共用 HUD 坐标和12px字体状态，
@@ -165,14 +174,15 @@ function Layer:Render(vg)
         if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
     end
     if not touch and not CombatHUD.Active() then
-        for i,b in ipairs({{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}) do
+        for i,b in ipairs(SPELL_BUTTONS) do
             local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
             Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
         end
     end
     if not touch and CombatHUD.Active() then
-        local list={{name='attack',icon=CombatHUD.Weapon(),key='左键'},{name='heavy',key='右键'},{name='dodge',key='Shift'},{name='swap',key='Q'}}
+        local list=COMBAT_BUTTONS
+        list[1].icon=CombatHUD.Weapon()
         for i,b in ipairs(list) do
             local x,y=Draw.Snap(w/2+(i-2.5)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,0,1,i==1 and CombatHUD.Charge() or 0)
@@ -202,10 +212,10 @@ function Layer:Render(vg)
         local ml,widths=Lines(vg,messageCache,displayMessage,maxW-88,24,touch,true)
         local mw=88
         for _,width in ipairs(widths) do mw=math.max(mw,Draw.Snap(width+88)) end
-        local step=({-4,0,4,0})[messageFrame+1]
+        local step=MESSAGE_STEPS[messageFrame+1]
         mw=math.min(maxW,mw+step)
         local my=Draw.Snap(h*.22)
-        local alpha=message=='' and hideFrame/2 or ({.34,.67,1,1})[messageFrame+1]
+        local alpha=message=='' and hideFrame/2 or MESSAGE_ALPHA[messageFrame+1]
         Draw.Scroll(vg,(w-mw)/2,my,mw,alpha)
         for i,line in ipairs(ml) do Draw.Text(vg,line,w/2,my+48+(i-(#ml+1)/2)*26,24,C.brown,NVG_ALIGN_CENTER,alpha) end
     end
@@ -217,7 +227,8 @@ function Layer:Render(vg)
             Draw.Text(vg,line,hx+16,top+22+(i-1)*20,12,C.brown)
         end
     end
-    CombatHUD.Render(vg,w,h,s,{x=left,y=top,h=oh})
+    combatObjective.x,combatObjective.y,combatObjective.h=left,top,oh
+    CombatHUD.Render(vg,w,h,s,combatObjective)
     Draw.Finish(vg)
 end
 function M.Build(spells)
@@ -240,9 +251,13 @@ function M.SelectHint(action,aim,pointerHint)
     return pointerHint or ''
 end
 function M.HelpLines(mode)
-    if mode=='combat' then return {'WASD 移动 · Space 跳跃','左键攻击/蓄力 · 右键重击','Shift 闪避 · Q 切武器 · C 收刃','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'} end
-    if mode=='mounted' then return {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Tab 远景 · Esc 释放鼠标','H 隐藏说明'} end
-    return {'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+    if M.helpLines then return M.helpLines[mode] or M.helpLines.explore end
+    M.helpLines={
+    combat= {'WASD 移动 · Space 跳跃','左键攻击/蓄力 · 右键重击','Shift 闪避 · Q 切武器 · C 收刃','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
+    mounted= {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Tab 远景 · Esc 释放鼠标','H 隐藏说明'},
+    explore= {'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+    }
+    return M.helpLines[mode] or M.helpLines.explore
 end
 function M.SetClock(t) clockText=t or '' end
 function M.SetHint(t) hint=t or '' end
@@ -255,7 +270,7 @@ end
 function M.SetTarget(t,obj) target,targetGold=t or '',obj~=nil end
 function M.SetCrossVisible(v) crossVisible=v==true end
 function M.IsCrossVisible() return crossVisible end
-function M.UpdateSlots(c,q) cool,charge=c or {},q or 0 end
+function M.UpdateSlots(c,q) cool,charge=c or EMPTY,q or 0 end
 function M.IsPointerOverUI() return UI.IsPointerOverUI() end
 function M.Stop()
     headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}

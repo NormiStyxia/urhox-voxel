@@ -1,6 +1,11 @@
 -- Combat audio, §19.6. No engine work at require time.
 -- New(scene) installs the default manager; use Audio.Play(...) OR manager:Play(...).
 -- Update(realDt) once per frame (also during hit-stop); Dispose before scene teardown.
+-- Call Preload once during scene idle time (W2: two seconds after scene startup).
+-- It only schedules work. Update loads at most ONE resource per frame, sharing
+-- that allowance with cold Play calls; each cold request is silent for this frame.
+-- 2 ms is an admission budget: synchronous ResourceCache:GetResource cannot be
+-- interrupted mid-decode. A single slow resource may overrun; no more work follows.
 -- opts: pos (world Vector3), material, tier, enemy, volume [0,1], pitch multiplier;
 -- hitId optionally groups layers across frames. Without hitId, impacts in one frame
 -- share a conservative three-voice budget. Explicit sword tier 1/2/3 selects a swing;
@@ -14,6 +19,7 @@ local defaultManager
 local BUS_GAIN = 10 ^ (-6 / 20)
 local FADE_SECONDS = 0.04
 local BOW_LOOP_SECONDS = 0.65 -- skip generated MP3 encoder padding beyond 0.7 s
+local LOAD_BUDGET_MS = 2
 local NEAR, FAR = 2, 35
 local LIMITS = { low = 8, mid = 12, high = 16 }
 local EVENTS = {
@@ -40,6 +46,39 @@ local EVENTS = {
     victory = { files = { 'audio/sfx/cmb_victory.mp3' }, db = -4, interval = 0.50 },
 }
 
+local ASSETS, ASSET_LOOPS = {}, {}
+for _, definition in pairs(EVENTS) do
+    for _, path in ipairs(definition.files) do
+        if ASSET_LOOPS[path] == nil then ASSETS[#ASSETS + 1] = path end
+        ASSET_LOOPS[path] = definition.loop == true
+    end
+end
+table.sort(ASSETS)
+
+local function milliseconds()
+    -- Wall clock includes file I/O stalls; os.clock is the offline fallback only.
+    if time then
+        local ok, value = pcall(function() return time:GetSystemTime() end)
+        if ok and type(value) == 'number' then return value end
+    end
+    return os.clock() * 1000
+end
+
+local function elapsed(start)
+    return (milliseconds() - start) % 4294967296 -- engine uint32 millisecond wrap
+end
+
+local function beginLoadFrame(self)
+    local frame = self.frame
+    if time then
+        local ok, value = pcall(function() return time:GetFrameNumber() end)
+        if ok and type(value) == 'number' then frame = value end
+    end
+    if self.loadFrameKey ~= frame then
+        self.loadFrameKey, self.loadsThisFrame, self.loadSpentMs = frame, 0, 0
+    end
+end
+
 local function finite(value, fallback)
     if type(value) ~= 'number' or value ~= value or math.abs(value) == math.huge then return fallback end
     return value
@@ -56,35 +95,65 @@ function Manager:Init(scene)
     self.pool, self.sounds, self.lastVariant, self.lastPlay, self.warned = {}, {}, {}, {}, {}
     self.enabled, self.disposed, self.volume, self.limit = true, false, 1, LIMITS.mid
     self.time, self.frame, self.serial = 0, 0, 0
+    self.preloadQueued, self.preloadCursor, self.loadedCount = false, 1, 0
+    self.demandQueue, self.demandQueued, self.loadedFrame = {}, {}, {}
+    self.loadsThisFrame, self.loadSpentMs = 0, 0
+    self.loadFrameKey = nil
     self.listenerPosition = {x = 0, y = 0, z = 0}
 end
 
 local function loadSound(self, path, looped)
     local sound = self.sounds[path]
     if sound ~= nil then return sound or nil end
+    if self.loadsThisFrame >= 1 or self.loadSpentMs >= LOAD_BUDGET_MS then return nil end
+    self.loadsThisFrame = self.loadsThisFrame + 1
+    local start = milliseconds()
     local ok, result = pcall(function()
         local resource = cache:GetResource('Sound', path)
         if resource then resource:SetLooped(looped == true) end
         return resource
     end)
+    self.loadSpentMs = self.loadSpentMs + elapsed(start)
     if not ok or not result then
         self.sounds[path] = false -- do not retry missing resources every frame
         warnOnce(self, 'resource', '战斗音效加载失败，已静音降级：' .. path)
         return nil
     end
     self.sounds[path] = result
+    self.loadedCount = self.loadedCount + 1
+    self.loadedFrame[path] = self.loadFrameKey
     return result
 end
 
 function Manager:Preload()
-    if self.disposed then return 0, 38 end
-    local loaded, missing = 0, 0
-    for _, definition in pairs(EVENTS) do
-        for _, path in ipairs(definition.files) do
-            if loadSound(self, path, definition.loop) then loaded = loaded + 1 else missing = missing + 1 end
-        end
+    if not self.disposed then self.preloadQueued = true end
+    return self:PreloadProgress()
+end
+
+-- loaded counts SUCCESSFUL resources, never failures. IsReady stays false if any
+-- asset failed, but each failed path is terminal and never retried automatically.
+function Manager:PreloadProgress()
+    return self.loadedCount, #ASSETS
+end
+
+function Manager:IsReady()
+    return not self.disposed and self.loadedCount == #ASSETS
+end
+
+local function preloadStep(self, updateStart)
+    while self.loadsThisFrame < 1 and self.loadSpentMs < LOAD_BUDGET_MS and elapsed(updateStart) < LOAD_BUDGET_MS do
+        local path
+        if #self.demandQueue > 0 then
+            path = table.remove(self.demandQueue, 1)
+            self.demandQueued[path] = nil
+        elseif self.preloadQueued then
+            path = ASSETS[self.preloadCursor]
+            if not path then return end
+            self.preloadCursor = self.preloadCursor + 1
+        else return end
+        -- On-demand loads may already have fulfilled items in the background list.
+        if self.sounds[path] == nil then loadSound(self, path, ASSET_LOOPS[path]) end
     end
-    return loaded, missing
 end
 
 local function stopVoice(self, slot)
@@ -226,6 +295,7 @@ end
 
 function Manager:Play(eventName, opts)
     if self.disposed or not self.enabled then return nil end
+    beginLoadFrame(self)
     opts = opts or {}
     local event = resolve(eventName, opts)
     local definition = EVENTS[event]
@@ -239,7 +309,16 @@ function Manager:Play(eventName, opts)
     end
     local index = chooseVariant(self, event, definition, opts)
     local path = definition.files[index]
-    local sound = loadSound(self, path, definition.loop)
+    local sound = self.sounds[path]
+    if sound == nil then
+        loadSound(self, path, definition.loop)
+        if self.sounds[path] == nil and not self.demandQueued[path] then
+            self.demandQueued[path] = true
+            self.demandQueue[#self.demandQueue + 1] = path
+        end
+        return nil -- no late replay: gameplay timing takes precedence over audio
+    end
+    if self.loadedFrame[path] == self.loadFrameKey then return nil end
     if not sound then return nil end
     local priority = definition.priority or 1
     local hitId = opts.hitId
@@ -295,7 +374,9 @@ end
 
 function Manager:Update(dt)
     if self.disposed then return end
+    local updateStart = milliseconds()
     self.time, self.frame = self.time + math.max(0, finite(dt, 0)), self.frame + 1
+    beginLoadFrame(self)
     local _, listenerPos = getListener(self)
     for _, slot in ipairs(self.pool) do
         if slot.active then
@@ -318,6 +399,9 @@ function Manager:Update(dt)
             end
         end
     end
+    -- Preserve exhausted Update budget for Play calls later in this same frame.
+    self.loadSpentMs = math.max(self.loadSpentMs, elapsed(updateStart))
+    preloadStep(self, updateStart)
 end
 
 function Manager:SetEnabled(enabled)
@@ -352,6 +436,8 @@ function Manager:Dispose()
         pcall(function() slot.node:Dispose() end)
     end
     self.pool, self.sounds, self.scene, self.disposed = {}, {}, nil, true
+    self.demandQueue, self.demandQueued, self.loadedFrame, self.loadedCount = {}, {}, {}, 0
+    self.preloadQueued = false
 end
 
 function Audio.Events()
@@ -373,9 +459,11 @@ function Audio.New(scene)
 end
 
 -- Module facade allows W2/W3 to share the scene-owned manager without globals.
-for _, name in ipairs({'Play', 'Stop', 'SetEnabled', 'SetVolume', 'SetQuality', 'Preload', 'Update', 'Dispose', 'SetListenerPosition'}) do
+for _, name in ipairs({'Play', 'Stop', 'SetEnabled', 'SetVolume', 'SetQuality', 'Preload', 'PreloadProgress', 'IsReady', 'Update', 'Dispose', 'SetListenerPosition'}) do
     Audio[name] = function(...)
         if defaultManager then return Manager[name](defaultManager, ...) end
+        if name == 'IsReady' then return false end
+        if name == 'PreloadProgress' then return 0, #ASSETS end
         return nil
     end
 end

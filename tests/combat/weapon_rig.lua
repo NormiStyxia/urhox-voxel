@@ -12,6 +12,7 @@ assert(world.created==2+#rig.trails+#rig.images+#rig.bowImages+#rig.particles+2+
 assert(rig:GetAfterimagePose()==nil,'hidden weapons are not hand snapshots')
 for _,volume in ipairs(world.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
 assert(rig.sockets.hand_right==nomi.castSocket)
+assert(rig.sockets.hand_right==nomi.nomi:HandSocket('right') and rig.sockets.hand_left==nomi.nomi:HandSocket('left'))
 Mock.Near(rig.sockets.hand_left.position.x,-nomi.castSocket.position.x)
 Mock.Near(rig.sockets.hand_left.position.y,nomi.castSocket.position.y)
 assert(rig.sockets.back_sword.parent==nomi.nomi.bones.body and rig.sockets.back_bow.parent==nomi.nomi.bones.body)
@@ -162,7 +163,7 @@ rig:SetPose('back');frames(11)
 assert(rig.flashes.socket.node.enabled,'stow arrival flashes once')
 frames(6);assert(not rig.flashes.socket.node.enabled)
 rig:Dispose();rig:Dispose()
-assert(world.created==world.removed and not nomi.castSocket.removed)
+assert(world.created==world.removed and not nomi.castSocket.removed and not rig.sockets.hand_left.removed)
 
 local function SlideCase(weapon)
     local root=Mock.Node('slide_test') --[[@as any]]
@@ -431,4 +432,89 @@ local function LivelyCase(fps,weapon)
     r:Dispose();r:Dispose();assert(w.created==w.removed)
 end
 for _,fps in ipairs({30,60}) do LivelyCase(fps,'sword');LivelyCase(fps,'bow') end
+
+-- Shared palm migration: compare against the pre-migration arm-local formula
+-- at varied root/body/arm poses. Zero-elbow chain must give the same values.
+local function SharedPalmCase(elbows)
+    local root=Mock.Node('shared_palms') --[[@as any]]
+    local w=Mock.World(root) --[[@as any]]
+    local controller=Mock.Nomi(root,elbows) --[[@as any]]
+    local character=controller.nomi
+    local right,left=character:HandSocket('right'),character:HandSocket('left')
+    assert(character:HandSocket('right')==right and character:HandSocket('left')==left)
+    local rightParent,leftParent=right.parent,left.parent
+    local rightPosition=Vector3(right.position.x,right.position.y,right.position.z)
+    local leftPosition=Vector3(left.position.x,left.position.y,left.position.z)
+    local rightRotation,leftRotation=right.rotation,left.rotation
+    local foreignRight,foreignLeft=right:CreateChild('other_owner'),left:CreateChild('other_owner')
+    local legacyRight=controller.castSocket
+    local legacyLeft=character.bones.arm_left:CreateChild('legacy_left_reference')
+    legacyLeft.position=Vector3(-legacyRight.position.x,legacyRight.position.y,legacyRight.position.z)
+    local accessor=character.HandSocket
+    local calls={}
+    character.HandSocket=function(self,side) calls[#calls+1]=side;return accessor(self,side) end
+    local r=Rig.New(root,w,controller)
+    assert(#calls==2 and calls[1]=='right' and calls[2]=='left')
+    assert(r.sockets.hand_right==right and r.sockets.hand_left==left)
+    if elbows then
+        assert(right.parent==character.bones.forearm_right and left.parent==character.bones.forearm_left)
+        assert(right~=controller.castSocket,'Rig must not keep a stale controller shoulder socket')
+    else assert(right.parent==character.bones.arm_right and left.parent==character.bones.arm_left) end
+    local offset,euler=Vector3(.03,-.02,.04),Vector3(11,-17,28)
+    local function Compare(weapon,source)
+        r:SetSwing(offset,euler)
+        local position,rotation=r:GetAfterimagePose()
+        local expectedPosition=source:LocalToWorld(offset)
+        local expectedRotation=source.worldRotation*Quaternion(90,0,0)*Quaternion(euler.x,euler.y,euler.z)
+        Mock.VectorNear(position,expectedPosition)
+        Mock.VectorNear(rotation*Vector3.UP,expectedRotation*Vector3.UP)
+        Mock.VectorNear(rotation*Vector3.FORWARD,expectedRotation*Vector3.FORWARD)
+        r:Update(0)
+        local hit=r:GetHit();local bp=r.entries[weapon].mesh.blueprint
+        local h=bp.hit
+        Mock.VectorNear(hit.origin,expectedPosition+expectedRotation*Vector3(h.origin[1],h.origin[2],h.origin[3]))
+        Mock.VectorNear(hit.dir,expectedRotation*Vector3(h.dir[1],h.dir[2],h.dir[3]))
+        assert(hit.length==h.length and hit.radius==h.radius)
+    end
+    for _,weapon in ipairs({'sword','bow'}) do
+        r:SetActive(weapon);r:SetPose('hand');r:Update(.12)
+        for i=1,5 do
+            controller.node.position=Vector3(i*.3,-i*.04,i*.1)
+            controller.node.rotation=Quaternion(0,i*37,0)
+            character.bones.body.rotation=Quaternion(i*3,-i*7,i*2)
+            character.bones.arm_right.rotation=Quaternion(-90+i*6,i*5,-i*4)
+            character.bones.arm_left.rotation=Quaternion(-90-i*5,-i*3,i*2)
+            Compare(weapon,weapon=='sword' and legacyRight or legacyLeft)
+        end
+    end
+    if elbows then
+        character.bones.forearm_right.rotation=Quaternion(-65,9,3)
+        character.bones.forearm_left.rotation=Quaternion(-90,-7,4)
+        for _,weapon in ipairs({'sword','bow'}) do
+            r:SetActive(weapon);r:SetPose('hand');r:Update(.12)
+            Compare(weapon,weapon=='sword' and right or left)
+        end
+    end
+    assert(#calls==2,'shared socket references are stable; no repeated creation in Update')
+    local function Preserved()
+        assert(not right.removed and not left.removed and right.parent==rightParent and left.parent==leftParent)
+        Mock.VectorNear(right.position,rightPosition);Mock.VectorNear(left.position,leftPosition)
+        Mock.VectorNear(right.rotation*Vector3.UP,rightRotation*Vector3.UP)
+        Mock.VectorNear(left.rotation*Vector3.UP,leftRotation*Vector3.UP)
+        assert(not foreignRight.removed and not foreignLeft.removed)
+    end
+    Preserved();r:Dispose();r:Dispose();Preserved()
+    assert(w.created==w.removed)
+    for _,entry in pairs(r.entries) do assert(entry.pivot.removed) end
+    for _,socket in ipairs({right,left}) do
+        for _,child in ipairs(socket.children) do assert(child.removed or child.name=='other_owner','weapon child leaked on shared palm') end
+    end
+    local recreated=Rig.New(root,w,controller)
+    assert(recreated.sockets.hand_right==right and recreated.sockets.hand_left==left)
+    recreated:SetPose('hand');recreated:Update(.12);recreated:Dispose();Preserved()
+    assert(w.created==w.removed and require('game.BlockCharacter').USE_ELBOW_DATA==false)
+    legacyLeft:Remove()
+end
+SharedPalmCase(false);SharedPalmCase(true)
+print('weapon_rig shared palms: PASS (legacy and zero-elbow hit/snapshot equality, bent forearm routing, owned-child-only idempotent cleanup)')
 print("weapon_rig: PASS (bow axes/draw/nock, timed reveal/flight/stow/dissolve, event drain, spring/float, visual-only sword scale, pooled FX)")

@@ -313,3 +313,17 @@ m:Feedback(enemy,{dmg=20,poise=12,heavy=true,kind='sword',pos=Vector3.ZERO,dir=V
 assert(layers[1].name=='hit_core' and layers[1].tier=='critical' and layers[1].material=='weakpoint')
 assert(layers[2].name=='hit_heavy' and layers[2].tier=='heavy' and layers[1].id==layers[2].id)
 print('PASS weak core +2dB tier, heavy extra layer shares same hitId and preserves event tier')
+
+-- A cold Play is intentionally silent; never retry it as the resource warms.
+for _,cancel in ipairs({true,false}) do
+    Bow(); local calls,stopped,beforeShots={},0,shots
+    m.o.audio={Play=function(name) calls[name]=(calls[name] or 0)+1; return nil end,
+        Stop=function() stopped=stopped+1; error('nil handle must not reach Stop') end}
+    Tick(.01,{attack=true})
+    for _=1,80 do Tick(.02,{attack=true}) end
+    assert(m.drawSound==nil and calls.bow_draw==1 and calls.bow_full==1,'cold cues are not replayed')
+    if cancel then m:Cancel('touchcancel') else Tick(.01,{attack=false}) end
+    for _=1,30 do Tick(.02) end
+    assert(stopped==0 and shots==beforeShots+(cancel and 0 or 1),'cold sound never changes cancel/fire behavior')
+end
+print('PASS cold nil bow handle: no retry, safe cancellation, release still fires once')

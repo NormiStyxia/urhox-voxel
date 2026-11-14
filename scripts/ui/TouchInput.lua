@@ -49,7 +49,7 @@ function M.CancelActions()
     held,pressed={},{}
     M.revision=M.revision+1
 end
-function M.EndFrame() pressed = {} end
+function M.EndFrame() for key in pairs(pressed) do pressed[key]=nil end end
 function M.SetMove(f, r) forward, right = f, r end
 function M.MoveAxis()
     if not M.enabled then return 0, 0 end

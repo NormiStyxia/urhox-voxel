@@ -99,7 +99,23 @@ function N:CreateChild(name)
     self.children[#self.children+1]=child
     return child
 end
-function N:SetParent(parent) self.parent=parent end
+function N:GetChild(name,recursive)
+    for _,child in ipairs(self.children) do
+        if not child.removed then
+            if child.name==name then return child end
+            if recursive then local found=child:GetChild(name,true);if found then return found end end
+        end
+    end
+end
+function N:SetParent(parent)
+    if self.parent then
+        for i,child in ipairs(self.parent.children) do
+            if child==self then table.remove(self.parent.children,i);break end
+        end
+    end
+    self.parent=parent
+    if parent then parent.children[#parent.children+1]=self end
+end
 function N:LocalToWorld(point) return worldPosition(self)+worldRotation(self)*v(point.x*self.scale.x,point.y*self.scale.y,point.z*self.scale.z) end
 function N:Remove() assert(not self.removed,"double node removal"); self.removed=true end
 
@@ -202,7 +218,7 @@ function M.World(scene)
     world.FinalizeVolumeAsDynamic=world.FinalizeVolume
     return world
 end
-function M.Nomi(scene)
+function M.Nomi(scene,withElbows)
     local node=scene:CreateChild("Nomi")
     local body=node:CreateChild("body")
     body.position=v(0,1,0)
@@ -210,7 +226,18 @@ function M.Nomi(scene)
     right.position,left.position=v(.2,.3,0),v(-.2,.3,0)
     local cast=right:CreateChild("SpellPalm")
     cast.position=v(.187,-.286,.01518)
-    return {node=node,nomi={bones={body=body,arm_right=right,arm_left=left}},castSocket=cast}
+    local character={bones={body=body,arm_right=right,arm_left=left},
+        handSocketPositions={right=v(.187,-.286,.01518),left=v(-.187,-.286,.01518)},
+        HandSocket=require('game.BlockCharacter').HandSocket}
+    if withElbows then
+        local foreRight,foreLeft=right:CreateChild('forearm_right'),left:CreateChild('forearm_left')
+        foreRight.position,foreLeft.position=v(.070125,-.099,0),v(-.070125,-.099,0)
+        character.bones.forearm_right,character.bones.forearm_left=foreRight,foreLeft
+        character.handSocketPositions.right,character.handSocketPositions.left=v(.116875,-.187,.01518),v(-.116875,-.187,.01518)
+    end
+    -- Keep the old controller reference: migration must consult the character,
+    -- even when another consumer has not yet adopted its forearm socket.
+    return {node=node,nomi=character,castSocket=cast}
 end
 function M.Near(a,b) assert(math.abs(a-b)<1e-7,tostring(a).." != "..tostring(b)) end
 function M.VectorNear(a,b) M.Near(a.x,b.x);M.Near(a.y,b.y);M.Near(a.z,b.z) end

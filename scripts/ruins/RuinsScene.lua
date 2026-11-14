@@ -34,6 +34,19 @@ local CombatMoves = require('combat.CombatMoves')
 local CombatAnim = require('combat.CombatAnim')
 local CombatHit = require('combat.Hit')
 local CombatAudio = require('combat.CombatAudio')
+local combatAudioWarmup_ = nil
+-- Queue once after startup settles; resource work stays in Audio.Update's
+-- per-engine-frame budget, on real time even during hitstop/menu/preview.
+local function UpdateCombatAudio(realDt)
+    if combatAudioWarmup_ ~= nil then
+        combatAudioWarmup_ = combatAudioWarmup_ + realDt
+        if combatAudioWarmup_ >= 2 then
+            combatAudioWarmup_ = nil
+            CombatAudio.Preload()
+        end
+    end
+    CombatAudio.Update(realDt)
+end
 local CombatSettings = require('ruins.GameSettings')
 local combatLowQuality_=false
 local Projectile = require('combat.Projectile')
@@ -45,6 +58,8 @@ local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 local combatParticles_
 local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
 local combatLookScale_=1
+local combatHUDData={}
+local hudClockMinute,hudClockPhase
 local CombatCamera=require('combat.CombatCamera')
 local combatCamera_,combatCameraFrame_
 local arrowNodes_={}
@@ -77,6 +92,70 @@ Breath.Register(Controller)
 ---@field forceCamMode string|nil
 ---@field stream table|nil Ordinary breath owned by RuinsDragon.
 local M = {}
+
+-- Optional pacing, scoped to this scene. Never switch to generational GC.
+M.gcEnabled=true
+M.gcDebug=false
+local gcState={running=false,configured=false,steps=0,cycles=0,skipped=0,maxMs=0,reclaimed=0}
+function M.SetGCEnabled(enabled)
+    M.gcEnabled=enabled==true
+    if M.gcEnabled and gcState.running and not gcState.configured then
+        gcState.pause=collectgarbage('setpause',110)
+        gcState.stepmul=collectgarbage('setstepmul',300)
+        collectgarbage('incremental',110,300)
+        gcState.configured=true
+    elseif not M.gcEnabled and gcState.configured then
+        collectgarbage('setpause',gcState.pause)
+        collectgarbage('setstepmul',gcState.stepmul)
+        gcState.configured=false
+    end
+end
+local function StartSceneGC()
+    gcState.running=true
+    gcState.steps,gcState.cycles,gcState.skipped,gcState.maxMs,gcState.reclaimed=0,0,0,0,0
+    gcState.frameStart=nil
+    gcState.at=GetTime():GetSystemTime()
+    gcState.heap=collectgarbage('count')
+    M.SetGCEnabled(M.gcEnabled)
+end
+function Ruins_HandleGCBeginFrame()
+    if gcState.running then gcState.frameStart=GetTime():GetSystemTime() end
+end
+function Ruins_HandleGCEndFrame()
+    if not gcState.running then return end
+    M.SetGCEnabled(M.gcEnabled) -- direct debug flag changes also restore pacing
+    local now=GetTime():GetSystemTime()
+    if M.gcEnabled and gcState.frameStart then
+        if now-gcState.frameStart<=12 and now>=gcState.frameStart then
+            local before=M.gcDebug and collectgarbage('count') or 0
+            local t=M.gcDebug and os.clock() or 0
+            local completed=collectgarbage('step',8)
+            gcState.steps=gcState.steps+1
+            if completed then gcState.cycles=gcState.cycles+1 end
+            if M.gcDebug then
+                gcState.maxMs=math.max(gcState.maxMs,(os.clock()-t)*1000)
+                gcState.reclaimed=gcState.reclaimed+math.max(0,before-collectgarbage('count'))
+            end
+        else gcState.skipped=gcState.skipped+1 end
+    end
+    gcState.frameStart=nil -- at most one explicit step per frame
+    if now-gcState.at>=1000 then
+        local heap=collectgarbage('count')
+        if M.gcDebug then
+            print(string.format('RuinsGC: heapKB=%.1f deltaKB=%+.1f steps=%d completed=%d skipped=%d stepReclaimedKB=%.1f maxStepCPUms=%.3f',
+                heap,heap-gcState.heap,gcState.steps,gcState.cycles,gcState.skipped,gcState.reclaimed,gcState.maxMs))
+        end
+        gcState.at,gcState.heap=now,heap
+        gcState.steps,gcState.cycles,gcState.skipped,gcState.maxMs,gcState.reclaimed=0,0,0,0,0
+    end
+end
+local function StopSceneGC()
+    local enabled=M.gcEnabled
+    M.SetGCEnabled(false)
+    M.gcEnabled=enabled
+    gcState.running=false;gcState.frameStart=nil
+end
+
 
 M.DEBUG_PANEL = false   -- 巨龙动画测试面板：默认隐藏（代码保留在 dragon/DragonDebugUI.lua）
 M.SPAWN = Vector3(0, Terrain.RING_Y + 0.1, -64.0)
@@ -339,14 +418,17 @@ local function OnPuzzle(name, data)
 end
 
 -- Touch state is sampled from the actual gameplay state, never inferred from UI.
+local combatEnemyView,emptyEnemies={},{}
 local function CombatEnemies()
-    local list=combatEnemies_ and combatEnemies_:GetEnemies() or {}
+    local list=combatEnemies_ and combatEnemies_:GetEnemies() or emptyEnemies
     if not trainingDummy_ then return list end
-    local result={}
-    for i,enemy in ipairs(list) do result[i]=enemy end
-    result[#result+1]=trainingDummy_
-    return result
+    local count=#list
+    for i,enemy in ipairs(list) do combatEnemyView[i]=enemy end
+    combatEnemyView[count+1]=trainingDummy_
+    for i=#combatEnemyView,count+2,-1 do combatEnemyView[i]=nil end
+    return combatEnemyView
 end
+
 -- Independent ray safeguard: even a misconfigured native layer cannot let the
 -- equipped model, sword afterimages or trail particles occlude aim/projectiles.
 local function IsCombatVisualVolume(volume)
@@ -422,6 +504,7 @@ local function OpenForge()
 end
 local function StartCombat()
     CombatAudio.New(scene_)
+    combatAudioWarmup_ = 0
     combatCamera_=CombatCamera.New()
     local hasDustStreak=false
     for _,event in ipairs(require('combat.AnimClips').Clips.dodge_slide.events) do
@@ -533,19 +616,23 @@ local function StartCombat()
     end)
 end
 local function AttachTouchControls()
+    local touchState={}
     local cooldown = {}
     for _,sp in ipairs(Spells.SPELLS) do cooldown[sp.id]=sp.cooldown end
     TouchControls.Attach(HUD.root,function()
         local ride,ctrl=M.ride,M.ctrl
-        return { mounted=ride.mode~="free", mounting=ride.mode=="mounting",
-            airborne=ctrl.loco.airborne, gliding=ctrl.state=="GLIDE", blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen(),
-            breathActive=M.stream and M.stream.active,
-            noSpells=not CombatState.CanUseTime(),
-            readyFlash=CombatState.ReadyFlash(),aggro=CombatHasAggro(),
-            combat=CombatState.InCombat(),weapon=CombatState.GetWeapon(),combatCharge=combatMoves_ and combatMoves_.charge or 0,
-            canMount=M.dragonAwake and not ride.locked and ride.mode=="free" and ride.onGround and ride:NearDragon()<3.6,
-            cool=caster_.cool, cooldown=cooldown, charging=caster_.charging,
-            charge=caster_.charging and caster_.charge or 0 }
+        touchState.mounted,touchState.mounting=ride.mode~="free",ride.mode=="mounting"
+        touchState.airborne,touchState.gliding=ctrl.loco.airborne,ctrl.state=="GLIDE"
+        touchState.blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen()
+        touchState.breathActive=M.stream and M.stream.active
+        touchState.noSpells=not CombatState.CanUseTime()
+        touchState.readyFlash,touchState.aggro=CombatState.ReadyFlash(),CombatHasAggro()
+        touchState.combat,touchState.weapon=CombatState.InCombat(),CombatState.GetWeapon()
+        touchState.combatCharge=combatMoves_ and combatMoves_.charge or 0
+        touchState.canMount=M.dragonAwake and not ride.locked and ride.mode=="free" and ride.onGround and ride:NearDragon()<3.6
+        touchState.cool,touchState.cooldown,touchState.charging=caster_.cool,cooldown,caster_.charging
+        touchState.charge=caster_.charging and caster_.charge or 0
+        return touchState
     end,function(on)
         pointer:Release("touch-mode")
         drag.buttons=0
@@ -574,6 +661,8 @@ end
 
 -- ---------------------------------------------------------------- 启动
 function M.Start()
+    hudClockMinute,hudClockPhase=nil,nil
+    StartSceneGC()
     voidInputBlocked=false
     combatInputBlocked=false
     combatNoticeAt=0
@@ -690,6 +779,8 @@ function M.Start()
     HUD.SetHint(resumeHint .. "  ·  F10 设置 · H 隐藏说明")
     if M.DEBUG_PANEL then M.ToggleDebugPanel() end
 
+    SubscribeToEvent("BeginFrame", "Ruins_HandleGCBeginFrame")
+    SubscribeToEvent("EndFrame", "Ruins_HandleGCEndFrame")
     SubscribeToEvent("Update", "Ruins_HandleUpdate")
     SubscribeToEvent("PostUpdate", "Ruins_HandlePostUpdate")
     SubscribeToEvent("SceneUpdate", "Ruins_HandleSceneUpdate")
@@ -843,6 +934,39 @@ local function DebugPointClear(pos)
     end
     return true
 end
+-- Debug-only measurements use character-owned sockets, never an assumed
+-- shoulder-to-hand vector. Gameplay and shared socket transforms are untouched.
+local function AppendHandDebug(lines,character,sample,legacy)
+    local body=character.bones.body
+    local targets=0
+    for _,side in ipairs({'right','left'}) do
+        local name='arm_'..side
+        local result=sample and sample[name]
+        local label=side=='right' and '右' or '左'
+        if not legacy and result and result.target then
+            local target=result.target
+            targets=targets+1
+            lines[#lines+1]=string.format('%s握点目标 (%.3f, %.3f, %.3f)m',label,target.x or target[1],target.y or target[2],target.z or target[3])
+        end
+        local palm=character:HandSocket(side)
+        if body and palm then
+            local actual=body:WorldToLocal(palm.worldPosition)
+            lines[#lines+1]=string.format('%s握点实际 (%.3f, %.3f, %.3f)m',label,actual.x,actual.y,actual.z)
+            local shoulder=character.bones[name]
+            local elbow=character.bones['forearm_'..side]
+            if shoulder and elbow then
+                local at=body:WorldToLocal(elbow.worldPosition)
+                local upper=(elbow.worldPosition-shoulder.worldPosition):Length()
+                local lower=(palm.worldPosition-elbow.worldPosition):Length()
+                lines[#lines+1]=string.format('%s肘 (%.3f, %.3f, %.3f)m',label,at.x,at.y,at.z)
+                lines[#lines+1]=string.format('%s骨长 上臂%.3fm / 前臂%.3fm',label,upper,lower)
+            elseif shoulder then
+                lines[#lines+1]=string.format('%s单段臂长 %.3fm',label,(palm.worldPosition-shoulder.worldPosition):Length())
+            end
+        end
+    end
+    if targets==0 then lines[#lines+1]=legacy and '旧轨道对比：不显示残留IK目标' or '此片段未提供握点轨迹' end
+end
 local function DebugTransfer()
     if animPreview_.index>0 then CombatHUD.Say('先退出 F7 动画预览'); return end
     local index=debugDestination_%3+1
@@ -965,6 +1089,8 @@ function M.readStreamInput()
 end
 
 -- 当前瞄准目标（时之物件）
+local aimTextCache={}
+local AIM_STATE_NAMES={WHOLE="完整",SHATTERED="破碎中",FROZEN="已碎",REWIND="回溯中"}
 local function UpdateAim()
     local aim = nomi_:Aim(60.0)
     if aim.hit then aim.object = aim.object or Puzzles.FindByVolume(aim.volume) end
@@ -996,10 +1122,17 @@ local function UpdateAim()
         -- 蓄力碎时或物件完整（只能碎）时为红；已碎可回溯时为黄
         local rewindable = obj.canRewind and (obj.state == "SHATTERED" or obj.state == "FROZEN")
         obj.hoverColor = (caster_.charging or not rewindable) and Spells.SHATTER_COLOR or Spells.REWIND_COLOR
-        local st = ({ WHOLE = "完整", SHATTERED = "破碎中", FROZEN = "已碎", REWIND = "回溯中" })[obj.state] or ""
-        if obj.state == "FROZEN" and not obj.rubble then st = "冻结" end
-        local actions = (obj.canShatter and "  [左键 碎时]" or "") .. (obj.canRewind and "  [Q 回溯]" or "")
-        HUD.SetTarget(string.format("◆ %s · %s%s", obj.title or obj.id, st, actions),obj)
+        local label=obj.title or obj.id
+        local c=aimTextCache
+        if c.object~=obj or c.state~=obj.state or c.label~=label or c.rubble~=obj.rubble
+            or c.shatter~=obj.canShatter or c.rewind~=obj.canRewind then
+            c.object,c.state,c.label,c.rubble,c.shatter,c.rewind=obj,obj.state,label,obj.rubble,obj.canShatter,obj.canRewind
+            local st=AIM_STATE_NAMES[obj.state] or ""
+            if obj.state=="FROZEN" and not obj.rubble then st="冻结" end
+            local actions=(obj.canShatter and "  [左键 碎时]" or "")..(obj.canRewind and "  [Q 回溯]" or "")
+            c.text=string.format("◆ %s · %s%s",label,st,actions)
+        end
+        HUD.SetTarget(c.text,obj)
     elseif aim.hit and aim.breakable then
         HUD.SetTarget(aim.volume == Puzzles.gateRubble and "◇ 碎石堆 · 左键碎时" or "◇ 可破坏 · 左键碎时", true)
     else
@@ -1118,7 +1251,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     -- touch mount edge before DragonRide consumes it.
     CombatState.SetMounted(M.ride.mode~='free')
     CombatState.Update(dt)
-    CombatAudio.SetListenerPosition(nomi_:Position()); CombatAudio.Update(dt)
+    CombatAudio.SetListenerPosition(nomi_:Position()); UpdateCombatAudio(dt)
     local combatAllowed=M.ride.mode=='free' and not voidInputBlocked and not M.debugOn
         and not TouchControls.IsBlocked() and input.focus and not input.minimized
         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
@@ -1268,21 +1401,9 @@ function Ruins_HandleUpdate(eventType, eventData)
             sample=sampled and sampled._ik
         end
         local lines={animPreview_.text or '', '1 前 / 2 侧 / 3 背 / 4 斜 · 距离2.6m · 鼠标微调'}
-        local body=nomi_.nomi.bones.body
-        local reference=require('combat.AnimClips').RigReference
-        for _,name in ipairs({'arm_right','arm_left'}) do
-            local result=sample and sample[name]
-            if result and result.target then
-                local target=result.target
-                local bone=nomi_.nomi.bones[name]
-                local grip=reference and (name=='arm_right' and reference.rightGrip or reference.leftGrip)
-                local actual=body and bone and grip and body:WorldToLocal(bone:LocalToWorld(Vector3(grip[1],grip[2],grip[3]))) or nil
-                local label=name=='arm_right' and '右' or '左'
-                lines[#lines+1]=string.format('%s握点目标 (%.3f, %.3f, %.3f)m',label,target.x or target[1],target.y or target[2],target.z or target[3])
-                if actual then lines[#lines+1]=string.format('%s握点实际 (%.3f, %.3f, %.3f)m',label,actual.x,actual.y,actual.z) end
-            end
-        end
-        if #lines==2 then lines[#lines+1]=legacy and '旧轨道对比：不显示残留IK目标' or '此片段未提供握点轨迹' end
+        local audioLoaded,audioTotal=CombatAudio.PreloadProgress()
+        lines[#lines+1]=string.format('音频预加载 %d/%d',audioLoaded,audioTotal)
+        AppendHandDebug(lines,nomi_.nomi,sample,legacy)
         animPreview_.text=table.concat(lines,'\n')
     end
     if combatRig_ then
@@ -1340,7 +1461,11 @@ function Ruins_HandleUpdate(eventType, eventData)
     if M.atmosphere.active then
         M.atmosphere:Update(dt, M.mounted and M.rig.root.worldPosition or nomi_.node.worldPosition, Terrain.groundMaterial)
     end
-    HUD.SetClock(dn:ClockText())
+    local clockMinute,clockPhase=math.floor(dn.hour*60),dn:PhaseName()
+    if hudClockMinute~=clockMinute or hudClockPhase~=clockPhase then
+        hudClockMinute,hudClockPhase=clockMinute,clockPhase
+        HUD.SetClock(dn:ClockText())
+    end
     -- 法阵灯：苏醒后常亮；夜里本来就有一点微光
     M.courtLight.brightness = 2.2 * M.runeK + 0.6 * (dn.nightK or 0)
     -- 草：诺米 / 龙脚下压开
@@ -1443,9 +1568,13 @@ function Ruins_HandlePostUpdate(eventType, eventData)
                 if CombatHit.Visible(a,candidate.shape.center,CombatCast) then combatLookScale_=.65; break end
             end
         end
-        CombatHUD.Set({moves=combatMoves_,combat=CombatState.InCombat(),mounted=M.ride.mode~='free',weapon=CombatState.GetWeapon(),charge=combatMoves_.charge,
-            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,bowCameraCharge=combatCameraFrame_.cross,
-            debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)})
+        local hud=combatHUDData
+        hud.moves,hud.combat,hud.mounted=combatMoves_,CombatState.InCombat(),M.ride.mode~='free'
+        hud.weapon,hud.charge=CombatState.GetWeapon(),combatMoves_.charge
+        hud.aimed,hud.enemies,hud.camera,hud.cameraNode=aimed,enemies,nomi_:Camera(),cn
+        hud.bowCameraCharge=combatCameraFrame_.cross
+        hud.debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)
+        CombatHUD.Set(hud)
     end
     fx_.motesB:Draw(); fx_.motesG:Draw()
     handMotes_:Draw()
@@ -1464,7 +1593,11 @@ function M.Stop()
     CombatState.Stop()
     CombatSettings.RegisterQuality('combat-presentation',nil)
     CombatAudio.Dispose()
+    combatAudioWarmup_ = nil
     combatCamera_,combatCameraFrame_=nil,nil
+    for key in pairs(aimTextCache) do aimTextCache[key]=nil end
+    for i=#combatEnemyView,1,-1 do combatEnemyView[i]=nil end
+    for key in pairs(combatHUDData) do combatHUDData[key]=nil end
     if trainingDummy_ then trainingDummy_:Destroy(); trainingDummy_=nil end
     if handMotes_ then handMotes_:Clear(); handMotes_=nil end
     handWasOn_,combatDebugText_,combatDebugUntil_,debugDestination_=nil,nil,0,0
@@ -1480,6 +1613,9 @@ function M.Stop()
     VoidRewind.Stop() -- release images while the UI NanoVG context is still alive
     TouchControls.Stop()
     HUD.Stop()
+    StopSceneGC()
+    UnsubscribeFromEvent("BeginFrame")
+    UnsubscribeFromEvent("EndFrame")
     UnsubscribeFromEvent("Update")
     UnsubscribeFromEvent("PostUpdate")
     UnsubscribeFromEvent("SceneUpdate")

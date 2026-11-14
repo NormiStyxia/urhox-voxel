@@ -1,4 +1,4 @@
--- 自动生成：art/nomi_voxel/voxelize.py，请勿手改（改脚本后重新运行）
+-- 自动生成：art/nomi_voxel/voxelize.py --elbows，请勿手改（改脚本后重新运行）
 -- 体素坐标：x 向右、y 向上、z 向前，脚底 y=0；quad = {方向, 层, u, v, 宽, 高, 颜色}
 -- 方向 1..6 = +X -X +Y -Y +Z -Z；层为该方向上的体素索引坐标
 return {

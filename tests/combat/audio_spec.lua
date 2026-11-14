@@ -6,10 +6,15 @@ local Mock = require('combat.audio_mock')
 local checks = 0
 local function check(value, label) checks = checks + 1; assert(value, label) end
 local function close(a, b) return math.abs(a - b) < 0.00001 end
-local function fresh(config)
+local function fresh(config, cold)
     Audio.Dispose()
     local mock = Mock.New(config)
-    return Audio.New(mock.scene), mock
+    local manager = Audio.New(mock.scene)
+    if not cold then
+        manager:Preload()
+        for _ = 1, 39 do manager:Update(1/60) end
+    end
+    return manager, mock
 end
 local function sourceFor(manager, handle)
     for _, slot in ipairs(manager.pool) do if slot.handle == handle then return slot.source end end
@@ -40,10 +45,23 @@ check(total == 38 and names == 21, '38 assets / 21 events')
 manifest.hit_soft.files[1] = 'corrupted'
 check(Audio.Events().hit_soft.files[1] ~= 'corrupted', 'manifest isolated')
 
-local manager, mock = fresh()
-local loaded, missing = Audio.Preload()
-check(loaded == 38 and missing == 0, 'preload complete')
+check(not Audio.IsReady(), 'no manager is not ready')
+local initialLoaded, initialTotal = Audio.PreloadProgress()
+check(initialLoaded == 0 and initialTotal == 38, 'no manager progress')
+local manager, mock = fresh(nil, true)
+local loaded, assetTotal = Audio.Preload()
+check(loaded == 0 and assetTotal == 38 and mock.readCount == 0, 'Preload only queues, no synchronous I/O')
+check(not Audio.IsReady(), 'queued but not ready')
+for frame = 1, 38 do
+    Audio.Preload(); Audio.Update(1/60)
+    loaded, assetTotal = Audio.PreloadProgress()
+    check(loaded == frame and assetTotal == 38, 'monotonic frame progress')
+    check(mock.readCount == frame, 'at most one resource each frame')
+    check(Audio.IsReady() == (frame == 38), 'ready only after all resources loaded')
+end
 Audio.Preload()
+Audio.Update(1/60)
+check(mock.readCount == 38, 'completed Preload is idempotent')
 for _, count in pairs(mock.reads) do check(count == 1, 'cache preloaded once') end
 check(mock.sounds['audio/sfx/cmb_bow_draw.mp3'].looped, 'bow looping resource')
 for name, variants in pairs(expected) do
@@ -188,7 +206,7 @@ warning = manager:Play('enemy_windup', {pos={x=135,y=0,z=0}})
 check(sourceFor(manager, warning).gain == 0, 'no listener fallback uses explicit player position')
 
 for _, config in ipairs({{missing=true}, {resourceError=true}, {noSource=true}, {noScene=true}, {playError=true}}) do
-    manager, mock = fresh(config); logs = {}
+    manager, mock = fresh(config, true); logs = {}
     _G.print = function(message) logs[#logs+1] = message end
     for _ = 1, 20 do
         manager:Preload(); check(manager:Play('hit_soft') == nil, 'failure is silent'); manager:Update(0.1)
@@ -197,6 +215,71 @@ for _, config in ipairs({{missing=true}, {resourceError=true}, {noSource=true}, 
     check(#mock.nodes <= 1 and Mock.Active(mock) == 0, 'failure does not leak nodes/voices')
     _G.print = savedPrint
 end
+
+-- Cold combat: only one demand load, never plays its late sound in this frame.
+manager, mock = fresh(nil, true)
+check(manager:Play('bow_draw') == nil and mock.readCount == 1, 'cold play loads one and stays silent')
+check(manager:Play('bow_draw') == nil and mock.readCount == 1, 'same-frame repeat cannot play newly loaded asset')
+check(manager:Play('bow_full') == nil and mock.readCount == 1, 'second cold event shares frame load allowance')
+for _ = 1, 10 do manager:Play('bow_full') end
+check(#manager.demandQueue == 1, 'deferred demand is deduplicated')
+manager:Preload(); check(mock.readCount == 1, 'combat Preload never performs bulk I/O')
+manager:Update(1/60)
+check(mock.readCount == 2 and mock.reads['audio/sfx/cmb_bow_full.mp3'] == 1, 'next frame loads demand before idle queue')
+check(manager:Play('bow_full') == nil, 'background load also cannot play in its load frame')
+check(Mock.Active(mock) == 0, 'cold events are not replayed automatically')
+check(manager:Play('bow_draw') ~= nil, 'later fresh event can use ready asset')
+manager:Update(1/60)
+check(manager:Play('bow_full') ~= nil, 'next-frame explicit event plays normally')
+for _ = 1, 45 do manager:Preload(); manager:Update(1/60) end
+check(manager:IsReady() and mock.readCount == 38, 'demand and idle queue share cache without duplicate loads')
+for _, count in pairs(mock.reads) do check(count == 1, 'each successful path loaded once') end
+
+-- Budget uses wall time, not dt (a long dt must not cause catch-up batches).
+manager, mock = fresh(nil, true)
+mock.engineFrame = 100
+manager:Play('bow_full'); manager:Preload(); manager:Update(1/60)
+check(mock.readCount == 1 and manager:Play('bow_full') == nil, 'Play before Update shares native frame budget and silent frame')
+manager:Update(1/60)
+check(mock.readCount == 1, 'repeated Update in same engine frame cannot duplicate loads')
+mock.engineFrame = 101
+manager:Update(1/60); manager:Play('bow_draw')
+check(mock.readCount == 2, 'Update before Play shares native frame budget')
+check(manager:Play('bow_full') ~= nil, 'native next-frame playback allowed')
+manager, mock = fresh({loadMs=0.5}, true)
+manager:Preload(); manager:Update(20)
+check(mock.readCount == 1 and close(manager.loadSpentMs, 0.5), 'cheap loads still limited to one, large dt no catch-up')
+mock.listenerMs = 2
+manager:Update(1/60)
+check(mock.readCount == 1, 'spent 2ms Update budget defers work')
+manager:Play('bow_full')
+check(mock.readCount == 1, 'cold Play cannot bypass exhausted Update budget')
+mock.listenerMs = 0
+manager:Update(1/60)
+check(mock.readCount == 2, 'budget-deferred queue resumes next frame')
+manager, mock = fresh({loadMs=3}, true)
+manager:Preload(); manager:Update(1/60)
+check(mock.readCount == 1 and manager.loadSpentMs == 3, 'single non-preemptible slow load is measured')
+manager:Play('bow_full'); manager:Preload()
+check(mock.readCount == 1, 'over-budget load prevents further loads in frame')
+manager:Update(1/60)
+check(mock.readCount == 2, 'slow-load remainder continues next frame')
+
+manager, mock = fresh({missing=true}, true); logs = {}
+_G.print = function(message) logs[#logs+1] = message end
+manager:Preload()
+for _ = 1, 80 do manager:Preload(); manager:Update(1/60); manager:Play('bow_full') end
+loaded, assetTotal = manager:PreloadProgress()
+check(loaded == 0 and assetTotal == 38 and not manager:IsReady(), 'failed assets do not count as ready')
+check(mock.readCount == 38 and #logs == 1, 'failed resource paths terminal, one failure log')
+_G.print = savedPrint
+manager:Dispose(); manager:Preload(); manager:Update(1)
+check(not manager:IsReady() and mock.readCount == 38 and #manager.demandQueue == 0, 'dispose cancels pending loads')
+
+manager, mock = fresh(nil, true)
+manager:Preload(); manager:Update(1/60)
+manager:Dispose(); manager:Update(1)
+check(mock.readCount == 1, 'dispose interrupts incomplete preload')
 
 manager, mock = fresh({stopError=true})
 bow = manager:Play('bow_draw'); source = sourceFor(manager, bow)

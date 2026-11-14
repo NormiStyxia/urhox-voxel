@@ -1,13 +1,21 @@
 -- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
 local Draw=require('ui.PixelDraw')
 local H={}
-local data={}
+local EMPTY={}
+local data=EMPTY
+local debugLines={}
+local debugText
+local enemyScreen={visible=false}
+local headOffset=Vector3(0,0,0)
+local PART_TEXT={}
+local BOW_HINT={'弱蓄 · 松手射击 · 闪避取消','中蓄 · 松手射击 · 闪避取消','满蓄 · 松手射击 · 闪避取消'}
 local C=Draw.colors
 local RED={240,91,76}
 local HISTORY={103,62,66}
 local trails=setmetatable({}, {__mode="k"})
 local notice,noticeUntil='',0
 local PART_NAMES={head='头部',foreleg_l='左前腿',foreleg_r='右前腿',back_armor='背甲',core='核心',body='躯干',belly='腹部',flank='侧腹'}
+for id,name in pairs(PART_NAMES) do PART_TEXT[id]=name..' · 破甲' end
 function H.Say(text,seconds) notice,noticeUntil=text,GetTime():GetElapsedTime()+(seconds or 1.2) end
 -- First loss anchors the hold/catch-up window. Repeated hits change the target,
 -- not its deadline; recovery/respawn snaps instead of showing phantom damage.
@@ -26,13 +34,36 @@ function H.HealthTrail(record,hp,now)
     return record.shown
 end
 function H.Set(value)
-    data=value or {}
-    if not value then trails=setmetatable({}, {__mode="k"}); return end
+    data=value or EMPTY
+    if not value then trails=setmetatable({}, {__mode="k"}); enemyScreen.visible=false;enemyScreen.enemy=nil;debugText=nil;for i=#debugLines,1,-1 do debugLines[i]=nil end;return end
+    if debugText~=data.debug then
+        debugText=data.debug
+        for i=#debugLines,1,-1 do debugLines[i]=nil end
+        if debugText then for line in debugText:gmatch('[^\n]+') do debugLines[#debugLines+1]=line end end
+    end
     local moves=data.moves
     if not moves then return end
+    local enemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
+    enemyScreen.visible=false
+    if enemy and not enemy.boss and not enemy.dead and enemy.active and data.camera then
+        headOffset.x,headOffset.y,headOffset.z=enemy.position.x,enemy.position.y+(enemy.config and enemy.config.height or 1.5)+.5,enemy.position.z
+        if (headOffset-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
+            local sp=data.camera:WorldToScreenPoint(headOffset)
+            enemyScreen.x,enemyScreen.y,enemyScreen.enemy=sp.x,sp.y,enemy
+            enemyScreen.visible=sp.x>0 and sp.x<1 and sp.y>0 and sp.y<1
+        end
+    end
+    for _,number in ipairs(moves.numbers or EMPTY) do
+        if number.cachedValue~=number.value then number.cachedValue,number.text=number.value,Draw.Number(number.value) end
+        number.screenVisible=false
+        if number.untilTime>moves.age and data.camera and (number.pos-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
+            local sp=data.camera:WorldToScreenPoint(number.pos)
+            number.screenX,number.screenY,number.screenVisible=sp.x,sp.y,true
+        end
+    end
     trails[moves]=trails[moves] or {}
     H.HealthTrail(trails[moves],moves.hp,moves.age)
-    for _,enemy in ipairs(data.enemies or {}) do
+    for _,enemy in ipairs(data.enemies or EMPTY) do
         trails[enemy]=trails[enemy] or {}
         H.HealthTrail(trails[enemy],enemy.hp,moves.age)
     end
@@ -48,7 +79,7 @@ function H.RenderHit(vg,x,y)
     local distance,weak=H.HitPulse(data.moves)
     if not distance then return end
     local color=weak and C.gold or C.paper
-    for _,sx in ipairs({-1,1}) do for _,sy in ipairs({-1,1}) do
+    for sx=-1,1,2 do for sy=-1,1,2 do
         local px,py=Draw.Snap(x+sx*distance),Draw.Snap(y+sy*distance)
         Draw.Rect(vg,px-(sx>0 and 4 or 0),py,6,2,color)
         Draw.Rect(vg,px,py-(sy>0 and 4 or 0),2,6,color)
@@ -67,13 +98,13 @@ function H.Mounted() return data.mounted==true end
 function H.Hint()
     local moves=data.moves
     if moves and (moves.clip=='bow_draw' or moves.clip=='bow_hold') then
-        return (moves.charge>=.8 and '满蓄' or (moves.charge>=.3 and '中蓄' or '弱蓄'))..' · 松手射击 · 闪避取消'
+        return BOW_HINT[moves.charge>=.8 and 3 or (moves.charge>=.3 and 2 or 1)]
     end
     if moves and moves.cancelUntil and moves.age<moves.cancelUntil then return '已取消拉弓' end
     return noticeUntil>GetTime():GetElapsedTime() and notice or nil
 end
 function H.HasBoss()
-    for _,enemy in ipairs(data.enemies or {}) do if enemy.boss and enemy.aggro and not enemy.dead then return true end end
+    for _,enemy in ipairs(data.enemies or EMPTY) do if enemy.boss and enemy.aggro and not enemy.dead then return true end end
     return false
 end
 function H.Render(vg,w,h,s,objective)
@@ -99,28 +130,21 @@ function H.Render(vg,w,h,s,objective)
         and (moves.clip=='bow_hold' or moves.clip=='bow_draw') then
         Draw.Text(vg,'满蓄',Draw.Snap(w/2),Draw.Snap(h/2-34),12,C.gold,NVG_ALIGN_CENTER)
     end
-    local enemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
-    if enemy and not enemy.boss and not enemy.dead and enemy.active and data.camera then
-        local pos=enemy.position+Vector3(0,(enemy.config and enemy.config.height or 1.5)+.5,0)
-        local delta=pos-data.cameraNode.worldPosition --[[@as Vector3]]
-        if delta:DotProduct(data.cameraNode.worldDirection)>0 then
-            local screen=data.camera:WorldToScreenPoint(pos)
-            if screen.x>0 and screen.x<1 and screen.y>0 and screen.y<1 then
-                local bx,by=Draw.Snap(screen.x*w-40),Draw.Snap(screen.y*h)
-                Draw.Rect(vg,bx-2,by-2,84,10,C.deep)
-                Draw.Rect(vg,bx,by,Draw.Snap(80*(trails[enemy] and trails[enemy].shown or enemy.hp)/enemy.maxHP),6,HISTORY)
-                Draw.Rect(vg,bx,by,Draw.Snap(80*enemy.hp/enemy.maxHP),6,RED)
-                local index=0
-                for _,p in pairs(enemy.parts) do if p.maxArmor>0 then
-                    local ax=bx+index*12
-                    Draw.Rect(vg,ax,by+12,8,8,p.broken and RED or C.gold)
-                    if not p.broken then Draw.Rect(vg,ax,by+12+Draw.Snap(8*(1-p.armor/p.maxArmor)),8,Draw.Snap(8*p.armor/p.maxArmor),C.paper) end
-                    index=index+1
-                end end
-            end
-        end
+    if enemyScreen.visible then
+        local enemy=enemyScreen.enemy
+        local bx,by=Draw.Snap(enemyScreen.x*w-40),Draw.Snap(enemyScreen.y*h)
+        Draw.Rect(vg,bx-2,by-2,84,10,C.deep)
+        Draw.Rect(vg,bx,by,Draw.Snap(80*(trails[enemy] and trails[enemy].shown or enemy.hp)/enemy.maxHP),6,HISTORY)
+        Draw.Rect(vg,bx,by,Draw.Snap(80*enemy.hp/enemy.maxHP),6,RED)
+        local index=0
+        for _,p in pairs(enemy.parts) do if p.maxArmor>0 then
+            local ax=bx+index*12
+            Draw.Rect(vg,ax,by+12,8,8,p.broken and RED or C.gold)
+            if not p.broken then Draw.Rect(vg,ax,by+12+Draw.Snap(8*(1-p.armor/p.maxArmor)),8,Draw.Snap(8*p.armor/p.maxArmor),C.paper) end
+            index=index+1
+        end end
     end
-    for _,boss in ipairs(data.enemies or {}) do if boss.boss and boss.aggro and not boss.dead then
+    for _,boss in ipairs(data.enemies or EMPTY) do if boss.boss and boss.aggro and not boss.dead then
         local bw=math.min(320,w-s.left-s.right-32)
         local bx,by=Draw.Snap((w-bw)/2),Draw.Snap(s.top+24)
         Draw.NineSlice(vg,'bar_frame',bx,by,bw,36,6,1)
@@ -135,17 +159,16 @@ function H.Render(vg,w,h,s,objective)
         local px,py=Draw.Snap(w/2-90),Draw.Snap(h*.3)
         local flash=math.floor(moves.age*16)%2==0
         Draw.Image(vg,'armor_break_s',px,py,1)
-        Draw.Text(vg,(PART_NAMES[partNotice.part] or partNotice.part)..' · 破甲',px+48,py+20,12,flash and C.bright or C.paper)
+        if not PART_TEXT[partNotice.part] then PART_TEXT[partNotice.part]=partNotice.part..' · 破甲' end
+        Draw.Text(vg,PART_TEXT[partNotice.part],px+48,py+20,12,flash and C.bright or C.paper)
     elseif moves.weakUntil and moves.age<moves.weakUntil then Draw.Text(vg,'弱点命中',w/2,h*.3,12,C.gold,NVG_ALIGN_CENTER) end
-    for _,number in ipairs(moves.numbers or {}) do
-        if number.untilTime>moves.age and data.camera and (number.pos-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
-            local sp=data.camera:WorldToScreenPoint(number.pos)
-            Draw.Text(vg,tostring(number.value),Draw.Snap(sp.x*w),Draw.Snap(sp.y*h-((number.duration or .7)-number.untilTime+moves.age)*24),12,C.gold,NVG_ALIGN_CENTER)
+    for _,number in ipairs(moves.numbers or EMPTY) do
+        if number.screenVisible then
+            Draw.Text(vg,number.text,Draw.Snap(number.screenX*w),Draw.Snap(number.screenY*h-((number.duration or .7)-number.untilTime+moves.age)*24),12,C.gold,NVG_ALIGN_CENTER)
         end
     end
     if data.debug then
-        local lines={}
-        for line in data.debug:gmatch('[^\n]+') do lines[#lines+1]=line end
+        local lines=debugLines
         Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,math.min(500,w-s.left-s.right-32),32+#lines*16,8,1)
         for i,line in ipairs(lines) do Draw.Text(vg,line,s.left+32,s.top+32+(i-1)*16,12,C.gold) end
     end
