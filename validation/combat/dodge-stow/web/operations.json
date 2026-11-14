@@ -1,0 +1,3904 @@
+[
+  {
+    "at": "2026-11-14T16:35:44.681Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:35:46.720Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":126944,\"originalBytes\":453853}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:03.190Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:03.367Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:04.309Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 450
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:05.826Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129834,\"originalBytes\":463658}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:06.226Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:07.178Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:07.210Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "3",
+            "code": "Digit3",
+            "windowsVirtualKeyCode": 51
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "3",
+            "code": "Digit3",
+            "windowsVirtualKeyCode": 51
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:07.398Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "o",
+            "code": "KeyO",
+            "windowsVirtualKeyCode": 79
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "o",
+            "code": "KeyO",
+            "windowsVirtualKeyCode": 79
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:10.527Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":110220,\"originalBytes\":399662}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:20.934Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:20.993Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:21.849Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:23.855Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":93226,\"originalBytes\":338061}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:40.109Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "3",
+            "code": "Digit3",
+            "windowsVirtualKeyCode": 51
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "3",
+            "code": "Digit3",
+            "windowsVirtualKeyCode": 51
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:44.806Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":109868,\"originalBytes\":399398}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:45.649Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:46.098Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:46.202Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:46.954Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:47.330Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:48.142Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:48.416Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:36:50.224Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":110194,\"originalBytes\":399986}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:09.454Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:11.221Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:12.802Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:14.804Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:15.296Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "ArrowRight",
+            "code": "ArrowRight",
+            "windowsVirtualKeyCode": 39
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:16.698Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": " ",
+            "code": "Space",
+            "windowsVirtualKeyCode": 32
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:17.142Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:19.532Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "i",
+            "code": "KeyI",
+            "windowsVirtualKeyCode": 73
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "i",
+            "code": "KeyI",
+            "windowsVirtualKeyCode": 73
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:21.826Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":89528,\"originalBytes\":329905}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:29.993Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:30.150Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:30.967Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:31.275Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:31.349Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:31.511Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:31.759Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:33.765Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":89034,\"originalBytes\":327859}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:34.684Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "k",
+            "code": "KeyK",
+            "windowsVirtualKeyCode": 75
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "k",
+            "code": "KeyK",
+            "windowsVirtualKeyCode": 75
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:36.503Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":88390,\"originalBytes\":326940}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:37.345Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "j",
+            "code": "KeyJ",
+            "windowsVirtualKeyCode": 74
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "j",
+            "code": "KeyJ",
+            "windowsVirtualKeyCode": 74
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:37.788Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "1",
+            "code": "Digit1",
+            "windowsVirtualKeyCode": 49
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "1",
+            "code": "Digit1",
+            "windowsVirtualKeyCode": 49
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:39.088Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":80642,\"originalBytes\":298569}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:50.413Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "l",
+            "code": "KeyL",
+            "windowsVirtualKeyCode": 76
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "l",
+            "code": "KeyL",
+            "windowsVirtualKeyCode": 76
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:52.879Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":75548,\"originalBytes\":283967}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:54.565Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:54.913Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "i",
+            "code": "KeyI",
+            "windowsVirtualKeyCode": 73
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "i",
+            "code": "KeyI",
+            "windowsVirtualKeyCode": 73
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:55.172Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:55.944Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ",",
+            "code": "Comma",
+            "windowsVirtualKeyCode": 188
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:57.325Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":89142,\"originalBytes\":329920}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:58.470Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:59.605Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:37:59.727Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:00.611Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:02.710Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:03.464Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:05.042Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": ".",
+            "code": "Period",
+            "windowsVirtualKeyCode": 190
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:08.001Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":88574,\"originalBytes\":327666}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:09.335Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "b",
+            "code": "KeyB",
+            "windowsVirtualKeyCode": 66
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "b",
+            "code": "KeyB",
+            "windowsVirtualKeyCode": 66
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:14.075Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "3",
+            "code": "Digit3",
+            "windowsVirtualKeyCode": 51
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "3",
+            "code": "Digit3",
+            "windowsVirtualKeyCode": 51
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:17.816Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":114808,\"originalBytes\":411975}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:31.133Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":110424,\"originalBytes\":402534}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:34.687Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "2",
+            "code": "Digit2",
+            "windowsVirtualKeyCode": 50
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:41.821Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 1800
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:38:47.940Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":88968,\"originalBytes\":328335}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:19.256Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:20.173Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:21.254Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:21.731Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:22.140Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:22.340Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:22.859Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:23.564Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:23.883Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:24.444Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:24.834Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:24.914Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F7",
+            "code": "F7",
+            "windowsVirtualKeyCode": 118
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:25.496Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:27.139Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 300
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:27.721Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:31.186Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 500
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:34.536Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":126592,\"originalBytes\":456634}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:49.856Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:51.214Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 300
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:51.410Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:52.750Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 600
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:54.210Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":131744,\"originalBytes\":470963}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:54.839Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "w",
+            "code": "KeyW",
+            "windowsVirtualKeyCode": 87
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:57.117Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":133654,\"originalBytes\":473668}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:57.939Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "w",
+            "code": "KeyW",
+            "windowsVirtualKeyCode": 87
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:39:58.262Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:40:00.372Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":102008,\"originalBytes\":374508}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:40:31.348Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:40:33.334Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:40:38.961Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":107354,\"originalBytes\":390654}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:40:39.549Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:40:43.082Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":102464,\"originalBytes\":375674}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:01.540Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:01.791Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:03.881Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":106440,\"originalBytes\":387842}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:04.676Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F11",
+            "code": "F11",
+            "windowsVirtualKeyCode": 122
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F11",
+            "code": "F11",
+            "windowsVirtualKeyCode": 122
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:21.653Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":102940,\"originalBytes\":376760}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:34.780Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "s",
+            "code": "KeyS",
+            "windowsVirtualKeyCode": 83
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:36.606Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 700
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:36.793Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "s",
+            "code": "KeyS",
+            "windowsVirtualKeyCode": 83
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:37.163Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F11",
+            "code": "F11",
+            "windowsVirtualKeyCode": 122
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F11",
+            "code": "F11",
+            "windowsVirtualKeyCode": 122
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:38.857Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":89094,\"originalBytes\":336655}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:41:55.398Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":97454,\"originalBytes\":365065}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:07.388Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":135342,\"originalBytes\":481411}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:23.439Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mousePressed",
+            "x": 1148,
+            "y": 650,
+            "button": "left",
+            "clickCount": 1
+          }
+        },
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mouseReleased",
+            "x": 1148,
+            "y": 650,
+            "button": "left",
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:24.258Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:24.347Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mousePressed",
+            "x": 1148,
+            "y": 650,
+            "button": "left",
+            "buttons": 1,
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:28.345Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":79608,\"originalBytes\":499354}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:29.416Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mouseReleased",
+            "x": 1148,
+            "y": 650,
+            "button": "left",
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:31.861Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":74406,\"originalBytes\":492710}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:47.273Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:49.015Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:49.578Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mousePressed",
+            "x": 1100,
+            "y": 650,
+            "button": "left",
+            "clickCount": 1
+          }
+        },
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mouseReleased",
+            "x": 1100,
+            "y": 650,
+            "button": "left",
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:53.375Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":138780,\"originalBytes\":490606}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:42:55.077Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":133210,\"originalBytes\":475139}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:18.944Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:20.387Z",
+    "args": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 650,
+                "button": "left",
+                "buttons": 1,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 80
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1100,
+                "y": 650,
+                "button": "left",
+                "clickCount": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":3,\"total\":3,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}]}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:22.155Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":138926,\"originalBytes\":492148}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:22.648Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "a",
+            "code": "KeyA",
+            "windowsVirtualKeyCode": 65
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:23.348Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "a",
+            "code": "KeyA",
+            "windowsVirtualKeyCode": 65
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:27.387Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":139802,\"originalBytes\":497240}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:41.864Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:42.386Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "d",
+            "code": "KeyD",
+            "windowsVirtualKeyCode": 68
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:42.462Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "d",
+            "code": "KeyD",
+            "windowsVirtualKeyCode": 68
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:43:44.939Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":136764,\"originalBytes\":486840}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:00.120Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:00.259Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F3",
+            "code": "F3",
+            "windowsVirtualKeyCode": 114
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F3",
+            "code": "F3",
+            "windowsVirtualKeyCode": 114
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:00.944Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "w",
+            "code": "KeyW",
+            "windowsVirtualKeyCode": 87
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:01.494Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "w",
+            "code": "KeyW",
+            "windowsVirtualKeyCode": 87
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:03.901Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129378,\"originalBytes\":456598}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:05.604Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "F3",
+            "code": "F3",
+            "windowsVirtualKeyCode": 114
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "F3",
+            "code": "F3",
+            "windowsVirtualKeyCode": 114
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:08.484Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "s",
+            "code": "KeyS",
+            "windowsVirtualKeyCode": 83
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:09.204Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "s",
+            "code": "KeyS",
+            "windowsVirtualKeyCode": 83
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:44:13.261Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":132766,\"originalBytes\":475289}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:32.548Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "c",
+            "code": "KeyC",
+            "windowsVirtualKeyCode": 67
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:32.616Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:34.588Z",
+    "args": {
+      "action": "act",
+      "request": {
+        "kind": "wait",
+        "timeMs": 450
+      }
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:35.368Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mousePressed",
+            "x": 1100,
+            "y": 650,
+            "button": "left",
+            "buttons": 1,
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:37.524Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":93602,\"originalBytes\":370913}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:38.905Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyDown",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Shift",
+            "code": "ShiftLeft",
+            "windowsVirtualKeyCode": 16
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:38.963Z",
+    "args": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mouseReleased",
+            "x": 1100,
+            "y": 650,
+            "button": "left",
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+      }
+    ]
+  },
+  {
+    "at": "2026-11-14T16:45:42.155Z",
+    "args": {
+      "action": "screenshot"
+    },
+    "result": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":100370,\"originalBytes\":391654}}"
+      }
+    ]
+  }
+]

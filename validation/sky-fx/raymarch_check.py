@@ -14,16 +14,19 @@ VLOW=np.stack([low[(z//16)*32:(z//16+1)*32,(z%16)*128:(z%16+1)*128,0] for z in r
 occ=np.asarray(Image.open(ROOT/'assets/Textures/Sky/cloud_occupancy.png')).astype(float)/255
 O=np.stack([occ[(z//8)*32:(z//8+1)*32,(z%8)*32:(z%8+1)*32] for z in range(32)])
 assert V.shape==(256,96,256,3) and np.isfinite(V).all()
-assert V.min()==0 and 0.6<V.max()<1
+assert V.min()==0 and 0.6<V.max()<=1
 assert not V[[0,-1]].any() and not V[:,[0,-1]].any() and not V[:,:,[0,-1]].any()
 LO=np.array([-320.,-96.,-320.]);HI=np.array([320.,160.,320.])
 def smooth(a,b,v):
  t=np.clip((v-a)/(b-a),0,1);return t*t*(3-2*t)
-def density(p,channel=0):
+def density_field(p,channel=0):
  volume=VLOW if channel==2 else V[:,:,:,channel]
  dims=np.array(volume.shape)[[2,1,0]]-1
  q=(p-LO)/(HI-LO)*dims
- return map_coordinates(volume,q[..., [2,1,0]].reshape(-1,3).T,order=1,mode='constant',cval=0,prefilter=False).reshape(p.shape[:-1])
+ sampled=map_coordinates(volume,q[..., [2,1,0]].reshape(-1,3).T,order=1,mode='constant',cval=0,prefilter=False).reshape(p.shape[:-1])
+ return np.where(readable(p),sampled,0.) # match shader's hard playable-height gap
+def density(p,channel=0):
+ return .92*smooth(.42,.58,density_field(p,channel))
 def readable(p):
  return np.all((p>=LO)&(p<=HI),axis=-1)&~((p[...,1]>-8)&(p[...,1]<30))
 def occupied(p,channel=0):
@@ -62,8 +65,10 @@ def march(ro,rd,channel=0,day=1.,dusk=0.,scene=600.,stats=None,sun_direction=Non
  sun=np.array([-.6,.7,-.35] if sun_direction is None else sun_direction,dtype=float);sun/=np.linalg.norm(sun)
  mu=np.clip(rays@sun,-1,1);phase=.7975/np.maximum(1.2025-.9*mu,.3)**1.5
  horizon=np.array([.38,.53,.75])*(.12+.88*day);zenith=np.array([.07,.22,.52])*(.12+.88*day)
- dark=(np.array([.012,.023,.052])*(1-day)+np.array([.13,.21,.36])*day)*(1-dusk*.65)+np.array([.24,.18,.31])*dusk*.65
- light=(np.array([.07,.11,.20])*(1-day)+np.array([.94,.93,.88])*day)*(1-dusk*.72)+np.array([1.,.56,.29])*dusk*.72
+ sunward=smooth(.35,.95,mu)
+ dark=(np.array([.012,.023,.052])*(1-day)+np.array([.26,.34,.50])*day)*(1-dusk*.65)+np.array([.30,.23,.36])*dusk*.65
+ warm=dusk*(.35+sunward*.45)
+ light=(np.array([.07,.11,.20])*(1-day)+np.array([.94,.93,.88])*day)*(1-warm[:,None])+np.array([1.,.63,.39])*warm[:,None]
  for i in range(limit):
   ids=np.flatnonzero((b>a)&(t<b)&(trans>=.008)&(counts['main']<steps))
   if not len(ids):break
@@ -75,8 +80,8 @@ def march(ro,rd,channel=0,day=1.,dusk=0.,scene=600.,stats=None,sun_direction=Non
    edge=cell_exit(probe,rays[ids])+.004
    empty=mask<.5;t[ids[empty]]+=np.maximum(edge[empty],.004)
    ids=ids[~empty];edge=edge[~empty]
-   fine=np.clip(1.25+t[ids]*.004,1.25,2.6) if channel==0 else np.clip(3+t[ids]*.008,3,5.5)
-   ds=np.minimum(fine,edge)
+   fine=np.clip(1.4+t[ids]*.004,1.4,2.8) if channel==0 else np.clip(3+t[ids]*.008,3,5.5)
+   ds=fine
   if not len(ids):continue
   ds=np.minimum(ds,b[ids]-t[ids]);sample=t[ids]+.5*ds;p=origins[ids]+rays[ids]*sample[:,None]
   counts['main'][ids]+=1;counts['density_reads'][ids]+=2*readable(p)
@@ -85,14 +90,17 @@ def march(ro,rd,channel=0,day=1.,dusk=0.,scene=600.,stats=None,sun_direction=Non
   counts['nonempty'][hit]+=1
   shadow=np.zeros(len(hit))
   if lights:
-   shadow=density(p+sun*8,channel)*28
-   counts['light'][hit]+=1;counts['density_reads'][hit]+=2*readable(p+sun*8)
-  vis=np.exp(-np.minimum(shadow*.11,12));band=.35*smooth(.12,.42,vis)+.65*smooth(.48,.88,vis)
+   shadow=smooth(.30,.75,density_field(p+sun*6,channel))*16
+   counts['light'][hit]+=1;counts['density_reads'][hit]+=2*readable(p+sun*6)
+  vis=np.exp(-np.minimum(shadow*.11,12));band=smooth(.18,.88,vis)
   h=smooth(np.where(p[:,1]<0,-75,42),np.where(p[:,1]<0,-28,115),p[:,1])
-  ambient=dark*(1-(.12+h*.12)[:,None])+zenith*(.12+h*.12)[:,None]
-  lum=ambient*(.48+h*.12)[:,None]+light*((.08+.92*(vis*.7+band*.3))*(.72+.22*phase[hit]))[:,None]
-  fog=smooth(100,300,dist)*.55;lum=lum*(1-fog[:,None])+horizon*fog[:,None]
-  tr=np.exp(-np.minimum(den*.11*width,12))
+  ambient=dark*(1-(.08+h*.08)[:,None])+zenith*(.08+h*.08)[:,None]
+  blend=.15+.85*band
+  lum=ambient*(1-blend[:,None])+light[hit]*blend[:,None]
+  thin=(1-den)**2
+  lum+=light[hit]*(.05*h+.10*np.minimum(phase[hit],3)*thin*(.3+.7*sunward[hit]))[:,None]
+  fog=smooth(100,300,dist)*.45;lum=lum*(1-fog[:,None])+horizon*fog[:,None]
+  tr=np.exp(-np.minimum(den*.16*width,12))
   scatter[hit]+=trans[hit,None]*(1-tr[:,None])*lum;trans[hit]*=tr
   t[ids]+=np.maximum(ds,.004)
  counts['exhausted']=((b>a)&(t<b-.005)&(trans>=.008)).astype(int)
@@ -136,7 +144,7 @@ def checks():
     yy=slice(math.floor(y*95/32),math.ceil((y+1)*95/32)+1)
     for x in range(32):
      xx=slice(math.floor(x*255/32),math.ceil((x+1)*255/32)+1)
-     assert O[z,y,x,tier]>0 or not V[zz,yy,xx,tier].any()
+     assert O[z,y,x,tier]>0 or not (V[zz,yy,xx,tier]>.42).any()
  for sign in (-1,1):
   rays=np.tile([sign,0.,0.],(40000,1));exit=cell_exit(points,rays)
   assert np.isfinite(exit).all() and (exit>=0).all()
@@ -168,34 +176,34 @@ def display(result,rd):
  return Image.fromarray(np.rint(srgb*255).astype(np.uint8))
 
 def render():
- import density_r1_reference as before
+ import density_r2_reference as before
  w,h=480,270;canvas=Image.new('RGB',(w*2,(h+24)*4));current=Image.new('RGB',(w*2,(h+24)*2))
  metrics=[];totals={}
  for tier in range(3):
   for index,(origin,target,label) in enumerate(CAMERAS):
    ro,rd=camera(origin,target,w,h)
-   for revision,fn in [('r1',before.march),('r2',march)]:
+   for revision,fn in [('r2',before.march),('r3',march)]:
     stats={};result=fn(ro,rd,channel=tier,stats=stats)
     stats['total_reads']=stats['density_reads']+stats['occupancy_reads']
-    if revision=='r2':assert stats['total_reads'].max()<=[352,176,32][tier]
+    if revision=='r3':assert stats['total_reads'].max()<=[352,176,32][tier]
     metric={'tier':['high','medium','low'][tier],'revision':revision,'view':label,'pixels':w*h}
     for key,value in stats.items():
      metric[key]={'mean':float(np.mean(value)),'p95':float(np.percentile(value,95)),'max':int(np.max(value))}
      totals.setdefault((tier,revision,key),[]).append(value.ravel())
     metric['visible_fraction']=float(np.mean(result[1]>.05));metrics.append(metric)
     if tier==0:
-     tile=display(result,rd);ox=0 if revision=='r1' else w;oy=index*(h+24)
+     tile=display(result,rd);ox=0 if revision=='r2' else w;oy=index*(h+24)
      canvas.paste(tile,(ox,oy+24));ImageDraw.Draw(canvas).text((ox+6,oy+5),revision.upper()+' CPU / '+label,fill='white')
-     if revision=='r2':
-      xx,yy=(index%2)*w,(index//2)*(h+24);current.paste(tile,(xx,yy+24));ImageDraw.Draw(current).text((xx+6,yy+5),'R2 CPU / '+label,fill='white')
+     if revision=='r3':
+      xx,yy=(index%2)*w,(index//2)*(h+24);current.paste(tile,(xx,yy+24));ImageDraw.Draw(current).text((xx+6,yy+5),'R3 CPU / '+label,fill='white')
  aggregates={}
  for (tier,revision,key),arrays in totals.items():
   value=np.concatenate(arrays);aggregates.setdefault(str(tier)+'_'+revision,{})[key]={'mean':float(value.mean()),'p95':float(np.percentile(value,95)),'max':int(value.max())}
  path=ROOT/'validation/sky-fx'
- canvas.save(path/'density-r2-comparison.png');current.save(path/'density-raymarch-preview.png')
+ canvas.save(path/'density-r3-comparison.png');current.save(path/'density-raymarch-preview.png')
  ro,rd=camera([-10,49,5],[-43,62,55],720,480)
- tile=display(march(ro,rd),rd);ImageDraw.Draw(tile).text((8,8),'R2 CPU / close cloud / no sharpening / dynamic sun sample',fill='white');tile.save(path/'density-r2-close.png')
- (path/'density-r2-counts.json').write_text(json.dumps({'meaning':'CPU branch-matched sampling-count proxy, NOT GPU timing; drift=0; sky background; all pixels denominator','views':metrics,'aggregate':aggregates},indent=2))
+ tile=display(march(ro,rd),rd);ImageDraw.Draw(tile).text((8,8),'R3 CPU / close cloud / shipped budget / no sharpening',fill='white');tile.save(path/'density-r3-close.png')
+ (path/'density-r3-counts.json').write_text(json.dumps({'meaning':'CPU branch-matched sampling-count proxy, NOT GPU timing; drift=0; sky background; all pixels denominator','views':metrics,'aggregate':aggregates},indent=2))
  for key,data in aggregates.items():print(key,'main',data['main'],'light',data['light'],'reads',data['total_reads'],'budget_exhausted',data['exhausted'])
  print('CPU before/after and close preview written; no Web/GPU claim')
 
@@ -210,7 +218,7 @@ def tail_check():
    a=limited[0]+sky*(1-limited[1][...,None]);b=full[0]+sky*(1-full[1][...,None])
    error=np.max(np.abs(a-b),axis=-1)
    results.append({'tier':tier,'view':label,'linear_rgb_mean_error':float(error.mean()),'linear_rgb_p95_error':float(np.percentile(error,95)),'max_error':float(error.max()),'pixels_over_0.02':float(np.mean(error>.02))})
- (ROOT/'validation/sky-fx/density-r2-tail-loss.json').write_text(json.dumps(results,indent=2))
- print('PASS tail-loss proxy compared to same algorithm with 192 density / 256 traversal budget; see density-r2-tail-loss.json')
+ (ROOT/'validation/sky-fx/density-r3-tail-loss.json').write_text(json.dumps(results,indent=2))
+ print('PASS tail-loss proxy compared to same algorithm with 192 density / 256 traversal budget; see density-r3-tail-loss.json')
 
 if __name__=='__main__':checks();render();tail_check()

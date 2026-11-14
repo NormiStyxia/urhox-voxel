@@ -1,0 +1,427 @@
+[
+  {
+    "type": "warning",
+    "text": "[Sentry] VITE_SENTRY_DSN not set, skipping initialization",
+    "timestamp": "2026-11-14T18:09:02.957Z"
+  },
+  {
+    "type": "log",
+    "text": "[TapTap] isInTapTapApp check: {hasTapTapAPI: false, hasUrlResource: false, result: false, hasWebviewOn: false, hasWebviewOff: false}",
+    "timestamp": "2026-11-14T18:09:02.960Z"
+  },
+  {
+    "type": "log",
+    "text": "[TapTap] isInTapTapApp check: {hasTapTapAPI: false, hasUrlResource: false, result: false, hasWebviewOn: false, hasWebviewOff: false}",
+    "timestamp": "2026-11-14T18:09:03.337Z"
+  },
+  {
+    "type": "log",
+    "text": "[Tracker] Page view queued: {action: tapmaker_page_view, user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap…KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36, args: Object}",
+    "timestamp": "2026-11-14T18:09:03.338Z"
+  },
+  {
+    "type": "log",
+    "text": "[MultiDebug] Extension initialized",
+    "timestamp": "2026-11-14T18:09:03.765Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] ✓ Env: production",
+    "timestamp": "2026-11-14T18:09:03.854Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] ✓ Project: m_hi4f",
+    "timestamp": "2026-11-14T18:09:04.188Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] ✓ Downloads complete (no .data needed)",
+    "timestamp": "2026-11-14T18:09:04.231Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] ✓ Engine JS executed",
+    "timestamp": "2026-11-14T18:09:04.327Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] Canvas size OK: 2297.272705078125x1080",
+    "timestamp": "2026-11-14T18:09:04.446Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_04_832][0] INFO: DownloadManager initialized",
+    "timestamp": "2026-11-14T18:09:04.967Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_05_017][0] INFO: a couple of Subsystems registered finish.",
+    "timestamp": "2026-11-14T18:09:05.049Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_05_023][0] INFO: Engine construct finish.",
+    "timestamp": "2026-11-14T18:09:05.049Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_05_062][0] WARNING: Graphics::SetMode called with zero dimensions: 0x0 (will maximize window)",
+    "timestamp": "2026-11-14T18:09:05.067Z"
+  },
+  {
+    "type": "info",
+    "text": "[UrhoX] Renderer Type: WebGPU",
+    "timestamp": "2026-11-14T18:09:05.384Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_05_089][0] WARNING: Could not get application preferences directory",
+    "timestamp": "2026-11-14T18:09:05.385Z"
+  },
+  {
+    "type": "warning",
+    "text": "The ScriptProcessorNode is deprecated. Use AudioWorkletNode instead. (https://bit.ly/audio-worklet)",
+    "timestamp": "2026-11-14T18:09:05.385Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] === postRun: Engine ready ===",
+    "timestamp": "2026-11-14T18:09:05.385Z"
+  },
+  {
+    "type": "log",
+    "text": "begin create net manager",
+    "timestamp": "2026-11-14T18:09:05.573Z"
+  },
+  {
+    "type": "log",
+    "text": "end create net manager",
+    "timestamp": "2026-11-14T18:09:05.573Z"
+  },
+  {
+    "type": "log",
+    "text": "create WebNetwork key: 1",
+    "timestamp": "2026-11-14T18:09:05.574Z"
+  },
+  {
+    "type": "log",
+    "text": "WebNetwork created",
+    "timestamp": "2026-11-14T18:09:05.574Z"
+  },
+  {
+    "type": "log",
+    "text": "begin connect server",
+    "timestamp": "2026-11-14T18:09:05.574Z"
+  },
+  {
+    "type": "log",
+    "text": "wss://entrance-new-pd.spark.xd.com/",
+    "timestamp": "2026-11-14T18:09:05.574Z"
+  },
+  {
+    "type": "log",
+    "text": "connect request sent",
+    "timestamp": "2026-11-14T18:09:05.574Z"
+  },
+  {
+    "type": "log",
+    "text": "connected to server... Event",
+    "timestamp": "2026-11-14T18:09:05.633Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_014][50] WARNING: DownloadManager: no resources resolved for batch download",
+    "timestamp": "2026-11-14T18:09:06.018Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_415][60]INFO[i18n] loadConfig: uuid='Q4M3GntfTmiNZCdTeiz5Kg' engine='Q4M3GntfTmiNZCdTeiz5Kg' match=true",
+    "timestamp": "2026-11-14T18:09:06.416Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_415][60]INFO[i18n] loadConfig: engine fallback, support_langs='zh_CN'",
+    "timestamp": "2026-11-14T18:09:06.417Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_416][60]INFO[i18n] PreloadI18nStep: resolved='zh_CN'",
+    "timestamp": "2026-11-14T18:09:06.417Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_416][60] WARNING: DownloadManager: no resources resolved for batch download",
+    "timestamp": "2026-11-14T18:09:06.417Z"
+  },
+  {
+    "type": "log",
+    "text": "[UrhoX] Loading screen hidden",
+    "timestamp": "2026-11-14T18:09:06.632Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_636][72][Script] IsNetworkMode:    false",
+    "timestamp": "2026-11-14T18:09:06.638Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_668][72][Script] [InputAdaptor] Loading input event adaptor...",
+    "timestamp": "2026-11-14T18:09:06.671Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_668][72][Script] [InputAdaptor] Hooked SubscribeToEvent for event mapping.",
+    "timestamp": "2026-11-14T18:09:06.672Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_668][72][Script] [InputAdaptor] Platform: Web, isTouchPlatform: false",
+    "timestamp": "2026-11-14T18:09:06.672Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_668][72][Script] [InputAdaptor] Hooked Input methods for touch emulation fallback.",
+    "timestamp": "2026-11-14T18:09:06.672Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_672][72][Script] Check Transition.lua SimpleGrid.lua",
+    "timestamp": "2026-11-14T18:09:06.673Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_06_848][72][Script] RuinsPalette: 50 entries",
+    "timestamp": "2026-11-14T18:09:06.850Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_09_188][72] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain.",
+    "timestamp": "2026-11-14T18:09:09.280Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_09_576][72][Script] RuinsTerrain: 79 island chunks, 2519040 allocated / 1174742 solid cells",
+    "timestamp": "2026-11-14T18:09:09.609Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_15_559][72][Script] RuinsTerrain: island shell 98692 triangles / 128 chunks",
+    "timestamp": "2026-11-14T18:09:15.563Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_15_560][72][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00",
+    "timestamp": "2026-11-14T18:09:15.563Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_15_566][72][Script] RuinsTerrain: GrassField ready",
+    "timestamp": "2026-11-14T18:09:15.567Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_15_567][72][Script] RuinsTerrain: total 0.00s",
+    "timestamp": "2026-11-14T18:09:15.568Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_15_904][72][Script] RuinsBuild: court 0.00s (volumes 4)",
+    "timestamp": "2026-11-14T18:09:15.907Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_15_932][72][Script] RuinsBuild: altar 0.00s (volumes 5)",
+    "timestamp": "2026-11-14T18:09:15.933Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_16_408][72][Script] RuinsBuild: colonnade 0.00s (volumes 33)",
+    "timestamp": "2026-11-14T18:09:16.409Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_16_686][72][Script] RuinsBuild: fallen 0.00s (volumes 38)",
+    "timestamp": "2026-11-14T18:09:16.702Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_16_960][72][Script] RuinsBuild: dome 0.00s (volumes 45)",
+    "timestamp": "2026-11-14T18:09:16.961Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_16_988][72][Script] RuinsBuild: steles 0.00s (volumes 53)",
+    "timestamp": "2026-11-14T18:09:16.989Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_17_608][72][Script] RuinsBuild: parapet 0.00s (volumes 57)",
+    "timestamp": "2026-11-14T18:09:17.609Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_17_736][72][Script] RuinsBuild: stairs 0.00s (volumes 59)",
+    "timestamp": "2026-11-14T18:09:17.737Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_25_968][72][Script] RuinsBuild: wall 0.00s (volumes 95)",
+    "timestamp": "2026-11-14T18:09:25.980Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_27_343][72][Script] RuinsBuild: hall 0.00s (volumes 105)",
+    "timestamp": "2026-11-14T18:09:27.344Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_27_635][72][Script] RuinsBuild: aqueduct 0.00s (volumes 106)",
+    "timestamp": "2026-11-14T18:09:27.636Z"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 503 ()",
+    "timestamp": "2026-11-14T18:09:28.121Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_33_607][72][Script] RuinsBuild: crystals 18",
+    "timestamp": "2026-11-14T18:09:33.678Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_33_611][72][Script] RuinsBuild: vegetation 0.00s (volumes 106)",
+    "timestamp": "2026-11-14T18:09:33.679Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_34_944][72][Script] RuinsBuild: floaters 0.00s (volumes 106)",
+    "timestamp": "2026-11-14T18:09:34.946Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_34_944][72][Script] RuinsBuild: total 0.00s, 106 volumes",
+    "timestamp": "2026-11-14T18:09:34.946Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_34_955][72][Script] RuinsPuzzles: gate rubble voxels 2658.0",
+    "timestamp": "2026-11-14T18:09:34.956Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_412][72][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m",
+    "timestamp": "2026-11-14T18:09:35.432Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_449][72][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m",
+    "timestamp": "2026-11-14T18:09:35.451Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_456][72][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-14T18:09:35.458Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_464][72][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-14T18:09:35.465Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_471][72][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-14T18:09:35.473Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_478][72][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-14T18:09:35.479Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_484][72][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m",
+    "timestamp": "2026-11-14T18:09:35.485Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_492][72][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m",
+    "timestamp": "2026-11-14T18:09:35.493Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_492][72][Script] RuinsPuzzles: built 8 time objects in 0.00s",
+    "timestamp": "2026-11-14T18:09:35.494Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_561][72][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris",
+    "timestamp": "2026-11-14T18:09:35.563Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_564][72][Script] [ThirdPersonCamera] Created with 10 modes, initial mode: normal",
+    "timestamp": "2026-11-14T18:09:35.701Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_564][72][Script] NomiController: spawn 0.0 6.1 -64.0",
+    "timestamp": "2026-11-14T18:09:35.701Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_568][72][Script] VoxelFX: MotesBlue uses world-space quads, capacity=900",
+    "timestamp": "2026-11-14T18:09:35.701Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_568][72][Script] VoxelFX: MotesGold uses world-space quads, capacity=500",
+    "timestamp": "2026-11-14T18:09:35.701Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_35_568][72][Script] VoxelFX: CombatHandMotes uses world-space quads, capacity=32",
+    "timestamp": "2026-11-14T18:09:35.701Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_244][72][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s",
+    "timestamp": "2026-11-14T18:09:44.361Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_288][72][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)",
+    "timestamp": "2026-11-14T18:09:44.365Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_292][72][Script] RuinsScene: dragon ready (large)",
+    "timestamp": "2026-11-14T18:09:44.366Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_838][72][Script] [UIInspector] 已初始化（快捷键: F9）",
+    "timestamp": "2026-11-14T18:09:44.950Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_838][72][Script] [UIInspector] 已初始化（快捷键: F9）",
+    "timestamp": "2026-11-14T18:09:45.014Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_839][72][Script] RuinsScene: stage -> gate",
+    "timestamp": "2026-11-14T18:09:45.017Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_44_839][72][Script] RuinsScene: ready in 37.99s, volumes 642",
+    "timestamp": "2026-11-14T18:09:45.017Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-15 02_09_49_764][73][Script] Combat: hand glow state=EXPLORE requested=0.28 brightness=0.198 motes=0",
+    "timestamp": "2026-11-14T18:09:50.237Z"
+  }
+]

@@ -1,0 +1,377 @@
+diff --git a/scripts/combat/CombatMoves.lua b/scripts/combat/CombatMoves.lua
+index e31269b..f4a1d6f 100644
+--- a/scripts/combat/CombatMoves.lua
++++ b/scripts/combat/CombatMoves.lua
+@@ -690,8 +690,9 @@ end
+ function C.MeleeZone(id,position,forward,reach,slam,out)
+     out=out or {origin=Vector3(0,0,0),source=Vector3(0,0,0)}
+     local offset=id=='sword_light_3' and .4 or 0
+-    out.origin.x,out.origin.y,out.origin.z=position.x+forward.x*offset,position.y,position.z+forward.z*offset
+-    out.source.x,out.source.y,out.source.z=position.x,position.y+.9,position.z
++    -- Engine Vector3 table fields are values: component writes target a copy.
++    out.origin=Vector3(position.x+forward.x*offset,position.y,position.z+forward.z*offset)
++    out.source=Vector3(position.x,position.y+.9,position.z)
+     out.forward=forward
+     out.radius=(slam and 2 or 1.8)*math.max(.1,reach or 1)
+     out.angle=slam and 90 or (id=='sword_heavy_release' and 360 or (id=='sword_light_3' and 100 or 120))
+@@ -715,7 +716,8 @@ function C:StrikeZones()
+     end
+     return self.strikeZone,slam,self.hitOpen or self.hitPending
+ end
+--- Samples on the same sector, including both radial edges, into caller storage.
++-- Samples the same sector, including both radial edges. The caller must assign
++-- the returned Vector3: native vector arguments are passed by value.
+ function C.ZoneBoundary(zone,index,segments,out)
+     local half=math.rad(zone.angle*.5)
+     local angle,radius
+diff --git a/scripts/ruins/RuinsHUD.lua b/scripts/ruins/RuinsHUD.lua
+index 5b745d1..4ed3312 100644
+--- a/scripts/ruins/RuinsHUD.lua
++++ b/scripts/ruins/RuinsHUD.lua
+@@ -149,6 +149,7 @@ local function RenderHUD(self,vg)
+     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
+     local w,h,s=Draw.Metrics()
+     local touch=Touch.IsEnabled()
++    local preview=not touch and CombatHUD.Preview()
+     local left,top,ow,oh,available=Objective(vg,w,h,s,touch)
+     local _,clockWidths=Lines(vg,clockCache,clockText,math.max(12,available-48),12,touch,false)
+     local cw=120
+@@ -174,14 +175,14 @@ local function RenderHUD(self,vg)
+         Draw.Rect(vg,x-gap-6,y-1,6,2,c); Draw.Rect(vg,x+gap,y-1,6,2,c)
+         if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
+     end
+-    if not touch and not CombatHUD.Active() then
++    if not preview and not touch and not CombatHUD.Active() then
+         for i,b in ipairs(SPELL_BUTTONS) do
+             local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
+             Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
+             Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
+         end
+     end
+-    if not touch and CombatHUD.Active() then
++    if not preview and not touch and CombatHUD.Active() then
+         local list=COMBAT_BUTTONS
+         list[1].icon=CombatHUD.Weapon()
+         for i,b in ipairs(list) do
+@@ -193,7 +194,7 @@ local function RenderHUD(self,vg)
+     local actionHint=CombatHUD.Hint()
+     if not actionHint and charge>0 then actionHint=touch and '碎时蓄力 · 松开【碎时】释放' or '碎时蓄力 · 松开左键释放' end
+     local shownHint=M.SelectHint(actionHint,MobileText(target),touch and Controls.Hint() or hint)
+-    if shownHint~='' then
++    if not preview and shownHint~='' then
+         -- Keep the bottom-center strip in the gap left of the right action cluster.
+         -- Longer air instructions wrap instead of covering glide/land buttons.
+         local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(640,w-40)
+@@ -208,7 +209,7 @@ local function RenderHUD(self,vg)
+         Draw.NineSlice(vg,'plaque_ink',hx,hy,hw,hh,12,.9)
+         for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.paper,NVG_ALIGN_CENTER) end
+     end
+-    if message~='' or hideFrame>0 then
++    if not preview and (message~='' or hideFrame>0) then
+         local maxW=math.max(96,w-s.left-s.right-40)
+         local ml,widths=Lines(vg,messageCache,displayMessage,maxW-88,24,touch,true)
+         local mw=88
+@@ -220,7 +221,7 @@ local function RenderHUD(self,vg)
+         Draw.Scroll(vg,(w-mw)/2,my,mw,alpha)
+         for i,line in ipairs(ml) do Draw.Text(vg,line,w/2,my+48+(i-(#ml+1)/2)*26,24,C.brown,NVG_ALIGN_CENTER,alpha) end
+     end
+-    if help and not touch then
++    if not preview and help and not touch then
+         local hx=w-s.right-320
+         local lines=M.HelpLines(CombatHUD.Active() and 'combat' or (CombatHUD.Mounted() and 'mounted' or 'explore'))
+         Draw.NineSlice(vg,'panel_paper',hx,top,304,24+#lines*20,8,.95)
+diff --git a/scripts/ruins/RuinsScene.lua b/scripts/ruins/RuinsScene.lua
+index 777ad64..fbe7883 100644
+--- a/scripts/ruins/RuinsScene.lua
++++ b/scripts/ruins/RuinsScene.lua
+@@ -1156,7 +1156,8 @@ local function UpdateAim()
+ end
+ 
+ local function HandleSpells(dt, aim)
+-    if M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
++    -- F7 owns number keys and pointer input; do not emit rejected-spell banners.
++    if animPreview_.index>0 or M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
+     if not CombatState.CanUseTime() then
+         caster_.charging,caster_.charge=false,0
+         -- Q is reserved for weapon swap in combat; E/1/2/3 remain rejected spells.
+@@ -1254,6 +1255,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
+             combatAnim_:Play(clip.id,{fadeIn=0,params=animPreview_.params})
+         else
+             CombatState.Exit('preview-end'); combatRig_:SetActive(CombatState.GetWeapon())
++            combatInputBlocked=true -- wait for held preview keys to release
+         end
+     end
+     if animPreview_.index>0 then
+@@ -1649,6 +1651,7 @@ local function UpdateCombatHUD(cn)
+         hud.aimed,hud.enemies,hud.camera,hud.cameraNode=aimed,enemies,nomi_:Camera(),cn
+         hud.bowCameraCharge=combatCameraFrame_ and combatCameraFrame_.cross or 0
+         hud.debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)
++        hud.preview=animPreview_.index>0
+         CombatHUD.Set(hud)
+ end
+ 
+diff --git a/scripts/ui/CombatHUD.lua b/scripts/ui/CombatHUD.lua
+index 1d4ded5..4617a5f 100644
+--- a/scripts/ui/CombatHUD.lua
++++ b/scripts/ui/CombatHUD.lua
+@@ -20,7 +20,7 @@ function H.UpdateRange(value)
+         for i=0,last do
+             rangeCount=rangeCount+1
+             local point=rangePoints[rangeCount]
+-            Moves.ZoneBoundary(z,i,16,point.world)
++            point.world=Moves.ZoneBoundary(z,i,16,point.world)
+             point.visible=false
+             if (active or i%2==0) and value.rangeVisible(z.source,point.world) then
+                 local sp=value.camera:WorldToScreenPoint(point.world)
+@@ -136,6 +136,7 @@ function H.HasBoss()
+     for _,enemy in ipairs(data.enemies or EMPTY) do if enemy.boss and enemy.aggro and not enemy.dead then return true end end
+     return false
+ end
++function H.Preview() return data.preview==true end
+ function H.Render(vg,w,h,s,objective)
+     if not data.moves then return end
+     local moves=data.moves
+diff --git a/tests/combat/core_free_facing.lua b/tests/combat/core_free_facing.lua
+index a1bfb84..a73fa1a 100644
+--- a/tests/combat/core_free_facing.lua
++++ b/tests/combat/core_free_facing.lua
+@@ -39,7 +39,7 @@ m:Update(.11,{allowed=true,axis=Vector3.RIGHT});position=position+m.motion
+ z,_,active=m:StrikeZones();assert(z==cached and active and z.forward.z==1 and m.motion.x==0 and calls==1,'action never reselects or bends')
+ local boundary=Vector3.ZERO
+ for i=0,24 do
+- C.ZoneBoundary(z,i,16,boundary)
++ boundary=C.ZoneBoundary(z,i,16,boundary)
+  local shape={id='boundary',center=boundary,radius=.001}
+  assert(#Hit.QueryZone({{active=true,GetHurtShapes=function()return {shape}end}},z)==1,'every displayed sample belongs to actual hit region')
+ end
+@@ -51,7 +51,7 @@ m:Cancel('menu');assert(not m:StrikeZones())
+ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_heavy_release'}) do
+  local zone=C.MeleeZone(id,Vector3.ZERO,Vector3.RIGHT,1.3)
+  for i=0,16 do
+-  C.ZoneBoundary(zone,i,16,boundary)
++  boundary=C.ZoneBoundary(zone,i,16,boundary)
+   local radius=math.sqrt((boundary.x-zone.origin.x)^2+(boundary.z-zone.origin.z)^2)
+   S.near(radius,zone.radius)
+  end
+diff --git a/tests/combat/core_routing.lua b/tests/combat/core_routing.lua
+index d18451c..a5ef9a2 100644
+--- a/tests/combat/core_routing.lua
++++ b/tests/combat/core_routing.lua
+@@ -10,7 +10,7 @@ function caster:HandleCharge(on) charges[#charges+1]=on;self.charging=on end
+ function caster:Cast(id) casts[#casts+1]=id end
+ function caster:Say(text) self.message=text end
+ local env=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,M={mounted=false,debugOn=false,ride={mode='free'},ctrl={state='IDLE'}},
+-    caster_=caster,voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
++    caster_=caster,animPreview_={index=0},voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
+     KEY_1=1,KEY_2=2,KEY_3=3,KEY_E=4,KEY_Q=5,MOUSEB_LEFT=1,
+     CombatState={CanUseTime=function() return state.allowed end,InCombat=function() return state.combat end},
+     TouchControls={IsBlocked=function() return false end},
+diff --git a/tests/combat/core_ui_alloc.lua b/tests/combat/core_ui_alloc.lua
+index dddeb98..f88ef4c 100644
+--- a/tests/combat/core_ui_alloc.lua
++++ b/tests/combat/core_ui_alloc.lua
+@@ -80,4 +80,25 @@ local growth=collectgarbage('count')-start
+ collectgarbage('restart')
+ print(string.format(case..' HUD+Touch 600 frames: %.3f KB total / %.3f KB per frame / %.1f fills per frame',growth,growth/600,count/600))
+ if not base then assert(growth/600<=2,'HUD/Touch steady allocation exceeds 2KB per frame') end
++-- Real HUD Render: the PC-only preview hides low overlays without mutating
++-- their state. Exiting restores them; a touch HUD ignores this PC debug flag.
++if not base then
++ local buttons,hints,scrolls=0,0,0
++ local button,text,scroll=Draw.Button,Draw.Text,Draw.Scroll
++ Draw.Button=function(...)buttons=buttons+1;return button(...)end
++ Draw.Text=function(vg,s,...)if s=='战斗测试'then hints=hints+1 end;return text(vg,s,...)end
++ Draw.Scroll=function(...)scrolls=scrolls+1;return scroll(...)end
++ moves.clip=nil;moves.charge=0;data.charge=0;HUD.UpdateSlots({},0);HUD.SetMessage('preview existing message')
++ local function sample(preview)
++  buttons,hints,scrolls=0,0,0;data.preview=preview;Combat.Set(data);layer:Render(1)
++  return buttons,hints,scrolls
++ end
++ local b,h,s=sample(false);assert(s>0);if not Input.IsEnabled()then assert(b>0 and h>0)end
++ local pb,ph,ps=sample(true)
++ if Input.IsEnabled()then assert(pb==b and ph==h and ps==s,'touch unchanged')
++ else assert(pb==0 and ph==0 and ps==0,'F7 lower overlays hidden')end
++ local rb,rh,rs=sample(false);assert(rb==b and rh==h and rs==s,'F7 exit restores overlays')
++ Draw.Button,Draw.Text,Draw.Scroll=button,text,scroll
++ print('PASS real Render preview overlay enter/exit, retained message/hint/buttons; touch unchanged')
++end
+ return growth/600
+diff --git a/tests/combat/core_zone_values.lua b/tests/combat/core_zone_values.lua
+new file mode 100644
+index 0000000..aa1108c
+--- /dev/null
++++ b/tests/combat/core_zone_values.lua
+@@ -0,0 +1,117 @@
++-- Emulate the documented native Vector3 table-field read-by-value boundary.
++-- Plain Lua table vectors in older tests mutate in place and hid this defect.
++local S=dofile('tests/combat/core_support.lua')
++local C=require('combat.CombatMoves')
++local H=require('combat.Hit')
++local A=require('combat.CombatAnim')
++local State=require('combat.CombatState')
++local function copy(v)return Vector3(v.x,v.y,v.z)end
++local function valueFields(t)
++ return setmetatable({}, {__index=function(_,k)
++  local v=t[k];return type(v)=='table' and v.x~=nil and copy(v) or v
++ end,__newindex=function(_,k,v)t[k]=type(v)=='table' and v.x~=nil and copy(v) or v end})
++end
++local function freshZone()return valueFields{origin=Vector3.ZERO,source=Vector3.ZERO}end
++local probe=freshZone();probe.origin.x=99;assert(probe.origin.x==0,'test must discard property component writes')
++local sceneFile=assert(io.open('scripts/ruins/RuinsScene.lua'));local scene=sceneFile:read('*a');sceneFile:close()
++local nf=assert(io.open('scripts/ruins/NomiController.lua'));local ns=nf:read('*a');nf:close()
++local N={}
++local terrain={IsSafeGround=function()return true end,GroundHeight=function()return 6 end}
++local function yawRotation(yaw)return Quaternion(0,yaw,0)end
++local env=setmetatable({N=N,Terrain=terrain,Quaternion=yawRotation},{__index=_G})
++for _,name in ipairs({'TeleportForCombatDebug','AssistMelee'})do
++ assert(load(assert(ns:match('(function N:'..name..'.-)\nend'))..'\nend',name,'t',env))()
++end
++local startCode=assert(scene:match('(local function StartCombatTest%(%).-)\nlocal function HandleCombatDebugKeys'))
++local tests=0
++for _,yaw in ipairs({0,45,90,180,270})do
++ for _,opposite in ipairs({false,true})do
++  for _,fixture in ipairs({false,true})do
++   for _,wall in ipairs({false,true})do
++    local dir=Vector3(math.sin(math.rad(yaw)),0,math.cos(math.rad(yaw)))
++    local pos=Vector3(12,6.1,-64)
++    local n=setmetatable({node={worldPosition=pos,worldDirection=dir},camTarget={},safePos=pos,
++     yaw=yaw,camYaw=yaw+(opposite and 180 or 0),camPitch=12}, {__index=N})
++    function n:Position()return copy(self.node.worldPosition)end
++    function n:CanSlide()return true end
++    function n:UpdateCamera()end
++    n.cc={SetLinearVelocity=function()end,Teleport=function(_,p)n.node.worldPosition=copy(p)end}
++    -- In normal play, aim at camera intent even with the body initially backwards.
++    local targetDir=fixture and dir or Vector3(math.sin(math.rad(n.camYaw)),0,math.cos(math.rad(n.camYaw)))
++    local dummy=C.NewTrainingDummy(pos+targetDir*(fixture and 3 or 1.35))
++    local rig={SetActive=function()end,SetPose=function()end,GetStats=function()return {attack=10,reach=1,speed=1,poise=6}end}
++    State.Configure{rig=rig};State.Enter();State.FinishTransition();State.Activity(true)
++    local cast=wall and function()return .5 end or nil
++    local m=C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,position=function()return n:Position()end,
++     forward=function()return n.node.worldDirection end,
++     intent=function()local a=math.rad(n.camYaw);return Vector3(math.sin(a),0,math.cos(a))end,
++     assist=function(intent,select)return n:AssistMelee({dummy},cast,intent,select)end,
++     enemies=function()return {dummy}end,cast=cast}
++    -- Both persistent cached zone fields have native-value semantics.
++    m.strikeZone,m.slamZone=freshZone(),freshZone()
++    local opts
++    if fixture then
++     local e=setmetatable({nomi_=n,combatMoves_=m,combatRig_=rig,CombatState=State,trainingDummy_=dummy,animPreview_={index=0},
++      Terrain=terrain,Quaternion=yawRotation,DebugPointClear=function()return true end,
++      combatArrows_={Clear=function()end},TouchControls={Cancel=function()end},CombatTest={New=function(o)opts=o;return {}end}}, {__index=_G})
++     assert(load(startCode..'\nreturn StartCombatTest','actual F11 setup','t',e))()()
++     assert(opts.prepare{weapon='sword'})
++     S.near(n.camYaw,n.yaw);S.near((n:Position()-(dummy.position-dir*1.35)):Length(),0)
++    end
++    local hits={}
++    m.observe=function(kind,v)if kind=='hit'then hits[v.clip]=(hits[v.clip]or 0)+v.damage end end
++    local function tick(input)
++     m:Update(1/60,input or {allowed=true});n.node.worldPosition=n:Position()+m.motion
++     m:AfterPose();m:AfterPose();State.Update(1/60)
++    end
++    for i=1,3 do
++     tick{allowed=true,attackTap=true}
++     S.near(m.hitForward:DotProduct(targetDir),1)
++     for _=1,32 do tick()end
++     assert((hits['sword_light_'..i]or 0)==(wall and 0 or 10),
++      string.format('native zone normal/fixture=%s yaw=%d opposite=%s wall=%s stage=%d damage=%s origin=(%.1f,%.1f,%.1f)',
++       tostring(fixture),yaw,tostring(opposite),tostring(wall),i,tostring(hits['sword_light_'..i]),m.strikeZone.origin.x,m.strikeZone.origin.y,m.strikeZone.origin.z))
++    end
++    for _,full in ipairs({false,true})do
++     m:Cancel('test');State.SetBusy(false);State.Activity(true)
++     n.node.worldPosition=dummy.position-targetDir*1.35
++     m.releaseFull=full;assert(m:Action('heavy'))
++     for _=1,60 do tick()end
++    end
++    assert((hits.sword_heavy_release or 0)==(wall and 0 or 38),'heavy short/full 16+22; no duplicate settlement')
++    tests=tests+1
++   end
++  end
++ end
++end
++-- Translation, height, target eligibility, and caller-owned range samples.
++local p=Vector3(30,12,-80);local z=C.MeleeZone('sword_light_1',p,Vector3.RIGHT,1,false,freshZone())
++S.near((z.origin-p):Length(),0);S.near((z.source-p-Vector3(0,.9,0)):Length(),0)
++local good=C.NewTrainingDummy(p+Vector3(1.35,0,0))
++assert(#H.QueryZone({good},z)==1);good.dead=true;assert(#H.QueryZone({good},z)==0);good.dead=false
++good.active=false;assert(#H.QueryZone({good},z)==0);good.active=true
++assert(#H.QueryZone({C.NewTrainingDummy(p+Vector3(4,0,0)),C.NewTrainingDummy(p+Vector3(1,4,0))},z)==0)
++local point=valueFields{world=Vector3.ZERO}
++for i=0,24 do
++ point.world=C.ZoneBoundary(z,i,16,point.world) -- engine copies this argument
++ assert(point.world,'ZoneBoundary must return its Vector3 value')
++ local shape={center=point.world,radius=.001,id='edge'}
++ assert(#H.QueryZone({{GetHurtShapes=function()return {shape}end}},z)==1)
++end
++-- Run the actual HUD projection with value-semantic point storage too: merely
++-- testing the helper's return would miss a caller that forgets to assign it.
++local hf=assert(io.open('scripts/ui/CombatHUD.lua'));local hs=hf:read('*a');hf:close()
++local points={}
++for i=1,50 do points[i]=valueFields{world=Vector3.ZERO}end
++local he=setmetatable({H={},Moves=C,rangePoints=points},{__index=_G})
++assert(load(assert(hs:match('(function H.UpdateRange.-)\nlocal data=')),'actual range projection','t',he))()
++local projected=0
++he.H.UpdateRange{combat=true,moves={StrikeZones=function()return z,nil,true end},
++ rangeVisible=function(from,to)
++  S.near((from-z.source):Length(),0);assert(to.x>28 and to.y>12 and to.z< -78,'HUD must project translated world boundary')
++  return true
++ end,camera={WorldToScreenPoint=function(_,world)
++  projected=projected+1;assert(world.x>28);return {x=.5,y=.5}
++ end}}
++assert(projected==25 and points[1].visible)
++print('PASS native Vector3 boundary: '..tests..' real Action->animation->zone->LOS->Apply matrices; actual F11 prepare aligns body/camera; all light/heavy damages; translated range samples')
+diff --git a/tests/combat/core_preview_route.lua b/tests/combat/core_preview_route.lua
+new file mode 100644
+index 0000000..789fd13
+--- /dev/null
++++ b/tests/combat/core_preview_route.lua
+@@ -0,0 +1,50 @@
++local S=dofile('tests/combat/core_support.lua')
++local f=assert(io.open('scripts/ruins/RuinsScene.lua'));local source=f:read('*a');f:close()
++local noop=function()end
++local keys,pressed={},{}
++for _,name in ipairs({'F7','RIGHTBRACKET','RIGHT','LEFTBRACKET','LEFT','SPACE','1','2','3','4','O','P','I','K','J','L','B','EQUALS','PLUS','KP_PLUS','MINUS','KP_MINUS','COMMA','PERIOD','E','Q'})do keys['KEY_'..name]=name end
++local inCombat=false
++local says,charges,casts=0,0,{}
++local casterLastDown
++local controls={Cancel=noop,IsBlocked=function()return false end}
++local touch={IsEnabled=function()return false end,Down=function()return false end,Press=function()return false end}
++local caster={charging=true,charge=.5,Say=function()says=says+1 end,
++ HandleCharge=function(_,down)charges=charges+1;casterLastDown=down end,Cast=function(_,id)casts[#casts+1]=id end}
++local list={{id='stance_combat',dur=1}}
++local env=setmetatable({animPreview_={index=0,params={p=.5},direction='后'},
++ CombatAnim={DebugList=function()return list end},
++ CombatState={Enter=function()inCombat=true end,Exit=function()inCombat=false end,SetBusy=noop,GetWeapon=function()return 'sword'end,
++  CanUseTime=function()return not inCombat end,InCombat=function()return inCombat end},
++ combatMoves_={Cancel=noop},combatArrows_={Clear=noop},combatRig_={SetActive=noop,SetPose=noop},
++ combatAnim_={Play=noop,SetParam=noop,Update=noop,Stop=noop,Poll=function()return {}end},
++ CombatMoves={PreviewPhase=function()return 'recovery'end,PreviewEvents=function()return '—'end},
++ TouchControls=controls,TouchInput=touch,PlatformUtils={IsMobilePlatform=function()return false end},
++ Press=function(k)return pressed[k]==true end,Down=function(k)return pressed[k]==true end,
++ Clamp=function(v,a,b)return math.max(a,math.min(b,v))end,nomi_={camPitch=12},M={},caster_=caster,
++ time_=10,combatNoticeAt=0,pointer={IsEnabled=function()return true end,CanAttack=function()return false end},
++ input={GetMouseButtonDown=function()return false end}}, {__index=function(_,k)return keys[k]or _G[k]end})
++local preview=assert(load(assert(source:match('(local function UpdateCombatPreview.-)\nlocal function UpdateCombatActions'))..'\nreturn UpdateCombatPreview','actual preview routing','t',env))()
++local spells=assert(load(assert(source:match('(local function HandleSpells.-)\nfunction Ruins_HandleSceneUpdate'))..'\nreturn HandleSpells','actual spell routing','t',env))()
++pressed.F7=true;preview(.016,true);pressed.F7=nil
++assert(env.animPreview_.index==1 and inCombat)
++for _,key in ipairs({'1','2','3','E','Q'})do
++ pressed[key]=true;spells(.016,{});pressed[key]=nil
++end
++assert(says==0 and charges==0 and #casts==0 and not caster.charging and caster.charge==0,'preview exclusively owns shortcuts')
++pressed.F7=true;preview(.016,true);pressed.F7=nil
++assert(env.animPreview_.index==0 and not inCombat and env.combatInputBlocked,'exit waits for held preview keys')
++pressed['2']=true;spells(.016,{});assert(#casts==0,'exit cannot immediately freeze via held preview key')
++pressed['2']=nil
++-- Execute Scene existing release gate, rather than handwaving its restoration.
++local updateBody=assert(source:match('function Ruins_HandleUpdate.-$'))
++local gate=assert(updateBody:match('(    if combatInputBlocked then.-)\n    if VoidRewind'))
++local gateEnv=env;env.input.GetMouseButtonDown=function()return false end
++assert(load(gate,'actual input release gate','t',gateEnv))()
++assert(not env.combatInputBlocked)
++for _,k in ipairs({'1','2','3'})do pressed[k]=true;spells(.016,{});pressed[k]=nil end
++assert(charges==3 and casts[1]=='freeze' and casts[2]=='rewind','normal puzzle shortcuts restore')
++touch.IsEnabled=function()return true end
++touch.Down=function(k)return k=='shatter'end
++spells(.016,{});assert(casterLastDown==true,'touch puzzle charge unaffected after exit')
++assert(source:find('hud.preview=animPreview_.index>0',1,true),'Scene forwards only current F7 state, not stale debug text')
++print('PASS actual F7 enter/exit, number/E/Q exclusive routing, held-key exit guard, normal keyboard/touch puzzle restore')

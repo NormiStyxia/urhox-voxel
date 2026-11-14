@@ -68,11 +68,32 @@ function M:Init(scene,count,upper,lower)
     ---@type number
     self.elapsed=0
     self.fallback,self.unavailable=false,false
+    self.loading=false
+    ---@type DayNight|nil
+    self.pendingDN=nil
+    ---@type Vector3|nil
+    self.pendingPosition=nil
     self.textureReads=1
     if self.budget==0 or not (upper or lower) or (self.horizonOnly and not upper) then return end
     local detailed=self.budget>12
     local path=detailed and "Textures/Sky/cloud_sculpted_atlas.png" or "Textures/Sky/cloud_sculpted_atlas_low.png"
-    self.texture=cache:GetResource("Texture2D",path)
+    -- DWP GetResource may return a temporary texture with placeholder dimensions.
+    -- Wait once for the real resource; never classify that placeholder as failure.
+    self.loading=true
+    cache:GetResourceAsync("Texture2D",path,function(resource)
+        ---@cast resource Texture2D|nil
+        self:CompleteAtlas(resource)
+    end)
+end
+
+---@param texture Texture2D|nil
+function M:CompleteAtlas(texture)
+    -- A quality switch/Stop may dispose this instance while the download is pending.
+    if self.disposed or not self.loading then return end
+    self.loading=false
+    local detailed=self.budget>12
+    local scene,upper,lower=self.scene,self.upper,self.lower
+    self.texture=texture
     local width,height=detailed and 2048 or 1024,detailed and 1024 or 512
     if not self.texture or self.texture.width~=width or self.texture.height~=height then
         self.texture=nil;self.unavailable=true
@@ -89,7 +110,12 @@ function M:Init(scene,count,upper,lower)
         return
     end
     self.material:SetShaderParameter("cloud_enabled",Variant(1))
+    local dn=self.pendingDN
+    self:Update(0,dn and dn.day or self.pendingDay,dn and dn.dusk or self.pendingDusk,dn)
+    self.pendingDN,self.pendingDay,self.pendingDusk=nil,nil,nil
     self.root=scene:CreateChild("SkyClouds")
+    if self.pendingPosition then self.root.position=self.pendingPosition end
+    self.pendingPosition=nil
     local node=self.root:CreateChild("CelestialCloudPatches")
     local g=node:CreateComponent("CustomGeometry")
     g:BeginGeometry(0,TRIANGLE_LIST)
@@ -142,15 +168,19 @@ end
 
 ---@param position Vector3
 function M:Follow(position)
-    if self.root and not self.disposed then self.root.position=position end
+    if self.disposed then return end
+    if self.root then self.root.position=position
+    elseif self.loading then self.pendingPosition=position end
 end
 
--- 保留宿主调用兼容性；静态图集即时就绪，没有运行时烘焙任务。
+-- 保留宿主调用兼容性；图集下载后一次建网格，没有运行时烘焙任务。
 function M:StepBake() end
 
 function M:Dispose()
     if self.disposed then return end
     self.disposed,self.baking,self.ready=true,false,false
+    self.loading=false
+    self.pendingDN,self.pendingDay,self.pendingDusk,self.pendingPosition=nil,nil,nil,nil
     self.texture=nil
     self.scene=nil
     if self.root then self.root:Dispose() end
@@ -160,7 +190,11 @@ end
 
 -- 宿主5Hz；少量uniform缓慢漂移，不更新顶点/图集，不创建日志字符串。
 function M:Update(dt,day,dusk,dn)
-    if self.disposed or not self.material then return end
+    if self.disposed or self.unavailable then return end
+    if not self.material then
+        if self.loading then self.pendingDay,self.pendingDusk,self.pendingDN=day,dusk,dn end
+        return
+    end
     -- 四个漂移频率的共同周期，重置时相位连续且uniform长期有界。
     self.elapsed = (self.elapsed+Finite(dt,0,0,1))%(10000*math.pi)
     self.material:SetShaderParameter("drift_time",Variant(self.elapsed))

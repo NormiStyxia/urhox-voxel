@@ -1,0 +1,70 @@
+a99b8c2b7084e201d24f5637375fb93a7f07a087
+7e10d23c5096d720ecef18446361c006d7b8bac9
+Natural dodge motion and floating back weapons with safe combat stow transitions
+
+ M assets/Textures/Sky/cloud_density.png
+ M assets/Textures/Sky/cloud_density_low.png
+ M assets/Textures/Sky/cloud_occupancy.png
+ M validation/sky-fx/bake_density.py
+ M validation/sky-fx/density-raymarch-preview.png
+ M validation/sky-fx/raymarch_check.py
+?? validation/combat/dodge-stow-anim/
+?? validation/combat/dodge-stow-rig/
+?? validation/combat/dodge-stow/
+?? validation/combat/free-facing-anim/
+?? validation/combat/free-facing/
+?? validation/combat/weapon-refine/
+?? validation/sky-fx/RuinsCloud-r2.shader.txt
+?? validation/sky-fx/density-r2-low.png
+?? validation/sky-fx/density-r2-occupancy.png
+?? validation/sky-fx/density-r2.png
+?? validation/sky-fx/density-r3-close-comparison.png
+?? validation/sky-fx/density-r3-close.png
+?? validation/sky-fx/density-r3-comparison.png
+?? validation/sky-fx/density-r3-counts.json
+?? validation/sky-fx/density-r3-tail-loss.json
+?? validation/sky-fx/density_r2_reference.py
+?? validation/sky-fx/detail-before/
+?? validation/sky-fx/review-reference.md
+?? validation/sky-fx/review-skycards.diff
+?? validation/sky-fx/rotation-counts.json
+?? validation/sky-fx/rotation-engine-evidence.txt
+?? validation/sky-fx/sculpted-atlas-preview.png
+?? validation/sky-fx/sculpted-channels.png
+?? validation/sky-fx/skycards-counts.json
+?? validation/sky-fx/skycards-scene-preview.png
+?? validation/sky-fx/skycards-tier-12.png
+?? validation/sky-fx/skycards-tier-4.png
+?? validation/sky-fx/xuetao-LICENSE.json
+?? validation/sky-fx/xuetao-README.md.json
+?? validation/sky-fx/xuetao-asset-0.json
+?? validation/sky-fx/xuetao-asset-1.json
+?? validation/sky-fx/xuetao-asset-2.json
+?? validation/sky-fx/xuetao-asset-3.json
+?? validation/sky-fx/xuetao-asset-4.json
+?? validation/sky-fx/xuetao-asset-5.json
+?? validation/sky-fx/xuetao-dependency-0.json
+?? validation/sky-fx/xuetao-dependency-1.json
+?? validation/sky-fx/xuetao-dependency-2.json
+?? validation/sky-fx/xuetao-dependency-3.json
+?? validation/sky-fx/xuetao-directory.json
+?? validation/sky-fx/xuetao-genship_cloud.shader.json
+?? validation/sky-fx/xuetao-genship_cloud_common.hlsl.json
+?? validation/sky-fx/xuetao-genship_cloud_frag.hlsl.json
+?? validation/sky-fx/xuetao-genship_cloud_vert.hlsl.json
+?? validation/sky-fx/xuetao-genship_genship_cloud.mat.json
+?? validation/sky-fx/xuetao-genship_skybox_v2.shader.json
+?? validation/sky-fx/xuetao-mask-channels.png
+?? validation/sky-fx/xuetao-mesh.json
+?? validation/sky-fx/xuetao-ref.json
+?? validation/sky-fx/xuetao-repo.json
+?? validation/sky-fx/xuetao-script.json
+?? validation/sky-fx/xuetao-source-0.txt
+?? validation/sky-fx/xuetao-source-1.txt
+?? validation/sky-fx/xuetao-source-2.txt
+?? validation/sky-fx/xuetao-source-3.txt
+?? validation/sky-fx/xuetao-texture.json
+?? validation/sky-fx/xuetao-video-07.webp
+?? validation/sky-fx/xuetao-video-11_8.webp
+?? validation/sky-fx/xuetao-video-13_5.webp
+?? validation/sky-fx/xuetao-video-21.webp

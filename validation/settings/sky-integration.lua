@@ -21,6 +21,7 @@ graphics={GetComputeShaderSupport=function()return compute end}
 renderer={SetVolumetricFogFroxelEnabled=function(self,v)self.froxel=v end,SetVolumetricFogQuality=function(self,v)self.fogQuality=v end}
 Material={new=function()return{Dispose=dispose,params={},SetShaderParameter=function(s,k,v)s.params[k]=v end,SetTechnique=function()end,SetTexture=function()end,SetSurfaceShader=function()return true end,SetSurfaceTexture=function(s,k,v)s.textureBinds=(s.textureBinds or 0)+1;s.textureName=k;return true end,Clone=function()return Material:new()end}end}
 cache={GetResource=function(_,kind,path)local r=Material:new();if path=='Textures/Sky/cloud_sculpted_atlas.png' then r.width,r.height=2048,1024 elseif path=='Textures/Sky/cloud_sculpted_atlas_low.png' then r.width,r.height=1024,512 end;return r end}
+function cache:GetResourceAsync(kind,path,callback) callback(self:GetResource(kind,path)) end
 Image=function()return{Dispose=dispose,SetSize=function()end,SetPixel=function()end}end
 Texture2D={new=function()return{Dispose=dispose,SetData=function()end}end}
 ParticleEffect={new=function()return{Dispose=dispose,frames={},SetNumColorFrames=function()end,AddColorTime=function(s,c,t)table.insert(s.frames,{color=c,time=t})end}end}

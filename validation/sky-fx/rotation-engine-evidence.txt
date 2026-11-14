@@ -1,0 +1,128 @@
+READ-ONLY cached engine-res 1.34.10: SurfaceUnlit.glsl / DBd5sZMp5v97BUkeLe9WtW3D-c11e5972.glsl
+NOT proof of current Web engine version.
+118:     hvec4 surfaceVertexPos = iPos;
+119:     hvec3 surfaceVertexNormal = iNormal;
+120:     #ifdef SURFACE_USES_TANGENT
+121:         hvec4 surfaceVertexTangent = iTangent;
+122:     #else
+123:         hvec4 surfaceVertexTangent = hvec4_init(1.0, 0.0, 0.0, 1.0);
+124:     #endif
+125:     #ifndef SURFACE_WORLD_VERTEX_COORDS
+126:         hvec3 surfacePosition = surfaceVertexPos.xyz;
+127:         vec3 surfaceNormal = surfaceVertexNormal;
+128:         vec3 surfaceTangent = surfaceVertexTangent.xyz;
+129:         vec3 surfaceBinormal = cross(surfaceTangent, surfaceNormal) * surfaceVertexTangent.w;
+130:         vec2 surfaceUV = GetTexCoord(iTexCoord);
+131:         vec2 surfaceUV2 = SurfaceGetUV2();
+132:         DECLARE_SURFACE_COLOR_INPUTS
+133:         // SURFACE_SLOT_VERTEX_OBJECT_BODY
+134:         #ifdef SURFACE_USES_UV2
+135:             vSurfaceUV2 = surfaceUV2;
+136:         #endif
+137:         surfaceVertexPos.xyz = surfacePosition;
+138:         surfaceVertexNormal = surfaceNormal;
+139:         surfaceVertexTangent.xyz = surfaceTangent;
+140:     #endif
+141: 
+142:     // SURFACE_SLOT_VERTEX_VARYING_BODY
+143: 
+144:     #undef iPos
+145:     #undef iNormal
+146:     #undef iTangent
+147:     #define iPos surfaceVertexPos
+148:     #define iNormal surfaceVertexNormal
+149:     #define iTangent surfaceVertexTangent
+150: 
+151:     #ifdef SURFACE_SKIP_VERTEX_TRANSFORM
+152:         // vertex() returned view-space values; recover world-space lighting data without
+153:         // applying the model, skinning or billboard expansion a second time.
+154:         modelMatrix = cViewInv;
+155:         #undef GetWorldPos
+156:         #undef GetWorldNormal
+157:         #undef GetWorldTangent
+158:         #define GetWorldPos(matrix) mul(iPos, cViewInv).xyz
+159:         #define GetWorldNormal(matrix) normalize(mul(hvec4_init(iNormal, 0.0), cViewInv).xyz)
+160:         #define GetWorldTangent(matrix) hvec4_init(normalize(mul(hvec4_init(iTangent.xyz, 0.0), cViewInv).xyz), iTangent.w)
+161:     #endif
+162:     hvec3 worldPos = GetWorldPos(modelMatrix);
+163: 
+164:     #ifdef SURFACE_WORLD_VERTEX_COORDS
+165:         hvec3 surfacePosition = worldPos;
+166:         vec3 surfaceNormal = GetWorldNormal(modelMatrix);
+167:         #ifdef SURFACE_USES_TANGENT
+168:             vec4 surfaceWorldTangent = GetWorldTangent(modelMatrix);
+169:         #else
+170:             vec4 surfaceWorldTangent = vec4(1.0, 0.0, 0.0, 1.0);
+171:         #endif
+172:         vec3 surfaceTangent = surfaceWorldTangent.xyz;
+173:         vec3 surfaceBinormal = cross(surfaceTangent, surfaceNormal) * surfaceWorldTangent.w * cBitangentOddNegativeScale;
+174:         vec2 surfaceUV = GetTexCoord(iTexCoord);
+175:         vec2 surfaceUV2 = SurfaceGetUV2();
+176:         DECLARE_SURFACE_COLOR_INPUTS
+177:         // SURFACE_SLOT_VERTEX_WORLD_BODY
+178:         #ifdef SURFACE_USES_UV2
+179:             vSurfaceUV2 = surfaceUV2;
+180:         #endif
+181:         worldPos = surfacePosition;
+182:         surfaceVertexNormal = surfaceNormal;
+183:         surfaceWorldTangent.xyz = surfaceTangent;
+184:     #endif
+229:     gl_Position = SurfaceApplyZClipScale(SurfaceSelectClipPosition(GetClipPos(worldPos), surfaceClipPosition), surfaceZClipScale);
+230:     #ifdef SURFACE_GENERIC_OUTLINE
+231:         gl_Position.z += SurfaceOutlineZBias(gl_Position);
+232:     #endif
+233:     vWorldPos = vec4(worldPos, GetDepth(gl_Position));
+READ-ONLY cached engine-res 1.34.10: transform.sh / C4HaWY3JiPfjwiWgyvUgXaGI-618948b7.sh
+NOT proof of current Web engine version.
+29: hvec4 GetClipPos(hvec3 worldPos)
+30: {
+31: #ifdef UVBAKE
+32:     // UV-space material baking (MaterialBaking): rasterize at the UV unwrap mapped to NDC
+33:     // while worldPos and every other varying stay untouched -- the PS receives the real
+34:     // vWorldPos/vNormal/vertex colour. Material shaders use MATERIALBAKE and
+35:     // EncodeGBufferBake for the corresponding fragment output. Stock shaders,
+36:     // ShaderLab PBRPiplineVS and SurfaceShader templates share this projection. The Y flip
+37:     // matches MaterialBakeVS.glsl so readback row 0 always corresponds to v=0. The UVBAKE
+38:     // variant must not be combined with NOUV/BASIC (no UV attribute exists there).
+39:     vec2 bakeUV = (a_texcoord0.xy - u_MaterialBakeUVRect.xy) * u_MaterialBakeUVRect.zw;
+40:     float bakeY = 1.0 - bakeUV.y * 2.0;
+41:     #if BGFX_SHADER_LANGUAGE_GLSL
+42:         bakeY = -bakeY;
+43:     #endif
+44:     return hvec4_init(bakeUV.x * 2.0 - 1.0, bakeY, 0.0, 1.0);
+45: #else
+46:     hvec4 ret = mul(mul(hvec4_init(worldPos, 1.0),u_view), u_proj); //mul(vec4(worldPos, 1.0), cViewProj);
+47:     // While getting the clip coordinate, also automatically set gl_ClipVertex for user clip planes
+48:     #ifdef CLIPPLANE
+49:     #if !defined(GL_ES) && !defined(GL3) && !defined(D3D11) && !BGFX_SHADER_LANGUAGE_WGSL
+50:         gl_ClipVertex = ret;
+51:     #elif defined(GL3)
+52:         gl_ClipDistance[0] = dot(cClipPlane, ret);
+53:     #elif defined(D3D11)
+54:         //vClip = dot(ret, cClipPlane);
+55:     #endif
+56:     #endif
+57:     return ret;
+58: #endif
+READ-ONLY cached engine-res 1.34.10: SurfaceGodotMatrices.sh / BBXM2XuGXPVCY5low7BHQ214-abb0ac58.sh
+NOT proof of current Web engine version.
+15: // UrhoX transforms vectors on the left. Godot exposes matrices for column-vector multiplication,
+16: // so built-in matrices must be transposed before generated Godot-style code consumes them.
+17: hmat4 SurfaceGodotMatrix(hmat4 engineMatrix)
+18: {
+19:     return transpose(engineMatrix);
+20: }
+21: 
+22: hmat4 SurfaceGodotModelMatrix(hmat4 modelMatrix)
+23: {
+24:     return SurfaceGodotMatrix(modelMatrix);
+READ-ONLY cached engine-res 1.34.10: uniforms.sh / D4oZib5HcnSumbbEeg8yjNSh-e1f495f8.sh
+NOT proof of current Web engine version.
+295: #define cView u_view
+296: #define cViewInv u_invView
+297: 
+298: #define cProj u_proj
+299: #define cInvProj u_invProj
+300: 
+301: #define cViewProj u_viewProj
+302: #define cInvViewProj u_invViewProj

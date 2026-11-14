@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"tabs\",\"status\":200,\"data\":{\"running\":true,\"tabs\":[{\"targetId\":\"534D9C45A7DC97FC8346C3DE21D4452B\",\"title\":\"about:blank\",\"url\":\"about:blank\",\"wsUrl\":\"ws://127.0.0.1:18800/devtools/page/534D9C45A7DC97FC8346C3DE21D4452B\",\"type\":\"page\",\"suggestedTargetId\":\"t1025\",\"tabId\":\"t1025\"}]}}"
+    }
+  ],
+  "isError": false
+}

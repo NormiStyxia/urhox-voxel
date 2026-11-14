@@ -1,0 +1,92 @@
+[
+  {
+    "case": "DAY / upper large",
+    "variant": 0,
+    "sampler_calls_mean": 0.5901157407407407,
+    "p95": 1.0,
+    "max": 3,
+    "cloud_fraction": 0.1882716049382716,
+    "mean_mip": 1.6878214712849604
+  },
+  {
+    "case": "DAY / upper large",
+    "variant": 1,
+    "sampler_calls_mean": 0.5901157407407407,
+    "p95": 1.0,
+    "max": 3,
+    "cloud_fraction": 0.19979166666666667,
+    "mean_mip": 1.6872602535507735
+  },
+  {
+    "case": "DAY / middle",
+    "variant": 0,
+    "sampler_calls_mean": 0.9177314814814815,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.24417438271604938,
+    "mean_mip": 1.6237475759437836
+  },
+  {
+    "case": "DAY / middle",
+    "variant": 1,
+    "sampler_calls_mean": 0.9177314814814815,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.24661265432098767,
+    "mean_mip": 1.622889286037641
+  },
+  {
+    "case": "DAY / horizon",
+    "variant": 0,
+    "sampler_calls_mean": 0.7036265432098765,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.20332561728395063,
+    "mean_mip": 1.649808946045238
+  },
+  {
+    "case": "DAY / horizon",
+    "variant": 1,
+    "sampler_calls_mean": 0.7036265432098765,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.20966820987654322,
+    "mean_mip": 1.649091559067513
+  },
+  {
+    "case": "DUSK",
+    "variant": 0,
+    "sampler_calls_mean": 0.7937808641975309,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.17347993827160493,
+    "mean_mip": 1.693304762254624
+  },
+  {
+    "case": "DUSK",
+    "variant": 1,
+    "sampler_calls_mean": 0.7937808641975309,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.1637422839506173,
+    "mean_mip": 1.692695753887865
+  },
+  {
+    "case": "NIGHT",
+    "variant": 0,
+    "sampler_calls_mean": 0.6002546296296296,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.14555555555555555,
+    "mean_mip": 1.7177279293979262
+  },
+  {
+    "case": "NIGHT",
+    "variant": 1,
+    "sampler_calls_mean": 0.6002546296296296,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.15195216049382715,
+    "mean_mip": 1.7171143321375844
+  }
+]

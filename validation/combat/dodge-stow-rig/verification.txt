@@ -1,0 +1,8 @@
+python3 validation/combat/weapon-refine/checks.py tests / PASS — 6 weapon suites / /Users/xd/Desktop/体素test/validation/combat/dodge-stow-rig/tests.log
+python3 validation/combat/juice/run_tests.py / PASS — 33 combat suites / /Users/xd/Desktop/体素test/validation/combat/dodge-stow-rig/all-tests.log
+python3 validation/combat/weapon-refine/checks.py lsp / PASS — 12 files, 0 Error / /Users/xd/Desktop/体素test/validation/combat/dodge-stow-rig/lsp.log
+python3 validation/combat/dodge-stow-rig/audit.py / PASS — 72 combinations, axes, rest + lag-envelope clearance, projections / /Users/xd/Desktop/体素test/validation/combat/dodge-stow-rig/geometry.log
+git diff --check / PASS / /Users/xd/Desktop/体素test/validation/combat/dodge-stow-rig/diff-check.log
+/review (manual diff/state/event/ownership inspection) / PASS / /Users/xd/Desktop/体素test/validation/combat/dodge-stow-rig/review.log
+No local Runtime / preview / validate / surfaceless / build / commit / push was run.
+Native rendering, dynamic clipping and Web timing remain UNVERIFIED.

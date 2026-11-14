@@ -1,0 +1,30 @@
+{
+  "scripts/combat/AnimClips.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/combat/CombatAnim.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "tests/combat/anim_spec.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "tests/combat/anim_mock.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  }
+}

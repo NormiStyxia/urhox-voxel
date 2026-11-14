@@ -1,4 +1,6 @@
--- Pure Lua 5.4 contract test. Native render/GC/input timing still needs Web testing.
+-- Pure Lua 5.4 contract test for the dark-glass forge panel + showroom hand-off.
+-- NOT covered here (needs real Web/Windows runs): NanoVG appearance, MiSans glyph
+-- coverage, the real ForgeShowroom module, camera/viewport switching.
 package.path='scripts/?.lua;tests/combat/?.lua;'..package.path
 local Mock=require('weapon_mock')
 local Parts=require('combat.WeaponParts')
@@ -9,114 +11,46 @@ local original=Store.Default()
 Store.Load=function() return original end
 local held,buttons={},{}
 local eventHandlers={}
-local scenes,textures,geometries={},{},{}
-local autoRender=true
-local meshFailure,queueFailure=false,false
-local geometryOptions={}
-local materialMissing=false
-local pixelResult='unavailable'
-local readbackRequests=0
-local pendingReadback
-local nativeFailure,bridgeFailure,sizeFailure=false,false,false
-local liveContext='vg'
-local videoCreates,videoDeletes=0,0
 local cleared=0
 local messages={}
 local realPrint=print
 rawset(_G,'print',function(message) messages[#messages+1]=tostring(message);realPrint(message) end)
 local function LogCount(message)
     local count=0
-    for _,line in ipairs(messages) do if line==message then count=count+1 end end
+    for _,line in ipairs(messages) do if line:find(message,1,true)==1 then count=count+1 end end
     return count
-end
-local function DiagnosticLines(fragment)
-    local count,last=0,nil
-    for _,line in ipairs(messages) do
-        if line:find('Forge preview mesh:',1,true)==1 and line:find(fragment,1,true) then count=count+1;last=line end
-    end
-    return count,last
 end
 local width,height,dpr,scale=844,390,3,2
 local safe={left=47,right=47,top=0,bottom=21}
 for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
-for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE','LIGHT_DIRECTIONAL','FILTER_NEAREST','TEXTURE_RENDERTARGET','SURFACE_MANUALUPDATE','SURFACE_UPDATEALWAYS','CMD_CLEAR','NVG_ALIGN_CENTER','NVG_ALIGN_RIGHT'}) do rawset(_G,name,i) end
+for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE'}) do rawset(_G,name,i) end
+NVG_ALIGN_LEFT,NVG_ALIGN_CENTER,NVG_ALIGN_RIGHT,NVG_ALIGN_MIDDLE=1,2,4,16
 local fakeInput={numTouches=0,mouseMode=MM_RELATIVE,GetKeyDown=function(_,key) return held[key] end,GetMouseButtonDown=function(_,button) return buttons[button] end}
 rawset(_G,'input',fakeInput)
-local timerMs=0
-local fakeTime={}
-function fakeTime:GetElapsedTime()
-    assert(self==fakeTime,'Time singleton requires colon dispatch')
-    timerMs=timerMs+.01;return timerMs/1000
-end
-rawset(_G,'time',fakeTime)
-rawset(_G,'GetTime',function() error('legacy GetTime/GetSystemTime path must not be used') end)
-local function MakeNode(name,parent)
-    local node=Mock.Node(name,parent)
-    node.CreateChild=function(self,childName)
-        local child=MakeNode(childName,self);self.children[#self.children+1]=child;return child
-    end
-    node.LookAt=function() return true end
-    node.Dispose=function(self) assert(not self.disposed);self.disposed=true end
-    node.SetVar=function(self,key,value) self[key]=value end
-    node.GetVar=function(self,key) return {GetString=function() return self[key] end} end
-    node.CreateComponent=function(self,kind)
-        assert(kind~='VoxelPhysicsWorld','forge must not create a second voxel physics world')
-        if kind=='CustomGeometry' then
-            if meshFailure then error('CustomGeometry failure') end
-            local g=Mock.CustomGeometry(self,geometryOptions);geometries[#geometries+1]=g;return g
-        end
-        return {SetBoundingBox=function() end,SetAmbientColor=function() end,SetLightType=function() end,SetBrightness=function() end,GetNode=function() return self end}
-    end
+local clock=0
+rawset(_G,'time',{GetElapsedTime=function(self) assert(self,'colon dispatch');clock=clock+.0001;return clock end})
+-- Every NanoVG call is counted; paints/colours are fresh tables like the real binding's userdata.
+local nvgCalls,rects,fills=0,0,0
+for _,name in ipairs({'nvgSave','nvgRestore','nvgTranslate','nvgScale','nvgIntersectScissor','nvgBeginPath','nvgRoundedRect','nvgFillColor','nvgFillPaint',
+    'nvgStrokeColor','nvgStrokeWidth','nvgStroke','nvgCircle','nvgMoveTo','nvgLineTo','nvgClosePath','nvgFontFaceId','nvgFontSize','nvgFontBlur',
+    'nvgTextLetterSpacing','nvgTextAlign','nvgText','nvgShapeAntiAlias','nvgGlobalAlpha'}) do rawset(_G,name,function() nvgCalls=nvgCalls+1 end) end
+rawset(_G,'nvgRect',function() rects=rects+1 end)
+rawset(_G,'nvgFill',function() fills=fills+1 end)
+rawset(_G,'nvgRGBA',function() return {} end)
+rawset(_G,'nvgLinearGradient',function() return {} end)
+rawset(_G,'nvgCreateFont',function() return 1 end)
+local function MakeNode()
+    local node={}
     node.CreateScriptObject=function()
         local receiver={}
         receiver.SubscribeToEvent=function(_,name,fn) eventHandlers[name]=fn end
         receiver.UnsubscribeFromAllEvents=function() eventHandlers={} end
         return receiver
     end
+    node.Remove=function(self) self.removed=true end
     return node
 end
-rawset(_G,'Node',function() return MakeNode('events') end)
-rawset(_G,'Scene',function()
-    if nativeFailure then error('test: render target unavailable') end
-    local scene=MakeNode('preview');scenes[#scenes+1]=scene
-    scene.SetUpdateEnabled=function(self,on) self.updateEnabled=on end
-    return scene
-end)
-rawset(_G,'BoundingBox',function() return {} end)
-rawset(_G,'Texture2D',{new=function()
-    local texture={surface={updates=0,viewports=0}}
-    texture.SetNumLevels=function(_,n) assert(n==1) end
-    texture.SetSize=function(_,w,h) assert(w==512 and h==512);return not sizeFailure end
-    texture.SetFilterMode=function(_,mode) assert(mode==FILTER_NEAREST) end
-    texture.GetRenderSurface=function(self) return self.surface end
-    texture.GetImageAsync=function(_,callback)
-        readbackRequests=readbackRequests+1
-        if pixelResult=='deferred' then pendingReadback=callback;return end
-        if pixelResult=='unavailable' then callback(nil);return end
-        callback({GetWidth=function() return 32 end,GetHeight=function() return 32 end,
-            GetPixel=function() return {r=0,g=0,b=0,a=pixelResult=='nonzero' and 1 or 0} end,Dispose=function() end})
-    end
-    texture.surface.GetParentTexture=function() return texture end
-    texture.Dispose=function(self) assert(self.surface.viewports==0);assert(not self.disposed);self.disposed=true end
-    texture.surface.SetViewport=function(self) self.viewports=1 end
-    texture.surface.SetUpdateMode=function(self,mode) assert(mode==SURFACE_MANUALUPDATE or mode==SURFACE_UPDATEALWAYS);self.mode=mode end
-    texture.surface.QueueUpdate=function(self) assert(not queueFailure);self.updates=self.updates+1 end
-    texture.surface.SetNumViewports=function(self,n) self.viewports=n end
-    textures[#textures+1]=texture
-    return texture
-end})
-rawset(_G,'Graphics',{GetRGBAFormat=function() return 1 end})
-rawset(_G,'cache',{GetResource=function(_,kind) if materialMissing and kind=='Material' then return nil end;return {} end})
-rawset(_G,'Viewport',{new=function()
-    local command={type=CMD_CLEAR}
-    return {SetRenderPath=function() end,GetRenderPath=function()
-        return {GetNumCommands=function() return 1 end,GetCommand=function() return command end}
-    end}
-end})
-rawset(_G,'nvgCreateVideo',function() videoCreates=videoCreates+1;return bridgeFailure and 0 or videoCreates end)
-rawset(_G,'nvgDeleteVideo',function() videoDeletes=videoDeletes+1 end)
-for _,name in ipairs({'nvgSave','nvgRestore','nvgIntersectScissor','nvgTranslate','nvgBeginPath','nvgRect','nvgFillPaint','nvgImagePattern','nvgFill'}) do rawset(_G,name,function() end) end
-rawset(_G,'nvgImagePattern',function() return {} end) -- allocating paint, cached after warmup
+rawset(_G,'Node',MakeNode)
 local root={children={}}
 function root:AddChild(child) self.children[#self.children+1]=child;child.parent=self end
 function root:RemoveChild(child)
@@ -134,56 +68,55 @@ UI.GetRoot=function() return root end
 UI.GetScale=function() return scale end
 UI.PushOverlay=function(widget) assert(not overlay);overlay=widget end
 UI.PopOverlay=function(widget) assert(overlay==widget);overlay=nil end
+local liveContext='vg'
 UI.QueueOverlay=function(fn) fn(liveContext) end
-local drawCalls={}
-local Draw={colors={brown={1,2,3},ink={2,3,4},deep={4,5,6},paper={6,7,8},gold={8,9,10},muted={10,11,12}}}
+local imageCalls=0
+local Draw={colors={}}
 Draw.Snap=function(n) return math.floor(n/2+.5)*2 end
 Draw.PixelToHUD=function() return 1/dpr end
 Draw.Metrics=function() return width,height,safe end
 Draw.Begin=function() end
 Draw.Finish=function() end
-Draw.Image=function() end
-local rectCalls=0
-local pixelRects=0
-Draw.Rect=function(_,_,_,w,h) rectCalls=rectCalls+1;if w==2 and h==2 then pixelRects=pixelRects+1 end end
-Draw.NineSlice=function() end
-Draw.Text=function(_,text,x,y,size) assert(size==12 or size==24);drawCalls[#drawCalls+1]={text=text,x=x,y=y} end
+Draw.Image=function() imageCalls=imageCalls+1 end
+Draw.Text=function() end
 local combat='EXPLORE'
 local currentWeapon='sword'
 local equipOK=true
 package.loaded['urhox-libs/UI']=UI
-package.loaded['urhox-libs/UI/Core/ImageCache']={GetContext=function() return liveContext end}
 package.loaded['ui.PixelDraw']=Draw
 package.loaded['ui.TouchInput']={Clear=function() cleared=cleared+1 end}
 package.loaded['combat.CombatState']={EXPLORE='EXPLORE',Get=function() return combat end,GetPose=function() return combat=='EXPLORE' and 'hidden' or 'back' end,
     GetWeapon=function() return currentWeapon end,SetWeapon=function(weapon) if not equipOK then return false end;currentWeapon=weapon;return true end}
+-- Fake showroom: records the whole contract the panel relies on.
+local room={enterOK=true,ready=true,state='ready',entered=0,exited=0,weapons={},drag={begin=0,by={},finish={}},homes=0,focus=nil,sceneSeen=nil,updates=0,enterThrows=false}
+local active=false
+package.loaded['combat.ForgeShowroom']={
+    Enter=function(scene,opts)
+        if room.enterThrows then error('showroom exploded') end
+        room.sceneSeen=scene;room.focus=opts.focusX
+        if not room.enterOK then return false end
+        room.entered=room.entered+1;active=true;return true
+    end,
+    Exit=function() if active then room.exited=room.exited+1;active=false end end,
+    SetWeapon=function(single) room.weapons[#room.weapons+1]=single end,
+    Update=function() room.updates=room.updates+1 end,
+    DragBegin=function() room.drag.begin=room.drag.begin+1 end,
+    DragBy=function(dx) room.drag.by[#room.drag.by+1]=dx end,
+    DragEnd=function(v) room.drag.finish[#room.drag.finish+1]=v end,
+    Home=function() room.homes=room.homes+1 end,
+    IsReady=function() return room.ready end,
+    State=function() return room.state end,
+    SetFocus=function(fx) room.focus=fx end,
+}
 local Forge=require('ui.ForgePanel')
 ---@return any
 local function State()
     for i=1,10 do local name,value=debug.getupvalue(Forge.IsOpen,i);if name=='session' then return value end end
     error('missing session')
 end
--- Realistic VariantMap: pointer shortcut deliberately absent; fields contain
--- typed PTR/VOIDPTR Variants, not raw engine objects.
-local function ViewEvent(p,voidOnly,overrides)
-    local values={Scene=p.scene,Surface=p.surface,Camera=p.camera,Texture=p.texture,View={}}
-    if overrides then for key,value in pairs(overrides) do values[key]=value end end
-    local result={}
-    for key,value in pairs(values) do
-        local expected=key=='Surface' and 'RenderSurface' or key
-        result[key]={GetPtr=function(_,kind) assert(kind==expected,'explicit pointer cast required');if not voidOnly then return value end end,
-            GetVoidPtr=function(_,kind) assert(kind==expected);return value end}
-    end
-    return result
-end
 local function Tick(n)
     for _=1,n or 1 do
         if eventHandlers.Update then eventHandlers.Update(nil,nil,{GetFloat=function() return 1/60 end}) end
-        local current=State()
-        local p=current and current.preview
-        if autoRender and p and eventHandlers.EndViewRender then
-            eventHandlers.EndViewRender(nil,nil,ViewEvent(p,true))
-        end
     end
 end
 local function Button(id)
@@ -198,8 +131,8 @@ end
 local function Point(button)
     local s=State()
     local b=button.box
-    if button.body then
-        s.scroll=math.max(0,math.min(s.maxScroll,b.y-s.body.y))
+    if button.area=='scroll' then
+        s.scroll=math.max(0,math.min(s.maxScroll,b.y-s.view.y-8))
         return b.x+b.w/2,b.y-s.scroll+b.h/2
     end
     return b.x+b.w/2,b.y+b.h/2
@@ -214,414 +147,284 @@ local function Click(id)
 end
 local function Render()
     local s=State()
-    drawCalls={}
     if s and s.layer then s.layer:Render('vg') end
 end
 local function CheckLayout()
     local s=State()
-    assert(s.box.x>=safe.left and s.box.y>=safe.top)
-    assert(s.box.x+s.box.w<=width-safe.right and s.box.y+s.box.h<=height-safe.bottom)
+    local p=s.panel
+    assert(p.x>=safe.left and p.y>=safe.top and p.x+p.w<=width-safe.right and p.y+p.h<=height-safe.bottom,'panel outside safe area')
+    assert(s.stage.x+s.stage.w<=p.x,'stage must stay left of the panel')
     for _,b in ipairs(s.buttons) do
-        assert(b.box.w>=56 and b.box.h>=56,b.id..' too small')
-        assert(b.box.x>=s.box.x and b.box.x+b.box.w<=s.box.x+s.box.w,b.id..' horizontal overflow')
-        if not b.body then assert(b.box.y>=s.box.y and b.box.y+b.box.h<=s.box.y+s.box.h,b.id..' vertical overflow') end
+        local min=(b.kind=='plain' or b.kind=='primary') and 44 or 34
+        assert(b.box.h>=min and b.box.w>=34,b.id..' hit target too small')
+        assert(b.box.x>=p.x and b.box.x+b.box.w<=p.x+p.w,b.id..' horizontal overflow')
+        if not b.area then assert(b.box.y>=p.y and b.box.y+b.box.h<=p.y+p.h,b.id..' vertical overflow') end
     end
     for i,a in ipairs(s.buttons) do for j,b in ipairs(s.buttons) do
-        if i<j and a.body==b.body then
+        if i<j and a.area==b.area then
             local x=math.min(a.box.x+a.box.w,b.box.x+b.box.w)-math.max(a.box.x,b.box.x)
             local y=math.min(a.box.y+a.box.h,b.box.y+b.box.h)-math.max(a.box.y,b.box.y)
             assert(x<=0 or y<=0,'overlapping buttons '..a.id..' / '..b.id)
         end
     end end
+    -- Scrolling content must never reach under the fixed footer.
+    assert(s.view.y+s.view.h<=s.footerY)
 end
 local safeToOpen=true
 local function Open(options)
     options=options or {}
     options.canOpen=options.canOpen or function() return safeToOpen end
-    local opened=Forge.Open(options)
-    if opened and State().previewWorker then Tick(4) end
-    return opened
+    if options.scene==nil then options.scene={name='main-scene'} end
+    return Forge.Open(options)
 end
-local function Flush()
-    for _=1,200 do
-        local current=State()
-        if not current or not current.preview or not current.preview.job then return end
-        Tick()
-    end
-    error('preview build did not complete')
+local function OpenReady(options)
+    local ok=Open(options)
+    assert(ok);Tick(40)
+    return State()
 end
+local function CloseAll() Forge.Close();Tick(60) end
+local function ResetRoom()
+    room.enterOK,room.ready,room.state,room.enterThrows=true,true,'ready',false
+end
+
 assert(not Forge.Open(),'missing safety provider must fail closed')
 assert(Forge.PreviewMode()==nil and Forge.Close(true) and Forge.ForceClose())
 combat='COMBAT_IDLE';assert(not Open());combat='EXPLORE'
 assert(not Open({canOpen=function() return false end}))
+
+-- ---------------------------------------------------------------- normal flow
 local opened,closed,applyCalls=0,0,{}
-local mockRig={config=original,active='sword',pose='hidden'} --[[@as any]]
+local mockRig={config=original,active='sword',pose='hidden',scene={name='rig-scene'}} --[[@as any]]
 mockRig.Apply=function(_,config) applyCalls[#applyCalls+1]=config;return true end
 mockRig.SetActive=function(self,weapon) self.active=weapon end
 mockRig.SetPose=function(self,pose) self.pose=pose end
-assert(Open({rig=mockRig,onOpen=function() opened=opened+1 end,onClose=function(config,wasSaved,kept)
+assert(Open({rig=mockRig,scene=false,onOpen=function() opened=opened+1 end,onClose=function(config,wasSaved,kept)
     closed=closed+1;assert(config.active=='bow' and wasSaved and not kept)
 end}))
-assert(opened==1 and Forge.IsOpen() and fakeInput.mouseMode==MM_ABSOLUTE and cleared==1)
-assert(#root.children==1 and State().preview and not State().fallback)
-assert(State().preview.job and #geometries==0,'preview must build over frames without voxel worlds')
-assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0,'Open is not preview readiness')
-assert(Open() and opened==1)
-autoRender=false
-CheckLayout();Flush();Render()
-assert(videoCreates==1)
-assert(Forge.PreviewMode()==nil,'wait for a later frame after render surface queueing')
-local publishedGeometry=State().preview.mesh.geometry
-local queries=publishedGeometry.queries
-publishedGeometry.GetNumVertices=function() error('must not re-query published mesh on each draw') end
-autoRender=true;Tick();Render()
-assert(publishedGeometry.queries==queries,'readiness uses committed CPU vertices plus this RTT render receipt')
-assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
-local submitted,meshInfo=DiagnosticLines('submitted')
-assert(submitted==1 and meshInfo:find('commit=nil(void)',1,true) and meshInfo:find('set_material=true',1,true)
-    and meshInfo:find('native_bounds=(',1,true) and meshInfo:find('octree=true zone=true camera=true light=true',1,true))
-Tick();Render();assert(LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
-local s=State() --[[@as any]]
-local scene=s.preview.scene
-local rebuilt=#geometries
-local ortho=s.preview.camera.orthoSize
+assert(opened==1 and Forge.IsOpen() and fakeInput.mouseMode==MM_ABSOLUTE and cleared==1 and #root.children==1)
+local s=State()
+assert(s.phase=='opening' and room.entered==0,'the showroom is entered only after the fade to black')
+assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0)
+CheckLayout();Render()
+assert(Open() and opened==1,'second Open joins the live session')
+Tick(10);assert(room.entered==0)
+Tick(4);assert(room.entered==1 and s.phase=='revealing' and room.sceneSeen==mockRig.scene,'scene falls back to rig.scene')
+assert(room.focus and room.focus>0 and room.focus<.5,'weapon focus sits in the left half')
+assert(#room.weapons==1 and room.weapons[1].weapon=='sword' and room.weapons[1].parts.blade=='blade_straight')
+Tick(1);assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
+Tick(30);assert(s.phase=='open' and LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
+assert(room.updates>20,'the showroom is stepped every frame')
+rects=0;Render();local readyRects=rects
+CheckLayout()
+
+-- Part selection: real values, units, and the weapon is re-sent to the showroom.
 Click('part_blade_broad')
 assert(s.config.sword.parts.blade=='blade_broad' and s.blueprint.stats.attack==13.5)
-assert(Forge.PreviewMode()==nil and s.preview.state=='building')
-assert(#geometries==rebuilt,'selection must not perform synchronous native rebuild')
-Flush();Render()
-assert(original.sword.parts.blade=='blade_straight' and #geometries==rebuilt+1)
-assert(s.preview.camera.orthoSize==ortho and s.preview.pivot.position.y==0,'grip and preview scale must stay fixed')
-local comparison,delta=false,false
-for _,draw in ipairs(drawCalls) do comparison=comparison or draw.text=='10点 → 13.5点';delta=delta or draw.text=='+3.5点' end
-assert(comparison and delta,'real values, units and difference are required')
-rebuilt=#geometries
-Click('color_primary')
-for i=1,6 do Click('swatch_'..i);Flush();assert(s.config.sword.colors.primary==i) end
-assert(#geometries==rebuilt+6,'preview colors rebuild vertex colors, never voxel jobs')
-Click('swatch_3');Click('color_primary')
-Click('slot_grip');Click('part_sword_grip_long');Flush()
-Click('slot_reset');assert(s.config.sword.parts.grip==original.sword.parts.grip)
+assert(#room.weapons==2 and room.weapons[2].parts.blade=='blade_broad')
+local attack=s.statRows[1]
+assert(attack.label=='攻击' and attack.text=='10 → 13.5' and attack.delta=='+3.5' and attack.up)
+assert(s.statRows[2].label=='速度 ×' and s.statRows[3].label:find('范围',1,true))
+for _,row in ipairs(s.statRows) do assert(row.fraction>=0 and row.fraction<=1) end
+assert(#s.statRows==3,'three headline stats; the rest sit behind 更多数值')
+Click('more');assert(s.moreOpen and #s.moreRows==2 and s.moreRows[1].label=='失衡');CheckLayout();Render()
+Click('more');assert(not s.moreOpen and not s.moreBox)
+-- Colours: palette opens inside the scroll area and edits rebuild without touching parts.
+Click('color_primary');CheckLayout();Render()
+assert(s.colorChannel=='primary' and s.paletteBox)
+local sends=#room.weapons
+for i=1,6 do Click('swatch_'..i);assert(s.config.sword.colors.primary==i) end
+assert(#room.weapons==sends+6)
+Click('swatch_3');Click('color_primary');assert(not s.colorChannel and not s.paletteBox)
+-- Slots, recommended menu, undo, reset.
+Click('slot_grip');assert(s.slot=='grip');Click('part_sword_grip_long');assert(s.config.sword.parts.grip=='sword_grip_long')
+Click('recommend');assert(s.menuOpen and s.menuBox);CheckLayout();Render()
+Click('slot_reset');assert(not s.menuOpen and s.config.sword.parts.grip==original.sword.parts.grip)
 Click('undo');assert(s.config.sword.parts.grip=='sword_grip_long' and not s.undo)
-Click('preset_fast');assert(s.config.sword.parts.blade=='blade_rapier')
-Click('preset_armor');assert(s.blueprint.stats.armorBreak>1 and s.blueprint.stats.speed<1)
+Click('recommend');Click('preset_fast');assert(s.config.sword.parts.blade=='blade_rapier' and not s.menuOpen)
+Click('recommend');Click('preset_armor');assert(s.blueprint.stats.armorBreak>1 and s.blueprint.stats.speed<1)
 Click('undo');assert(s.config.sword.parts.blade=='blade_rapier')
-Click('reset');assert(s.config.sword.parts.blade=='blade_straight')
-Click('part_sword_grip_long');Flush()
-local props=s.layer.props
-s.scroll=0
-local x=s.previewBox.x+s.previewBox.w/2
-local y=s.previewBox.y+30
-props.onPointerDown(Event(x,y));local yaw=s.yaw
-props.onPointerMove(Event(x+30,y));props.onPointerUp(Event(x+30,y))
-assert(s.yaw~=yaw and not s.autoSpin)
-Tick();local updates=s.preview.surface.updates;Tick(8)
-assert(s.preview.surface.updates==updates,'stopped preview must not redraw every frame')
-Click('home');assert(s.yaw==25 and s.autoSpin)
-props.onPointerDown(Event(x,y));props.onPointerUp(Event(x,y));Tick()
-props.onPointerDown(Event(x,y));props.onPointerUp(Event(x,y));assert(s.yaw==25)
-Click('tab_bow');Click('part_limbs_long');Click('slot_tip');Click('part_tip_crystal');Flush();Render()
-assert(s.config.bow.parts.tip=='tip_crystal' and s.blueprint.stats.crystalRadius==.8)
-local labels={}
-for _,draw in ipairs(drawCalls) do labels[draw.text]=true end
-assert(labels['拉弓速度'] and labels['射程'] and labels['移动'] and labels['破甲'] and not labels['散布'])
-held.G=true;Click('equip')
-assert(s.closing and Forge.IsOpen() and #root.children==1 and overlay)
-assert(Forge.PreviewMode()==nil,'closed visual must not report a live preview during release latch')
-assert(#applyCalls==2 and saved.active=='bow' and currentWeapon=='bow' and mockRig.active=='bow' and mockRig.pose=='hidden')
-assert(scene.disposed and textures[1].disposed and videoDeletes==1)
-for _,g in ipairs(geometries) do assert(g.node.removed) end
-Tick(4);assert(Forge.IsOpen() and closed==0)
-held.G=false;Tick(2)
-assert(not Forge.IsOpen() and closed==1 and fakeInput.mouseMode==MM_RELATIVE and not next(eventHandlers))
-
--- Responsive collapse and explicit palettes preserve 56dp targets at every width.
-width,height,dpr,scale=320,568,2,1.5
-safe={left=0,right=0,top=20,bottom=24};nativeFailure=true
-assert(Open());s=State();CheckLayout();Render()
-assert(s.fallback and not s.preview and not s.wide and s.statsBox==nil)
-assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (scene)')==1)
-Click('stats_toggle');CheckLayout();Render()
-assert(s.statsBox.y>=s.previewBox.y+s.previewBox.h+56)
-Click('color_primary');CheckLayout();Click('swatch_5');assert(s.config.sword.colors.primary==5)
-local b=Button('swatch_2');x,y=Point(b);props=s.layer.props
-props.onPointerDown(Event(x,y,1));props.onPointerUp(Event(x,y,2));assert(s.pointer)
-props.onPointerCancel(Event(x,y,1));assert(not s.pointer)
-props.onPointerDown(Event(x,y));props.onPointerMove(Event(x,y-28));props.onPointerUp(Event(x,y-28))
-assert(s.config.sword.colors.primary==5,'scroll must not select a swatch')
-for _,w in ipairs({320,430,719,720,844,960}) do
-    width,height=w,390;safe={left=0,right=0,top=0,bottom=0};Render();CheckLayout()
-    assert(s.wide==(w>=720))
+Click('recommend');Click('reset');assert(s.config.sword.parts.blade=='blade_straight')
+-- Tapping outside an open menu only closes it (no click-through).
+Click('recommend');assert(s.menuOpen)
+do
+    local props=s.layer.props
+    local tab=Button('tab_bow');local x,y=Point(tab)
+    props.onPointerDown(Event(x,y));props.onPointerUp(Event(x,y))
+    assert(not s.menuOpen and s.weapon=='sword','outside tap closes the menu without activating what is under it')
 end
-Forge.Close();Tick(2)
+Click('part_sword_grip_long')
+-- Stage gestures: drag rotates, a quick second tap resets, panel drags scroll instead of selecting.
+do
+    local props=s.layer.props
+    local x,y=s.stage.x+s.stage.w/2,s.stage.y+s.stage.h/2
+    props.onPointerDown(Event(x,y));Tick()
+    props.onPointerMove(Event(x+30,y));Tick();props.onPointerMove(Event(x+60,y));props.onPointerUp(Event(x+60,y))
+    assert(room.drag.begin==1 and #room.drag.by>=1 and #room.drag.finish==1 and room.drag.finish[1]~=0)
+    props.onPointerDown(Event(x,y));props.onPointerUp(Event(x,y));Tick()
+    props.onPointerDown(Event(x,y));props.onPointerUp(Event(x,y));assert(room.homes==1)
+end
+do
+    local props=s.layer.props
+    s.scroll=0
+    local card=Button('slot_grip');local x,y=card.box.x+card.box.w/2,card.box.y+card.box.h/2
+    local before=s.slot
+    props.onPointerDown(Event(x,y));props.onPointerMove(Event(x,y-30));props.onPointerUp(Event(x,y-30))
+    assert(s.slot==before and s.scroll>0 or s.maxScroll==0,'dragging a button scrolls and does not select it')
+    props.onPointerDown(Event(x,y,1));props.onPointerUp(Event(x,y,2));assert(s.pointer)
+    props.onPointerCancel(Event(x,y,1));assert(not s.pointer)
+end
+-- Bow tab and its stats.
+Click('tab_bow');assert(s.weapon=='bow' and s.slot=='limbs' and #room.weapons>0 and room.weapons[#room.weapons].weapon=='bow')
+Click('part_limbs_long');Click('slot_tip');Click('part_tip_crystal')
+assert(s.config.bow.parts.tip=='tip_crystal' and s.blueprint.stats.crystalRadius==.8)
+assert(s.statRows[1].label:find('拉弓速度',1,true) and s.statRows[2].label:find('射程',1,true) and s.statRows[3].label:find('移动',1,true))
+Click('more');assert(s.moreRows[1].label:find('破甲',1,true));Click('more')
+CheckLayout();Render()
+-- Equip: edits apply immediately, the visual closes through the fade + release latch.
+held.G=true;Click('equip')
+assert(s.closing and Forge.IsOpen() and #root.children==1 and overlay and Forge.PreviewMode()==nil)
+assert(#applyCalls==2 and saved.active=='bow' and currentWeapon=='bow' and mockRig.active=='bow' and mockRig.pose=='hidden')
+Tick(30);assert(Forge.IsOpen() and closed==0 and room.exited==0,'held key blocks the release latch and the showroom stays up')
+held.G=false;Tick(14)
+assert(room.exited==1 and Forge.IsOpen(),'showroom exits at full black, then the overlay fades out')
+Tick(30)
+assert(not Forge.IsOpen() and closed==1 and fakeInput.mouseMode==MM_RELATIVE and not next(eventHandlers) and #root.children==0 and not overlay)
+assert(room.entered==room.exited)
 
--- Native failures clean up once; a subsequent Open can retry the capability.
-nativeFailure=false;bridgeFailure=true
-width,height=844,390
-assert(Open());s=State()
-local nextPreview=State().preview --[[@as any]]
-scene=nextPreview.scene
-Render();assert(s.fallback and not s.preview and scene.disposed)
-assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (bridge)')==1)
-local count=videoCreates
-Render();Tick(5);Render();assert(videoCreates==count)
-assert(LogCount('Forge preview: fallback (bridge)')==1)
-Click('tab_bow');Click('slot_grip');Click('part_bow_grip_stable')
-assert(s.blueprint.stats.move==.6)
-Forge.Close();Tick(2)
+-- ---------------------------------------------------------------- layouts
+for _,case in ipairs({{844,390},{960,420},{720,360},{667,375},{568,320},{1280,720}}) do
+    width,height=case[1],case[2];safe={left=0,right=0,top=0,bottom=0}
+    s=OpenReady();CheckLayout();Render()
+    width,height=case[1]+1,case[2];Render();CheckLayout()
+    assert(room.focus<.6,'re-layout updates the showroom focus')
+    CloseAll()
+end
+width,height=844,390;safe={left=47,right=47,top=0,bottom=21}
+-- Notched / unsafe areas shrink the panel but never leave the screen.
+safe={left=64,right=64,top=24,bottom=34};s=OpenReady();CheckLayout();CloseAll()
+safe={left=47,right=47,top=0,bottom=21}
 
--- Danger closes immediately without applying or saving; next safe Open restores undo too.
-bridgeFailure=false
+-- ---------------------------------------------------------------- fallbacks
+room.enterOK=false
+s=OpenReady();assert(s.fallback and not s.room and room.exited==room.entered)
+assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (enter)')==1)
+rects=0;Render()
+local fallbackRects=rects
+assert(fallbackRects>readyRects+10,'fallback draws the 2D voxel side view on top of the normal UI')
+Click('part_blade_broad');assert(s.config.sword.parts.blade=='blade_broad')
+Tick(10);assert(LogCount('Forge preview: fallback (enter)')==1)
+CloseAll();ResetRoom()
+room.enterThrows=true
+s=OpenReady();assert(s.fallback and Forge.PreviewMode()=='fallback');CloseAll();ResetRoom()
+-- Room that never becomes ready: fall back after the timeout and release it.
+local entered=room.entered
+room.ready=false
+s=OpenReady();assert(not s.fallback and Forge.PreviewMode()==nil and s.room)
+rects=0;Render();local preparingRects=rects
+Tick(60*7)
+assert(preparingRects<fallbackRects,'while the room is preparing, no 2D side view flash')
+assert(s.fallback and not s.room and LogCount('Forge preview: fallback (timeout)')==1 and room.exited==room.entered)
+CloseAll();ResetRoom()
+-- Room that reports failure.
+s=OpenReady();room.state='failed';Tick(2)
+assert(s.fallback and LogCount('Forge preview: fallback (failed)')==1)
+CloseAll();ResetRoom()
+-- Missing showroom module at runtime: updates that throw also fall back.
+package.loaded['combat.ForgeShowroom'].Update=function() error('update failed') end
+s=OpenReady();assert(s.fallback and LogCount('Forge preview: fallback (update)')==1);CloseAll()
+package.loaded['combat.ForgeShowroom'].Update=function() room.updates=room.updates+1 end
+-- SetWeapon failures also degrade without breaking edits.
+local oldSet=package.loaded['combat.ForgeShowroom'].SetWeapon
+package.loaded['combat.ForgeShowroom'].SetWeapon=function() error('mesh failed') end
+s=OpenReady();assert(s.fallback and LogCount('Forge preview: fallback (mesh)')==1)
+Click('part_blade_broad');assert(s.config.sword.parts.blade=='blade_broad');CloseAll()
+package.loaded['combat.ForgeShowroom'].SetWeapon=oldSet
+
+-- ---------------------------------------------------------------- danger close / drafts
 local savedBefore=saved
 local draftApplies,draftCloses=0,0
 local function DraftOptions()
     return {config=Store.Default(),onApply=function() draftApplies=draftApplies+1;return true end,
         onClose=function(_,wasSaved,kept) if kept then assert(not wasSaved);draftCloses=draftCloses+1 end end}
 end
-assert(Open(DraftOptions()));s=State();Click('part_blade_rapier')
-Tick(3) -- Abort a partially assembled custom preview.
-local interruptedScene=State().preview.scene
+local exitedBefore=room.exited
+s=OpenReady(DraftOptions());Click('part_blade_rapier')
 buttons[MOUSEB_LEFT]=true
-assert(Forge.Close(true) and not Forge.IsOpen(),'danger must not wait for held buttons')
+assert(Forge.Close(true) and not Forge.IsOpen(),'danger must not wait for held buttons or fades')
 assert(draftApplies==0 and saved==savedBefore and draftCloses==1 and #root.children==0)
-assert(interruptedScene.disposed)
-assert(not next(eventHandlers) and s.eventNode.removed and s.finished,'forced close must clean receiver now, without another Update')
+assert(room.exited==exitedBefore+1 and room.entered==room.exited,'danger close releases the showroom immediately')
+assert(not next(eventHandlers) and s.eventNode.removed and s.finished)
 assert(Forge.PreviewMode()==nil and Forge.ForceClose() and Forge.Close(true) and draftCloses==1)
-Tick();buttons[MOUSEB_LEFT]=false
+buttons[MOUSEB_LEFT]=false
 combat='COMBAT_ACTIVE';assert(not Open(DraftOptions()));combat='EXPLORE'
-assert(Open(DraftOptions()));s=State()
+s=OpenReady(DraftOptions())
 assert(s.config.sword.parts.blade=='blade_rapier' and s.undo and s.original.sword.parts.blade=='blade_straight')
 Click('undo');assert(s.config.sword.parts.blade=='blade_straight')
 Click('part_blade_broad');safeToOpen=false;Tick()
-assert(not Forge.IsOpen() and draftApplies==0 and draftCloses==2)
-Tick();safeToOpen=true
-assert(Open(DraftOptions()));assert(State().config.sword.parts.blade=='blade_broad')
-Forge.Close();Tick(2);assert(draftApplies==1)
-assert(Open(DraftOptions()));assert(State().config.sword.parts.blade=='blade_straight','equipping clears retained draft')
-Forge.Close();Tick(2)
--- Scene.Stop can arrive during the release latch, with no future Update events.
+assert(not Forge.IsOpen() and draftApplies==0 and draftCloses==2,'losing safe ground closes the forge and keeps the draft')
+safeToOpen=true
+s=OpenReady(DraftOptions());assert(s.config.sword.parts.blade=='blade_broad')
+CloseAll();assert(draftApplies==1)
+s=OpenReady(DraftOptions());assert(s.config.sword.parts.blade=='blade_straight','equipping clears the retained draft')
+CloseAll()
+-- Scene.Stop during the release latch: the latch finishes without another Update.
 local forcedCallbacks=0
-assert(Open({onClose=function() forcedCallbacks=forcedCallbacks+1 end}))
+assert(Open({onClose=function() forcedCallbacks=forcedCallbacks+1 end}));Tick(40)
 s=State();local retiredLayer=s.layer
 held.G=true;buttons[MOUSEB_LEFT]=true;fakeInput.numTouches=1
 Forge.Close();assert(Forge.IsOpen() and not retiredLayer.destroyed)
 Forge.Close(true)
 assert(not Forge.IsOpen() and not overlay and #root.children==0 and not next(eventHandlers))
 assert(retiredLayer.destroyed and s.eventNode.removed and fakeInput.mouseMode==MM_RELATIVE and forcedCallbacks==1)
+assert(room.entered==room.exited)
 local clearCount=cleared
 assert(Forge.Close(true) and Forge.ForceClose() and Forge.ForceClose())
-assert(forcedCallbacks==1 and cleared==clearCount and not next(eventHandlers),'repeated teardown must have no side effects')
+assert(forcedCallbacks==1 and cleared==clearCount,'repeated teardown has no side effects')
 held.G=false;buttons[MOUSEB_LEFT]=false;fakeInput.numTouches=0
-assert(Open({onClose=function(_,_,kept) assert(kept);forcedCallbacks=forcedCallbacks+1 end}))
-s=State()
+assert(Open({onClose=function(_,_,kept) assert(kept);forcedCallbacks=forcedCallbacks+1 end}));s=State()
 retiredLayer.props.onPointerDown(Event(100,100));retiredLayer.props.onPointerMove(Event(120,100));retiredLayer.props.onPointerUp(Event(120,100))
 assert(not s.pointer and retiredLayer.absoluteLayout.w==0,'stale UI pointer events must not touch a reopened forge')
-assert(Forge.ForceClose())
-assert(s.eventNode.removed and not next(eventHandlers) and forcedCallbacks==2)
+assert(Forge.ForceClose() and s.eventNode.removed and forcedCallbacks==2)
+-- Closing during the opening fade never enters (or leaks) the showroom.
+local before=room.entered
+assert(Open());Tick(3);Forge.ForceClose();Tick(30);assert(room.entered==before and not Forge.IsOpen())
 
--- Failed application/equip retains edits; failed disk save still applies this session.
+-- ---------------------------------------------------------------- failed apply / equip / save
 local allowApply=false
 saveOK=false
-assert(Open({onApply=function() return allowApply end,onClose=function(_,wasSaved,kept) assert(not wasSaved and not kept) end}))
+assert(Open({onApply=function() return allowApply end,onClose=function(_,wasSaved,kept) assert(not wasSaved and not kept) end}));Tick(40)
 s=State();Click('part_blade_rapier')
 assert(not Forge.Close() and Forge.IsOpen() and not s.closing and s.message)
+rects=0;Render()
 allowApply=true;equipOK=false;Click('tab_bow');currentWeapon='sword'
 assert(not Forge.Close() and not s.closing)
-equipOK=true;assert(Forge.Close());Tick(2);assert(not Forge.IsOpen())
+equipOK=true;assert(Forge.Close());Tick(80);assert(not Forge.IsOpen())
+saveOK=true
 assert(Open({config={sword={},bow={}}}));assert(State().config.active=='sword')
-Forge.Close();Tick(2)
-sizeFailure=true
-assert(Open());assert(State().fallback and not State().preview)
-assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (rendertexture)')==1)
-Forge.Close();Tick(2);sizeFailure=false
-assert(Open());Flush();Render()
-local createsBefore,deletesBefore=videoCreates,videoDeletes
-liveContext='vg2';Render()
-assert(videoCreates==createsBefore+1 and videoDeletes==deletesBefore)
 eventHandlers.KeyDown(nil,nil,{GetInt=function() return KEY_ESCAPE end})
-Tick(2);assert(not Forge.IsOpen() and videoDeletes==deletesBefore+1)
-assert(#root.children==0 and not overlay)
--- Unavailable or throwing Time must still finish assembly and emit readiness.
-local oldOs=rawget(_G,'os')
-rawset(_G,'os',nil)
-for _,brokenTime in ipairs({false,{GetElapsedTime=function() error('Web binding failure') end}}) do
-    rawset(_G,'time',brokenTime or nil)
-    local readyLogs=LogCount('Forge preview: 3d')
-    assert(Open());Flush();Tick();Render()
-    assert(Forge.PreviewMode()=='3d' and State().buildMetrics.clockUnavailable)
-    assert(LogCount('Forge preview: 3d')==readyLogs+1,'clock failure must not suppress preview readiness')
-    Forge.ForceClose()
-end
-rawset(_G,'time',fakeTime);rawset(_G,'os',oldOs)
--- Preview state machine: creation -> assembly -> render receipt -> ready, or
--- any failure / <=5 seconds without readiness -> terminal 2D fallback.
-autoRender=false
-assert(Open());assert(State().preview.state=='building')
-pixelRects=0;Render();assert(pixelRects>10,'pending preview must draw voxel pixels, not a blank panel')
-Flush();local stalled=State().preview
-assert(stalled.state=='awaiting_render' and stalled.queued and not stalled.rendered)
-eventHandlers.EndViewRender(nil,nil,{GetPtr=function() return {} end})
-Render();assert(Forge.PreviewMode()==nil,'main scene receipt cannot satisfy preview readiness')
-eventHandlers.EndViewRender(nil,nil,{GetPtr=function() error('binding unavailable') end})
-eventHandlers.Update(nil,nil,{GetFloat=function() return 4.99-stalled.age end})
-assert(Forge.PreviewMode()==nil and State().preview)
-eventHandlers.Update(nil,nil,{GetFloat=function() return .02 end})
-assert(Forge.PreviewMode()=='fallback' and not State().preview and stalled.scene.disposed)
-assert(LogCount('Forge preview: fallback (timeout)')==1)
-pixelRects=0;Render();assert(pixelRects>10,'timeout must draw the 2D parts')
-Tick(10);Render();assert(LogCount('Forge preview: fallback (timeout)')==1)
-Forge.ForceClose()
-local Builder=require('combat.WeaponBuilder')
-local stepPreview=Builder.StepPreview
-assert(Open());Builder.StepPreview=function() return false end
-Tick(3);assert(State().preview.state=='building')
-eventHandlers.Update(nil,nil,{GetFloat=function() return 5 end})
-assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (timeout)')==2)
-Builder.StepPreview=stepPreview;Forge.ForceClose()
-autoRender=true;meshFailure=true
-assert(Open());Flush();assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (mesh)')==1)
-local failureLogs,failureDetail=DiagnosticLines('failure_mesh')
-assert(failureLogs==1 and failureDetail:find('stage=create_custom_geometry',1,true)
-    and failureDetail:find('CustomGeometry failure',1,true) and failureDetail:find('vertices=0/',1,true))
-Tick(10);Render();assert(DiagnosticLines('failure_mesh')==failureLogs,'failure details must not spam per frame')
-Forge.ForceClose();assert(Open());Flush()
-assert(DiagnosticLines('failure_mesh')==failureLogs,'rapid identical reopenings must be rate limited')
-Forge.ForceClose();timerMs=timerMs+10001;assert(Open());Flush()
-assert(DiagnosticLines('failure_mesh')==failureLogs+1,'diagnostics may retry after cooldown')
-pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose();meshFailure=false
--- Both delayed native visibility and permanent native errors have a determined
--- path; the render view never disappears while verification is pending.
-geometryOptions={zeroQueries=2}
-assert(Open())
-while State().preview.job.phase~='verify' do Tick() end
-assert(State().preview.job.geometry.queries==0)
-Tick(2);assert(State().preview.job.phase=='verify')
-pixelRects=0;Render();assert(pixelRects>10 and Forge.PreviewMode()==nil)
-Flush();Render();assert(Forge.PreviewMode()=='3d');Forge.ForceClose()
-geometryOptions={zeroQueries=100}
-assert(Open());Flush();assert(Forge.PreviewMode()=='fallback')
-assert(DiagnosticLines('code=vertices_zero_after_3_frames')==1)
-pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose()
-geometryOptions={};materialMissing=true
-assert(Open());Flush();assert(Forge.PreviewMode()=='fallback')
-assert(DiagnosticLines('code=material_nil')==1)
-pixelRects=0;Render();assert(pixelRects>10);Forge.ForceClose();materialMissing=false
-queueFailure=true
-assert(Open());Tick();assert(Forge.PreviewMode()=='fallback' and LogCount('Forge preview: fallback (render)')==1)
-Forge.ForceClose();queueFailure=false
-assert(Open());Flush();Render();assert(Forge.PreviewMode()=='3d')
-Tick(310);Render();assert(Forge.PreviewMode()=='3d','ready is not downgraded by the initial watchdog')
-Forge.ForceClose()
--- Pointer receipts use Variant fields, never the misleading generated
--- VariantMap:GetPtr shortcut. View and Viewport intentionally differ.
-autoRender=false
-assert(Open());Flush()
-local receiptPreview=State().preview
-assert(receiptPreview.scene.updateEnabled and receiptPreview.surface.mode==SURFACE_UPDATEALWAYS)
-assert(receiptPreview.queued and receiptPreview.state=='awaiting_render')
-eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Scene={}}))
-assert(not receiptPreview.rendered and receiptPreview.endViews==1 and receiptPreview.sceneMatches==0 and receiptPreview.surfaceMatches==1)
-eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Surface={}}))
-assert(receiptPreview.rendered and receiptPreview.endViews==2 and receiptPreview.sceneMatches==1 and receiptPreview.surfaceMatches==1,'scene token alone is sufficient; surface is diagnostic')
-eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false))
-assert(receiptPreview.rendered and receiptPreview.matchedViews==2 and receiptPreview.pointerErrors==0)
-assert(receiptPreview.surface.mode==SURFACE_MANUALUPDATE and Forge.PreviewMode()==nil)
-assert(receiptPreview.lastReceipt:find('/ptr',1,true),'record typed pointer accessor used')
-Render();assert(Forge.PreviewMode()=='3d')
-local messagesReady=#messages
-Tick(60);Render();assert(#messages==messagesReady,'no per-frame receipt spam after ready')
-Forge.ForceClose()
-assert(Open());Flush();receiptPreview=State().preview
-eventHandlers.Update(nil,nil,{GetFloat=function() return 1.1 end})
-assert(receiptPreview.waitLogged and receiptPreview.endViews==0 and receiptPreview.state=='awaiting_render')
-local failedEvent=ViewEvent(receiptPreview,false)
-failedEvent.Scene={GetPtr=function() error('PTR binding unavailable') end,GetVoidPtr=function() error('VOIDPTR binding unavailable') end}
-eventHandlers.EndViewRender(nil,nil,failedEvent)
-assert(receiptPreview.pointerErrors==1 and not receiptPreview.rendered and receiptPreview.lastReceipt:find('PTR binding unavailable',1,true))
-local voidEvent=ViewEvent(receiptPreview,true)
-for _,variant in pairs(voidEvent) do variant.GetPtr=nil end
-eventHandlers.EndViewRender(nil,nil,voidEvent)
-assert(receiptPreview.rendered and receiptPreview.lastReceipt:find('/void',1,true))
-Render();assert(Forge.PreviewMode()=='3d')
-Forge.ForceClose();autoRender=true
--- Open does not create the Scene/RTT/batch meshes on the caller's first frame.
-local sceneCount,textureCount,geometryCount=#scenes,#textures,#geometries
-assert(Forge.Open({canOpen=function() return true end}))
-assert(State().previewWorker and not State().preview and #scenes==sceneCount and #textures==textureCount and #geometries==geometryCount)
-Tick();assert(#scenes==sceneCount+1 and #textures==textureCount and #geometries==geometryCount)
-Forge.ForceClose();assert(scenes[#scenes].disposed,'close during staged startup releases the partial scene')
--- New wrappers for the same native Scene/Surface must match stable markers.
-autoRender=false;assert(Open());Flush();receiptPreview=State().preview
-local wrappedScene={GetVar=function(_,key) assert(key=='ForgePreview');return {GetString=function() return receiptPreview.token end} end}
-local wrappedTexture={name=receiptPreview.token}
-local wrappedSurface={GetParentTexture=function() return wrappedTexture end}
-assert(wrappedScene~=receiptPreview.scene and wrappedSurface~=receiptPreview.surface)
-eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Scene=wrappedScene,Surface=wrappedSurface,Texture=wrappedTexture}))
-assert(receiptPreview.rendered and receiptPreview.matchedViews==1 and receiptPreview.surfaceMatches==1)
-assert(receiptPreview.lastReceipt:find('scene_token='..receiptPreview.token,1,true))
-Render();assert(Forge.PreviewMode()=='3d');Forge.ForceClose()
--- No useful event bindings: three distinct drawn frames plus optional readback.
-for _,pixels in ipairs({'nonzero','unavailable','zero'}) do
-    pixelResult=pixels
-    assert(Open());Flush();receiptPreview=State().preview
-    local readsBefore=readbackRequests
-    for _=1,2 do Tick();Render();Render();assert(Forge.PreviewMode()==nil,'same-frame repeated draw does not count twice') end
-    Tick();Render()
-    assert(readbackRequests==readsBefore+1)
-    if pixels=='zero' then
-        assert(Forge.PreviewMode()==nil)
-        eventHandlers.Update(nil,nil,{GetFloat=function() return 5 end})
-        assert(Forge.PreviewMode()=='fallback','confirmed empty texture must not be labelled ready')
-    else
-        assert(Forge.PreviewMode()=='3d' and receiptPreview.readyReason==(pixels=='nonzero' and 'three_draws_nonzero' or 'three_draws_unverified'))
-    end
-    Forge.ForceClose()
-end
--- Late readbacks from a replaced build or a closed overlay cannot mark the
--- new preview ready; their caller-owned Image is still released exactly once.
-pixelResult='deferred'
-assert(Open());Flush();receiptPreview=State().preview
-for _=1,3 do Tick();Render() end
-assert(receiptPreview.pixelStatus=='pending' and pendingReadback)
-local staleReadback=pendingReadback
-local oldGeneration=receiptPreview.generation
-Click('preset_fast')
-assert(receiptPreview.generation>oldGeneration and receiptPreview.pixelStatus=='not_requested')
-local disposedPixels=0
-local function ReadbackImage()
-    return {GetWidth=function() return 1 end,GetHeight=function() return 1 end,
-        GetPixel=function() return {r=1,g=1,b=1,a=1} end,Dispose=function() disposedPixels=disposedPixels+1 end}
-end
-staleReadback(ReadbackImage())
-assert(disposedPixels==1 and receiptPreview.pixelStatus=='not_requested')
-Flush();for _=1,3 do Tick();Render() end
-assert(receiptPreview.pixelStatus=='pending')
-local closedReadback=pendingReadback
-Forge.ForceClose();closedReadback(ReadbackImage());assert(disposedPixels==2 and Forge.PreviewMode()==nil)
-pixelResult='unavailable';autoRender=true
--- Reproducible Lua allocation probe: exclude mock text recording, warm caches,
--- stop GC for 240 draws. Native graphics allocations are not measured here.
-local recordedText=Draw.Text
-Draw.Text=function() end
+Tick(80);assert(not Forge.IsOpen() and #root.children==0 and not overlay)
+-- Escape closes an open menu first.
+s=OpenReady();Click('recommend')
+eventHandlers.KeyDown(nil,nil,{GetInt=function() return KEY_ESCAPE end});assert(Forge.IsOpen() and not s.menuOpen)
+eventHandlers.MouseWheel(nil,nil,{GetInt=function() return -1 end});assert(s.scroll>=0)
+CloseAll()
+
+-- ---------------------------------------------------------------- allocation probe
+-- Steady-state Lua allocation per drawn frame. Native NanoVG allocations are not measured.
 for _,fallback in ipairs({false,true}) do
-    nativeFailure=fallback
-    assert(Open());Flush();Tick();Render()
-    local current=State()
-    for _=1,20 do current.layer:Render(liveContext) end
-    local format=string.format
-    string.format=function() error('steady forge render must not format strings') end
+    room.enterOK=not fallback
+    s=OpenReady();Render()
+    for _=1,20 do s.layer:Render(liveContext) end
     collectgarbage('collect');collectgarbage('stop')
-    local before=collectgarbage('count')
-    for _=1,240 do current.layer:Render(liveContext) end
-    local after=collectgarbage('count');collectgarbage('restart');string.format=format
-    local perFrame=(after-before)/240
-    print(string.format('BENCH %s %.6f KiB/frame (240 frames, GC stopped, drawing stubs no recording)',fallback and '2d' or '3d',perFrame))
-    assert(perFrame<1,'steady render regressed above 1 KiB/frame in the isolated Lua probe')
-    Forge.ForceClose()
+    local mem=collectgarbage('count')
+    for _=1,240 do s.layer:Render(liveContext) end
+    local perFrame=(collectgarbage('count')-mem)/240
+    collectgarbage('restart')
+    print(string.format('BENCH %s %.6f KiB/frame (240 frames, GC stopped)',fallback and '2d' or '3d',perFrame))
+    assert(perFrame<1,'steady forge render regressed above 1 KiB/frame')
+    CloseAll()
 end
-Draw.Text=recordedText;nativeFailure=false
-for _,g in ipairs(geometries) do assert(g.node.removed) end
-for _,texture in ipairs(textures) do assert(texture.disposed) end
-for _,createdScene in ipairs(scenes) do assert(createdScene.disposed) end
+ResetRoom()
+assert(room.entered==room.exited,'every entered showroom was exited exactly once')
 for key in pairs(Forge) do assert(key=='Open' or key=='Close' or key=='IsOpen' or key=='ForceClose' or key=='PreviewMode') end
-print('PASS weapon_forge: staged preview, safe drafts, presets/undo/slot reset, real stats, 720dp collapse, explicit palettes, fixed grip, input and cleanup')
+print('PASS weapon_forge: glass panel, sky-showroom hand-off, fades, drafts/undo/presets, real stats, layouts, fallbacks, input and cleanup')

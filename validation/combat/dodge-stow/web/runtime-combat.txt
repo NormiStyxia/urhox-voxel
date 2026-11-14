@@ -1,0 +1,224 @@
+[2026-11-15 00_33_31_360][158][Script] VoxelFX: CombatHandMotes uses world-space quads, capacity=32
+[2026-11-15 00_33_44_752][159][Script] Combat: hand glow state=EXPLORE requested=0.28 brightness=0.198 motes=0
+[2026-11-15 00_35_13_793][3136][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_35_13_801][3136][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_35_19_936][3340][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_35_20_952][3376][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.004 motes=0
+[2026-11-15 00_35_44_559][4176][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_35_44_560][4176][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_35_50_579][4374][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_35_51_583][4409][Script] Combat: hand glow state=EXPLORE requested=0.00 brightness=0.001 motes=0
+[2026-11-15 00_36_03_180][4809][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_36_03_180][4809][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_39_24_902][11121][Script] Combat: state COMBAT_IDLE->EXPLORE preview-end
+[2026-11-15 00_39_25_152][11127][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_39_27_681][11185][Script] Combat: clip weapon_swap_sword_to_bow start
+[2026-11-15 00_39_31_191][11266][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_39_32_211][11295][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.005 motes=0
+[2026-11-15 00_39_49_695][11853][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_39_49_697][11853][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_39_51_400][11907][Script] Combat: clip weapon_swap_bow_to_sword start
+[2026-11-15 00_39_55_696][12042][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_39_56_710][12076][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.005 motes=0
+[2026-11-15 00_40_31_169][13034][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_40_31_176][13034][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_40_31_952][13051][Script] Combat: clip weapon_swap_sword_to_bow start
+[2026-11-15 00_40_37_278][13165][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_40_38_328][13189][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.010 motes=0
+[2026-11-15 00_41_01_524][13726][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_41_01_528][13726][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_41_01_760][13731][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_01_763][13731][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_02_116][13736][Script] Combat: sfx dodge_land
+[2026-11-15 00_41_02_139][13737][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_41_04_599][13795][Script] CombatTest: BEGIN FAIL no safe dummy location
+[2026-11-15 00_41_07_847][13872][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_41_08_848][13898][Script] Combat: hand glow state=EXPLORE requested=0.00 brightness=0.002 motes=0
+[2026-11-15 00_41_36_868][14558][Script] CombatTest: BEGIN; safe staging between steps; real input/physics/hit settlement; any key aborts
+[2026-11-15 00_41_36_961][14559][Script] Combat: state EXPLORE->COMBAT_IDLE selftest
+[2026-11-15 00_41_36_961][14559][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_36_963][14559][Script] CombatTest: STEP combo (neutral settle .35s)
+[2026-11-15 00_41_36_964][14559][Script] Combat: hand glow state=COMBAT_ACTIVE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_41_37_863][14565][Script] Combat: clip sword_light_1 start
+[2026-11-15 00_41_37_913][14567][Script] CombatTest: combo hit_on clip=sword_light_1 action_t=0.1000 observed_t=0.0516
+[2026-11-15 00_41_38_220][14579][Script] Combat: clip sword_light_1 finish
+[2026-11-15 00_41_38_248][14580][Script] Combat: clip sword_light_2 start
+[2026-11-15 00_41_38_323][14583][Script] CombatTest: combo hit_on clip=sword_light_2 action_t=0.1000 observed_t=0.0813
+[2026-11-15 00_41_38_631][14595][Script] Combat: clip sword_light_2 finish
+[2026-11-15 00_41_38_652][14596][Script] Combat: clip sword_light_3 start
+[2026-11-15 00_41_38_783][14601][Script] CombatTest: combo hit_on clip=sword_light_3 action_t=0.1400 observed_t=0.1272
+[2026-11-15 00_41_39_164][14616][Script] Combat: clip sword_light_3 finish
+[2026-11-15 00_41_39_184][14617][Script] CombatTest: sword_light_1 FAIL hit_on=0.1000 damage=0.000 hits=0
+[2026-11-15 00_41_39_185][14617][Script] CombatTest: sword_light_2 FAIL hit_on=0.1000 damage=0.000 hits=0
+[2026-11-15 00_41_39_185][14617][Script] CombatTest: sword_light_3 FAIL hit_on=0.1400 damage=0.000 hits=0
+[2026-11-15 00_41_39_185][14617][Script] CombatTest: combo_all_hit FAIL stage1=0.000 stage2=0.000 stage3=0.000
+[2026-11-15 00_41_39_187][14617][Script] CombatTest: STEP heavy_short (neutral settle .35s)
+[2026-11-15 00_41_39_564][14632][Script] Combat: clip sword_heavy_charge start
+[2026-11-15 00_41_40_100][14652][Script] Combat: clip sword_heavy_release start
+[2026-11-15 00_41_40_304][14660][Script] CombatTest: heavy_short hit_on clip=sword_heavy_release action_t=0.2200 observed_t=0.2054
+[2026-11-15 00_41_40_804][14680][Script] Combat: clip sword_heavy_release finish
+[2026-11-15 00_41_40_832][14681][Script] CombatTest: heavy_short FAIL damage=0.000 expected=16.000 hit_on=0.2200
+[2026-11-15 00_41_40_832][14681][Script] CombatTest: STEP heavy_full (neutral settle .35s)
+[2026-11-15 00_41_41_206][14696][Script] Combat: clip sword_heavy_charge start
+[2026-11-15 00_41_42_223][14735][Script] Combat: clip sword_heavy_release start
+[2026-11-15 00_41_42_432][14743][Script] CombatTest: heavy_full hit_on clip=sword_heavy_release action_t=0.2200 observed_t=0.2102
+[2026-11-15 00_41_42_932][14759][Script] Combat: clip sword_heavy_release finish
+[2026-11-15 00_41_42_955][14760][Script] CombatTest: heavy_full FAIL damage=0.000 expected=22.000 hit_on=0.2200
+[2026-11-15 00_41_42_956][14760][Script] CombatTest: STEP slide_forward (neutral settle .35s)
+[2026-11-15 00_41_43_326][14775][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_43_327][14775][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_43_584][14785][Script] Combat: sfx dodge_land
+[2026-11-15 00_41_43_628][14787][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_41_44_020][14803][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_44_807][14835][Script] CombatTest: slide_forward PASS controller_distance=2.2000 expected=2.20 iframe_observed=0.2079 cd_observed=0.5033 max_dt=0.0302
+[2026-11-15 00_41_44_808][14835][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_44_808][14835][Script] CombatTest: STEP slide_back (neutral settle .35s)
+[2026-11-15 00_41_45_169][14849][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_45_172][14849][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_45_423][14859][Script] Combat: sfx dodge_land
+[2026-11-15 00_41_45_476][14861][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_41_45_864][14875][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_46_676][14908][Script] CombatTest: slide_back PASS controller_distance=2.2000 expected=2.20 iframe_observed=0.2093 cd_observed=0.5201 max_dt=0.0314
+[2026-11-15 00_41_46_676][14908][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_46_678][14908][Script] CombatTest: STEP slide_left (neutral settle .35s)
+[2026-11-15 00_41_47_028][14922][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_47_031][14922][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_47_280][14932][Script] Combat: sfx dodge_land
+[2026-11-15 00_41_47_328][14934][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_41_47_727][14950][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_48_572][14982][Script] CombatTest: slide_left PASS controller_distance=2.2000 expected=2.20 iframe_observed=0.2260 cd_observed=0.5160 max_dt=0.0625
+[2026-11-15 00_41_48_572][14982][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_48_572][14982][Script] CombatTest: STEP slide_right (neutral settle .35s)
+[2026-11-15 00_41_48_929][14992][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_48_960][14993][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_48_964][14993][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_49_180][15001][Script] Combat: sfx dodge_land
+[2026-11-15 00_41_49_263][15004][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_41_50_427][15051][Script] CombatTest: slide_right PASS controller_distance=2.2000 expected=2.20 iframe_observed=0.2062 cd_observed=0.5083 max_dt=0.0598
+[2026-11-15 00_41_50_428][15051][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_50_428][15051][Script] CombatTest: STEP slide_cancel (neutral settle .35s)
+[2026-11-15 00_41_50_807][15065][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_50_808][15065][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_51_015][15073][Script] Combat: sfx dodge_land
+[2026-11-15 00_41_51_015][15073][Script] Combat: clip sword_light_1 start
+[2026-11-15 00_41_51_137][15078][Script] CombatTest: slide_cancel hit_on clip=sword_light_1 action_t=0.1000 observed_t=0.1215
+[2026-11-15 00_41_51_431][15090][Script] Combat: clip sword_light_1 finish
+[2026-11-15 00_41_51_828][15106][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_52_297][15125][Script] CombatTest: slide_cancel PASS controller_distance=1.9200 expected=1.92 iframe_observed=0.2184 cd_observed=0.5047 max_dt=0.0327
+[2026-11-15 00_41_52_297][15125][Script] CombatTest: slide_cancel_follow PASS attack_after_slide=0.2200 next_clip2=0
+[2026-11-15 00_41_52_299][15125][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_52_299][15125][Script] CombatTest: STEP attack_slide_attack (neutral settle .35s)
+[2026-11-15 00_41_52_665][15140][Script] Combat: clip sword_light_1 start
+[2026-11-15 00_41_52_763][15144][Script] CombatTest: attack_slide_attack hit_on clip=sword_light_1 action_t=0.1000 observed_t=0.0969
+[2026-11-15 00_41_52_860][15148][Script] Combat: clip dodge_slide start
+[2026-11-15 00_41_52_862][15148][Script] Combat: sfx dodge_start
+[2026-11-15 00_41_54_164][15202][Script] CombatTest: attack_slide_attack PASS controller_distance=1.9200 expected=1.92 iframe_observed=0.2172 cd_observed=0.5138 max_dt=0.0287
+[2026-11-15 00_41_54_164][15202][Script] CombatTest: attack_slide_attack_follow PASS attack_after_slide=0.2200 next_clip2=1
+[2026-11-15 00_41_54_164][15202][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_54_164][15202][Script] CombatTest: STEP arrow_weak (neutral settle .35s)
+[2026-11-15 00_41_54_529][15213][Script] Combat: clip bow_draw start
+[2026-11-15 00_41_54_684][15218][Script] Combat: clip bow_hold start
+[2026-11-15 00_41_54_715][15219][Script] Combat: clip bow_release start
+[2026-11-15 00_41_54_718][15219][Script] Combat: arrow fire tier=weak speed=18.00
+[2026-11-15 00_41_54_718][15219][Script] CombatTest: arrow_weak arrow tier=weak speed=18.000 damage=4.000 crystal=0.000 radius=0.00
+[2026-11-15 00_41_54_844][15224][Script] Dummy hit: bow weak dmg=4.00 part=body
+[2026-11-15 00_41_54_844][15224][Script] CombatTest: arrow_weak hit clip=bow_release weapon=bow dmg=4.000
+[2026-11-15 00_41_54_844][15224][Script] Combat: hit training_dummy part=body dmg=4.00 poise=4.00
+[2026-11-15 00_41_54_865][15225][Script] Combat: clip bow_release finish
+[2026-11-15 00_41_55_248][15240][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_56_536][15290][Script] CombatTest: arrow_weak PASS shots=1 tier=weak speed=18.000 hit_damage=4.000 crystal_resolved=0.000
+[2026-11-15 00_41_56_536][15290][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_56_536][15290][Script] CombatTest: STEP arrow_mid (neutral settle .35s)
+[2026-11-15 00_41_56_900][15305][Script] Combat: clip bow_draw start
+[2026-11-15 00_41_57_000][15309][Script] Combat: clip bow_hold start
+[2026-11-15 00_41_57_260][15319][Script] Combat: clip bow_release start
+[2026-11-15 00_41_57_263][15319][Script] Combat: arrow fire tier=mid speed=30.00
+[2026-11-15 00_41_57_263][15319][Script] CombatTest: arrow_mid arrow tier=mid speed=30.000 damage=8.000 crystal=0.000 radius=0.00
+[2026-11-15 00_41_57_332][15322][Script] Dummy hit: bow mid dmg=8.00 part=body
+[2026-11-15 00_41_57_332][15322][Script] CombatTest: arrow_mid hit clip=bow_release weapon=bow dmg=8.000
+[2026-11-15 00_41_57_332][15322][Script] Combat: hit training_dummy part=body dmg=8.00 poise=4.00
+[2026-11-15 00_41_57_432][15326][Script] Combat: clip bow_release finish
+[2026-11-15 00_41_57_819][15342][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_41_58_904][15387][Script] CombatTest: arrow_mid PASS shots=1 tier=mid speed=30.000 hit_damage=8.000 crystal_resolved=0.000
+[2026-11-15 00_41_58_904][15387][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_41_58_904][15387][Script] CombatTest: STEP arrow_full (neutral settle .35s)
+[2026-11-15 00_41_59_329][15402][Script] Combat: clip bow_draw start
+[2026-11-15 00_41_59_380][15404][Script] Combat: clip bow_hold start
+[2026-11-15 00_42_00_000][15430][Script] Combat: clip bow_release start
+[2026-11-15 00_42_00_003][15430][Script] Combat: arrow fire tier=full speed=44.00
+[2026-11-15 00_42_00_003][15430][Script] CombatTest: arrow_full arrow tier=full speed=44.000 damage=14.400 crystal=0.000 radius=0.00
+[2026-11-15 00_42_00_052][15432][Script] Dummy hit: bow full dmg=14.40 part=body
+[2026-11-15 00_42_00_052][15432][Script] CombatTest: arrow_full hit clip=bow_release weapon=bow dmg=14.400
+[2026-11-15 00_42_00_052][15432][Script] Combat: hit training_dummy part=body dmg=14.40 poise=4.00
+[2026-11-15 00_42_00_172][15437][Script] Combat: clip bow_release finish
+[2026-11-15 00_42_00_584][15453][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_42_01_259][15479][Script] CombatTest: arrow_full PASS shots=1 tier=full speed=44.000 hit_damage=14.400 crystal_resolved=0.000
+[2026-11-15 00_42_01_260][15479][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_42_01_260][15479][Script] CombatTest: STEP arrow_cancel (neutral settle .35s)
+[2026-11-15 00_42_01_624][15494][Script] Combat: clip bow_draw start
+[2026-11-15 00_42_01_736][15498][Script] Combat: clip bow_hold start
+[2026-11-15 00_42_02_008][15509][Script] Combat: arrow cancel dodge
+[2026-11-15 00_42_02_008][15509][Script] Combat: clip dodge_slide start
+[2026-11-15 00_42_02_019][15509][Script] Combat: sfx dodge_start
+[2026-11-15 00_42_02_257][15519][Script] Combat: sfx dodge_land
+[2026-11-15 00_42_02_308][15521][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_42_02_702][15537][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_42_03_137][15555][Script] CombatTest: arrow_cancel PASS shots=0 charge=0.000 cancel_via_dodge=true
+[2026-11-15 00_42_03_137][15555][Script] Combat: state COMBAT_IDLE->EXPLORE selftest-end
+[2026-11-15 00_42_03_139][15555][Script] CombatTest: END complete pass=12 fail=6; synthetic inputs cleared
+[2026-11-15 00_42_04_155][15581][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.010 motes=0
+[2026-11-15 00_42_23_784][16038][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_42_23_785][16038][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_42_24_356][16052][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_42_24_356][16052][Script] Combat: clip bow_equip start
+[2026-11-15 00_42_24_624][16058][Script] Combat: clip bow_equip finish
+[2026-11-15 00_42_24_624][16058][Script] Combat: clip bow_draw start
+[2026-11-15 00_42_24_758][16061][Script] Combat: clip bow_hold start
+[2026-11-15 00_42_29_392][16165][Script] Combat: clip bow_release start
+[2026-11-15 00_42_29_396][16165][Script] Combat: arrow fire tier=full speed=44.00
+[2026-11-15 00_42_29_513][16168][Script] Combat: clip bow_release finish
+[2026-11-15 00_42_29_979][16177][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_42_30_609][16192][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_42_31_611][16215][Script] Combat: hand glow state=EXPLORE requested=0.00 brightness=0.001 motes=0
+[2026-11-15 00_42_47_192][16569][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_42_47_200][16569][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_42_49_000][16610][Script] Combat: clip weapon_swap_bow_to_sword start
+[2026-11-15 00_42_53_248][16703][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_42_54_294][16726][Script] Combat: hand glow state=EXPLORE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_43_18_764][17296][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_43_18_768][17296][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_43_19_126][17304][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_43_19_127][17304][Script] Combat: clip sword_draw start
+[2026-11-15 00_43_19_384][17310][Script] Combat: clip sword_draw finish
+[2026-11-15 00_43_19_385][17310][Script] Combat: clip sword_heavy_charge start
+[2026-11-15 00_43_20_399][17333][Script] Combat: clip sword_heavy_release start
+[2026-11-15 00_43_21_102][17349][Script] Combat: clip sword_heavy_release finish
+[2026-11-15 00_43_21_487][17358][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_43_22_655][17384][Script] Combat: clip dodge_slide start
+[2026-11-15 00_43_22_671][17384][Script] Combat: sfx dodge_start
+[2026-11-15 00_43_22_872][17389][Script] Combat: sfx dodge_land
+[2026-11-15 00_43_28_623][17515][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_43_29_627][17539][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.004 motes=0
+[2026-11-15 00_43_41_870][17824][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_43_41_876][17824][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_43_47_892][17960][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_43_48_891][17984][Script] Combat: hand glow state=EXPLORE requested=0.00 brightness=0.001 motes=0
+[2026-11-15 00_44_00_100][18249][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_44_00_108][18249][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_44_00_736][18263][Script] Combat: clip dodge_slide start
+[2026-11-15 00_44_00_740][18263][Script] Combat: sfx dodge_start
+[2026-11-15 00_44_00_952][18268][Script] Combat: sfx dodge_land
+[2026-11-15 00_44_07_740][18423][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.011 motes=0
+[2026-11-15 00_45_32_335][20415][Script] Combat: state EXPLORE->COMBAT_IDLE manual
+[2026-11-15 00_45_32_336][20415][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0
+[2026-11-15 00_45_35_252][20479][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+[2026-11-15 00_45_35_254][20479][Script] Combat: clip sword_draw start
+[2026-11-15 00_45_35_508][20485][Script] Combat: clip sword_draw finish
+[2026-11-15 00_45_35_508][20485][Script] Combat: clip sword_heavy_charge start
+[2026-11-15 00_45_38_353][20549][Script] Combat: clip dodge_slide start
+[2026-11-15 00_45_38_356][20549][Script] Combat: sfx dodge_start
+[2026-11-15 00_45_38_579][20554][Script] Combat: sfx dodge_land
+[2026-11-15 00_45_38_623][20555][Script] Combat: clip dodge_slide finish
+[2026-11-15 00_45_39_020][20564][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+[2026-11-15 00_45_44_416][20684][Script] Combat: state COMBAT_IDLE->EXPLORE quiet
+[2026-11-15 00_45_45_478][20708][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.011 motes=0

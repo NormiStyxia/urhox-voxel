@@ -1,0 +1,353 @@
+diff --git a/scripts/combat/WeaponBuilder.lua b/scripts/combat/WeaponBuilder.lua
+index c373daf..ad5fb48 100644
+--- a/scripts/combat/WeaponBuilder.lua
++++ b/scripts/combat/WeaponBuilder.lua
+@@ -686,28 +686,54 @@ end
+ ---@return table
+ function Builder.BowVisual(blueprint,stage)
+     local cells={}
++    local seen={}
+     local half=assert(Parts.Get(blueprint.config.parts.limbs)).sockets.top[2]
+     local mid=stage==0 and -.06 or (stage==1 and -.18 or -.35)
+     for _,cell in ipairs(blueprint.geometry.cells) do
+         if cell.feature~='string' then
+             local bend=cell.slot=='limbs' and math.floor(stage*math.abs(cell.y)/half+.5) or (cell.slot=='tip' and stage or 0)
+             cells[#cells+1]={x=cell.x,y=cell.y,z=cell.z-bend,channel=cell.channel,slot=cell.slot}
++            seen[Key(cell.x,cell.y,cell.z-bend)]=true
+         end
+     end
+-    local seen={}
++    local nockY=math.floor(blueprint.hit.origin[2]/SIZE+.5)
++    local nockZ=0
+     for side=-1,1,2 do
+         for step=0,half*8 do
+             local t=step/(half*8)
+             local y=side*math.floor(half*t+.5)
+             local z=math.floor((mid/SIZE)*(1-t)+(-2-stage)*t+.5)
+             if y==0 then z=math.floor(mid/SIZE+.5) end
++            if y==nockY then nockZ=z*SIZE end
+             local key=Key(0,y,z)
+             if not seen[key] then
+                 cells[#cells+1]={x=0,y=y,z=z,channel='accent',slot='limbs',feature='string'};seen[key]=true
+             end
+         end
+     end
+-    return {cells=cells,stringMidpoint={0,0,mid},stage=stage}
++    return {cells=cells,stringMidpoint={0,0,mid},nockZ=nockZ,stage=stage}
++end
++
++--- Local arrow cells; tail cross-nock reaches the string at X=0 after the
++--- right-side launch offset. Two swept vanes face away from the grip/shelf.
++--- Used only when creating pools, also usable by the offline geometry audit.
++---@param blueprint WeaponBlueprint
++---@return table[]
++function Builder.NockedArrow(blueprint)
++    local cells={}
++    for z=0,21 do cells[#cells+1]={x=0,y=0,z=z,channel=z==0 and 'dark' or 'secondary'} end
++    for x=-2,-1 do cells[#cells+1]={x=x,y=0,z=0,channel='dark'} end
++    for z=1,4 do
++        cells[#cells+1]={x=1,y=0,z=z,channel=z==4 and 'secondary' or 'primary'}
++        if z<=3 then cells[#cells+1]={x=0,y=1,z=z,channel='secondary'} end
++    end
++    for _,cell in ipairs(Decode(assert(Parts.Get(blueprint.config.parts.tip)))) do
++        -- Arrowhead +Y becomes the arrow's +Z. Root is attached at shaft 21.
++        if not (cell.x==0 and cell.z==0 and cell.y==0) then
++            cells[#cells+1]={x=cell.x,y=cell.z,z=21+cell.y,channel=cell.channel}
++        end
++    end
++    return cells
+ end
+ 
+ --- Rows run target(+Z) -> shooter(-Z), columns -X -> +X.
+diff --git a/scripts/combat/WeaponParts.lua b/scripts/combat/WeaponParts.lua
+index 8879884..77d7d14 100644
+--- a/scripts/combat/WeaponParts.lua
++++ b/scripts/combat/WeaponParts.lua
+@@ -40,13 +40,21 @@ local function Add(part)
+     Parts.All[#Parts.All+1] = part
+ end
+ 
+--- Profile is ordered bottom -> top. Three Z slices give dark backs and bright ridges.
++-- Profile is ordered bottom -> top. Bevel the front/back instead of extruding
++-- every silhouette cell into a three-voxel slab. Edge pixels stay one voxel.
+ ---@param profile string[]
+ ---@return string[][]
+ local function Relief(profile)
+     local layers = {}
+     for y, row in ipairs(profile) do
+-        layers[y] = { (row:gsub("[PSA]", "D")), row, (row:gsub("P", "S")) }
++        local back,front={},{}
++        for x=1,#row do
++            local c=row:sub(x,x)
++            local interior=c~='.' and x>1 and x<#row and row:sub(x-1,x-1)~='.' and row:sub(x+1,x+1)~='.'
++            back[x]=interior and (c=='A' and 'S' or 'D') or '.'
++            front[x]=interior and c or '.'
++        end
++        layers[y] = {table.concat(back),row,table.concat(front)}
+     end
+     return layers
+ end
+@@ -61,11 +69,18 @@ local function Blade(id, name, desc, width, height, stats)
+     local layers = {}
+     local half = width // 2
+     for y = 1, height do
+-        local edge = math.min(half, height-y)
++        -- Straight: short ricasso and long converging point. Broad: waisted
++        -- leaf, two shoulders. Rapier: narrow forte then a diamond needle.
++        local edge
++        if id=='blade_straight' then edge=y<=3 and 1 or (y<=13 and 2 or (y<=19 and 1 or 0))
++        elseif id=='blade_broad' then
++            edge=y==1 and 1 or (y==2 and 2 or (y<=6 and 3 or (y<=11 and 2 or (y<=15 and 3 or (y<=18 and 2 or (y<=20 and 1 or 0))))))
++        else edge=y<=6 and 1 or 0 end
+         local row, ridge = {}, {}
+         for x = -half, half do
+             row[#row+1] = math.abs(x) <= edge and (math.abs(x)==edge and "S" or "P") or "."
+-            ridge[#ridge+1] = x==0 and "A" or "."
++            -- Ridge is metal highlight, not a continuous emissive light bar.
++            ridge[#ridge+1] = x==0 and y<height-1 and (y==2 and 'A' or 'S') or '.'
+         end
+         layers[y] = {table.concat(ridge), table.concat(row), table.concat(ridge)}
+     end
+@@ -81,31 +96,44 @@ local function SwordPart(id, slot, name, desc, profile, root, top, stats)
+         origin={-(#profile[1]//2),root[2],-1}, sockets={root=root,top=top}, stats=stats, palette=CHANNEL_PALETTE})
+ end
+ SwordPart("guard_cross","guard","十字","失衡更强，出手略慢",
+-    {"DDSPPAPPSDD","SSSPPAPPSSS"}, {0,0,0},{0,2,0},{poise=1,speed=-.02})
++    {"SS..PAP..SS","DSSSPPPSSSD"}, {0,0,0},{0,2,0},{poise=1,speed=-.02})
+ SwordPart("guard_wing","guard","翼形","失衡+3，速度−0.04",
+-    {"...DPAPD...",".DSPPAPPSD.","SSSPPAPPSSS"}, {0,0,0},{0,3,0},{poise=3,speed=-0.04})
+-SwordPart("guard_slim","guard","窄身","速度+0.08，失衡−1", {"DPAPD","SSASS"},{0,0,0},{0,2,0},{speed=0.08,poise=-1})
++    {"...SPAPS...",".SSSPPPSSS.","SSD..S..DSS"}, {0,0,0},{0,3,0},{poise=3,speed=-0.04})
++SwordPart("guard_slim","guard","窄身","速度+0.08，失衡−1", {".SAS.","SSPSS"},{0,0,0},{0,2,0},{speed=0.08,poise=-1})
+ SwordPart("sword_grip_leather","grip","缠革","发力稳，触及略短",
+-    {"SAS","PDP","DPD","PDP","DPD","PDP","SAS"}, {0,-3,0},{0,4,0},{attack=.5,reach=-.02})
++    {"SSS","DPP","PDP","PPD","DPP","PDP","SAS"}, {0,-3,0},{0,4,0},{attack=.5,reach=-.02})
+ SwordPart("sword_grip_long","grip","长柄","增加触及，出手稍慢",
+-    {"SAS","PDP","DPD","PDP","DPD","PDP","DPD","PDP","SAS"}, {0,-4,0},{0,5,0},{reach=0.1,speed=-0.06})
+-SwordPart("pommel_round","pommel","圆首","触及略长，失衡略低", {".DSD.","DPAPD",".SAS."},{0,0,0},{0,3,0},{reach=.02,poise=-1})
+-SwordPart("pommel_crystal","pommel","晶首","蓄满时间−8%，攻击−0.5", {"..A..",".SAS.","DPAPD",".SSS."},{0,0,0},{0,4,0},{chargeMultiplier=.92,attack=-.5})
+-SwordPart("pommel_weight","pommel","配重","攻击+2，破甲+0.15，速度−0.08", {"DSSSD","DPAPD","DPAPD",".SAS."},{0,0,0},{0,4,0},{attack=2,armorBreak=.15,speed=-0.08})
++    {"SSS","DPP","PDP","PPD","SSS","DPP","PDP","PPD","SAS"}, {0,-4,0},{0,5,0},{reach=0.1,speed=-0.06})
++SwordPart("pommel_round","pommel","圆首","触及略长，失衡略低", {".SSS.","SPAPS",".SPS."},{0,0,0},{0,3,0},{reach=.02,poise=-1})
++SwordPart("pommel_crystal","pommel","晶首","蓄满时间−8%，攻击−0.5", {"..A..",".SAS.","SDADS",".SPS."},{0,0,0},{0,4,0},{chargeMultiplier=.92,attack=-.5})
++SwordPart("pommel_weight","pommel","配重","攻击+2，破甲+0.15，速度−0.08", {"SSSSS","SPDPS","SPAPS",".SPS."},{0,0,0},{0,4,0},{attack=2,armorBreak=.15,speed=-0.08})
+ 
+ -- Bow is in the Y/Z plane: +Y up, +Z target, string on the shooter's -Z side.
+ -- W explicitly identifies string voxels for the three cached draw shapes.
+ -- Central limb voxels are omitted so either grip can fill the same socket.
+ local function Limbs(id, name, desc, halfHeight, recurve, stats)
+     local layers = {}
++    -- Sampled centreline from |Y|=4 to the tip; same extents and sockets.
++    -- Recurve has an actual reverse bend (0 -> 1 -> -1), not just a colour.
++    local profiles={
++        limbs_short={1,2,2,2,1,1,0,0,-1,-1,-1,-1},
++        limbs_long={1,1,2,2,2,2,2,2,2,1,1,1,0,0,-1,-1,-1},
++        limbs_recurve={1,2,2,2,1,1,0,0,0,1,1,1,0,-1,-1},
++    }
+     for y = -halfHeight, halfHeight do
+-        local t = math.abs(y)/halfHeight
+-        local center = 2-math.floor(3*t*t+0.5)
+-        if recurve and math.abs(y)>halfHeight-3 then center = -1 end
++        local ay=math.abs(y)
++        local center=profiles[id][math.max(1,ay-3)]
++        local wide=ay<halfHeight*(recurve and .65 or .5)
+         local layer={}
+         for z=-2,3 do
+-            local limb=math.abs(y)>3 and math.abs(z-center)<=1
+-            layer[#layer+1]=limb and (z==center and 'SPS' or 'DDD') or (z==-2 and '.W.' or '...')
++            local limb=ay>3 and (z==center or z==center-1 or (wide and z==center+1))
++            local row='...'
++            if limb then
++                if z==center then row=wide and (ay==4 and 'SAS' or 'DPD') or '.P.'
++                else row=z>center and '.S.' or '.D.' end
++                if ay==halfHeight or ay==halfHeight-1 then row=z==center and '.S.' or '.D.' end
++            elseif z==-2 then row='.W.' end
++            layer[#layer+1]=row
+         end
+         layers[#layers+1] = layer
+     end
+@@ -117,15 +145,30 @@ Limbs("limbs_long","长弓","射程远，拉满稍慢",20,false,{draw=0.16,range
+ Limbs("limbs_recurve","反曲弓","失衡略强，出手略慢",18,true,{poise=.5,speed=-.02})
+ 
+ local function BowPart(id,slot,name,desc,profile,origin,sockets,stats)
+-    Add({id=id,weapon="bow",slot=slot,name=name,desc=desc,voxels=Relief(profile),origin=origin,sockets=sockets,stats=stats,palette=CHANNEL_PALETTE})
++    local layers=Relief(profile)
++    if slot=='grip' then
++        -- One right-side arrow shelf, one voxel BELOW the unchanged launch
++        -- socket (2,2,3). Never fill the shaft corridor at launch Y=2.
++        local width=5
++        for iy,layer in ipairs(layers) do
++            for iz=1,5 do
++                local row=layer[iz] or string.rep('.',#profile[1])
++                if #row==3 then row='.'..row..'.' end
++                if iy==5 and iz>=3 then row=row:sub(1,width-2)..'SS' end
++                layer[iz]=row
++            end
++        end
++        origin={-2,origin[2],origin[3]}
++    end
++    Add({id=id,weapon="bow",slot=slot,name=name,desc=desc,voxels=layers,origin=origin,sockets=sockets,stats=stats,palette=CHANNEL_PALETTE})
+ end
+ BowPart("bow_grip_leather","grip","皮握把","攻击略高，失衡略低",
+-    {"SAS","PDP","DPD","PDP","DPD","PDP","SAS"},{-1,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {attack=.5,poise=-.5})
++    {"SSS","DPP","PDP","PPD","DPP","PDP","SAS"},{-1,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {attack=.5,poise=-.5})
+ BowPart("bow_grip_stable","grip","稳定握把","移动×0.6，散布−25%，拉弓速度−8%",
+-    {".SAS.",".PDP.","DPAPD","DPAPD","DPAPD",".PDP.",".SAS."},{-2,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {spreadMultiplier=.75,move=.1,drawMultiplier=1/.92})
+-BowPart("tip_iron","tip","铁簇","出手略快，攻击略低",{"DAD","SPS",".S."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {speed=.02,attack=-.5})
+-BowPart("tip_bone","tip","骨簇","轻骨箭簇，箭速更快",{"DAD",".S."},{-1,0,-1},{root={0,0,0},top={0,2,0}}, {attack=-1,projectileSpeed=0.12})
+-BowPart("tip_crystal","tip","晶簇","破甲+25%，晶爆0.8m/箭伤25%；箭速−10%，射程−8%",{"DAD","SAS",".A."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {armorBreak=.25,crystalRadius=.8,crystalDamageMultiplier=.25,projectileSpeedMultiplier=.9,rangeMultiplier=.92})
++    {".SSS.",".DPP.","SPPPS","SPAPS","SPPPS",".PPD.",".SSS."},{-2,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {spreadMultiplier=.75,move=.1,drawMultiplier=1/.92})
++BowPart("tip_iron","tip","铁簇","出手略快，攻击略低",{"SPS",".P.",".S."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {speed=.02,attack=-.5})
++BowPart("tip_bone","tip","骨簇","轻骨箭簇，箭速更快",{"SPD",".S."},{-1,0,-1},{root={0,0,0},top={0,2,0}}, {attack=-1,projectileSpeed=0.12})
++BowPart("tip_crystal","tip","晶簇","破甲+25%，晶爆0.8m/箭伤25%；箭速−10%，射程−8%",{".S.","SAS",".A."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {armorBreak=.25,crystalRadius=.8,crystalDamageMultiplier=.25,projectileSpeedMultiplier=.9,rangeMultiplier=.92})
+ 
+ ---@param id string
+ ---@return WeaponPart?
+diff --git a/scripts/combat/WeaponRig.lua b/scripts/combat/WeaponRig.lua
+index b3670b5..fb112a3 100644
+--- a/scripts/combat/WeaponRig.lua
++++ b/scripts/combat/WeaponRig.lua
+@@ -337,20 +337,10 @@ function Rig:BuildVisualPools(weapon)
+         for stage=0,2 do
+             local shape=Builder.BowVisual(bp,stage)
+             local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,shape.cells,'BowDraw_'..stage)
+-            mesh.stringZ=shape.stringMidpoint[3];self.bowDrawMeshes[stage+1]=mesh
++            mesh.stringZ=shape.stringMidpoint[3];mesh.nockZ=shape.nockZ;self.bowDrawMeshes[stage+1]=mesh
+         end
+         DisposeEffect(self,self.bowArrow)
+-        local arrow={}
+-        for z=0,21 do arrow[#arrow+1]={x=0,y=0,z=z,channel='secondary'} end
+-        for z=1,4 do
+-            arrow[#arrow+1]={x=-1,y=0,z=z,channel='accent'}
+-            arrow[#arrow+1]={x=1,y=0,z=z,channel='accent'}
+-        end
+-        local tip=assert(Parts.Get(bp.config.parts.tip))
+-        for iy,layer in ipairs(tip.voxels) do for iz,row in ipairs(layer) do for ix=1,#row do
+-            local c=row:sub(ix,ix)
+-            if c~='.' then arrow[#arrow+1]={x=tip.origin[1]+ix-1,y=tip.origin[3]+iz-1,z=21+iy-1,channel=tip.palette[c]} end
+-        end end end
++        local arrow=Builder.NockedArrow(bp)
+         self.bowArrow=Builder.VisualVolume(self.world,entry.pivot,bp,arrow,'BowNockedArrow')
+     end
+ end
+@@ -860,7 +850,8 @@ function Rig:UpdateBowVisual()
+     if self.active=='bow' and self.visualState=='hand' then self.entries.bow.mesh.node.enabled=not drawn end
+     if drawn then
+         local minimum=self.bowArrow.minimum
+-        SetVec(self.bowArrowOffset,minimum.x+.06,minimum.y,minimum.z+self.bowDrawMeshes[self.bowStage+1].stringZ)
++        local launch=self.entries.bow.mesh.blueprint.hit.origin
++        SetVec(self.bowArrowOffset,minimum.x+launch[1],minimum.y+launch[2],minimum.z+self.bowDrawMeshes[self.bowStage+1].nockZ)
+         self.bowArrow.node.position=self.bowArrowOffset
+         self.bowArrow.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
+         self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
+diff --git a/tests/combat/weapon_builder.lua b/tests/combat/weapon_builder.lua
+index 56a4e5f..248532f 100644
+--- a/tests/combat/weapon_builder.lua
++++ b/tests/combat/weapon_builder.lua
+@@ -40,9 +40,40 @@ local function verify(c)
+     end
+     if c.weapon=="sword" then
+         Mock.Near(b.hit.length,b.bounds.max[2]); assert(b.hit.radius==.12)
++        local tip=-math.huge
++        for _,cell in ipairs(g.cells) do if cell.slot=='blade' then tip=math.max(tip,cell.y) end end
++        Mock.Near(b.hit.length,(tip+.5)*P.VOXEL_SIZE)
++        assert(g.sparse['0:'..tip..':0'].slot=='blade','actual tip must lie on the hit axis')
+         assert(b.stats.speed>=.7 and b.stats.speed<=1.4 and b.stats.reach<=1.4)
+     else
+         assert(g.overlaps>0,"bow tip must overlap the upper limb socket")
++        local lx,ly,lz=math.floor(b.hit.origin[1]/.03+.5),math.floor(b.hit.origin[2]/.03+.5),math.floor(b.hit.origin[3]/.03+.5)
++        assert(b.hit.dir[1]==0 and b.hit.dir[2]==0 and b.hit.dir[3]==1)
++        assert(g.sparse[lx..':'..(ly-1)..':'..lz],'arrow shelf must support the unchanged launch socket')
++        for stage=0,2 do
++            local shape=B.BowVisual(b,stage)
++            local occupied={}
++            for _,cell in ipairs(shape.cells) do
++                local k=cell.x..':'..cell.y..':'..cell.z
++                assert(not occupied[k],'draw shape duplicate voxel');occupied[k]=cell
++                if cell.feature=='string' then
++                    local grip=g.sparse[k]
++                    assert(not grip or grip.slot~='grip','string penetrated grip')
++                end
++            end
++            local nz=math.floor(shape.nockZ/.03+.5)
++            assert(occupied['0:'..ly..':'..nz].feature=='string','arrow nock must touch the actual rasterized string')
++            for z=nz,lz+12 do assert(not occupied[lx..':'..ly..':'..z],'arrow shaft corridor obstructed') end
++            local arrow=B.NockedArrow(b)
++            local arrowSeen={}
++            for _,cell in ipairs(arrow) do
++                local k=cell.x..':'..cell.y..':'..cell.z
++                assert(not arrowSeen[k],'duplicate arrow cell');arrowSeen[k]=true
++                local contact=occupied[(lx+cell.x)..':'..(ly+cell.y)..':'..(nz+cell.z)]
++                assert(not contact or contact.feature=='string','arrow/feather intersects grip or limb')
++            end
++            assert(arrowSeen['-2:0:0'] and arrowSeen['0:0:21'],'nock/shaft missing')
++        end
+     end
+     checked=checked+1
+ end
+@@ -328,7 +359,7 @@ for _,limbs in ipairs(P.GetOptions('bow','limbs')) do
+         local middle,front=false,false
+         for _,cell in ipairs(bp.geometry.cells) do
+             local mirrored=bp.geometry.sparse[cell.x..':'..(-cell.y)..':'..cell.z]
+-            assert(mirrored and mirrored.channel==cell.channel,'bow must be symmetric above/below grip')
++            if cell.slot~='grip' then assert(mirrored and mirrored.channel==cell.channel,'limbs/tips must be symmetric above/below grip') end
+             if cell.feature=='string' and cell.y==0 then assert(cell.x==0 and cell.z<0);middle=true end
+             if cell.slot=='limbs' and cell.feature~='string' and cell.z>0 then front=true end
+         end
+@@ -340,7 +371,7 @@ for _,limbs in ipairs(P.GetOptions('bow','limbs')) do
+             local occupied={}
+             for _,cell in ipairs(shape.cells) do occupied[cell.x..':'..cell.y..':'..cell.z]=true end
+             for _,cell in ipairs(shape.cells) do
+-                assert(occupied[cell.x..':'..(-cell.y)..':'..cell.z],'draw pose must stay vertically symmetric')
++                if cell.slot~='grip' then assert(occupied[cell.x..':'..(-cell.y)..':'..cell.z],'draw limbs must stay vertically symmetric') end
+                 if cell.feature=='string' and cell.y==0 then
+                     assert(math.abs(cell.z*P.VOXEL_SIZE-shape.stringMidpoint[3])<=P.VOXEL_SIZE/2+.0001)
+                 end
+diff --git a/tests/combat/weapon_data.lua b/tests/combat/weapon_data.lua
+index 771623a..93f7db9 100644
+--- a/tests/combat/weapon_data.lua
++++ b/tests/combat/weapon_data.lua
+@@ -74,4 +74,25 @@ for _, part in ipairs(Parts.GetOptions("bow","limbs")) do
+         assert(stringRow:sub(2,2)~=".")
+     end
+ end
+-print("weapon_data: PASS (19 parts, 7 slots, channels/sockets/strings/validation)")
++-- Silhouettes are structural differences, not colour swaps or uniform scale.
++local function Widths(id)
++    local out={}
++    for _,layer in ipairs(Parts.Get(id).voxels) do
++        local n=0
++        for c in layer[2]:gmatch('.') do if c~='.' then n=n+1 end end
++        out[#out+1]=n
++    end
++    return out
++end
++local straight,broad,rapier=Widths('blade_straight'),Widths('blade_broad'),Widths('blade_rapier')
++assert(straight[2]<straight[8] and straight[17]<straight[8] and straight[#straight]==1)
++assert(broad[8]<broad[4] and broad[8]<broad[14] and broad[#broad]==1,'broad blade needs a waist and leaf shoulder')
++assert(rapier[3]>rapier[10] and rapier[#rapier]==1,'rapier needs a forte and needle')
++local recurve=Parts.Get('limbs_recurve')
++local centres={}
++for y=4,recurve.sockets.top[2] do
++    local layer=assert(recurve.voxels[y-recurve.origin[2]+1])
++    for z,row in ipairs(layer) do if row:find('P',1,true) then centres[y]=recurve.origin[3]+z-1 end end
++end
++assert(centres[13]>centres[10],'recurve must bend toward target again before its tip')
++print("weapon_data: PASS (19 parts, 7 slots, channels/sockets/strings/validation, distinct blade/limb contours)")
+diff --git a/tests/combat/weapon_rig.lua b/tests/combat/weapon_rig.lua
+index f264843..ed48b63 100644
+--- a/tests/combat/weapon_rig.lua
++++ b/tests/combat/weapon_rig.lua
+@@ -370,8 +370,10 @@ local function LivelyCase(fps,weapon)
+             assert(entry.mesh.node.enabled==(p<=.05))
+             if p>.05 then
+                 local pose=r.bowDrawMeshes[r.bowStage+1]
+-                assert(pose.node.enabled and r.bowArrow.node.position.x>0)
+-                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,pose.stringZ)
++                assert(pose.node.enabled)
++                Mock.Near(r.bowArrow.node.position.x-r.bowArrow.minimum.x,entry.mesh.blueprint.hit.origin[1])
++                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,pose.nockZ)
++                Mock.Near(r.bowArrow.node.position.y-r.bowArrow.minimum.y,entry.mesh.blueprint.hit.origin[2])
+             end
+         end
+         r:SetBowDraw(0/0);assert(r.bowDraw==0)

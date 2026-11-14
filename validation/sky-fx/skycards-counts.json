@@ -1,0 +1,66 @@
+[
+  {
+    "view": "DAY / ground / CPU",
+    "sampler_calls_mean": 0.6002560763888889,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.1502300347222222,
+    "mean_mip": 1.3020594576788749
+  },
+  {
+    "view": "DUSK / near sun / CPU",
+    "sampler_calls_mean": 0.7943836805555555,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.16204427083333334,
+    "mean_mip": 1.2774996885526548
+  },
+  {
+    "view": "NIGHT / CPU",
+    "sampler_calls_mean": 0.6002560763888889,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.1502300347222222,
+    "mean_mip": 1.3020594576788749
+  },
+  {
+    "view": "HEIGHT 1000m / looking down / CPU",
+    "sampler_calls_mean": 0.5756293402777778,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.15726996527777778,
+    "mean_mip": 1.039486096698143
+  },
+  {
+    "view": "LOOK UP / CPU",
+    "sampler_calls_mean": 0.5060503472222222,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.12825520833333334,
+    "mean_mip": 1.2692108564755487
+  },
+  {
+    "view": "HEIGHT 30000m / nadir / CPU",
+    "sampler_calls_mean": 0.4174262152777778,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.21868055555555554,
+    "mean_mip": 0.9970902237399898
+  },
+  {
+    "view": "tier 12",
+    "sampler_calls_mean": 0.3201953125,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.08055121527777778,
+    "mean_mip": 0.3629949222731638
+  },
+  {
+    "view": "tier 4",
+    "sampler_calls_mean": 0.3596657986111111,
+    "p95": 1.0,
+    "max": 1,
+    "cloud_fraction": 0.05108506944444444,
+    "mean_mip": 0.0031564781190929793
+  }
+]

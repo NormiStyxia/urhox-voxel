@@ -64,6 +64,7 @@ local WeaponRig = require('combat.WeaponRig')
 local EnemySpawner = require('combat.enemies.Spawner')
 local CombatHUD = require('ui.CombatHUD')
 local ForgePanel = require('ui.ForgePanel')
+local ForgeShowroom = require('combat.ForgeShowroom')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 local combatParticles_
 local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
@@ -719,7 +720,7 @@ function M.Start()
     Puzzles.On(OnPuzzle)
 
     nomi_ = Nomi.New(scene_, world_, M.SPAWN, 0)
-    renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera()))
+    if not ForgeShowroom.Active() then renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera())) end
     fx_ = Spells.NewFX(scene_, nomi_:CameraNode())
     handMotes_=require('dragon.VoxelFX').WorldMotes(fx_.root,'CombatHandMotes',32,'square',true,nomi_:CameraNode())
     M.sigils=Sigil.New(scene_)
@@ -1576,6 +1577,7 @@ function Ruins_HandleUpdate(eventType, eventData)
 end
 
 local function UpdateBaseCamera(dt)
+    if ForgeShowroom and ForgeShowroom.Active() then return end
     if animPreview_.index>0 and M.ride.mode=='free' then
         nomi_:UpdateCombatPreview(dt,animPreview_.view or 4,animPreview_.orbit or 0)
     elseif M.mounted or M.ride.mode ~= "free" then
@@ -1599,6 +1601,7 @@ local function UpdateBaseCamera(dt)
 end
 
 local function UpdateCombatCamera(dt,cn)
+        if ForgeShowroom and ForgeShowroom.Active() then return end
         combatCameraFrame_=combatCamera_:Update(dt,combatMoves_,CombatState.GetSetting('cameraFov'),CombatState.GetSetting('cameraShake'))
         if M.ride.mode=='free' and animPreview_.index==0 then
             local action=combatCameraFrame_
@@ -1675,6 +1678,7 @@ function M.Stop()
     ForgePanel.Close(true)
     local forceClose=rawget(ForgePanel,'ForceClose')
     if type(forceClose)=='function' then forceClose() end
+    if ForgeShowroom then ForgeShowroom.Exit() end -- teardown between panel fades
     if M.atmosphere then M.atmosphere:Stop() end
     DebugLog.RegisterProbe('Ruins',nil)
     SettingsMenu.Stop()

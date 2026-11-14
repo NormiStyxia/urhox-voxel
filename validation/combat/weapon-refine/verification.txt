@@ -1,0 +1,7 @@
+python3 validation/combat/weapon-refine/capture.py before / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/before.log
+python3 validation/combat/weapon-refine/capture.py after / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/after.log
+python3 validation/combat/weapon-refine/review.py / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/projection.log
+python3 validation/combat/weapon-refine/checks.py tests / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/tests.log
+python3 validation/combat/weapon-refine/checks.py lsp / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/lsp.log
+git diff --check -- scripts/combat/WeaponParts.lua scripts/combat/WeaponBuilder.lua scripts/combat/WeaponRig.lua tests/combat/weapon_builder.lua tests/combat/weapon_data.lua tests/combat/weapon_rig.lua / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/diff-check.log
+manual /review of owned diff and projections / PASS / /Users/xd/Desktop/体素test/validation/combat/weapon-refine/review.log

@@ -1,0 +1,1556 @@
+{
+  "poses": {
+    "before": {
+      "sword": {
+        "rotation": [
+          0.9455577700244288,
+          0.1244850420368845,
+          -0.039249982987779035,
+          0.29813321970381484
+        ],
+        "position": [
+          0.0,
+          1.1886,
+          -0.3
+        ]
+      },
+      "bow": {
+        "rotation": [
+          4.329780281177467e-17,
+          0.7071067811865475,
+          0.7071067811865476,
+          4.329780281177466e-17
+        ],
+        "position": [
+          0.0,
+          1.1886,
+          -0.3
+        ]
+      }
+    },
+    "after": {
+      "sword": {
+        "position": [
+          0.12,
+          1.3186,
+          -0.5
+        ],
+        "rotation": [
+          0.1305261922200517,
+          0.0,
+          0.0,
+          0.9914448613738104
+        ]
+      },
+      "bow": {
+        "position": [
+          0.0,
+          0.9985999999999999,
+          -0.5
+        ],
+        "rotation": [
+          5.83983205513195e-17,
+          0.3007057995042731,
+          0.9537169507482269,
+          1.841291974239769e-17
+        ]
+      }
+    }
+  },
+  "combinations": [
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_straight"
+      ],
+      "min": [
+        -0.1742966585258517,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_broad"
+      ],
+      "min": [
+        -0.21081601621102086,
+        0.3536642387457394,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.023290341500451006
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.20456555063998977,
+        0.17255314631653906,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.006951274463447676
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.27380966168661014,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.27380966168661014,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.27380966168661014,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_straight"
+      ],
+      "min": [
+        -0.1742966585258517,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2675591961155791,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_broad"
+      ],
+      "min": [
+        -0.21081601621102086,
+        0.3536642387457394,
+        -0.545
+      ],
+      "max": [
+        0.2675591961155791,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.023290341500451006
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.20456555063998977,
+        0.17255314631653906,
+        -0.545
+      ],
+      "max": [
+        0.2675591961155791,
+        1.569185334296458,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.006951274463447676
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.28351537587795467,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.28351537587795467,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.28351537587795467,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_straight"
+      ],
+      "min": [
+        -0.19370808690854074,
+        0.2449975832882192,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.013487686883004835
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_broad"
+      ],
+      "min": [
+        -0.23022744459370992,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.22397697902267882,
+        0.10010870934485894,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.0004140450154456743
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_round",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.605407552782298,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_straight"
+      ],
+      "min": [
+        -0.1742966585258517,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_broad"
+      ],
+      "min": [
+        -0.21081601621102086,
+        0.3536642387457394,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.023290341500451006
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.20456555063998977,
+        0.17255314631653906,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.006951274463447676
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.27380966168661014,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.27380966168661014,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.27380966168661014,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_straight"
+      ],
+      "min": [
+        -0.1742966585258517,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2675591961155791,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_broad"
+      ],
+      "min": [
+        -0.21081601621102086,
+        0.3536642387457394,
+        -0.545
+      ],
+      "max": [
+        0.2675591961155791,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.023290341500451006
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.20456555063998977,
+        0.17255314631653906,
+        -0.545
+      ],
+      "max": [
+        0.2675591961155791,
+        1.5953136100232996,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.006951274463447676
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.28351537587795467,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.28351537587795467,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.28351537587795467,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_straight"
+      ],
+      "min": [
+        -0.19370808690854074,
+        0.2449975832882192,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.013487686883004835
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_broad"
+      ],
+      "min": [
+        -0.23022744459370992,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.22397697902267882,
+        0.10010870934485894,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.0004140450154456743
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_crystal",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.2772649103069237,
+        1.6315358285091397,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_straight"
+      ],
+      "min": [
+        -0.1742966585258517,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_broad"
+      ],
+      "min": [
+        -0.21081601621102086,
+        0.3536642387457394,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.023290341500451006
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_cross",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.20456555063998977,
+        0.17255314631653906,
+        -0.545
+      ],
+      "max": [
+        0.2932210900692992,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.006951274463447676
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.28697062449826816,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.28697062449826816,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_wing",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.28697062449826816,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_straight"
+      ],
+      "min": [
+        -0.1742966585258517,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.28697062449826816,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_broad"
+      ],
+      "min": [
+        -0.21081601621102086,
+        0.3536642387457394,
+        -0.545
+      ],
+      "max": [
+        0.28697062449826816,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.023290341500451006
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_leather",
+        "guard_slim",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.20456555063998977,
+        0.17255314631653906,
+        -0.545
+      ],
+      "max": [
+        0.28697062449826816,
+        1.6155014955412963,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.006951274463447676
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_cross",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_straight"
+      ],
+      "min": [
+        -0.19370808690854074,
+        0.2449975832882192,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.013487686883004835
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_broad"
+      ],
+      "min": [
+        -0.23022744459370992,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_wing",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.22397697902267882,
+        0.10010870934485894,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.0004140450154456743
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_straight"
+      ],
+      "min": [
+        -0.18400237271719622,
+        0.28121980177405903,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.016755529581578277
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_broad"
+      ],
+      "min": [
+        -0.2205217304023654,
+        0.3174420202598993,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.020023092396067477
+    },
+    {
+      "weapon": "sword",
+      "parts": [
+        "pommel_weight",
+        "sword_grip_long",
+        "guard_slim",
+        "blade_rapier"
+      ],
+      "min": [
+        -0.21427126483133435,
+        0.136330927830699,
+        -0.545
+      ],
+      "max": [
+        0.29667633868961274,
+        1.6517237140271361,
+        -0.455
+      ],
+      "rest_surface_aabb_gap": 0.12940000000000002,
+      "rest_character_lag_envelope_gap": 0.003682751925218608
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_short",
+        "tip_iron"
+      ],
+      "min": [
+        -0.31341490974863406,
+        0.5599415302030135,
+        -0.605
+      ],
+      "max": [
+        0.31341490974863406,
+        1.4372584697969863,
+        -0.425
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.03209290772713996
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_short",
+        "tip_bone"
+      ],
+      "min": [
+        -0.303574884896241,
+        0.5845160915316834,
+        -0.605
+      ],
+      "max": [
+        0.303574884896241,
+        1.4126839084683165,
+        -0.425
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.03209290772713996
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_short",
+        "tip_crystal"
+      ],
+      "min": [
+        -0.32078217798677244,
+        0.5599415302030135,
+        -0.605
+      ],
+      "max": [
+        0.32078217798677244,
+        1.4372584697969863,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.02950554698048724
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_long",
+        "tip_iron"
+      ],
+      "min": [
+        -0.3994513752012909,
+        0.43706872355966486,
+        -0.605
+      ],
+      "max": [
+        0.3994513752012909,
+        1.560131276440335,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.019128034212937683
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_long",
+        "tip_bone"
+      ],
+      "min": [
+        -0.38961135034889793,
+        0.4616432848883345,
+        -0.605
+      ],
+      "max": [
+        0.38961135034889793,
+        1.5355567151116654,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.019128034212937683
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_long",
+        "tip_crystal"
+      ],
+      "min": [
+        -0.40681864343942936,
+        0.43706872355966486,
+        -0.605
+      ],
+      "max": [
+        0.40681864343942936,
+        1.560131276440335,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.01652852609746569
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_recurve",
+        "tip_iron"
+      ],
+      "min": [
+        -0.3650367890202282,
+        0.48621784621700426,
+        -0.605
+      ],
+      "max": [
+        0.3650367890202282,
+        1.5109821537829955,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.024321532739067564
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_recurve",
+        "tip_bone"
+      ],
+      "min": [
+        -0.35519676416783513,
+        0.510792407545674,
+        -0.605
+      ],
+      "max": [
+        0.35519676416783513,
+        1.4864075924543259,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.024321532739067564
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_leather",
+        "limbs_recurve",
+        "tip_crystal"
+      ],
+      "min": [
+        -0.37240405725836656,
+        0.48621784621700426,
+        -0.605
+      ],
+      "max": [
+        0.37240405725836656,
+        1.5109821537829955,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.021725793796675275
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_short",
+        "tip_iron"
+      ],
+      "min": [
+        -0.31341490974863406,
+        0.5599415302030135,
+        -0.605
+      ],
+      "max": [
+        0.31341490974863406,
+        1.4372584697969863,
+        -0.425
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.03209290772713996
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_short",
+        "tip_bone"
+      ],
+      "min": [
+        -0.303574884896241,
+        0.5845160915316834,
+        -0.605
+      ],
+      "max": [
+        0.303574884896241,
+        1.4126839084683165,
+        -0.425
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.03209290772713996
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_short",
+        "tip_crystal"
+      ],
+      "min": [
+        -0.32078217798677244,
+        0.5599415302030135,
+        -0.605
+      ],
+      "max": [
+        0.32078217798677244,
+        1.4372584697969863,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.02950554698048724
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_long",
+        "tip_iron"
+      ],
+      "min": [
+        -0.3994513752012909,
+        0.43706872355966486,
+        -0.605
+      ],
+      "max": [
+        0.3994513752012909,
+        1.560131276440335,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.019128034212937683
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_long",
+        "tip_bone"
+      ],
+      "min": [
+        -0.38961135034889793,
+        0.4616432848883345,
+        -0.605
+      ],
+      "max": [
+        0.38961135034889793,
+        1.5355567151116654,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.019128034212937683
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_long",
+        "tip_crystal"
+      ],
+      "min": [
+        -0.40681864343942936,
+        0.43706872355966486,
+        -0.605
+      ],
+      "max": [
+        0.40681864343942936,
+        1.560131276440335,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.01652852609746569
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_recurve",
+        "tip_iron"
+      ],
+      "min": [
+        -0.3650367890202282,
+        0.48621784621700426,
+        -0.605
+      ],
+      "max": [
+        0.3650367890202282,
+        1.5109821537829955,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.024321532739067564
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_recurve",
+        "tip_bone"
+      ],
+      "min": [
+        -0.35519676416783513,
+        0.510792407545674,
+        -0.605
+      ],
+      "max": [
+        0.35519676416783513,
+        1.4864075924543259,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.024321532739067564
+    },
+    {
+      "weapon": "bow",
+      "parts": [
+        "bow_grip_stable",
+        "limbs_recurve",
+        "tip_crystal"
+      ],
+      "min": [
+        -0.37240405725836656,
+        0.48621784621700426,
+        -0.605
+      ],
+      "max": [
+        0.37240405725836656,
+        1.5109821537829955,
+        -0.42499999999999993
+      ],
+      "rest_surface_aabb_gap": 0.09939999999999999,
+      "rest_character_lag_envelope_gap": 0.021725793796675275
+    }
+  ]
+}

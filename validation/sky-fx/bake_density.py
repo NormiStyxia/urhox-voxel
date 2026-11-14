@@ -1,4 +1,4 @@
-"""Offline scalar 3D density; PNG stores slices, never a billboard.
+"""Offline signed-distance band; PNG stores 3D slices, never a billboard.
 R/G/B = high/medium/low fields. Fixed recipes and seed, metres, no engine needed.
 """
 import json, math, time
@@ -35,18 +35,35 @@ def bake(count):
         px=((x-cx)*math.cos(yaw)-(z-cz)*math.sin(yaw))/sx
         py=(y-cy)/sy
         pz=((x-cx)*math.sin(yaw)+(z-cz)*math.cos(yaw))/sz
-        d=np.full(x.shape,100.,dtype=np.float32)
-        for bx,by,bz,rx,ry,rz in LOBES[cloud['variant']]:
+        region=(np.abs(px)<4)&(np.abs(py)<4)&(np.abs(pz)<4)
+        px,py,pz=px[region],py[region],pz[region]
+        d=np.full(px.shape,100.,dtype=np.float32)
+        lobes=list(LOBES[cloud['variant']])
+        # Own cauliflower clusters: satellites on exposed upper/lateral faces.
+        # Fixed seed, no imported reference textures/meshes and no runtime noise.
+        rng=np.random.default_rng(1801+cloud['variant'])
+        for bx,by,bz,rx,ry,rz in list(lobes)[1:]:
+            for j in range(4):
+                az=rng.uniform(0,math.tau); elevation=rng.uniform(.15,1.1)
+                radial=math.cos(elevation); ratio=rng.uniform(.38,.56)
+                lobes.append([bx+rx*.98*radial*math.cos(az),by+ry*.98*math.sin(elevation),bz+rz*.98*radial*math.sin(az),rx*ratio,ry*ratio,rz*ratio])
+        for bx,by,bz,rx,ry,rz in lobes:
             q=(np.sqrt(((px-bx)/rx)**2+((py-by)/ry)**2+((pz-bz)/rz)**2)-1)*min(rx,ry,rz)
-            h=np.maximum(.10-np.abs(d-q),0)/.10
-            d=np.minimum(d,q)-h*h*.025
+            h=np.maximum(.06-np.abs(d-q),0)/.06
+            d=np.minimum(d,q)-h*h*.015
         # Fixed spatial erosion, no screen-space noise and no runtime regeneration.
         noise=(np.sin(px*3.1+np.sin(pz*2.7))*np.sin(py*3.4+1.1)+.40*np.sin(px*8.7+pz*4.3)*np.sin(py*7.1))/1.4
-        d+=noise*.075
-        # 2m-ish boundary at near-cloud scale, instead of the old ~6m haze ramp.
-        den=np.clip((.025-d)/.10,0,1)
-        den=den*den*(3-2*den)
-        field=np.maximum(field,den*(.65 if cloud['layer']==2 else .92))
+        d+=noise*.045
+        # Preserve a signed distance band BEFORE interpolation. A pre-thresholded
+        # density saturates inside/outside and blurs the silhouette by a full voxel.
+        # 0.5 = surface, 12m total band; runtime reconstructs ~1.92m soft boundary.
+        encoded=np.clip(.5-d*min(sx,sy,sz)/12.,0,1)
+        encoded[(y[region]>-8)&(y[region]<30)]=0
+        field[region]=np.maximum(field[region],encoded)
+    # Exterior distance-band texels may reach the domain faces, but density must
+    # not. A zero gutter prevents atlas edge bleed without cutting the cloud.
+    assert max(field[[0,-1]].max(),field[:,[0,-1]].max(),field[:,:,[0,-1]].max())<.42
+    field[[0,-1]]=0;field[:,[0,-1]]=0;field[:,:,[0,-1]]=0
     assert not np.any(field[[0,-1]]) and not np.any(field[:,[0,-1]]) and not np.any(field[:,:,[0,-1]])
     return field
 
@@ -65,7 +82,9 @@ def main():
                 yy=slice(math.floor(y*(H-1)/32),math.ceil((y+1)*(H-1)/32)+1)
                 for x in range(32):
                     xx=slice(math.floor(x*(N-1)/32),math.ceil((x+1)*(N-1)/32)+1)
-                    occupancy[(z//8)*32+y,(z%8)*32+x,channel]=255 if quantized[zz,yy,xx].any() else 0
+                    # A convex trilinear blend cannot exceed its contributing max.
+                    # Include one quantization unit below the .42 runtime threshold.
+                    occupancy[(z//8)*32+y,(z%8)*32+x,channel]=255 if (quantized[zz,yy,xx]>=107).any() else 0
         for z in range(N):
             atlas[(z//COLS)*H:(z//COLS+1)*H,(z%COLS)*N:(z%COLS+1)*N,channel]=quantized[z]
         if channel==2:

@@ -1,0 +1,230 @@
+diff --git a/tests/combat/weapon_rig.lua b/tests/combat/weapon_rig.lua
+index ed48b63..9a27c6c 100644
+--- a/tests/combat/weapon_rig.lua
++++ b/tests/combat/weapon_rig.lua
+@@ -19,7 +19,7 @@ assert(rig.sockets.back_sword.parent==nomi.nomi.bones.body and rig.sockets.back_
+ local initialWrites,initialRebuilds=world.writes,world.rebuilds
+ local function frames(n) for _=1,n do rig:Update(1/60) end end
+ rig:SetPose("back")
+-for i=1,18 do rig:Update(1/60);Mock.Near(rig.entries.sword.mesh.alpha,math.floor(i/3)/6) end
++for i=1,10 do rig:Update(1/60);Mock.Near(rig.entries.sword.mesh.alpha,math.floor(math.min(1,i/60/.16)*6+1e-7)/6) end
+ assert(rig.visualState=='hang')
+ assert(rig.entries.sword.pivot.parent==rig.sockets.back_sword)
+ rig:SetPose("hand")
+@@ -54,7 +54,7 @@ rig:SetPose("hidden");frames(3)
+ rig:SetPose("hand");frames(8)
+ assert(rig.entries.sword.mesh.alpha==1 and rig.visualState=='hand',"interrupted dissolve flies back to hand")
+ rig:SetActive("bow")
+-assert(not rig.entries.sword.mesh.node.enabled and rig.pose=="back")
++assert(rig.retiring.weapon=='sword' and not rig.entries.bow.mesh.node.enabled and rig.pose=="back")
+ frames(18);rig:SetPose("hand");frames(8)
+ assert(rig.entries.bow.pivot.parent==rig.sockets.hand_left)
+ local bowHit=rig:GetHit()
+@@ -312,7 +312,7 @@ local function LivelyCase(fps,weapon)
+     assert(r.visualState=='materialize' and r:PopEvents()[1]=='materialize')
+     assert(#r:PopEvents()==0,'event queue drains once')
+     local previous=0
+-    for frame=1,math.ceil(.30*fps) do
++    for frame=1,math.ceil(.16*fps) do
+         r:Update(1/fps)
+         if r.visualState=='materialize' then
+             local visible=count(r.layers[weapon])
+@@ -324,13 +324,14 @@ local function LivelyCase(fps,weapon)
+     assert(r.visualState=='hang' and entry.mesh.node.enabled and r:PopEvents()[1]=='materialized')
+     assert(r.flashes.socket.node.enabled and r.flashLeft==.08)
+     local socket=r.sockets['back_'..weapon]
+-    Mock.Near(socket.worldPosition.y,1.05);Mock.Near(socket.worldPosition.z,-.30)
++    Mock.Near(socket.worldPosition.y,weapon=='sword' and 1.18 or .86);Mock.Near(socket.worldPosition.z,-.50)
+     if weapon=='sword' then
+-        local up=socket.worldRotation*Vector3.UP;assert(up.x<0 and up.y>0,'sword tip up-left')
++        local up=socket.worldRotation*Vector3.UP;assert(up.x<0 and up.y<-.96,'sword point down-left, handle above')
+     else
+         local up=socket.worldRotation*Vector3.UP
+         local outward=socket.worldRotation*Vector3.FORWARD
+-        assert(math.abs(up.x)>.99 and outward.z<-.99,'back bow horizontal, convex away from body')
++        Mock.Near(math.deg(math.acos(up.y)),35)
++        assert(up.x>0 and outward.z<-.99,'back bow diagonal, convex away from body')
+     end
+     local minY,maxY=math.huge,-math.huge
+     for _=1,fps*3 do
+@@ -398,12 +399,12 @@ local function LivelyCase(fps,weapon)
+     Mock.Near((entry.pivot.worldPosition-r.hangPosition):Length(),.02)
+     advance(.10)
+     r:SetPose('hidden');assert(r.visualState=='dissolve')
+-    r:Update(.10)
++    r:Update(.04)
+     assert(count(r.layers[weapon])==4)
+-    local radius=(r.particles[1].node.worldPosition-entry.pivot.worldPosition):Length()
+-    r:Update(.10)
+-    assert(count(r.layers[weapon])==2 and (r.particles[1].node.worldPosition-entry.pivot.worldPosition):Length()>radius)
+-    r:Update(.10)
++    assert(count(r.particles)==0 and r.afterimages==nil and not r.visualActive,'hidden immediately cancels combat FX')
++    r:Update(.04)
++    assert(count(r.layers[weapon])==2)
++    r:Update(.04)
+     assert(r.visualState=='hidden' and count(r.layers[weapon])==0 and not entry.mesh.node.enabled and count(r.particles)==0)
+     assert(r:PopEvents()[1]=='dissolved')
+     -- Interrupt a flight without teleporting to the back socket.
+@@ -424,9 +425,12 @@ local function LivelyCase(fps,weapon)
+     assert(r.visualState=='hand' and r:GetAfterimagePose()~=nil)
+     r:SetCombatVisual(false,nil)
+     r:SetPose('hidden');r:Update(.30)
+-    r:SetPose('back');r:Update(.10);assert(count(r.layers[weapon])==2)
++    r:SetPose('back');r:Update(.06);assert(count(r.layers[weapon])==2)
+     r:SetPose('hidden');r:Update(0);assert(count(r.layers[weapon])==2,'reversing partial reveal must not pop all six layers')
+-    r:SetPose('back');r:Update(0);assert(count(r.layers[weapon])==2,'reversing dissolve preserves visible layers')
++    local partialPosition=entry.pivot.worldPosition
++    r:SetPose('back');r:Update(0)
++    Mock.VectorNear(entry.pivot.worldPosition,partialPosition)
++    Mock.Near(entry.mesh.alpha,2/6)
+     assert(w.created==created and w.rebuilds==rebuilds and w.writes==writes,'all motion/draw states reuse their pools')
+     assert(colors==0 and variants==0,'new motion/draw path must reuse color/alpha buckets')
+     rawset(_G,'Color',makeColor);rawset(_G,'Variant',makeVariant)
+@@ -479,7 +483,7 @@ local function SharedPalmCase(elbows)
+         assert(hit.length==h.length and hit.radius==h.radius)
+     end
+     for _,weapon in ipairs({'sword','bow'}) do
+-        r:SetActive(weapon);r:SetPose('hand');r:Update(.12)
++        r:SetActive(weapon);r:SetPose('hand');r:Update(.20)
+         for i=1,5 do
+             controller.node.position=Vector3(i*.3,-i*.04,i*.1)
+             controller.node.rotation=Quaternion(0,i*37,0)
+@@ -493,7 +497,7 @@ local function SharedPalmCase(elbows)
+         character.bones.forearm_right.rotation=Quaternion(-65,9,3)
+         character.bones.forearm_left.rotation=Quaternion(-90,-7,4)
+         for _,weapon in ipairs({'sword','bow'}) do
+-            r:SetActive(weapon);r:SetPose('hand');r:Update(.12)
++            r:SetActive(weapon);r:SetPose('hand');r:Update(.20)
+             Compare(weapon,weapon=='sword' and right or left)
+         end
+     end
+@@ -518,6 +522,129 @@ local function SharedPalmCase(elbows)
+     legacyLeft:Remove()
+ end
+ SharedPalmCase(false);SharedPalmCase(true)
++-- 2026-11-15: actual model axes, serial swaps, interruption and late callbacks.
++local function BackAndSwapCase(fps)
++    local root=Mock.Node('back_swap') --[[@as any]]
++    local w=Mock.World(root) --[[@as any]]
++    local c=Mock.Nomi(root) --[[@as any]]
++    local r=Rig.New(root,w,c)
++    local function Visible(weapon)
++        if r.entries[weapon].mesh.node.enabled then return true end
++        for _,layer in ipairs(r.layers[weapon]) do if layer.node.enabled then return true end end
++        if weapon=='bow' then
++            for _,mesh in ipairs(r.bowDrawMeshes) do if mesh.node.enabled then return true end end
++            return r.bowArrow.node.enabled
++        end
++        return false
++    end
++    local function CheckSingle() assert(not (Visible('sword') and Visible('bow')),'two weapon shapes visible together') end
++    local function Step(t) r:Update(t);CheckSingle() end
++    for _,yaw in ipairs({0,90,180,275}) do
++        c.node.rotation=Quaternion(0,yaw,0)
++        for _,weapon in ipairs({'sword','bow'}) do
++            r:SetActive(weapon);r:SetPose('back');Step(.4)
++            local socket=r.sockets['back_'..weapon]
++            local up=socket.worldRotation*Vector3.UP
++            local worldUp=c.node.worldRotation*Vector3.UP
++            local dot=up.x*worldUp.x+up.y*worldUp.y+up.z*worldUp.z
++            if weapon=='sword' then
++                assert(dot<-.96)
++                local tip=socket:LocalToWorld(r.bladeTip)
++                local hilt=socket:LocalToWorld(Vector3(0,-.15,0))
++                assert(hilt.y>tip.y+.8,'actual blade tip must hang below the hilt')
++            else
++                Mock.Near(math.deg(math.acos(dot)),35)
++                local string=socket:LocalToWorld(Vector3(0,0,-.06))
++                local back=socket:LocalToWorld(Vector3(0,0,.06))
++                local forward=c.node.worldRotation*Vector3.FORWARD
++                assert((string.x-back.x)*forward.x+(string.y-back.y)*forward.y+(string.z-back.z)*forward.z>.119)
++            end
++        end
++    end
++    r:SetActive('sword');r:SetPose('back');Step(.4)
++    local outgoing=r.entries.sword.pivot.worldPosition
++    r:SetActive('bow');CheckSingle()
++    assert(r.retiring.weapon=='sword' and not Visible('bow'))
++    for _=1,2 do Step(.02);Mock.VectorNear(r.entries.sword.pivot.worldPosition,outgoing);assert(not Visible('bow')) end
++    Step(.04);assert(not Visible('sword') and not Visible('bow'),'swap midpoint must be fully hidden')
++    Step(.04);assert(not Visible('sword') and Visible('bow'))
++    Step(.04);assert(r.visualState=='hang' and r.retiring.weapon==nil)
++    r:SetPose('hand');Step(.06);assert(not Visible('bow'),'flight midpoint is a blackout, not a double image')
++    Step(.06);assert(r:GetAfterimagePose()~=nil)
++    r:SetBowDraw(1);Step(0);assert(r.bowArrow.node.enabled)
++    r:SetActive('sword');Step(.02)
++    assert(r.retiring.weapon=='bow' and r.bowArrow.node.enabled and not Visible('sword'))
++    r:SetActive('bow');CheckSingle();assert(not Visible('sword') and not Visible('bow'))
++    r:SetPose('hand');Step(.02);local interrupted=r.entries.bow.pivot.worldPosition
++    r:SetPose('hidden');Step(0);Mock.VectorNear(r.entries.bow.pivot.worldPosition,interrupted)
++    local stale={{clip='dodge_slide',age=0,position=interrupted,rotation=Quaternion(),life=.08}}
++    for _=1,fps do
++        r:SetAfterimages(stale);r:SetCombatVisual(true,.7);r:SetBowDraw(1)
++        assert(not r:Flash('draw') and not r:Flash('sheath') and not r:Flash('full_charge'))
++        Step(1/fps)
++        assert(not r.visualActive and r.visualCharge==nil and r.afterimages==nil and r.tailLeft==0)
++        assert(r:GetAfterimagePose()==nil and not r.bowArrow.node.enabled)
++        for _,pool in ipairs({r.trails,r.images,r.bowImages,r.particles}) do for _,fx in ipairs(pool) do assert(not fx.node.enabled) end end
++    end
++    assert(not Visible('bow') and not Visible('sword'))
++    -- W2 Q contract: hidden before selection, no autonomous reveal during the
++    -- .40s lock; .20s dodge cancellation may explicitly request target back.
++    for _,cancelAt in ipairs({.20,.40}) do
++        r:SetActive('sword');r:SetPose('hand');Step(.4)
++        r:SetPose('hidden');assert(#r:PopEvents()==0,'old arrival event survived hidden')
++        r:SetActive('bow');assert(#r:PopEvents()==0,'old event survived selection')
++        for _=1,math.ceil(cancelAt*fps) do
++            r:SetCombatVisual(true,nil);r:Flash('draw');Step(1/fps)
++            assert(r.pose=='hidden' and not Visible('bow'),'Q target revealed before owner unlock')
++        end
++        assert(not Visible('sword'))
++        r:SetPose('back');Step(.16);assert(r.visualState=='hang' and Visible('bow'))
++        r:SetPose('hand');Step(.02);r:SetPose('back');Step(.02)
++        r:SetPose('hidden');Step(.4)
++        local notifications=r:PopEvents()
++        assert(#notifications==1 and notifications[1]=='dissolved','interrupted flight emitted a stale arrival')
++        assert(not Visible('bow') and not Visible('sword'))
++    end
++    r:SetPose('back');Step(.16);r:SetActive('sword');r:SetPose('hand')
++    r:SetCombatVisual(true,nil);Step(0)
++    assert(r.visualState=='hand' and not Visible('bow') and r:GetAfterimagePose()~=nil,'early hit_on settles only the selected hand pivot')
++    r:SetPose('back');Step(.18)
++    c.node.rotation=Quaternion(0,120,0);Step(1/fps)
++    local a,b=r.hangRotation,r.sockets.back_sword.worldRotation
++    local dot=math.abs(a.w*b.w+a.x*b.x+a.y*b.y+a.z*b.z)
++    assert(2*math.acos(math.min(1,dot))<=math.rad(5)+1e-7,'rotation lag must not swing the blade through the body')
++    local f=c.node.worldRotation*Vector3.FORWARD;local delta=r.hangPosition-r.hangTarget
++    assert(delta.x*f.x+delta.y*f.y+delta.z*f.z<=.02500001,'lag must not pull weapon toward the coat')
++    local created,writes,rebuilds=w.created,w.writes,w.rebuilds
++    local builder=require('combat.WeaponBuilder')
++    local build,create,material,color=builder.Build,w.CreateVolume,w.GetPaletteMaterial,Color
++    local function Forbidden() error('switch/stow attempted pool/material/color allocation') end
++    builder.Build=Forbidden;w.CreateVolume=Forbidden;w.GetPaletteMaterial=Forbidden;rawset(_G,'Color',Forbidden)
++    for i=1,50 do
++        r:SetActive(i%2==0 and 'sword' or 'bow');r:SetPose('back')
++        for _=1,math.ceil(.16*fps) do Step(1/fps) end
++        r:SetPose('hand');for _=1,math.ceil(.12*fps) do Step(1/fps) end
++        r:SetPose('back');Step(.06)
++        if i%3==0 then r:SetActive(i%2==0 and 'bow' or 'sword') end
++        r:SetPose('hidden');Step(.12)
++        assert(not Visible('sword') and not Visible('bow'))
++    end
++    builder.Build=build;w.CreateVolume=create;w.GetPaletteMaterial=material;rawset(_G,'Color',color)
++    assert(w.created==created and w.writes==writes and w.rebuilds==rebuilds)
++    r:Dispose();r:Dispose();assert(w.created==w.removed)
++end
++BackAndSwapCase(30);BackAndSwapCase(60)
++-- Simulate value-type helper arguments: writes to the input are discarded.
++-- Returning/reassigning is required; reference-table mocks alone miss this.
++do
++    local slot,original
++    for i=1,20 do local name,value=debug.getupvalue(Rig.BeginMotion,i);if name=='SetVec' then slot,original=i,value;break end end
++    assert(slot and original)
++    debug.setupvalue(Rig.BeginMotion,slot,function(_,x,y,z) return Vector3(x,y,z) end)
++    BackAndSwapCase(30)
++    LivelyCase(60,'sword');LivelyCase(60,'bow')
++    debug.setupvalue(Rig.BeginMotion,slot,original)
++end
+ -- Switching and the very first draw use startup pools only. Fail immediately
+ -- if any hidden Build/CreateVolume/material clone creeps into that path.
+ do

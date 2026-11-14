@@ -1,0 +1,52 @@
+{
+  "build": 29,
+  "client": "6b853f7b",
+  "preload_groups": [
+    "shader_includes",
+    "#shaders",
+    "#config"
+  ],
+  "files": [
+    {
+      "uuid": "B7kCUdFGjP2SetnaTjmh7PX4",
+      "ext": ".shader",
+      "hash": "6b06cfa1",
+      "size": 3438,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsCloud.shader"
+    },
+    {
+      "uuid": "CH2ukU53R-k9JMWAciHBMyyt",
+      "ext": ".png",
+      "hash": "b95ed6af",
+      "size": 315121,
+      "hash@windows": "63d3efca",
+      "size@windows": 699217,
+      "fs_path": "Textures/Sky/cloud_sculpted_atlas_low.png"
+    },
+    {
+      "uuid": "GZVsubjhgXZh6G1VXJLerni0",
+      "ext": ".lua",
+      "hash": "45e1c5cb",
+      "size": 7887,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/SkyClouds.lua"
+    },
+    {
+      "uuid": "Hxf6YaCUt5wJjkqmqEq9BrUa",
+      "ext": ".png",
+      "hash": "766e2ff8",
+      "size": 1250837,
+      "hash@windows": "5c80aca7",
+      "size@windows": 2796373,
+      "fs_path": "Textures/Sky/cloud_sculpted_atlas.png"
+    }
+  ]
+}

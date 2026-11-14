@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"console\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"CBA39D67685A529CB6649B07D8DFAFF9\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"messages\":[]}}"
+    }
+  ],
+  "isError": false
+}
