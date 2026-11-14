@@ -4,6 +4,10 @@ local VoxelFX = require("dragon.VoxelFX")
 local Spells = require("ruins.TimeSpells")
 V.atFrame(5, function()
     local game = _G["RUINS"]
+    V.assert(game.atmosphere.motes == nil and game.scene:GetChild("AmbientFloatingMotes", true) == nil,
+        "不创建跟随头顶的环境浮光")
+    V.assert(game.scene:GetChild("CombatHandMotes", true) ~= nil and game.fx.handLight ~= nil,
+        "保留独立手部粒子与掌心灯光")
     local root = game.scene:CreateChild("EffectsRegression")
     local pool = VoxelFX.Motes(root,"Pool",8,"square",true)
     local function Spawn(life)

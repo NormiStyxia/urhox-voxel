@@ -10,6 +10,8 @@ local SceneQuality = require("ruins.SceneQuality")
 
 function Start()
     Settings.Load()
+    -- 去掉跟随头顶的环境浮光；手部与施法粒子使用独立系统，保持不变。
+    Settings.Set("floatingMotes", false)
     RuinsScene.Start()
     SceneQuality.Attach(RuinsScene)
 end
