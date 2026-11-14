@@ -132,8 +132,10 @@ V.atFrame(8,function()
         camera:LookAt(urn.center)
     end
     game.aim={hit=false}
+    local timeBefore=urn.time
     Ruins_HandlePostUpdate("PostUpdate",{TimeStep=Variant(0.016)})
     V.assert(game.aim.object==urn and game.sigils.target.node.enabled,"最终相机更新后同帧选中瓮并显示钟面")
+    V.assert(urn.hover>0 and urn.hoverTarget==0 and urn.time==timeBefore,"最终选中同帧更新高亮但不重复推进玩法计时")
     nomi.UpdateCamera=savedCamera
     nomi.world=saved
     local clock=Time:GetSystemTime()
