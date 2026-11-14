@@ -35,6 +35,31 @@ V.atFrame(8, function()
             V.assert(selected.object==object,"同一实心物件六面均可锁定 "..face.." "..a..","..b)
         end end
     end
+    -- 擦过上/右/后边界进入：微小法向分量仍须跨入合法格，不能 floor 成 dims。
+    local shallowMisses=0
+    for _,entry in ipairs({
+        {Vector3.RIGHT,Vector3.UP},{-Vector3.RIGHT,Vector3.UP},
+        {Vector3.UP,Vector3.FORWARD},{-Vector3.UP,Vector3.FORWARD},
+        {Vector3.FORWARD,Vector3.RIGHT},{-Vector3.FORWARD,Vector3.RIGHT}
+    }) do
+        for _,slope in ipairs({.01,.003,.001}) do
+            local normal=(entry[1]*slope+entry[2]):Normalized()
+            local point=object.center+entry[1]*.5
+            local r=Ray(point+normal*3,-normal)
+            local native=world:RaycastGridSingle(r,10,nomi.aimMask)
+            local selected=nomi:GridHit(r,10)
+            if native.hit and native.volume==object.whole then
+                local same=selected.hit and selected.volume==object.whole
+                if not same then
+                    shallowMisses=shallowMisses+1
+                    print(string.format("TargetingTest: SHALLOW MISS slope=%g origin=%s dir=%s native=%.9f checked=%s",
+                        slope,tostring(r.origin),tostring(r.direction),native.distance,tostring(selected.hit)))
+                end
+                V.assert(same,"微小法向分量入格不丢失原生正确命中 slope="..slope.." face="..tostring(entry[1]))
+            end
+        end
+    end
+    print("TargetingTest: shallow misses="..shallowMisses)
     -- 按正式悬石/碑的体素列取最外层实心格，在隔离区复用原始形状。
     -- 相机 → 空气 → 外露格；六个局部面都没有别的体积挡在前面。
     -- 不规则形状、旋转和远距离要分开核对原生命中与二次 Grid 校验。
