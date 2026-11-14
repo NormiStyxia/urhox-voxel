@@ -10,11 +10,13 @@
 -- DragonAnimationController altitude<=40. SkyClouds has +/-2048 CPU bounds
 -- around player, despite visible radii 522..548: y=1200 ALONE does not avoid it!
 -- x=2304 leaves >150m beyond that inflated bound at the island edge. Float32
--- ULP here is <0.25mm (weapon cells=30mm). The room's half extent is 12m.
--- Draw budget: one combined unlit backdrop/podium batch, plus one weapon batch.
+-- ULP here is <0.25mm (weapon cells=30mm). The dressing dome radius is 90m (still outside main-cloud bounds).
+-- Draw budget: six dressing batches plus one weapon batch; hidden fallback stand.
+-- Dressing spans <100m (same x=2304 clearance); Zone includes the full sky dome.
 -- Native Commit is indivisible; StepPreview's 2ms budget is cooperative, not a
 -- guarantee that a GPU upload/Compile cannot exceed 2ms on a slow platform.
 local Builder=require('combat.WeaponBuilder')
+local Dressing=require('combat.ForgeShowroomScene')
 local M={}
 local MASK=0x40000000
 local KEEP=0xffffffff~MASK
@@ -113,8 +115,8 @@ local function Cleanup(s)
         local saved=s.masks[i]
         pcall(function() saved.object[saved.field]=saved.value end)
     end
+    if s.dressing then CleanupFunction(s,'Dressing.Dispose',Dressing.Dispose,s.dressing);s.dressing=nil end
     Remove(s,s.root)
-    if s.roomMaterial then CleanupMethod(s,s.roomMaterial,'Dispose','Material:Dispose') end
 end
 local function Failed(reason,origin)
     ReportFailure(session,origin or 'Update',reason) -- snapshot BEFORE cleanup
@@ -156,50 +158,6 @@ local function IsolateWorld(s,scene)
     end
 end
 
----@param g CustomGeometry
-local function Triangle(s,g,a,b,c,color)
-    for _,p in ipairs({a,b,c}) do
-        Call(s,'geometry',g,'DefineVertex','CustomGeometry:DefineVertex',p)
-        Call(s,'geometry',g,'DefineNormal','CustomGeometry:DefineNormal',Vector3.UP)
-        Call(s,'geometry',g,'DefineColor','CustomGeometry:DefineColor',color)
-    end
-end
----@param s table
-local function Room(s)
-    local mat=Call(s,'material',Material,'new','Material:new');s.roomMaterial=mat
-    local technique=Call(s,'material',cache,'GetResource','cache:GetResource','Technique','Techniques/NoTextureUnlit.xml')
-    assert(technique,'unlit technique missing') -- assert(v,msg) returns BOTH values; never forward as the final argument
-    Call(s,'material',mat,'SetTechnique','Material:SetTechnique',0,technique)
-    mat.vertexShaderDefines='VERTEXCOLOR';mat.pixelShaderDefines='VERTEXCOLOR'
-    Call(s,'material',mat,'SetShaderParameter','Material:SetShaderParameter','MatDiffColor',Variant(Color(1,1,1,1)))
-    mat.cullMode=CULL_NONE
-    local node=Call(s,'geometry',s.root,'CreateChild','Node:CreateChild','BackdropAndPodium')
-    local g=assert(Call(s,'geometry',node,'CreateComponent','Node:CreateComponent','CustomGeometry'),'room geometry missing')
-    Isolate(s,'geometry',g);g.occluder=false
-    for _,name in ipairs({'DefineVertex','DefineNormal','DefineColor'}) do Check(s,'geometry',g,name,'CustomGeometry:'..name) end
-    Call(s,'geometry',g,'BeginGeometry','CustomGeometry:BeginGeometry',0,TRIANGLE_LIST)
-    local dark,top,side=Color(.025,.04,.07,1),Color(.12,.16,.21,1),Color(.055,.075,.11,1)
-    -- A closed, inward-visible room prevents sky/clear-color leaks at any aspect.
-    for axis=1,3 do for _,sign in ipairs({-1,1}) do
-        local a,b,c,d={0,0,0},{0,0,0},{0,0,0},{0,0,0}
-        local u,v=axis%3+1,(axis+1)%3+1
-        for _,p in ipairs({a,b,c,d}) do p[axis]=sign*12 end
-        a[u],a[v]=-12,-12;b[u],b[v]=12,-12;c[u],c[v]=12,12;d[u],d[v]=-12,12
-        local va,vb,vc,vd=Vector3(table.unpack(a)),Vector3(table.unpack(b)),Vector3(table.unpack(c)),Vector3(table.unpack(d))
-        Triangle(s,g,va,vb,vc,dark);Triangle(s,g,va,vc,vd,dark)
-    end end
-    -- Sixteen-sided low circular stand, sharing the single unlit room material.
-    for i=0,15 do
-        local a,b=i*math.pi/8,(i+1)*math.pi/8
-        local p,q=Vector3(math.cos(a)*.38,.08,math.sin(a)*.38),Vector3(math.cos(b)*.38,.08,math.sin(b)*.38)
-        local lowP,lowQ=Vector3(p.x,0,p.z),Vector3(q.x,0,q.z)
-        Triangle(s,g,Vector3(0,.08,0),p,q,top)
-        Triangle(s,g,p,lowP,lowQ,side);Triangle(s,g,p,lowQ,q,side)
-    end
-    assert(Call(s,'geometry',g,'Commit','CustomGeometry:Commit')~=false,'room Commit failed')
-    assert(Call(s,'geometry',g,'SetMaterial','CustomGeometry:SetMaterial',0,mat)~=false,'room material failed')
-end
-
 local function Focus(s,x,y)
     s.focusX=Clamp(Finite(x,s.focusX),.1,.9)
     s.focusY=Clamp(Finite(y,s.focusY),.15,.85)
@@ -223,9 +181,21 @@ local function Fit(s,bp)
     -- of the pivot, and shrink automatically near an edge / on portrait phones.
     local horizontal=2*math.min(s.focusX,1-s.focusX,.25)*.82
     local distance=math.max(halfY/(tan*vertical),radius/(tan*(w/h)*horizontal))+radius+.18
-    assert(distance<10,'weapon cannot fit within showroom')
-    s.spin.position=Vector3(0,.20+halfY,0)
-    s.cameraNode.position=Vector3(0,.20+halfY,-math.max(1.8,distance))
+    -- Fit the real stand and complete left arch, not only the small weapon.
+    -- Solve perspective bounds in the pitched camera basis (not guessed Euler).
+    local pitch=math.rad(8);local cp,sp=math.cos(pitch),math.sin(pitch)
+    local pivotY=math.max(1.65,.85+halfY)
+    for _,p in ipairs({{-3.1,0,1.7},{-3.1,4.3,1.7},{0,7.2,2.2},
+        {-2.4,0,-2.4},{2.4,0,-2.4},{-2.4,.65,2.4},{2.4,.65,2.4}}) do
+        local y=cp*(p[2]-pivotY)+sp*p[3]
+        local z=-sp*(p[2]-pivotY)+cp*p[3]
+        local vspace=2*(y>0 and s.focusY or 1-s.focusY)*.92
+        local hspace=2*(p[1]<0 and s.focusX or 1-s.focusX)*.92
+        distance=math.max(distance,math.abs(y)/(tan*vspace)-z,math.abs(p[1])/(tan*(w/h)*hspace)-z)
+    end
+    s.spin.position=Vector3(0,pivotY,0)
+    s.cameraNode.position=Vector3(0,pivotY+distance*sp,-distance*cp)
+    s.cameraNode.rotation=Quaternion(8,0,0)
     s.fitDirty=false
 end
 local function EnterImpl(s,scene,opts)
@@ -239,27 +209,28 @@ local function EnterImpl(s,scene,opts)
     s.root=assert(Call(s,'root',scene,'CreateChild','Node:CreateChild','ForgeShowroom'),'showroom root missing')
     s.root.temporary=true;s.root.position=Vector3(2304,1200,0)
     local zone=Call(s,'zone',s.root,'CreateComponent','Node:CreateComponent','Zone');assert(zone,'showroom Zone missing')
-    Isolate(s,'zone',zone);zone.boundingBox=BoundingBox(Vector3(-20,-20,-20),Vector3(20,20,20))
+    Isolate(s,'zone',zone);zone.boundingBox=BoundingBox(Vector3(-110,-110,-110),Vector3(110,110,110))
     Read(s,'zone',zone,'ambientSource','Zone.ambientSource')
-    zone.priority=100;zone.ambientSource=AMBIENT_COLOR;zone.ambientColor=Color(.12,.14,.18,1)
+    zone.priority=100;zone.ambientSource=AMBIENT_COLOR;zone.ambientColor=Color(.55*.55,.62*.55,.78*.55,1)
     zone.depthFogEnable=false;zone.heightFogEnable=false;zone.volumetricFogEnabled=false
-    zone.autoExposureEnabled=false;zone.fogColor=Color(.025,.04,.07,1)
+    zone.autoExposureEnabled=false;zone.fogColor=Color(.93,.90,.82,1)
     for i=1,2 do
         local n=Call(s,'light',s.root,'CreateChild','Node:CreateChild',i==1 and 'WarmKey' or 'CoolRim')
         n.position=i==1 and Vector3(-2,3,-2) or Vector3(2,2,2)
         local light=assert(Call(s,'light',n,'CreateComponent','Node:CreateComponent','Light'),'showroom light missing')
         Isolate(s,'light',light);light.lightType=LIGHT_POINT;light.range=8
-        light.brightness=i==1 and 5 or 4
-        light.color=i==1 and Color(1,.91,.78,1) or Color(.40,.65,1,1)
+        light.brightness=i==1 and 1.2 or 1.0
+        light.color=i==1 and Color(1,.93,.78,1) or Color(.40,.65,1,1)
         light.affectVolumetricFog=false
     end
-    Room(s)
+    s.dressing=Dressing.Begin(s.root,MASK)
     s.spin=Call(s,'geometry',s.root,'CreateChild','Node:CreateChild','WeaponTurntable');s.rotation=Quaternion(0,HOME_YAW,0);s.spin.rotation=s.rotation
     s.cameraNode=Call(s,'camera',s.root,'CreateChild','Node:CreateChild','ForgeCamera');s.cameraNode.position=Vector3(0,1,-3)
     s.camera=assert(Call(s,'camera',s.cameraNode,'CreateComponent','Node:CreateComponent','Camera'),'showroom Camera missing')
     Read(s,'camera',s.camera,'viewMask','Camera.viewMask')
-    s.camera.fov=34;s.camera.nearClip=.05;s.camera.farClip=32;s.camera.viewMask=MASK
+    s.camera.fov=34;s.camera.nearClip=.05;s.camera.farClip=180;s.camera.viewMask=MASK
     Focus(s,opts and opts.focusX,opts and opts.focusY)
+    Fit(s,{bounds={min={-.3,-.6,-.3},max={.3,.6,.3}}})
     s.viewport=Call(s,'viewport',Viewport,'new','Viewport:new',scene,s.camera)
     assert(s.viewport,'showroom Viewport missing')
     s.switched=true -- even a partially successful binding must be rolled back
@@ -305,7 +276,7 @@ local function BuildStep(s,dt)
     if not job then return end
     s.stage,s.api,s.apiType='geometry','WeaponBuilder.StepPreview',type(Builder.StepPreview)
     s.buildAge=s.buildAge+dt;assert(s.buildAge<=5,'mesh build timeout')
-    local done,mesh,err=Check(s,'geometry',Builder,'StepPreview','WeaponBuilder.StepPreview')(job,2)
+    local done,mesh,err=Check(s,'geometry',Builder,'StepPreview','WeaponBuilder.StepPreview')(job,1)
     if job.geometry and not err then Isolate(s,'geometry',job.geometry) end -- hidden ancestor until atomic publish
     if not done then return end
     assert(mesh,err or 'mesh missing')
@@ -320,7 +291,20 @@ local function BuildStep(s,dt)
 end
 local function UpdateImpl(s,dt)
     dt=Clamp(Finite(dt,0),0,1)
+    local compiling=s.pending~=nil
     BuildStep(s,dt)
+    if s.dressing and not compiling then
+        -- Dressing failures cannot change weapon readiness or restore viewport.
+        local ok,err=pcall(function()
+            local reason=Dressing.Step(s.dressing,1)
+            if reason then return reason end
+            return Dressing.Animate(s.dressing,dt)
+        end)
+        if not ok or err then
+            s.stage,s.api,s.apiType='dressing.'..s.dressing.stage,'ForgeShowroomScene','function'
+            ReportFailure(s,'Update',err)
+        end
+    end
     if s.mesh and (s.fitDirty or Call(s,'camera',graphics,'GetWidth','graphics:GetWidth')~=s.width
         or Call(s,'camera',graphics,'GetHeight','graphics:GetHeight')~=s.height) then Fit(s,s.mesh.blueprint) end
     if s.home then
