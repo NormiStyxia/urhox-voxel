@@ -1107,10 +1107,11 @@ end
 -- 当前瞄准目标（时之物件）
 local aimTextCache={}
 local AIM_STATE_NAMES={WHOLE="完整",SHATTERED="破碎中",FROZEN="已碎",REWIND="回溯中"}
-local function UpdateAim()
+local function UpdateAim(presentation)
     local aim = nomi_:Aim(60.0)
     if aim.hit then aim.object = aim.object or Puzzles.FindByVolume(aim.volume) end
     M.aim = aim
+    if presentation==false then return aim end
     if CombatState.InCombat() then
         M.gateHoverTarget=0
         HUD.SetTarget('')
@@ -1490,7 +1491,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Safe('Dragon.SleepPose',ApplySleepPose,dt)
     Safe('Dragon.World',M.dragonWorld.Update,M.dragonWorld,dt)
     -- 谜题 / 法术
-    local aim = (not M.mounted) and UpdateAim() or { hit = false, dir = Vector3.FORWARD, far = Vector3.ZERO }
+    local aim = (not M.mounted) and UpdateAim(false) or { hit = false, dir = Vector3.FORWARD, far = Vector3.ZERO }
     Safe('Spells.Input',HandleSpells,dt,aim)
     Safe('Spells.Update',caster_.Update,caster_,dt)
     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
@@ -1503,7 +1504,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Safe('Rig.Visuals',UpdateCombatRig,dt)
     if animPreview_.index==0 then Safe('Combat.AfterPose',combatMoves_.AfterPose,combatMoves_) end
     -- 法阵只更新一次，在 PostUpdate 中使用本帧最终相机与施法方向。
-    Safe('Puzzles.Update',Puzzles.Update,dt)
+    Safe('Puzzles.Update',Puzzles.Update,dt,true)
     Safe('Puzzles.Gate',Puzzles.CheckGate)
     Safe('Puzzles.Key',Puzzles.UpdateKey,time_,nomi_:Position())
     -- 法阵点亮
@@ -1668,6 +1669,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     -- 展示准星必须读取最终相机；不能把上一帧射线的结果画在当前帧视角。
     -- Update 的 aim 仍用于本帧技能输入，PostUpdate 再校准选中反馈与悬停材质。
     local aim=not M.mounted and UpdateAim() or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
+    Safe('Puzzles.Presentation',Puzzles.UpdatePresentation,dt)
     Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime())
     if combatMoves_ then
         local cn=nomi_:CameraNode()

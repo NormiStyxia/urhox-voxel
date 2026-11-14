@@ -696,10 +696,13 @@ local function UpdateStairStones(dt)
     end
 end
 
-function M.Update(dt)
+function M.Update(dt,deferPresentation)
     gateClock = gateClock + dt
     UpdateStairStones(dt)
-    for _, o in ipairs(M.list) do o:Update(dt) end
+    for _, o in ipairs(M.list) do o:Update(dt,deferPresentation) end
+end
+function M.UpdatePresentation(dt)
+    for _,o in ipairs(M.list) do o:UpdatePresentation(dt) end
 end
 
 -- 世界点附近的时之物件（任一碎块中心或完整物件包围球在 radius 内）

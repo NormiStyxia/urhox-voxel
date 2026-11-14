@@ -776,7 +776,7 @@ function T:Reassemble()
 end
 
 -- ---------------------------------------------------------------- 更新
-function T:Update(dt)
+function T:Update(dt,deferPresentation)
     self.time = self.time + dt
     if self.state == M.STATE.SHATTERED then
         self.recT = self.recT + dt
@@ -809,6 +809,11 @@ function T:Update(dt)
         self.frozenWhole = self.frozenWhole - dt
         if self.frozenWhole <= 0 then self.frozenWhole = nil; self:Emit("unfreeze", {}) end
     end
+    if not deferPresentation then self:UpdatePresentation(dt) end
+end
+
+-- 展示与玩法计时分开：最终相机选中后只更新高亮，不推进第二次碎裂/回溯。
+function T:UpdatePresentation(dt)
     -- 表现：hover 高亮、复原闪光
     local hv = self.hoverTarget or 0
     self.hover = self.hover + (hv - self.hover) * (1 - math.exp(-12 * dt))
