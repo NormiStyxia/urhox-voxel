@@ -56,6 +56,35 @@ V.atFrame(8,function()
     end
     -- 镜头瞄准外壳而非包围中心：覆盖瓮腹棱角/金环/蓝纹各高度。
     local urn=urns[1]
+    -- 模拟不同运行后端的首命中漏掉可见瓮，或报出包围盒空气中的普通障碍。
+    -- 真实 Grid 不变：镜头 -> 空气 -> 瓮外壳；两种原生结果都必须得到同一目标。
+    local falseBlock=world:CreateVolume(4,4,4,.125,urn.center+Vector3(0,0,-2))
+    falseBlock.destructible=false
+    world:FinalizeVolume(falseBlock)
+    local faultMode=0
+    nomi.world={
+        RaycastGridSingle=function(self,r,d,mask)
+            local hit=VoxelRaycastResult:new()
+            if faultMode==1 then
+                hit.hit,hit.volume,hit.volumeId=true,falseBlock,falseBlock.volumeId
+                hit.distance,hit.position=1,(r.origin+r.direction) --[[@as Vector3]]
+            end
+            return hit
+        end,
+        GetVolumeCount=function() return world:GetVolumeCount() end,
+        GetVolume=function(self,i) return world:GetVolume(i) end,
+        SphereCast=function() return VoxelRaycastResult:new() end
+    }
+    for mode=0,1 do
+        faultMode=mode
+        local target=urn.center
+        local r=Ray(target+Vector3(0,.5,-4),Vector3(0,-.5,4):Normalized())
+        local aim=nomi:AimRay(r,20)
+        V.assert(aim.object==urn,"原生漏报或空气障碍不清空可见瓮 mode="..mode)
+    end
+    nomi.world=saved
+    local blockNode=falseBlock:GetNode()
+    world:RemoveVolume(falseBlock); falseBlock:Dispose(); blockNode:Dispose()
     for heading=0,345,15 do
         local a=math.rad(heading)
         local facing=Vector3(math.sin(a),0,math.cos(a))
