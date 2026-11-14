@@ -368,7 +368,8 @@ function N:UpdateCamera(dt, mode, followNode)
     end
 end
 
--- 从当前 Grid 核对真实实心格，不把空气包围盒或动态凸包当成遮挡。
+-- 粗筛只排除射线不可能碰到的包围球；最终仍逐格检测，不能把球当可选表面。
+local aimBounds=setmetatable({}, {__mode="k"})
 -- 相机 -> [空气 | 实心格]；高坐标面负向进入时属于 n-1，不属于网格外的 n。
 -- 入口/步进用 Lua 标量保留精度；不靠微小世界位移选格，也不把越界格强行夹回网格。
 -- 整数边界按方向归属，棱角同时跨轴；空洞及旋转体积仍按当前 Grid。
@@ -445,19 +446,28 @@ local function TraceVolume(volume, ray, maxDist)
     return result
 end
 
----@param hit VoxelRaycastResult
+---@param volume VoxelVolume
 ---@param ray Ray
-local function EmptyOriginHit(hit,ray)
-    if not hit.hit or hit.distance>.001 then return false end
-    local volume=hit.volume
-    local grid=volume:GetGrid()
-    if grid==nil then return true end
+local function MayIntersect(volume,ray,maxDist)
     local node=volume:GetNode()
-    if node==nil or volume.voxelSize<=0 then return true end
-    local p=node:WorldToLocal(ray.origin+ray.direction*.0001)/volume.voxelSize
-    local dims=grid:GetDimensions()
-    local x,y,z=math.floor(p.x),math.floor(p.y),math.floor(p.z)
-    return x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or not grid:IsSolid(x,y,z)
+    if node==nil or not volume:IsEnabledEffective() or not node:IsEnabled() then return false end
+    local bound=aimBounds[volume]
+    if bound==nil then
+        local grid=volume:GetGrid()
+        if grid==nil then return false end
+        local d=grid:GetDimensions()
+        -- 遗迹体积创建后不改 dimensions；重建/碎裂创建新 volume，自然生成新粗筛缓存。
+        bound=d.x*d.x+d.y*d.y+d.z*d.z
+        aimBounds[volume]=bound
+    end
+    local scale=node.worldScale
+    local s=math.max(math.abs(scale.x),math.abs(scale.y),math.abs(scale.z))*volume.voxelSize
+    local p=node.worldPosition
+    local x,y,z=p.x-ray.origin.x,p.y-ray.origin.y,p.z-ray.origin.z
+    local dir=ray.direction
+    local t=math.max(0,math.min(maxDist,x*dir.x+y*dir.y+z*dir.z))
+    local dx,dy,dz=x-dir.x*t,y-dir.y*t,z-dir.z*t
+    return dx*dx+dy*dy+dz*dz<=bound*s*s
 end
 
 ---@param ray Ray
@@ -465,29 +475,19 @@ end
 ---@return VoxelRaycastResult
 function N:GridHit(ray,maxDist)
     local mask=self.aimMask or 0xffffffff
-    local first=self.world:RaycastGridSingle(ray,maxDist,mask)
-    local ignored=first.hit and self.ignoreAimVolume and self.ignoreAimVolume(first.volume)
-    local emptyOrigin=not ignored and EmptyOriginHit(first,ray)
-    local timeTarget=not ignored and first.hit and TimeObject.FindByVolume(first.volume)~=nil
-    if not ignored and not emptyOrigin and not timeTarget then return first end
-    -- 原生列表也可能漏掉前景体积：不能用同一条查询的返回列表证明无遮挡。
-    -- 零距离异常或选到时之物件时，从当前世界逐体积核对真实 Grid，取最近实心。
-    -- 截断到原生候选距离即可：后方体积绝不可能成为更近的遮挡物。
-    local reach=not ignored and not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
     local nearest=VoxelRaycastResult:new()
+    -- 统一查询真实 Grid：原生首命中的 miss、空气碰撞体及偏短距离不能决定截断。
+    -- 镜头 -> 候选包围球粗筛 -> 最近实心格；可见 mask=0 回溯残片保留，禁用体积排除。
     for i=0,self.world:GetVolumeCount()-1 do
         local volume=self.world:GetVolume(i)
         if volume~=nil and (volume.collisionLayer & mask)~=0
             and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
-            local limit=nearest.hit and math.min(reach,nearest.distance) or reach
-            local actual=TraceVolume(volume,ray,limit)
-            if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
+            local limit=nearest.hit and math.min(maxDist,nearest.distance) or maxDist
+            if MayIntersect(volume,ray,limit) then
+                local actual=TraceVolume(volume,ray,limit)
+                if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
+            end
         end
-    end
-    if DebugLog.enabled and emptyOrigin and not self.emptyOriginLogged then
-        self.emptyOriginLogged=true
-        print(string.format("RuinsAim: repaired empty-origin volume=%d falseDistance=%.4f actualDistance=%.4f",
-            first.volumeId,first.distance,nearest.hit and nearest.distance or -1))
     end
     return nearest
 end
