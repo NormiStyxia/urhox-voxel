@@ -43,6 +43,7 @@ end
 ---@field onVoidFall fun(pos:Vector3, forced:boolean):boolean|nil
 ---@field voidReturning boolean|nil
 ---@field castSocket Node
+---@field combatFocus Vector3|nil
 ---@field ignoreAimVolume fun(volume:VoxelVolume):boolean|nil
 local N = {}
 N.__index = N
@@ -211,7 +212,7 @@ function N:ClipSlideMotion(motion)
                 local offset=Vector3(math.sin(angle)*margin,0,math.cos(angle)*margin)
                 for _,h in ipairs({.25,self.cc.height*.5,self.cc.height-.10}) do
                     local origin=a+offset+Vector3(0,h,0)
-                    local delta=b-a
+                    local delta=b-a --[[@as Vector3]]
                     local length=delta:Length()
                     if length>1e-8 and self:SlideRay(Ray(origin,delta/length),length) then return false end
                 end
@@ -339,7 +340,7 @@ function N:UpdateCamera(dt, mode, followNode)
     self.combatLookQuiet=math.max(0,(self.combatLookQuiet or 0)-dt)
     local focus=Vector3.ZERO
     if fighting and self.combatFocus and self.combatLookQuiet<=0 then
-        local toward=self.combatFocus-p
+        local toward=self.combatFocus-p --[[@as Vector3]]
         -- Ignore offscreen/remote targets instead of pulling framing behind the player.
         local forward=Quaternion(self.camYaw,Vector3.UP)*Vector3.FORWARD
         if toward:Length()<20 and toward:DotProduct(forward)>0 then focus=toward*.3 end
@@ -367,9 +368,10 @@ function N:UpdateCamera(dt, mode, followNode)
     end
 end
 
--- 只修复“射线起于空格，却返回 distance=0”的体积查询异常。
--- 相机在地形 chunk 包围盒的空气中 -> 逐格前进 -> 第一块真实实心格。
--- 不忽略整个 chunk：它前方的山壁/地面仍须遮挡；空洞和旋转体积同样按当前 Grid。
+-- 从当前 Grid 核对真实实心格，不把空气包围盒或动态凸包当成遮挡。
+-- 相机 -> [空气 | 实心格]；高坐标面负向进入时属于 n-1，不属于网格外的 n。
+-- 入口/步进用 Lua 标量保留精度；不靠微小世界位移选格，也不把越界格强行夹回网格。
+-- 整数边界按方向归属，棱角同时跨轴；空洞及旋转体积仍按当前 Grid。
 ---@param volume VoxelVolume
 ---@param ray Ray
 ---@param maxDist number
@@ -380,40 +382,45 @@ local function TraceVolume(volume, ray, maxDist)
     if node==nil or grid==nil then return result end
     local size=volume.voxelSize
     if size<=0 then return result end
-    local origin=node:WorldToLocal(ray.origin)/size
+    local localOrigin=node:WorldToLocal(ray.origin)
     -- 方向用逆旋转/缩放，不对两个世界坐标作差；远离原点时会丢失微小斜率。
     local rotated=node.worldRotation:Inverse()*ray.direction
     local scale=node.worldScale
     if math.abs(scale.x)<1e-8 or math.abs(scale.y)<1e-8 or math.abs(scale.z)<1e-8 then return result end
-    local direction=Vector3(rotated.x/scale.x,rotated.y/scale.y,rotated.z/scale.z)/size
+    local ox,oy,oz=localOrigin.x/size,localOrigin.y/size,localOrigin.z/size
+    local vx,vy,vz=rotated.x/scale.x/size,rotated.y/scale.y/size,rotated.z/scale.z/size
     local dims=grid:GetDimensions()
     local enter,exit=0,maxDist
     local normal=Vector3.ZERO
-    for _,axis in ipairs({"x","y","z"}) do
-        local o,d,n=origin[axis],direction[axis],dims[axis]
-        if math.abs(d)<1e-8 then
-            if o<0 or o>=n then return result end
-        else
-            local a,b=-o/d,(n-o)/d
-            local sign=-1
-            if a>b then a,b=b,a; sign=1 end
-            if a>enter then
-                enter=a
-                normal=Vector3(axis=="x" and sign or 0,axis=="y" and sign or 0,axis=="z" and sign or 0)
-            end
-            exit=math.min(exit,b)
-            if enter>exit then return result end
+    local entryAxis=""
+    local function Slab(o,d,n,axis)
+        if math.abs(d)<1e-8 then return o>=0 and o<n end
+        local a,b=-o/d,(n-o)/d
+        local sign=-1
+        if a>b then a,b=b,a; sign=1 end
+        if a>enter then
+            enter=a
+            entryAxis=axis
+            normal=Vector3(axis=="x" and sign or 0,axis=="y" and sign or 0,axis=="z" and sign or 0)
         end
+        exit=math.min(exit,b)
+        return enter<=exit
     end
-    local start=origin+direction*(enter+1e-5)
-    local x,y,z=math.floor(start.x),math.floor(start.y),math.floor(start.z)
-    local sx,sy,sz=direction.x>0 and 1 or -1,direction.y>0 and 1 or -1,direction.z>0 and 1 or -1
+    if not Slab(ox,vx,dims.x,"x") or not Slab(oy,vy,dims.y,"y") or not Slab(oz,vz,dims.z,"z") then return result end
+    local function FirstCell(o,d,n,axis)
+        if axis==entryAxis then return d>0 and 0 or n-1 end
+        local p=o+d*enter
+        -- 负向经过整数格面时从前一格开始；不推进 1e-5 再经 Vector3 舍入。
+        return d<0 and math.ceil(p)-1 or math.floor(p)
+    end
+    local x,y,z=FirstCell(ox,vx,dims.x,"x"),FirstCell(oy,vy,dims.y,"y"),FirstCell(oz,vz,dims.z,"z")
+    local sx,sy,sz=vx>0 and 1 or -1,vy>0 and 1 or -1,vz>0 and 1 or -1
     local function Next(o,d,i,step)
         if math.abs(d)<1e-8 then return math.huge end
         return (i+(step>0 and 1 or 0)-o)/d
     end
-    local tx,ty,tz=Next(origin.x,direction.x,x,sx),Next(origin.y,direction.y,y,sy),Next(origin.z,direction.z,z,sz)
-    local dx,dy,dz=math.abs(1/direction.x),math.abs(1/direction.y),math.abs(1/direction.z)
+    local tx,ty,tz=Next(ox,vx,x,sx),Next(oy,vy,y,sy),Next(oz,vz,z,sz)
+    local dx,dy,dz=math.abs(1/vx),math.abs(1/vy),math.abs(1/vz)
     local distance=enter
     for i=1,dims.x+dims.y+dims.z+3 do
         if x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or distance>exit then break end
