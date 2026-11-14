@@ -49,3 +49,14 @@ D.Release();assert(deleted==1)
 D.Image(1,'plaque_ink',0,0,1,{100,110,120});assert(paints==built+2,'context release drops paints')
 assert(tx==0 and ty==0 and #stack==0,'transforms balanced')
 print('PASS PixelDraw: identical tiled rect/UV contract, transform balance, moving/resize cache, fresh tint dedup, context lifetime')
+
+-- Failed HUD draw unwinds only its own save levels, not the parent widget.
+local State=require('combat.CombatState')
+D.Save(1);local parentDepth=D.Depth(1)
+local function brokenDraw()D.Save(1);nvgTranslate(1,8,12);D.Save(1);error('injected HUD failure')end
+local ok=State.Isolated('HUD.test',brokenDraw)
+assert(not ok)
+D.Unwind(1,parentDepth)
+assert(D.Depth(1)==parentDepth and #stack==1 and tx==0 and ty==0)
+D.Restore(1);assert(D.Depth(1)==0 and #stack==0)
+print('PASS isolated HUD draw restores parent NVG state after nested save failure')

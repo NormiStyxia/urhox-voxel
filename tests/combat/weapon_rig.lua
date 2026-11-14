@@ -516,5 +516,25 @@ local function SharedPalmCase(elbows)
     legacyLeft:Remove()
 end
 SharedPalmCase(false);SharedPalmCase(true)
+-- Switching and the very first draw use startup pools only. Fail immediately
+-- if any hidden Build/CreateVolume/material clone creeps into that path.
+do
+    local root=Mock.Node('swap_pool') --[[@as any]]
+    local w=Mock.World(root) --[[@as any]]
+    local r=Rig.New(root,w,Mock.Nomi(root) --[[@as any]])
+    local created,writes,rebuilds=w.created,w.writes,w.rebuilds
+    local builder=require('combat.WeaponBuilder')
+    local build,createVolume,getPalette=builder.Build,w.CreateVolume,w.GetPaletteMaterial
+    local rawColor=Color
+    local function Forbidden() error('switch/first draw must not build, clone, allocate colors or create a volume') end
+    builder.Build=Forbidden;w.CreateVolume=Forbidden;w.GetPaletteMaterial=Forbidden;rawset(_G,'Color',Forbidden)
+    for i=1,40 do
+        r:SetActive(i%2==0 and 'sword' or 'bow');r:SetPose('hand');r:Update(.12)
+        r:SetPose('back');r:Update(.18);r:SetPose('hidden');r:Update(.30)
+    end
+    builder.Build=build;w.CreateVolume=createVolume;w.GetPaletteMaterial=getPalette;rawset(_G,'Color',rawColor)
+    assert(w.created==created and w.writes==writes and w.rebuilds==rebuilds)
+    r:Dispose();assert(w.created==w.removed)
+end
 print('weapon_rig shared palms: PASS (legacy and zero-elbow hit/snapshot equality, bent forearm routing, owned-child-only idempotent cleanup)')
 print("weapon_rig: PASS (bow axes/draw/nock, timed reveal/flight/stow/dissolve, event drain, spring/float, visual-only sword scale, pooled FX)")

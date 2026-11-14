@@ -5,6 +5,7 @@ local Draw=require('ui.PixelDraw')
 local Touch=require('ui.TouchInput')
 local Controls=require('ui.TouchControls')
 local CombatHUD=require('ui.CombatHUD')
+local CombatState=require('combat.CombatState')
 local M={}
 local ready=false
 local EMPTY={}
@@ -131,12 +132,12 @@ local function Objective(vg,w,h,s,touch)
     local ow,oh,step,mid=c.ow,c.oh,c.step,c.mid
     Draw.NineSlice(vg,'plaque_ink',left,top,ow,oh,OBJECTIVE_BORDER,.9)
     local x,y=left+OBJECTIVE_INSET,top+OBJECTIVE_INSET
-    nvgSave(vg)
+    Draw.Save(vg)
     nvgIntersectScissor(vg,x,y,math.max(0,ow-2*OBJECTIVE_INSET),oh-2*OBJECTIVE_INSET)
     local row=ObjectiveRows(vg,headingCache,C.gold,x,y,step,mid,0)
     row=ObjectiveRows(vg,titleCache,C.paper,x,y,step,mid,row)
     ObjectiveRows(vg,objectiveCache,C.muted,x,y,step,mid,row)
-    nvgRestore(vg)
+    Draw.Restore(vg)
     return left,top,ow,oh,available
 end
 function Layer:Update(dt)
@@ -144,7 +145,7 @@ function Layer:Update(dt)
     if message=='' and hideFrame>0 then hideFrame=hideFrame-1 end
     if input:GetKeyPress(KEY_H) and not Touch.IsEnabled() then help=not help end
 end
-function Layer:Render(vg)
+local function RenderHUD(self,vg)
     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
@@ -230,6 +231,11 @@ function Layer:Render(vg)
     combatObjective.x,combatObjective.y,combatObjective.h=left,top,oh
     CombatHUD.Render(vg,w,h,s,combatObjective)
     Draw.Finish(vg)
+end
+function Layer:Render(vg)
+    local depth=Draw.Depth(vg)
+    CombatState.Isolated('HUD.Render',CombatState.PerfCall,'hudRebuild',RenderHUD,self,vg)
+    Draw.Unwind(vg,depth)
 end
 function M.Build(spells)
     headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}

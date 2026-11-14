@@ -43,8 +43,15 @@ function M.Metrics()
     return w/dpr/z,h/dpr/z,safeMetrics
 end
 
+-- Track only this renderer's saves; unwind them after a protected HUD failure
+-- without touching the parent UI widget's NanoVG transform/scissor stack.
+local saveDepth={}
+function M.Depth(vg) return saveDepth[vg] or 0 end
+function M.Save(vg) nvgSave(vg);saveDepth[vg]=(saveDepth[vg] or 0)+1 end
+function M.Restore(vg) nvgRestore(vg);saveDepth[vg]=math.max(0,(saveDepth[vg] or 0)-1) end
+function M.Unwind(vg,depth) while M.Depth(vg)>depth do M.Restore(vg) end end
 function M.Begin(vg, screenSpace)
-    nvgSave(vg)
+    M.Save(vg)
     if screenSpace then nvgResetTransform(vg) end
     local k = graphics:GetDPR()*M.Zoom()/UI.GetScale()
     nvgScale(vg,k,k)
@@ -52,7 +59,7 @@ function M.Begin(vg, screenSpace)
     nvgTextScaleMode(vg,NVG_TEXT_SCALE_FULL)
     nvgFontSizeMethod(vg,NVG_SIZE_PIXEL)
 end
-function M.Finish(vg) nvgRestore(vg) end
+function M.Finish(vg) M.Restore(vg) end
 local function Context(vg)
     local c = contexts[vg]
     if not c then c = {images={}, retry={}, paints={}, font=nvgCreateFont(vg,'ruins-pixel','Fonts/ArkPixel-12px-zh_hans.ttf')}; contexts[vg]=c end
@@ -111,24 +118,24 @@ function M.Image(vg,name,x,y,alpha,tint)
     local img,w,h=Image(vg,name)
     if not img then return end
     x,y=M.Snap(x),M.Snap(y)
-    nvgSave(vg); nvgTranslate(vg,x,y)
+    M.Save(vg); nvgTranslate(vg,x,y)
     nvgBeginPath(vg); nvgRect(vg,0,0,w*2,h*2)
     nvgFillPaint(vg,Paint(vg,img,w,h,0,0,tint,alpha)); nvgFill(vg)
-    nvgRestore(vg)
+    M.Restore(vg)
 end
 -- Preserve exact 2x source tiling (stretching would blur/distort pixel borders).
 local function Tile(vg,img,iw,ih,sx,sy,sw,sh,x,y,w,h,alpha)
     if w<=0 or h<=0 or sw<=0 or sh<=0 then return end
     local paint=Paint(vg,img,iw,ih,sx,sy,nil,alpha)
-    nvgSave(vg); nvgIntersectScissor(vg,x,y,w,h)
+    M.Save(vg); nvgIntersectScissor(vg,x,y,w,h)
     for yy=y,y+h-1,sh*2 do
         for xx=x,x+w-1,sw*2 do
-            nvgSave(vg);nvgTranslate(vg,xx,yy)
+            M.Save(vg);nvgTranslate(vg,xx,yy)
             nvgBeginPath(vg); nvgRect(vg,0,0,math.min(sw*2,x+w-xx),math.min(sh*2,y+h-yy))
-            nvgFillPaint(vg,paint); nvgFill(vg);nvgRestore(vg)
+            nvgFillPaint(vg,paint); nvgFill(vg);M.Restore(vg)
         end
     end
-    nvgRestore(vg)
+    M.Restore(vg)
 end
 function M.NineSlice(vg,name,x,y,w,h,border,alpha)
     local img,iw,ih=Image(vg,name)

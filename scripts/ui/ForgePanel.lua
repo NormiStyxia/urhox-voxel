@@ -24,6 +24,16 @@ local drafts=setmetatable({}, {__mode='k'})
 -- One detailed outcome per opening, and suppress repeated identical outcomes
 -- for 10 seconds across reopenings. No clock capability may block the preview.
 local diagnosticTimes={}
+local previewSerial=0
+local function SceneToken(scene) return scene:GetVar('ForgePreview'):GetString() end
+local function ResourceName(resource) return resource.name end
+local function SurfaceName(surface) return surface:GetParentTexture().name end
+local function CameraName(camera) return camera:GetNode().name end
+local function StableValue(fn,value)
+    if not value then return 'nil' end
+    local ok,result=pcall(fn,value)
+    return ok and tostring(result) or 'unavailable'
+end
 local function RenderSummary(p)
     if not p then return 'render=none' end
     return 'state='..tostring(p.state)..' queued='..tostring(p.queued)..' mode='..tostring(p.updateMode)
@@ -31,6 +41,8 @@ local function RenderSummary(p)
         ..' scene_matches='..tostring(p.sceneMatches or 0)..' surface_matches='..tostring(p.surfaceMatches or 0)
         ..' camera_matches='..tostring(p.cameraMatches or 0)..' texture_matches='..tostring(p.textureMatches or 0)
         ..' ptr_errors='..tostring(p.pointerErrors or 0)..' last='..tostring(p.lastReceipt or 'none')
+        ..' compare=scene_token expected='..tostring(p.token)..' draws='..tostring(p.drawFrames or 0)
+        ..' pixels='..tostring(p.pixelStatus or 'not_requested')
 end
 local function PreviewDiagnostic(s,outcome,detail)
     s.previewDiagnostics=s.previewDiagnostics or {}
@@ -77,7 +89,10 @@ local function EndPreviewView(s,data)
     local camera,cameraStatus=EventPointer(data,'Camera','Camera')
     local texture,textureStatus=EventPointer(data,'Texture','Texture')
     local view,viewStatus=EventPointer(data,'View','View')
-    local sceneMatch,surfaceMatch,cameraMatch,textureMatch=scene==p.scene,surface==p.surface,camera==p.camera,texture==p.texture
+    local sceneValue,surfaceValue=StableValue(SceneToken,scene),StableValue(SurfaceName,surface)
+    local cameraValue,textureValue=StableValue(CameraName,camera),StableValue(ResourceName,texture)
+    local sceneMatch,surfaceMatch,cameraMatch,textureMatch=sceneValue==p.token,surfaceValue==p.token,
+        cameraValue==p.token,textureValue==p.token
     if sceneMatch then p.sceneMatches=p.sceneMatches+1 end
     if surfaceMatch then p.surfaceMatches=p.surfaceMatches+1 end
     if cameraMatch then p.cameraMatches=p.cameraMatches+1 end
@@ -86,15 +101,16 @@ local function EndPreviewView(s,data)
         or (surfaceStatus~='ptr' and surfaceStatus~='void' and surfaceStatus~='nil') then
         p.pointerErrors=p.pointerErrors+1
     end
-    -- View is the renderer's internal View, NOT our Viewport. Never compare
-    -- those different objects. Require this exact scene and this RTT surface.
-    local ours=sceneMatch and surfaceMatch
-    p.lastReceipt='view='..tostring(view)..'/'..viewStatus
+    -- tolua wrappers are not identities. The unique scene token is the gate;
+    -- texture/surface names are corroboration only (bindings vary by renderer).
+    local ours=sceneMatch
+    if p.endViews==1 or ours or p.endViews%60==0 then p.lastReceipt='view='..tostring(view)..'/'..viewStatus
+        ..',scene_token='..sceneValue..',surface_texture='..surfaceValue..',texture_name='..textureValue
         ..',scene='..tostring(scene)..'/'..sceneStatus..' expected='..tostring(p.scene)
         ..',surface='..tostring(surface)..'/'..surfaceStatus..' expected='..tostring(p.surface)
         ..',camera='..tostring(camera)..'/'..cameraStatus..' match='..tostring(cameraMatch)
         ..',texture='..tostring(texture)..'/'..textureStatus..' match='..tostring(textureMatch)
-        ..',viewport='..tostring(p.viewport)..',ours='..tostring(ours)
+        ..',viewport='..tostring(p.viewport)..',ours='..tostring(ours) end
     if p.endViews==1 then print('Forge preview render: first '..RenderSummary(p)) end
     if ours then
         p.matchedViews=p.matchedViews+1;p.rendered=true
@@ -135,8 +151,10 @@ local function ReleaseImage(p)
     -- A replaced UI context already released its images; never call into that pointer.
     if p.image and p.image~=0 and p.context==ImageCache.GetContext() then nvgDeleteVideo(p.context,p.image) end
     p.image,p.context=nil,nil
+    p.paint,p.paintImage=nil,nil
 end
 local function DestroyPreview(s)
+    s.previewWorker=nil
     local p=s.preview
     if not p then return end
     ReleaseImage(p)
@@ -158,12 +176,14 @@ local function Fallback(s,reason,detail)
 end
 local function UpdatePreview(s)
     local p=s.preview
-    if not p then return end
+    if not p or not p.surface then return end
     Builder.CancelPreview(p.job)
     p.job=Builder.BeginPreview(p.pivot,Single(s.config,s.weapon),p.mesh)
     p.state,p.age,p.rendered,p.queued='building',0,false,false
     p.awaitAge,p.endViews,p.matchedViews,p.sceneMatches,p.surfaceMatches,p.cameraMatches,p.textureMatches,p.pointerErrors=0,0,0,0,0,0,0,0
     p.lastReceipt=nil;p.waitLogged=false;p.receiptLogged=false
+    p.drawFrames,p.drawFrame,p.pixelStatus=0,nil,'not_requested'
+    p.generation=(p.generation or 0)+1;p.readyReason=nil
     p.dirty=true
 end
 local function CreatePreview(s)
@@ -171,11 +191,14 @@ local function CreatePreview(s)
     local p={failureReason='scene'}
     s.preview=p
     p.scene=Scene()
+    previewSerial=previewSerial+1;p.token='ForgePreview_'..previewSerial
+    p.scene.name=p.token;p.scene:SetVar('ForgePreview',Variant(p.token))
     p.scene:SetUpdateEnabled(true) -- no physics world/scripts; renderer updates its Octree
     p.octree=assert(p.scene:CreateComponent('Octree'),'Octree nil')
     local zone=assert(p.scene:CreateComponent('Zone'),'Zone nil');p.zone=zone
     zone:SetBoundingBox(BoundingBox(Vector3(-10,-10,-10),Vector3(10,10,10)))
     zone:SetAmbientColor(Color(.65,.65,.65))
+    coroutine.yield() -- scene/zone, camera/light, texture, viewport: separate frames
     local lamp=p.scene:CreateChild('ForgeLight')
     lamp.rotation=Quaternion(35,-30,0)
     local light=assert(lamp:CreateComponent('Light'),'Light nil');p.light=light
@@ -184,6 +207,7 @@ local function CreatePreview(s)
     p.turn=p.scene:CreateChild('ForgeTurntable')
     p.pivot=p.turn:CreateChild('ForgeWeapon')
     p.cameraNode=p.scene:CreateChild('ForgeCamera')
+    p.cameraNode.name=p.token
     -- One fixed grip origin and scale across all parts, including long limbs.
     p.cameraNode.position=Vector3(0,.3,3)
     p.cameraNode:LookAt(Vector3(0,.3,0))
@@ -192,11 +216,14 @@ local function CreatePreview(s)
     p.camera.orthoSize=1.9
     p.camera.nearClip=.01
     p.camera.farClip=10
+    coroutine.yield()
     p.failureReason='rendertexture'
     p.texture=Texture2D:new()
+    p.texture.name=p.token
     p.texture:SetNumLevels(1)
     assert(p.texture:SetSize(512,512,Graphics:GetRGBAFormat(),TEXTURE_RENDERTARGET),'render target')
     p.texture:SetFilterMode(FILTER_NEAREST)
+    coroutine.yield()
     p.viewport=Viewport:new(p.scene,p.camera)
     -- Binding has both overloads; the generated LSP stub only selects RenderPath.
     ---@diagnostic disable-next-line: param-type-mismatch
@@ -217,6 +244,7 @@ local function Rebuild(s)
     s.blueprint=assert(Builder.Compile(Single(s.config,s.weapon)))
     s.baseline=assert(Builder.Compile(Single(s.original,s.weapon)))
     s.flash={}
+    s.statRows=nil
     if previous and previous.geometry.weapon==s.weapon then
         for key,value in pairs(s.blueprint.stats) do
             if previous.stats[key]~=value then s.flash[key]=.35 end
@@ -245,7 +273,7 @@ end
 Layout=function(s)
     local w,h,safe=Draw.Metrics()
     s.width,s.height=w,h
-    s.safeKey=table.concat({safe.left,safe.top,safe.right,safe.bottom},':')
+    s.safeLeft,s.safeTop,s.safeRight,s.safeBottom=safe.left,safe.top,safe.right,safe.bottom
     local b=Box(safe.left+8,safe.top+4,w-safe.left-safe.right-16,h-safe.top-safe.bottom-8)
     s.box=b
     s.body=Box(b.x+4,b.y+60,b.w-8,math.max(56,b.h-136))
@@ -296,6 +324,14 @@ Layout=function(s)
     s.descriptionBox=Box(x,extrasY,bw,descriptionHeight)
     extrasY=extrasY+descriptionHeight;s.contentHeight=s.contentHeight+descriptionHeight
     s.previewBox,s.statsBox=preview,stats
+    s.fallbackBox=Box(preview.x,preview.y+4,preview.w*.5,preview.h-28)
+    s.previewParts={}
+    local slots=SLOT_ORDER[s.weapon]
+    local cellHeight=(preview.h-28)/#slots
+    for i,slot in ipairs(slots) do
+        local box=Box(preview.x+preview.w*.5,preview.y+4+(i-1)*cellHeight,preview.w*.5-2,cellHeight-2)
+        s.previewParts[i]={slot=slot,box=box,pixels=Box(box.x,box.y,box.w-26,box.h)}
+    end
     Add(s,'home','回正',Box(preview.x+preview.w-56,preview.y,56,56),function() Home(s) end,{body=true})
     for i,slot in ipairs(SLOT_ORDER[s.weapon]) do
         local sx,sy,sw=left.x,left.y+(i-1)*56,left.w
@@ -356,6 +392,16 @@ Layout=function(s)
         Edit(s,function() s.config[s.weapon]=Parts.DefaultWeapon(s.weapon) end)
     end)
     Add(s,'equip','装备并关闭',Box(b.x+120,footerY,b.w-120,56),function() M.Close() end,{active=true})
+    for _,button in ipairs(s.buttons) do
+        if button.part then
+            local box=button.box
+            button.thumbnailBox=Box(box.x+4,box.y+4,32,44)
+            local limit=math.max(1,math.floor((box.w-12)/12))
+            button.shortSub=(utf8.len(button.sub) or 0)<=limit and button.sub
+                or button.sub:sub(1,(utf8.offset(button.sub,limit) or 1)-1)..'…'
+        end
+    end
+    s.footerText=nil
 end
 local function At(s,x,y)
     for _,button in ipairs(s.buttons) do
@@ -417,29 +463,35 @@ end
 -- Front-most Z cell wins. Used for option thumbnails and native-preview fallback.
 local function Pixels(vg,s,cells,b,highlight,fixedGrip)
     if #cells==0 then return end
-    local minX,minY,maxX,maxY=math.huge,math.huge,-math.huge,-math.huge
-    local front={}
-    for _,cell in ipairs(cells) do
-        minX=math.min(minX,cell.x);maxX=math.max(maxX,cell.x)
-        minY=math.min(minY,cell.y);maxY=math.max(maxY,cell.y)
-        local k=cell.x..':'..cell.y
-        if not front[k] or cell.z>front[k].z then front[k]=cell end
+    if b.cells~=cells then
+        local minX,minY,maxX,maxY=math.huge,math.huge,-math.huge,-math.huge
+        local front={}
+        for _,cell in ipairs(cells) do
+            minX=math.min(minX,cell.x);maxX=math.max(maxX,cell.x)
+            minY=math.min(minY,cell.y);maxY=math.max(maxY,cell.y)
+            local k=cell.x..':'..cell.y
+            if not front[k] or cell.z>front[k].z then front[k]=cell end
+        end
+        local fit=math.min(b.w/(maxX-minX+1),b.h/(maxY-minY+1))
+        local pixel=math.max(2,math.floor(fit/2)*2)
+        local step=math.min(pixel,fit)
+        local x=Draw.Snap(b.x+(b.w-(maxX-minX+1)*step)/2)
+        local y=Draw.Snap(b.y+(b.h-(maxY-minY+1)*step)/2)
+        if fixedGrip then
+            pixel,step=2,2
+            x=Draw.Snap(b.x+b.w/2+minX*2);y=Draw.Snap(b.y+b.h*.64-maxY*2)
+        end
+        local pixels={}
+        for _,cell in pairs(front) do
+            pixels[#pixels+1]={x=x+math.floor((cell.x-minX)*step/2)*2,y=y+math.floor((maxY-cell.y)*step/2)*2,
+                channel=cell.channel,slot=cell.slot}
+        end
+        b.cells,b.pixels,b.pixelSize=cells,pixels,pixel
     end
-    local fit=math.min(b.w/(maxX-minX+1),b.h/(maxY-minY+1))
-    local pixel=math.max(2,math.floor(fit/2)*2)
-    -- Small silhouettes are sampled onto a 2dp grid; never crop tall bow limbs.
-    local step=math.min(pixel,fit)
-    local x=Draw.Snap(b.x+(b.w-(maxX-minX+1)*step)/2)
-    local y=Draw.Snap(b.y+(b.h-(maxY-minY+1)*step)/2)
-    if fixedGrip then
-        pixel,step=2,2
-        x=Draw.Snap(b.x+b.w/2+minX*2)
-        y=Draw.Snap(b.y+b.h*.64-maxY*2)
-    end
-    nvgSave(vg); nvgIntersectScissor(vg,b.x,b.y,b.w,b.h)
-    for _,cell in pairs(front) do
-        Draw.Rect(vg,x+math.floor((cell.x-minX)*step/2)*2,y+math.floor((maxY-cell.y)*step/2)*2,pixel,pixel,
-            ChannelColor(s,cell.channel),highlight and cell.slot~=highlight and .4 or 1)
+    nvgSave(vg);nvgIntersectScissor(vg,b.x,b.y,b.w,b.h)
+    for _,pixel in ipairs(b.pixels) do
+        Draw.Rect(vg,pixel.x,pixel.y,b.pixelSize,b.pixelSize,ChannelColor(s,pixel.channel),
+            highlight and pixel.slot~=highlight and .4 or 1)
     end
     nvgRestore(vg)
 end
@@ -454,23 +506,65 @@ local function PartCells(s,part)
     s.thumbnails[part.id]=cached
     return cached
 end
+local function NonzeroPixels(image)
+    local w,h=image:GetWidth(),image:GetHeight()
+    if w<=0 or h<=0 then return false end
+    -- Coarse nonempty check only, not a visual-quality assertion. Transparent
+    -- black is the configured RTT clear color. One async readback per build.
+    for y=0,h-1,math.max(1,math.floor(h/32)) do
+        for x=0,w-1,math.max(1,math.floor(w/32)) do
+            local pixel=image:GetPixel(x,y)
+            if pixel.a>0 or pixel.r>0 or pixel.g>0 or pixel.b>0 then return true end
+        end
+    end
+    return false
+end
+local function RequestPixels(s,p)
+    p.pixelStatus='pending'
+    local generation=p.generation
+    local ok=pcall(function()
+        p.texture:GetImageAsync(function(image)
+            local valid,nonzero=false,false
+            if image then valid,nonzero=pcall(NonzeroPixels,image);image:Dispose() end
+            if session~=s or s.preview~=p or p.generation~=generation then return end
+            p.pixelStatus=image and valid and (nonzero and 'nonzero' or 'zero') or 'unavailable'
+            print('Forge preview render: pixels '..RenderSummary(p))
+        end)
+    end)
+    if not ok then p.pixelStatus='unavailable' end
+end
 -- Require a receipt for this RTT view, not just texture/mesh allocation.
 -- GPU pixels/material appearance still require Web visual validation.
 local function DrawNativePreview(vg,s)
     local p=s.preview
-    if not p then return false end
+    if not p or not p.surface then return false end
     if p.context and p.context~=vg then ReleaseImage(p) end
     if not p.image then
         local handle=nvgCreateVideo(vg,p.texture)
         if type(handle)~='number' or handle<=0 then error('bridge') end
         p.image,p.context=handle,vg
     end
-    if p.job or not p.mesh or not p.rendered or p.mesh.vertexCount<=0 or not p.mesh.materialReady then return false end
+    if p.job or not p.mesh or p.mesh.vertexCount<=0 or not p.mesh.materialReady then return false end
     local b=s.previewBox
     local size=math.floor(math.min(b.w,b.h-24)/2)*2
     local x,y=Draw.Snap(b.x+(b.w-size)/2),b.y+2
-    nvgBeginPath(vg);nvgRect(vg,x,y,size,size)
-    nvgFillPaint(vg,nvgImagePattern(vg,x,y,size,size,0,p.image,1));nvgFill(vg)
+    if not p.paint or p.paintSize~=size or p.paintImage~=p.image then
+        p.paint=nvgImagePattern(vg,0,0,size,size,0,p.image,1);p.paintSize,p.paintImage=size,p.image
+    end
+    nvgSave(vg);nvgTranslate(vg,x,y)
+    nvgBeginPath(vg);nvgRect(vg,0,0,size,size)
+    nvgFillPaint(vg,p.paint);nvgFill(vg);nvgRestore(vg)
+    if p.drawFrame~=s.updateFrame then
+        p.drawFrames=p.drawFrame==s.updateFrame-1 and p.drawFrames+1 or 1
+        p.drawFrame=s.updateFrame
+    end
+    if not p.rendered then
+        if p.drawFrames>=3 and p.pixelStatus=='not_requested' then RequestPixels(s,p) end
+        if p.drawFrames<3 or (p.pixelStatus~='nonzero' and p.pixelStatus~='unavailable') then return false end
+        p.readyReason=p.pixelStatus=='nonzero' and 'three_draws_nonzero' or 'three_draws_unverified'
+        print('Forge preview render: relaxed '..p.readyReason..' '..RenderSummary(p))
+        p.surface:SetUpdateMode(SURFACE_MANUALUPDATE);p.updateMode='manual';p.rendered=true
+    else p.readyReason=p.readyReason or 'scene_token' end
     p.state='ready'
     if s.previewMode~='3d' then s.previewMode='3d';print('Forge preview: 3d') end
     return true
@@ -482,13 +576,12 @@ local function Preview(vg,s)
     if not ok then Fallback(s,'bridge',drawn);drawn=false end
     if not drawn then
         -- Useful pixels during creation AND after any failure/timeout.
-        Pixels(vg,s,s.blueprint.geometry.cells,Box(b.x,b.y+4,b.w*.5,b.h-28),s.slot,true)
-        local slots=SLOT_ORDER[s.weapon]
-        local cellHeight=(b.h-28)/#slots
-        for i,slot in ipairs(slots) do
+        Pixels(vg,s,s.blueprint.geometry.cells,s.fallbackBox,s.slot,true)
+        for _,item in ipairs(s.previewParts) do
+            local slot=item.slot
             local part=Parts.Get(s.config[s.weapon].parts[slot])
-            local box=Box(b.x+b.w*.5,b.y+4+(i-1)*cellHeight,b.w*.5-2,cellHeight-2)
-            Pixels(vg,s,PartCells(s,part),Box(box.x,box.y,box.w-26,box.h))
+            local box=item.box
+            Pixels(vg,s,PartCells(s,part),item.pixels)
             Draw.Text(vg,Parts.SlotNames[slot],box.x+box.w-24,box.y+box.h/2,12,C.paper)
         end
     end
@@ -511,21 +604,31 @@ end
 local function Stats(vg,s)
     local b=s.statsBox
     if not b then return end
+    if not s.statRows then
+        s.statRows={}
+        for i,entry in ipairs(s.weapon=='sword' and STAT_SWORD or STAT_BOW) do
+            local key,unit=entry[1],entry[4]
+            local value,before=StatValue(s.blueprint,key),StatValue(s.baseline,key)
+            local delta=value-before
+            s.statRows[i]={key=key,label=entry[2],text=Number(before,unit)..' → '..Number(value,unit),
+                filled=Clamp(math.floor(value/entry[3]*5+.5),0,5),
+                delta=math.abs(delta)>.001 and ((delta>0 and '+' or '')..Number(delta,unit)) or nil}
+        end
+        s.armorText='破甲 '..Number(s.baseline.stats.armorBreak,'×')..' → '..Number(s.blueprint.stats.armorBreak,'×')
+    end
     Draw.Text(vg,'当前装备 → 候选',b.x+4,b.y+10,12,C.brown)
-    for i,entry in ipairs(s.weapon=='sword' and STAT_SWORD or STAT_BOW) do
-        local key,unit=entry[1],entry[4]
-        local value,before=StatValue(s.blueprint,key),StatValue(s.baseline,key)
-        local delta=value-before
+    for i,entry in ipairs(s.statRows) do
+        local key=entry.key
         local y=b.y+28+(i-1)*32
         local flash=(s.flash[key] or 0)>0 and math.floor(s.clock*16)%2==0
-        Draw.Text(vg,entry[2],b.x+4,y,12,C.brown)
-        Draw.Text(vg,Number(before,unit)..' → '..Number(value,unit),b.x+b.w-4,y,12,flash and C.gold or C.brown,NVG_ALIGN_RIGHT)
-        local filled=Clamp(math.floor(value/entry[3]*5+.5),0,5)
+        Draw.Text(vg,entry.label,b.x+4,y,12,C.brown)
+        Draw.Text(vg,entry.text,b.x+b.w-4,y,12,flash and C.gold or C.brown,NVG_ALIGN_RIGHT)
+        local filled=entry.filled
         for j=1,5 do Draw.Rect(vg,b.x+4+(j-1)*12,y+10,8,6,j<=filled and C.gold or C.muted) end
-        if math.abs(delta)>.001 then Draw.Text(vg,(delta>0 and '+' or '')..Number(delta,unit),b.x+b.w-4,y+14,12,C.brown,NVG_ALIGN_RIGHT) end
+        if entry.delta then Draw.Text(vg,entry.delta,b.x+b.w-4,y+14,12,C.brown,NVG_ALIGN_RIGHT) end
     end
     if s.weapon=='sword' then
-        Draw.Text(vg,'破甲 '..Number(s.baseline.stats.armorBreak,'×')..' → '..Number(s.blueprint.stats.armorBreak,'×'),b.x+4,b.y+152,12,C.brown)
+        Draw.Text(vg,s.armorText,b.x+4,b.y+152,12,C.brown)
     end
 end
 local function Truncate(text,limit)
@@ -544,9 +647,9 @@ local function Button(vg,s,button)
         Draw.Image(vg,button.icon,b.x+(b.w-40)/2,b.y)
         Draw.Text(vg,button.label,b.x+b.w/2,b.y+44,12,color,NVG_ALIGN_CENTER)
     elseif button.part then
-        Pixels(vg,s,PartCells(s,button.part),Box(b.x+4,b.y+4,32,44))
+        Pixels(vg,s,PartCells(s,button.part),button.thumbnailBox)
         Draw.Text(vg,button.label,b.x+40,b.y+20,12,color)
-        Draw.Text(vg,Truncate(button.sub,math.floor((b.w-12)/12)),b.x+6,b.y+62,12,color)
+        Draw.Text(vg,button.shortSub,b.x+6,b.y+62,12,color)
     elseif button.swatch then
         Draw.Rect(vg,b.x+6,b.y+8,10,10,button.swatch)
         Draw.Text(vg,button.label,b.x+20,b.y+14,12,color)
@@ -559,8 +662,8 @@ end
 local function Render(vg,s)
     if session~=s or s.closing then return end
     local w,h,safe=Draw.Metrics()
-    local safeKey=table.concat({safe.left,safe.top,safe.right,safe.bottom},':')
-    if w~=s.width or h~=s.height or safeKey~=s.safeKey then s.pointer=nil; Layout(s) end
+    if w~=s.width or h~=s.height or safe.left~=s.safeLeft or safe.top~=s.safeTop
+        or safe.right~=s.safeRight or safe.bottom~=s.safeBottom then s.pointer=nil;Layout(s) end
     local b=s.box
     Draw.Begin(vg,true)
     Draw.Rect(vg,0,0,w,h,C.deep,.8)
@@ -578,13 +681,16 @@ local function Render(vg,s)
         Draw.Rect(vg,s.body.x+s.body.w-2,s.body.y+s.scroll/s.maxScroll*(s.body.h-thumb),2,thumb,C.gold)
     end
     for _,button in ipairs(s.buttons) do if not button.body then Button(vg,s,button) end end
-    Draw.Text(vg,Truncate(s.message or 'Web 刷新后配置会恢复默认',math.floor((b.w-8)/12)),b.x+4,b.y+b.h-8,12,C.brown)
+    if not s.footerText or s.footerMessage~=s.message then
+        s.footerMessage=s.message;s.footerText=Truncate(s.message or 'Web 刷新后配置会恢复默认',math.floor((b.w-8)/12))
+    end
+    Draw.Text(vg,s.footerText,b.x+4,b.y+b.h-8,12,C.brown)
     Draw.Finish(vg)
 end
 local Layer=UI.Panel:Extend('RuinsForgePanel')
 function Layer:Render(vg)
     local s=session
-    if s and not s.closing then UI.QueueOverlay(function(context) Render(context,s) end) end
+    if s and not s.closing then UI.QueueOverlay(s.renderOverlay) end
 end
 local function Released()
     if input.numTouches>0 or input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT) or input:GetMouseButtonDown(MOUSEB_MIDDLE) then return false end
@@ -623,6 +729,13 @@ local function Update(_,_,data)
     end
     if not Safe(s.callbacks) then M.Close(true);return end
     s.updateFrame=s.updateFrame+1
+    if s.previewWorker then
+        local worker=s.previewWorker
+        local ok,reason=coroutine.resume(worker)
+        if not ok then Fallback(s,s.preview and s.preview.failureReason or 'scene',reason)
+        elseif coroutine.status(worker)=='dead' then s.previewWorker=nil end
+        return
+    end
     local dt=math.max(0,math.min(.1,data:GetFloat('TimeStep')))
     s.clock=s.clock+dt
     for key,value in pairs(s.flash) do s.flash[key]=math.max(0,value-dt) end
@@ -691,9 +804,9 @@ function M.Open(rigOrCallbacks)
         undo=draft and Copy(draft.undo),owner=owner,scroll=0,clock=0,pauseSpin=0,yaw=25,autoSpin=true,
         thumbnails={},flash={},root=root,updateFrame=0,mouseMode=input.mouseMode,message=draft and '已恢复草稿 · Web刷新后配置会恢复默认' or nil}
     session=s
+    s.renderOverlay=function(context) Render(context,s) end
     Rebuild(s);Layout(s)
-    local ok,reason=pcall(CreatePreview,s)
-    if not ok then Fallback(s,s.preview and s.preview.failureReason or 'scene',reason) end
+    s.previewWorker=coroutine.create(function() CreatePreview(s) end)
     s.layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',
         onPointerDown=Down,onPointerMove=Move,onPointerUp=Up,onPointerCancel=Cancel,
         onClick=function(_,event) if event then Consume(event) end end}

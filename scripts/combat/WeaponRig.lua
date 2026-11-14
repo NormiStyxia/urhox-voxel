@@ -93,6 +93,7 @@ local Store=require("combat.WeaponStore")
 ---@field recoil number
 ---@field glowColors Color[]
 ---@field glowBucket integer
+---@field trailColors table
 ---@field arrivalFresh boolean
 local Rig={}
 Rig.__index=Rig
@@ -180,7 +181,7 @@ function Rig:Init(scene,world,controller)
     self.hangReady=false
     self.bowDraw,self.bowStage,self.bowArrowOffset=0,0,Vector3()
     self.bowDrawMeshes={}
-    self.glowColors,self.glowBucket={},0
+    self.glowColors,self.glowBucket,self.trailColors={},0,{}
     ---@type table<string, Node>
     local bones=controller.nomi.bones
     self.body=assert(bones.body,"WeaponRig requires body bone")
@@ -210,6 +211,7 @@ function Rig:Init(scene,world,controller)
     self:BuildSwordImages()
     self:BuildBowImages()
     self:BuildVisualPools('sword');self:BuildVisualPools('bow')
+    self:PrepareTrailColor('sword');self:PrepareTrailColor('bow')
     self:UpdateTrailColor()
 end
 
@@ -385,15 +387,26 @@ function Rig:SetAfterimages(list)
     self.imageElapsed=0
 end
 
-function Rig:UpdateTrailColor()
-    local preset=Parts.ColorPresets[self.config[self.active].colors.accent]
-    local rgb=preset.rgb
+---@param weapon string
+function Rig:PrepareTrailColor(weapon)
+    local index=self.config[weapon].colors.accent
+    if self.trailColors[weapon] and self.trailColors[weapon].index==index then return end
+    local preset=Parts.ColorPresets[index]
+    local rgb=preset.rgb --[[@as number[] ]]
     local r,g,b=rgb[1]/255,rgb[2]/255,rgb[3]/255
-    self.world:SetPaletteEntry(Builder.TRAIL_PALETTE,Color(r,g,b,1),1000)
-    self.world:SetPaletteEntryPBR(Builder.TRAIL_PALETTE,0.5,0,0.5,Color(r*1.2,g*1.2,b*1.2,0.9))
-    self.world:SetPaletteEntry(WHITE_PALETTE,Color(1,1,1,1),1000)
-    self.world:SetPaletteEntryPBR(WHITE_PALETTE,.5,0,.5,Color(1.3,1.3,1.3,1))
-    for i=1,8 do local strength=.9+(i-1)/70;self.glowColors[i]=Color(r*strength,g*strength,b*strength,.6) end
+    local colors={index=index,color=Color(r,g,b,1),emissive=Color(r*1.2,g*1.2,b*1.2,.9),
+        white=Color(1,1,1,1),whiteEmissive=Color(1.3,1.3,1.3,1),glow={}}
+    for i=1,8 do local strength=.9+(i-1)/70;colors.glow[i]=Color(r*strength,g*strength,b*strength,.6) end
+    self.trailColors[weapon]=colors
+end
+
+function Rig:UpdateTrailColor()
+    local colors=self.trailColors[self.active]
+    self.world:SetPaletteEntry(Builder.TRAIL_PALETTE,colors.color,1000)
+    self.world:SetPaletteEntryPBR(Builder.TRAIL_PALETTE,.5,0,.5,colors.emissive)
+    self.world:SetPaletteEntry(WHITE_PALETTE,colors.white,1000)
+    self.world:SetPaletteEntryPBR(WHITE_PALETTE,.5,0,.5,colors.whiteEmissive)
+    self.glowColors=colors.glow
     self.glowBucket=0
 end
 
@@ -580,6 +593,7 @@ function Rig:Apply(config)
     for k,v in pairs(blueprint.config.parts) do value.parts[k]=v end
     for k,v in pairs(blueprint.config.colors) do value.colors[k]=v end
     self.config[weapon]=value
+    self:PrepareTrailColor(weapon)
     if weapon=='sword' then self:BuildSwordImages() else self:BuildBowImages() end
     self:BuildVisualPools(weapon)
     if weapon==self.active then self:UpdateTrailColor(); self:ClearTrail() end

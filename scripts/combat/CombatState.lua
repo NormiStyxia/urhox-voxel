@@ -18,6 +18,70 @@ function M.Log(key,format,...)
     local write=options.log or print
     write(string.format(format,...))
 end
+-- Per-subsystem circuit breaker. No per-frame table/closure construction.
+local faults={}
+local clockKind='system'
+local function EngineMilliseconds()
+    local timer=time or (GetTime and GetTime())
+    if timer and timer.GetSystemTime then return timer:GetSystemTime() end
+end
+local function Milliseconds()
+    local ok,value=pcall(EngineMilliseconds)
+    if ok and type(value)=='number' and value==value then clockKind='system';return value end
+    clockKind='cpu-fallback'
+    return os.clock()*1000
+end
+function M.ResetIsolation() for key in pairs(faults) do faults[key]=nil end end
+function M.Isolated(key,fn,...)
+    local now=Milliseconds()
+    local fault=faults[key]
+    if fault and now<fault.resumeAt then return false end
+    local ok,a,b,c,d=pcall(fn,...)
+    if ok then return true,a,b,c,d end
+    if not fault then fault={lastLog=-math.huge};faults[key]=fault end
+    fault.resumeAt=now+3000
+    if now-fault.lastLog>=5000 then
+        fault.lastLog=now
+        local textOK,message=pcall(tostring,a)
+        pcall(print,'Isolated error: '..key..' '..(textOK and message or '<unprintable error>'))
+    end
+    return false
+end
+-- Event trace only; deferred HUD/audio work is sampled for 600ms after swap.
+M.swapPerf=false
+local swapPerf={pending=false}
+function M.BeginSwapPerf()
+    if not M.swapPerf then return end
+    M.FlushSwapPerf(true)
+    swapPerf.pending=true
+    swapPerf.at=Milliseconds()
+    swapPerf.total,swapPerf.rigSetActive,swapPerf.animPlay,swapPerf.hudRebuild,swapPerf.audio=0,0,0,0,0
+    swapPerf.hudMeasured=false
+    swapPerf.accepted=nil
+end
+function M.EndSwapPerf(accepted)
+    if swapPerf.pending then
+        swapPerf.total=Milliseconds()-swapPerf.at
+        if accepted~=nil then swapPerf.accepted=accepted end
+    end
+end
+function M.PerfCall(part,fn,...)
+    if not M.swapPerf or not swapPerf.pending or (part=='hudRebuild' and swapPerf.hudMeasured) then return fn(...) end
+    local at=Milliseconds()
+    local ok,a,b,c,d=pcall(fn,...)
+    swapPerf[part]=swapPerf[part]+math.max(0,Milliseconds()-at)
+    if part=='hudRebuild' then swapPerf.hudMeasured=true end
+    if not ok then error(a,0) end -- outer subsystem breaker owns the failure
+    return a,b,c,d
+end
+function M.FlushSwapPerf(force)
+    if not swapPerf.pending or (not force and Milliseconds()-swapPerf.at<600) then return end
+    swapPerf.pending=false
+    if M.swapPerf then
+        print(string.format('Perf: weaponSwap total=%.3f rigSetActive=%.3f animPlay=%.3f hudRebuild=%.3f audio=%.3f ms window=600 hudSample=%s accepted=%s clock=%s',
+            swapPerf.total,swapPerf.rigSetActive,swapPerf.animPlay,swapPerf.hudRebuild,swapPerf.audio,tostring(swapPerf.hudMeasured),tostring(swapPerf.accepted),clockKind))
+    end
+end
 local function SetState(nextState,reason)
     if nextState==state then return end
     M.Log('state:'..state..':'..nextState,'Combat: state %s->%s %s',state,nextState,reason)
@@ -127,7 +191,7 @@ function M.SetWeapon(value)
     if value == weapon then return true end
     if busy or transition > 0 or mounted or dead then return false end
     weapon, transition, idle = value, .4, 0
-    if options.rig then options.rig:SetActive(value) end
+    if options.rig then M.PerfCall('rigSetActive',options.rig.SetActive,options.rig,value) end
     if state ~= M.EXPLORE then SetState(M.IDLE,'weapon'); Pose('back') end
     if options.cancel then options.cancel('weapon') end
     return true

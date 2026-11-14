@@ -9,7 +9,7 @@ local caster={charging=false,charge=0}
 function caster:HandleCharge(on) charges[#charges+1]=on;self.charging=on end
 function caster:Cast(id) casts[#casts+1]=id end
 function caster:Say(text) self.message=text end
-local env=setmetatable({M={mounted=false,debugOn=false,ride={mode='free'},ctrl={state='IDLE'}},
+local env=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,M={mounted=false,debugOn=false,ride={mode='free'},ctrl={state='IDLE'}},
     caster_=caster,voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
     KEY_1=1,KEY_2=2,KEY_3=3,KEY_E=4,KEY_Q=5,MOUSEB_LEFT=1,
     CombatState={CanUseTime=function() return state.allowed end,InCombat=function() return state.combat end},
@@ -46,7 +46,7 @@ env.M.ride.mode='free';held,allowed=env.M.readStreamInput();assert(not held and 
 local cue=assert(source:match('(function Ruins_HandleEnemyAttackCue.-)\nend'))..'\nend'
 env.M.combat={};env.DebugLog={Log=function() end}
 local sounds={}
-env.CombatAudio={Play=function(name,opts) sounds[#sounds+1]=name end}
+env.CombatAudio={Play=function(name,opts) sounds[#sounds+1]=name end};env.combatAudioPort=env.CombatAudio
 assert(load(cue,'Scene.EnemyAttackCue','t',env))()
 local fields={EnemyId='sentry_1',Attack='stone',Phase='telegraph',Position={x=1,y=2,z=3},Duration=.9,Event='enemy_windup',Enemy='sentry',Material='stone',Tier='light'}
 local event={GetBool=function(_,key) return fields[key]==true end,GetString=function(_,key) return fields[key] end,GetFloat=function(_,key) return fields[key] end,
@@ -122,7 +122,7 @@ assert(not source:find('combatParticles_:Release',1,true),'borrower must not rel
 local rigStart=assert(source:find('local offset,euler=combatAnim_:GetWeaponPose()',1,true))
 local swing=assert(source:find('combatRig_:SetSwing(offset,euler)',rigStart,true))
 local sample=assert(source:find('combatRig_:GetAfterimagePose()',rigStart,true))
-local update=assert(source:find('combatRig_:Update(dt)',rigStart,true))
+local update=assert(source:find("Safe('Rig.Update',combatRig_.Update,combatRig_,dt)",rigStart,true))
 assert(swing<sample and sample<update,'SetSwing this frame before world pose sample, then advance Rig once')
 print('PASS no duplicate enemy particles, player/wall shared pool table port, borrower cleanup, current-frame slide snapshot order')
 
@@ -139,7 +139,7 @@ print('PASS independent ray exclusion for main weapon/trail/sword+bow images/cha
 -- F11 interruption must leave the original key available to its normal handler.
 local keyBody=assert(source:match('(function Ruins_HandleKeyDown.-)\nend'))..'\nend'
 local stoppedTest,resumed=0,0
-local keyEnv=setmetatable({combatTest_={active=true,Stop=function()stoppedTest=stoppedTest+1 end},
+local keyEnv=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,combatTest_={active=true,Stop=function()stoppedTest=stoppedTest+1 end},
  KEY_F11=111,KEY_W=119,KEY_F10=110,KEY_ESCAPE=27,KEY_E=101,KEY_Q=113,KEY_A=97,KEY_S=115,KEY_D=100,
  ForgePanel={IsOpen=function()return false end},SettingsMenu={IsOpen=function()return false end,IsBlocked=function()return false end},
  TouchInput={IsEnabled=function()return false end},pointer={Resume=function()resumed=resumed+1 end},M={}}, {__index=_G})
@@ -158,7 +158,7 @@ local Audio=require('combat.CombatAudio')
 local audioMock=require('combat.audio_mock').New()
 Audio.New(audioMock.scene)
 local queued,updates,elapsed=0,0,0
-local audioEnv={combatAudioWarmup_=0,CombatAudio={
+local audioEnv={Safe=function(_,fn,...)return pcall(fn,...)end,combatAudioWarmup_=0,CombatAudio={
     Preload=function() queued=queued+1; return Audio.Preload() end,
     Update=function(dt) updates=updates+1;elapsed=elapsed+dt;Audio.Update(dt) end}}
 local warmupBody=assert(source:match('(local function UpdateCombatAudio.-)\nend'))..'\nend\nreturn UpdateCombatAudio'

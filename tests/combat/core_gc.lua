@@ -5,7 +5,7 @@ local now,cpu,heap=0,0,1024
 local pause,mul,steps=200,100,0
 local logs,calls={},{}
 local timer={GetSystemTime=function()return now end}
-local env={M={},GetTime=function()return timer end,os={clock=function()return cpu end},math=math,string=string,
+local env={Safe=function(_,fn,...)return pcall(fn,...)end,CombatState={FlushSwapPerf=function()end},M={},GetTime=function()return timer end,os={clock=function()return cpu end},math=math,string=string,
  print=function(text)logs[#logs+1]=text end,
  collectgarbage=function(action,a,b)
   calls[#calls+1]=action

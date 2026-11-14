@@ -14,6 +14,9 @@ local autoRender=true
 local meshFailure,queueFailure=false,false
 local geometryOptions={}
 local materialMissing=false
+local pixelResult='unavailable'
+local readbackRequests=0
+local pendingReadback
 local nativeFailure,bridgeFailure,sizeFailure=false,false,false
 local liveContext='vg'
 local videoCreates,videoDeletes=0,0
@@ -54,13 +57,15 @@ local function MakeNode(name,parent)
     end
     node.LookAt=function() return true end
     node.Dispose=function(self) assert(not self.disposed);self.disposed=true end
+    node.SetVar=function(self,key,value) self[key]=value end
+    node.GetVar=function(self,key) return {GetString=function() return self[key] end} end
     node.CreateComponent=function(self,kind)
         assert(kind~='VoxelPhysicsWorld','forge must not create a second voxel physics world')
         if kind=='CustomGeometry' then
             if meshFailure then error('CustomGeometry failure') end
             local g=Mock.CustomGeometry(self,geometryOptions);geometries[#geometries+1]=g;return g
         end
-        return {SetBoundingBox=function() end,SetAmbientColor=function() end,SetLightType=function() end,SetBrightness=function() end}
+        return {SetBoundingBox=function() end,SetAmbientColor=function() end,SetLightType=function() end,SetBrightness=function() end,GetNode=function() return self end}
     end
     node.CreateScriptObject=function()
         local receiver={}
@@ -84,6 +89,14 @@ rawset(_G,'Texture2D',{new=function()
     texture.SetSize=function(_,w,h) assert(w==512 and h==512);return not sizeFailure end
     texture.SetFilterMode=function(_,mode) assert(mode==FILTER_NEAREST) end
     texture.GetRenderSurface=function(self) return self.surface end
+    texture.GetImageAsync=function(_,callback)
+        readbackRequests=readbackRequests+1
+        if pixelResult=='deferred' then pendingReadback=callback;return end
+        if pixelResult=='unavailable' then callback(nil);return end
+        callback({GetWidth=function() return 32 end,GetHeight=function() return 32 end,
+            GetPixel=function() return {r=0,g=0,b=0,a=pixelResult=='nonzero' and 1 or 0} end,Dispose=function() end})
+    end
+    texture.surface.GetParentTexture=function() return texture end
     texture.Dispose=function(self) assert(self.surface.viewports==0);assert(not self.disposed);self.disposed=true end
     texture.surface.SetViewport=function(self) self.viewports=1 end
     texture.surface.SetUpdateMode=function(self,mode) assert(mode==SURFACE_MANUALUPDATE or mode==SURFACE_UPDATEALWAYS);self.mode=mode end
@@ -103,6 +116,7 @@ end})
 rawset(_G,'nvgCreateVideo',function() videoCreates=videoCreates+1;return bridgeFailure and 0 or videoCreates end)
 rawset(_G,'nvgDeleteVideo',function() videoDeletes=videoDeletes+1 end)
 for _,name in ipairs({'nvgSave','nvgRestore','nvgIntersectScissor','nvgTranslate','nvgBeginPath','nvgRect','nvgFillPaint','nvgImagePattern','nvgFill'}) do rawset(_G,name,function() end) end
+rawset(_G,'nvgImagePattern',function() return {} end) -- allocating paint, cached after warmup
 local root={children={}}
 function root:AddChild(child) self.children[#self.children+1]=child;child.parent=self end
 function root:RemoveChild(child)
@@ -224,7 +238,9 @@ local safeToOpen=true
 local function Open(options)
     options=options or {}
     options.canOpen=options.canOpen or function() return safeToOpen end
-    return Forge.Open(options)
+    local opened=Forge.Open(options)
+    if opened and State().previewWorker then Tick(4) end
+    return opened
 end
 local function Flush()
     for _=1,200 do
@@ -506,9 +522,9 @@ assert(receiptPreview.queued and receiptPreview.state=='awaiting_render')
 eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Scene={}}))
 assert(not receiptPreview.rendered and receiptPreview.endViews==1 and receiptPreview.sceneMatches==0 and receiptPreview.surfaceMatches==1)
 eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Surface={}}))
-assert(not receiptPreview.rendered and receiptPreview.endViews==2 and receiptPreview.sceneMatches==1 and receiptPreview.surfaceMatches==1)
+assert(receiptPreview.rendered and receiptPreview.endViews==2 and receiptPreview.sceneMatches==1 and receiptPreview.surfaceMatches==1,'scene token alone is sufficient; surface is diagnostic')
 eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false))
-assert(receiptPreview.rendered and receiptPreview.matchedViews==1 and receiptPreview.pointerErrors==0)
+assert(receiptPreview.rendered and receiptPreview.matchedViews==2 and receiptPreview.pointerErrors==0)
 assert(receiptPreview.surface.mode==SURFACE_MANUALUPDATE and Forge.PreviewMode()==nil)
 assert(receiptPreview.lastReceipt:find('/ptr',1,true),'record typed pointer accessor used')
 Render();assert(Forge.PreviewMode()=='3d')
@@ -528,6 +544,82 @@ eventHandlers.EndViewRender(nil,nil,voidEvent)
 assert(receiptPreview.rendered and receiptPreview.lastReceipt:find('/void',1,true))
 Render();assert(Forge.PreviewMode()=='3d')
 Forge.ForceClose();autoRender=true
+-- Open does not create the Scene/RTT/batch meshes on the caller's first frame.
+local sceneCount,textureCount,geometryCount=#scenes,#textures,#geometries
+assert(Forge.Open({canOpen=function() return true end}))
+assert(State().previewWorker and not State().preview and #scenes==sceneCount and #textures==textureCount and #geometries==geometryCount)
+Tick();assert(#scenes==sceneCount+1 and #textures==textureCount and #geometries==geometryCount)
+Forge.ForceClose();assert(scenes[#scenes].disposed,'close during staged startup releases the partial scene')
+-- New wrappers for the same native Scene/Surface must match stable markers.
+autoRender=false;assert(Open());Flush();receiptPreview=State().preview
+local wrappedScene={GetVar=function(_,key) assert(key=='ForgePreview');return {GetString=function() return receiptPreview.token end} end}
+local wrappedTexture={name=receiptPreview.token}
+local wrappedSurface={GetParentTexture=function() return wrappedTexture end}
+assert(wrappedScene~=receiptPreview.scene and wrappedSurface~=receiptPreview.surface)
+eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Scene=wrappedScene,Surface=wrappedSurface,Texture=wrappedTexture}))
+assert(receiptPreview.rendered and receiptPreview.matchedViews==1 and receiptPreview.surfaceMatches==1)
+assert(receiptPreview.lastReceipt:find('scene_token='..receiptPreview.token,1,true))
+Render();assert(Forge.PreviewMode()=='3d');Forge.ForceClose()
+-- No useful event bindings: three distinct drawn frames plus optional readback.
+for _,pixels in ipairs({'nonzero','unavailable','zero'}) do
+    pixelResult=pixels
+    assert(Open());Flush();receiptPreview=State().preview
+    local readsBefore=readbackRequests
+    for _=1,2 do Tick();Render();Render();assert(Forge.PreviewMode()==nil,'same-frame repeated draw does not count twice') end
+    Tick();Render()
+    assert(readbackRequests==readsBefore+1)
+    if pixels=='zero' then
+        assert(Forge.PreviewMode()==nil)
+        eventHandlers.Update(nil,nil,{GetFloat=function() return 5 end})
+        assert(Forge.PreviewMode()=='fallback','confirmed empty texture must not be labelled ready')
+    else
+        assert(Forge.PreviewMode()=='3d' and receiptPreview.readyReason==(pixels=='nonzero' and 'three_draws_nonzero' or 'three_draws_unverified'))
+    end
+    Forge.ForceClose()
+end
+-- Late readbacks from a replaced build or a closed overlay cannot mark the
+-- new preview ready; their caller-owned Image is still released exactly once.
+pixelResult='deferred'
+assert(Open());Flush();receiptPreview=State().preview
+for _=1,3 do Tick();Render() end
+assert(receiptPreview.pixelStatus=='pending' and pendingReadback)
+local staleReadback=pendingReadback
+local oldGeneration=receiptPreview.generation
+Click('preset_fast')
+assert(receiptPreview.generation>oldGeneration and receiptPreview.pixelStatus=='not_requested')
+local disposedPixels=0
+local function ReadbackImage()
+    return {GetWidth=function() return 1 end,GetHeight=function() return 1 end,
+        GetPixel=function() return {r=1,g=1,b=1,a=1} end,Dispose=function() disposedPixels=disposedPixels+1 end}
+end
+staleReadback(ReadbackImage())
+assert(disposedPixels==1 and receiptPreview.pixelStatus=='not_requested')
+Flush();for _=1,3 do Tick();Render() end
+assert(receiptPreview.pixelStatus=='pending')
+local closedReadback=pendingReadback
+Forge.ForceClose();closedReadback(ReadbackImage());assert(disposedPixels==2 and Forge.PreviewMode()==nil)
+pixelResult='unavailable';autoRender=true
+-- Reproducible Lua allocation probe: exclude mock text recording, warm caches,
+-- stop GC for 240 draws. Native graphics allocations are not measured here.
+local recordedText=Draw.Text
+Draw.Text=function() end
+for _,fallback in ipairs({false,true}) do
+    nativeFailure=fallback
+    assert(Open());Flush();Tick();Render()
+    local current=State()
+    for _=1,20 do current.layer:Render(liveContext) end
+    local format=string.format
+    string.format=function() error('steady forge render must not format strings') end
+    collectgarbage('collect');collectgarbage('stop')
+    local before=collectgarbage('count')
+    for _=1,240 do current.layer:Render(liveContext) end
+    local after=collectgarbage('count');collectgarbage('restart');string.format=format
+    local perFrame=(after-before)/240
+    print(string.format('BENCH %s %.6f KiB/frame (240 frames, GC stopped, drawing stubs no recording)',fallback and '2d' or '3d',perFrame))
+    assert(perFrame<1,'steady render regressed above 1 KiB/frame in the isolated Lua probe')
+    Forge.ForceClose()
+end
+Draw.Text=recordedText;nativeFailure=false
 for _,g in ipairs(geometries) do assert(g.node.removed) end
 for _,texture in ipairs(textures) do assert(texture.disposed) end
 for _,createdScene in ipairs(scenes) do assert(createdScene.disposed) end

@@ -73,10 +73,13 @@ function C.New(opts)
 end
 -- Injected sound port keeps offline simulations engine-independent.
 function C:Sound(name,opts)
-    if self.o.audio then return self.o.audio.Play(name,opts or {pos=self.o.position()}) end
+    if self.o.audio then
+        local _,handle=self.state.Isolated('Audio.Play',self.state.PerfCall,'audio',self.o.audio.Play,name,opts or {pos=self.o.position()})
+        return handle
+    end
 end
 function C:StopDrawSound()
-    if self.drawSound and self.o.audio then self.o.audio.Stop(self.drawSound) end
+    if self.drawSound and self.o.audio then self.state.Isolated('Audio.Stop',self.o.audio.Stop,self.drawSound) end
     self.drawSound=nil
 end
 function C:Flash(kind)
@@ -92,7 +95,7 @@ function C:Play(id,fadeIn)
         local d=self.moveDir or -f
         params={moveX=d.x*f.z-d.z*f.x,moveZ=d:DotProduct(f),bow=self.state.GetWeapon()=='bow' and 1 or 0}
     end
-    local handle=self.anim:Play(id,{stats=stats,speed=speed,fadeIn=fadeIn,params=params})
+    local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,{stats=stats,speed=speed,fadeIn=fadeIn,params=params})
     if not handle then return false end
     self.clip,self.handle=id,handle
     self.whoosh,self.whooshTime=false,0
@@ -138,7 +141,7 @@ function C:Cancel(reason,keepProtection)
     if keepProtection then
         if cancelledHandle then self.anim:Stop(cancelledHandle,0) end
     else self.anim:Stop(nil,0) end
-    self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose(self.state.GetPose())
+    self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose(self.state.GetPose())
     if not self.draining and not keepProtection then self.anim:Poll() end
     self.state.SetBusy(false)
     if self.o.clear then self.o.clear(reason) end
@@ -208,7 +211,7 @@ function C:Action(kind,axis)
         self:Cancel('dodge',true) -- discard shot; retain independent getup tail
         self.state.Activity(true)
         self.moveDir,self.slideFacing=dir,facing
-        self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose('hand')
+        self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose('hand')
         if not self:Play('dodge_slide',.04) then return false end
         -- Clear the previous strike before the first slide snapshot at .04s.
         -- Scene restores the quality/combat trail switch on its next pose pass.
@@ -418,7 +421,7 @@ function C:Events()
         elseif e.name=='weapon_ready' then
             if not self.rig.PopEvents then self:Flash('draw'); self:Sound('blade_draw') end
             if self.clip:find('weapon_swap_',1,true) then
-                self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose('back'); self.state.FinishTransition()
+                self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose('back'); self.state.FinishTransition()
             else self.rig:SetPose('hand') end
         elseif e.name=='weapon_stowed' or e.name=='weapon_drop' then
             if e.name=='weapon_stowed' and not self.rig.PopEvents then self:Flash('sheath'); self:Sound('blade_sheath') end
@@ -590,15 +593,17 @@ function C:Update(dt,controls)
 end
 function C:Swap()
     if not self:CanCancel() or self.dead then return false end
+    self.state.BeginSwapPerf()
     local old,pose=self.state.GetWeapon(),self.state.GetPose()
     self.state.SetBusy(false)
     local nextWeapon=old=='sword' and 'bow' or 'sword'
     local ok=self.state.SetWeapon(nextWeapon)
     if ok then
         self:Cancel('swap')
-        self.rig:SetActive(old); self.rig:SetPose(pose)
+        self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,old); self.rig:SetPose(pose)
         self:Play('weapon_swap_'..old..'_to_'..nextWeapon)
     end
+    self.state.EndSwapPerf(ok)
     return ok
 end
 function C:MoveScale()

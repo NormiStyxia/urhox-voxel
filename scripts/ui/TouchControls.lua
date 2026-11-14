@@ -5,6 +5,7 @@ local Input = require('ui.TouchInput')
 local Draw = require('ui.PixelDraw')
 local SettingsMenu = require('ui.SettingsMenu')
 local Settings = require('ruins.GameSettings')
+local CombatState=require('combat.CombatState')
 local M = { menuOpen=false }
 local provider, onModeChanged, onCancel
 local owners, buttons = {}, {}
@@ -244,7 +245,7 @@ local function DrawSet(vg,mode,alpha,offset)
     end end
 end
 local Layer=UI.Panel:Extend('RuinsTouchControls')
-function Layer:Render(vg)
+local function RenderControls(self,vg)
     if not Input.IsEnabled() or state.blocked or SettingsMenu.IsBlocked() then return end
     Draw.Begin(vg)
     local alpha=idle>=3 and .45 or .78
@@ -275,6 +276,11 @@ function Layer:Render(vg)
         for i,line in ipairs(lines) do Draw.Text(vg,line,x+w/2,y+22+(i-1)*22,12,Draw.colors.brown,NVG_ALIGN_CENTER) end
     end
     Draw.Finish(vg)
+end
+function Layer:Render(vg)
+    local depth=Draw.Depth(vg)
+    CombatState.Isolated('Touch.Render',RenderControls,self,vg)
+    Draw.Unwind(vg,depth)
 end
 function M.Attach(parent,getState,changed,cancelled)
     if not parent then return end
