@@ -68,7 +68,7 @@ local function Run(fps,wall)
     end
     for i=1,3 do
         tick({allowed=true,attackTap=true})
-        for _=1,math.ceil(fps*.8) do tick() end
+        for _=1,math.ceil(fps*.6) do tick() end
     end
     for i=1,3 do assert((damage['sword_light_'..i] or 0)==(wall and 0 or 10),'each light stage must settle once') end
     for _,full in ipairs({false,true}) do

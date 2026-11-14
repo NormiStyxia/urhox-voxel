@@ -43,6 +43,7 @@ local BONE_NAMES = {"body","arm_right","arm_left","head","leg_right","leg_left"}
 ---@field sample number
 ---@field motion number
 ---@field ik table<string, CombatIKResult>
+---@field handWeight number Smoothed weaponInHand value for slide arms.
 ---@class CombatArm
 ---@field shoulder Vector3
 ---@field grip Vector3
@@ -126,6 +127,7 @@ A.DefaultDodge = Data.DefaultDodge
 local function clamp(v,lo,hi) return math.max(lo,math.min(hi,v)) end
 local function finite(v) return type(v)=="number" and v==v and math.abs(v)<math.huge end
 local function ease(name,x)
+    if name=="smoothStep" then return x*x*(3-2*x) end
     if name=="inQuad" then return x*x end
     if name=="outQuad" then return 1-(1-x)*(1-x) end
     if name=="inOutQuad" then return x<.5 and 2*x*x or 1-(-2*x+2)^2/2 end
@@ -275,7 +277,7 @@ local function pathPole(path)
     return Vector3(0,1,0)
 end
 ---@param c CombatClip
-local function boneSample(c,name,p,params)
+local function boneSample(c,name,p,params,handWeight)
     local tracks=(params.legacyPose==1 and c.legacyKeys) or c.keys
     local track=(params.bow==1 and c.bowKeys and c.bowKeys[name]) or tracks[name]
     local x,y,z=vectorSample(track,p)
@@ -284,19 +286,32 @@ local function boneSample(c,name,p,params)
         if dz==nil then dz=-1 end
         local length=math.sqrt(dx*dx+dz*dz)
         if length>EPS then dx,dz=dx/length,dz/length else dx,dz=0,-1 end
-        local lean=scalarSample(c.lean,p)
         local bodyPitch=vectorSample(c.keys.body,p)
         if name=="body" then
-            x=6*(1-lean)+x*dz*lean
+            x=4+x*dz
+            y=y*dx
             -- Upper torso extends +Y: negative roll tips it toward +X.
-            z=-12*dx*(bodyPitch/30)*lean
+            z=-bodyPitch*.5*dx
         elseif name=="head" then
-            x=3*(1-lean)+x*dz*lean
-            z=12*.65*dx*(bodyPitch/30)*lean
+            x=-1+x*dz
+            y=y*dx
+            z=bodyPitch*.325*dx
         elseif name=="leg_right" or name=="leg_left" then
-            -- Rigid legs hang -Y. Opposite hip pitch/roll + root dip suggests knees.
-            z=-x*dx
+            -- Hip rotations only: side-leading leg swaps with direction. Both
+            -- hips override gait, but no nonexistent knee or extra displacement.
+            local other=name=="leg_right" and "leg_left" or "leg_right"
+            local sidePitch=dx>0 and vectorSample(c.keys[other],p) or x
+            z=-sidePitch*dx*.65
             x=x*dz
+        elseif c.balanceKeys and c.balanceKeys[name] then
+            local neutral=track[1][2][1]
+            z=z-(x-neutral)*dx*.35
+            x=neutral+(x-neutral)*dz
+            local bx,by,bz=vectorSample(c.balanceKeys[name],p)
+            bz=bz-bx*dx*.6
+            bx=bx*dz
+            local held=handWeight or clamp(params.weaponInHand==nil and 1 or params.weaponInHand,0,1)
+            x,y,z=bx+(x-bx)*held,by+(y-by)*held,bz+(z-bz)*held
         end
     end
     return x,y,z
@@ -321,10 +336,12 @@ local function weight(s)
         return s.fadeOut<=0 and 0 or s.stopWeight*clamp(1-s.stopAge/s.fadeOut,0,1)
     end
     local w=s.fadeIn<=0 and 1 or clamp(s.age/s.fadeIn,0,1)
+    if s.clip.smoothBlend then w=ease("smoothStep",w) end
     if not s.clip.loop and not s.clip.hold and s.fadeOut>0 then
         -- fadeOut is wall/animation-clock seconds, not normalized time.
         local remaining=(s.clip.dur-s.t)/math.max(s.speed,EPS)
-        w=math.min(w,clamp(remaining/s.fadeOut,0,1))
+        local out=clamp(remaining/s.fadeOut,0,1)
+        w=math.min(w,s.clip.smoothBlend and ease("smoothStep",out) or out)
     end
     return w
 end
@@ -404,7 +421,7 @@ function A:init(character,node,opts)
         self.tracks[i]={clip=Data.Clips.stance_combat,handle=0,live=false,stopping=false,
             t=0,age=0,realAge=0,previousT=0,speed=1,fadeIn=.08,fadeOut=.08,stopAge=0,stopWeight=0,weight=0,
             params={},nextEvent=1,complete=false,hitOpen=false,iframeOpen=false,cancelOpen=false,protectOpen=false,
-            dustOpen=false,afterimageOpen=false,sample=0,motion=0,
+            dustOpen=false,afterimageOpen=false,sample=0,motion=0,handWeight=1,
             ik={arm_right=ikBuffer(),arm_left=ikBuffer()}}
     end
     for i=1,MAX_EVENTS do
@@ -432,6 +449,9 @@ end
 ---@param clipId string
 ---@param opts table|nil {speed=1, stats=..., fadeIn=.08, fadeOut=.08, params={p=0}}
 ---dodge_slide snapshots params={moveX,moveZ,bow=1} in character-local axes;
+---weaponInHand: unitless 0=back/stowed, 1=in hand (default); values clamp to
+---[0,1]. Pass at Play for the starting pose, SetParam before Update to change;
+---slide arms smooth subsequent changes with a .05s real-clock time constant.
 ---defaults to a backstep. It ignores speed/timeScale and uses realDt, with an
 ---immediate t=0 event pair. A new attack/bow_draw may replace it from .22s.
 ---@return number|nil handle Numeric generation id; stale handles never stop a replacement.
@@ -482,6 +502,7 @@ function A:Play(clipId,opts)
     slot.dustOpen,slot.afterimageOpen=false,false
     for name in pairs(slot.params) do slot.params[name]=nil end
     for name,value in pairs(opts.params or EMPTY) do if finite(value) then slot.params[name]=value end end
+    slot.handWeight=clamp(slot.params.weaponInHand==nil and 1 or slot.params.weaponInHand,0,1)
     if c.directional then
         local x,z=slot.params.moveX or 0,slot.params.moveZ
         if z==nil then z=-1 end
@@ -578,6 +599,10 @@ function A:Update(dt,realDt)
                 s.weight=weight(s)
                 if s.weight<=0 then s.live=false end
             else
+                if s.clip.balanceKeys then
+                    local held=clamp(s.params.weaponInHand==nil and 1 or s.params.weaponInHand,0,1)
+                    s.handWeight=s.handWeight+(held-s.handWeight)*(1-math.exp(-realDt/.05))
+                end
                 local previous=s.t
                 s.previousT=previous
                 s.t=s.t+step*s.speed
@@ -671,7 +696,7 @@ function A:Apply()
                     local c=s.clip
                     local track=((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
                     if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and track then
-                        local x,y,z=boneSample(c,name,s.sample,s.params)
+                        local x,y,z=boneSample(c,name,s.sample,s.params,s.handWeight)
                         if c.param=="p" and s.sample>.8 and name=="body" then
                             x=x+math.sin(s.t*48)*.4
                         end

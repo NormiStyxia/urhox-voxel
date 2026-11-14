@@ -109,22 +109,25 @@ end
 function C:Flash(kind)
     if self.rig.Flash then self.rig:Flash(kind) end
 end
+function C:WeaponInHand()
+    return (self.rig.pose or self.state.GetPose())=='hand'
+end
 function C:Play(id,fadeIn)
     if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
     -- Scale the clip clock; charge_full remains the sole full-charge signal.
     local speed=id=='sword_heavy_charge' and 1/math.max(.1,stats.chargeMultiplier or 1) or 1
-    local params
+    local params={weaponInHand=self:WeaponInHand() and 1 or 0}
     if id=='bow_release' or id=='bow_cancel' then
         self.bowPoseCharge=self.charge
         self.bowPosePitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
         self.bowPoseFacing=Flat(self.o.forward(),Vector3.FORWARD)
-        params={p=self.bowPoseCharge,aimPitch=self.bowPosePitch}
+        params.p,params.aimPitch=self.bowPoseCharge,self.bowPosePitch
     end
     if id=='dodge_slide' then
         local f=self.slideFacing or self.o.forward()
         local d=self.moveDir or -f
-        params={moveX=d.x*f.z-d.z*f.x,moveZ=d:DotProduct(f),bow=self.state.GetWeapon()=='bow' and 1 or 0}
+        params.moveX,params.moveZ,params.bow=d.x*f.z-d.z*f.x,d:DotProduct(f),self.state.GetWeapon()=='bow' and 1 or 0
     end
     local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,{stats=stats,speed=speed,fadeIn=fadeIn,params=params})
     if not handle then return false end
@@ -257,16 +260,16 @@ function C:Action(kind,axis)
     if kind=='dodge' then
         if self.dodgeCool>1e-8 or not self:CanDodge() then return false end
         if self.o.slideStart and not self.o.slideStart() then return false end
-        local combo=self.combo
+        local combo=self:WeaponInHand() and self.combo or 0
         local queued=self.buffer~='dodge' and self.buffer or nil
         local queuedAt=self.bufferAt
         local facing=Flat(self.o.forward(),Vector3.FORWARD)
         local dir=axis or Vector3.ZERO
         dir=dir:LengthSquared()>=.18*.18 and Flat(dir,-facing) or -facing
         self:Cancel('dodge',true) -- discard shot; retain independent getup tail
-        self.state.Activity(true)
+        self.state.Activity(true,true) -- dodge never requests a weapon from the back
         self.moveDir,self.slideFacing=dir,facing
-        self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose('hand')
+        self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose(self.state.GetPose())
         if not self:Play('dodge_slide',.04) then return false end
         -- Clear the previous strike before the first slide snapshot at .04s.
         -- Scene restores the quality/combat trail switch on its next pose pass.
@@ -293,11 +296,11 @@ function C:Action(kind,axis)
     if self.state.TransitionRemaining()>0 then return false end
     if self.clip then return false end
     if self.state.GetPose()~='hand' then
+        self.combo=0
         if not self.state.Activity(true) then return false end
         self.pending,self.pendingReleased=kind,false
         self.hold,self.charge=0,0
         self.autoFire=kind=='heavy' and self.state.GetWeapon()=='bow'
-        self.rig:SetPose('back')
         self:Play(self.state.GetWeapon()=='sword' and 'sword_draw' or 'bow_equip')
         return true
     end
@@ -481,11 +484,13 @@ function C:Events()
         elseif e.name=='weapon_ready' then
             if not self.rig.PopEvents then self:Flash('draw'); self:Sound('blade_draw') end
             if self.clip:find('weapon_swap_',1,true) then
-                self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose('back'); self.state.FinishTransition()
+                self.state.FinishTransition(); self.rig:SetPose(self.state.GetPose())
             else self.rig:SetPose('hand') end
         elseif e.name=='weapon_stowed' or e.name=='weapon_drop' then
             if e.name=='weapon_stowed' and not self.rig.PopEvents then self:Flash('sheath'); self:Sound('blade_sheath') end
-            self.rig:SetPose(e.name=='weapon_drop' and 'hidden' or 'back')
+            if not self.clip:find('weapon_swap_',1,true) then
+                self.rig:SetPose(e.name=='weapon_drop' and 'hidden' or 'back')
+            end
         elseif e.name=='draw_start' then self.rig:SetPose('hand')
         elseif e.name=='draw_min' then
             self:Play('bow_hold')
@@ -511,9 +516,10 @@ function C:Events()
             self.clip,self.handle,self.iframe=nil,nil,false
             if finished=='dodge_slide' then self.slideFacing,self.slideImages=nil,false end
             if finished=='sword_draw' or finished=='bow_equip' then
-                local pending,released=self.pending or 'light',self.pendingReleased
+                local pending,released=self.pending,self.pendingReleased
                 local heldTime=self.hold
-                self.pending,self.pendingReleased=nil,false; self:Action(pending)
+                self.pending,self.pendingReleased=nil,false
+                if pending then self:Action(pending) else self.state.SetBusy(false) end
                 if pending=='hold' then self.hold=heldTime end
                 if released and self.clip=='bow_draw' then self.pendingReleased=true end
             elseif finished=='bow_draw' then self:Play('bow_hold'); if self.pendingReleased then self:Release() end
@@ -543,7 +549,9 @@ end
 function C:Update(dt,controls)
     self.inputAxis=controls.axis
     self.age=self.age+dt; self.invuln=math.max(0,self.invuln-dt)
-    if self.state.InCombat() and not self.anim:IsPlaying('stance_combat') then self.anim:Play('stance_combat') end
+    if self.state.InCombat() and self:WeaponInHand() then
+        if not self.anim:IsPlaying('stance_combat') then self.stanceHandle=self.anim:Play('stance_combat') end
+    elseif self.stanceHandle then self.anim:Stop(self.stanceHandle,.08);self.stanceHandle=nil end
     self.dodgeCool=math.max(0,self.dodgeCool-dt); self.shakeAge=self.shakeAge+dt
     local attack,heavy=controls.attack==true,controls.heavy==true
     if not controls.allowed then
@@ -612,6 +620,8 @@ function C:Update(dt,controls)
             self.whoosh=true; self:Sound('sword_whoosh',{pos=self.o.position(),tier=self.combo>0 and self.combo or 3})
         end
     end
+    -- W4 smooths arm ownership during advancement, so this must precede GetMotion.
+    self.anim:SetParam('weaponInHand',self:WeaponInHand() and 1 or 0)
     local metres=self.anim:GetMotion(stepDt,sliding and stepDt or dt)
     if sliding then
         self.slideElapsed=(self.slideElapsed or 0)+stepDt
@@ -630,6 +640,7 @@ function C:Update(dt,controls)
     end
     if self.fovAge then self.fovAge=self.fovAge+dt end
     self:Events()
+    if not sliding and not self.clip and canInput then self:ConsumeBuffer(controls.axis) end
     if sliding then
         self.iframe=self.clip=='dodge_slide' and self.slideElapsed<.20-1e-8
         if controls.allowed and not self.dead then
@@ -655,13 +666,13 @@ end
 function C:Swap()
     if not self:CanCancel() or self.dead then return false end
     self.state.BeginSwapPerf()
-    local old,pose=self.state.GetWeapon(),self.state.GetPose()
+    local old=self.state.GetWeapon()
     self.state.SetBusy(false)
     local nextWeapon=old=='sword' and 'bow' or 'sword'
     local ok=self.state.SetWeapon(nextWeapon)
     if ok then
         self:Cancel('swap')
-        self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,old); self.rig:SetPose(pose)
+        self.rig:SetPose('hidden') -- never resurrect the old weapon while swapping
         self:Play('weapon_swap_'..old..'_to_'..nextWeapon)
     end
     self.state.EndSwapPerf(ok)

@@ -122,13 +122,20 @@ function M.InCombat() return state ~= M.EXPLORE end
 function M.GetWeapon() return weapon end
 function M.GetPose() return lastPose end
 function M.TransitionRemaining() return transition end
-function M.FinishTransition() transition=0 end
+function M.FinishTransition()
+    transition=0
+    if M.InCombat() and not mounted and not dead and lastPose=='hidden' then Pose('back') end
+end
 function M.CanUseTime() return state == M.EXPLORE and spellDelay <= 0 and not mounted and not dead end
 function M.Glow() return (mounted or dead) and 0 or glow end
 function M.ReadyFlash() return readyFlash>0 end
 function M.HasAggro() return options.aggro and options.aggro()==true or false end
 function M.CanSheath() return not M.HasAggro() end
-function M.SetBusy(value) busy = value == true end
+function M.SetBusy(value)
+    local nextBusy=value==true
+    if busy and not nextBusy then idle=0 end -- grace starts at recovery, not hit_on
+    busy=nextBusy
+end
 function M.SetRig(rig)
     options.rig = rig
     if rig then rig:SetActive(weapon); rig:SetPose(lastPose) end
@@ -170,12 +177,17 @@ function M.OnPlayerHit()
 end
 -- Called by accepted combat moves, not by ordinary exploration LMB/1.
 ---@param cancelTransition boolean|nil Dodge can interrupt draw/sheath.
-function M.Activity(cancelTransition)
+function M.Activity(cancelTransition,keepPose)
     if not M.Enter('attack') then return false end
     if transition > 0 and not cancelTransition then return false end
-    SetState(M.ACTIVE,'attack')
     idle, quiet, transition = 0, 0, 0
-    Pose('hand')
+    if keepPose then
+        if lastPose=='hidden' then Pose('back') end
+        if lastPose=='hand' then SetState(M.ACTIVE,'dodge') end
+    else
+        SetState(M.ACTIVE,'attack')
+        Pose('hand')
+    end
     return true
 end
 function M.SetMounted(value)
@@ -191,9 +203,10 @@ function M.SetWeapon(value)
     if value ~= 'sword' and value ~= 'bow' then return false end
     if value == weapon then return true end
     if busy or transition > 0 or mounted or dead then return false end
+    Pose('hidden') -- old shape clears before changing the active entry
     weapon, transition, idle = value, .4, 0
     if options.rig then M.PerfCall('rigSetActive',options.rig.SetActive,options.rig,value) end
-    if state ~= M.EXPLORE then SetState(M.IDLE,'weapon'); Pose('back') end
+    if state ~= M.EXPLORE then SetState(M.IDLE,'weapon') end
     if options.cancel then options.cancel('weapon') end
     return true
 end
@@ -201,7 +214,9 @@ end
 function M.Update(dt)
     dt = math.max(0, dt)
     logTime=logTime+dt
+    local wasTransition=transition
     transition = math.max(0, transition - dt)
+    if wasTransition>0 and transition==0 then M.FinishTransition() end
     local previousDelay=spellDelay
     spellDelay = math.max(0, spellDelay - dt)
     readyFlash=math.max(0,readyFlash-dt)
@@ -215,8 +230,8 @@ function M.Update(dt)
     quiet = quiet + dt
     if not busy then idle = idle + dt else idle = 0 end
     if quiet >= 6 and not busy then M.Exit('quiet'); return end
-    if state == M.ACTIVE and idle >= 2.5 then
-        SetState(M.IDLE,'idle'); transition = .3
+    if lastPose=='hand' and not busy and idle >= .40 then
+        SetState(M.IDLE,'idle')
         Pose('back')
     end
 end

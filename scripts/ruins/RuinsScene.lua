@@ -74,7 +74,7 @@ local CombatCamera=require('combat.CombatCamera')
 local combatCamera_,combatCameraFrame_
 local arrowNodes_={}
 local emptyAfterimages_={}
-local animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5},direction='后'}
+local animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5,weaponInHand=1},direction='后'}
 local CombatTest=require('combat.CombatTest')
 local combatTest_
 local trainingDummy_,handMotes_
@@ -729,12 +729,6 @@ function M.Start()
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
     nomi_.ignoreAimVolume=IsCombatVisualVolume
     CombatState.Configure({rig=combatRig_,weapon=combatRig_.active,aggro=CombatHasAggro,
-        pose=function(p,previous)
-            if p=='back' and previous=='hand' and combatMoves_ and CombatState.InCombat() then
-                combatRig_:SetPose('hand')
-                combatMoves_:Play(CombatState.GetWeapon()=='sword' and 'sword_sheath' or 'bow_sheath')
-            end
-        end,
         cancel=function(reason)
             if reason=='manual' or reason=='aggro' or reason=='quiet' or reason=='weapon' or reason=='attack' then
                 TouchControls.CancelActions()
@@ -1256,7 +1250,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
         if animPreview_.index>0 then
             CombatState.Enter('preview')
             local clip=list[animPreview_.index]
-            combatRig_:SetActive(clip.weaponType or CombatState.GetWeapon()); combatRig_:SetPose('hand')
+            combatRig_:SetActive(clip.weaponType or CombatState.GetWeapon()); combatRig_:SetPose(animPreview_.params.weaponInHand==0 and 'back' or 'hand')
             combatAnim_:Play(clip.id,{fadeIn=0,params=animPreview_.params})
         else
             CombatState.Exit('preview-end'); combatRig_:SetActive(CombatState.GetWeapon())
@@ -1267,6 +1261,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
         if previewAllowed and Press(KEY_SPACE) then animPreview_.paused=not animPreview_.paused end
         CombatState.SetBusy(true)
         local params=animPreview_.params
+        if params.weaponInHand==nil then params.weaponInHand=1 end
         params.aimPitch=Clamp(nomi_.camPitch,-35,35)
         if previewAllowed then
             for i,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_4}) do
@@ -1274,6 +1269,11 @@ local function UpdateCombatPreview(dt,combatAllowed)
             end
         end
         local changed=false
+        if previewAllowed and Press(KEY_O) then
+            params.weaponInHand=params.weaponInHand==1 and 0 or 1;changed=true
+        end
+        combatRig_:SetPose(params.weaponInHand==1 and 'hand' or 'back')
+        combatAnim_:SetParam('weaponInHand',params.weaponInHand)
         if previewAllowed and Press(KEY_P) then
             params.legacyPose=params.legacyPose==1 and 0 or 1; changed=true
         end
@@ -1283,7 +1283,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
             if Press(KEY_J) then params.moveX,params.moveZ,animPreview_.direction=-1,0,'左'; changed=true end
             if Press(KEY_L) then params.moveX,params.moveZ,animPreview_.direction=1,0,'右'; changed=true end
             if Press(KEY_B) then params.bow=params.bow==1 and 0 or 1; changed=true end
-            combatRig_:SetActive(params.bow==1 and 'bow' or 'sword'); combatRig_:SetPose('hand')
+            combatRig_:SetActive(params.bow==1 and 'bow' or 'sword'); combatRig_:SetPose(params.weaponInHand==1 and 'hand' or 'back')
         elseif previewAllowed and clip.id=='bow_hold' then
             if Press(KEY_EQUALS) or Press(KEY_PLUS) or Press(KEY_KP_PLUS) then params.p=math.min(1,params.p+.1); changed=true end
             if Press(KEY_MINUS) or Press(KEY_KP_MINUS) then params.p=math.max(0,params.p-.1); changed=true end
@@ -1312,7 +1312,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
         end
         animPreview_.text=string.format('F7 %s / %.3f / %s%s\n事件：%s\n空格 暂停 · , / . 逐帧 · 左右 切片段',clip.id,animPreview_.t,
             CombatMoves.PreviewPhase(clip.id,animPreview_.t),animPreview_.paused and ' · 暂停' or '',animPreview_.events or '—')
-        animPreview_.text=animPreview_.text..string.format('\nIJKL 方向:%s · B:%s · +/- 拉弓:%.1f',animPreview_.direction,params.bow==1 and '弓' or '剑',params.p)
+        animPreview_.text=animPreview_.text..string.format('\nIJKL 方向:%s · B:%s · +/- 拉弓:%.1f',animPreview_.direction,params.bow==1 and '弓' or '剑',params.p)..(params.weaponInHand==1 and ' · O 持手' or ' · O 背挂')
         animPreview_.text=animPreview_.text..'\nP 对比：'..(params.legacyPose==1 and '旧骨骼轨道 / IK关闭' or '路径驱动 / IK开启')
     end
 end
@@ -1351,6 +1351,7 @@ end
 
 local function UpdateCombatAnimationParams()
     local p,pitch=combatMoves_:BowParameters(nomi_.camPitch)
+    Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'weaponInHand',combatMoves_:WeaponInHand() and 1 or 0)
     Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'aimPitch',pitch)
     Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'p',p)
 end
@@ -1489,7 +1490,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Safe('Spells.Input',HandleSpells,dt,aim)
     Safe('Spells.Update',caster_.Update,caster_,dt)
     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
-    if M.ride.mode == "free" then Safe('Animation.Base',nomi_.Animate,nomi_,combatMoves_.hitstop>0 and 0 or dt,caster_.charging or caster_.castAnim > 0 or CombatState.Get()==CombatState.ACTIVE) end
+    if M.ride.mode == "free" then Safe('Animation.Base',nomi_.Animate,nomi_,combatMoves_.hitstop>0 and 0 or dt,caster_.charging or caster_.castAnim > 0 or combatMoves_:WeaponInHand()) end
     if combatAnim_ and animPreview_.index==0 then
         Safe('Animation.BowParameters',UpdateCombatAnimationParams)
     end
@@ -1692,7 +1693,7 @@ function M.Stop()
     if combatAnim_ then combatAnim_:Stop(nil,0) end
     combatMoves_,combatAnim_,combatArrows_,combatEnemies_=nil,nil,nil,nil
     for _,entry in pairs(arrowNodes_) do entry.node:Remove() end
-    arrowNodes_={}; animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5},direction='后'}; CombatHUD.Set(nil)
+    arrowNodes_={}; animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5,weaponInHand=1},direction='后'}; CombatHUD.Set(nil)
     if combatRig_ and combatRig_.Dispose then combatRig_:Dispose() end
     combatRig_=nil
     VoidRewind.Stop() -- release images while the UI NanoVG context is still alive

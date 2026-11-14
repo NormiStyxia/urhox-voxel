@@ -383,11 +383,11 @@ test("slide has six exact root landmarks and no knee bones",function()
         near(clip.root[i][1]*clip.dur,t)
         near(clip.keys.body[i][1]*clip.dur,t)
     end
-    for i,y in ipairs({-.04,-.19,-.24,-.20,-.10,-.04}) do near(clip.root[i][2],y) end
+    for i,y in ipairs({0,-.065,-.10,-.06,-.025,0}) do near(clip.root[i][2],y) end
     local a,c=new();a:Play("dodge_slide",{fadeIn=0,params={moveZ=1}})
-    a:Update(.1);a:Apply();near(c.bones.root.position.y,.76)
+    a:Update(.1);a:Apply();near(c.bones.root.position.y,.90)
     local pose=A.DebugSample("dodge_slide",.1,{moveZ=1})
-    near(pose.body[1],30);near(pose.leg_right[1]-pose.leg_left[1],55)
+    near(pose.body[1],16);assert(pose.leg_right[1]-pose.leg_left[1]>30 and pose.leg_right[1]-pose.leg_left[1]<36)
     assert(not pose.knee_right and not pose.knee_left)
 end)
 test("slide directional snapshot keeps attack yaw and supports bow",function()
@@ -395,11 +395,11 @@ test("slide directional snapshot keeps attack yaw and supports bow",function()
     local rear=A.DebugSample("dodge_slide",.1)
     local right=A.DebugSample("dodge_slide",.1,{moveX=1,moveZ=0})
     local left=A.DebugSample("dodge_slide",.1,{moveX=-1,moveZ=0})
-    near(forward.body[1],30);near(rear.body[1],-30)
-    near(right.body[2],0);near(right.body[3],-12);near(left.body[3],12)
+    near(forward.body[1],16);near(rear.body[1],-8)
+    near(right.body[2],4);near(right.body[3],-6);near(left.body[3],6)
     assert(right.head[3]>0 and right.leg_right[3]*right.leg_left[3]<0)
     local bow=A.DebugSample("dodge_slide",.1,{moveX=1,moveZ=0,bow=1})
-    near(bow.arm_left[1],-70)
+    near(bow.arm_left[1],-65)
     local a=new();local h=a:Play("dodge_slide",{params={moveX=3,moveZ=4}})
     a:SetParam("moveX",-1);a:SetParam("moveZ",0)
     near(state(a,h).params.moveX,.6);near(state(a,h).params.moveZ,.8)
@@ -568,11 +568,11 @@ test("path fallback and exact shoulder-target degeneracy stay valid",function()
     a:Play("sword_light_1",{fadeIn=0});a:Update(.14);a:Apply()
     assert(a:GetIKDebug().arm_right.degenerate)
 end)
-test("strong slide adds dust_streak once without moving the old gates",function()
+test("elastic slide retains dust_streak once without moving the old gates",function()
     local a=new();a:Play("dodge_slide");assert(names(a:Poll())=="iframe_on,dust_start,dust_streak,")
     a:Update(.10);a:Poll()
     local pose=A.DebugSample("dodge_slide",.10,{moveZ=1})
-    near(pose.arm_right[1],55);near(pose.body[1],30)
+    assert(pose.arm_right[1]>-30 and pose.arm_right[1]<-24);near(pose.body[1],16)
     a:Update(.10);assert(names(a:Poll())=="afterimage_off,iframe_off,")
     a:Update(.02);assert(names(a:Poll())=="cancel_open,")
 end)
@@ -661,6 +661,122 @@ test("bow release holds left aim for .08s then relaxes; cancel does not twist to
     local rest=A.DebugSample("bow_release",.20,{p=1,aimPitch=-20})
     assert(rest._ik.arm_left.actual[2]<first._ik.arm_left.actual[2])
     for i=0,18 do near(A.DebugSample("bow_cancel",i*.01,{p=1}).body[2],0) end
+end)
+test("slide stowed arms ignore weapon type and default remains held",function()
+    for i=0,32 do
+        local t=i*.01
+        local stowed=A.DebugSample("dodge_slide",t,{weaponInHand=0,moveZ=1})
+        local bowBack=A.DebugSample("dodge_slide",t,{weaponInHand=0,bow=1,moveZ=1})
+        local held=A.DebugSample("dodge_slide",t,{weaponInHand=1,moveZ=1})
+        local default=A.DebugSample("dodge_slide",t,{moveZ=1})
+        for _,name in ipairs({"arm_right","arm_left"}) do
+            for axis=1,3 do near(stowed[name][axis],bowBack[name][axis]);near(held[name][axis],default[name][axis]) end
+            assert(math.abs(stowed[name][1])<=18.001)
+            local middle=A.DebugSample("dodge_slide",t,{weaponInHand=.5,moveZ=1})
+            near(middle[name][1],(stowed[name][1]+held[name][1])*.5)
+        end
+    end
+    near(A.DebugSample("dodge_slide",.12,{weaponInHand=-2,moveZ=1}).arm_right[1],18)
+    near(A.DebugSample("dodge_slide",.12,{weaponInHand=3,moveZ=1}).arm_right[1],-24)
+end)
+test("slide eight directions keep finite bounded poses and lateral feet uncrossed in glide",function()
+    for d=0,7 do
+        local angle=d*math.pi/4
+        local params={moveX=math.sin(angle),moveZ=math.cos(angle),weaponInHand=0}
+        local a,c=new();local h=a:Play("dodge_slide",{params=params})
+        for i=0,32 do
+            local pose=A.DebugSample("dodge_slide",i*.01,params)
+            for _,name in ipairs({"body","head","arm_right","arm_left","leg_right","leg_left"}) do
+                for axis=1,3 do assert(pose[name][axis]==pose[name][axis] and math.abs(pose[name][axis])<=31) end
+            end
+        end
+        local glide=A.DebugSample("dodge_slide",.10,params)
+        if math.abs(params.moveX)>.5 then
+            assert(glide.leg_right[3]>0 and glide.leg_left[3]<0)
+            assert(glide.body[3]*glide.head[3]<0)
+        end
+        a:Update(.10);near(state(a,h).weight,1)
+        c.bones.leg_left.rotation=Quaternion(48,0,0);c.bones.leg_right.rotation=Quaternion(-48,0,0);a:Apply()
+        local left,right=c.bones.leg_left.rotation,c.bones.leg_right.rotation
+        Mock.reset(c);c.bones.leg_left.rotation=Quaternion(-48,0,0);c.bones.leg_right.rotation=Quaternion(48,0,0)
+        a:Update(0);a:Apply();sameRotation(c.bones.leg_left.rotation,left);sameRotation(c.bones.leg_right.rotation,right)
+    end
+end)
+test("slide six poses have smooth tangents and staggered push shoulder brake timing",function()
+    local clip=D.Clips.dodge_slide
+    assert(clip.keys.leg_right[3][1]<clip.keys.body[3][1] and clip.keys.body[3][1]<clip.keys.arm_right[3][1])
+    local params={moveX=.6,moveZ=.8,weaponInHand=0}
+    local eps=1e-6
+    for _,name in ipairs({"body","head","arm_right","arm_left","leg_right","leg_left"}) do
+        for i=2,5 do
+            local t=clip.keys[name][i][1]*clip.dur
+            local before,at,after=A.DebugSample("dodge_slide",t-eps,params),A.DebugSample("dodge_slide",t,params),A.DebugSample("dodge_slide",t+eps,params)
+            for axis=1,3 do
+                local incoming=(at[name][axis]-before[name][axis])/eps
+                local outgoing=(after[name][axis]-at[name][axis])/eps
+                assert(math.abs(incoming-outgoing)<.3,name.." hard keyframe corner")
+            end
+        end
+    end
+    assert(A.DebugSample("dodge_slide",.04,{moveZ=1}).body[1]<4)
+    assert(A.DebugSample("dodge_slide",.10,{moveZ=1}).body[1]>4)
+    assert(A.DebugSample("dodge_slide",.26,{moveZ=1}).body[1]<4)
+end)
+test("slide entry and natural exit converge to fresh gait without endpoint jumps",function()
+    local function sample(t)
+        local a,c=new();local h=a:Play("dodge_slide",{params={moveX=.6,moveZ=.8,weaponInHand=0}})
+        a:Update(t)
+        for _,name in ipairs({"body","head","arm_right","arm_left","leg_right","leg_left"}) do
+            c.bones[name].rotation=Quaternion(18*math.sin(t*8),3,2)
+        end
+        a:Apply();return a,c,h
+    end
+    for _,t in ipairs({0,1e-7,.32-1e-7,.32,.32+1e-7}) do
+        local a,c,h=sample(t)
+        for _,name in ipairs({"body","head","arm_right","arm_left","leg_right","leg_left"}) do
+            sameRotation(c.bones[name].rotation,Quaternion(18*math.sin(t*8),3,2))
+        end
+        near(c.bones.root.position.y,1,1e-6)
+        if t<.32 then assert(state(a,h).weight<1e-8) end
+    end
+    local a,_,h=sample(.01);near(state(a,h).weight,.15625)
+    a,_,h=sample(.28);near(state(a,h).weight,.5)
+end)
+test("weaponInHand changes smooth in real seconds and reuse track tables at 30 and 60fps",function()
+    local previous
+    for _,fps in ipairs({30,60}) do
+        local a,c=new();local h=a:Play("dodge_slide",{params={weaponInHand=1,moveZ=1}})
+        a:Update(.04);a:Apply();local s=state(a,h);local params,ik=s.params,s.ik
+        local arm=c.bones.arm_right.rotation
+        a:SetParam("weaponInHand",0);Mock.reset(c);a:Update(0);a:Apply()
+        sameRotation(arm,c.bones.arm_right.rotation)
+        for _=1,fps/10 do
+            a:Update(0,1/fps);Mock.reset(c);a:Apply()
+            assert(state(a,h)==s and s.params==params and s.ik==ik)
+        end
+        near(s.handWeight,math.exp(-2))
+        if previous then near(s.handWeight,previous) end
+        previous=s.handWeight
+    end
+end)
+test("slide movement exit at .26 preserves pose then blends to gait in .04",function()
+    local a,c=new();local h=a:Play("dodge_slide",{params={moveX=1,moveZ=0,weaponInHand=0}})
+    a:Update(.26);a:Apply()
+    local body,arm,leg,root=c.bones.body.rotation,c.bones.arm_right.rotation,c.bones.leg_left.rotation,c.bones.root.position.y
+    a:Stop(h,.04);Mock.reset(c);a:Update(0);a:Apply()
+    sameRotation(c.bones.body.rotation,body);sameRotation(c.bones.arm_right.rotation,arm)
+    sameRotation(c.bones.leg_left.rotation,leg);near(c.bones.root.position.y,root)
+    near(a:GetMotion(.04),0);Mock.reset(c)
+    c.bones.leg_right.rotation=Quaternion(24,0,0);c.bones.leg_left.rotation=Quaternion(-24,0,0);a:Apply()
+    sameRotation(c.bones.leg_right.rotation,Quaternion(24,0,0));sameRotation(c.bones.leg_left.rotation,Quaternion(-24,0,0))
+    near(c.bones.root.position.y,1)
+end)
+test("stowed slide hands crossfade directly into attack without inherited motion",function()
+    local a,c=new();a:Play("dodge_slide",{params={weaponInHand=0,moveZ=1}})
+    a:Update(.22);a:Apply();local pose=c.bones.arm_right.rotation
+    a:Play("sword_light_1");Mock.reset(c);a:Update(0);a:Apply()
+    sameRotation(c.bones.arm_right.rotation,pose);near(a:GetMotion(),0)
+    a:Update(.04);Mock.reset(c);a:Apply();assert(not a:IsPlaying("dodge_slide"));near(a:GetMotion(),0)
 end)
 local baselinePath=os.getenv("ANIM_BASELINE_FILE")
 if baselinePath then

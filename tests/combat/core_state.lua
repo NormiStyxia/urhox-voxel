@@ -19,9 +19,9 @@ eq(State.Get(),'COMBAT_IDLE');eq(State.CanUseTime(),false);eq(State.Glow(),0);eq
 eq(State.Activity(),false) -- draw transition cannot be bypassed by ordinary attack
 eq(State.Activity(true),true) -- dodge is the explicit cancellation exception
 eq(rig.pose,'hand');eq(State.Get(),'COMBAT_ACTIVE')
-State.Update(2.49);eq(State.Get(),'COMBAT_ACTIVE')
+State.Update(.39);eq(State.Get(),'COMBAT_ACTIVE')
 State.Update(.02);eq(State.Get(),'COMBAT_IDLE');eq(rig.pose,'back')
-State.Update(3.50);eq(State.Get(),'EXPLORE');eq(State.CanUseTime(),false);eq(rig.pose,'hidden')
+State.Update(5.60);eq(State.Get(),'EXPLORE');eq(State.CanUseTime(),false);eq(rig.pose,'hidden')
 State.Update(.4);eq(State.Glow(),0);eq(State.CanUseTime(),false)
 State.Update(.61);eq(State.CanUseTime(),true)
 eq(State.ReadyFlash(),true);State.Update(.4);eq(State.Glow(),1)
@@ -48,14 +48,14 @@ State.SetDead(true);eq(State.Enter('hit'),false);eq(State.CanUseTime(),false)
 State.SetDead(false);State.Update(1);eq(State.CanUseTime(),true)
 
 reset();State.Enter('manual');eq(State.SetWeapon('bow'),false)
-State.Update(.31);eq(State.SetWeapon('bow'),true);eq(rig.weapon,'bow');eq(rig.pose,'back')
+State.Update(.31);eq(State.SetWeapon('bow'),true);eq(rig.weapon,'bow');eq(rig.pose,'hidden')
 eq(State.Activity(),false);State.Update(.41);eq(State.Activity(),true)
 State.Exit('manual');eq(cancelled[#cancelled],'manual');eq(State.CanUseTime(),false)
 State.Stop();eq(State.Get(),'EXPLORE');eq(rig.pose,'hidden')
 State.Configure{rig=rig,aggro=function() return true end}
 State.OnEnemyAggro('enemy');eq(State.Exit('manual'),false);eq(State.InCombat(),true)
 State.SetMounted(true);eq(State.InCombat(),false)
-print('PASS core_state: visibility, draw/dodge gate, 2.5s back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation')
+print('PASS core_state: visibility, draw/dodge gate, 0.4s recovery grace/back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation')
 local logs={}
 State.Configure{log=function(line) logs[#logs+1]=line end}
 State.Enter('manual');State.Enter('manual')

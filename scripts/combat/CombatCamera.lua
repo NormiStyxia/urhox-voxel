@@ -54,11 +54,11 @@ function A:Update(dt,moves,enabled,shakeEnabled)
     if self.slideAt then
         local t=self.time-self.slideAt
         -- Lag opposes travel; neither yaw/pitch/roll nor screen-space reticle move.
-        out.focus=-(self.slideDir or Vector3.FORWARD)*(.30*A.Spring(t))
-        out.distance=.25*pulse(t,.08,.25)
-        out.fov=out.fov+3*pulse(t,.05,.20)
+        out.focus=-(self.slideDir or Vector3.FORWARD)*(.12*ease(t/.06)*A.Spring(math.max(0,t-.06)))
+        out.distance=.12*pulse(t,.10,.22)
+        out.fov=out.fov+.8*pulse(t,.08,.22)
     end
-    if self.followAt then out.distance=-.15*pulse(self.time-self.followAt,.04,.14) end
+    if self.followAt then out.distance=-.10*pulse(self.time-self.followAt,.06,.18) end
     local id=moves.clip
     if id and (id:find('sword_light_',1,true) or id=='sword_heavy_release') then
         local clip=require('combat.AnimClips').Clips[id]
