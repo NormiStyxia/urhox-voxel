@@ -80,4 +80,25 @@ local growth=collectgarbage('count')-start
 collectgarbage('restart')
 print(string.format(case..' HUD+Touch 600 frames: %.3f KB total / %.3f KB per frame / %.1f fills per frame',growth,growth/600,count/600))
 if not base then assert(growth/600<=2,'HUD/Touch steady allocation exceeds 2KB per frame') end
+-- Real HUD Render: the PC-only preview hides low overlays without mutating
+-- their state. Exiting restores them; a touch HUD ignores this PC debug flag.
+if not base then
+ local buttons,hints,scrolls=0,0,0
+ local button,text,scroll=Draw.Button,Draw.Text,Draw.Scroll
+ Draw.Button=function(...)buttons=buttons+1;return button(...)end
+ Draw.Text=function(vg,s,...)if s=='战斗测试'then hints=hints+1 end;return text(vg,s,...)end
+ Draw.Scroll=function(...)scrolls=scrolls+1;return scroll(...)end
+ moves.clip=nil;moves.charge=0;data.charge=0;HUD.UpdateSlots({},0);HUD.SetMessage('preview existing message')
+ local function sample(preview)
+  buttons,hints,scrolls=0,0,0;data.preview=preview;Combat.Set(data);layer:Render(1)
+  return buttons,hints,scrolls
+ end
+ local b,h,s=sample(false);assert(s>0);if not Input.IsEnabled()then assert(b>0 and h>0)end
+ local pb,ph,ps=sample(true)
+ if Input.IsEnabled()then assert(pb==b and ph==h and ps==s,'touch unchanged')
+ else assert(pb==0 and ph==0 and ps==0,'F7 lower overlays hidden')end
+ local rb,rh,rs=sample(false);assert(rb==b and rh==h and rs==s,'F7 exit restores overlays')
+ Draw.Button,Draw.Text,Draw.Scroll=button,text,scroll
+ print('PASS real Render preview overlay enter/exit, retained message/hint/buttons; touch unchanged')
+end
 return growth/600

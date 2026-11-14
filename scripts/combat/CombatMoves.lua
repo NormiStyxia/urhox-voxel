@@ -690,8 +690,9 @@ end
 function C.MeleeZone(id,position,forward,reach,slam,out)
     out=out or {origin=Vector3(0,0,0),source=Vector3(0,0,0)}
     local offset=id=='sword_light_3' and .4 or 0
-    out.origin.x,out.origin.y,out.origin.z=position.x+forward.x*offset,position.y,position.z+forward.z*offset
-    out.source.x,out.source.y,out.source.z=position.x,position.y+.9,position.z
+    -- Engine Vector3 table fields are values: component writes target a copy.
+    out.origin=Vector3(position.x+forward.x*offset,position.y,position.z+forward.z*offset)
+    out.source=Vector3(position.x,position.y+.9,position.z)
     out.forward=forward
     out.radius=(slam and 2 or 1.8)*math.max(.1,reach or 1)
     out.angle=slam and 90 or (id=='sword_heavy_release' and 360 or (id=='sword_light_3' and 100 or 120))
@@ -715,7 +716,8 @@ function C:StrikeZones()
     end
     return self.strikeZone,slam,self.hitOpen or self.hitPending
 end
--- Samples on the same sector, including both radial edges, into caller storage.
+-- Samples the same sector, including both radial edges. The caller must assign
+-- the returned Vector3: native vector arguments are passed by value.
 function C.ZoneBoundary(zone,index,segments,out)
     local half=math.rad(zone.angle*.5)
     local angle,radius

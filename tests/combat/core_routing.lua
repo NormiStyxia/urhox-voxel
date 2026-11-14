@@ -10,7 +10,7 @@ function caster:HandleCharge(on) charges[#charges+1]=on;self.charging=on end
 function caster:Cast(id) casts[#casts+1]=id end
 function caster:Say(text) self.message=text end
 local env=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,M={mounted=false,debugOn=false,ride={mode='free'},ctrl={state='IDLE'}},
-    caster_=caster,voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
+    caster_=caster,animPreview_={index=0},voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
     KEY_1=1,KEY_2=2,KEY_3=3,KEY_E=4,KEY_Q=5,MOUSEB_LEFT=1,
     CombatState={CanUseTime=function() return state.allowed end,InCombat=function() return state.combat end},
     TouchControls={IsBlocked=function() return false end},

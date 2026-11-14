@@ -39,7 +39,7 @@ m:Update(.11,{allowed=true,axis=Vector3.RIGHT});position=position+m.motion
 z,_,active=m:StrikeZones();assert(z==cached and active and z.forward.z==1 and m.motion.x==0 and calls==1,'action never reselects or bends')
 local boundary=Vector3.ZERO
 for i=0,24 do
- C.ZoneBoundary(z,i,16,boundary)
+ boundary=C.ZoneBoundary(z,i,16,boundary)
  local shape={id='boundary',center=boundary,radius=.001}
  assert(#Hit.QueryZone({{active=true,GetHurtShapes=function()return {shape}end}},z)==1,'every displayed sample belongs to actual hit region')
 end
@@ -51,7 +51,7 @@ m:Cancel('menu');assert(not m:StrikeZones())
 for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_heavy_release'}) do
  local zone=C.MeleeZone(id,Vector3.ZERO,Vector3.RIGHT,1.3)
  for i=0,16 do
-  C.ZoneBoundary(zone,i,16,boundary)
+  boundary=C.ZoneBoundary(zone,i,16,boundary)
   local radius=math.sqrt((boundary.x-zone.origin.x)^2+(boundary.z-zone.origin.z)^2)
   S.near(radius,zone.radius)
  end

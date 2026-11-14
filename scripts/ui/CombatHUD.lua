@@ -20,7 +20,7 @@ function H.UpdateRange(value)
         for i=0,last do
             rangeCount=rangeCount+1
             local point=rangePoints[rangeCount]
-            Moves.ZoneBoundary(z,i,16,point.world)
+            point.world=Moves.ZoneBoundary(z,i,16,point.world)
             point.visible=false
             if (active or i%2==0) and value.rangeVisible(z.source,point.world) then
                 local sp=value.camera:WorldToScreenPoint(point.world)
@@ -136,6 +136,7 @@ function H.HasBoss()
     for _,enemy in ipairs(data.enemies or EMPTY) do if enemy.boss and enemy.aggro and not enemy.dead then return true end end
     return false
 end
+function H.Preview() return data.preview==true end
 function H.Render(vg,w,h,s,objective)
     if not data.moves then return end
     local moves=data.moves

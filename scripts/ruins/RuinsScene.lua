@@ -1156,7 +1156,8 @@ local function UpdateAim()
 end
 
 local function HandleSpells(dt, aim)
-    if M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
+    -- F7 owns number keys and pointer input; do not emit rejected-spell banners.
+    if animPreview_.index>0 or M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
     if not CombatState.CanUseTime() then
         caster_.charging,caster_.charge=false,0
         -- Q is reserved for weapon swap in combat; E/1/2/3 remain rejected spells.
@@ -1254,6 +1255,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
             combatAnim_:Play(clip.id,{fadeIn=0,params=animPreview_.params})
         else
             CombatState.Exit('preview-end'); combatRig_:SetActive(CombatState.GetWeapon())
+            combatInputBlocked=true -- wait for held preview keys to release
         end
     end
     if animPreview_.index>0 then
@@ -1649,6 +1651,7 @@ local function UpdateCombatHUD(cn)
         hud.aimed,hud.enemies,hud.camera,hud.cameraNode=aimed,enemies,nomi_:Camera(),cn
         hud.bowCameraCharge=combatCameraFrame_ and combatCameraFrame_.cross or 0
         hud.debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)
+        hud.preview=animPreview_.index>0
         CombatHUD.Set(hud)
 end
 

@@ -149,6 +149,7 @@ local function RenderHUD(self,vg)
     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
+    local preview=not touch and CombatHUD.Preview()
     local left,top,ow,oh,available=Objective(vg,w,h,s,touch)
     local _,clockWidths=Lines(vg,clockCache,clockText,math.max(12,available-48),12,touch,false)
     local cw=120
@@ -174,14 +175,14 @@ local function RenderHUD(self,vg)
         Draw.Rect(vg,x-gap-6,y-1,6,2,c); Draw.Rect(vg,x+gap,y-1,6,2,c)
         if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
     end
-    if not touch and not CombatHUD.Active() then
+    if not preview and not touch and not CombatHUD.Active() then
         for i,b in ipairs(SPELL_BUTTONS) do
             local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
             Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
         end
     end
-    if not touch and CombatHUD.Active() then
+    if not preview and not touch and CombatHUD.Active() then
         local list=COMBAT_BUTTONS
         list[1].icon=CombatHUD.Weapon()
         for i,b in ipairs(list) do
@@ -193,7 +194,7 @@ local function RenderHUD(self,vg)
     local actionHint=CombatHUD.Hint()
     if not actionHint and charge>0 then actionHint=touch and '碎时蓄力 · 松开【碎时】释放' or '碎时蓄力 · 松开左键释放' end
     local shownHint=M.SelectHint(actionHint,MobileText(target),touch and Controls.Hint() or hint)
-    if shownHint~='' then
+    if not preview and shownHint~='' then
         -- Keep the bottom-center strip in the gap left of the right action cluster.
         -- Longer air instructions wrap instead of covering glide/land buttons.
         local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(640,w-40)
@@ -208,7 +209,7 @@ local function RenderHUD(self,vg)
         Draw.NineSlice(vg,'plaque_ink',hx,hy,hw,hh,12,.9)
         for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.paper,NVG_ALIGN_CENTER) end
     end
-    if message~='' or hideFrame>0 then
+    if not preview and (message~='' or hideFrame>0) then
         local maxW=math.max(96,w-s.left-s.right-40)
         local ml,widths=Lines(vg,messageCache,displayMessage,maxW-88,24,touch,true)
         local mw=88
@@ -220,7 +221,7 @@ local function RenderHUD(self,vg)
         Draw.Scroll(vg,(w-mw)/2,my,mw,alpha)
         for i,line in ipairs(ml) do Draw.Text(vg,line,w/2,my+48+(i-(#ml+1)/2)*26,24,C.brown,NVG_ALIGN_CENTER,alpha) end
     end
-    if help and not touch then
+    if not preview and help and not touch then
         local hx=w-s.right-320
         local lines=M.HelpLines(CombatHUD.Active() and 'combat' or (CombatHUD.Mounted() and 'mounted' or 'explore'))
         Draw.NineSlice(vg,'panel_paper',hx,top,304,24+#lines*20,8,.95)
