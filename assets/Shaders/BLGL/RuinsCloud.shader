@@ -7,7 +7,7 @@ uniform float cloud_enabled = 0.0;
 uniform float day = 1.0;
 uniform float dusk = 0.0;
 uniform float drift_time = 0.0;
-uniform float motion_detail = 1.0;
+uniform float motion_detail = 1.0; // Reserved for unchanged Lua binding; no fragment deformation.
 uniform vec4 sky_top = vec4(0.05,0.16,0.46,1.0);
 uniform vec4 sky_horizon = vec4(0.45,0.60,0.83,1.0);
 uniform vec4 sky_bottom = vec4(0.07,0.10,0.15,1.0);
@@ -40,20 +40,9 @@ void vertex() {
 
 void fragment() {
     if (cloud_enabled<0.5) { discard; }
-    // Coherent billowing, not edge erosion. Far/small clouds keep authored UVs.
-    // Evaluate derivatives uniformly, before the per-pixel alpha discard.
+    // Stable silhouette: whole-cloud angular drift remains in vertex().
+    // Do not wobble the AA edge by subpixel UV distortion.
     vec2 uv=UV;
-    if (motion_detail>0.0) {
-        vec2 cell=fract(UV*vec2(4.0,2.0));
-        vec2 footprint=fwidth(UV*vec2(4.0,2.0));
-        float detail=motion_detail*(1.0-smoothstep(0.008,0.025,max(footprint.x,footprint.y)));
-        float gutter=smoothstep(0.02,0.10,cell.x)*(1.0-smoothstep(0.90,0.98,cell.x))
-            *smoothstep(0.02,0.10,cell.y)*(1.0-smoothstep(0.90,0.98,cell.y));
-        float phase=floor(UV.x*4.0)*1.7+floor(UV.y*2.0)*2.3;
-        vec2 billow=vec2(sin(cell.y*8.0+phase+drift_time*0.020)-sin(cell.y*8.0+phase),
-            sin(cell.x*7.0+phase+drift_time*0.014)-sin(cell.x*7.0+phase));
-        uv+=billow*vec2(0.003/4.0,0.0015/2.0)*gutter*detail;
-    }
     vec4 data=texture(cloud_atlas,uv);
     if (data.a<0.003) { discard; }
     vec3 dir=normalize(cloud_direction);
