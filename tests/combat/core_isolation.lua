@@ -33,18 +33,55 @@ tail();tail();assert(count.hit==2 and count.debug==2,'Apply/Rig failure cannot a
 -- Actual PostUpdate: base camera failure, sigil failure and combat camera failure
 -- must still update HUD and independent FX consumers in that same frame.
 local post=assert(src:match('(function Ruins_HandlePostUpdate.-)\nfunction M.Stop'))
-env.UpdateBaseCamera=bad;env.UpdateCombatCamera=bad;env.UpdateCombatHUD=function()tick('hud')end
-env.M={aim={},sigils={Update=bad}}
-env.SwingPerf=require('combat.SwingPerf')
-env.nomi_={BeginQueryScope=function()end,EndQueryScope=function()end,HandPos=function()return 0 end,CameraNode=function()return 0 end}
+local order,scope={},0
+local camera={revision=0}
+local aim={hit=true}
+local function record(name)order[#order+1]=name end
+local isolated=env.Safe
+local perf=require('combat.SwingPerf')
+env.Safe=function(name,fn,...)record(name);return isolated(name,fn,...)end
+env.SwingPerf={Invalidate=function()record('invalidate');perf.Invalidate()end}
+env.UpdateBaseCamera=bad;env.UpdateCombatCamera=bad
+local presentedAim
+local function finalAim()
+    record('aim');assert(scope==2,'display aim belongs to final-camera query scope')
+    presentedAim=camera.revision;return aim
+end
+env.UpdateAim=finalAim
+env.Puzzles={UpdatePresentation=function(dt)assert(dt==.016);tick('presentation')end}
+env.UpdateCombatHUD=function(cn,dt)assert(cn==camera and dt==.016 and scope==2);tick('hud')end
+env.M={sigils={Update=bad}}
+env.nomi_={BeginQueryScope=function()scope=scope+1;record('begin'..scope)end,
+ EndQueryScope=function()record('end'..scope)end,HandPos=function()return 0 end,
+ CameraNode=function()return camera end,Camera=function()return camera end}
+env.weaponGesture_={Update=function(_,dt,cam)assert(dt==.016 and cam==camera);tick('anchor')end}
 env.caster_={charge=0};env.Spells={ShatterRadius=function()return 0 end}
 env.CombatState.CanUseTime=function()return true end
 env.fx_={motesB={Draw=function()tick('b')end},motesG={Draw=function()tick('g')end}}
 env.handMotes_={Draw=function()tick('hand')end}
 assert(load(post,'actual Scene PostUpdate','t',env))()
 local event={TimeStep={GetFloat=function()return .016 end}}
+local expected='begin1,Camera.Base,end1,invalidate,begin2,Camera.Combat,aim,Puzzles.Presentation,FX.Sigils,HUD.Update,end2,WeaponSelect.Anchor,FX.MotesB,FX.MotesG,FX.HandMotes'
 env.Ruins_HandlePostUpdate(nil,event)
-assert(count.hud==1 and count.b==1 and count.g==1 and count.hand==1)
+assert(table.concat(order,',')==expected,'camera/final aim/puzzles/sigils/HUD/anchor ordering must survive isolated failures')
+assert(count.hud==1 and count.b==1 and count.g==1 and count.hand==1 and count.presentation==1 and count.anchor==1)
+-- Successful transforms prove aim sees the final camera, not its base pose.
+State.ResetIsolation();order={};scope=0
+local baseRevision=perf.revision
+local baseScopeRevision
+local aimScopeRevision
+local beginScope=env.nomi_.BeginQueryScope
+env.nomi_.BeginQueryScope=function()
+    beginScope()
+    if scope==1 then baseScopeRevision=perf.revision else aimScopeRevision=perf.revision end
+end
+env.UpdateBaseCamera=function()assert(scope==1);camera.revision=1 end
+env.UpdateCombatCamera=function(_,cn)assert(scope==2 and cn==camera);camera.revision=2 end
+env.M.sigils.Update=function(_,dt,selected)assert(dt==.016 and selected==aim and presentedAim==2)end
+env.Ruins_HandlePostUpdate(nil,event)
+assert(table.concat(order,',')==expected and presentedAim==2)
+assert(baseScopeRevision==baseRevision and aimScopeRevision>baseScopeRevision,'base scope cannot leak rays into final-camera presentation scope')
+assert(count.hud==2 and count.presentation==2 and count.anchor==2)
 -- Perf logs are opt-in; event totals and first HUD sample do not become frame spam.
 State.swapPerf=false;local before=#logs
 State.BeginSwapPerf();State.PerfCall('animPlay',good);State.EndSwapPerf();State.FlushSwapPerf(true)

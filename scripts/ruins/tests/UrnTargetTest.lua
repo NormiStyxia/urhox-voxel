@@ -56,6 +56,35 @@ V.atFrame(8,function()
     end
     -- 镜头瞄准外壳而非包围中心：覆盖瓮腹棱角/金环/蓝纹各高度。
     local urn=urns[1]
+    -- 模拟不同运行后端的首命中漏掉可见瓮，或报出包围盒空气中的普通障碍。
+    -- 真实 Grid 不变：镜头 -> 空气 -> 瓮外壳；两种原生结果都必须得到同一目标。
+    local falseBlock=world:CreateVolume(4,4,4,.125,urn.center+Vector3(0,0,-2))
+    falseBlock.destructible=false
+    world:FinalizeVolume(falseBlock)
+    local faultMode=0
+    nomi.world={
+        RaycastGridSingle=function(self,r,d,mask)
+            local hit=VoxelRaycastResult:new()
+            if faultMode==1 then
+                hit.hit,hit.volume,hit.volumeId=true,falseBlock,falseBlock.volumeId
+                hit.distance,hit.position=1,(r.origin+r.direction) --[[@as Vector3]]
+            end
+            return hit
+        end,
+        GetVolumeCount=function() return world:GetVolumeCount() end,
+        GetVolume=function(self,i) return world:GetVolume(i) end,
+        SphereCast=function() return VoxelRaycastResult:new() end
+    }
+    for mode=0,1 do
+        faultMode=mode
+        local target=urn.center
+        local r=Ray(target+Vector3(0,.5,-4),Vector3(0,-.5,4):Normalized())
+        local aim=nomi:AimRay(r,20)
+        V.assert(aim.object==urn,"原生漏报或空气障碍不清空可见瓮 mode="..mode)
+    end
+    nomi.world=saved
+    local blockNode=falseBlock:GetNode()
+    world:RemoveVolume(falseBlock); falseBlock:Dispose(); blockNode:Dispose()
     for heading=0,345,15 do
         local a=math.rad(heading)
         local facing=Vector3(math.sin(a),0,math.cos(a))
@@ -81,7 +110,37 @@ V.atFrame(8,function()
             end
         end
     end
+    -- 禁用体积不再成为隐形墙；仍启用的 mask=0 视觉残片必须保留可选性。
+    local obstacle=world:CreateVolume(8,8,2,.125,urn.center+Vector3(-.5,-.5,-2))
+    obstacle:GetGrid():FillBox(0,0,0,7,7,1,true)
+    obstacle.destructible=false
+    world:FinalizeVolume(obstacle)
+    local obstacleNode=obstacle:GetNode()
+    local sight=Ray(urn.center+Vector3(0,0,-4),Vector3.FORWARD)
+    V.assert(nomi:GridHit(sight,20).volume==obstacle,"启用实心墙仍阻止瓮锁定")
+    obstacleNode.enabled=false
+    V.assert(nomi:AimRay(sight,20).object==urn,"禁用体积不留下隐形遮挡")
+    obstacleNode.enabled=true
+    obstacle.enabled=false
+    V.assert(nomi:AimRay(sight,20).object==urn,"禁用组件不留下隐形遮挡")
+    world:RemoveVolume(obstacle); obstacle:Dispose(); obstacleNode:Dispose()
+    -- 正式 PostUpdate 应在相机更新后重取准星，不沿用过期或故意清空的 aim。
+    local savedCamera=nomi.UpdateCamera
+    nomi.UpdateCamera=function(self,dt,mode,follow)
+        local camera=self:CameraNode()
+        camera.worldPosition=urn.center+Vector3(3,1,3.5)
+        camera:LookAt(urn.center)
+    end
+    game.aim={hit=false}
+    local timeBefore=urn.time
+    Ruins_HandlePostUpdate("PostUpdate",{TimeStep=Variant(0.016)})
+    V.assert(game.aim.object==urn and game.sigils.target.node.enabled,"最终相机更新后同帧选中瓮并显示钟面")
+    V.assert(urn.hover>0 and urn.hoverTarget==0 and urn.time==timeBefore,"最终选中同帧更新高亮但不重复推进玩法计时")
+    nomi.UpdateCamera=savedCamera
     nomi.world=saved
+    local clock=Time:GetSystemTime()
+    for i=1,120 do nomi:AimRay(sight,20) end
+    print(string.format("UrnTargetTest: aim average %.3fms over 120 rays",(Time:GetSystemTime()-clock)/120))
     print(string.format("UrnTargetTest: visible=%d / 1296 misses=%d",visible,misses))
 end)
 

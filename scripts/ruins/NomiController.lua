@@ -457,7 +457,8 @@ function N:UpdateCamera(dt, mode, followNode)
     end
 end
 
--- 从当前 Grid 核对真实实心格，不把空气包围盒或动态凸包当成遮挡。
+-- 粗筛只排除射线不可能碰到的包围球；最终仍逐格检测，不能把球当可选表面。
+local aimBounds=setmetatable({}, {__mode="k"})
 -- 相机 -> [空气 | 实心格]；高坐标面负向进入时属于 n-1，不属于网格外的 n。
 -- 入口/步进用 Lua 标量保留精度；不靠微小世界位移选格，也不把越界格强行夹回网格。
 -- 整数边界按方向归属，棱角同时跨轴；空洞及旋转体积仍按当前 Grid。
@@ -536,19 +537,30 @@ local function TraceVolume(volume, ray, maxDist, cellLimit)
     return nil
 end
 
----@param hit VoxelRaycastResult
+---@param volume VoxelVolume
 ---@param ray Ray
-local function EmptyOriginHit(hit,ray)
-    if not hit.hit or hit.distance>.001 then return false end
-    local volume=hit.volume
-    local grid=volume:GetGrid()
-    if grid==nil then return true end
+local function MayIntersect(volume,ray,maxDist)
     local node=volume:GetNode()
-    if node==nil or volume.voxelSize<=0 then return true end
-    local p=node:WorldToLocal(ray.origin+ray.direction*.0001)/volume.voxelSize
-    local dims=grid:GetDimensions()
-    local x,y,z=math.floor(p.x),math.floor(p.y),math.floor(p.z)
-    return x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or not grid:IsSolid(x,y,z)
+    if node==nil or not volume:IsEnabledEffective() or not node:IsEnabled() then return false end
+    local bound=aimBounds[volume]
+    if bound==nil then
+        local grid=volume:GetGrid()
+        if grid==nil then return false end
+        local d=grid:GetDimensions()
+        -- 遗迹体积创建后不改 dimensions；缓存局部中心/半对角线，不缓存移动后的世界位置。
+        bound={x=d.x*.5,y=d.y*.5,z=d.z*.5,r2=(d.x*d.x+d.y*d.y+d.z*d.z)*.25}
+        aimBounds[volume]=bound
+    end
+    local scale=node.worldScale
+    local size=volume.voxelSize
+    local s=math.max(math.abs(scale.x),math.abs(scale.y),math.abs(scale.z))*size
+    local p=node.worldPosition
+    local offset=node.worldRotation*Vector3(bound.x*scale.x*size,bound.y*scale.y*size,bound.z*scale.z*size)
+    local x,y,z=p.x+offset.x-ray.origin.x,p.y+offset.y-ray.origin.y,p.z+offset.z-ray.origin.z
+    local dir=ray.direction
+    local t=math.max(0,math.min(maxDist,x*dir.x+y*dir.y+z*dir.z))
+    local dx,dy,dz=x-dir.x*t,y-dir.y*t,z-dir.z*t
+    return dx*dx+dy*dy+dz*dz<=bound.r2*s*s+.0001
 end
 
 -- Cache is opt-in for synchronous read-only batches. World mutation has no
@@ -582,27 +594,23 @@ function N:GridHit(ray,maxDist,decorative)
         end
     end
     Perf.gridCalls=Perf.gridCalls+1
-    local first=self.world:RaycastGridSingle(ray,maxDist,mask)
-    local ignored=first.hit and self.ignoreAimVolume and self.ignoreAimVolume(first.volume)
-    local emptyOrigin=not ignored and EmptyOriginHit(first,ray)
-    local timeTarget=not ignored and first.hit and TimeObject.FindByVolume(first.volume)~=nil
-    local nearest=first
-    if ignored or emptyOrigin or timeTarget then
-        Perf.fallbackReason=ignored and 'ignored' or (emptyOrigin and 'emptyOrigin' or 'timeTarget')
-        -- Gameplay LOS remains exact. Only optional HUD queries can be denied;
-        -- reporting the overrun is preferable to silently missing a real hit.
-        local denied=decorative and (Perf.fallbacks>=4 or Perf.cells>=4096)
-        if denied then
-            nearest=VoxelRaycastResult:new();nearest.hit=true;nearest.distance=0
-            Perf.gridBudgetExceeded=Perf.gridBudgetExceeded+1
-            Perf.Finish('GridHit',start);return nearest -- never cache a budget denial
-        end
-        Perf.fallbacks=Perf.fallbacks+1
-        local reach=not ignored and not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
-        nearest=VoxelRaycastResult:new()
-        for i=0,self.world:GetVolumeCount()-1 do
-            local volume=self.world:GetVolume(i)
-            if volume~=nil and (volume.collisionLayer & mask)~=0
+    -- Gameplay LOS remains exact. Only optional HUD queries can be denied;
+    -- reporting the overrun is preferable to silently missing a real hit.
+    if decorative and (Perf.fallbacks>=4 or Perf.cells>=4096) then
+        local denied=VoxelRaycastResult:new();denied.hit=true;denied.distance=0
+        Perf.gridBudgetExceeded=Perf.gridBudgetExceeded+1
+        Perf.Finish('GridHit',start);return denied -- never cache a budget denial
+    end
+    Perf.fallbacks=Perf.fallbacks+1
+    Perf.fallbackReason='fullTrace'
+    local nearest=VoxelRaycastResult:new()
+    -- 统一查询真实 Grid：原生首命中的 miss、空气碰撞体及偏短距离不能决定截断。
+    -- 镜头 -> 候选包围球粗筛 -> 最近实心格；可见 mask=0 回溯残片保留，禁用体积排除。
+    for i=0,self.world:GetVolumeCount()-1 do
+        local volume=self.world:GetVolume(i)
+        if volume~=nil and (volume.collisionLayer & mask)~=0 then
+            local limit=nearest.hit and math.min(maxDist,nearest.distance) or maxDist
+            if MayIntersect(volume,ray,limit)
                 and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
                 if decorative and Perf.volumes>=128 then
                     nearest.hit,nearest.distance=true,0
@@ -610,7 +618,6 @@ function N:GridHit(ray,maxDist,decorative)
                     Perf.Finish('GridHit',start);return nearest
                 end
                 Perf.volumes=Perf.volumes+1
-                local limit=nearest.hit and math.min(reach,nearest.distance) or reach
                 local actual,exhausted=TraceVolume(volume,ray,limit,decorative and 4096 or nil)
                 if decorative and exhausted then
                     nearest.hit,nearest.distance=true,0

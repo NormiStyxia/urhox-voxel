@@ -1,7 +1,10 @@
 local S=dofile('tests/combat/core_support.lua')
 local file=assert(io.open('scripts/ruins/NomiController.lua')); local source=file:read('*a');file:close()
-local body=source:match('(function N:Move.-)\n%-%- 仅 Scene')
-assert(body)
+-- Extract methods by their top-level function end, not translated comments.
+local function method(name)
+    return assert(source:match('(function N:'..name..'%b().-)\nend'))..'\nend'
+end
+local body=method('Move')..'\n'..method('AssistMelee')
 local N={}
 local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,
     WrapDeg=function(a) return a end,Quaternion=function() return {} end,
@@ -68,7 +71,7 @@ print('PASS slide full-footprint edge guard, slope/height/wall probes <=.10m and
 
 -- Actual camera methods: framing is independent of player yaw; effects are
 -- applied after fresh camera placement and cannot enter the follow state.
-local cameraBody=assert(source:match('(function N:SetCombatCamera.-)\n%-%- 从当前 Grid'))
+local cameraBody=method('SetCombatCamera')..'\n'..method('UpdateCamera')..'\n'..method('ApplyCombatOffset')
 local CameraN={}
 local rotation=setmetatable({}, {__mul=function(_,v) return v end})
 local cameraEnv=setmetatable({N=CameraN,Ray=function(origin,direction) return {origin=origin,direction=direction} end,Quaternion=function() return rotation end},{__index=_G})

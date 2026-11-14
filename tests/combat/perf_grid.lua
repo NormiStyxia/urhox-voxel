@@ -4,11 +4,11 @@ local N,trace=F.LoadNomi()
 local rotation={Inverse=function(self)return self end}
 setmetatable(rotation,{__mul=function(_,v)return v end})
 local function volume(x,solid,dims)
- local node={worldRotation=rotation,worldScale=Vector3(1,1,1),WorldToLocal=function(_,p)return p-Vector3(x,0,0)end}
+ local node={worldPosition=Vector3(x,0,0),worldRotation=rotation,worldScale=Vector3(1,1,1),IsEnabled=function()return true end,WorldToLocal=function(_,p)return p-Vector3(x,0,0)end}
  local grid={GetDimensions=function()return dims or {x=4,y=4,z=4}end,
   IsSolid=function(_,a,b,c)assert(math.type(a)=='integer' and math.type(b)=='integer' and math.type(c)=='integer');return solid(a,b,c)end,
   GetVoxelMaterial=function()return 1 end}
- return {collisionLayer=1,voxelSize=1,volumeId=x,GetNode=function()return node end,GetGrid=function()return grid end,GetPaletteDomain=function()return 0 end}
+ return {collisionLayer=1,voxelSize=1,volumeId=x,IsEnabledEffective=function()return true end,GetNode=function()return node end,GetGrid=function()return grid end,GetPaletteDomain=function()return 0 end}
 end
 local v=volume(0,function(x)return x==0 end)
 local hit=trace(v,{origin=Vector3(4,1.5,1.5),direction=Vector3(-1,0,0)},10)
@@ -19,11 +19,11 @@ local empty=volume(0,function()return false end,{x=10000,y=4,z=4})
 P.BeginFrame();local _,exhausted=trace(empty,{origin=Vector3(0,1.5,1.5),direction=Vector3.RIGHT},10000,4096)
 assert(exhausted and P.cells==4096,'optional DDA budget exact')
 local native={hit=false}
-local count=0
+local count,nativeCalls=0,0
 local world={RaycastGridSingle=function(_,ray,distance,mask)
  assert(type(ray.origin)=='table' and type(ray.direction)=='table' and type(distance)=='number' and math.type(mask)=='integer')
- count=count+1;return native
-end,GetVolumeCount=function()return 1 end,GetVolume=function(_,i)assert(i==0);return v end}
+ nativeCalls=nativeCalls+1;return native
+end,GetVolumeCount=function()count=count+1;return 1 end,GetVolume=function(_,i)assert(i==0);return v end}
 local n=setmetatable({world=world,aimMask=1},{__index=N})
 local ray={origin=Vector3(4,1.5,1.5),direction=Vector3(-1,0,0)}
 P.BeginFrame();n:BeginQueryScope()
@@ -32,13 +32,13 @@ n:GridHit(ray,9);assert(count==2)
 n.aimMask=3;n:GridHit(ray,10);assert(count==3)
 P.Invalidate();n:GridHit(ray,10);assert(count==4)
 n:EndQueryScope();n:GridHit(ray,10);n:GridHit(ray,10);assert(count==6,'uncached by default')
--- Ignored foreground native result repaired; query cache never survives scope end.
+-- Native foreground/miss/empty-origin hints never truncate the full Grid trace; scope remains opt-in.
 n.aimMask=1
 local ignored={}
 n.ignoreAimVolume=function(vol)return vol==ignored end
 native={hit=true,distance=1,volume=ignored}
 P.BeginFrame();n:BeginQueryScope();local repaired=n:GridHit(ray,10)
-assert(repaired.volume==v and repaired.distance==3 and P.fallbackReason=='ignored')
+assert(repaired.volume==v and repaired.distance==3 and P.fallbackReason=='fullTrace')
 assert(n:GridHit(ray,10)==repaired and P.fallbacks==1)
 n:EndQueryScope()
 P.fallbacks=4
@@ -46,7 +46,15 @@ local hidden=n:GridHit(ray,10,true);assert(hidden.hit and hidden.distance==0 and
 local exact=n:GridHit(ray,10);assert(exact.volume==v and exact.distance==3,'gameplay cannot be dropped by HUD budget')
 P.BeginFrame();n.ignoreAimVolume=nil
 native={hit=true,distance=0,volume=empty}
-local repairedEmpty=n:GridHit(ray,10);assert(repairedEmpty.volume==v and P.fallbackReason=='emptyOrigin')
+local repairedEmpty=n:GridHit(ray,10);assert(repairedEmpty.volume==v and P.fallbackReason=='fullTrace')
+assert(nativeCalls==0,'fullTrace never consults native first hit')
+local queries=count
+P.BeginFrame();v.IsEnabledEffective=function()return false end
+assert(not n:GridHit(ray,10).hit and P.cells==0 and count==queries+1,'disabled volumes are rejected before DDA')
+v.IsEnabledEffective=function()return true end
+v:GetNode().IsEnabled=function()return false end
+assert(not n:GridHit(ray,10).hit and P.cells==0,'disabled nodes are rejected before DDA')
+v:GetNode().IsEnabled=function()return true end
 print('PASS Grid slab rejection, negative-boundary DDA, exact ray/mask/distance/scope invalidation, 4096-cell optional cap, gameplay fallback preserved')
 
 local _,oldTrace=F.LoadNomi('validation/combat/sword-hitch/before/NomiController.lua.txt')
