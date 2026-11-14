@@ -278,6 +278,10 @@ local function RenderControls(self,vg)
     Draw.Finish(vg)
 end
 function Layer:Render(vg)
+    local forge=package.loaded['ui.ForgePanel']
+    if forge and forge.HudHidden and forge.HudHidden() then return end
+    local wheel=package.loaded['ui.WeaponWheel']
+    if wheel and wheel.IsOpen and wheel.IsOpen() then return end
     local depth=Draw.Depth(vg)
     CombatState.Isolated('Touch.Render',RenderControls,self,vg)
     Draw.Unwind(vg,depth)

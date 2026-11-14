@@ -16,6 +16,8 @@ local elapsed,frames=0,0
 local text='FPS -- · -- ms'
 local Layer=UI.Panel:Extend('RuinsPerformanceHUD')
 function Layer:Render(vg)
+    local forge=package.loaded['ui.ForgePanel']
+    if forge and forge.HudHidden and forge.HudHidden() then return end
     local w,_,safe=Draw.Metrics()
     Draw.Begin(vg,true)
     Draw.Rect(vg,w-safe.right-196,safe.top+94,176,24,Draw.colors.ink,.85)

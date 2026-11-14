@@ -6,6 +6,8 @@ for _,name in ipairs({'ui.CombatHUD','ui.PixelDraw','ui.TouchControls','ruins.Ru
 end
 local noop=function()end
 local classes={}
+-- Opaque host-context adapter (.emmylua/NanoVG.manual.d.lua), not a numeric handle.
+local vg={} --[[@as NVGContextWrapper]]
 local Panel=setmetatable({Extend=function(_,name)
  local c={};c.__index=c;setmetatable(c,{__call=function(t,p)return setmetatable(p,t)end});classes[name]=c;return c
 end},{__call=function(_,p)return p end})
@@ -13,7 +15,7 @@ local safe={left=0,right=0,top=0,bottom=0}
 local UI={Panel=Panel,Scale={DEFAULT=1},Init=noop,SetRoot=noop,Shutdown=noop,
  GetScale=function()return 1 end,GetSafeAreaInsets=function()return {left=safe.left,right=safe.right,top=safe.top,bottom=safe.bottom} end}
 package.loaded['urhox-libs/UI']=UI
-package.loaded['urhox-libs/UI/Core/ImageCache']={GetContext=function()return 1 end}
+package.loaded['urhox-libs/UI/Core/ImageCache']={GetContext=function()return vg end}
 package.loaded['ui.SettingsMenu']={IsBlocked=function()return false end,IsOpen=function()return false end}
 package.loaded['ruins.GameSettings']={TouchDetected=noop}
 local events={SubscribeToEvent=noop,UnsubscribeFromAllEvents=noop}
@@ -70,7 +72,7 @@ HUD.Build({});HUD.SetObjective('测试任务','站在岸边瞄准桥片，修复
 Touch.Attach({AddChild=noop},function()return state end)
 local layer=classes.RuinsPixelHUD;local touchLayer=classes.RuinsTouchControls
 local function frame()
- moves.age=now;Combat.Set(data);Touch.Update(1/60);Touch.Sync();layer:Update(1/60);layer:Render(1);touchLayer:Render(1);Input.EndFrame();now=now+1/60;frameNumber=frameNumber+1
+ moves.age=now;Combat.Set(data);Touch.Update(1/60);Touch.Sync();layer:Update(1/60);layer:Render(vg);touchLayer:Render(vg);Input.EndFrame();now=now+1/60;frameNumber=frameNumber+1
 end
 for _=1,20 do frame()end
 collectgarbage('collect');collectgarbage('stop');count=0
@@ -90,7 +92,7 @@ if not base then
  Draw.Scroll=function(...)scrolls=scrolls+1;return scroll(...)end
  moves.clip=nil;moves.charge=0;data.charge=0;HUD.UpdateSlots({},0);HUD.SetMessage('preview existing message')
  local function sample(preview)
-  buttons,hints,scrolls=0,0,0;data.preview=preview;Combat.Set(data);layer:Render(1)
+  buttons,hints,scrolls=0,0,0;data.preview=preview;Combat.Set(data);layer:Render(vg)
   return buttons,hints,scrolls
  end
  local b,h,s=sample(false);assert(s>0);if not Input.IsEnabled()then assert(b>0 and h>0)end
@@ -100,5 +102,37 @@ if not base then
  local rb,rh,rs=sample(false);assert(rb==b and rh==h and rs==s,'F7 exit restores overlays')
  Draw.Button,Draw.Text,Draw.Scroll=button,text,scroll
  print('PASS real Render preview overlay enter/exit, retained message/hint/buttons; touch unchanged')
+end
+if not base then
+ -- Exercise every public draw entry, not a replacement renderer. Forge state is
+ -- deliberately loaded late: HUD modules must neither require nor cache it.
+ require('ui.PerformanceHUD')
+ local forgeBefore=package.loaded['ui.ForgePanel']
+ local hidden=false
+ package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
+ data.preview=false;moves.lastHitAt=moves.age;Combat.Set(data)
+ local saved,calls={},0
+ for name,fn in pairs(Draw)do if type(fn)=='function'then
+  saved[name]=fn;Draw[name]=function(...)calls=calls+1;return fn(...)end
+ end end
+ local renders={
+  {name='RuinsHUD',run=function()layer:Render(vg)end},
+  {name='CombatHUD',run=function()Combat.Render(vg,1280,720,safe,{x=20,y=20,h=80})end},
+  {name='HitCross',run=function()Combat.RenderHit(vg,640,360)end},
+  {name='TouchControls',run=function()touchLayer:Render(vg)end},
+  {name='PerformanceHUD',run=function()classes.RuinsPerformanceHUD:Render(vg)end},
+ }
+ for _,entry in ipairs(renders)do
+  hidden=false;calls=0;entry.run();local visible=calls;assert(visible>0,entry.name..' visible baseline')
+  hidden=true;calls=0;entry.run();assert(calls==0,entry.name..' must not issue any draw call')
+  hidden=false;calls=0;entry.run();assert(calls==visible,entry.name..' restores without reinitialization')
+ end
+ -- Timers and data updates continue while covered; rendering alone is gated.
+ hidden=true;local age=moves.age;frame();assert(moves.age>age)
+ HUD.SetMessage('updated while forge covered');HUD.SetClock('13:00');HUD.UpdateSlots({freeze=2},.2)
+ hidden=false;calls=0;layer:Render(vg);assert(calls>0)
+ for name,fn in pairs(saved)do Draw[name]=fn end
+ package.loaded['ui.ForgePanel']=forgeBefore
+ print('PASS forge HudHidden: all five HUD draw entries zero calls; close restores; covered updates continue')
 end
 return growth/600

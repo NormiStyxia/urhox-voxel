@@ -48,6 +48,15 @@ Controls.BeginTouch(6,776,322); assert(Input.Down('attack'))
 Controls.BeginTouch(7,792,52) -- menu
 assert(not Input.Down('attack') and menu)
 assert(cancelled>=3)
+-- Forge IsOpen feeds the existing state.blocked port for the entire modal and
+-- release latch, independently of the visual fade's narrower HudHidden window.
+menu=false;state.blocked=true;Controls.Sync()
+Controls.BeginTouch(20,776,322);Controls.BeginTouch(21,100,290);Controls.MoveTouch(21,100,250)
+assert(Controls.IsBlocked() and not Input.Down('attack') and Input.MoveAxis()==0,'forge blocks buttons and joystick')
+state.blocked=false;Controls.Sync();Controls.BeginTouch(22,776,322)
+assert(Input.Down('attack'),'fresh touch restores after forge closes');Controls.Cancel()
+local sf=assert(io.open('scripts/ruins/RuinsScene.lua'));local scene=sf:read('*a');sf:close()
+assert(scene:find('touchState.blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen()',1,true),'Scene preserves full modal input gate')
 KEY_F9=109
 local shift=false
 input={GetKeyDown=function(_,key) return key==KEY_SHIFT and shift end}

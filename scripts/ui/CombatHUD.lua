@@ -105,6 +105,8 @@ function H.HitPulse(moves)
     return age<.04 and 10 or 8,moves.lastHitWeak==true
 end
 function H.RenderHit(vg,x,y)
+    local forge=package.loaded['ui.ForgePanel']
+    if forge and forge.HudHidden and forge.HudHidden() then return end
     local distance,weak=H.HitPulse(data.moves)
     if not distance then return end
     local color=weak and C.gold or C.paper
@@ -138,6 +140,8 @@ function H.HasBoss()
 end
 function H.Preview() return data.preview==true end
 function H.Render(vg,w,h,s,objective)
+    local forge=package.loaded['ui.ForgePanel']
+    if forge and forge.HudHidden and forge.HudHidden() then return end
     if not data.moves then return end
     local moves=data.moves
     for i=1,rangeCount do

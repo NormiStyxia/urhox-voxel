@@ -234,6 +234,8 @@ local function RenderHUD(self,vg)
     Draw.Finish(vg)
 end
 function Layer:Render(vg)
+    local forge=package.loaded['ui.ForgePanel']
+    if forge and forge.HudHidden and forge.HudHidden() then return end
     local depth=Draw.Depth(vg)
     CombatState.Isolated('HUD.Render',CombatState.PerfCall,'hudRebuild',RenderHUD,self,vg)
     Draw.Unwind(vg,depth)
