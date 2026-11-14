@@ -1,0 +1,66 @@
+[
+  {
+    "tier": 0,
+    "view": "ground -> near cumulus",
+    "linear_rgb_mean_error": 0.0,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.0,
+    "pixels_over_0.02": 0.0
+  },
+  {
+    "tier": 0,
+    "view": "above -> near cumulus",
+    "linear_rgb_mean_error": 2.6155537233609783e-06,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.0037177146280088502,
+    "pixels_over_0.02": 0.0
+  },
+  {
+    "tier": 0,
+    "view": "below -> lower sea",
+    "linear_rgb_mean_error": 0.0,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.0,
+    "pixels_over_0.02": 0.0
+  },
+  {
+    "tier": 0,
+    "view": "inside volume -> across",
+    "linear_rgb_mean_error": 9.194728418963438e-05,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.05537689608570978,
+    "pixels_over_0.02": 0.0007638888888888889
+  },
+  {
+    "tier": 1,
+    "view": "ground -> near cumulus",
+    "linear_rgb_mean_error": 0.0,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.0,
+    "pixels_over_0.02": 0.0
+  },
+  {
+    "tier": 1,
+    "view": "above -> near cumulus",
+    "linear_rgb_mean_error": 0.00018642205549764063,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.20274089202152434,
+    "pixels_over_0.02": 0.0022916666666666667
+  },
+  {
+    "tier": 1,
+    "view": "below -> lower sea",
+    "linear_rgb_mean_error": 0.0,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.0,
+    "pixels_over_0.02": 0.0
+  },
+  {
+    "tier": 1,
+    "view": "inside volume -> across",
+    "linear_rgb_mean_error": 0.0005664733386771884,
+    "linear_rgb_p95_error": 0.0,
+    "max_error": 0.17706060091438047,
+    "pixels_over_0.02": 0.008402777777777778
+  }
+]

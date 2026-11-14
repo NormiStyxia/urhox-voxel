@@ -1,0 +1,45 @@
+diff --git a/scripts/combat/CombatMoves.lua b/scripts/combat/CombatMoves.lua
+index e664b2e..448cf53 100644
+--- a/scripts/combat/CombatMoves.lua
++++ b/scripts/combat/CombatMoves.lua
+@@ -208,6 +208,9 @@ function C:Action(kind,axis)
+         self.moveDir,self.slideFacing=dir,facing
+         self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose('hand')
+         if not self:Play('dodge_slide',.04) then return false end
++        -- Clear the previous strike before the first slide snapshot at .04s.
++        -- Scene restores the quality/combat trail switch on its next pose pass.
++        if self.rig.SetTrail then self.rig:SetTrail(false) end
+         self.dodgeCool,self.dodgeAt,self.slideElapsed=.50,self.age,0
+         self.combo,self.comboUntil,self.slideFollowUntil=combo,self.age+.60,self.age+.60
+         self.perfectUsed,self.slideStopped,self.pending=false,false,nil
+diff --git a/tests/combat/core_moves.lua b/tests/combat/core_moves.lua
+index eba217b..4723c46 100644
+--- a/tests/combat/core_moves.lua
++++ b/tests/combat/core_moves.lua
+@@ -236,6 +236,26 @@ Tick(.3);assert(#dust==2,'interrupt emits exactly one brake, no stale extra dust
+ assert(State.GetSetting('dodgeFov')==false,'dodge FOV is opt-in')
+ print('PASS dust start/brake/interrupt once, <=2 snapshots/.04 cadence/.08 expiry, default FOV off')
+ 
++-- A rejected dodge must not clear the current strike; an accepted one clears
++-- immediately, once, before its delayed afterimage window.
++do
++    local trailResets=0
++    rig.SetTrail=function(_,enabled)
++        assert(enabled==false and m.clip=='dodge_slide')
++        trailResets=trailResets+1
++    end
++    m=New();m.o.slideStart=function() return false end
++    assert(not m:Action('dodge') and trailResets==0)
++    m=New();m.anim.Play=function() return nil end
++    assert(not m:Action('dodge') and trailResets==0)
++    m=New();assert(m:Action('dodge') and trailResets==1)
++    assert(not m:Action('dodge') and trailResets==1)
++    Tick(.02);assert(trailResets==1 and #m:SlideAfterimages(Vector3.ZERO,{})==0)
++    Tick(.02);assert(trailResets==1 and #m:SlideAfterimages(Vector3.ZERO,{})==1)
++    rig.SetTrail=nil
++end
++print('PASS accepted slide clears previous trail once before .04s; rejected slide leaves it intact')
++
+ -- §19: one immutable-in-consumption event and max-only group envelopes.
+ m=New()
+ local impacts,audio={},{}

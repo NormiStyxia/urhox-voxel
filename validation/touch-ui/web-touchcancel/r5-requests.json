@@ -1,0 +1,966 @@
+{
+  "ok": true,
+  "action": "requests",
+  "status": 200,
+  "data": {
+    "ok": true,
+    "targetId": "8AA91AA51561D08403D5D9C30FA1CAB3",
+    "url": "https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1",
+    "requests": [
+      {
+        "id": "r86",
+        "timestamp": "2026-11-12T17:42:33.231Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/project.json?state=fresh",
+        "resourceType": "fetch",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r104",
+        "timestamp": "2026-11-12T17:42:33.345Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/?preview_login=REDACTED",
+        "resourceType": "document",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r106",
+        "timestamp": "2026-11-12T17:42:33.596Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r111",
+        "timestamp": "2026-11-12T17:42:33.744Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/env.json?v=358901070",
+        "resourceType": "fetch",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r112",
+        "timestamp": "2026-11-12T17:42:33.744Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/latest.json?v=358901070",
+        "resourceType": "fetch",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r113",
+        "timestamp": "2026-11-12T17:42:33.803Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/1.0.0/engine-ef9e23e2.json",
+        "resourceType": "fetch",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r117",
+        "timestamp": "2026-11-12T17:42:33.903Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/project.json?v=358901070",
+        "resourceType": "fetch",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r122",
+        "timestamp": "2026-11-12T17:43:06.479Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r123",
+        "timestamp": "2026-11-12T17:43:06.479Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r124",
+        "timestamp": "2026-11-12T17:43:06.479Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r125",
+        "timestamp": "2026-11-12T17:43:06.479Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r126",
+        "timestamp": "2026-11-12T17:43:06.479Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r127",
+        "timestamp": "2026-11-12T17:43:06.642Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r128",
+        "timestamp": "2026-11-12T17:43:06.643Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r129",
+        "timestamp": "2026-11-12T17:43:06.644Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r130",
+        "timestamp": "2026-11-12T17:43:06.644Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r131",
+        "timestamp": "2026-11-12T17:43:06.645Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r132",
+        "timestamp": "2026-11-12T17:43:06.779Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r133",
+        "timestamp": "2026-11-12T17:43:08.184Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/latest.json?_t=700805",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r134",
+        "timestamp": "2026-11-12T17:43:08.333Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/1.0.0/manifest-7c15de61.json",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r141",
+        "timestamp": "2026-11-12T17:43:08.950Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/project.json",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r156",
+        "timestamp": "2026-11-12T17:44:56.373Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/BpQ8wRmVaK_4WOHF8fVi9vu5-a34c74fb.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r157",
+        "timestamp": "2026-11-12T17:44:56.377Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GCZRQXzSmpTWcO-b-cvJ-ioQ-f905e9b4.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r158",
+        "timestamp": "2026-11-12T17:44:56.377Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HCCOYU7fDAIANC5d0_3_xHDx-07b42954.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r159",
+        "timestamp": "2026-11-12T17:44:56.377Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/D_pSiSwK6q5qnuUt88U75ZC6-54ea4896.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r160",
+        "timestamp": "2026-11-12T17:44:56.378Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GnwdcW3eSNyzK4V4RvlX9y2O-bb64ea0e.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r162",
+        "timestamp": "2026-11-12T17:44:56.378Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EaGmgXYKf7kcSVLECF2KccZl-7557e8a7.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r163",
+        "timestamp": "2026-11-12T17:44:56.378Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/BchRoUGxGOV2Edhki_nbBnns-25298923.xml",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r165",
+        "timestamp": "2026-11-12T17:44:56.432Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/FZoIobzpUiPzGq3fl73-wUIu-6b614a89.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r166",
+        "timestamp": "2026-11-12T17:44:56.468Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EzxT0ZnaK0Ly-lGXfd46Pmw--3ec30875.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r167",
+        "timestamp": "2026-11-12T17:44:56.469Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/G_ScoRDj76lzrk0eobA-Vnou-8f8b3e4e.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r168",
+        "timestamp": "2026-11-12T17:44:56.469Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/C7Z6ATD1U_oaFs4P9HvfN5p--c36ac389.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r169",
+        "timestamp": "2026-11-12T17:44:56.484Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/E_ZYmfIW07RtDal_VUIk9vtC-60aaa280.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r171",
+        "timestamp": "2026-11-12T17:44:56.533Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/ErhxueBgiHMyHIResB0QdRPR-b8e06b0f.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r172",
+        "timestamp": "2026-11-12T17:44:56.533Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EXiVkfe--TOUFEJ6yE6RSYrZ-562b1bb3.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r173",
+        "timestamp": "2026-11-12T17:44:56.548Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HugTwcRgEB-isk56qmmtrRQq-529b3dab.xml",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r174",
+        "timestamp": "2026-11-12T17:44:56.549Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/FowROf-FdU1jhudrEwrkZxb5-57794612.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r175",
+        "timestamp": "2026-11-12T17:44:56.550Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/A_RSYZLPIs9B4RCw5w9kUY3a-6cd5f19e.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r176",
+        "timestamp": "2026-11-12T17:44:56.553Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CGipGZotHQZo6Lnw3pQeMIsT-937801dc.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r177",
+        "timestamp": "2026-11-12T17:44:56.560Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CadNoY2Zq6ZDU-pDFWWyAxW9-a7f43771.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r178",
+        "timestamp": "2026-11-12T17:44:56.560Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DBHx6VmzUdXoAqEXqb_W3Bbg-052a475c.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r179",
+        "timestamp": "2026-11-12T17:44:56.585Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/ETRtef5sdf3UvQdESFBCJIUV-84437ff0.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r182",
+        "timestamp": "2026-11-12T17:44:56.588Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GN4TGXaodHj2JGbhxiyS1XWZ-98e52eb5.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r183",
+        "timestamp": "2026-11-12T17:44:56.596Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HEQU2RUcbBOFFx4zPH725_w4-3c0e5d87.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r184",
+        "timestamp": "2026-11-12T17:44:56.603Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GLdleavMxcm5mjJgdtmWTghs-947629f5.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r185",
+        "timestamp": "2026-11-12T17:44:56.603Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B32GWUiujKdiCxGfDVtA1I4T-e298c2d4.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r187",
+        "timestamp": "2026-11-12T17:44:56.617Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/AzTdWfNZRFjO0CbJ2AyRDRcx-fa973285.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r188",
+        "timestamp": "2026-11-12T17:44:56.617Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GHVd0VIxuowmsGlfvLDsKw4w-3f2b3a10.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r189",
+        "timestamp": "2026-11-12T17:44:56.631Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/BbIPOZaT6GcieSuEEhfcc6HX-e8946f13.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r190",
+        "timestamp": "2026-11-12T17:44:56.632Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EoeM-YCZLNLvg-btxN1BsatN-9e8877ff.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r191",
+        "timestamp": "2026-11-12T17:44:56.641Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CJsg4d4-pr-tlwaFRMbp6cW5-d1680a2a.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r192",
+        "timestamp": "2026-11-12T17:44:56.648Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CsZRsSHMYK8rzZ_mtLuFhKWm-4ac45b69.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r193",
+        "timestamp": "2026-11-12T17:44:56.650Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GtcCsWFYwg6sCv0linvFfV8F-c54afdf3.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r194",
+        "timestamp": "2026-11-12T17:44:56.650Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CHuTcXdiXJzYmx2QyMCKESUJ-21627e75.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r195",
+        "timestamp": "2026-11-12T17:44:56.692Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DVIBSfRpNRBVyYTePYCGks-g-2658d70f.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r196",
+        "timestamp": "2026-11-12T17:44:56.751Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/BFX-GWZ8Esgm27ibwhmcMgt--c4f48107.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r197",
+        "timestamp": "2026-11-12T17:44:56.751Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DJMX4WhGoyLwMC1SByKMroU_-285aef57.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r198",
+        "timestamp": "2026-11-12T17:44:56.751Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B393uZUMXEjcJyYNvpBqhmpu-c5392987.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r199",
+        "timestamp": "2026-11-12T17:44:56.751Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/ELe2cbH2cQhQ5PSYxqvsobeV-c90fbbeb.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r200",
+        "timestamp": "2026-11-12T17:44:56.753Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B0I8mc8VboKksncTRor4W0Z2-90788a73.json",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r202",
+        "timestamp": "2026-11-12T17:44:56.753Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r204",
+        "timestamp": "2026-11-12T17:44:56.765Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DPa1-RGJnlisSS1FRAMOia73-e09bc17d.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r205",
+        "timestamp": "2026-11-12T17:44:56.768Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HORyAf6HTN1UifGdMG-BpzOy-3cc90b0b.xml",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r206",
+        "timestamp": "2026-11-12T17:44:56.787Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DHx06dYO8RwgRXwCuB8m2f56-afede9a2.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r207",
+        "timestamp": "2026-11-12T17:44:56.789Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GGtLATZ5eyWmp5BDOTYxj0Ni-be599699.shaderinc",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r209",
+        "timestamp": "2026-11-12T17:44:56.803Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DTCzse2hWacKh-l4wWKEAmAg-97942542.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r210",
+        "timestamp": "2026-11-12T17:44:56.804Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DtVguRd3wS7COhnZ2jnRNCiH-3ca3dce9.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r211",
+        "timestamp": "2026-11-12T17:44:56.804Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DHDZQT_ATtjY1ccd0kiMkf3J-9a5ddc11.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r212",
+        "timestamp": "2026-11-12T17:44:56.813Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/FdESuZVA8YcFvAt5lXuTtpGQ-c5182689.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r213",
+        "timestamp": "2026-11-12T17:44:56.818Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/AxDrMWHIIweVvEfW6egBBwPg-639e4fad.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r214",
+        "timestamp": "2026-11-12T17:44:56.842Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HtaN6aW4XN4Ldg_NV5i8ELxn-8e784e1f.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r215",
+        "timestamp": "2026-11-12T17:44:56.845Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CoUWQSH5Eif3h4n0zGoemFoA-17b44eb9.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r216",
+        "timestamp": "2026-11-12T17:44:56.846Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HBo9SbMFummRBxXwAbmFLYJi-6db8bb8a.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r217",
+        "timestamp": "2026-11-12T17:44:56.863Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/H-DXybppMRTdvsmqG2ElfLi2-85e84bc3.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r218",
+        "timestamp": "2026-11-12T17:44:56.872Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/C_u-MV_T95PqduWw-6es0k_1-47af5e33.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r219",
+        "timestamp": "2026-11-12T17:44:56.872Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CiYBCXLF4yOXrMiYX0I-pY5s-da93a4f1.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r220",
+        "timestamp": "2026-11-12T17:44:56.872Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HI7DmbNnCN_rdhYxvWqgi2W8-de7d7622.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r221",
+        "timestamp": "2026-11-12T17:44:56.872Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EzyU6TMwQufXMXHPT0n6YRK0-22893f7f.xml",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r222",
+        "timestamp": "2026-11-12T17:44:56.880Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/Cq5FOapzi9J9r2E78ls-TMRp-bb9375d3.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r223",
+        "timestamp": "2026-11-12T17:44:56.898Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B2LTMb4kOzz6zB_65JzaC2A8-d8609992.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r224",
+        "timestamp": "2026-11-12T17:44:56.899Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/AMyGWa_hbHU2t55Ti5rFmzqn-5bb07923.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r226",
+        "timestamp": "2026-11-12T17:44:56.920Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/F1gTQXqCib1icGoXCJ7HtwUW-5155f7bd.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r227",
+        "timestamp": "2026-11-12T17:44:56.931Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GYlhsQl3Wy8lIK6Y_nvuiuWr-423aad28.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r228",
+        "timestamp": "2026-11-12T17:44:56.932Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EGhgAdC-bEsjN834QpSh8gMG-f13e4d6e.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r229",
+        "timestamp": "2026-11-12T17:44:56.932Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HFb0WX4cVKfFLm2TTewxTAek-4d37bb7f.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r230",
+        "timestamp": "2026-11-12T17:44:56.932Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/A4FXmZgxj6sfPQbnRsWS15jz-86390d54.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r232",
+        "timestamp": "2026-11-12T17:44:56.953Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/FfMuceD3Id2qXD_anLLjSe6C-af316824.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r233",
+        "timestamp": "2026-11-12T17:44:56.953Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EiE2EU_M44gasL94njSoE_Q_-84013ce2.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r234",
+        "timestamp": "2026-11-12T17:44:56.960Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/AQo0mQ6WqK0pp1_L3mUMTO9R-d8d176e4.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r235",
+        "timestamp": "2026-11-12T17:44:56.968Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B3tGqeIq_9cKTAXduUSGklA0-666528dc.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r237",
+        "timestamp": "2026-11-12T17:44:56.989Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/FR9Z8XPhauKok68VjFj3ikTa-9f83c952.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r238",
+        "timestamp": "2026-11-12T17:44:56.989Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/ErvVGed1PnsmWleeH1TZz88k-3cfa8287.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r239",
+        "timestamp": "2026-11-12T17:44:56.990Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/CPH2-TZmax3O2Pg-5aJXN8XT-cffe473f.xml",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r240",
+        "timestamp": "2026-11-12T17:44:57.003Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/EEBvSRlZGUK-WsSCUFHF7C-g-c04e8a1f.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r241",
+        "timestamp": "2026-11-12T17:44:57.007Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/HcYTufSI4yB1wR8rsvVq0_ti-20a6e6ad.shader",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r242",
+        "timestamp": "2026-11-12T17:44:57.007Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DbxXMb3iXIDmPlvtf8bwKBww-54dda3ee.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r243",
+        "timestamp": "2026-11-12T17:44:57.018Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B2lnkUFoU3xh0l1TJ53R9CLW-10b3817a.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r244",
+        "timestamp": "2026-11-12T17:44:57.018Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/G4Kt2UEEFGIHRki67vjbtw7w-30b39dde.lua",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r250",
+        "timestamp": "2026-11-12T17:45:37.053Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/D_UYwexCMRe13w5g6azDX7Pf-d8ad3f1a.png",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r251",
+        "timestamp": "2026-11-12T17:45:37.858Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/E6l14XsfXdG0EiL30hemjLDa-809f453d.ttf",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r252",
+        "timestamp": "2026-11-12T17:45:37.863Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/Eu7QQUU2KQHzAFLgauEDiBBn-ac7330a7.png",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r253",
+        "timestamp": "2026-11-12T17:45:37.864Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/Gk9tUcSRfaKqRgFFK8U7B40M-e644e442.png",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r254",
+        "timestamp": "2026-11-12T17:45:37.886Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GKqOge3HHJv2mZFmemM6HySi-a0a347d7.png",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r255",
+        "timestamp": "2026-11-12T17:45:37.900Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GBfsqbiMuZMBXfk_AjgyArxL-feb0c8a7.png",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r256",
+        "timestamp": "2026-11-12T17:45:37.906Z",
+        "method": "GET",
+        "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/F9Vz6b5yRS28D9ORRq8zGzMT-6a83732b.png",
+        "resourceType": "xhr",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "id": "r257",
+        "timestamp": "2026-11-12T17:45:38.055Z",
+        "method": "GET",
+        "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+        "resourceType": "script",
+        "status": 200,
+        "ok": true
+      }
+    ]
+  }
+}

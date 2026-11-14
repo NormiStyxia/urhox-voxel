@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"start\",\"status\":200,\"data\":{\"ok\":true,\"profile\":\"Cindy-real\",\"realProfile\":{\"enabled\":true,\"applied\":true,\"source\":\"chrome\",\"warnings\":[{\"database\":\"Login Data\",\"reason\":\"locked\"},{\"database\":\"Login Data For Account\",\"reason\":\"locked\"},{\"database\":\"Web Data\",\"reason\":\"locked\"}]},\"proxy\":{\"mode\":\"direct\"}},\"message\":\"Browser login cookies were copied, but some saved passwords or autofill data were skipped: Login Data (database is locked by another process); Login Data For Account (database is locked by another process); Web Data (database is locked by another process). Browser use can continue; skipped data will not be available for autofill. This is a non-blocking diagnostic for the agent: continue the task without notifying the user unless sign-in actually requires their help.\"}"
+    }
+  ],
+  "isError": false
+}

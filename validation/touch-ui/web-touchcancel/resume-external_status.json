@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"status\",\"status\":200,\"data\":{\"enabled\":true,\"profile\":\"Cindy-real\",\"driver\":\"browser runtime\",\"transport\":\"cdp\",\"running\":true,\"cdpReady\":true,\"cdpHttp\":true,\"pageReady\":true,\"pid\":14580,\"cdpPort\":18800,\"cdpUrl\":\"http://127.0.0.1:18800\",\"chosenBrowser\":\"custom\",\"detectedBrowser\":\"custom\",\"detectedExecutablePath\":\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\",\"detectError\":null,\"userDataDir\":\"/Users/xd/Library/Application Support/Cindy/browser-runtime/browser/Cindy-real/user-data\",\"color\":\"#00D9C5\",\"headless\":false,\"headlessSource\":\"config\",\"noSandbox\":false,\"executablePath\":\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\",\"attachOnly\":false,\"realProfile\":{\"enabled\":true,\"applied\":true,\"source\":\"chrome\",\"warnings\":[{\"database\":\"Login Data\",\"reason\":\"locked\"},{\"database\":\"Login Data For Account\",\"reason\":\"locked\"},{\"database\":\"Web Data\",\"reason\":\"locked\"}]},\"proxy\":{\"mode\":\"direct\"},\"backend\":\"external\"}}"
+    }
+  ],
+  "isError": false
+}

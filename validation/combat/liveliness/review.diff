@@ -1,0 +1,393 @@
+diff --git a/scripts/combat/CombatMoves.lua b/scripts/combat/CombatMoves.lua
+index 1810432..0641d4d 100644
+--- a/scripts/combat/CombatMoves.lua
++++ b/scripts/combat/CombatMoves.lua
+@@ -111,6 +111,7 @@ function C:Play(id,fadeIn)
+     return true
+ end
+ function C:Cancel(reason,keepProtection)
++    if self.o.camera then self.o.camera:Cancel() end
+     local cancelledHandle=self.handle
+     self:StopDrawSound()
+     self:BrakeSlide()
+@@ -212,6 +213,7 @@ function C:Action(kind,axis)
+         -- Clear the previous strike before the first slide snapshot at .04s.
+         -- Scene restores the quality/combat trail switch on its next pose pass.
+         if self.rig.SetTrail then self.rig:SetTrail(false) end
++        if self.o.camera then self.o.camera:Slide(self.moveDir) end
+         self.dodgeCool,self.dodgeAt,self.slideElapsed=.50,self.age,0
+         self.combo,self.comboUntil,self.slideFollowUntil=combo,self.age+.60,self.age+.60
+         self.perfectUsed,self.slideStopped,self.pending=false,false,nil
+@@ -244,7 +246,9 @@ function C:Action(kind,axis)
+     self.state.Activity(true)
+     if self.state.GetWeapon()=='sword' and kind~='hold' and self.o.assist then self.o.assist() end
+     self.moveDir=self.o.forward()
+-    if follow then self.followDistance=0; self.slideFollowUntil=nil
++    if follow then
++        if self.o.camera then self.o.camera:Follow() end
++        self.followDistance=0; self.slideFollowUntil=nil
+     else self.followDistance=nil end
+     local bow=self.state.GetWeapon()=='bow'
+     if bow then
+@@ -383,9 +387,13 @@ function C:Events()
+             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
+             self.strikePerfect=self.perfectUntil and self.age<=self.perfectUntil
+             self.perfectUntil=nil
+-        elseif e.name=='hit_off' then self.hitOpen=false; self.trailUntil=self.age+.06
++        elseif e.name=='hit_off' then
++            self.hitOpen=false; self.trailUntil=self.age+.06
++            if e.clip=='sword_light_3' and self.o.camera then self.o.camera:Land() end
+         elseif e.name=='cancel_open' then self.cancelOpen=true
+         elseif e.name=='cancel_close' then self.cancelOpen=false
++        elseif e.name=='dust_streak' then
++            if self.o.dustStreak then self.o.dustStreak(self.moveDir or self.o.forward()) end
+         elseif e.name=='dust_start' or e.name=='dust_stop' then
+             local start=e.name=='dust_start'
+             if start then
+@@ -404,14 +412,15 @@ function C:Events()
+             self.fullAt=self.age
+             if e.name=='draw_full' and not self.drawFullReached then
+                 self.drawFullReached=true; self.bowFullAt=self.age; self:Sound('bow_full')
++                if self.o.camera then self.o.camera:Full() end
+             end
+         elseif e.name=='weapon_ready' then
+-            self:Flash('draw'); self:Sound('blade_draw')
++            if not self.rig.PopEvents then self:Flash('draw'); self:Sound('blade_draw') end
+             if self.clip:find('weapon_swap_',1,true) then
+                 self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose('back'); self.state.FinishTransition()
+             else self.rig:SetPose('hand') end
+         elseif e.name=='weapon_stowed' or e.name=='weapon_drop' then
+-            if e.name=='weapon_stowed' then self:Flash('sheath'); self:Sound('blade_sheath') end
++            if e.name=='weapon_stowed' and not self.rig.PopEvents then self:Flash('sheath'); self:Sound('blade_sheath') end
+             self.rig:SetPose(e.name=='weapon_drop' and 'hidden' or 'back')
+         elseif e.name=='draw_start' then self.rig:SetPose('hand')
+         elseif e.name=='draw_min' then
+@@ -549,6 +558,10 @@ function C:Update(dt,controls)
+     self.motion=moveDir*metres
+     if sliding and self.o.slideMotion and metres>0 then
+         self.motion,self.slideStopped=self.o.slideMotion(self.motion)
++    elseif self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
++        and self.o.attackMotion and metres>0 then
++        self.motion=self.o.attackMotion(self.motion)
++        self.slideMotionFrame=true -- already footprint/wall checked, do not re-run endpoint guard
+     end
+     if self.fovAge then self.fovAge=self.fovAge+dt end
+     self:Events()
+@@ -727,6 +740,34 @@ function C.SeekPreview(anim,id,t,previous,params)
+     return t,C.PreviewEvents(anim:Poll(),from,t)
+ end
+ 
++-- Adapt the existing bounded dust emitter without owning another particle pool.
++-- Touch only this emission's serials; preserve enemy slots/key-event reserves.
++function C.EmitDustStreak(pool,owner,pos,dir,ground)
++    if not pool or not pool.slots or not pool.Hide then return 0 end
++    local originY=ground(pos)
++    if not originY then return 0 end
++    local first=pool.serial
++    pool:Emit(owner,{pos=pos,dir=dir,normal=Vector3.UP,material='stone',kind='dust'})
++    local count=0
++    for _,slot in ipairs(pool.slots) do
++        if slot.active and slot.owner==owner and slot.serial>first then
++            local i=slot.serial-first
++            local at=pos-dir*((i-1)*.18)
++            local y=i<=4 and ground(at) or nil
++            if not y then pool:Hide(slot)
++            else
++                count=count+1
++                slot.x,slot.y,slot.z=at.x,y+.025,at.z
++                slot.vx,slot.vy,slot.vz,slot.gravity=0,.04,0,0
++                slot.sx,slot.sy,slot.sz=.025+i*.005,.025,.025+i*.005
++                slot.ttl=.12+i*.02
++                if slot.node then slot.node.position=Vector3(slot.x,slot.y,slot.z); slot.node.scale=Vector3(slot.sx,slot.sy,slot.sz) end
++            end
++        end
++    end
++    return count
++end
++
+ -- Hand-only pool lets combat remove white hand motes immediately without
+ -- deleting ongoing freeze/rewind effects from TimeFX's shared spell pools.
+ function C.UpdateHandFX(fx,motes,dt,pos,color,glow)
+diff --git a/scripts/ruins/NomiController.lua b/scripts/ruins/NomiController.lua
+index 1cb79bc..62e76e0 100644
+--- a/scripts/ruins/NomiController.lua
++++ b/scripts/ruins/NomiController.lua
+@@ -312,6 +312,26 @@ function N:SetCombatCamera(target,boss,bow,zoom)
+     self.combatFocus=target
+     self.combatCameraMode=(boss and 'combatBoss' or 'combat')..(bow and ('Bow'..(zoom and 'Zoom' or '')) or '')
+ end
++-- Isolated F7 orbit through the same camera library and voxel obstruction guard.
++-- Gameplay yaw/pitch and follow state are preserved for the next normal frame.
++function N:UpdateCombatPreview(dt,view,orbit)
++    self.cam:SetModeConfig('combatPreview',{distance=2.6,offset=Vector3(0,1.2,0),fov=45})
++    self.cam:SetTransitionSpeed(1000); self.cam:SetMode('combatPreview')
++    local saved=self.camTarget.position
++    self.camTarget.position=self.node.worldPosition
++    local angle=({180,90,0,135})[view or 4] or 135
++    self.cam:Update(dt,self.camTarget,self.yaw+angle+(orbit or 0),6)
++    self.camTarget.position=saved
++    self.combatCameraOrigin=self.node.worldPosition+Vector3(0,1.2,0)
++    self:ApplyCombatOffset(Vector3.ZERO)
++end
++function N:ClipAttackMotion(motion)
++    if not self.cc.onGround then return Vector3.ZERO end
++    -- Rebuilt bridges are real collision ground even inside Terrain's void mask.
++    -- Use the same <=.10m footprint/slope/wall sweep as the accepted slide.
++    local clipped=self:ClipSlideMotion(motion)
++    return clipped
++end
+ function N:ApplyCombatOffset(offset)
+     local cn=self:CameraNode()
+     local origin=self.combatCameraOrigin
+diff --git a/scripts/ruins/RuinsHUD.lua b/scripts/ruins/RuinsHUD.lua
+index 7aa20b3..dc4507d 100644
+--- a/scripts/ruins/RuinsHUD.lua
++++ b/scripts/ruins/RuinsHUD.lua
+@@ -159,8 +159,9 @@ function Layer:Render(vg)
+         local x,y=math.floor(w/2),math.floor(h/2)
+         local c=CombatHUD.Active() and (CombatHUD.Aimed() and SPELL_COLORS.shatter or C.paper) or SPELL_COLORS.shatter
+         Draw.Rect(vg,x-1,y-1,2,2,c)
+-        Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
+-        Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
++        local gap=CombatHUD.Active() and CombatHUD.CrossGap() or 7
++        Draw.Rect(vg,x-1,y-gap-6,2,6,c); Draw.Rect(vg,x-1,y+gap,2,6,c)
++        Draw.Rect(vg,x-gap-6,y-1,6,2,c); Draw.Rect(vg,x+gap,y-1,6,2,c)
+         if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
+     end
+     if not touch and not CombatHUD.Active() then
+diff --git a/scripts/ruins/RuinsScene.lua b/scripts/ruins/RuinsScene.lua
+index 97a8570..b0af862 100644
+--- a/scripts/ruins/RuinsScene.lua
++++ b/scripts/ruins/RuinsScene.lua
+@@ -45,6 +45,8 @@ local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
+ local combatParticles_
+ local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
+ local combatLookScale_=1
++local CombatCamera=require('combat.CombatCamera')
++local combatCamera_,combatCameraFrame_
+ local arrowNodes_={}
+ local emptyAfterimages_={}
+ local animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5},direction='后'}
+@@ -420,12 +422,19 @@ local function OpenForge()
+ end
+ local function StartCombat()
+     CombatAudio.New(scene_)
++    combatCamera_=CombatCamera.New()
+     combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node)
+     combatMoves_=CombatMoves.New({anim=combatAnim_,rig=combatRig_,state=CombatState,
+         position=function() return nomi_:Position() end,forward=function() return nomi_.node.worldDirection end,
+-        enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=CombatAudio,
++        enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=CombatAudio,camera=combatCamera_,
+         slideStart=function() return nomi_:CanSlide() end,
+         slideMotion=function(motion) return nomi_:ClipSlideMotion(motion) end,
++        attackMotion=function(motion) return nomi_:ClipAttackMotion(motion) end,
++        dustStreak=function(direction)
++            if not nomi_.cc.onGround then return end
++            CombatMoves.EmitDustStreak(combatParticles_,hitParticleOwner_,nomi_:Position(),direction,
++                function(at) return nomi_:SlideGround(at) end)
++        end,
+         dust=function(count,direction)
+             if not nomi_.cc.onGround then return end
+             local pos=nomi_:Position()+Vector3(0,.04,0)
+@@ -745,7 +754,9 @@ function Ruins_HandleMouseMove(eventType, eventData)
+     local dx, dy = x - drag.x, y - drag.y
+     drag.x, drag.y = x, y
+     if dx == 0 and dy == 0 then return end
+-    nomi_:Look(dx, dy, 0.12*combatLookScale_)
++    if animPreview_.index>0 then
++        animPreview_.orbit=Clamp((animPreview_.orbit or 0)+dx*.12,-25,25)
++    else nomi_:Look(dx, dy, 0.12*combatLookScale_) end
+     drag.distance = drag.distance + math.abs(dx) + math.abs(dy)
+     drag.samples = drag.samples + 1
+     if drag.samples == 1 then
+@@ -918,7 +929,7 @@ local function HandleCombatDebugKeys(allowed)
+     end
+     if Press(KEY_F3) then
+         local on=not CombatState.GetSetting('cameraFov')
+-        CombatState.SetSetting('cameraFov',on); CombatHUD.Say('FOV 冲击 · '..(on and '开' or '关'))
++        CombatState.SetSetting('cameraFov',on); CombatHUD.Say('动作镜头 / FOV · '..(on and '开' or '关'))
+     end
+     if Press(KEY_F6) then
+         local on=not CombatState.GetSetting('aimAssist')
+@@ -1091,7 +1102,9 @@ function Ruins_HandleUpdate(eventType, eventData)
+     if not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_TAB) then farView = not farView end
+     if not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
+         local mm = input.mouseMove
+-        nomi_:Look(mm.x, mm.y, 0.12*combatLookScale_)
++        if animPreview_.index>0 then
++            animPreview_.orbit=Clamp((animPreview_.orbit or 0)+mm.x*.12,-25,25)
++        else nomi_:Look(mm.x, mm.y, 0.12*combatLookScale_) end
+     end
+     -- 龙
+     local ctrl = M.ctrl
+@@ -1117,6 +1130,7 @@ function Ruins_HandleUpdate(eventType, eventData)
+         local list=CombatAnim.DebugList()
+         if previewCycle then animPreview_.index=(animPreview_.index+1)%(#list+1)
+         else animPreview_.index=(animPreview_.index-1+(previewNext and 1 or -1))%#list+1 end
++        animPreview_.view=animPreview_.view or 4; animPreview_.orbit=0
+         animPreview_.t=0; animPreview_.text=nil; animPreview_.paused=false; animPreview_.events='—'
+         combatMoves_:Cancel('animation-preview'); TouchControls.Cancel()
+         combatArrows_:Clear()
+@@ -1134,6 +1148,12 @@ function Ruins_HandleUpdate(eventType, eventData)
+         if previewAllowed and Press(KEY_SPACE) then animPreview_.paused=not animPreview_.paused end
+         CombatState.SetBusy(true)
+         local params=animPreview_.params
++        params.aimPitch=Clamp(nomi_.camPitch,-35,35)
++        if previewAllowed then
++            for i,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_4}) do
++                if Press(key) then animPreview_.view,animPreview_.orbit=i,0 end
++            end
++        end
+         local changed=false
+         if previewAllowed and clip.id=='dodge_slide' then
+             if Press(KEY_I) then params.moveX,params.moveZ,animPreview_.direction=0,1,'前'; changed=true end
+@@ -1226,8 +1246,42 @@ function Ruins_HandleUpdate(eventType, eventData)
+     caster_:Update(dt)
+     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
+     if M.ride.mode == "free" then nomi_:Animate(combatMoves_.hitstop>0 and 0 or dt, caster_.charging or caster_.castAnim > 0 or CombatState.Get()==CombatState.ACTIVE) end
++    if combatAnim_ and animPreview_.index==0 then combatAnim_:SetParam('aimPitch',Clamp(nomi_.camPitch,-35,35)) end
+     if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or animPreview_.index>0) then combatAnim_:Apply() end
++    if animPreview_.index>0 then
++        local clip=CombatAnim.DebugList()[animPreview_.index]
++        local sample=combatAnim_.GetIKDebug and combatAnim_:GetIKDebug(clip.id)
++        if not sample then
++            local sampled=CombatAnim.DebugSample(clip.id,clip.id=='bow_hold' and animPreview_.params.p or animPreview_.t,animPreview_.params)
++            sample=sampled and sampled._ik
++        end
++        local lines={animPreview_.text or '', '1 前 / 2 侧 / 3 背 / 4 斜 · 距离2.6m · 鼠标微调'}
++        local body=nomi_.nomi.bones.body
++        local reference=require('combat.AnimClips').RigReference
++        for _,name in ipairs({'arm_right','arm_left'}) do
++            local result=sample and sample[name]
++            if result and result.target then
++                local target=result.target
++                local bone=nomi_.nomi.bones[name]
++                local grip=reference and (name=='arm_right' and reference.rightGrip or reference.leftGrip)
++                local actual=body and bone and grip and body:WorldToLocal(bone:LocalToWorld(Vector3(grip[1],grip[2],grip[3]))) or nil
++                local label=name=='arm_right' and '右' or '左'
++                lines[#lines+1]=string.format('%s握点目标 (%.3f, %.3f, %.3f)m',label,target.x or target[1],target.y or target[2],target.z or target[3])
++                if actual then lines[#lines+1]=string.format('%s握点实际 (%.3f, %.3f, %.3f)m',label,actual.x,actual.y,actual.z) end
++            end
++        end
++        if #lines==2 then lines[#lines+1]='此片段未提供握点轨迹' end
++        animPreview_.text=table.concat(lines,'\n')
++    end
+     if combatRig_ then
++        if combatRig_.SetBowDraw then
++            local p=(combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold') and combatMoves_.charge or 0
++            if animPreview_.index>0 then
++                local id=CombatAnim.DebugList()[animPreview_.index].id
++                p=(id=='bow_hold' or id=='bow_draw') and animPreview_.params.p or 0
++            end
++            combatRig_:SetBowDraw(p)
++        end
+         local offset,euler=combatAnim_:GetWeaponPose()
+         combatRig_:SetSwing(offset,euler)
+         local slidePosition,slideRotation
+@@ -1240,6 +1294,19 @@ function Ruins_HandleUpdate(eventType, eventData)
+         end
+         combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or (#slideImages>0 and slideImages or combatAnim_:GetAfterimages()))
+         combatRig_:Update(dt)
++        if combatRig_.PopEvents then
++            for _,event in ipairs(combatRig_:PopEvents() or {}) do
++                local name=type(event)=='string' and event or event.name
++                if name=='blade_draw' or name=='blade_sheath' then
++                    CombatAudio.Play(name,{pos=nomi_:Position()})
++                    if not combatRig_.ArrivalFlash and combatRig_.Flash then combatRig_:Flash(name=='blade_draw' and 'draw' or 'sheath') end
++                elseif name=='materialize' then
++                    CombatAudio.Play('blade_draw',{pos=nomi_:Position(),volume=.35})
++                elseif name=='materialized' and not combatRig_.ArrivalFlash and combatRig_.Flash then
++                    combatRig_:Flash('sheath')
++                end
++            end
++        end
+         if animPreview_.index==0 then combatMoves_:AfterPose() end
+     end
+     -- 法阵只更新一次，在 PostUpdate 中使用本帧最终相机与施法方向。
+@@ -1315,7 +1382,9 @@ end
+ 
+ function Ruins_HandlePostUpdate(eventType, eventData)
+     local dt = eventData["TimeStep"]:GetFloat()
+-    if M.mounted or M.ride.mode ~= "free" then
++    if animPreview_.index>0 and M.ride.mode=='free' then
++        nomi_:UpdateCombatPreview(dt,animPreview_.view or 4,animPreview_.orbit or 0)
++    elseif M.mounted or M.ride.mode ~= "free" then
+         nomi_:UpdateCamera(dt, "mounted", M.rig.bones.chest)
+     else
+         local mode = farView and "far" or ((caster_.charging or caster_.castAnim > 0) and "aim" or "normal")
+@@ -1326,7 +1395,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
+             for _,enemy in ipairs(CombatEnemies()) do if enemy.boss and enemy.aggro and not enemy.dead then boss=true; target=target or enemy end end
+             local focus=target and not target.dead and target.position or nil
+             local drawing=combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold'
+-            nomi_:SetCombatCamera(focus,boss,drawing,CombatState.GetSetting('bowZoom') and not combatLowQuality_)
++            nomi_:SetCombatCamera(focus,boss,drawing,false) -- charge envelope owns zoom, avoid double FOV
+             mode='combat'
+         end
+         if M.forceCamMode ~= nil then mode = M.forceCamMode end
+@@ -1336,14 +1405,17 @@ function Ruins_HandlePostUpdate(eventType, eventData)
+     M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime())
+     if combatMoves_ then
+         local cn=nomi_:CameraNode()
+-        if M.ride.mode=='free' then
+-            local shake=combatMoves_:ShakeOffset()
+-            if CombatState.InCombat() or shake:LengthSquared()>0 then nomi_:ApplyCombatOffset(shake) end
+-            if not combatLowQuality_ then nomi_:Camera().fov=nomi_:Camera().fov+combatMoves_:FovOffset() end
+-            local slideAge=combatMoves_.slideFovAge
+-            if not combatLowQuality_ and CombatState.GetSetting('cameraFov') and CombatState.GetSetting('dodgeFov') and slideAge and slideAge<.16 then
+-                local camera=nomi_:Camera()
+-                camera.fov=camera.fov+1.5*math.min(slideAge/.04,(.16-slideAge)/.12)
++        combatCameraFrame_=combatCamera_:Update(dt,combatMoves_,CombatState.GetSetting('cameraFov'),CombatState.GetSetting('cameraShake'))
++        if M.ride.mode=='free' and animPreview_.index==0 then
++            local action=combatCameraFrame_
++            local offset=combatMoves_:ShakeOffset()
++            if CombatState.InCombat() then offset=offset+action.focus-cn.worldDirection*action.distance end
++            if CombatState.InCombat() or offset:LengthSquared()>0 then nomi_:ApplyCombatOffset(offset) end
++            if CombatState.InCombat() then
++                -- The base library resets fov each frame. Merge impacts by maximum,
++                -- not addition, so heavy hits cannot double the authored +2 degrees.
++                local impact=not combatLowQuality_ and combatMoves_:FovOffset() or 0
++                nomi_:Camera().fov=nomi_:Camera().fov+math.min(0,action.fov)+math.max(0,action.fov,impact)
+             end
+         end
+         local enemies=CombatEnemies()
+@@ -1352,7 +1424,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
+         local wall=CombatCast(a,b)
+         local aimed=hits[1] and (not wall or hits[1].t<wall) and hits[1].enemy or nil
+         M.combat.aimed=aimed
+-        combatLookScale_=1
++        combatLookScale_=CombatState.InCombat() and combatCameraFrame_.look or 1
+         if CombatState.InCombat() and CombatState.GetWeapon()=='bow' and CombatState.GetSetting('aimAssist') then
+             local near=CombatHit.Query(enemies,a,b,.6)
+             for _,candidate in ipairs(near) do
+@@ -1360,7 +1432,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
+             end
+         end
+         CombatHUD.Set({moves=combatMoves_,combat=CombatState.InCombat(),mounted=M.ride.mode~='free',weapon=CombatState.GetWeapon(),charge=combatMoves_.charge,
+-            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,
++            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,bowCameraCharge=combatCameraFrame_.cross,
+             debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)})
+     end
+     fx_.motesB:Draw(); fx_.motesG:Draw()
+@@ -1380,6 +1452,7 @@ function M.Stop()
+     CombatState.Stop()
+     CombatSettings.RegisterQuality('combat-presentation',nil)
+     CombatAudio.Dispose()
++    combatCamera_,combatCameraFrame_=nil,nil
+     if trainingDummy_ then trainingDummy_:Destroy(); trainingDummy_=nil end
+     if handMotes_ then handMotes_:Clear(); handMotes_=nil end
+     handWasOn_,combatDebugText_,combatDebugUntil_,debugDestination_=nil,nil,0,0
+diff --git a/scripts/ui/CombatHUD.lua b/scripts/ui/CombatHUD.lua
+index e102117..d3c8577 100644
+--- a/scripts/ui/CombatHUD.lua
++++ b/scripts/ui/CombatHUD.lua
+@@ -58,6 +58,10 @@ function H.Active() return data.combat==true end
+ function H.Aimed() return data.aimed~=nil end
+ function H.Weapon() return data.weapon or 'sword' end
+ function H.Charge() return data.charge or 0 end
++function H.CrossGap()
++    local p=math.max(0,math.min(1,data.bowCameraCharge or 0))
++    return 7-2*math.floor(p*2+.5) -- integer two-pixel steps; centre never moves
++end
+ function H.Mounted() return data.mounted==true end
+ -- Only RuinsHUD renders this text: combat and pointer hints share one slot.
+ function H.Hint()

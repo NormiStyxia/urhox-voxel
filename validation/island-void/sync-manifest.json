@@ -1,0 +1,39 @@
+{
+  "root": "/Users/xd/Desktop/体素test",
+  "backup": "/Users/xd/Desktop/体素test-island-sync-backup-20261114-002042",
+  "head": "c9df58ab8bb368319d4246230b5d5b37e2ced8a6",
+  "remote": "19f0d635779e3752d3f0a48c5a36efc62cb5fa84",
+  "files": [
+    "assets/Shaders/BLGL/RuinsGround.shader",
+    "docs/README.md",
+    "scripts/dragon/DragonAnimationController.lua",
+    "scripts/ruins/GrassTufts.lua",
+    "scripts/ruins/NomiController.lua",
+    "scripts/ruins/RuinsBuild.lua",
+    "scripts/ruins/RuinsDragon.lua",
+    "scripts/ruins/RuinsPuzzles.lua",
+    "scripts/ruins/RuinsScene.lua",
+    "scripts/ruins/RuinsTerrain.lua"
+  ],
+  "new": "docs/空岛地形改造-2026-11-13.md",
+  "sha256": {
+    "assets/Shaders/BLGL/RuinsGround.shader": "cf0dcf2bf83af7e31e9440c6d366bd2337f800552c9469aed48e232e95acc2fe",
+    "docs/README.md": "b2d6b1f883f7290b96b3d0ef88e8fe4821d104286d7e2264e688519cdf8fe4e9",
+    "scripts/dragon/DragonAnimationController.lua": "a920cfd060922b065e5fc54f29255108c71fb546e03c5b551a1020f824c1bc62",
+    "scripts/ruins/GrassTufts.lua": "47958bf28bdb44b09b50c71eee430f5be6822eb9461bf1a5ca6b562f31b0278b",
+    "scripts/ruins/NomiController.lua": "bd17140c57b0c386a6409b942b91e1afc3e11e869e199b0198eeefa11e71f302",
+    "scripts/ruins/RuinsBuild.lua": "5e7b98193d573187afba2181c1d26ad5622fd74dcc102061551cfc33dfc2bed7",
+    "scripts/ruins/RuinsDragon.lua": "0d2319283bf90e1aafd4f9dab28cc459a35a5b9aded969d437432d5d38b83149",
+    "scripts/ruins/RuinsPuzzles.lua": "8578aa2173435a243a2baddddd28de77bd7781e62db3fe02e1e446917c28a8d0",
+    "scripts/ruins/RuinsScene.lua": "7dd2f03fc45a9ab248b94fb9cdfefaf4c1e8b1fcbb84c81d20d2e54df98a3503",
+    "scripts/ruins/RuinsTerrain.lua": "5aa42b31c9809bcc6b73b897d69a63d2b1ea657e25eef7ad96d87aafc2c95e81",
+    "docs/空岛地形改造-2026-11-13.md": "6270fcb6cca5af371145571282100763a2150bbf26f44f7f85cc066a9ac15ce5"
+  },
+  "worktree": "/tmp/island-integration-20261114-002042",
+  "conflicts": [
+    "scripts/ruins/NomiController.lua",
+    "scripts/ruins/RuinsPuzzles.lua",
+    "scripts/ruins/RuinsTerrain.lua"
+  ],
+  "stash_oid": "fb68d5822a78eafecf2480f0bc1352c6033e8c64"
+}

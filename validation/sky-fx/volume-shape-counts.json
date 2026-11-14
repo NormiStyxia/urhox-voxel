@@ -1,0 +1,36 @@
+{
+  "shapes": [
+    {
+      "shape": "tower",
+      "vertices": 590,
+      "triangles": 1176
+    },
+    {
+      "shape": "long_bank",
+      "vertices": 568,
+      "triangles": 1132
+    },
+    {
+      "shape": "three_peaks",
+      "vertices": 556,
+      "triangles": 1108
+    },
+    {
+      "shape": "anvil",
+      "vertices": 548,
+      "triangles": 1092
+    },
+    {
+      "shape": "stratocumulus",
+      "vertices": 598,
+      "triangles": 1192
+    },
+    {
+      "shape": "fragments",
+      "vertices": 592,
+      "triangles": 1180
+    }
+  ],
+  "total_triangles": 8800.0,
+  "slices": 504
+}

@@ -1,0 +1,1387 @@
+{
+  "meaning": "CPU branch-matched sampling-count proxy, NOT GPU timing; drift=0; sky background; all pixels denominator",
+  "views": [
+    {
+      "tier": "high",
+      "revision": "r1",
+      "view": "ground -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 96.0,
+        "p95": 96.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 96.0,
+        "p95": 96.0,
+        "max": 96
+      },
+      "nonempty": {
+        "mean": 3.5762345679012344,
+        "p95": 14.0,
+        "max": 21
+      },
+      "light": {
+        "mean": 7.152469135802469,
+        "p95": 28.0,
+        "max": 42
+      },
+      "density_reads": {
+        "mean": 206.30493827160493,
+        "p95": 248.0,
+        "max": 276
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 206.30493827160493,
+        "p95": 248.0,
+        "max": 276
+      },
+      "visible_fraction": 0.2920679012345679
+    },
+    {
+      "tier": "high",
+      "revision": "r2",
+      "view": "ground -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 45.11672839506173,
+        "p95": 73.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 20.333233024691356,
+        "p95": 47.0,
+        "max": 61
+      },
+      "nonempty": {
+        "mean": 5.419390432098766,
+        "p95": 24.0,
+        "max": 33
+      },
+      "light": {
+        "mean": 5.419390432098766,
+        "p95": 24.0,
+        "max": 33
+      },
+      "density_reads": {
+        "mean": 51.505246913580244,
+        "p95": 136.0,
+        "max": 182
+      },
+      "occupancy_reads": {
+        "mean": 45.116643518518515,
+        "p95": 73.0,
+        "max": 96
+      },
+      "exhausted": {
+        "mean": 7.71604938271605e-06,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 96.62189043209877,
+        "p95": 206.0,
+        "max": 262
+      },
+      "visible_fraction": 0.28804012345679014
+    },
+    {
+      "tier": "high",
+      "revision": "r1",
+      "view": "above -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 96.0,
+        "p95": 96.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 96.0,
+        "p95": 96.0,
+        "max": 96
+      },
+      "nonempty": {
+        "mean": 2.829436728395062,
+        "p95": 13.0,
+        "max": 27
+      },
+      "light": {
+        "mean": 5.658873456790124,
+        "p95": 26.0,
+        "max": 54
+      },
+      "density_reads": {
+        "mean": 175.38266975308642,
+        "p95": 216.0,
+        "max": 272
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 175.38266975308642,
+        "p95": 216.0,
+        "max": 272
+      },
+      "visible_fraction": 0.27554783950617284
+    },
+    {
+      "tier": "high",
+      "revision": "r2",
+      "view": "above -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 56.19795524691358,
+        "p95": 81.0,
+        "max": 94
+      },
+      "main": {
+        "mean": 16.010324074074074,
+        "p95": 49.0,
+        "max": 64
+      },
+      "nonempty": {
+        "mean": 4.7568981481481485,
+        "p95": 23.0,
+        "max": 45
+      },
+      "light": {
+        "mean": 4.7568981481481485,
+        "p95": 23.0,
+        "max": 45
+      },
+      "density_reads": {
+        "mean": 41.534444444444446,
+        "p95": 136.0,
+        "max": 218
+      },
+      "occupancy_reads": {
+        "mean": 56.19784722222222,
+        "p95": 81.0,
+        "max": 94
+      },
+      "exhausted": {
+        "mean": 0.008016975308641976,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 97.73229166666667,
+        "p95": 215.0,
+        "max": 305
+      },
+      "visible_fraction": 0.2742746913580247
+    },
+    {
+      "tier": "high",
+      "revision": "r1",
+      "view": "below -> lower sea",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 90.86592592592592,
+        "p95": 96.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 90.86592592592592,
+        "p95": 96.0,
+        "max": 96
+      },
+      "nonempty": {
+        "mean": 1.2824691358024691,
+        "p95": 8.0,
+        "max": 12
+      },
+      "light": {
+        "mean": 2.5649382716049383,
+        "p95": 16.0,
+        "max": 24
+      },
+      "density_reads": {
+        "mean": 167.5743672839506,
+        "p95": 192.0,
+        "max": 212
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 167.5743672839506,
+        "p95": 192.0,
+        "max": 212
+      },
+      "visible_fraction": 0.17451388888888889
+    },
+    {
+      "tier": "high",
+      "revision": "r2",
+      "view": "below -> lower sea",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 43.084513888888885,
+        "p95": 79.0,
+        "max": 95
+      },
+      "main": {
+        "mean": 8.884081790123457,
+        "p95": 36.0,
+        "max": 57
+      },
+      "nonempty": {
+        "mean": 2.537260802469136,
+        "p95": 17.0,
+        "max": 28
+      },
+      "light": {
+        "mean": 2.537260802469136,
+        "p95": 17.0,
+        "max": 28
+      },
+      "density_reads": {
+        "mean": 22.825077160493827,
+        "p95": 104.0,
+        "max": 148
+      },
+      "occupancy_reads": {
+        "mean": 43.08440586419753,
+        "p95": 79.0,
+        "max": 95
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 65.90948302469135,
+        "p95": 178.0,
+        "max": 239
+      },
+      "visible_fraction": 0.17619598765432098
+    },
+    {
+      "tier": "high",
+      "revision": "r1",
+      "view": "inside volume -> across",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 96.0,
+        "p95": 96.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 96.0,
+        "p95": 96.0,
+        "max": 96
+      },
+      "nonempty": {
+        "mean": 8.268395061728395,
+        "p95": 16.0,
+        "max": 32
+      },
+      "light": {
+        "mean": 16.53679012345679,
+        "p95": 32.0,
+        "max": 64
+      },
+      "density_reads": {
+        "mean": 214.057762345679,
+        "p95": 256.0,
+        "max": 320
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 214.057762345679,
+        "p95": 256.0,
+        "max": 320
+      },
+      "visible_fraction": 1.0
+    },
+    {
+      "tier": "high",
+      "revision": "r2",
+      "view": "inside volume -> across",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 59.80866512345679,
+        "p95": 78.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 35.94594135802469,
+        "p95": 64.0,
+        "max": 64
+      },
+      "nonempty": {
+        "mean": 19.542970679012345,
+        "p95": 36.0,
+        "max": 51
+      },
+      "light": {
+        "mean": 19.542970679012345,
+        "p95": 36.0,
+        "max": 51
+      },
+      "density_reads": {
+        "mean": 110.97782407407408,
+        "p95": 198.0,
+        "max": 230
+      },
+      "occupancy_reads": {
+        "mean": 59.80861111111111,
+        "p95": 78.0,
+        "max": 96
+      },
+      "exhausted": {
+        "mean": 0.09067901234567902,
+        "p95": 1.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 170.78643518518518,
+        "p95": 269.0,
+        "max": 310
+      },
+      "visible_fraction": 1.0
+    },
+    {
+      "tier": "medium",
+      "revision": "r1",
+      "view": "ground -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 48.0,
+        "p95": 48.0,
+        "max": 48
+      },
+      "main": {
+        "mean": 48.0,
+        "p95": 48.0,
+        "max": 48
+      },
+      "nonempty": {
+        "mean": 1.6047839506172838,
+        "p95": 8.0,
+        "max": 13
+      },
+      "light": {
+        "mean": 1.6047839506172838,
+        "p95": 8.0,
+        "max": 13
+      },
+      "density_reads": {
+        "mean": 99.20956790123456,
+        "p95": 112.0,
+        "max": 122
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 99.20956790123456,
+        "p95": 112.0,
+        "max": 122
+      },
+      "visible_fraction": 0.2259567901234568
+    },
+    {
+      "tier": "medium",
+      "revision": "r2",
+      "view": "ground -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 32.827538580246916,
+        "p95": 48.0,
+        "max": 56
+      },
+      "main": {
+        "mean": 7.775941358024691,
+        "p95": 23.0,
+        "max": 24
+      },
+      "nonempty": {
+        "mean": 2.45579475308642,
+        "p95": 14.0,
+        "max": 19
+      },
+      "light": {
+        "mean": 2.45579475308642,
+        "p95": 14.0,
+        "max": 19
+      },
+      "density_reads": {
+        "mean": 20.463472222222222,
+        "p95": 70.0,
+        "max": 84
+      },
+      "occupancy_reads": {
+        "mean": 32.8274537037037,
+        "p95": 48.0,
+        "max": 56
+      },
+      "exhausted": {
+        "mean": 0.022330246913580248,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 53.290925925925926,
+        "p95": 113.0,
+        "max": 131
+      },
+      "visible_fraction": 0.22459876543209878
+    },
+    {
+      "tier": "medium",
+      "revision": "r1",
+      "view": "above -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 48.0,
+        "p95": 48.0,
+        "max": 48
+      },
+      "main": {
+        "mean": 48.0,
+        "p95": 48.0,
+        "max": 48
+      },
+      "nonempty": {
+        "mean": 0.6584953703703704,
+        "p95": 5.0,
+        "max": 8
+      },
+      "light": {
+        "mean": 0.6584953703703704,
+        "p95": 5.0,
+        "max": 8
+      },
+      "density_reads": {
+        "mean": 83.34975308641975,
+        "p95": 96.0,
+        "max": 98
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 83.34975308641975,
+        "p95": 96.0,
+        "max": 98
+      },
+      "visible_fraction": 0.1290895061728395
+    },
+    {
+      "tier": "medium",
+      "revision": "r2",
+      "view": "above -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 46.13225308641975,
+        "p95": 56.0,
+        "max": 62
+      },
+      "main": {
+        "mean": 4.450432098765432,
+        "p95": 19.0,
+        "max": 24
+      },
+      "nonempty": {
+        "mean": 1.1264583333333333,
+        "p95": 10.0,
+        "max": 16
+      },
+      "light": {
+        "mean": 1.1264583333333333,
+        "p95": 10.0,
+        "max": 16
+      },
+      "density_reads": {
+        "mean": 11.148425925925926,
+        "p95": 56.0,
+        "max": 76
+      },
+      "occupancy_reads": {
+        "mean": 46.132145061728394,
+        "p95": 56.0,
+        "max": 62
+      },
+      "exhausted": {
+        "mean": 0.012854938271604938,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 57.28057098765432,
+        "p95": 109.0,
+        "max": 134
+      },
+      "visible_fraction": 0.12906635802469135
+    },
+    {
+      "tier": "medium",
+      "revision": "r1",
+      "view": "below -> lower sea",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 45.43296296296296,
+        "p95": 48.0,
+        "max": 48
+      },
+      "main": {
+        "mean": 45.43296296296296,
+        "p95": 48.0,
+        "max": 48
+      },
+      "nonempty": {
+        "mean": 0.25003858024691356,
+        "p95": 2.0,
+        "max": 5
+      },
+      "light": {
+        "mean": 0.25003858024691356,
+        "p95": 2.0,
+        "max": 5
+      },
+      "density_reads": {
+        "mean": 81.70808641975309,
+        "p95": 96.0,
+        "max": 96
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 81.70808641975309,
+        "p95": 96.0,
+        "max": 96
+      },
+      "visible_fraction": 0.07982253086419754
+    },
+    {
+      "tier": "medium",
+      "revision": "r2",
+      "view": "below -> lower sea",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 37.07391975308642,
+        "p95": 60.0,
+        "max": 73
+      },
+      "main": {
+        "mean": 1.831682098765432,
+        "p95": 12.0,
+        "max": 22
+      },
+      "nonempty": {
+        "mean": 0.4775462962962963,
+        "p95": 5.0,
+        "max": 13
+      },
+      "light": {
+        "mean": 0.4775462962962963,
+        "p95": 5.0,
+        "max": 13
+      },
+      "density_reads": {
+        "mean": 4.618456790123457,
+        "p95": 36.0,
+        "max": 66
+      },
+      "occupancy_reads": {
+        "mean": 37.073811728395064,
+        "p95": 60.0,
+        "max": 73
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 41.69226851851852,
+        "p95": 92.0,
+        "max": 135
+      },
+      "visible_fraction": 0.07558641975308641
+    },
+    {
+      "tier": "medium",
+      "revision": "r1",
+      "view": "inside volume -> across",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 48.0,
+        "p95": 48.0,
+        "max": 48
+      },
+      "main": {
+        "mean": 48.0,
+        "p95": 48.0,
+        "max": 48
+      },
+      "nonempty": {
+        "mean": 0.2276466049382716,
+        "p95": 2.0,
+        "max": 10
+      },
+      "light": {
+        "mean": 0.2276466049382716,
+        "p95": 2.0,
+        "max": 10
+      },
+      "density_reads": {
+        "mean": 90.94859567901234,
+        "p95": 100.0,
+        "max": 116
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 90.94859567901234,
+        "p95": 100.0,
+        "max": 116
+      },
+      "visible_fraction": 0.057430555555555554
+    },
+    {
+      "tier": "medium",
+      "revision": "r2",
+      "view": "inside volume -> across",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 37.309506172839505,
+        "p95": 50.0,
+        "max": 60
+      },
+      "main": {
+        "mean": 10.491666666666667,
+        "p95": 19.0,
+        "max": 24
+      },
+      "nonempty": {
+        "mean": 0.345733024691358,
+        "p95": 3.0,
+        "max": 11
+      },
+      "light": {
+        "mean": 0.345733024691358,
+        "p95": 3.0,
+        "max": 11
+      },
+      "density_reads": {
+        "mean": 21.67479938271605,
+        "p95": 46.0,
+        "max": 70
+      },
+      "occupancy_reads": {
+        "mean": 37.30945216049383,
+        "p95": 50.0,
+        "max": 60
+      },
+      "exhausted": {
+        "mean": 0.030563271604938273,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 58.98425154320988,
+        "p95": 90.0,
+        "max": 112
+      },
+      "visible_fraction": 0.05513888888888889
+    },
+    {
+      "tier": "low",
+      "revision": "r1",
+      "view": "ground -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 20.0,
+        "p95": 20.0,
+        "max": 20
+      },
+      "main": {
+        "mean": 20.0,
+        "p95": 20.0,
+        "max": 20
+      },
+      "nonempty": {
+        "mean": 0.0004475308641975309,
+        "p95": 0.0,
+        "max": 1
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 40.0,
+        "p95": 40.0,
+        "max": 40
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 40.0,
+        "p95": 40.0,
+        "max": 40
+      },
+      "visible_fraction": 0.0001388888888888889
+    },
+    {
+      "tier": "low",
+      "revision": "r2",
+      "view": "ground -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 16.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "main": {
+        "mean": 16.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "nonempty": {
+        "mean": 0.003896604938271605,
+        "p95": 0.0,
+        "max": 2
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 32.0,
+        "p95": 32.0,
+        "max": 32
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 32.0,
+        "p95": 32.0,
+        "max": 32
+      },
+      "visible_fraction": 0.0022762345679012345
+    },
+    {
+      "tier": "low",
+      "revision": "r1",
+      "view": "above -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 20.0,
+        "p95": 20.0,
+        "max": 20
+      },
+      "main": {
+        "mean": 20.0,
+        "p95": 20.0,
+        "max": 20
+      },
+      "nonempty": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 40.0,
+        "p95": 40.0,
+        "max": 40
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 40.0,
+        "p95": 40.0,
+        "max": 40
+      },
+      "visible_fraction": 0.0
+    },
+    {
+      "tier": "low",
+      "revision": "r2",
+      "view": "above -> near cumulus",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 16.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "main": {
+        "mean": 16.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "nonempty": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 32.0,
+        "p95": 32.0,
+        "max": 32
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 32.0,
+        "p95": 32.0,
+        "max": 32
+      },
+      "visible_fraction": 0.0
+    },
+    {
+      "tier": "low",
+      "revision": "r1",
+      "view": "below -> lower sea",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 10.750308641975309,
+        "p95": 20.0,
+        "max": 20
+      },
+      "main": {
+        "mean": 10.750308641975309,
+        "p95": 20.0,
+        "max": 20
+      },
+      "nonempty": {
+        "mean": 0.02607253086419753,
+        "p95": 0.0,
+        "max": 2
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 21.500617283950618,
+        "p95": 40.0,
+        "max": 40
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 21.500617283950618,
+        "p95": 40.0,
+        "max": 40
+      },
+      "visible_fraction": 0.015246913580246914
+    },
+    {
+      "tier": "low",
+      "revision": "r2",
+      "view": "below -> lower sea",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 8.599891975308642,
+        "p95": 16.0,
+        "max": 16
+      },
+      "main": {
+        "mean": 8.599891975308642,
+        "p95": 16.0,
+        "max": 16
+      },
+      "nonempty": {
+        "mean": 0.048109567901234565,
+        "p95": 0.0,
+        "max": 3
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 17.199783950617284,
+        "p95": 32.0,
+        "max": 32
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 17.199783950617284,
+        "p95": 32.0,
+        "max": 32
+      },
+      "visible_fraction": 0.024753086419753087
+    },
+    {
+      "tier": "low",
+      "revision": "r1",
+      "view": "inside volume -> across",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 20.0,
+        "p95": 20.0,
+        "max": 20
+      },
+      "main": {
+        "mean": 20.0,
+        "p95": 20.0,
+        "max": 20
+      },
+      "nonempty": {
+        "mean": 0.02154320987654321,
+        "p95": 0.0,
+        "max": 2
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 40.0,
+        "p95": 40.0,
+        "max": 40
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 40.0,
+        "p95": 40.0,
+        "max": 40
+      },
+      "visible_fraction": 0.011612654320987655
+    },
+    {
+      "tier": "low",
+      "revision": "r2",
+      "view": "inside volume -> across",
+      "pixels": 129600,
+      "iterations": {
+        "mean": 16.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "main": {
+        "mean": 16.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "nonempty": {
+        "mean": 0.03216049382716049,
+        "p95": 0.0,
+        "max": 2
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 32.0,
+        "p95": 32.0,
+        "max": 32
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 32.0,
+        "p95": 32.0,
+        "max": 32
+      },
+      "visible_fraction": 0.017569444444444443
+    }
+  ],
+  "aggregate": {
+    "0_r1": {
+      "iterations": {
+        "mean": 94.71648148148148,
+        "p95": 96.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 94.71648148148148,
+        "p95": 96.0,
+        "max": 96
+      },
+      "nonempty": {
+        "mean": 3.9891338734567903,
+        "p95": 14.0,
+        "max": 32
+      },
+      "light": {
+        "mean": 7.9782677469135805,
+        "p95": 28.0,
+        "max": 64
+      },
+      "density_reads": {
+        "mean": 190.82993441358025,
+        "p95": 244.0,
+        "max": 320
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 190.82993441358025,
+        "p95": 244.0,
+        "max": 320
+      }
+    },
+    "0_r2": {
+      "iterations": {
+        "mean": 51.05196566358025,
+        "p95": 78.0,
+        "max": 96
+      },
+      "main": {
+        "mean": 20.293395061728393,
+        "p95": 53.0,
+        "max": 64
+      },
+      "nonempty": {
+        "mean": 8.064130015432099,
+        "p95": 28.0,
+        "max": 51
+      },
+      "light": {
+        "mean": 8.064130015432099,
+        "p95": 28.0,
+        "max": 51
+      },
+      "density_reads": {
+        "mean": 56.710648148148145,
+        "p95": 150.0,
+        "max": 230
+      },
+      "occupancy_reads": {
+        "mean": 51.051876929012344,
+        "p95": 78.0,
+        "max": 96
+      },
+      "exhausted": {
+        "mean": 0.024675925925925928,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 107.76252507716049,
+        "p95": 228.0,
+        "max": 310
+      }
+    },
+    "1_r1": {
+      "iterations": {
+        "mean": 47.35824074074074,
+        "p95": 48.0,
+        "max": 48
+      },
+      "main": {
+        "mean": 47.35824074074074,
+        "p95": 48.0,
+        "max": 48
+      },
+      "nonempty": {
+        "mean": 0.6852411265432099,
+        "p95": 5.0,
+        "max": 13
+      },
+      "light": {
+        "mean": 0.6852411265432099,
+        "p95": 5.0,
+        "max": 13
+      },
+      "density_reads": {
+        "mean": 88.80400077160493,
+        "p95": 106.0,
+        "max": 122
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 88.80400077160493,
+        "p95": 106.0,
+        "max": 122
+      }
+    },
+    "1_r2": {
+      "iterations": {
+        "mean": 38.33580439814815,
+        "p95": 55.0,
+        "max": 73
+      },
+      "main": {
+        "mean": 6.1374305555555555,
+        "p95": 20.0,
+        "max": 24
+      },
+      "nonempty": {
+        "mean": 1.1013831018518518,
+        "p95": 9.0,
+        "max": 19
+      },
+      "light": {
+        "mean": 1.1013831018518518,
+        "p95": 9.0,
+        "max": 19
+      },
+      "density_reads": {
+        "mean": 14.476288580246914,
+        "p95": 58.0,
+        "max": 84
+      },
+      "occupancy_reads": {
+        "mean": 38.335715663580245,
+        "p95": 55.0,
+        "max": 73
+      },
+      "exhausted": {
+        "mean": 0.016437114197530866,
+        "p95": 0.0,
+        "max": 1
+      },
+      "total_reads": {
+        "mean": 52.81200424382716,
+        "p95": 105.0,
+        "max": 135
+      }
+    },
+    "2_r1": {
+      "iterations": {
+        "mean": 17.687577160493827,
+        "p95": 20.0,
+        "max": 20
+      },
+      "main": {
+        "mean": 17.687577160493827,
+        "p95": 20.0,
+        "max": 20
+      },
+      "nonempty": {
+        "mean": 0.012015817901234568,
+        "p95": 0.0,
+        "max": 2
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 35.375154320987654,
+        "p95": 40.0,
+        "max": 40
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 35.375154320987654,
+        "p95": 40.0,
+        "max": 40
+      }
+    },
+    "2_r2": {
+      "iterations": {
+        "mean": 14.149972993827161,
+        "p95": 16.0,
+        "max": 16
+      },
+      "main": {
+        "mean": 14.149972993827161,
+        "p95": 16.0,
+        "max": 16
+      },
+      "nonempty": {
+        "mean": 0.021041666666666667,
+        "p95": 0.0,
+        "max": 3
+      },
+      "light": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "density_reads": {
+        "mean": 28.299945987654322,
+        "p95": 32.0,
+        "max": 32
+      },
+      "occupancy_reads": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "exhausted": {
+        "mean": 0.0,
+        "p95": 0.0,
+        "max": 0
+      },
+      "total_reads": {
+        "mean": 28.299945987654322,
+        "p95": 32.0,
+        "max": 32
+      }
+    }
+  }
+}

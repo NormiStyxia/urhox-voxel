@@ -1,0 +1,477 @@
+{
+  "ui/TouchInput.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "ui/PixelDraw.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "ui/TouchControls.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": [
+        {
+          "code": "param-type-mismatch",
+          "message": "expected `(unknown[]|table<integer,unknown>|{ [integer]: unknown })` but found `((table,table,table,table...)|(table,table,table))?`. ",
+          "range": {
+            "end": {
+              "character": 35,
+              "line": 116
+            },
+            "start": {
+              "character": 22,
+              "line": 116
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "param-type-mismatch",
+          "message": "expected `TouchBeginEventData` but found `VariantMap`. ",
+          "range": {
+            "end": {
+              "character": 86,
+              "line": 220
+            },
+            "start": {
+              "character": 85,
+              "line": 220
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "param-type-mismatch",
+          "message": "expected `TouchMoveEventData` but found `VariantMap`. ",
+          "range": {
+            "end": {
+              "character": 84,
+              "line": 221
+            },
+            "start": {
+              "character": 83,
+              "line": 221
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "param-type-mismatch",
+          "message": "expected `TouchEndEventData` but found `VariantMap`. ",
+          "range": {
+            "end": {
+              "character": 82,
+              "line": 222
+            },
+            "start": {
+              "character": 81,
+              "line": 222
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "param-type-mismatch",
+          "message": "expected `InputFocusEventData` but found `VariantMap`. ",
+          "range": {
+            "end": {
+              "character": 86,
+              "line": 223
+            },
+            "start": {
+              "character": 85,
+              "line": 223
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "param-type-mismatch",
+          "message": "expected `KeyDownEventData` but found `VariantMap`. ",
+          "range": {
+            "end": {
+              "character": 81,
+              "line": 224
+            },
+            "start": {
+              "character": 80,
+              "line": 224
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        }
+      ]
+    }
+  },
+  "ruins/RuinsHUD.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": [
+        {
+          "code": "syntax-error",
+          "message": "expected '}' to close table constructor",
+          "range": {
+            "end": {
+              "character": 122,
+              "line": 115
+            },
+            "start": {
+              "character": 121,
+              "line": 115
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "syntax-error",
+          "message": "table constructor was not properly closed",
+          "range": {
+            "end": {
+              "character": 138,
+              "line": 115
+            },
+            "start": {
+              "character": 135,
+              "line": 115
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "syntax-error",
+          "message": "expected ')' to close argument list",
+          "range": {
+            "end": {
+              "character": 138,
+              "line": 115
+            },
+            "start": {
+              "character": 135,
+              "line": 115
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        }
+      ]
+    }
+  },
+  "ruins/RuinsScene.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "ruins/NomiController.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "dragon/DragonRide.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": [
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `fake`. ",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 33
+            },
+            "start": {
+              "character": 9,
+              "line": 33
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `fake`. ",
+          "range": {
+            "end": {
+              "character": 31,
+              "line": 33
+            },
+            "start": {
+              "character": 27,
+              "line": 33
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `fake`. ",
+          "range": {
+            "end": {
+              "character": 62,
+              "line": 33
+            },
+            "start": {
+              "character": 58,
+              "line": 33
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `fakePress`. ",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 37
+            },
+            "start": {
+              "character": 9,
+              "line": 37
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `fakePress`. ",
+          "range": {
+            "end": {
+              "character": 41,
+              "line": 37
+            },
+            "start": {
+              "character": 32,
+              "line": 37
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `fakePress`. ",
+          "range": {
+            "end": {
+              "character": 63,
+              "line": 37
+            },
+            "start": {
+              "character": 54,
+              "line": 37
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `worldPosition`. ",
+          "range": {
+            "end": {
+              "character": 44,
+              "line": 171
+            },
+            "start": {
+              "character": 31,
+              "line": 171
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `resolveDismount`. ",
+          "range": {
+            "end": {
+              "character": 27,
+              "line": 205
+            },
+            "start": {
+              "character": 12,
+              "line": 205
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `resolveDismount`. ",
+          "range": {
+            "end": {
+              "character": 40,
+              "line": 207
+            },
+            "start": {
+              "character": 25,
+              "line": 207
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `worldRotation`. ",
+          "range": {
+            "end": {
+              "character": 37,
+              "line": 215
+            },
+            "start": {
+              "character": 24,
+              "line": 215
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `input`. ",
+          "range": {
+            "end": {
+              "character": 11,
+              "line": 218
+            },
+            "start": {
+              "character": 6,
+              "line": 218
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `input`. ",
+          "range": {
+            "end": {
+              "character": 25,
+              "line": 218
+            },
+            "start": {
+              "character": 20,
+              "line": 218
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `input`. ",
+          "range": {
+            "end": {
+              "character": 39,
+              "line": 218
+            },
+            "start": {
+              "character": 34,
+              "line": 218
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `input`. ",
+          "range": {
+            "end": {
+              "character": 54,
+              "line": 218
+            },
+            "start": {
+              "character": 49,
+              "line": 218
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `params`. ",
+          "range": {
+            "end": {
+              "character": 12,
+              "line": 219
+            },
+            "start": {
+              "character": 6,
+              "line": 219
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `Request`. ",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 220
+            },
+            "start": {
+              "character": 6,
+              "line": 220
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        },
+        {
+          "code": "undefined-field",
+          "message": "Undefined field `loco`. ",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 223
+            },
+            "start": {
+              "character": 17,
+              "line": 223
+            }
+          },
+          "severity": 1,
+          "source": "EmmyLua"
+        }
+      ]
+    }
+  },
+  "dragon/DragonTest.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  }
+}

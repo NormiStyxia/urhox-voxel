@@ -1,0 +1,1312 @@
+[
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_36_673][477][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x267ee3c8 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:41:36.869Z"
+  },
+  {
+    "type": "warning",
+    "text": "[Sentry] VITE_SENTRY_DSN not set, skipping initialization",
+    "timestamp": "2026-11-13T17:41:37.989Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_40_392][0] WARNING: Graphics::SetMode called with zero dimensions: 0x0 (will maximize window)",
+    "timestamp": "2026-11-13T17:41:40.395Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_40_416][0] WARNING: Could not get application preferences directory",
+    "timestamp": "2026-11-13T17:41:40.417Z"
+  },
+  {
+    "type": "warning",
+    "text": "The ScriptProcessorNode is deprecated. Use AudioWorkletNode instead. (https://bit.ly/audio-worklet)",
+    "timestamp": "2026-11-13T17:41:40.423Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_084][40] WARNING: DownloadManager: no resources resolved for batch download",
+    "timestamp": "2026-11-13T17:41:41.110Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_486][50] WARNING: DownloadManager: no resources resolved for batch download",
+    "timestamp": "2026-11-13T17:41:41.488Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_625][58][Script] IsNetworkMode:    false",
+    "timestamp": "2026-11-13T17:41:41.628Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_649][58][Script] [InputAdaptor] Loading input event adaptor...",
+    "timestamp": "2026-11-13T17:41:41.650Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_649][58][Script] [InputAdaptor] Hooked SubscribeToEvent for event mapping.",
+    "timestamp": "2026-11-13T17:41:41.651Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_649][58][Script] [InputAdaptor] Platform: Web, isTouchPlatform: false",
+    "timestamp": "2026-11-13T17:41:41.651Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_649][58][Script] [InputAdaptor] Hooked Input methods for touch emulation fallback.",
+    "timestamp": "2026-11-13T17:41:41.651Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_652][58][Script] Check Transition.lua SimpleGrid.lua",
+    "timestamp": "2026-11-13T17:41:41.652Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_788][58][Script] RuinsPalette: 50 entries",
+    "timestamp": "2026-11-13T17:41:41.790Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_41_806][58][Script] DayNight: ready, hour 12.0, capture true (manual, 64px, time-sliced)",
+    "timestamp": "2026-11-13T17:41:41.807Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_44_142][58] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain.",
+    "timestamp": "2026-11-13T17:41:44.143Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_44_484][58][Script] RuinsTerrain: 79 island chunks, 2519040 allocated / 1174742 solid cells",
+    "timestamp": "2026-11-13T17:41:44.499Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_035][58][Script] RuinsTerrain: island shell 98692 triangles / 128 chunks",
+    "timestamp": "2026-11-13T17:41:50.036Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_035][58][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00",
+    "timestamp": "2026-11-13T17:41:50.036Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_039][58][Script] RuinsTerrain: GrassField ready",
+    "timestamp": "2026-11-13T17:41:50.040Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_040][58][Script] RuinsTerrain: total 0.00s",
+    "timestamp": "2026-11-13T17:41:50.040Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_328][58][Script] RuinsBuild: court 0.00s (volumes 4)",
+    "timestamp": "2026-11-13T17:41:50.331Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_356][58][Script] RuinsBuild: altar 0.00s (volumes 5)",
+    "timestamp": "2026-11-13T17:41:50.357Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_50_831][58][Script] RuinsBuild: colonnade 0.00s (volumes 33)",
+    "timestamp": "2026-11-13T17:41:50.832Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_51_115][58][Script] RuinsBuild: fallen 0.00s (volumes 38)",
+    "timestamp": "2026-11-13T17:41:51.131Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_51_428][58][Script] RuinsBuild: dome 0.00s (volumes 45)",
+    "timestamp": "2026-11-13T17:41:51.430Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_51_456][58][Script] RuinsBuild: steles 0.00s (volumes 53)",
+    "timestamp": "2026-11-13T17:41:51.458Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_52_086][58][Script] RuinsBuild: parapet 0.00s (volumes 57)",
+    "timestamp": "2026-11-13T17:41:52.087Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_41_52_228][58][Script] RuinsBuild: stairs 0.00s (volumes 59)",
+    "timestamp": "2026-11-13T17:41:52.231Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_00_368][58][Script] RuinsBuild: wall 0.00s (volumes 95)",
+    "timestamp": "2026-11-13T17:42:00.369Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_01_748][58][Script] RuinsBuild: hall 0.00s (volumes 105)",
+    "timestamp": "2026-11-13T17:42:01.750Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_02_043][58][Script] RuinsBuild: aqueduct 0.00s (volumes 106)",
+    "timestamp": "2026-11-13T17:42:02.071Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_07_027][58][Script] RuinsBuild: crystals 18",
+    "timestamp": "2026-11-13T17:42:07.028Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_07_027][58][Script] RuinsBuild: vegetation 0.00s (volumes 106)",
+    "timestamp": "2026-11-13T17:42:07.029Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_296][58][Script] RuinsBuild: floaters 0.00s (volumes 106)",
+    "timestamp": "2026-11-13T17:42:08.297Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_296][58][Script] RuinsBuild: total 0.00s, 106 volumes",
+    "timestamp": "2026-11-13T17:42:08.298Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_304][58][Script] RuinsPuzzles: gate rubble voxels 2658.0",
+    "timestamp": "2026-11-13T17:42:08.306Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_716][58][Script] TimeObject[bridge]: shattered into 22 pieces (level 2)",
+    "timestamp": "2026-11-13T17:42:08.719Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_718][58][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m",
+    "timestamp": "2026-11-13T17:42:08.719Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_756][58][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m",
+    "timestamp": "2026-11-13T17:42:08.757Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_763][58][Script] TimeObject[stele1]: shattered into 21 pieces (level 2)",
+    "timestamp": "2026-11-13T17:42:08.764Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_764][58][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-13T17:42:08.765Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_769][58][Script] TimeObject[stele2]: shattered into 19 pieces (level 2)",
+    "timestamp": "2026-11-13T17:42:08.771Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_771][58][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-13T17:42:08.771Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_777][58][Script] TimeObject[stele3]: shattered into 21 pieces (level 2)",
+    "timestamp": "2026-11-13T17:42:08.779Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_779][58][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-13T17:42:08.780Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_785][58][Script] TimeObject[stele4]: shattered into 22 pieces (level 2)",
+    "timestamp": "2026-11-13T17:42:08.787Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_785][58][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m",
+    "timestamp": "2026-11-13T17:42:08.787Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_792][58][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m",
+    "timestamp": "2026-11-13T17:42:08.794Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_799][58][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m",
+    "timestamp": "2026-11-13T17:42:08.800Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_800][58][Script] RuinsPuzzles: built 8 time objects in 0.00s",
+    "timestamp": "2026-11-13T17:42:08.802Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_852][58][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris",
+    "timestamp": "2026-11-13T17:42:08.854Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_855][58][Script] [ThirdPersonCamera] Created with 4 modes, initial mode: normal",
+    "timestamp": "2026-11-13T17:42:08.861Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_855][58][Script] NomiController: spawn 0.0 6.1 -64.0",
+    "timestamp": "2026-11-13T17:42:08.865Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_856][58][Script] VoxelFX: MotesBlue uses world-space quads, capacity=900",
+    "timestamp": "2026-11-13T17:42:08.865Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_08_856][58][Script] VoxelFX: MotesGold uses world-space quads, capacity=500",
+    "timestamp": "2026-11-13T17:42:08.866Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_17_151][58][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s",
+    "timestamp": "2026-11-13T17:42:17.163Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_17_168][58][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)",
+    "timestamp": "2026-11-13T17:42:17.170Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_17_171][58][Script] RuinsScene: dragon ready (large)",
+    "timestamp": "2026-11-13T17:42:17.172Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_17_443][58][Script] [UIInspector] 已初始化（快捷键: F9）",
+    "timestamp": "2026-11-13T17:42:17.469Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_17_451][58][Script] RuinsScene: stage -> gate",
+    "timestamp": "2026-11-13T17:42:17.469Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_17_452][58][Script] RuinsScene: ready in 35.66s, volumes 439",
+    "timestamp": "2026-11-13T17:42:17.469Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_21_887][59][Script] RuinsPerf: sleeping dragon pose cached",
+    "timestamp": "2026-11-13T17:42:21.930Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_21_888][59][Script] RuinsAim: center-forward dot=1.0000 viewport=2526x1188 dpr=1.10",
+    "timestamp": "2026-11-13T17:42:21.930Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_21_891][59][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.68560314, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.26702499, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x394d9798 player=Vector3(0, 6.06602764, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:21.931Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_25_391][116][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x21725f70 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:25.497Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_28_436][171][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x281cde70 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:28.437Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_31_480][228][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x279a7ca8 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:31.482Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_32_300][243][Script] RuinsPerf: fps=18.5 peak=100.0ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:42:32.302Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_34_483][284][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x264ff340 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:34.484Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_37_494][341][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x2df16ca0 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:37.495Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_40_526][397][Script] RuinsAim: target=none assisted=false origin=Vector3(0.550000012, 8.58560276, -68.4016647) dir=Vector3(0, -0.2079117, 0.978147626) hit=Vector3(0.550000012, 1.16702461, -33.5) distance=35.681 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x28fc3230 player=Vector3(0, 5.99999952, -64) yaw=0.00 pitch=12.00",
+    "timestamp": "2026-11-13T17:42:40.534Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_40_587][397][Script] RuinsInput: drag begin button=1 pos=1261,561 focus=true",
+    "timestamp": "2026-11-13T17:42:40.588Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_40_588][397][Script] RuinsInput: drag end samples=0 distance=0",
+    "timestamp": "2026-11-13T17:42:40.590Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_40_588][397][Script] RuinsScene: pointer activate, mode=3.0",
+    "timestamp": "2026-11-13T17:42:40.590Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_42_104][426][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:42:42.106Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_42_143][426][Script] RuinsInput: drag move delta=187,-222 yaw=22.44",
+    "timestamp": "2026-11-13T17:42:42.145Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_42_160][427][Script] RuinsInput: drag end samples=1 distance=409",
+    "timestamp": "2026-11-13T17:42:42.163Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_42_312][430][Script] RuinsPerf: fps=18.7 peak=67.8ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:42:42.314Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_43_536][458][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.39531803, 5.56602955, -89.6636276) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:42:43.581Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_46_564][528][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431627, 5.45390844, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:42:46.566Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_49_604][600][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431627, 5.45390844, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:42:49.608Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_52_320][664][Script] RuinsPerf: fps=23.3 peak=70.9ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:42:52.330Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_52_616][671][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431627, 5.45390844, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:42:52.618Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_55_672][743][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:42:55.674Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_42_58_675][814][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:42:58.676Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_01_683][886][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:01.685Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_02_345][902][Script] RuinsPerf: fps=23.7 peak=64.8ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:43:02.347Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_04_743][959][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:04.744Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_07_664][1029][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:07.703Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_10_727][1098][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:10.750Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_12_328][1136][Script] RuinsPerf: fps=23.3 peak=62.7ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:43:12.329Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_13_740][1170][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:13.742Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_16_811][1242][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:16.813Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_19_820][1313][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:19.824Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_22_359][1373][Script] RuinsPerf: fps=23.6 peak=71.5ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:43:22.360Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_22_838][1384][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:22.840Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_25_855][1457][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:25.856Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_28_888][1529][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:28.890Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_31_889][1601][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:31.892Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_32_390][1613][Script] RuinsPerf: fps=23.9 peak=63.4ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:43:32.392Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_34_897][1672][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:34.917Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_37_911][1745][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:37.912Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_40_947][1816]WARNINGNext log has been output too many times and will not be output again.",
+    "timestamp": "2026-11-13T17:43:40.975Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_40_945][1816][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:43:40.975Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_42_416][1851][Script] RuinsPerf: fps=23.7 peak=68.3ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:43:42.419Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_43_52_419][2089][Script] RuinsPerf: fps=23.8 peak=63.3ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:43:52.420Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_02_446][2327][Script] RuinsPerf: fps=23.7 peak=62.6ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:44:02.448Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_12_454][2563][Script] RuinsPerf: fps=23.6 peak=70.6ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:44:12.456Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_22_464][2799][Script] RuinsPerf: fps=23.6 peak=64.8ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:44:22.468Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_32_499][3036][Script] RuinsPerf: fps=23.6 peak=58.5ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:44:32.500Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_41_416][3247][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:44:41.418Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_42_516][3273][Script] RuinsPerf: fps=23.7 peak=65.9ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:44:42.519Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_44_432][3316][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:44:44.565Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_47_456][3383][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:44:47.465Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_50_467][3455][Script] RuinsAim: target=none assisted=false origin=Vector3(-7.56431723, 5.45390797, -90.0717545) dir=Vector3(0.369322568, 0.252744883, 0.894271135) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(2.00113654, 5.99999952, -66.9101334) yaw=22.44 pitch=-14.64",
+    "timestamp": "2026-11-13T17:44:50.468Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_50_609][3458][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:44:50.613Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_50_636][3458][Script] RuinsInput: drag move delta=-188,1 yaw=-0.12",
+    "timestamp": "2026-11-13T17:44:50.638Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_50_655][3459][Script] RuinsInput: drag end samples=1 distance=189",
+    "timestamp": "2026-11-13T17:44:50.657Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_51_809][3484][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:44:51.814Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_51_840][3484][Script] RuinsInput: drag move delta=0,-87 yaw=-0.12",
+    "timestamp": "2026-11-13T17:44:51.843Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_51_876][3485][Script] RuinsInput: drag end samples=1 distance=87",
+    "timestamp": "2026-11-13T17:44:51.878Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_52_648][3500][Script] RuinsPerf: fps=22.6 peak=100.0ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:44:52.741Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_53_598][3520][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:44:53.629Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_56_624][3586][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:44:56.626Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_44_59_648][3652][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:44:59.654Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_02_671][3719][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:02.673Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_02_672][3719][Script] RuinsPerf: fps=21.8 peak=57.9ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:45:02.673Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_05_680][3785][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:05.681Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_08_724][3847][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:08.732Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_11_707][3909][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:11.708Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_12_704][3930][Script] RuinsPerf: fps=21.0 peak=71.6ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:45:12.706Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_14_736][3973][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:14.737Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_17_787][4034][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:17.835Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_20_811][4098][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:20.812Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_22_715][4139][Script] RuinsPerf: fps=20.9 peak=72.0ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:45:22.718Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_23_848][4164]WARNINGNext log has been output too many times and will not be output again.",
+    "timestamp": "2026-11-13T17:45:23.850Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_23_848][4164][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.765919447, 1.07057798, -88.8488083) dir=Vector3(-0.00189878256, 0.421985447, 0.906600595) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=-0.12 pitch=-24.96",
+    "timestamp": "2026-11-13T17:45:23.851Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_27_705][4247][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:45:27.711Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_27_732][4247][Script] RuinsInput: drag move delta=187,86 yaw=22.32",
+    "timestamp": "2026-11-13T17:45:27.737Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_27_752][4248][Script] RuinsInput: drag end samples=1 distance=273",
+    "timestamp": "2026-11-13T17:45:27.755Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_29_888][4294][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:29.907Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_32_760][4359][Script] RuinsPerf: fps=21.9 peak=76.2ms volumes=431 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:45:32.762Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_32_888][4362][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:32.948Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_35_896][4431][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:35.898Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_38_955][4500][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:38.957Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_41_964][4568][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:41.967Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_42_793][4587][Script] RuinsPerf: fps=22.8 peak=74.3ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:45:42.796Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_44_977][4636][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:44.979Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_48_012][4705][Script] RuinsAim: target=none assisted=false origin=Vector3(-10.3320208, 5.45390701, -88.5494537) dir=Vector3(0.367448807, 0.252744913, 0.895042658) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.815097868, 5.99999952, -65.3678513) yaw=22.32 pitch=-14.64",
+    "timestamp": "2026-11-13T17:45:48.015Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_49_071][4729][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:45:49.128Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_49_145][4730][Script] RuinsInput: drag move delta=-188,341 yaw=-0.24",
+    "timestamp": "2026-11-13T17:45:49.148Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_49_167][4731][Script] RuinsInput: drag end samples=1 distance=529",
+    "timestamp": "2026-11-13T17:45:49.169Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_51_049][4765][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.278366923, 9.64241314, -62.1990471) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.309264809, 5.99999905, -54.8227654) distance=8.227 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x29333e20 player=Vector3(-0.847032428, 6.00000048, -57.744175) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:45:51.065Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_52_908][4800][Script] RuinsPerf: fps=21.3 peak=81.0ms volumes=431 pieces=105 particles=19 awake=false",
+    "timestamp": "2026-11-13T17:45:52.911Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_54_323][4825][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.26742807, 9.32890987, -59.5468864) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.295666546, 5.99999905, -52.8054848) distance=7.519 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x268adcf0 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:45:54.326Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_45_57_440][4880][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.286863714, 9.64240932, -60.1706848) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.31776154, 5.99999905, -52.7944107) distance=8.227 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x314cac28 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:45:57.656Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_00_480][4936][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.286863685, 9.64241123, -60.1706886) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.31776154, 6.00000095, -52.7944145) distance=8.227 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x2a178b20 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:46:00.506Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_03_262][4988][Script] RuinsPerf: fps=18.8 peak=78.0ms volumes=431 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:46:03.264Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_03_520][4993][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.286863685, 9.64241123, -60.1706886) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.31776154, 6.00000095, -52.7944145) distance=8.227 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x2b3e2060 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:46:03.522Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_06_609][5051][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.286863685, 9.64241123, -60.1706886) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.31776154, 6.00000095, -52.7944145) distance=8.227 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x26c628b8 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:46:06.612Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_09_667][5108][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.286863685, 9.64241123, -60.1706886) dir=Vector3(-0.00375582976, -0.442758232, 0.896633148) hit=Vector3(-0.31776154, 6.00000095, -52.7944145) distance=8.227 volume=VoxelVolume id=40.0 layer=1.0 voxel=IntVector3: 0x25d789e8 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.24 pitch=26.28",
+    "timestamp": "2026-11-13T17:46:09.669Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_10_886][5129][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:46:10.892Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_10_920][5129][Script] RuinsInput: drag move delta=2,-267 yaw=-0.00",
+    "timestamp": "2026-11-13T17:46:10.929Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_10_944][5130][Script] RuinsInput: drag end samples=1 distance=269",
+    "timestamp": "2026-11-13T17:46:11.036Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_10_977][5131][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.303760111, 7.19837189, -60.6154251) dir=Vector3(-3.47025858e-17, 0.10036172, 0.99495101) hit=Vector3(-0.303760111, 8.09263611, -51.75) distance=8.910 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x28af0680 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.00 pitch=-5.76",
+    "timestamp": "2026-11-13T17:46:11.069Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_13_143][5173][Script] RuinsScene: stage -> bridge",
+    "timestamp": "2026-11-13T17:46:13.144Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_13_436][5179][Script] RuinsPerf: fps=19.1 peak=77.1ms volumes=446 pieces=105 particles=149 awake=false",
+    "timestamp": "2026-11-13T17:46:13.437Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_13_987][5190][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.296391964, 7.23475599, -60.2364616) dir=Vector3(-3.47025858e-17, 0.10036172, 0.99495101) hit=Vector3(-0.296391964, 8.21688271, -50.5) distance=9.786 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x2544e1e0 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.00 pitch=-5.76",
+    "timestamp": "2026-11-13T17:46:13.989Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_17_024][5249][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.303760111, 7.19837189, -60.6154213) dir=Vector3(-3.47025858e-17, 0.10036172, 0.99495101) hit=Vector3(-0.303760111, 8.21872425, -50.5) distance=10.167 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x26653f00 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.00 pitch=-5.76",
+    "timestamp": "2026-11-13T17:46:17.027Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_20_030][5309][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.303760111, 7.19837189, -60.6154251) dir=Vector3(-3.47025858e-17, 0.10036172, 0.99495101) hit=Vector3(-0.303760111, 8.2187252, -50.5) distance=10.167 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x33211770 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.00 pitch=-5.76",
+    "timestamp": "2026-11-13T17:46:20.032Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_23_078][5370][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.303760111, 7.19837189, -60.6154251) dir=Vector3(-3.47025858e-17, 0.10036172, 0.99495101) hit=Vector3(-0.303760111, 8.2187252, -50.5) distance=10.167 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x307a4088 player=Vector3(-0.853760123, 5.99999905, -56.1381454) yaw=-0.00 pitch=-5.76",
+    "timestamp": "2026-11-13T17:46:23.080Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_23_473][5378][Script] RuinsPerf: fps=19.9 peak=75.2ms volumes=446 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:46:23.475Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_26_183][5433][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.303760111, 7.19837189, -60.5677681) dir=Vector3(-3.47025858e-17, 0.10036172, 0.99495101) hit=Vector3(-0.303760111, 8.21391773, -50.5) distance=10.119 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x2ebdbdf0 player=Vector3(-0.853760123, 5.99999905, -55.8873787) yaw=-0.00 pitch=-5.76",
+    "timestamp": "2026-11-13T17:46:26.185Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_27_272][5454][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:46:27.276Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_27_304][5454][Script] RuinsInput: drag move delta=242,-213 yaw=29.04",
+    "timestamp": "2026-11-13T17:46:27.334Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_27_363][5456][Script] RuinsInput: drag end samples=1 distance=455",
+    "timestamp": "2026-11-13T17:46:27.364Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_27_744][5465][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.90566921, 6.20792675, -54.4397926) dir=Vector3(0.414683461, 0.519817412, 0.746878505) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.852603674, 6.48455906, -51.4078674) yaw=29.04 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:27.763Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_30_772][5538][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.90871644, 6.20792675, -54.4426384) dir=Vector3(0.414683461, 0.519817412, 0.746878505) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.852603674, 6.48455906, -51.4074554) yaw=29.04 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:30.798Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_33_561][5607][Script] RuinsPerf: fps=22.8 peak=75.5ms volumes=446 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:46:33.580Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_33_800][5613][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.90871644, 6.20792675, -54.4426384) dir=Vector3(0.414683461, 0.519817412, 0.746878505) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.852603674, 6.48455906, -51.4074554) yaw=29.04 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:33.801Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_36_820][5689][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.90871644, 6.20792675, -54.4426384) dir=Vector3(0.414683461, 0.519817412, 0.746878505) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.852603674, 6.48455906, -51.4074554) yaw=29.04 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:36.821Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_39_839][5765][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.90871644, 6.20792675, -54.4426384) dir=Vector3(0.414683461, 0.519817412, 0.746878505) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.852603674, 6.48455906, -51.4074554) yaw=29.04 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:39.863Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_40_024][5769][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:46:40.027Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_40_052][5769][Script] RuinsInput: drag move delta=-243,0 yaw=-0.12",
+    "timestamp": "2026-11-13T17:46:40.056Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_40_073][5770][Script] RuinsInput: drag end samples=1 distance=243",
+    "timestamp": "2026-11-13T17:46:40.150Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_40_395][5777][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.17497088, 6.20792675, -54.4337463) dir=Vector3(-0.0017891929, 0.519817412, 0.854275584) hit=Vector3(-0.184780508, 9.05793571, -49.75) distance=5.483 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x22dc1890 player=Vector3(-0.505515873, 6.39417171, -51.4586906) yaw=-0.12 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:40.396Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_40_995][5791][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:46:40.997Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_41_024][5791][Script] RuinsInput: drag move delta=242,0 yaw=28.92",
+    "timestamp": "2026-11-13T17:46:41.029Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_41_036][5792][Script] RuinsInput: drag end samples=1 distance=242",
+    "timestamp": "2026-11-13T17:46:41.039Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_43_416][5848][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.962344527, 6.20792723, -53.5295258) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(1.12578738, 8.83537674, -49.75) distance=5.055 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x23493a38 player=Vector3(-0.0995445773, 6.24931908, -50.8305321) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:43.418Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_43_588][5852][Script] RuinsPerf: fps=24.5 peak=67.9ms volumes=440 pieces=105 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:46:43.606Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_46_441][5915][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.962251782, 6.20792723, -53.5293655) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(1.12579167, 8.83526516, -49.75) distance=5.054 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x1f9938f8 player=Vector3(-0.0995445773, 6.24920225, -50.8305321) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:46.444Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_49_476][5986][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.961932182, 6.20792723, -53.5287857) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(1.12579107, 8.83486176, -49.75) distance=5.054 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x21c6e390 player=Vector3(-0.0995445773, 6.2487998, -50.8305321) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:49.492Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_52_486][6057][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.961269975, 6.20792675, -53.5275879) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(1.12579119, 8.83402824, -49.75) distance=5.052 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x2eafc870 player=Vector3(-0.0995458588, 6.2482233, -50.8305321) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:52.519Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_53_616][6084][Script] RuinsPerf: fps=23.1 peak=69.0ms volumes=440 pieces=105 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:46:53.617Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_55_505][6128][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.961119533, 6.20792675, -53.5273056) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(1.12578595, 8.83383274, -49.75) distance=5.052 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x272606e8 player=Vector3(-0.0995486602, 6.24777174, -50.8305321) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:55.508Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_46_58_563][6199][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.732672811, 6.25455666, -53.4823227) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(1.24999988, 8.74930859, -49.8936806) distance=4.799 volume=VoxelVolume id=234.0 layer=1.0 voxel=IntVector3: 0x36e7e2f8 player=Vector3(-0.0995486602, 6.24777174, -50.8305321) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:46:58.564Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_00_310][6249][Script] RuinsAim: target=bridge:FROZEN assisted=false origin=Vector3(-0.641119838, 6.34030151, -53.3616829) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(2.98864937, 10.9075584, -46.79179) distance=8.786 volume=TimePiece_bridge id=236.0 layer=1.0 voxel=IntVector3: 0x1f7cb858 player=Vector3(-0.233715445, 6.24960423, -50.8279877) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:00.311Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_00_483][6254][Script] RuinsAim: target=breakable assisted=false origin=Vector3(-0.765343666, 6.33486843, -53.3639603) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(-0.59697926, 6.54671764, -53.0592194) distance=0.408 volume=VoxelVolume id=446.0 layer=1.0 voxel=IntVector3: 0x25f059a0 player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:00.484Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_00_519][6255][Script] RuinsAim: target=bridge:FROZEN assisted=false origin=Vector3(-0.330522746, 6.88620043, -52.5701485) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(2.98084116, 11.0528145, -46.5765686) distance=8.016 volume=TimePiece_bridge id=236.0 layer=1.0 voxel=IntVector3: 0x25f861d8 player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:00.520Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_420][6305][Script] TimeObject[bridge]: rewinding 22 pieces, track 0.15s, noTrack=true",
+    "timestamp": "2026-11-13T17:47:02.422Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_438][6306][Script] RuinsAim: target=bridge:REWIND assisted=false origin=Vector3(-1.00752676, 6.2057724, -53.5311737) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(2.97041607, 11.2111282, -46.3310852) distance=9.629 volume=TimePiece_bridge id=469.0 layer=1.0 voxel=IntVector3: 0x28bcbd70 player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:02.439Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_480][6308][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.949358344, 6.20673037, -53.5364227) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:02.481Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_699][6314][Script] RuinsAim: target=bridge:REWIND assisted=false origin=Vector3(-0.883993268, 6.23040009, -53.5077515) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(2.9781146, 11.090003, -46.5173264) distance=9.349 volume=TimePiece_bridge id=469.0 layer=1.0 voxel=IntVector3: 0x2e7b5ca0 player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:02.700Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_739][6315][Script] RuinsAim: target=none assisted=false origin=Vector3(-0.926549315, 6.22106361, -53.5171242) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:02.740Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_800][6317][Script] RuinsAim: target=bridge:REWIND assisted=false origin=Vector3(-1.03015292, 6.15977955, -53.5989418) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=Vector3(2.97144699, 11.1949024, -46.3560333) distance=9.686 volume=TimePiece_bridge id=469.0 layer=1.0 voxel=IntVector3: 0x2a1784e8 player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:02.802Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_02_951][6321][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.05068874, 6.20849705, -53.5220261) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:02.952Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_03_684][6340][Script] RuinsPerf: fps=25.5 peak=70.6ms volumes=454 pieces=105 particles=174 awake=false",
+    "timestamp": "2026-11-13T17:47:03.685Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_04_657][6364][Script] RuinsScene: stage -> key",
+    "timestamp": "2026-11-13T17:47:04.659Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_04_657][6364][Script] TimeObject[bridge]: restored",
+    "timestamp": "2026-11-13T17:47:04.659Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_05_967][6400][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.08888936, 6.20792675, -53.5184898) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:05.968Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_09_016][6475][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.08888888, 6.20792723, -53.518486) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:09.018Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_12_032][6553][Script] RuinsAim: target=none assisted=false origin=Vector3(-1.08888888, 6.20792723, -53.518486) dir=Vector3(0.413118303, 0.519817412, 0.747745395) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(-0.233715445, 6.23972273, -50.8332901) yaw=28.92 pitch=-31.32",
+    "timestamp": "2026-11-13T17:47:12.054Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_13_748][6599][Script] RuinsPerf: fps=25.9 peak=73.3ms volumes=433 pieces=83 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:47:13.751Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_14_196][6610][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:47:14.199Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_14_220][6610][Script] RuinsInput: drag move delta=-241,386 yaw=-0.00",
+    "timestamp": "2026-11-13T17:47:14.224Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_14_241][6611][Script] RuinsInput: drag end samples=1 distance=627",
+    "timestamp": "2026-11-13T17:47:14.244Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_15_049][6628][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315141857, 9.7047224, -54.3274879) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315141857, 4.12401295, -33.5) distance=21.562 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x276bde40 player=Vector3(-0.23448272, 6.99964857, -49.5908089) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:15.051Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_18_064][6685][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315538704, 8.83976364, -41.704731) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315538704, 6.6413126, -33.5) distance=8.494 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x2fcd4b40 player=Vector3(-0.234461322, 6, -36.9383316) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:18.066Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_21_107][6741][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315538704, 8.81468582, -40.1846352) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315538704, 7, -33.4121361) distance=7.011 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x22c2f2a8 player=Vector3(-0.234461322, 5.99999952, -35.8379669) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:21.251Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_23_788][6789][Script] RuinsPerf: fps=19.0 peak=78.9ms volumes=433 pieces=83 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:47:23.790Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_24_112][6795][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315538704, 8.81468582, -40.1846352) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315538704, 7, -33.4121361) distance=7.011 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x2eb840d8 player=Vector3(-0.234461322, 5.99999952, -35.8379669) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:24.115Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_27_140][6854][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315538704, 8.81468582, -40.1846352) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315538704, 7, -33.4121361) distance=7.011 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x29401820 player=Vector3(-0.234461322, 5.99999952, -35.8379669) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:27.142Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_30_180][6912][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315538704, 8.81468582, -40.1846352) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315538704, 7, -33.4121361) distance=7.011 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x26106ec0 player=Vector3(-0.234461322, 5.99999952, -35.8379669) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:30.182Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_33_228][6971][Script] RuinsAim: target=none assisted=false origin=Vector3(0.315538704, 8.81468582, -40.1846352) dir=Vector3(-5.98937328e-17, -0.258819073, 0.965925813) hit=Vector3(0.315538704, 7, -33.4121361) distance=7.011 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x2df15c70 player=Vector3(-0.234461322, 5.99999952, -35.8379669) yaw=-0.00 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:33.231Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_33_827][6982][Script] RuinsPerf: fps=19.2 peak=76.0ms volumes=427 pieces=83 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:47:33.829Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_35_699][7016][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:47:35.722Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_35_732][7016][Script] RuinsInput: drag move delta=0,297 yaw=-0.00",
+    "timestamp": "2026-11-13T17:47:35.737Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_35_751][7017][Script] RuinsInput: drag end samples=1 distance=297",
+    "timestamp": "2026-11-13T17:47:35.754Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_36_279][7027][Script] RuinsAim: target=none assisted=false origin=Vector3(3.70868492, 31.4853382, -51.8258286) dir=Vector3(-3.93239943e-17, -0.773176551, 0.634190917) hit=Vector3(3.70868492, 7.00000191, -31.7419586) distance=31.668 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x28ef86f8 player=Vector3(3.70788693, 5.99999857, -35.8379669) yaw=-0.00 pitch=50.64",
+    "timestamp": "2026-11-13T17:47:36.741Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_39_283][7087][Script] RuinsAim: target=none assisted=false origin=Vector3(3.70788717, 32.0252686, -52.2635078) dir=Vector3(-3.93239943e-17, -0.773176551, 0.634190917) hit=Vector3(3.70788717, 7.00000191, -31.736763) distance=32.367 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x35ff28e0 player=Vector3(3.70788717, 5.99999857, -35.8379669) yaw=-0.00 pitch=50.64",
+    "timestamp": "2026-11-13T17:47:39.284Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_42_332][7148][Script] RuinsAim: target=none assisted=false origin=Vector3(3.70788717, 32.0252724, -52.2635078) dir=Vector3(-3.93239943e-17, -0.773176551, 0.634190917) hit=Vector3(3.70788717, 7, -31.7367592) distance=32.367 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x3586cef0 player=Vector3(3.70788717, 5.99999857, -35.8379669) yaw=-0.00 pitch=50.64",
+    "timestamp": "2026-11-13T17:47:42.408Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_43_857][7179][Script] RuinsPerf: fps=19.7 peak=74.5ms volumes=427 pieces=83 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:47:43.978Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_45_337][7210][Script] RuinsAim: target=none assisted=false origin=Vector3(3.70788717, 32.0252724, -52.2635078) dir=Vector3(-3.93239943e-17, -0.773176551, 0.634190917) hit=Vector3(3.70788717, 7, -31.7367592) distance=32.367 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x27c38210 player=Vector3(3.70788717, 5.99999857, -35.8379669) yaw=-0.00 pitch=50.64",
+    "timestamp": "2026-11-13T17:47:45.339Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_48_353][7272][Script] RuinsAim: target=none assisted=false origin=Vector3(3.70788717, 32.0252724, -52.2635078) dir=Vector3(-3.93239943e-17, -0.773176551, 0.634190917) hit=Vector3(3.70788717, 7, -31.7367592) distance=32.367 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x364bc350 player=Vector3(3.70788717, 5.99999857, -35.8379669) yaw=-0.00 pitch=50.64",
+    "timestamp": "2026-11-13T17:47:48.356Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_51_367][7335][Script] RuinsAim: target=none assisted=false origin=Vector3(3.88513756, 32.0252724, -52.2635078) dir=Vector3(-3.93239943e-17, -0.773176551, 0.634190917) hit=Vector3(3.88513756, 7, -31.7367592) distance=32.367 volume=VoxelVolume id=137.0 layer=1.0 voxel=IntVector3: 0x28b46dc8 player=Vector3(4.12611294, 5.99999857, -35.8379669) yaw=-0.00 pitch=50.64",
+    "timestamp": "2026-11-13T17:47:51.368Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_52_836][7363][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:47:52.839Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_52_876][7363][Script] RuinsInput: drag move delta=747,-297 yaw=89.64",
+    "timestamp": "2026-11-13T17:47:52.878Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_52_888][7364][Script] RuinsInput: drag end samples=1 distance=1044",
+    "timestamp": "2026-11-13T17:47:52.891Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_52_937][7365][Script] RuinsInput: drag begin button=4 pos=1208,550 focus=true",
+    "timestamp": "2026-11-13T17:47:52.940Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_52_975][7365][Script] RuinsInput: drag move delta=751,0 yaw=179.76",
+    "timestamp": "2026-11-13T17:47:52.998Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_53_000][7366][Script] RuinsInput: drag end samples=1 distance=751",
+    "timestamp": "2026-11-13T17:47:53.002Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_53_952][7387][Script] RuinsPerf: fps=20.7 peak=74.9ms volumes=427 pieces=83 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:47:53.954Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_54_427][7397][Script] RuinsAim: target=none assisted=false origin=Vector3(7.44038105, 7.12525845, -37.0828438) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(8.01029396, 3.43216038, -41.8351936) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:54.429Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_47_57_515][7461][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:47:57.542Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_00_512][7527][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:00.513Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_03_596][7592][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:03.632Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_04_009][7601][Script] RuinsPerf: fps=21.4 peak=77.7ms volumes=425 pieces=83 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:48:04.097Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_06_569][7658][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:06.571Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_09_654][7725][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:09.655Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_12_646][7791][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:12.648Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_14_040][7822][Script] RuinsPerf: fps=22.0 peak=72.1ms volumes=425 pieces=83 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:48:14.069Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_15_680][7857][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:15.682Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_18_697][7922][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:18.766Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_21_744][7988][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:21.747Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_24_096][8040][Script] RuinsPerf: fps=21.8 peak=71.2ms volumes=423 pieces=83 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:48:24.098Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_24_804][8056][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:24.805Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_27_812][8122]WARNINGNext log has been output too many times and will not be output again.",
+    "timestamp": "2026-11-13T17:48:27.815Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_27_812][8122][Script] RuinsAim: target=none assisted=false origin=Vector3(7.41592169, 8.81468582, -31.6685429) dir=Vector3(0.00404618122, -0.258819073, -0.965917349) hit=nil distance=-1.000 volume=none id=nil layer=none voxel=nil player=Vector3(7.98412466, 5.99999952, -36.012867) yaw=179.76 pitch=15.00",
+    "timestamp": "2026-11-13T17:48:27.815Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_34_137][8262][Script] RuinsPerf: fps=22.1 peak=72.8ms volumes=421 pieces=83 particles=3 awake=false",
+    "timestamp": "2026-11-13T17:48:34.146Z"
+  },
+  {
+    "type": "log",
+    "text": "[2026-11-14 01_48_44_145][8482][Script] RuinsPerf: fps=22.0 peak=69.4ms volumes=421 pieces=83 particles=2 awake=false",
+    "timestamp": "2026-11-13T17:48:44.148Z"
+  }
+]

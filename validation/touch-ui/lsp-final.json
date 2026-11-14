@@ -1,0 +1,86 @@
+{
+  "scripts/ui/PixelDraw.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ui/TouchControls.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ui/TouchInput.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ui/tests/LayoutAir.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ui/tests/LayoutGround.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ui/tests/TouchAcceptance.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ui/tests/TouchLayout.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ruins/RuinsHUD.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ruins/RuinsScene.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ruins/NomiController.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/dragon/DragonRide.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/dragon/DragonTest.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  }
+}

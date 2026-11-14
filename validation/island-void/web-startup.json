@@ -1,0 +1,110 @@
+[
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_35_217][357][Script] RuinsTerrain: 79 island chunks, 2429952 allocated / 1157687 solid cells\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_39_782][357][Script] RuinsTerrain: island shell 98132 triangles / 129 chunks\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_39_782][357][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_39_785][357][Script] RuinsTerrain: GrassField ready\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_39_785][357][Script] RuinsTerrain: total 0.00s\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_58_520][357][Script] TimeObject[bridge]: shattered into 22 pieces (level 2)\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_35_58_520][357][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_36_07_188][357][Script] RuinsScene: ready in 33.94s, volumes 439\n"
+  },
+  {
+    "t": 1794587775,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_36_12_172][358][Script] RuinsPerf: sleeping dragon pose cached\n"
+  },
+  {
+    "t": 1794587784,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_36_24_392][543][Script] RuinsPerf: fps=18.5 peak=100.0ms volumes=431 pieces=105 particles=2 awake=false\n"
+  },
+  {
+    "t": 1794587794,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_36_34_447][729][Script] RuinsPerf: fps=18.5 peak=92.9ms volumes=431 pieces=105 particles=2 awake=false\n"
+  },
+  {
+    "t": 1794587805,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_36_44_451][919][Script] RuinsPerf: fps=19.0 peak=68.2ms volumes=431 pieces=105 particles=3 awake=false\n"
+  },
+  {
+    "t": 1794587815,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_36_54_473][1105][Script] RuinsPerf: fps=18.6 peak=78.0ms volumes=431 pieces=105 particles=2 awake=false\n"
+  },
+  {
+    "t": 1794587824,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_37_04_512][1298][Script] RuinsPerf: fps=19.2 peak=72.1ms volumes=431 pieces=105 particles=2 awake=false\n"
+  },
+  {
+    "t": 1794587834,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_37_14_571][1492][Script] RuinsPerf: fps=19.3 peak=75.4ms volumes=431 pieces=105 particles=3 awake=false\n"
+  },
+  {
+    "t": 1794587845,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_37_24_595][1689][Script] RuinsPerf: fps=19.7 peak=72.6ms volumes=431 pieces=105 particles=3 awake=false\n"
+  },
+  {
+    "t": 1794587855,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_37_34_617][1883][Script] RuinsPerf: fps=19.4 peak=76.8ms volumes=431 pieces=105 particles=2 awake=false\n"
+  },
+  {
+    "t": 1794587865,
+    "topic": "user_script",
+    "level": "INFO",
+    "msg": "[2026-11-14 00_37_44_630][2078][Script] RuinsPerf: fps=19.5 peak=75.4ms volumes=431 pieces=105 particles=2 awake=false\n"
+  }
+]

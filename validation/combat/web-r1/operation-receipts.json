@@ -1,0 +1,869 @@
+{
+  "web-nav": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"action\":\"navigate\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"},\"afterSnapshot\":{\"ok\":true,\"action\":\"snapshot\",\"status\":200,\"data\":{\"ok\":true,\"format\":\"ai\",\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"snapshot\":\"      - button [ref=f10e5] [cursor=pointer]:\\n      - button [ref=f10e7] [cursor=pointer]\\n        - button [ref=f10e9] [cursor=pointer]:\\n          - button [disabled]: 发布\\n    - button [ref=f10e15] [cursor=pointer]:\\n      - button [ref=f10e20] [cursor=pointer]\\n        - button [ref=f10e23] [cursor=pointer]\\n          - link [ref=f10e25] [cursor=pointer]:\\n            - /url: /app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1&chatId=97bdcd62-deeb-4359-a3e2-89b289d1d274\\n          - button [ref=f10e26] [cursor=pointer]\\n        - button [ref=f10e32] [cursor=pointer]\\n          - link [ref=f10e34] [cursor=pointer]:\\n            - /url: /app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1&chatId=227cb97d-78ef-41ee-8b3e-ec3af4af244a\\n          - button [ref=f10e35] [cursor=pointer]\\n        - button [ref=f10e41] [cursor=pointer]\\n          - link [ref=f10e43] [cursor=pointer]:\\n            - /url: /app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1&chatId=8026c643-d28b-42a8-b749-3b7bdba003b9\\n          - button [ref=f10e44] [cursor=pointer]\\n        - button [ref=f10e50] [cursor=pointer]\\n          - link [ref=f10e52] [cursor=pointer]:\\n            - /url: /app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1&chatId=71d3fb21-25c4-40d9-adfe-800add3df910\\n          - button [ref=f10e53] [cursor=pointer]\\n        - button [ref=f10e59] [cursor=pointer]\\n          - link [ref=f10e61] [cursor=pointer]:\",\"refs\":{},\"truncated\":true,\"originalChars\":4162,\"hint\":\"快照正文已截断；若缺少所需内容，请缩小 selector 范围或单独 snapshot 补读，不要重复已成功的动作。\"}},\"recipeSuggestions\":[{\"id\":\"taptap-game\",\"description\":\"读取 TapTap 中国站游戏详情、评分、评价数量与官方链接。\",\"access\":\"read\",\"state\":\"active\",\"provenance\":\"builtin\",\"inputs\":{\"appId\":{\"required\":true,\"description\":\"TapTap 数字游戏 ID，例如 82835\"}}}]}"
+      }
+    ],
+    "isError": false
+  },
+  "animReceipts1": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_draw",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":127270,\"originalBytes\":460532}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_sheath",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128818,\"originalBytes\":460394}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "bow_equip",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128698,\"originalBytes\":461754}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "bow_sheath",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128858,\"originalBytes\":462811}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "weapon_swap_sword_to_bow",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129602,\"originalBytes\":466021}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "weapon_swap_bow_to_sword",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129596,\"originalBytes\":464108}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_light_1",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128674,\"originalBytes\":461747}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_light_2",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128364,\"originalBytes\":462627}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_light_3",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129532,\"originalBytes\":465435}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_heavy_charge",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":130588,\"originalBytes\":465755}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "sword_heavy_release",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128078,\"originalBytes\":464719}}"
+        }
+      ]
+    }
+  ],
+  "animReceipts2": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "dodge_roll",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":130264,\"originalBytes\":469002}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "bow_draw",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129672,\"originalBytes\":466478}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "bow_hold",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128976,\"originalBytes\":464229}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "bow_release",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129762,\"originalBytes\":465153}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "bow_cancel",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129958,\"originalBytes\":466628}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "hit_light",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129974,\"originalBytes\":465302}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "hit_heavy",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129288,\"originalBytes\":465029}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "knockdown",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128926,\"originalBytes\":464353}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "getup",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":128922,\"originalBytes\":463985}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "death",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":129138,\"originalBytes\":463888}}"
+        }
+      ]
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "name": "stagger_recoil",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":130340,\"originalBytes\":466836}}"
+        }
+      ]
+    }
+  ],
+  "combatOps": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    }
+  ],
+  "bowOps": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    }
+  ],
+  "lightOps": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    }
+  ],
+  "gateOps": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+        }
+      ],
+      "isError": false
+    }
+  ]
+}

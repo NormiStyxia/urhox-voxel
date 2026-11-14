@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":false,\"errorCode\":\"INVALID_ARGS\",\"data\":{\"tool\":\"browser\",\"validation_errors\":[{\"origin\":\"array\",\"code\":\"too_big\",\"maximum\":12,\"inclusive\":true,\"path\":[\"commands\"],\"message\":\"Invalid input\"}],\"schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"commands\":{\"description\":\"action=cdp(需要 targetId): 在该标签页的同一个调试协议会话里顺序执行。辅助命令:{method:\\\"nodes\\\",params:{filter?}} 列出无障碍树 [id] role \\\"name\\\"(含封闭 Shadow DOM);{method:\\\"click\\\",params:{node:id}} 真实鼠标点击;{method:\\\"type\\\",params:{node:id,text}};{method:\\\"call\\\",params:{node:id,fn:\\\"function(){ return this.textContent }\\\"}}。也可发白名单内的原始命令(DOM.* / Input.* / Page.getFrameTree / Runtime.callFunctionOn 等)。\",\"minItems\":1,\"maxItems\":12,\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"method\":{\"type\":\"string\",\"minLength\":1},\"params\":{\"type\":\"object\",\"propertyNames\":{\"type\":\"string\"},\"additionalProperties\":{}}},\"required\":[\"method\"],\"additionalProperties\":false}}},\"additionalProperties\":false},\"hint\":\"请按 schema 修正参数后重试(只列出有问题的字段;args 传 {} 可取完整 schema)\"}}"
+    }
+  ],
+  "isError": true
+}

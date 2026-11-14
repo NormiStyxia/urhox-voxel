@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"tabs\",\"status\":200,\"data\":{\"running\":true,\"tabs\":[{\"targetId\":\"CA9A5E457588BE12D4F9C1B4D6976029\",\"title\":\"Service Worker chrome-extension://nkeimhogjdpnpccoofpliimaahmaaome/thunk.js\",\"url\":\"chrome-extension://nkeimhogjdpnpccoofpliimaahmaaome/thunk.js\",\"wsUrl\":\"ws://127.0.0.1:18800/devtools/page/CA9A5E457588BE12D4F9C1B4D6976029\",\"type\":\"service_worker\",\"suggestedTargetId\":\"t1\",\"tabId\":\"t1\"},{\"targetId\":\"F67C602D9FB7A4B1F799EA1FB1AE35AA\",\"title\":\"Service Worker chrome-extension://admccjkmockfdflocgggjfgdacdodkdf/background.js\",\"url\":\"chrome-extension://admccjkmockfdflocgggjfgdacdodkdf/background.js\",\"wsUrl\":\"ws://127.0.0.1:18800/devtools/page/F67C602D9FB7A4B1F799EA1FB1AE35AA\",\"type\":\"service_worker\",\"suggestedTargetId\":\"t2\",\"tabId\":\"t2\"},{\"targetId\":\"70AF6F80C76752CC5F3E6EEA5770A134\",\"title\":\"Service Worker chrome-extension://fignfifoniblkonapihmkfakmlgkbkcf/service_worker.js\",\"url\":\"chrome-extension://fignfifoniblkonapihmkfakmlgkbkcf/service_worker.js\",\"wsUrl\":\"ws://127.0.0.1:18800/devtools/page/70AF6F80C76752CC5F3E6EEA5770A134\",\"type\":\"service_worker\",\"suggestedTargetId\":\"t3\",\"tabId\":\"t3\"}]}}"
+    }
+  ],
+  "isError": false
+}

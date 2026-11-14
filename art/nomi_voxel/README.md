@@ -74,3 +74,61 @@ detail_cleanup.json 记录逐面颜色改动；check_mesh.py 将这些改动反�
 
     python3 art/nomi_voxel/voxelize.py
     cd art/nomi_voxel && python3 check_mesh.py
+
+## 2026-11-14：可选双肘绑定（默认关闭）
+
+新增生成链：原采样 → refine.finish → **按已批准 polish_edits.json 重放颜色** →
+`elbow.split` 重分上/下臂并封口 → `scripts/game/NomiVoxelDataElbow.lua`。
+旧 NomiVoxelData.lua、approved_head / rollback_baseline / detail_cleanup / polish_baseline / polish_edits
+均不由这条分支写入，旧的无参数生成命令行为不变。不要手改两份 Lua 数据。
+
+临时环境与完整重生成命令（项目根执行，不安装到系统 Python）：
+
+~~~sh
+python3 -m venv /tmp/nomi-elbow-venv
+/tmp/nomi-elbow-venv/bin/pip install numpy scipy Pillow lupa shapely
+/tmp/nomi-elbow-venv/bin/python art/nomi_voxel/voxelize.py --elbows
+/tmp/nomi-elbow-venv/bin/python tests/nomi/elbow_geometry.py
+/tmp/nomi-elbow-venv/bin/python tests/nomi/run_offline.py
+~~~
+
+numpy/scipy/Pillow 用于生成；shapely 只用于独立面覆盖验算；lupa.lua54 用于纯 Lua 测试。
+最后一条也跑已有 combat / ruins 独立测试，故会如实报告与本次修改无关的既有失败。
+只运行生成命令会更新数据和 measurements.json；检查命令更新全部预览与 checks.json。
+这些都是离线工具，不启动引擎、不构建、不提交。
+
+**为什么重放颜色记录：**本机重新计算 polish 的 KD-tree 邻居投票时，SciPy 版本间
+等距邻居顺序不同，曾使部分头发面选择不同颜色。双肘分支改为按已批准逐面日志重放，
+逐条核对 before RGB，几何或输入色不匹配便失败；不把新投票结果写回认可基准。
+不读取生成后的 Lua 作为生成源；旧 Lua 仅供独立检查脚本比对。
+
+**轴心测量：**两侧肤色手部的最高点均为 y=35，袖子几何最高点为 y=49；
+以袖段几何中心 y=42 为候选，将切面移到靠手侧半格 y=41.5，避免与原共面面片争归属。
+切面闭环包围盒：右 x=[9,16.5]，左 x=[-16.5,-9]，z=[-6,3]。
+由此肘轴为 `(12.75,41.5,-1.5)` / `(-12.75,41.5,-1.5)`，单位是原始体素坐标，
+乘 0.022 得米，再应用 SLENDER 的 X/Z 收窄。它是根据现有宽袖几何选择的绑定轴，
+不是解剖扫描结果；没有取骨表肩轴与手掌的中点。完整轮廓、肤色边界和封口清单见
+`elbow_preview/measurements.json`。
+
+保留 arm_right/arm_left 作上臂，新增 forearm_right/forearm_left 作其子骨。
+四边形跨 y=41.5 时裁成两片，三角形用平面裁剪并重新三角化；交线闭环耳切封口，
+颜色取现有袖色，不增调色板、不覆盖旧衣服面。原斜面有零面积悬挂边，封口建环时剔除
+不围成面积的枝杈，但保留原外表面。出现多闭环/孔洞会报错，不能默默填成实心。
+
+**验收定义：**新增内部封口本来就不在旧网格中，所以“逐面一致”指外表面位置、
+覆盖、朝向、颜色一致；不能要求包含内部封口后的面列表字节数相同。
+`tests/nomi/elbow_geometry.py` 独立读取两份导出数据，按半格检查四边形的逐体素面覆盖，
+按带朝向/颜色的平面集合和面积检查裁剪三角形，并核对非手臂逐行相同、palette 相同。
+`elbow_rig.lua` 在 Lua 5.4 mock 中对比旧版 BlockCharacter 的所有默认顶点/颜色/姿态，
+检验挂点复用、层级、归零、45°/90°/120°前弯与等半径手掌轨迹。
+
+**仍需验收：**封口面积各 67.5 平方体素、缺面为 0，不等于弯曲后轮廓无凹口。
+SLENDER 下两段对应边缘顶点的最大间距，45°/90°/120°分别约 6.97/12.88/15.78 cm；
+这是旋转后的对应点间距，**不是最短裂缝宽度**。肘轴保持接触；半径 2.5 体素邻域的
+552 个原实体采样点中，分别有 54/138/178 点在弯折后位于两段实体之外，说明刚体
+外弯侧凹口存在。预览已显示封口，但没有证明所有视角不透背景；不能据此开启正式开关。
+所有图片为软件投影，不模拟 UrhoX 剔除、阴影、材质或 Web 性能。
+
+预览：`elbow_preview/contact_sheet.png`（0/45/90/120°，每行正/斜/侧/背四视图），
+分图 `bend_000.png`、`bend_045.png`、`bend_090.png`、`bend_120.png`；检查结果 `checks.json`。
+调用方迁移与开关步骤见 `docs/人物肘部绑定迁移-2026-11-14.md`。

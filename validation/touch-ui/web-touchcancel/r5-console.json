@@ -1,0 +1,1080 @@
+{
+  "ok": true,
+  "action": "console",
+  "status": 200,
+  "data": {
+    "ok": true,
+    "targetId": "8AA91AA51561D08403D5D9C30FA1CAB3",
+    "url": "https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1",
+    "messages": [
+      {
+        "type": "log",
+        "text": "[TapTap] isInTapTapApp check: {hasTapTapAPI: false, hasUrlResource: false, result: false, hasWebviewOn: false, hasWebviewOff: false}",
+        "timestamp": "2026-11-12T17:41:21.994Z",
+        "location": {
+          "url": "https://maker.taptap.cn/assets/index-BMMMrpzc.js",
+          "line": 27,
+          "column": 84964,
+          "lineNumber": 27,
+          "columnNumber": 84964
+        }
+      },
+      {
+        "type": "log",
+        "text": "LogV2 instances initialized with profile and config",
+        "timestamp": "2026-11-12T17:41:23.348Z",
+        "location": {
+          "url": "https://assets.tapimg.com/cupid-apps/web-app-account-next/assets/js/index-40190db9.js",
+          "line": 15,
+          "column": 9180,
+          "lineNumber": 15,
+          "columnNumber": 9180
+        }
+      },
+      {
+        "type": "warning",
+        "text": "[Sentry] VITE_SENTRY_DSN not set, skipping initialization",
+        "timestamp": "2026-11-12T17:42:32.914Z",
+        "location": {
+          "url": "https://maker.taptap.cn/assets/index-BMMMrpzc.js",
+          "line": 27,
+          "column": 84187,
+          "lineNumber": 27,
+          "columnNumber": 84187
+        }
+      },
+      {
+        "type": "log",
+        "text": "[TapTap] isInTapTapApp check: {hasTapTapAPI: false, hasUrlResource: false, result: false, hasWebviewOn: false, hasWebviewOff: false}",
+        "timestamp": "2026-11-12T17:42:32.915Z",
+        "location": {
+          "url": "https://maker.taptap.cn/assets/index-BMMMrpzc.js",
+          "line": 27,
+          "column": 84964,
+          "lineNumber": 27,
+          "columnNumber": 84964
+        }
+      },
+      {
+        "type": "log",
+        "text": "[TapTap] isInTapTapApp check: {hasTapTapAPI: false, hasUrlResource: false, result: false, hasWebviewOn: false, hasWebviewOff: false}",
+        "timestamp": "2026-11-12T17:42:33.201Z",
+        "location": {
+          "url": "https://maker.taptap.cn/assets/index-BMMMrpzc.js",
+          "line": 27,
+          "column": 84964,
+          "lineNumber": 27,
+          "columnNumber": 84964
+        }
+      },
+      {
+        "type": "log",
+        "text": "[Tracker] Page view queued: {action: tapmaker_page_view, user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Ap…KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36, args: Object}",
+        "timestamp": "2026-11-12T17:42:33.201Z",
+        "location": {
+          "url": "https://maker.taptap.cn/assets/index-BMMMrpzc.js",
+          "line": 120,
+          "column": 88112,
+          "lineNumber": 120,
+          "columnNumber": 88112
+        }
+      },
+      {
+        "type": "warning",
+        "text": "Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.",
+        "timestamp": "2026-11-12T17:42:33.285Z",
+        "location": {
+          "url": "https://maker.taptap.cn/assets/index-BMMMrpzc.js",
+          "line": 73,
+          "column": 500,
+          "lineNumber": 73,
+          "columnNumber": 500
+        }
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 503 ()",
+        "timestamp": "2026-11-12T17:42:33.381Z",
+        "location": {
+          "url": "https://maker.taptap.cn/api/v1/apps/f323832c-195d-4276-a841-0ceafd1f1cf1/project-config/project.json?allowLockedUser=true",
+          "line": 0,
+          "column": 0,
+          "lineNumber": 0,
+          "columnNumber": 0
+        }
+      },
+      {
+        "type": "log",
+        "text": "[MultiDebug] Extension initialized",
+        "timestamp": "2026-11-12T17:42:33.743Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] ✓ Env: production",
+        "timestamp": "2026-11-12T17:42:33.801Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] ✓ Project: m_hi4f",
+        "timestamp": "2026-11-12T17:42:33.969Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] ✓ Downloads complete (no .data needed)",
+        "timestamp": "2026-11-12T17:43:06.478Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] ✓ Engine JS executed",
+        "timestamp": "2026-11-12T17:43:06.480Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] Final Module.arguments: [-preview_login=REDACTED, -game_url=https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/, -production, -log=WARNING]",
+        "timestamp": "2026-11-12T17:43:06.482Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] Canvas size OK: 1425.4544677734375x832.7272338867188",
+        "timestamp": "2026-11-12T17:43:06.482Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_43_06_564][0] INFO: DownloadManager initialized",
+        "timestamp": "2026-11-12T17:43:06.566Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_43_06_575][0] INFO: a couple of Subsystems registered finish.",
+        "timestamp": "2026-11-12T17:43:06.637Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_43_06_576][0] INFO: Engine construct finish.",
+        "timestamp": "2026-11-12T17:43:06.637Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_43_06_599][0] WARNING: Graphics::SetMode called with zero dimensions: 0x0 (will maximize window)",
+        "timestamp": "2026-11-12T17:43:06.638Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "info",
+        "text": "[UrhoX] Renderer Type: WebGPU",
+        "timestamp": "2026-11-12T17:43:06.638Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_43_06_631][0] WARNING: Could not get application preferences directory",
+        "timestamp": "2026-11-12T17:43:06.638Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "warning",
+        "text": "The ScriptProcessorNode is deprecated. Use AudioWorkletNode instead. (https://bit.ly/audio-worklet)",
+        "timestamp": "2026-11-12T17:43:06.643Z",
+        "location": {
+          "url": "blob:https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/fa927a1e-8664-4fec-be5f-6bb3c9ab793d",
+          "line": 1,
+          "column": 0,
+          "lineNumber": 1,
+          "columnNumber": 0
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] === postRun: Engine ready ===",
+        "timestamp": "2026-11-12T17:43:06.683Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "begin create net manager",
+        "timestamp": "2026-11-12T17:43:06.842Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "end create net manager",
+        "timestamp": "2026-11-12T17:43:06.842Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "create WebNetwork key: 1",
+        "timestamp": "2026-11-12T17:43:06.842Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "WebNetwork created",
+        "timestamp": "2026-11-12T17:43:06.842Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "begin connect server",
+        "timestamp": "2026-11-12T17:43:06.843Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "wss://entrance-new-pd.spark.xd.com/",
+        "timestamp": "2026-11-12T17:43:06.843Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "connect request sent",
+        "timestamp": "2026-11-12T17:43:06.845Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "connected to server... Event",
+        "timestamp": "2026-11-12T17:43:08.101Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_56_344][6552]INFO[i18n] loadConfig: uuid='Q4M3GntfTmiNZCdTeiz5Kg' engine='Q4M3GntfTmiNZCdTeiz5Kg' match=true",
+        "timestamp": "2026-11-12T17:44:56.349Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_56_345][6552]INFO[i18n] loadConfig: engine fallback, support_langs='zh_CN'",
+        "timestamp": "2026-11-12T17:44:56.349Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_56_345][6552]INFO[i18n] PreloadI18nStep: resolved='zh_CN'",
+        "timestamp": "2026-11-12T17:44:56.349Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_56_347][6552] WARNING: DownloadManager: no resources resolved for batch download",
+        "timestamp": "2026-11-12T17:44:56.349Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[UrhoX] Loading screen hidden",
+        "timestamp": "2026-11-12T17:44:57.243Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_247][6598][Script] IsNetworkMode:    false",
+        "timestamp": "2026-11-12T17:44:57.248Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_264][6598][Script] [InputAdaptor] Loading input event adaptor...",
+        "timestamp": "2026-11-12T17:44:57.266Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_264][6598][Script] [InputAdaptor] Hooked SubscribeToEvent for event mapping.",
+        "timestamp": "2026-11-12T17:44:57.267Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_264][6598][Script] [InputAdaptor] Platform: Web, isTouchPlatform: false",
+        "timestamp": "2026-11-12T17:44:57.267Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_265][6598][Script] [InputAdaptor] Hooked Input methods for touch emulation fallback.",
+        "timestamp": "2026-11-12T17:44:57.267Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_267][6598][Script] Check Transition.lua SimpleGrid.lua",
+        "timestamp": "2026-11-12T17:44:57.268Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_416][6598][Script] RuinsPalette: 50 entries",
+        "timestamp": "2026-11-12T17:44:57.419Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_57_436][6598][Script] DayNight: ready, hour 16.2, capture true",
+        "timestamp": "2026-11-12T17:44:57.438Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_59_273][6598][Script] RuinsTerrain: collision heightmap 336x336 in 0.00s",
+        "timestamp": "2026-11-12T17:44:59.275Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_44_59_279][6598] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain.",
+        "timestamp": "2026-11-12T17:44:59.280Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_00_252][6598][Script] RuinsTerrain: 49 collision chunks in 0.00s",
+        "timestamp": "2026-11-12T17:45:00.254Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_03_430][6598][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=11.03 expect=11.03",
+        "timestamp": "2026-11-12T17:45:03.434Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_03_439][6598][Script] RuinsTerrain: GrassField ready",
+        "timestamp": "2026-11-12T17:45:03.441Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_03_440][6598][Script] RuinsTerrain: total 0.00s",
+        "timestamp": "2026-11-12T17:45:03.441Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_03_736][6598][Script] RuinsBuild: court 0.00s (volumes 4)",
+        "timestamp": "2026-11-12T17:45:03.738Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_03_764][6598][Script] RuinsBuild: altar 0.00s (volumes 5)",
+        "timestamp": "2026-11-12T17:45:03.766Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_04_275][6598][Script] RuinsBuild: colonnade 0.00s (volumes 33)",
+        "timestamp": "2026-11-12T17:45:04.277Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_04_576][6598][Script] RuinsBuild: fallen 0.00s (volumes 38)",
+        "timestamp": "2026-11-12T17:45:04.579Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_04_871][6598][Script] RuinsBuild: dome 0.00s (volumes 45)",
+        "timestamp": "2026-11-12T17:45:04.872Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_04_902][6598][Script] RuinsBuild: steles 0.00s (volumes 53)",
+        "timestamp": "2026-11-12T17:45:04.903Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_05_012][6598][Script] RuinsBuild: parapet 0.00s (volumes 61)",
+        "timestamp": "2026-11-12T17:45:05.015Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_05_105][6598][Script] RuinsBuild: stairs 0.00s (volumes 63)",
+        "timestamp": "2026-11-12T17:45:05.107Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_13_369][6598][Script] RuinsBuild: wall 0.00s (volumes 99)",
+        "timestamp": "2026-11-12T17:45:13.396Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_14_953][6598][Script] RuinsBuild: hall 0.00s (volumes 109)",
+        "timestamp": "2026-11-12T17:45:15.013Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_15_080][6598][Script] RuinsBuild: aqueduct 0.00s (volumes 110)",
+        "timestamp": "2026-11-12T17:45:15.081Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_20_612][6598][Script] RuinsBuild: crystals 121",
+        "timestamp": "2026-11-12T17:45:20.615Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_20_614][6598][Script] RuinsBuild: vegetation 0.00s (volumes 110)",
+        "timestamp": "2026-11-12T17:45:20.615Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_092][6598][Script] RuinsBuild: floaters 0.00s (volumes 110)",
+        "timestamp": "2026-11-12T17:45:22.096Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_094][6598][Script] RuinsBuild: total 0.00s, 110 volumes",
+        "timestamp": "2026-11-12T17:45:22.096Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_104][6598][Script] RuinsPuzzles: gate rubble voxels 2658.0",
+        "timestamp": "2026-11-12T17:45:22.105Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_172][6598][Script] TimeObject[bridge]: shattered into 20 pieces (level 2)",
+        "timestamp": "2026-11-12T17:45:22.174Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_172][6598][Script] TimeObject[bridge]: 4976 voxels, 20x15x46 @0.25m",
+        "timestamp": "2026-11-12T17:45:22.174Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_212][6598][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m",
+        "timestamp": "2026-11-12T17:45:22.213Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_220][6598][Script] TimeObject[stele1]: shattered into 21 pieces (level 2)",
+        "timestamp": "2026-11-12T17:45:22.221Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_220][6598][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m",
+        "timestamp": "2026-11-12T17:45:22.221Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_228][6598][Script] TimeObject[stele2]: shattered into 19 pieces (level 2)",
+        "timestamp": "2026-11-12T17:45:22.229Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_228][6598][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m",
+        "timestamp": "2026-11-12T17:45:22.230Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_236][6598][Script] TimeObject[stele3]: shattered into 21 pieces (level 2)",
+        "timestamp": "2026-11-12T17:45:22.237Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_236][6598][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m",
+        "timestamp": "2026-11-12T17:45:22.237Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_244][6598][Script] TimeObject[stele4]: shattered into 22 pieces (level 2)",
+        "timestamp": "2026-11-12T17:45:22.246Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_244][6598][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m",
+        "timestamp": "2026-11-12T17:45:22.246Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_249][6598][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m",
+        "timestamp": "2026-11-12T17:45:22.251Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_256][6598][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m",
+        "timestamp": "2026-11-12T17:45:22.258Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_259][6598][Script] RuinsPuzzles: built 8 time objects in 0.00s",
+        "timestamp": "2026-11-12T17:45:22.270Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_315][6598][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris",
+        "timestamp": "2026-11-12T17:45:22.316Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_316][6598][Script] [ThirdPersonCamera] Created with 4 modes, initial mode: normal",
+        "timestamp": "2026-11-12T17:45:22.319Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_22_318][6598][Script] NomiController: spawn 0.0 6.1 -64.0",
+        "timestamp": "2026-11-12T17:45:22.319Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_31_292][6598][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s",
+        "timestamp": "2026-11-12T17:45:31.305Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_31_324][6598][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)",
+        "timestamp": "2026-11-12T17:45:31.326Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_31_332][6598][Script] RuinsScene: dragon ready (large)",
+        "timestamp": "2026-11-12T17:45:31.335Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_31_681][6598][Script] [UIInspector] 已初始化（快捷键: F9）",
+        "timestamp": "2026-11-12T17:45:31.691Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_31_684][6598][Script] RuinsScene: stage -> gate",
+        "timestamp": "2026-11-12T17:45:31.692Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      },
+      {
+        "type": "log",
+        "text": "[2026-11-13 01_45_31_684][6598][Script] RuinsScene: ready in 0.00s, volumes 416",
+        "timestamp": "2026-11-12T17:45:31.692Z",
+        "location": {
+          "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/__preview-bridge.js?v=forge-7fdb85786b-n9s8w",
+          "line": 76,
+          "column": 15,
+          "lineNumber": 76,
+          "columnNumber": 15
+        }
+      }
+    ]
+  }
+}

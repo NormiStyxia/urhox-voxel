@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "action": "act",
+  "truncated": true,
+  "summary": {
+    "ok": true,
+    "action": "act",
+    "status": 200,
+    "data": {
+      "ok": true,
+      "targetId": "82A6CFAFF4DF3C2BCD316957A406C437",
+      "url": "https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1",
+      "result": {
+        "status": 200,
+        "source": "TNNDne��ȭ�׼�ˢ���ڼ�ٷ�Ͱ�Ť�¦�ک�Ġ�������ՠ������в����ا�֦���ļ�ޭ�ݠ�Ƕ����^hha\u0007<1 $(:e�����Ρ��e\u000232*0\u0014,$8!e�������£���ª��3,$$\u0014\"!.|d��͵�����æ�ݧ���̪�Ⱦ�͠�ʠ����Xhlt����ŷ��t\u000602'6.\u0015 .9 13*y���n���n����ٳ����ɬ�ɩ�ߢ�����ݠ���»���Ӧ���ۤ�Ҧ��Sne\t1,\")'v\u000b7,&<1\u00045s��… [29220 chars]"
+      }
+    }
+  },
+  "fullResult": {
+    "id": "result-b241da40-03fe-45b3-bd7e-fec3478d4ead",
+    "chars": 39915,
+    "read": {
+      "action": "readResult",
+      "resultId": "result-b241da40-03fe-45b3-bd7e-fec3478d4ead",
+      "offset": 0,
+      "maxChars": 12000
+    }
+  },
+  "hint": "摘要不是完整结果。缺少事实或页面 ref 时用 readResult 分段补读；不要猜测或重放动作。原文仅留在当前工具会话，最多保留最近四份大结果。"
+}

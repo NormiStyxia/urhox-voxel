@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "action": "status",
+  "status": 200,
+  "data": {
+    "ready": false,
+    "backend": "user-browser",
+    "running": false,
+    "configured": false,
+    "reason": "plugin-missing",
+    "message": "没有已启用的浏览器扩展插件提供页面控制(安装并启用 Cindy Chrome 插件后再选择「我的浏览器」)。",
+    "capabilities": {
+      "evaluate": true,
+      "screenshot": true,
+      "network": true,
+      "upload": true,
+      "dialog": true,
+      "console": true,
+      "pdf": false,
+      "focus": true,
+      "close": true,
+      "trustedInput": false,
+      "pointer": true,
+      "rawProtocol": false
+    }
+  }
+}

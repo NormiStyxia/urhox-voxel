@@ -1,0 +1,23 @@
+{
+  "ui/TouchControls.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "ruins/RuinsHUD.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "dragon/DragonRide.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  }
+}

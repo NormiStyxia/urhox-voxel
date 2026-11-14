@@ -1,0 +1,6 @@
+{
+  "ok": false,
+  "action": "tabs",
+  "errorCode": "BROWSER_RUNTIME_NOT_CONFIGURED",
+  "message": "没有已启用的浏览器扩展插件提供页面控制(安装并启用 Cindy Chrome 插件后再选择「我的浏览器」)。"
+}

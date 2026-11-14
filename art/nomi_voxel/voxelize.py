@@ -1159,10 +1159,11 @@ def render_iso(by_face, occ, yaw_deg=35, pitch_deg=20, scale=6, tris=()):
 
 
 # ------------------------------------------------------------------ 导出
-def export_lua(quads, palette, tris_q=(), bones=None):
+def export_lua(quads, palette, tris_q=(), bones=None, output=None):
     bones = BONES if bones is None else bones
+    command = 'art/nomi_voxel/voxelize.py' + (' --elbows' if output else '')
     lines = [
-        "-- 自动生成：art/nomi_voxel/voxelize.py，请勿手改（改脚本后重新运行）",
+        f"-- 自动生成：{command}，请勿手改（改脚本后重新运行）",
         "-- 体素坐标：x 向右、y 向上、z 向前，脚底 y=0；quad = {方向, 层, u, v, 宽, 高, 颜色}",
         "-- 方向 1..6 = +X -X +Y -Y +Z -Z；层为该方向上的体素索引坐标",
         "return {",
@@ -1220,12 +1221,12 @@ def export_lua(quads, palette, tris_q=(), bones=None):
         lines.append("        },")
     lines.append("    },")
     lines.append("}")
-    out = ROOT / "scripts" / "game" / "NomiVoxelData.lua"
+    out = Path(output) if output else ROOT / "scripts" / "game" / "NomiVoxelData.lua"
     out.write_text("\n".join(lines) + "\n")
     return out
 
 
-def main():
+def main(elbows=False):
     im, mask = load_mask()
     xs = np.arange(-NX, NX) + 0.5
     zs = np.arange(-NZ, NZ) + 0.5
@@ -1263,7 +1264,12 @@ def main():
     tris_q = [(t[0], t[1], int(c)) for t, c in zip(tris, tidx)]
     from refine import finish
     from review_mesh import save_review
-    quads, palette, tris_q, bones = finish(quads, palette, tris_q, BONES)
+    quads, palette, tris_q, bones = finish(quads, palette, tris_q, BONES,
+                                         record_edits=not elbows, replay_reviewed=elbows)
+    if elbows:
+        from elbow import generate
+        generate(quads, palette, tris_q, bones)
+        return
     save_review(quads, palette, tris_q, bones, HERE)
 
     counts = {}
@@ -1275,4 +1281,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--elbows', action='store_true', help='opt-in elbow data only; never overwrite production mesh')
+    main(elbows=parser.parse_args().elbows)

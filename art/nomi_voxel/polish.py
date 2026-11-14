@@ -105,6 +105,30 @@ def canonical(quads, tris, palette):
     return cells, ts
 
 
+def replay_edits(quads, palette, tris):
+    """Reapply the reviewed colour log; no exported/auto-generated Lua is input.
+
+    Fail on mismatched source geometry/colour rather than silently repainting a
+    changed model. Keeps the legacy non-elbow generation workflow untouched.
+    """
+    cells=[list(c) for q in quads for c in unit_cells(q)]
+    tris=[list(t) for t in tris]
+    palette=list(palette)
+    cell_at={tuple(c[:5]):c for c in cells}
+    tri_at={};counts=Counter()
+    for row in tris:
+        bone=row[0];tri_at[(bone,counts[bone])]=row;counts[bone]+=1
+    for edit in json.loads((HERE/'polish_edits.json').read_text())['edits']:
+        row=(cell_at if edit['kind']=='q' else tri_at).get(tuple(edit['key']))
+        assert row is not None, 'reviewed colour edit geometry missing'
+        assert np.allclose(palette[row[-1]],edit['before'],atol=.001,rtol=0), 'reviewed source RGB changed'
+        candidates=[i for i,c in enumerate(palette) if np.allclose(c,edit['after'],atol=.001,rtol=0)]
+        if not candidates:
+            palette.append(np.asarray(edit['after'],float));candidates=[len(palette)-1]
+        row[-1]=candidates[0]
+    return merge(cells),palette,[tuple(t) for t in tris]
+
+
 def polish(quads, palette, tris):
     palette = [np.asarray(c, float) for c in palette]
     rgb = [tuple(int(round(x)) for x in c) for c in palette]

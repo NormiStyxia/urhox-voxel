@@ -1,0 +1,1825 @@
+[
+  {
+    "request": {
+      "action": "navigate",
+      "url": "https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1",
+      "afterSnapshot": {
+        "maxChars": 800
+      }
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"navigate\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"},\"afterSnapshot\":{\"ok\":true,\"action\":\"snapshot\",\"status\":200,\"data\":{\"ok\":true,\"format\":\"ai\",\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"snapshot\":\"      - button [ref=f10e5] [cursor=pointer]:\\n      - button [ref=f10e7] [cursor=pointer]\\n        - button [ref=f10e9] [cursor=pointer]:\\n          - button [disabled]: 发布\\n    - button [ref=f10e15] [cursor=pointer]:\\n      - button [ref=f10e20] [cursor=pointer]\\n        - button [ref=f10e23] [cursor=pointer]\\n          - link [ref=f10e25] [cursor=pointer]:\\n            - /url: /app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1&chatId=97bdcd62-deeb-4359-a3e2-89b289d1d274\\n          - button [ref=f10e26] [cursor=pointer]\\n        - button [ref=f10e32] [cursor=pointer]\\n          - link [ref=f10e34] [cursor=pointer]:\\n            - /url: /app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1&chatId=227cb97d-78ef-41ee-8b3e-ec3af4af244a\",\"refs\":{},\"truncated\":true,\"originalChars\":4162,\"hint\":\"快照正文已截断；若缺少所需内容，请缩小 selector 范围或单独 snapshot 补读，不要重复已成功的动作。\"}}}"
+    }
+  },
+  {
+    "name": "web-r2-loading.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 20000
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":2,\"total\":2,\"steps\":[{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/jpeg\",\"bytes\":31064}}]}"
+    }
+  },
+  {
+    "name": "web-r2-spawn.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 15000
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":2,\"total\":2,\"steps\":[{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":109584,\"originalBytes\":415190}}]}"
+    }
+  },
+  {
+    "name": "web-r2-outeroblique-noon.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "act",
+          "request": {
+            "kind": "clickCoords",
+            "x": 1148,
+            "y": 560
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 140
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "s",
+                "code": "KeyS",
+                "windowsVirtualKeyCode": 83
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 350
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "s",
+                "code": "KeyS",
+                "windowsVirtualKeyCode": 83
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1270,
+                "y": 349,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1270,
+                "y": 349,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 120
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":12,\"total\":12,\"steps\":[{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":51476,\"originalBytes\":212505}}]}"
+    }
+  },
+  {
+    "name": "web-r2-outerlowside.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 930,
+                "y": 551,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 930,
+                "y": 551,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "a",
+                "code": "KeyA",
+                "windowsVirtualKeyCode": 65
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 140
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "a",
+                "code": "KeyA",
+                "windowsVirtualKeyCode": 65
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 65
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 471,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1100,
+                "y": 471,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":9,\"total\":9,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":49176,\"originalBytes\":205870}}]}"
+    }
+  },
+  {
+    "name": "web-r2-outerlowside-afternoon.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "t",
+                "code": "KeyT",
+                "windowsVirtualKeyCode": 84
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 7600
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "t",
+                "code": "KeyT",
+                "windowsVirtualKeyCode": 84
+              }
+            }
+          ]
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":4,\"total\":4,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":51340,\"originalBytes\":212213}}]}"
+    }
+  },
+  {
+    "name": "web-r2-outeroblique-afternoon.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1271,
+                "y": 629,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1271,
+                "y": 629,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":2,\"total\":2,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":53984,\"originalBytes\":220478}}]}"
+    }
+  },
+  {
+    "name": "web-r2-gate-first.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 930,
+                "y": 860,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 930,
+                "y": 860,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1900
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "1",
+                "code": "Digit1",
+                "windowsVirtualKeyCode": 49
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1700
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "1",
+                "code": "Digit1",
+                "windowsVirtualKeyCode": 49
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1800
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":11,\"total\":11,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":126154,\"originalBytes\":446508}}]}"
+    }
+  },
+  {
+    "name": "web-r2-gate-open.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1102,
+                "y": 308,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1102,
+                "y": 308,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "1",
+                "code": "Digit1",
+                "windowsVirtualKeyCode": 49
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1700
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "1",
+                "code": "Digit1",
+                "windowsVirtualKeyCode": 49
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1800
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":6,\"total\":6,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":83128,\"originalBytes\":327582}}]}"
+    }
+  },
+  {
+    "name": "web-r2-bridge-aim.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 800
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1321,
+                "y": 357,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1321,
+                "y": 357,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 300
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":6,\"total\":6,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":53940,\"originalBytes\":221173}}]}"
+    }
+  },
+  {
+    "name": "web-r2-bridge-rewind.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 880,
+                "y": 550,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 880,
+                "y": 550,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 40
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 30
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1320,
+                "y": 550,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1320,
+                "y": 550,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "q",
+                "code": "KeyQ",
+                "windowsVirtualKeyCode": 81
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "q",
+                "code": "KeyQ",
+                "windowsVirtualKeyCode": 81
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 2700
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":12,\"total\":12,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":56664,\"originalBytes\":222687}}]}"
+    }
+  },
+  {
+    "name": "web-r2-bridge-restored.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "1",
+                "code": "Digit1",
+                "windowsVirtualKeyCode": 49
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1700
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "1",
+                "code": "Digit1",
+                "windowsVirtualKeyCode": 49
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1800
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "q",
+                "code": "KeyQ",
+                "windowsVirtualKeyCode": 81
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 160
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "q",
+                "code": "KeyQ",
+                "windowsVirtualKeyCode": 81
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 2800
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":9,\"total\":9,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":52540,\"originalBytes\":210241}}]}"
+    }
+  },
+  {
+    "name": "web-r2-crossbridge.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 881,
+                "y": 901,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 881,
+                "y": 901,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 3600
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 500
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":6,\"total\":6,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":112720,\"originalBytes\":414353}}]}"
+    }
+  },
+  {
+    "name": "web-r2-southaerial.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 480
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 120
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 820,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1100,
+                "y": 820,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":8,\"total\":8,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":90084,\"originalBytes\":344403}}]}"
+    }
+  },
+  {
+    "name": "web-r2-lowrift.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 700
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "d",
+                "code": "KeyD",
+                "windowsVirtualKeyCode": 68
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 100
+          }
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "Tab",
+                "code": "Tab",
+                "windowsVirtualKeyCode": 9
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1780,
+                "y": 280,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1780,
+                "y": 280,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1100,
+                "y": 550
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mousePressed",
+                "x": 1100,
+                "y": 550,
+                "button": "right",
+                "buttons": 2,
+                "clickCount": 1
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseMoved",
+                "x": 1783,
+                "y": 550,
+                "buttons": 2
+              }
+            },
+            {
+              "method": "Input.dispatchMouseEvent",
+              "params": {
+                "type": "mouseReleased",
+                "x": 1783,
+                "y": 550,
+                "button": "right",
+                "buttons": 0,
+                "clickCount": 1
+              }
+            }
+          ]
+        },
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyDown",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 1200
+          }
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":11,\"total\":11,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":44672,\"originalBytes\":220967}}]}"
+    }
+  },
+  {
+    "name": "web-r2-return-held.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 2100
+          }
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "act",
+          "request": {
+            "kind": "wait",
+            "timeMs": 900
+          }
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":3,\"total\":3,\"steps\":[{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":80028,\"originalBytes\":327388}},{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\"}}]}"
+    }
+  },
+  {
+    "name": "web-r2-return-still.webp",
+    "request": {
+      "action": "batch",
+      "steps": [
+        {
+          "action": "cdp",
+          "commands": [
+            {
+              "method": "Input.dispatchKeyEvent",
+              "params": {
+                "type": "keyUp",
+                "key": "w",
+                "code": "KeyW",
+                "windowsVirtualKeyCode": 87
+              }
+            }
+          ]
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"batch\",\"completed\":2,\"total\":2,\"steps\":[{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}},{\"ok\":true,\"action\":\"screenshot\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"mimeType\":\"image/webp\",\"bytes\":79914,\"originalBytes\":327487}}]}"
+    }
+  },
+  {
+    "name": "web-r2-resource-read",
+    "request": {
+      "action": "act",
+      "request": {
+        "kind": "evaluate",
+        "fn": "async () => { const u='https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DJMX4WhGoyLwMC1SByKMroU_-edc80a1e.shader'; const r=await fetch(u); const t=await r.text(); return {url:u,status:r.status,length:t.length,source:t}; }"
+      }
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"result\":{\"url\":\"https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DJMX4WhGoyLwMC1SByKMroU_-edc80a1e.shader\",\"status\":200,\"length\":9134,\"source\":\"// RuinsGround.shader — 时之遗迹岛面与岩壳（共用世界空间材质）\\n//\\n// 颜色全部程序化：世界空间多层噪声把草地 / 枯草 / 泥土 / 铺石 / 岩壁 混在一起，\\n// 权重来自 Lua 生成的控制图 splat_map（覆盖整块地形，UV 0..1）：\\n//   R = 铺石路   G = 泥土 / 碎石   B = 岩壁（崖面）   A = 草地密度（GrassField 也读这张）\\n// 崖面另外按法线坡度自动换岩石，岩层沿倾斜、带噪声扭曲的方向分布，不再是一圈圈水平色带。\\n// daynight_tint：昼夜模块统一写入，乘到最终颜色（与其他自定义材质一致）。\\nshader_type spatial;\\nrender_mode shading_model_pbr, cull_back;\\n#include \\\"res://Shaders/BLGL/RuinsFrost.shaderinc\\\"\\n\\nuniform sampler2D splat_map : filter_linear, repeat_disable;\\nuniform vec3 daynight_tint = vec3(1.0);\\nuniform vec3 grass_dark = vec3(0.16, 0.30, 0.10);\\nuniform vec3 grass_light = vec3(0.36, 0.52, 0.20);\\nuniform vec3 grass_dry = vec3(0.55, 0.52, 0.28);\\nuniform vec3 dirt_color = vec3(0.36, 0.28, 0.20);\\nuniform vec3 path_color = vec3(0.62, 0.58, 0.51);\\nuniform vec3 rock_a = vec3(0.56, 0.54, 0.51);\\nuniform vec3 rock_b = vec3(0.40, 0.39, 0.40);\\nuniform vec3 rock_warm = vec3(0.62, 0.56, 0.47);\\nuniform vec3 deep_color = vec3(0.34, 0.35, 0.37);\\nuniform float deep_y = -11.5;\\nuniform float world_half = 84.0;\\nuniform float snow_y = 31.0;\\nuniform vec3 snow_color = vec3(0.93, 0.94, 0.97);\\n\\nfloat hash2(vec2 p) {\\n    vec3 p3 = fract(vec3(p.xyx) * 0.1031);\\n    p3 += dot(p3, p3.yzx + 33.33);\\n    return fract((p3.x + p3.y) * p3.z);\\n}\\n\\nfloat vnoise(vec2 p) {\\n    vec2 i = floor(p);\\n    vec2 f = fract(p);\\n    vec2 u = f * f * (3.0 - 2.0 * f);\\n    float a = hash2(i);\\n    float b = hash2(i + vec2(1.0, 0.0));\\n    float c = hash2(i + vec2(0.0, 1.0));\\n    float d = hash2(i + vec2(1.0, 1.0));\\n    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\\n}\\n\\nfloat fbm(vec2 p) {\\n    float s = 0.0;\\n    float a = 0.5;\\n    for (int i = 0; i < 4; i++) {\\n        s += vnoise(p) * a;\\n        p = p * 2.03 + vec2(17.1, 5.3);\\n        a *= 0.5;\\n    }\\n    return s;\\n}\\n\\n// 三向世界投影：陡坡也按实际米数取样，不把平面纹理拉成竖条。\\nfloat surfaceNoise(vec3 p, vec3 weights) {\\n    return vnoise(p.yz) * weights.x + vnoise(p.xz) * weights.y + vnoise(p.xy) * weights.z;\\n}\\n\\n// 约 60cm 岩块的非规则断隙；返回块内差异与距边缘的相对距离。\\nvec2 rockCell(vec2 p) {\\n    vec2 cell = floor(p);\\n    vec2 f = fract(p);\\n    float first = 8.0, second = 8.0, color = 0.0;\\n    for (int y = -1; y <= 1; y++) {\\n        for (int x = -1; x <= 1; x++) {\\n            vec2 off = vec2(float(x), float(y));\\n            vec2 id = cell + off;\\n            vec2 point = off + vec2(hash2(id), hash2(id + 17.3)) - f;\\n            float d = dot(point, point);\\n            if (d < first) { second = first; first = d; color = hash2(id + 31.0); }\\n            else { second = min(second, d); }\\n        }\\n    }\\n    return vec2(color, sqrt(second) - sqrt(first));\\n}\\n\\nvec3 srgb_to_linear(vec3 c) {\\n    return c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878);\\n}\\n\\nvoid fragment() {\\n    vec3 wp = VERTEX;\\n    vec3 n = normalize(NORMAL);\\n    vec3 weights = pow(abs(n), vec3(4.0));\\n    weights /= max(weights.x + weights.y + weights.z, 0.0001);\\n    // Keep the relief field quad-wide: do NOT move these samples into weight/LOD branches.\\n    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);\\n    float footprint = max(length(dpdx), length(dpdy));\\n    float detailFade = 1.0 - smoothstep(0.035, 0.14, footprint);\\n    float grainFade = 1.0 - smoothstep(0.012, 0.055, footprint);\\n    float chips = surfaceNoise(wp * 11.0, weights);\\n    float grain = surfaceNoise(wp * 45.0, weights);\\n    float relief = chips * 0.006 + grain * 0.0015;\\n    vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);\\n    float det = dot(dpdx, r1);\\n    vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);\\n    // 控制图按世界坐标取：第 0 行 = +Z（北）\\n    vec2 suv = vec2(wp.x + world_half, world_half - wp.z) / (2.0 * world_half);\\n    vec4 sp = texture(splat_map, suv);\\n\\n    // Shared low-frequency fields remain at every distance (snow, blend edges and grass).\\n    float big = fbm(wp.xz * 0.045);\\n    float mid = fbm(wp.xz * 0.28 + 3.0);\\n    float fine = vnoise(wp.xz * 3.1);\\n\\n    // ---- 权重：先决定实际可见的材质，再计算只用于颜色的昂贵细节。\\n    float slope = 1.0 - n.y;\\n    float wRock = max(sp.b, smoothstep(0.28, 0.45, slope + (fine - 0.5) * 0.06));\\n    // IslandShell 顶点 R 标记最上方薄土断缘。\\n    float soilLip = COLOR.r;\\n    wRock *= 1.0 - soilLip;\\n    float wPath = sp.r * (1.0 - wRock) * (1.0 - soilLip);\\n    float wDirt = max(sp.g, soilLip) * (1.0 - wRock) * (1.0 - wPath);\\n    float edgeN = (mid - 0.5) * 0.5;\\n    wPath = smoothstep(0.35, 0.65, wPath + edgeN * 0.6);\\n    wDirt = smoothstep(0.3, 0.7, wDirt + edgeN);\\n    vec3 col = vec3(0.0);\\n    // All branches below are derivative-free. Exact zero/one tests preserve blend boundaries.\\n    if (wRock < 1.0) {\\n        // ---- 草地：铺石缝里也用到草色，不仅是裸露草地。\\n        vec3 grass = mix(grass_dark, grass_light, clamp(big * 1.1 + mid * 0.35 - 0.25, 0.0, 1.0));\\n        grass = mix(grass, grass_dry, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.55);\\n        grass *= 0.88 + fine * 0.22;\\n        col = grass;\\n\\n        // ---- 泥土 / 碎石：被铺石或岩壁完全覆盖时跳过。\\n        if (wDirt > 0.0 && wPath < 1.0) {\\n            float pebble = smoothstep(0.63, 0.76, chips);\\n            vec3 dirt = dirt_color * (0.85 + mid * 0.3);\\n            dirt *= 1.0 + (chips - 0.5) * 0.34 * detailFade + (grain - 0.5) * 0.18 * grainFade;\\n            dirt = mix(dirt, path_color * 0.72, pebble * 0.38 * detailFade);\\n            col = mix(col, dirt, wDirt);\\n        }\\n\\n        // ---- 铺石路：保留原石板、窄缝及缝内草色。\\n        if (wPath > 0.0) {\\n            vec2 pc = wp.xz * 1.15;\\n            vec2 cell = floor(pc + vec2(0.0, floor(pc.x) * 0.5));\\n            vec2 f = fract(pc + vec2(0.0, floor(pc.x) * 0.5));\\n            float seam = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));\\n            float slab = hash2(cell);\\n            vec3 path = path_color * (0.84 + slab * 0.26) * (0.92 + fine * 0.12);\\n            path = mix(path * 0.55, path, smoothstep(0.02, 0.07, seam));\\n            path = mix(path, grass * 0.9, smoothstep(0.55, 0.85, mid) * 0.5 * (1.0 - smoothstep(0.03, 0.09, seam)));\\n            col = mix(col, path, wPath);\\n        }\\n    }\\n\\n    // ---- 岩壁：只在实际贡献颜色时计算，近景岩层、风化与苔藓不变。\\n    if (wRock > 0.0) {\\n        float warp = fbm(wp.xz * 0.05 + vec2(wp.y * 0.03)) * 6.0;\\n        float strata = wp.y * 0.55 + dot(wp.xz, vec2(0.07, 0.045)) + warp;\\n        float band = vnoise(vec2(strata, 0.5)) * 0.65 + vnoise(vec2(strata * 3.7, 7.0)) * 0.35;\\n        vec3 rock = mix(rock_b, rock_a, band);\\n        rock = mix(rock, rock_warm, smoothstep(0.6, 0.85, fbm(wp.xz * 0.11 + wp.y * 0.07)) * 0.6);\\n        float rockFade = 1.0 - smoothstep(0.08, 0.30, footprint);\\n        // The old Voronoi terms already vanish at rockFade == 0; do not evaluate 27 cells there.\\n        vec2 cellDetail = vec2(0.5, 1.0);\\n        float crack = 0.0;\\n        if (rockFade > 0.0) {\\n            vec3 rp = wp * 1.6;\\n            cellDetail = vec2(0.0);\\n            if (weights.x > 0.0) { cellDetail += rockCell(rp.yz) * weights.x; }\\n            if (weights.y > 0.0) { cellDetail += rockCell(rp.xz) * weights.y; }\\n            if (weights.z > 0.0) { cellDetail += rockCell(rp.xy) * weights.z; }\\n            crack = 1.0 - smoothstep(0.012, 0.045 + footprint * 1.6, cellDetail.y);\\n        }\\n        rock *= 0.92 + (cellDetail.x - 0.5) * 0.20 * rockFade;\\n        rock *= 1.0 - crack * 0.19 * rockFade + (chips - 0.5) * 0.26 * detailFade + (grain - 0.5) * 0.13 * grainFade;\\n        float mossFacing = smoothstep(0.35, 0.75, n.y + 0.6);\\n        if (mossFacing > 0.0) {\\n            float mossy = smoothstep(0.55, 0.75, fbm(vec2(wp.x - wp.z, wp.y * 2.0) * 0.35)) * mossFacing;\\n            rock = mix(rock, grass_dark * 1.2, mossy * 0.45);\\n        }\\n        // 复用已有低频场，不新增纹理/噪声采样；大块深浅只作用于崖面。\\n        float cliff = 1.0 - smoothstep(0.15, 0.60, n.y);\\n        rock *= mix(1.0, mix(0.90, 1.06, smoothstep(0.22, 0.70, big)), cliff);\\n        // 深部仍是灰岩而非另一圈深色材料；11m宽过渡随空间低频场偏移。\\n        float deepHeight = wp.y + (big - 0.47) * 10.0 + (warp - 2.8) * 0.45;\\n        float deepMix = (1.0 - smoothstep(deep_y - 5.0, deep_y + 6.0, deepHeight)) * 0.50 * cliff;\\n        rock = mix(rock, deep_color, deepMix);\\n        col = mix(col, rock, wRock);\\n    }\\n    // 草地被 GrassField 覆盖处稍压暗（草缝里是草丛深处）\\n    float under = sp.a * (1.0 - wRock) * (1.0 - wPath) * (1.0 - wDirt);\\n    col = mix(col, col * 0.62, under * 0.5);\\n    // 山顶积雪：平坦处先积，噪声咬边\\n    float snow = smoothstep(snow_y - 1.0, snow_y + 1.5, wp.y + (big - 0.5) * 3.0) * smoothstep(0.25, 0.7, n.y);\\n    col = mix(col, snow_color * (0.92 + fine * 0.08), snow);\\n\\n    // 毫米级凹凸直接扰动世界法线；梯度已在所有非一致分支之前求好。\\n    float bumpWeight = max(wRock, wDirt) * (1.0 - snow);\\n    NORMAL = normalize(n - clamp(grad, vec3(-0.35), vec3(0.35)) * detailFade * bumpWeight);\\n    ALBEDO = srgb_to_linear(col) * daynight_tint;\\n    ROUGHNESS = clamp(mix(0.92, 0.78, wPath) + (chips - 0.5) * 0.12 * bumpWeight * detailFade, 0.0, 1.0);\\n    METALLIC = 0.0;\\n    SPECULAR = mix(0.25, 0.4, wRock);\\n    float ice = ruins_frost(VERTEX, NORMAL);\\n    // Frost is evaluated after all derivatives; a zero mask needs no vein sin/pow or PBR mixes.\\n    if (ice != 0.0) {\\n        float iceVeins = pow(abs(sin(VERTEX.x*7.0 + sin(VERTEX.z*4.0))), 18.0);\\n        ALBEDO = mix(ALBEDO, vec3(0.30,0.56,0.68) + vec3(0.26)*iceVeins, ice*0.85);\\n        ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);\\n        SPECULAR = mix(SPECULAR, 0.7, ice);\\n    }\\n}\\n\"}}}"
+    }
+  },
+  {
+    "name": "web-r2-terrain-request",
+    "request": {
+      "action": "requests",
+      "filter": "H-DXybppMRTdvsmqG2ElfLi2"
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"requests\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"requests\":[{\"id\":\"r1685\",\"timestamp\":\"2026-11-13T17:40:33.691Z\",\"method\":\"GET\",\"url\":\"https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/H-DXybppMRTdvsmqG2ElfLi2-903883f8.lua\",\"resourceType\":\"xhr\",\"status\":200,\"ok\":true}]}}"
+    }
+  },
+  {
+    "name": "web-r2-release-1",
+    "request": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "w",
+            "code": "KeyW",
+            "windowsVirtualKeyCode": 87
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "a",
+            "code": "KeyA",
+            "windowsVirtualKeyCode": 65
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "s",
+            "code": "KeyS",
+            "windowsVirtualKeyCode": 83
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "d",
+            "code": "KeyD",
+            "windowsVirtualKeyCode": 68
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "q",
+            "code": "KeyQ",
+            "windowsVirtualKeyCode": 81
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "t",
+            "code": "KeyT",
+            "windowsVirtualKeyCode": 84
+          }
+        },
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mouseReleased",
+            "x": 1100,
+            "y": 550,
+            "button": "left",
+            "buttons": 0,
+            "clickCount": 1
+          }
+        },
+        {
+          "method": "Input.dispatchMouseEvent",
+          "params": {
+            "type": "mouseReleased",
+            "x": 1100,
+            "y": 550,
+            "button": "right",
+            "buttons": 0,
+            "clickCount": 1
+          }
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchMouseEvent\",\"ok\":true,\"result\":{}}]}}"
+    }
+  },
+  {
+    "name": "web-r2-release-2",
+    "request": {
+      "action": "cdp",
+      "commands": [
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "1",
+            "code": "Digit1",
+            "windowsVirtualKeyCode": 49
+          }
+        },
+        {
+          "method": "Input.dispatchKeyEvent",
+          "params": {
+            "type": "keyUp",
+            "key": "Tab",
+            "code": "Tab",
+            "windowsVirtualKeyCode": 9
+          }
+        }
+      ]
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"cdp\",\"data\":{\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"results\":[{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}},{\"method\":\"Input.dispatchKeyEvent\",\"ok\":true,\"result\":{}}]}}"
+    }
+  },
+  {
+    "name": "web-r2-terrain-hash",
+    "request": {
+      "action": "act",
+      "request": {
+        "kind": "evaluate",
+        "fn": "async () => { const u='https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/H-DXybppMRTdvsmqG2ElfLi2-903883f8.lua'; const r=await fetch(u); const b=await r.arrayBuffer(); const digest=await crypto.subtle.digest('SHA-256',b); return {url:u,status:r.status,bytes:b.byteLength,sha256:Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,'0')).join('')}; }"
+      }
+    },
+    "result": {
+      "type": "text",
+      "text": "{\"ok\":true,\"action\":\"act\",\"status\":200,\"data\":{\"ok\":true,\"targetId\":\"82A6CFAFF4DF3C2BCD316957A406C437\",\"url\":\"https://maker.taptap.cn/app/f323832c-195d-4276-a841-0ceafd1f1cf1?localDev=1&hide_chat=1\",\"result\":{\"url\":\"https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/H-DXybppMRTdvsmqG2ElfLi2-903883f8.lua\",\"status\":200,\"bytes\":30236,\"sha256\":\"0369f7db28b054dca24cbd6acf94fa2fa2d4a5af8773cdc01ce7534242264892\"}}}"
+    }
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "scripts/dragon/DragonCollision.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ruins/RuinsDragon.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/ruins/VoxelBrush.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  },
+  "scripts/dragon/DragonAnimationController.lua": {
+    "ok": true,
+    "result": {
+      "kind": "full",
+      "items": []
+    }
+  }
+}

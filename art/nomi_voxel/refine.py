@@ -52,7 +52,7 @@ def garment_spot(bone, points, rgb):
     return False
 
 
-def finish(quads, palette, tris, bones):
+def finish(quads, palette, tris, bones, record_edits=True, replay_reviewed=False):
     approved = json.loads((HERE / 'approved_head.json').read_text())
     palette = list(np.asarray(palette,float))
     def colour(name):
@@ -121,10 +121,16 @@ def finish(quads, palette, tris, bones):
         tube('hair_locks',[ring(sgn*12,43,11.5,.4,.5,.15),ring(sgn*12.5,47,11.5,1.1,1.2,.4),ring(sgn*13.5,53,9,1.3,1.1,.4)],['hair','hair','hair_edge','hair'])
 
     # Colour-only polish reviewed against in-game screenshots (baked shading, coat spill, tie).
-    from polish import polish
+    from polish import polish, replay_edits
+    before_qs, before_ts = qs, ts
     qs, palette, ts, edits = polish(qs, palette, ts)
-    (HERE / 'polish_edits.json').write_text(
-        '{"edits": [\n' + ',\n'.join(json.dumps(e, separators=(',', ':')) for e in edits) + '\n]}\n')
+    if replay_reviewed:
+        # cKDTree tie ordering varies across SciPy versions. The accepted per-face
+        # edit log, not a fresh neighbour vote, defines the preserved appearance.
+        qs, palette, ts = replay_edits(before_qs, palette, before_ts)
+    if record_edits:
+        (HERE / 'polish_edits.json').write_text(
+            '{"edits": [\n' + ',\n'.join(json.dumps(e, separators=(',', ':')) for e in edits) + '\n]}\n')
 
     # Drop unused sampled shades; the retained face RGB is copied exactly, never clustered.
     used=sorted(set(q[-1] for q in qs)|set(t[-1] for t in ts))

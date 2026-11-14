@@ -1,0 +1,73 @@
+scripts/ui/SettingsMenu.lua:80:        Add('打印最近日志',x,y+88,bw,44,function() for _,line in ipairs(DebugLog.GetRecent(40)) do print(line) end end,false)
+scripts/dragon/DragonRig.lua:498:    print(string.format("DragonRig[%s]: %d bones, %d voxel parts, %d voxels, body %.2fs, total %.2fs",
+scripts/combat/enemies/Spawner.lua:77:            print('EnemySpawner: unsafe placement skipped: '..id)
+scripts/ruins/RuinsBuild.lua:115:            if r >= R or Terrain.InStairFootprint(x, z) then return nil end
+scripts/ruins/RuinsBuild.lua:461:                if Terrain.InStairFootprint(x, z) or r < Terrain.COURT_R or r > 21.9 then return nil end
+scripts/ruins/RuinsBuild.lua:889:    print("RuinsBuild: crystals " .. nCrystal)
+scripts/ruins/RuinsBuild.lua:978:        if not ok then print("RuinsBuild: " .. s[1] .. " FAILED: " .. tostring(err)) end
+scripts/ruins/RuinsBuild.lua:979:        print(string.format("RuinsBuild: %s %.2fs (volumes %d)", s[1], os.clock() - t1, #M.volumes))
+scripts/ruins/RuinsBuild.lua:981:    print(string.format("RuinsBuild: total %.2fs, %d volumes", os.clock() - t0, #M.volumes))
+scripts/ruins/RuinsTrees.lua:27:        print("RuinsTrees: shader failed " .. path)
+scripts/ruins/RuinsTerrain.lua:127:function M.InStairFootprint(x, z)
+scripts/ruins/RuinsTerrain.lua:187:    if not M.HasGround(x,z,M.ISLAND.safeMargin) or M.InStairFootprint(x,z) then return false end
+scripts/ruins/RuinsTerrain.lua:246:        print("RuinsTerrain: HiddenVoxel.shader failed; collision voxels will be visible")
+scripts/ruins/RuinsTerrain.lua:300:    print(string.format("RuinsTerrain: %d island chunks, %d allocated / %d solid cells",#vols,allocated,solid))
+scripts/ruins/RuinsTerrain.lua:510:    print(string.format("RuinsTerrain: island shell %d triangles / %d chunks",triangles,chunks))
+scripts/ruins/RuinsTerrain.lua:563:        print("RuinsTerrain: RuinsGround.shader failed, using PBRNoTexture")
+scripts/ruins/RuinsTerrain.lua:574:    print(string.format("RuinsTerrain: visual %dx%d in %.2fs, probe terrain=%.2f expect=%.2f", NV, NV, os.clock() - t0,
+scripts/ruins/RuinsTerrain.lua:594:        print("RuinsTerrain: GrassField not supported, using tuft fallback")
+scripts/ruins/RuinsTerrain.lua:650:    print("RuinsTerrain: GrassField ready")
+scripts/ruins/RuinsTerrain.lua:679:    if not ok then print("RuinsTerrain: grass FAILED: " .. tostring(err)) end
+scripts/ruins/RuinsTerrain.lua:680:    print(string.format("RuinsTerrain: total %.2fs", os.clock() - t0))
+scripts/ruins/RuinsScene.lua:106:        if DebugLog.enabled then print("RuinsScene: pointer " .. reason .. ", mode=" .. tostring(input.mouseMode)) end
+scripts/ruins/RuinsScene.lua:133:    print("RuinsScene: stage -> " .. s)
+scripts/ruins/RuinsScene.lua:171:            print("RuinsScene: RuinsVoxel.shader failed, using palette material")
+scripts/ruins/RuinsScene.lua:236:    print("RuinsScene: dragon ready (" .. M.variant .. ")")
+scripts/ruins/RuinsScene.lua:258:        if DebugLog.enabled then print("RuinsPerf: sleeping dragon pose cached") end
+scripts/ruins/RuinsScene.lua:285:    print("RuinsScene: dragon awakening")
+scripts/ruins/RuinsScene.lua:463:    print(string.format("RuinsScene: ready in %.2fs, volumes %d", GetTime():GetElapsedTime() - t0, world_:GetVolumeCount()))
+scripts/ruins/RuinsScene.lua:505:        if DebugLog.enabled then print(string.format("RuinsInput: drag begin button=%d pos=%d,%d focus=%s", button, drag.x, drag.y, tostring(input.focus))) end
+scripts/ruins/RuinsScene.lua:523:        if DebugLog.enabled then print(string.format("RuinsInput: drag move delta=%d,%d yaw=%.2f", dx, dy, nomi_.camYaw)) end
+scripts/ruins/RuinsScene.lua:536:    if DebugLog.enabled then print(string.format("RuinsInput: drag end samples=%d distance=%d", drag.samples, drag.distance)) end
+scripts/ruins/RuinsScene.lua:619:        print(string.format("RuinsAim: target=%s assisted=%s origin=%s dir=%s hit=%s distance=%.3f volume=%s id=%s layer=%s voxel=%s player=%s yaw=%.2f pitch=%.2f",
+scripts/ruins/VoxelBrush.lua:49:        print(string.format("VoxelBrush: WARNING large dims %dx%dx%d (%s)", self.nx, self.ny, self.nz, tostring(o.name)))
+scripts/ruins/NomiController.lua:98:    print(string.format("NomiController: spawn %.1f %.1f %.1f", spawn.x, spawn.y, spawn.z))
+scripts/ruins/NomiController.lua:337:        print(string.format("RuinsAim: repaired empty-origin volume=%d falseDistance=%.4f actualDistance=%.4f",
+scripts/ruins/NomiController.lua:392:        print(string.format("RuinsAim: center-forward dot=%.4f viewport=%dx%d dpr=%.2f",
+scripts/ruins/RuinsPuzzles.lua:95:    print("RuinsPuzzles: gate rubble voxels " .. M.gateRubbleSolid0)
+scripts/ruins/RuinsPuzzles.lua:660:    print(string.format("RuinsPuzzles: built %d time objects in %.2fs", #M.list, os.clock() - t0))
+scripts/game/BlockCharacter.lua:146:        print("BlockCharacter: material not found: " .. MATERIAL)
+scripts/game/BlockCharacter.lua:178:    print(string.format("BlockCharacter: built %d bones, %d cubes, %d faces", #data.bones, cubes, faces))
+scripts/game/BlockCharacter.lua:209:        print("BlockCharacter: voxel material not found")
+scripts/game/BlockCharacter.lua:332:    print(string.format("BlockCharacter: built voxel character, %d bones, %d quads, %d slope tris",
+scripts/ruins/SkyAtmosphere.lua:36:    print("SkyAtmosphere: "..quality..", realFog="..tostring(self.realFog)..", cloudTriangles=1080, maxMotes="..self.motes.count)
+scripts/ruins/DayNight.lua:67:        print("DayNight: SkyLightCapture not supported, keeping preset ambient")
+scripts/ruins/DayNight.lua:77:    print(string.format("DayNight: ready, hour %.1f, capture %s (manual, 64px, time-sliced)", self.hour, tostring(self.capture.supported)))
+scripts/ruins/GrassTufts.lua:20:        print("GrassTufts: shader failed")
+scripts/ruins/GrassTufts.lua:81:    print(string.format("GrassTufts: %d tufts in %d blocks, %.2fs", tufts, blocks, os.clock() - t0))
+scripts/ruins/TimeSigil.lua:16:            print('TimeSigil: missing texture '..TEX[kind])
+scripts/ruins/DebugLog.lua:20:    print(line)
+scripts/ruins/RuinsPalette.lua:110:    print("RuinsPalette: " .. #DEF .. " entries")
+scripts/dragon/DragonTest.lua:114:    print("[DragonTest] bloom tuned for mobile/web (threshold 1.2)")
+scripts/dragon/DragonTest.lua:191:    print("DragonTest: breath style -> " .. M.breathStyle)
+scripts/dragon/DragonTest.lua:278:    print("DragonTest: ready")
+scripts/dragon/DragonTest.lua:301:        print("DragonTest: variant " .. id .. " failed: " .. tostring(built))
+scripts/dragon/DragonTest.lua:319:    print(string.format("DragonTest: variant -> %s (%.2fs)", id, os.clock() - t0))
+scripts/ruins/TimeObject.lua:122:        print("TimeObject: TimeVoxel.shader failed, fallback to palette material")
+scripts/ruins/TimeObject.lua:184:    print(string.format("TimeObject[%s]: %d voxels, %dx%dx%d @%.2fm", self.id, #self.voxels,
+scripts/ruins/TimeObject.lua:530:    print(string.format("TimeObject[%s]: shattered into %d pieces (level %d)", self.id, #self.pieces, level))
+scripts/ruins/TimeObject.lua:590:    print(string.format("TimeObject[%s]: refined %d pieces → %d", self.id, changed, #self.pieces))
+scripts/ruins/TimeObject.lua:647:    print(string.format("TimeObject[%s]: frozen %d pieces for %.1fs", self.id, #self.pieces, self.freezeLeft))
+scripts/ruins/TimeObject.lua:696:    print(string.format("TimeObject[%s]: rewinding %d pieces, track %.2fs, noTrack=%s", self.id, #self.pieces, tEnd, tostring(self.noTrack)))
+scripts/ruins/TimeObject.lua:774:    print(string.format("TimeObject[%s]: restored", self.id))
+scripts/dragon/VoxelFX.lua:122:        print("VoxelFX: VoxelSprite.shader failed, fallback to particle technique")
+scripts/dragon/VoxelFX.lua:244:    print("VoxelFX: " .. name .. " uses world-space quads, capacity=" .. n)
+scripts/dragon/DragonBreath.lua:182:    if not m:SetSurfaceShader(path) then print("DragonBreath: failed to load " .. path) end
+scripts/dragon/DragonBreath.lua:295:        print("DragonBreath: variant " .. tostring(variantId) .. " has no breath")
+scripts/dragon/DragonBreath.lua:303:    print(string.format("DragonBreath: %s ready (size %.2f, crystals %d)", self.cfg.name, self.S, #self.crystals))
+scripts/dragon/DragonBreath.lua:328:    print("DragonBreath: trigger " .. self.cfg.name)
+scripts/dragon/DragonMembrane.lua:42:        print("DragonMembrane: failed to load " .. Membrane.SHADER)
+scripts/dragon/DragonBreathClassic.lua:184:        print("DragonBreath: failed to load " .. path)
+scripts/dragon/DragonBreathClassic.lua:293:        print("DragonBreath: variant " .. tostring(variantId) .. " has no breath")
+scripts/dragon/DragonBreathClassic.lua:297:    print(string.format("DragonBreath: %s ready (size %.2f)", self.cfg.name, self.S))
+scripts/dragon/DragonBreathClassic.lua:313:    print("DragonBreath: trigger " .. self.cfg.name)

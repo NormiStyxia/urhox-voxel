@@ -1,0 +1,466 @@
+{"t": 1794605149, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_25_05_496][67] WARNING: DownloadManager: no resources resolved for batch download"}
+{"t": 1794605149, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_25_08_512][90] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain."}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_05_495][67]INFO[i18n] loadConfig: uuid='Q4M3GntfTmiNZCdTeiz5Kg' engine='Q4M3GntfTmiNZCdTeiz5Kg' match=true"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_05_496][67]INFO[i18n] loadConfig: engine fallback, support_langs='zh_CN'"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_05_496][67]INFO[i18n] PreloadI18nStep: resolved='zh_CN'"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_06_083][90][Script] RuinsPalette: 50 entries\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_08_864][90][Script] RuinsTerrain: 79 island chunks, 2519040 allocated / 1174742 solid cells\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_816][90][Script] RuinsTerrain: island shell 98692 triangles / 128 chunks\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_819][90][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_823][90][Script] RuinsTerrain: GrassField ready\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_824][90][Script] RuinsTerrain: total 0.00s\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_151][90][Script] RuinsBuild: court 0.00s (volumes 4)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_179][90][Script] RuinsBuild: altar 0.00s (volumes 5)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_651][90][Script] RuinsBuild: colonnade 0.00s (volumes 33)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_926][90][Script] RuinsBuild: fallen 0.00s (volumes 38)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_16_203][90][Script] RuinsBuild: dome 0.00s (volumes 45)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_16_232][90][Script] RuinsBuild: steles 0.00s (volumes 53)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_16_920][90][Script] RuinsBuild: parapet 0.00s (volumes 57)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_17_081][90][Script] RuinsBuild: stairs 0.00s (volumes 59)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_25_427][90][Script] RuinsBuild: wall 0.00s (volumes 95)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_26_798][90][Script] RuinsBuild: hall 0.00s (volumes 105)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_27_103][90][Script] RuinsBuild: aqueduct 0.00s (volumes 106)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_32_112][90][Script] RuinsBuild: crystals 18\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_32_113][90][Script] RuinsBuild: vegetation 0.00s (volumes 106)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_380][90][Script] RuinsBuild: floaters 0.00s (volumes 106)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_380][90][Script] RuinsBuild: total 0.00s, 106 volumes\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_388][90][Script] RuinsPuzzles: gate rubble voxels 2658.0\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_803][90][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_840][90][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_848][90][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_855][90][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_862][90][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_868][90][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_875][90][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_881][90][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_883][90][Script] RuinsPuzzles: built 8 time objects in 0.00s\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_939][90][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_942][90][Script] NomiController: spawn 0.0 6.1 -64.0\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_944][90][Script] VoxelFX: MotesBlue uses world-space quads, capacity=900\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_944][90][Script] VoxelFX: MotesGold uses world-space quads, capacity=500\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_33_944][90][Script] VoxelFX: CombatHandMotes uses world-space quads, capacity=32\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_42_768][90][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_42_804][90][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_42_807][90][Script] RuinsScene: dragon ready (large)\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_42_996][90][Script] RuinsScene: stage -> gate\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_42_996][90][Script] RuinsScene: ready in 36.91s, volumes 626\n"}
+{"t": 1794605149, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_47_612][91][Script] Combat: hand glow state=EXPLORE requested=0.28 brightness=0.200 motes=0\n"}
+{"t": 1794605161, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_25_01_148][195] WARNING: DownloadManager: no resources resolved for batch download"}
+{"t": 1794605161, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_25_05_272][283] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain."}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_01_148][195]INFO[i18n] loadConfig: uuid='Q4M3GntfTmiNZCdTeiz5Kg' engine='Q4M3GntfTmiNZCdTeiz5Kg' match=true"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_01_148][195]INFO[i18n] loadConfig: engine fallback, support_langs='zh_CN'"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_01_148][195]INFO[i18n] PreloadI18nStep: resolved='zh_CN'"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_01_848][283][Script] RuinsPalette: 50 entries\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_05_696][283][Script] RuinsTerrain: 79 island chunks, 2519040 allocated / 1174742 solid cells\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_13_641][283][Script] RuinsTerrain: island shell 98692 triangles / 128 chunks\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_13_641][283][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_13_644][283][Script] RuinsTerrain: GrassField ready\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_13_644][283][Script] RuinsTerrain: total 0.00s\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_068][283][Script] RuinsBuild: court 0.00s (volumes 4)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_107][283][Script] RuinsBuild: altar 0.00s (volumes 5)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_14_809][283][Script] RuinsBuild: colonnade 0.00s (volumes 33)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_200][283][Script] RuinsBuild: fallen 0.00s (volumes 38)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_585][283][Script] RuinsBuild: dome 0.00s (volumes 45)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_15_625][283][Script] RuinsBuild: steles 0.00s (volumes 53)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_16_564][283][Script] RuinsBuild: parapet 0.00s (volumes 57)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_16_744][283][Script] RuinsBuild: stairs 0.00s (volumes 59)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_28_519][283][Script] RuinsBuild: wall 0.00s (volumes 95)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_30_550][283][Script] RuinsBuild: hall 0.00s (volumes 105)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_30_961][283][Script] RuinsBuild: aqueduct 0.00s (volumes 106)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_36_950][283][Script] RuinsBuild: crystals 18\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_36_950][283][Script] RuinsBuild: vegetation 0.00s (volumes 106)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_38_548][283][Script] RuinsBuild: floaters 0.00s (volumes 106)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_38_548][283][Script] RuinsBuild: total 0.00s, 106 volumes\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_38_560][283][Script] RuinsPuzzles: gate rubble voxels 2658.0\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_104][283][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_151][283][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_159][283][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_167][283][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_176][283][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_185][283][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_193][283][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_201][283][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_203][283][Script] RuinsPuzzles: built 8 time objects in 0.00s\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_270][283][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_271][283][Script] NomiController: spawn 0.0 6.1 -64.0\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_272][283][Script] VoxelFX: MotesBlue uses world-space quads, capacity=900\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_273][283][Script] VoxelFX: MotesGold uses world-space quads, capacity=500\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_39_273][283][Script] VoxelFX: CombatHandMotes uses world-space quads, capacity=32\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_49_607][283][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_49_631][283][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_49_632][283][Script] RuinsScene: dragon ready (large)\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_49_815][283][Script] RuinsScene: stage -> gate\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_49_815][283][Script] RuinsScene: ready in 47.97s, volumes 626\n"}
+{"t": 1794605161, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_25_54_886][284][Script] Combat: hand glow state=EXPLORE requested=0.28 brightness=0.179 motes=0\n"}
+{"t": 1794605229, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_26_27_294][33] WARNING: DownloadManager: no resources resolved for batch download"}
+{"t": 1794605229, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_26_27_696][43] WARNING: DownloadManager: no resources resolved for batch download"}
+{"t": 1794605229, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_26_30_336][51] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain."}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_27_696][43]INFO[i18n] loadConfig: uuid='Q4M3GntfTmiNZCdTeiz5Kg' engine='Q4M3GntfTmiNZCdTeiz5Kg' match=true"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_27_696][43]INFO[i18n] loadConfig: engine fallback, support_langs='zh_CN'"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_27_696][43]INFO[i18n] PreloadI18nStep: resolved='zh_CN'"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_28_033][51][Script] RuinsPalette: 50 entries\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_30_715][51][Script] RuinsTerrain: 79 island chunks, 2519040 allocated / 1174742 solid cells\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_36_464][51][Script] RuinsTerrain: island shell 98692 triangles / 128 chunks\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_36_464][51][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_36_470][51][Script] RuinsTerrain: GrassField ready\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_36_470][51][Script] RuinsTerrain: total 0.00s\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_36_796][51][Script] RuinsBuild: court 0.00s (volumes 4)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_36_824][51][Script] RuinsBuild: altar 0.00s (volumes 5)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_37_302][51][Script] RuinsBuild: colonnade 0.00s (volumes 33)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_37_585][51][Script] RuinsBuild: fallen 0.00s (volumes 38)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_37_868][51][Script] RuinsBuild: dome 0.00s (volumes 45)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_37_897][51][Script] RuinsBuild: steles 0.00s (volumes 53)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_38_528][51][Script] RuinsBuild: parapet 0.00s (volumes 57)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_38_657][51][Script] RuinsBuild: stairs 0.00s (volumes 59)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_46_880][51][Script] RuinsBuild: wall 0.00s (volumes 95)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_48_291][51][Script] RuinsBuild: hall 0.00s (volumes 105)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_48_583][51][Script] RuinsBuild: aqueduct 0.00s (volumes 106)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_53_332][51][Script] RuinsBuild: crystals 18\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_53_332][51][Script] RuinsBuild: vegetation 0.00s (volumes 106)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_54_588][51][Script] RuinsBuild: floaters 0.00s (volumes 106)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_54_588][51][Script] RuinsBuild: total 0.00s, 106 volumes\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_54_599][51][Script] RuinsPuzzles: gate rubble voxels 2658.0\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_022][51][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_062][51][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_070][51][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_076][51][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_084][51][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_092][51][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_099][51][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_104][51][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_105][51][Script] RuinsPuzzles: built 8 time objects in 0.00s\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_159][51][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_161][51][Script] NomiController: spawn 0.0 6.1 -64.0\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_164][51][Script] VoxelFX: MotesBlue uses world-space quads, capacity=900\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_164][51][Script] VoxelFX: MotesGold uses world-space quads, capacity=500\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_26_55_164][51][Script] VoxelFX: CombatHandMotes uses world-space quads, capacity=32\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_27_03_628][51][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_27_03_646][51][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_27_03_648][51][Script] RuinsScene: dragon ready (large)\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_27_03_976][51][Script] RuinsScene: stage -> gate\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_27_03_976][51][Script] RuinsScene: ready in 35.94s, volumes 626\n"}
+{"t": 1794605229, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_27_08_543][52][Script] Combat: hand glow state=EXPLORE requested=0.28 brightness=0.198 motes=0\n"}
+{"t": 1794605289, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_28_08_472][1835][Script] Forge preview: fallback (mesh)\n"}
+{"t": 1794605349, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_29_08_080][3564][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794605349, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_29_08_127][3564][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605355, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_29_14_248][3739][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794605356, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_29_15_267][3770][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.006 motes=0\n"}
+{"t": 1794605411, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_30_10_598][5400][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794605411, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_30_10_600][5400][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605417, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_30_16_615][5586][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794605418, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_30_17_631][5616][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.003 motes=0\n"}
+{"t": 1794605460, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_30_59_508][6899][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794605460, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_30_59_511][6899][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605461, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_00_439][6929][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605461, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_00_440][6929][Script] Combat: clip sword_draw start\n"}
+{"t": 1794605461, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_00_720][6938][Script] Combat: clip sword_draw finish\n"}
+{"t": 1794605461, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_00_720][6938][Script] Combat: clip sword_heavy_charge start\n"}
+{"t": 1794605461, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_00_916][6944][Script] Combat: clip sword_heavy_release start\n"}
+{"t": 1794605462, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_01_096][6948][Script] Dummy hit: sword heavy dmg=16.00 part=body\n"}
+{"t": 1794605462, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_01_096][6948][Script] Combat: hit training_dummy part=body dmg=16.00 poise=10.80\n"}
+{"t": 1794605462, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_01_804][6967][Script] Combat: clip sword_heavy_release finish\n"}
+{"t": 1794605462, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_01_836][6968][Script] Combat: clip sword_heavy_charge start\n"}
+{"t": 1794605463, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_02_331][6984][Script] Combat: clip sword_heavy_release start\n"}
+{"t": 1794605463, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_03_039][7007][Script] Combat: clip sword_heavy_release finish\n"}
+{"t": 1794605466, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_05_513][7079][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605466, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_05_515][7079][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794605466, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_05_849][7089][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794605468, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_08_307][7164][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794605469, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_31_09_328][7194][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.006 motes=0\n"}
+{"t": 1794605539, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_18_516][9323][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794605539, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_18_521][9323][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605544, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_23_388][9467][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605544, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_23_388][9467][Script] Combat: clip dodge_slide start\n"}
+{"t": 1794605544, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_23_391][9467][Script] Combat: sfx dodge_start\n"}
+{"t": 1794605544, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_23_624][9471][Script] Combat: sfx dodge_land\n"}
+{"t": 1794605546, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_26_132][9543][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605546, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_26_132][9543][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794605547, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_26_460][9553][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794605548, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_27_683][9588][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605548, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_27_683][9588][Script] Combat: clip dodge_slide start\n"}
+{"t": 1794605548, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_27_684][9588][Script] Combat: sfx dodge_start\n"}
+{"t": 1794605548, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_27_913][9595][Script] Combat: sfx dodge_land\n"}
+{"t": 1794605551, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_30_400][9669][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605551, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_30_400][9669][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794605551, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_30_692][9678][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605551, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_30_694][9678][Script] Combat: clip dodge_slide start\n"}
+{"t": 1794605551, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_30_695][9678][Script] Combat: sfx dodge_start\n"}
+{"t": 1794605551, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_30_945][9686][Script] Combat: sfx dodge_land\n"}
+{"t": 1794605554, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_33_425][9765][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605554, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_33_427][9765][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794605554, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_33_752][9775][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794605555, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_34_633][9802][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605555, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_34_633][9802][Script] Combat: clip dodge_slide start\n"}
+{"t": 1794605555, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_34_635][9802][Script] Combat: sfx dodge_start\n"}
+{"t": 1794605555, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_34_888][9810][Script] Combat: sfx dodge_land\n"}
+{"t": 1794605557, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_37_393][9882][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605557, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_37_395][9882][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794605558, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_37_747][9892][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794605561, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_40_664][9977][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794605563, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_32_41_721][10006][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.017 motes=0\n"}
+{"t": 1794605792, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_31_780][16691][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794605792, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_31_782][16691][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605793, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_32_414][16710][Script] Combat: clip weapon_swap_sword_to_bow start\n"}
+{"t": 1794605794, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_33_406][16739][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605794, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_33_406][16739][Script] Combat: clip bow_equip start\n"}
+{"t": 1794605794, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_33_694][16748][Script] Combat: clip bow_equip finish\n"}
+{"t": 1794605794, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_33_695][16748][Script] Combat: clip bow_draw start\n"}
+{"t": 1794605794, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_33_823][16752][Script] Combat: clip bow_hold start\n"}
+{"t": 1794605796, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_36_020][16815][Script] Combat: clip bow_release start\n"}
+{"t": 1794605796, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_36_023][16815][Script] Combat: arrow fire tier=full speed=44.00\n"}
+{"t": 1794605797, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_36_184][16820][Script] Combat: clip bow_release finish\n"}
+{"t": 1794605799, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_38_668][16891][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605799, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_38_668][16891][Script] Combat: clip bow_sheath start\n"}
+{"t": 1794605799, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_38_969][16900][Script] Combat: clip bow_sheath finish\n"}
+{"t": 1794605800, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_39_696][16922][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794605801, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_36_40_704][16952][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.003 motes=0\n"}
+{"t": 1794605830, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_09_036][17774][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794605830, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_09_038][17774][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605830, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_09_636][17792][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605830, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_09_636][17792][Script] Combat: clip bow_equip start\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_09_927][17801][Script] Combat: clip bow_equip finish\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_09_927][17801][Script] Combat: clip bow_draw start\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_10_054][17805][Script] Combat: clip bow_hold start\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_10_603][17821][Script] Combat: arrow cancel dodge\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_10_604][17821][Script] Combat: clip dodge_slide start\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_10_604][17821][Script] Combat: sfx dodge_start\n"}
+{"t": 1794605831, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_10_833][17828][Script] Combat: sfx dodge_land\n"}
+{"t": 1794605832, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_10_903][17830][Script] Combat: clip dodge_slide finish\n"}
+{"t": 1794605832, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_11_984][17854][Script] Combat: debug teleport 苔壳虫组 pos=(-27.65,6.10,-5.00)\n"}
+{"t": 1794605834, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_13_624][17913][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794605834, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_13_625][17913][Script] Combat: clip bow_sheath start\n"}
+{"t": 1794605834, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_13_920][17924][Script] Combat: clip bow_sheath finish\n"}
+{"t": 1794605835, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_15_076][17964][Script] Combat: player hit dmg=9.00 hp=91.00\n"}
+{"t": 1794605835, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_15_078][17964][Script] Combat: clip hit_light start\n"}
+{"t": 1794605836, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_15_344][17974][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605836, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_15_881][17993][Script] Combat: player hit dmg=10.00 hp=81.00\n"}
+{"t": 1794605836, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_15_881][17993][Script] Combat: clip hit_light start\n"}
+{"t": 1794605836, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_16_132][18002][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605838, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_17_568][18047][Script] Combat: player hit dmg=10.00 hp=71.00\n"}
+{"t": 1794605838, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_17_568][18047][Script] Combat: clip hit_light start\n"}
+{"t": 1794605838, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_17_832][18057][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605840, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_19_627][18125][Script] Combat: player hit dmg=10.00 hp=61.00\n"}
+{"t": 1794605840, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_19_628][18125][Script] Combat: clip hit_light start\n"}
+{"t": 1794605840, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_19_891][18135][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605841, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_20_894][18170][Script] Combat: player hit dmg=10.00 hp=51.00\n"}
+{"t": 1794605841, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_20_895][18170][Script] Combat: clip hit_light start\n"}
+{"t": 1794605841, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_21_128][18179][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605842, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_22_287][18224][Script] Combat: player hit dmg=9.00 hp=42.00\n"}
+{"t": 1794605842, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_22_287][18224][Script] Combat: clip hit_light start\n"}
+{"t": 1794605843, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_22_544][18234][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605844, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_24_252][18296][Script] Combat: player hit dmg=10.00 hp=32.00\n"}
+{"t": 1794605844, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_24_254][18296][Script] Combat: clip hit_light start\n"}
+{"t": 1794605845, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_24_492][18304][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605846, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_25_951][18354][Script] Combat: player hit dmg=10.00 hp=22.00\n"}
+{"t": 1794605846, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_25_952][18354][Script] Combat: clip hit_light start\n"}
+{"t": 1794605846, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_26_184][18362][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605847, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_26_839][18382][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794605847, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_26_840][18382][Script] Combat: clip bow_equip start\n"}
+{"t": 1794605847, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_26_895][18384][Script] Combat: player hit dmg=9.00 hp=13.00\n"}
+{"t": 1794605847, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_26_896][18384][Script] Combat: clip hit_light start\n"}
+{"t": 1794605847, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_27_150][18393][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605848, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_27_995][18421][Script] Combat: player hit dmg=10.00 hp=3.00\n"}
+{"t": 1794605848, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_27_996][18421][Script] Combat: clip hit_light start\n"}
+{"t": 1794605848, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_28_244][18430][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605850, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_29_276][18461][Script] Combat: player hit dmg=9.00 hp=0.00\n"}
+{"t": 1794605850, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_29_278][18461][Script] Combat: state COMBAT_ACTIVE->EXPLORE death\n"}
+{"t": 1794605850, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_29_278][18461][Script] Combat: clip death start\n"}
+{"t": 1794605851, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_30_497][18507][Script] Combat: player respawn hp=100\n"}
+{"t": 1794605851, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_30_500][18507][Script] Combat: clip getup start\n"}
+{"t": 1794605851, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_30_502][18507][Script] Combat: state EXPLORE->COMBAT_IDLE aggro\n"}
+{"t": 1794605852, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_30_971][18525][Script] Combat: clip getup finish\n"}
+{"t": 1794605852, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_31_212][18534][Script] Combat: debug teleport 哨灵 pos=(-26.15,6.10,-3.00)\n"}
+{"t": 1794605854, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_32_796][18587][Script] Combat: player hit dmg=9.00 hp=91.00\n"}
+{"t": 1794605854, "topic": "user_script", "level": "WARNING", "msg": "[2026-11-14 05_37_32_799][18587]WARNINGNext log has been output too many times and will not be output again."}
+{"t": 1794605854, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_32_799][18587][Script] Combat: clip hit_light start\n"}
+{"t": 1794605854, "topic": "user_script", "level": "WARNING", "msg": "[2026-11-14 05_37_33_019][18598]WARNINGNext log has been output too many times and will not be output again."}
+{"t": 1794605854, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_33_019][18598][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605855, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_34_044][18637][Script] Combat: debug teleport 石甲兽 pos=(24.00,6.10,27.25)\n"}
+{"t": 1794605860, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_39_633][18808][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794605861, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_40_656][18841][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.004 motes=0\n"}
+{"t": 1794605870, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_49_367][19106][Script] Combat: state EXPLORE->COMBAT_IDLE aggro\n"}
+{"t": 1794605870, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_49_371][19106][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794605871, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_50_960][19154][Script] Combat: player hit dmg=22.00 hp=69.00\n"}
+{"t": 1794605871, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_50_960][19154][Script] Combat: clip hit_light start\n"}
+{"t": 1794605872, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_51_207][19163][Script] Combat: clip hit_light finish\n"}
+{"t": 1794605874, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_53_511][19237][Script] Combat: player hit dmg=18.00 hp=51.00\n"}
+{"t": 1794605874, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_53_512][19237][Script] Combat: clip hit_light start\n"}
+{"t": 1794605874, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_37_53_775][19246][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606124, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_42_04_078][27410][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794606125, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_42_05_095][27441][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.010 motes=0\n"}
+{"t": 1794606183, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_02_270][29303][Script] Combat: state EXPLORE->COMBAT_IDLE preview\n"}
+{"t": 1794606183, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_02_272][29303][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794606185, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_04_720][29382][Script] Combat: state COMBAT_IDLE->EXPLORE preview-end\n"}
+{"t": 1794606186, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_05_584][29412][Script] Combat: state EXPLORE->COMBAT_IDLE aggro\n"}
+{"t": 1794606187, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_05_804][29420][Script] Combat: player hit dmg=20.00 hp=31.00\n"}
+{"t": 1794606187, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_05_804][29420][Script] Combat: clip hit_light start\n"}
+{"t": 1794606187, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_06_164][29428][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606189, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_08_023][29482][Script] Combat: player hit dmg=22.00 hp=9.00\n"}
+{"t": 1794606189, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_08_024][29482][Script] Combat: clip hit_light start\n"}
+{"t": 1794606189, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_08_320][29487][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606191, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_10_504][29555][Script] Combat: player hit dmg=18.00 hp=0.00\n"}
+{"t": 1794606191, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_10_504][29555][Script] Combat: state COMBAT_IDLE->EXPLORE death\n"}
+{"t": 1794606191, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_10_505][29555][Script] Combat: clip death start\n"}
+{"t": 1794606192, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_11_712][29594][Script] Combat: player respawn hp=100\n"}
+{"t": 1794606192, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_11_715][29594][Script] Combat: clip getup start\n"}
+{"t": 1794606192, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_11_716][29594][Script] Combat: state EXPLORE->COMBAT_IDLE aggro\n"}
+{"t": 1794606193, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_12_191][29611][Script] Combat: clip getup finish\n"}
+{"t": 1794606193, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_12_948][29636][Script] Combat: player hit dmg=22.00 hp=78.00\n"}
+{"t": 1794606193, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_12_950][29636][Script] Combat: clip hit_light start\n"}
+{"t": 1794606194, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_13_191][29645][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606196, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_15_812][29733][Script] Combat: player hit dmg=18.00 hp=60.00\n"}
+{"t": 1794606196, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_15_814][29733][Script] Combat: clip hit_light start\n"}
+{"t": 1794606196, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_16_076][29742][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606198, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_18_038][29807][Script] Combat: player hit dmg=20.00 hp=40.00\n"}
+{"t": 1794606198, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_18_039][29807][Script] Combat: clip hit_light start\n"}
+{"t": 1794606199, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_18_310][29816][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606200, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_20_060][29870][Script] Combat: player hit dmg=22.00 hp=18.00\n"}
+{"t": 1794606200, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_20_060][29870][Script] Combat: clip hit_light start\n"}
+{"t": 1794606201, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_20_387][29877][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606205, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_24_995][30028][Script] Combat: player hit dmg=18.00 hp=0.00\n"}
+{"t": 1794606205, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_24_996][30028][Script] Combat: state COMBAT_IDLE->EXPLORE death\n"}
+{"t": 1794606205, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_24_996][30028][Script] Combat: clip death start\n"}
+{"t": 1794606206, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_26_192][30070][Script] Combat: player respawn hp=100\n"}
+{"t": 1794606206, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_26_193][30070][Script] Combat: clip getup start\n"}
+{"t": 1794606206, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_26_196][30070][Script] Combat: state EXPLORE->COMBAT_IDLE aggro\n"}
+{"t": 1794606207, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_26_663][30086][Script] Combat: clip getup finish\n"}
+{"t": 1794606208, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_27_359][30110][Script] Combat: player hit dmg=22.00 hp=78.00\n"}
+{"t": 1794606208, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_27_360][30110][Script] Combat: clip hit_light start\n"}
+{"t": 1794606208, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_27_600][30119][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606211, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_30_972][30217][Script] Combat: player hit dmg=18.00 hp=60.00\n"}
+{"t": 1794606211, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_30_974][30217][Script] Combat: clip hit_light start\n"}
+{"t": 1794606211, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_31_217][30225][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606213, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_33_164][30289][Script] Combat: player hit dmg=20.00 hp=40.00\n"}
+{"t": 1794606213, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_33_164][30289][Script] Combat: clip hit_light start\n"}
+{"t": 1794606213, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_33_427][30298][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606215, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_35_231][30358][Script] Combat: player hit dmg=22.00 hp=18.00\n"}
+{"t": 1794606215, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_35_232][30358][Script] Combat: clip hit_light start\n"}
+{"t": 1794606215, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_35_447][30366][Script] Combat: clip hit_light finish\n"}
+{"t": 1794606266, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_43_43_190][32] WARNING: DownloadManager: no resources resolved for batch download"}
+{"t": 1794606266, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_43_43_609][42] WARNING: DownloadManager: no resources resolved for batch download"}
+{"t": 1794606266, "topic": "engine", "level": "WARNING", "msg": "[2026-11-14 05_43_46_387][50] WARNING: SurfaceShader <game>/assets/HQ-5qfZwSR37r_zXuUDQ01dw-668d00f6.shader: Warning: opaque material has no deferred pass because of: POSITION. Use a forward render path or remove these features. Deferred rendering has no automatic forward fallback; depth-only coverage may remain."}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_43_608][42]INFO[i18n] loadConfig: uuid='Q4M3GntfTmiNZCdTeiz5Kg' engine='Q4M3GntfTmiNZCdTeiz5Kg' match=true"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_43_609][42]INFO[i18n] loadConfig: engine fallback, support_langs='zh_CN'"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_43_609][42]INFO[i18n] PreloadI18nStep: resolved='zh_CN'"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_43_969][50][Script] RuinsPalette: 50 entries\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_46_732][50][Script] RuinsTerrain: 79 island chunks, 2519040 allocated / 1174742 solid cells\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_52_639][50][Script] RuinsTerrain: island shell 98692 triangles / 128 chunks\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_52_639][50][Script] RuinsTerrain: visual 337x337 in 0.00s, probe terrain=6.00 expect=6.00\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_52_643][50][Script] RuinsTerrain: GrassField ready\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_52_644][50][Script] RuinsTerrain: total 0.00s\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_52_992][50][Script] RuinsBuild: court 0.00s (volumes 4)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_53_020][50][Script] RuinsBuild: altar 0.00s (volumes 5)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_53_510][50][Script] RuinsBuild: colonnade 0.00s (volumes 33)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_53_796][50][Script] RuinsBuild: fallen 0.00s (volumes 38)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_54_084][50][Script] RuinsBuild: dome 0.00s (volumes 45)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_54_112][50][Script] RuinsBuild: steles 0.00s (volumes 53)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_54_756][50][Script] RuinsBuild: parapet 0.00s (volumes 57)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_43_54_889][50][Script] RuinsBuild: stairs 0.00s (volumes 59)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_03_377][50][Script] RuinsBuild: wall 0.00s (volumes 95)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_04_772][50][Script] RuinsBuild: hall 0.00s (volumes 105)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_05_078][50][Script] RuinsBuild: aqueduct 0.00s (volumes 106)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_10_139][50][Script] RuinsBuild: crystals 18\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_10_139][50][Script] RuinsBuild: vegetation 0.00s (volumes 106)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_439][50][Script] RuinsBuild: floaters 0.00s (volumes 106)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_439][50][Script] RuinsBuild: total 0.00s, 106 volumes\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_448][50][Script] RuinsPuzzles: gate rubble voxels 2658.0\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_873][50][Script] TimeObject[bridge]: 43380 voxels, 40x34x92 @0.12m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_912][50][Script] TimeObject[boulder]: 864 voxels, 16x16x17 @0.25m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_920][50][Script] TimeObject[stele1]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_927][50][Script] TimeObject[stele2]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_934][50][Script] TimeObject[stele3]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_942][50][Script] TimeObject[stele4]: 648 voxels, 8x23x4 @0.25m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_948][50][Script] TimeObject[urn1]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_953][50][Script] TimeObject[urn2]: 888 voxels, 16x20x16 @0.12m\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_11_955][50][Script] RuinsPuzzles: built 8 time objects in 0.00s\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_12_008][50][Script] BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_12_009][50][Script] NomiController: spawn 0.0 6.1 -64.0\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_12_012][50][Script] VoxelFX: MotesBlue uses world-space quads, capacity=900\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_12_012][50][Script] VoxelFX: MotesGold uses world-space quads, capacity=500\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_12_014][50][Script] VoxelFX: CombatHandMotes uses world-space quads, capacity=32\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_20_503][50][Script] DragonRig[large]: 90 bones, 87 voxel parts, 52465 voxels, body 0.00s, total 0.00s\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_20_528][50][Script] DragonBreath: 星陨龙息 ready (size 1.50, crystals 12)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_20_534][50][Script] RuinsScene: dragon ready (large)\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_20_888][50][Script] RuinsScene: stage -> gate\n"}
+{"t": 1794606266, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_20_888][50][Script] RuinsScene: ready in 36.92s, volumes 626\n"}
+{"t": 1794606267, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_44_25_664][51][Script] Combat: hand glow state=EXPLORE requested=0.28 brightness=0.200 motes=0\n"}
+{"t": 1794606303, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_01_889][1111][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794606303, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_01_911][1111][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794606303, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_02_766][1134][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794606303, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_02_766][1134][Script] Combat: clip sword_draw start\n"}
+{"t": 1794606304, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_03_040][1142][Script] Combat: clip sword_draw finish\n"}
+{"t": 1794606304, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_03_040][1142][Script] Combat: clip sword_light_1 start\n"}
+{"t": 1794606304, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_03_479][1155][Script] Combat: clip sword_light_1 finish\n"}
+{"t": 1794606306, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_05_967][1226][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794606306, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_05_974][1226][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794606307, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_06_268][1234][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794606309, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_09_120][1312][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794606310, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_10_155][1341][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.008 motes=0\n"}
+{"t": 1794606326, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_26_119][1789][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794606326, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_26_120][1789][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794606328, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_26_975][1813][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794606328, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_26_976][1813][Script] Combat: clip sword_draw start\n"}
+{"t": 1794606328, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_27_259][1822][Script] Combat: clip sword_draw finish\n"}
+{"t": 1794606328, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_27_259][1822][Script] Combat: clip sword_light_1 start\n"}
+{"t": 1794606328, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_27_487][1829][Script] Combat: clip sword_light_2 start\n"}
+{"t": 1794606329, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_27_868][1840][Script] Combat: clip sword_light_2 finish\n"}
+{"t": 1794606331, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_30_369][1914][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794606331, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_30_374][1914][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794606332, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_30_702][1923][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794606334, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_33_478][2006][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794606335, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_34_505][2038][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.007 motes=0\n"}
+{"t": 1794606353, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_52_056][2592][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794606353, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_52_059][2592][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794606354, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_53_088][2624][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794606354, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_53_088][2624][Script] Combat: clip sword_draw start\n"}
+{"t": 1794606354, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_53_360][2632][Script] Combat: clip sword_draw finish\n"}
+{"t": 1794606354, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_53_361][2632][Script] Combat: clip sword_heavy_charge start\n"}
+{"t": 1794606356, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_55_772][2703][Script] Combat: clip sword_heavy_release start\n"}
+{"t": 1794606357, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_56_407][2725][Script] Combat: clip sword_heavy_release finish\n"}
+{"t": 1794606359, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_58_887][2798][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794606359, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_58_887][2798][Script] Combat: clip sword_sheath start\n"}
+{"t": 1794606360, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_45_59_192][2806][Script] Combat: clip sword_sheath finish\n"}
+{"t": 1794606362, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_01_702][2880][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794606363, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_02_728][2912][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.008 motes=0\n"}
+{"t": 1794606394, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_33_076][3850][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794606394, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_33_076][3850][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794606395, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_33_987][3875][Script] Combat: clip weapon_swap_sword_to_bow start\n"}
+{"t": 1794606396, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_34_991][3905][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794606396, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_34_992][3905][Script] Combat: clip bow_equip start\n"}
+{"t": 1794606396, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_35_279][3913][Script] Combat: clip bow_equip finish\n"}
+{"t": 1794606396, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_35_279][3913][Script] Combat: clip bow_draw start\n"}
+{"t": 1794606396, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_35_416][3917][Script] Combat: clip bow_hold start\n"}
+{"t": 1794606398, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_37_623][3986][Script] Combat: clip bow_release start\n"}
+{"t": 1794606398, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_37_625][3986][Script] Combat: arrow fire tier=full speed=44.00\n"}
+{"t": 1794606398, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_37_656][3987][Script] Dummy hit: bow full dmg=14.40 part=body\n"}
+{"t": 1794606398, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_37_657][3987][Script] Combat: hit training_dummy part=body dmg=14.40 poise=4.00\n"}
+{"t": 1794606399, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_37_798][3991][Script] Combat: clip bow_release finish\n"}
+{"t": 1794606401, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_40_272][4064][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794606401, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_40_272][4064][Script] Combat: clip bow_sheath start\n"}
+{"t": 1794606401, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_40_608][4074][Script] Combat: clip bow_sheath finish\n"}
+{"t": 1794606402, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_41_294][4093][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794606403, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_46_42_316][4123][Script] Combat: hand glow state=EXPLORE requested=0.02 brightness=0.009 motes=0\n"}
+{"t": 1794606421, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_00_324][4677][Script] Combat: state EXPLORE->COMBAT_IDLE manual\n"}
+{"t": 1794606421, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_00_332][4677][Script] Combat: hand glow state=COMBAT_IDLE requested=0.00 brightness=0.000 motes=0\n"}
+{"t": 1794606421, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_01_028][4699][Script] Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack\n"}
+{"t": 1794606421, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_01_030][4699][Script] Combat: clip bow_equip start\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_01_320][4708][Script] Combat: clip bow_equip finish\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_01_320][4708][Script] Combat: clip bow_draw start\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_01_452][4712][Script] Combat: clip bow_hold start\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_02_033][4725][Script] Combat: clip bow_release start\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_02_040][4725][Script] Combat: arrow fire tier=full speed=44.00\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_02_075][4726][Script] Dummy hit: bow full dmg=14.40 part=body\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_02_076][4726][Script] Combat: hit training_dummy part=body dmg=14.40 poise=4.00\n"}
+{"t": 1794606422, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_02_196][4729][Script] Combat: clip bow_release finish\n"}
+{"t": 1794606423, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_03_084][4757][Script] Combat: clip bow_draw start\n"}
+{"t": 1794606423, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_03_187][4760][Script] Combat: clip bow_hold start\n"}
+{"t": 1794606425, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_04_491][4796][Script] Combat: clip bow_release start\n"}
+{"t": 1794606425, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_04_492][4796][Script] Combat: arrow fire tier=full speed=44.00\n"}
+{"t": 1794606425, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_04_528][4797][Script] Dummy hit: bow full dmg=14.40 part=body\n"}
+{"t": 1794606425, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_04_528][4797][Script] Combat: hit training_dummy part=body dmg=14.40 poise=4.00\n"}
+{"t": 1794606425, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_04_660][4801][Script] Combat: clip bow_release finish\n"}
+{"t": 1794606427, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_07_145][4870][Script] Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle\n"}
+{"t": 1794606427, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_07_147][4870][Script] Combat: clip bow_sheath start\n"}
+{"t": 1794606428, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_07_463][4879][Script] Combat: clip bow_sheath finish\n"}
+{"t": 1794606429, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_09_081][4923][Script] Combat: state COMBAT_IDLE->EXPLORE quiet\n"}
+{"t": 1794606430, "topic": "user_script", "level": "INFO", "msg": "[2026-11-14 05_47_10_103][4952][Script] Combat: hand glow state=EXPLORE requested=0.01 brightness=0.006 motes=0\n"}

@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"ok\":false,\"action\":\"cdp\",\"errorCode\":\"BROWSER_RUNTIME_INVALID_REQUEST\",\"message\":\"cdp 不支持 \\\"Input.dispatchTouchEvent\\\"。可用辅助命令:nodes / click / type / call;可用原始命令:DOM.getDocument、DOM.querySelector、DOM.querySelectorAll、DOM.describeNode、DOM.resolveNode、DOM.getContentQuads、DOM.getBoxModel、DOM.scrollIntoViewIfNeeded、DOM.focus、Input.dispatchKeyEvent、Input.dispatchMouseEvent、Input.insertText、Page.getLayoutMetrics、Page.getFrameTree、Page.handleJavaScriptDialog、Runtime.callFunctionOn、Runtime.releaseObject。导航、标签页、截图、上传、下载和 Cookie 不走 cdp,用对应的普通 action。\"}"
+    }
+  ],
+  "isError": true
+}

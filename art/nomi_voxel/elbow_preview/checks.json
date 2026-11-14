@@ -1,0 +1,93 @@
+{
+  "static_external_surface_equal": true,
+  "non_arm_rows_exact": true,
+  "palette_exact": true,
+  "half_cell_faces": 62664,
+  "original_tris": 8079,
+  "max_triangle_symmetric_difference": 0,
+  "cap_coverage": {
+    "right": {
+      "area_authoring_units2": 67.5,
+      "uncovered_area": 0
+    },
+    "left": {
+      "area_authoring_units2": 67.5,
+      "uncovered_area": 0
+    }
+  },
+  "bend_sampling": [
+    {
+      "side": "right",
+      "degrees": 0,
+      "probes": 552,
+      "vacated_rest_volume_probes": 0,
+      "max_matching_rim_separation_m": 0.0,
+      "hand_radius_error_m": 0.0,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "right",
+      "degrees": 45,
+      "probes": 552,
+      "vacated_rest_volume_probes": 54,
+      "max_matching_rim_separation_m": 0.06970961403962475,
+      "hand_radius_error_m": 0.0,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "right",
+      "degrees": 90,
+      "probes": 552,
+      "vacated_rest_volume_probes": 138,
+      "max_matching_rim_separation_m": 0.12880657126094153,
+      "hand_radius_error_m": 3.907985046680551e-17,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "right",
+      "degrees": 120,
+      "probes": 552,
+      "vacated_rest_volume_probes": 178,
+      "max_matching_rim_separation_m": 0.15775518755337334,
+      "hand_radius_error_m": 0.0,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "left",
+      "degrees": 0,
+      "probes": 552,
+      "vacated_rest_volume_probes": 0,
+      "max_matching_rim_separation_m": 0.0,
+      "hand_radius_error_m": 0.0,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "left",
+      "degrees": 45,
+      "probes": 552,
+      "vacated_rest_volume_probes": 54,
+      "max_matching_rim_separation_m": 0.06970961403962475,
+      "hand_radius_error_m": 0.0,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "left",
+      "degrees": 90,
+      "probes": 552,
+      "vacated_rest_volume_probes": 138,
+      "max_matching_rim_separation_m": 0.12880657126094153,
+      "hand_radius_error_m": 3.907985046680551e-17,
+      "pivot_displacement_m": 0
+    },
+    {
+      "side": "left",
+      "degrees": 120,
+      "probes": 552,
+      "vacated_rest_volume_probes": 178,
+      "max_matching_rim_separation_m": 0.15775518755337334,
+      "hand_radius_error_m": 0.0,
+      "pivot_displacement_m": 0
+    }
+  ],
+  "limitation": "Capped rigid cuts remain in contact at hinge, but form an outside bend notch. Vacated probes and rim separation are diagnostics, not a no-gap pass; engine/Web rendering unverified."
+}
