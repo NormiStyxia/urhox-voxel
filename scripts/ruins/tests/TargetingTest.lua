@@ -67,6 +67,10 @@ V.atFrame(8, function()
             local direction=Vector3(x,y,z):Normalized()
             local r=Ray(object.center+direction*3,-direction)
             local hit=nomi:GridHit(r,10)
+            if not hit.hit or hit.volume~=object.whole then
+                local native=world:RaycastGridSingle(r,10,nomi.aimMask)
+                print(string.format("TargetingTest: CORNER MISS %d,%d,%d origin=%s dir=%s native=%s d=%.9f checked=%s",x,y,z,tostring(r.origin),tostring(r.direction),tostring(native.hit),native.distance,tostring(hit.hit)))
+            end
             V.assert(hit.hit and hit.volume==object.whole,"棱角同时入射正确取格 "..x..","..y..","..z)
         end
     end end end
@@ -78,9 +82,7 @@ V.atFrame(8, function()
         local hit=nomi:GridHit(r,2.5)
         V.assert(not hit.hit,"外侧平行擦过不产生实心命中")
     end
-    local endpoint=nomi:GridHit(Ray(Vector3(300.5,5.5,298),Vector3.FORWARD),2)
-    V.assert(endpoint.hit and endpoint.volume==object.whole and math.abs(endpoint.distance-2)<1e-6,
-        "距离上限恰好触及实心表面仍可选")
+    -- 原生查询的端点约定与 DDA 分开：在下方强制逐格复核路径测试闭区间。
     -- 按正式悬石/碑的体素列取最外层实心格，在隔离区复用原始形状。
     -- 相机 → 空气 → 外露格；六个局部面都没有别的体积挡在前面。
     -- 不规则形状、旋转和远距离要分开核对原生命中与二次 Grid 校验。
@@ -162,6 +164,19 @@ V.atFrame(8, function()
         GetVolumeCount=function() return world:GetVolumeCount() end,
         GetVolume=function(self,i) return world:GetVolume(i) end
     }
+    nomi.world=forceGrid
+    local endpoint=nomi:GridHit(Ray(Vector3(300.5,5.5,298),Vector3.FORWARD),2)
+    V.assert(endpoint.hit and endpoint.volume==object.whole and math.abs(endpoint.distance-2)<1e-6,
+        "逐格复核距离上限恰好触及实心表面")
+    -- 起点在内部格面上：只检查前进侧，不选身后仅接触的实心格。
+    object.whole:GetGrid():Clear()
+    object.whole:GetGrid():FillBox(0,0,0,1,3,3,true)
+    local backward=nomi:GridHit(Ray(Vector3(300.5,5.5,300.5),-Vector3.RIGHT),.4)
+    local forward=nomi:GridHit(Ray(Vector3(300.5,5.5,300.5),Vector3.RIGHT),.4)
+    V.assert(backward.hit and backward.voxel.x==1,"内部整数格面负向归前一实心格")
+    V.assert(not forward.hit,"内部整数格面正向不误选身后实心格")
+    object.whole:GetGrid():FillBox(0,0,0,3,3,3,true)
+    nomi.world=actualWorld
     local visibleCount,mismatch=0,0
     for heading=0,330,30 do for _,height in ipairs({-3,0,3}) do
         local angle=math.rad(heading)

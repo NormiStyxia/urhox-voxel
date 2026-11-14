@@ -408,7 +408,9 @@ local function TraceVolume(volume, ray, maxDist)
     end
     if not Slab(ox,vx,dims.x,"x") or not Slab(oy,vy,dims.y,"y") or not Slab(oz,vz,dims.z,"z") then return result end
     local function FirstCell(o,d,n,axis)
-        if axis==entryAxis then return d>0 and 0 or n-1 end
+        -- 并列入射的每个轴都直接归属边界格，避免 o+d*enter 的抵消残差。
+        local boundary=d>0 and -o or n-o
+        if axis==entryAxis or (math.abs(d)>=1e-8 and boundary/d==enter) then return d>0 and 0 or n-1 end
         local p=o+d*enter
         -- 负向经过整数格面时从前一格开始；不推进 1e-5 再经 Vector3 舍入。
         return d<0 and math.ceil(p)-1 or math.floor(p)
