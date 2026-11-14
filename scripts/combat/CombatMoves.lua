@@ -106,11 +106,12 @@ function C:Play(id,fadeIn)
     if self.observe then self.observe('start',{clip=id,age=self.age}) end
     if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
     self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
-    self.damaged,self.previousHit={},nil
+    self.damaged,self.previousHit,self.hitForward={},nil,nil
     self.state.SetBusy(true)
     return true
 end
 function C:Cancel(reason,keepProtection)
+    if self.o.camera then self.o.camera:Cancel() end
     local cancelledHandle=self.handle
     self:StopDrawSound()
     self:BrakeSlide()
@@ -212,6 +213,7 @@ function C:Action(kind,axis)
         -- Clear the previous strike before the first slide snapshot at .04s.
         -- Scene restores the quality/combat trail switch on its next pose pass.
         if self.rig.SetTrail then self.rig:SetTrail(false) end
+        if self.o.camera then self.o.camera:Slide(self.moveDir) end
         self.dodgeCool,self.dodgeAt,self.slideElapsed=.50,self.age,0
         self.combo,self.comboUntil,self.slideFollowUntil=combo,self.age+.60,self.age+.60
         self.perfectUsed,self.slideStopped,self.pending=false,false,nil
@@ -244,7 +246,9 @@ function C:Action(kind,axis)
     self.state.Activity(true)
     if self.state.GetWeapon()=='sword' and kind~='hold' and self.o.assist then self.o.assist() end
     self.moveDir=self.o.forward()
-    if follow then self.followDistance=0; self.slideFollowUntil=nil
+    if follow then
+        if self.o.camera then self.o.camera:Follow() end
+        self.followDistance=0; self.slideFollowUntil=nil
     else self.followDistance=nil end
     local bow=self.state.GetWeapon()=='bow'
     if bow then
@@ -381,11 +385,16 @@ function C:Events()
         if self.observe then self.observe('event',{name=e.name,clip=e.clip,t=e.t,age=self.age}) end
         if e.name=='hit_on' then
             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
+            self.hitForward=Flat(self.o.forward(),Vector3.FORWARD)
             self.strikePerfect=self.perfectUntil and self.age<=self.perfectUntil
             self.perfectUntil=nil
-        elseif e.name=='hit_off' then self.hitOpen=false; self.trailUntil=self.age+.06
+        elseif e.name=='hit_off' then
+            self.hitOpen=false; self.trailUntil=self.age+.06
+            if e.clip=='sword_light_3' and self.o.camera then self.o.camera:Land() end
         elseif e.name=='cancel_open' then self.cancelOpen=true
         elseif e.name=='cancel_close' then self.cancelOpen=false
+        elseif e.name=='dust_streak' then
+            if self.o.dustStreak then self.o.dustStreak(self.moveDir or self.o.forward()) end
         elseif e.name=='dust_start' or e.name=='dust_stop' then
             local start=e.name=='dust_start'
             if start then
@@ -404,14 +413,15 @@ function C:Events()
             self.fullAt=self.age
             if e.name=='draw_full' and not self.drawFullReached then
                 self.drawFullReached=true; self.bowFullAt=self.age; self:Sound('bow_full')
+                if self.o.camera then self.o.camera:Full() end
             end
         elseif e.name=='weapon_ready' then
-            self:Flash('draw'); self:Sound('blade_draw')
+            if not self.rig.PopEvents then self:Flash('draw'); self:Sound('blade_draw') end
             if self.clip:find('weapon_swap_',1,true) then
                 self.rig:SetActive(self.state.GetWeapon()); self.rig:SetPose('back'); self.state.FinishTransition()
             else self.rig:SetPose('hand') end
         elseif e.name=='weapon_stowed' or e.name=='weapon_drop' then
-            if e.name=='weapon_stowed' then self:Flash('sheath'); self:Sound('blade_sheath') end
+            if e.name=='weapon_stowed' and not self.rig.PopEvents then self:Flash('sheath'); self:Sound('blade_sheath') end
             self.rig:SetPose(e.name=='weapon_drop' and 'hidden' or 'back')
         elseif e.name=='draw_start' then self.rig:SetPose('hand')
         elseif e.name=='draw_min' then
@@ -549,6 +559,10 @@ function C:Update(dt,controls)
     self.motion=moveDir*metres
     if sliding and self.o.slideMotion and metres>0 then
         self.motion,self.slideStopped=self.o.slideMotion(self.motion)
+    elseif self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
+        and self.o.attackMotion and metres>0 then
+        self.motion=self.o.attackMotion(self.motion)
+        self.slideMotionFrame=true -- already footprint/wall checked, do not re-run endpoint guard
     end
     if self.fovAge then self.fovAge=self.fovAge+dt end
     self:Events()
@@ -595,7 +609,18 @@ function C:MoveScale()
     if self.clip and self.clip:find('sword_light_',1,true) then return .2 end
     return 1
 end
--- After base pose -> anim Apply -> rig Update, query the actual blade capsule.
+-- Snapshot the strike's facing at hit_on; translate its zone with the actual
+-- controller position every active frame. Neither rig pose nor blade length is
+-- a prerequisite for melee settlement (the weapon path remains visual only).
+function C.MeleeZone(id,position,forward,reach,slam)
+    local offset=id=='sword_light_3' and .4 or 0
+    return {origin=position+forward*offset,source=position+Vector3(0,.9,0),forward=forward,
+        radius=(slam and 2 or 1.8)*math.max(.1,reach or 1),
+        angle=slam and 90 or (id=='sword_heavy_release' and 360 or (id=='sword_light_3' and 100 or 120)),
+        low=-.3,high=2}
+end
+-- Still called after the physical actor/base animation update. hitPending covers
+-- a low-FPS frame which contains both hit_on and hit_off exactly once.
 function C:AfterPose()
     if self.pendingFire~=nil then
         if not self.dead and self.o.fire then self.o.fire(self.pendingFire,self.rig:GetStats(),self.fireCrystal) end
@@ -603,29 +628,34 @@ function C:AfterPose()
     end
     if not (self.hitOpen or self.hitPending) or self.dead then self.previousHit=nil; return end
     self.hitPending=false
-    local hit,stats=self.rig:GetHit(),self.rig:GetStats()
-    if not hit.length then return end
-    local a=hit.origin --[[@as Vector3]]
-    local direction=hit.dir --[[@as Vector3]]
-    local b=a+direction*(hit.length*(stats.reach or 1))
+    local stats=self.rig:GetStats()
+    local position=self.o.position()
+    local direction=self.hitForward or Flat(self.o.forward(),Vector3.FORWARD)
     local enemies=self.o.enemies and self.o.enemies() or {}
-    local contacts=Hit.Query(enemies,a,b,hit.radius or .12)
-    if self.previousHit then
-        for _,c in ipairs(Hit.Query(enemies,self.previousHit,b,hit.radius or .12)) do contacts[#contacts+1]=c end
+    local zone=C.MeleeZone(self.hitClip,position,direction,stats.reach)
+    local contacts=Hit.QueryZone(enemies,zone)
+    if self.hitClip=='sword_heavy_release' then
+        local phase=require('combat.AnimClips').Clips.sword_heavy_release.phases.active
+        -- Final third of the EXISTING active interval extends the forward slam;
+        -- it does not open another damage window or reset the swing hit ledger.
+        if (self.whooshTime or 0)>=phase[1]+(phase[2]-phase[1])*2/3 then
+            local slam=C.MeleeZone(self.hitClip,position,direction,stats.reach,true)
+            for _,contact in ipairs(Hit.QueryZone(enemies,slam)) do contacts[#contacts+1]=contact end
+            table.sort(contacts,function(a,b)return a.distance2<b.distance2 end)
+        end
     end
-    self.previousHit=b
     for _,contact in ipairs(contacts) do
         local enemy,part=contact.enemy,contact.shape.id
         -- Stone projectiles are distinct targets; a deflection cannot consume the body hit.
         local key=(part and part:find('stone_',1,true)==1) and (tostring(enemy)..part) or enemy
-        if not self.damaged[key] and Hit.Visible(self.o.position()+Vector3(0,.9,0),contact.pos,self.o.cast) then
+        if not self.damaged[key] and Hit.Visible(position+Vector3(0,.9,0),contact.pos,self.o.cast) then
             local heavy=self.hitClip=='sword_heavy_release'
             local perfect=self.strikePerfect
             local info={dmg=(stats.attack or 10)*(heavy and (self.releaseFull and 2.2 or 1.6) or 1),
                 poise=(stats.poise or 6)*(heavy and (self.releaseFull and 2.5 or 1.8) or 1)*(perfect and 1.5 or 1),
                 armorBreak=(stats.armorBreak or 1)*(heavy and self.releaseFull and 1.5 or 1),knockback=self.combo==3 and .55 or .1,
-                part=part,material=contact.shape.material or 'soft',normal=(contact.pos-contact.shape.center):Normalized(),
-                swingId='sword:'..self.swingSerial,tier=heavy and 'heavy' or (self.combo==3 and 'third' or 'light'),kind='sword',clip=self.hitClip,pos=contact.pos,dir=self.o.forward(),source='player',heavy=heavy,combo=self.combo}
+                part=part,material=contact.shape.material or 'soft',normal=contact.normal,
+                swingId='sword:'..self.swingSerial,tier=heavy and 'heavy' or (self.combo==3 and 'third' or 'light'),kind='sword',clip=self.hitClip,pos=contact.pos,dir=direction,source='player',heavy=heavy,combo=self.combo}
             local result=Hit.Apply(enemy,info)
             if result.hit then
                 self.damaged[key]=true; self:Feedback(enemy,info,result,contact.shape.weak,false)
@@ -725,6 +755,34 @@ function C.SeekPreview(anim,id,t,previous,params)
     anim:Update(t,t)
     local from=previous<t and previous or t-1/30-1e-8
     return t,C.PreviewEvents(anim:Poll(),from,t)
+end
+
+-- Adapt the existing bounded dust emitter without owning another particle pool.
+-- Touch only this emission's serials; preserve enemy slots/key-event reserves.
+function C.EmitDustStreak(pool,owner,pos,dir,ground)
+    if not pool or not pool.slots or not pool.Hide then return 0 end
+    local originY=ground(pos)
+    if not originY then return 0 end
+    local first=pool.serial
+    pool:Emit(owner,{pos=pos,dir=dir,normal=Vector3.UP,material='stone',kind='dust'})
+    local count=0
+    for _,slot in ipairs(pool.slots) do
+        if slot.active and slot.owner==owner and slot.serial>first then
+            local i=slot.serial-first
+            local at=pos-dir*((i-1)*.18)
+            local y=i<=4 and ground(at) or nil
+            if not y then pool:Hide(slot)
+            else
+                count=count+1
+                slot.x,slot.y,slot.z=at.x,y+.025,at.z
+                slot.vx,slot.vy,slot.vz,slot.gravity=0,.04,0,0
+                slot.sx,slot.sy,slot.sz=.025+i*.005,.025,.025+i*.005
+                slot.ttl=.12+i*.02
+                if slot.node then slot.node.position=Vector3(slot.x,slot.y,slot.z); slot.node.scale=Vector3(slot.sx,slot.sy,slot.sz) end
+            end
+        end
+    end
+    return count
 end
 
 -- Hand-only pool lets combat remove white hand motes immediately without

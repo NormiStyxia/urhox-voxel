@@ -1,6 +1,7 @@
 -- Ordinary held breath. Does not enter BREATH or replace walking/flight states.
 local VoxelFX=require('dragon.VoxelFX')
 local Pose=require('dragon.DragonPose')
+local ShaderWarmup=require('dragon.DragonShaderWarmup') -- W6: independent warmup hook
 local M={RANGE=18.0,POWER=1.8}
 ---@class DragonStream
 ---@field breath DragonBreath
@@ -19,6 +20,7 @@ local M={RANGE=18.0,POWER=1.8}
 ---@field node Node
 ---@field mat Material
 ---@field motes VoxelFXMotes
+---@field shaderWarmup DragonShaderWarmup
 local S={}; S.__index=S
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Wrap(a) return (a+180)%360-180 end
@@ -48,6 +50,8 @@ function M.New(scene,breath)
     assert(self.mat:SetSurfaceShader('Shaders/BLGL/DragonStream.shader'),'DragonStream shader unavailable')
     g:SetMaterial(self.mat);self.node.enabled=false
     self.motes=VoxelFX.Motes(root,'FrostFlecks',96,'square',false)
+    -- W6: clone only visual sources; real breath/pool state stays untouched.
+    self.shaderWarmup=ShaderWarmup.New(root,self.node,self.motes.bb,breath.rings[1] and breath.rings[1].node)
     self.ctrl.stream=self
     self.ctrl.overlayPose=function(_,pose) self:OverlayPose(pose) end
     return self
@@ -72,6 +76,7 @@ end
 ---@param target Vector3|nil
 ---@param allowed boolean|nil
 function S:Update(dt,held,target,allowed)
+    self.shaderWarmup:Update(dt,held or self.ctrl.state=='BREATH') -- W6: idle-frame submission
     dt=math.min(math.max(dt,0),.1)
     self.time=self.time+dt
     self.motes:Update(dt)
@@ -128,6 +133,7 @@ function S:Update(dt,held,target,allowed)
     end
 end
 function S:Destroy()
+    self.shaderWarmup:Destroy() -- W6: cleanup before the owning root disappears
     self:Stop()
     if self.ctrl.stream==self then self.ctrl.overlayPose=nil;self.ctrl.stream=nil end
     if self.root then self.root:Remove();self.root=nil end

@@ -8,7 +8,7 @@ local nomi=Mock.Nomi(scene) --[[@as any]]
 local rig=Rig.New(scene,world,nomi)
 assert(rig.active=="sword" and rig.pose=="hidden")
 assert(#rig.trails==8 and #rig.images==2 and #rig.bowImages==2 and #rig.particles==6)
-assert(world.created==2+#rig.trails+#rig.images+#rig.bowImages+#rig.particles+2,"two weapons, two flash meshes and both silhouette pools")
+assert(world.created==2+#rig.trails+#rig.images+#rig.bowImages+#rig.particles+2+12+4,"weapons/FX plus twelve reveal slices, three bow shapes and arrow")
 assert(rig:GetAfterimagePose()==nil,'hidden weapons are not hand snapshots')
 for _,volume in ipairs(world.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
 assert(rig.sockets.hand_right==nomi.castSocket)
@@ -18,11 +18,11 @@ assert(rig.sockets.back_sword.parent==nomi.nomi.bones.body and rig.sockets.back_
 local initialWrites,initialRebuilds=world.writes,world.rebuilds
 local function frames(n) for _=1,n do rig:Update(1/60) end end
 rig:SetPose("back")
-for i=1,8 do rig:Update(1/60);Mock.Near(rig.entries.sword.mesh.alpha,i/8) end
+for i=1,18 do rig:Update(1/60);Mock.Near(rig.entries.sword.mesh.alpha,math.floor(i/3)/6) end
+assert(rig.visualState=='hang')
 assert(rig.entries.sword.pivot.parent==rig.sockets.back_sword)
 rig:SetPose("hand")
-for i=1,4 do rig:Update(1/60);Mock.Near(rig.entries.sword.mesh.alpha,1-i/4) end
-frames(4)
+frames(8)
 assert(rig.entries.sword.pivot.parent==nomi.castSocket and rig.entries.sword.mesh.alpha==1)
 nomi.nomi.bones.arm_right.rotation=Quaternion(-90,0,0)
 rig:SetSwing(Vector3(.03,0,.06),Vector3(0,0,0))
@@ -50,31 +50,29 @@ nomi.node.position=Vector3(2.15,0,0);rig:SetCombatVisual(true,nil);frames(1)
 nomi.node.position=Vector3(200,0,0);rig:SetCombatVisual(true,nil);frames(1)
 assert(rig.sampleCount==1,"teleports clear distance samples")
 rig:SetPose("hidden");frames(3)
-local fadingAlpha=rig.entries.sword.mesh.alpha
-rig:SetPose("hand");frames(1)
-assert(rig.entries.sword.mesh.alpha>fadingAlpha and rig.entries.sword.mesh.alpha<1,"fade reversal")
-frames(7)
+rig:SetPose("hand");frames(8)
+assert(rig.entries.sword.mesh.alpha==1 and rig.visualState=='hand',"interrupted dissolve flies back to hand")
 rig:SetActive("bow")
 assert(not rig.entries.sword.mesh.node.enabled and rig.pose=="back")
-frames(8);rig:SetPose("hand");frames(8)
+frames(18);rig:SetPose("hand");frames(8)
 assert(rig.entries.bow.pivot.parent==rig.sockets.hand_left)
 local bowHit=rig:GetHit()
 assert(bowHit.radius==nil and bowHit.length==nil and rig:GetStats().draw==.7)
-rig:SetPose("back");frames(8)
+rig:SetPose("back");frames(11)
 nomi.nomi.bones.body.rotation=Quaternion(25,0,20);frames(1)
-assert(math.abs(rig.lag.x)<=2 and math.abs(rig.lag.z)<=2)
+assert((rig.hangPosition-rig.hangTarget):Length()<=.1200001)
 frames(100)
-assert(math.abs(rig.lag.x)<1e-5 and math.abs(rig.lag.z)<1e-5)
+assert((rig.hangPosition-rig.hangTarget):Length()<.03)
 assert(world.writes==initialWrites and world.rebuilds==initialRebuilds,"combat must never rebuild or edit grids")
 local c=Parts.DefaultWeapon("bow");c.weapon="bow";c.colors.accent=6
 assert(rig:Apply(c) and world.rebuilds==initialRebuilds)
 assert(world.palette[175].r==Parts.ColorPresets[6].rgb[1]/255)
 c.parts.limbs="limbs_long"
-assert(rig:Apply(c) and world.rebuilds==initialRebuilds+3 and rig:GetStats().range==46,'bow edit rebuilds weapon plus two bow silhouettes')
+assert(rig:Apply(c) and world.rebuilds==initialRebuilds+13 and rig:GetStats().range==46,'bow edit refreshes fixed visual pools')
 assert(not rig:SetActive("axe") and not rig:SetPose("fly") and not rig:Apply({}))
-rig:SetPose("hidden");frames(8)
+rig:SetPose("hidden");frames(18)
 assert(not rig.entries.bow.mesh.node.enabled)
-rig:SetActive('sword');rig:SetPose('hand');frames(8)
+rig:SetActive('sword');rig:SetPose('hand');frames(36)
 local pivot=rig.entries.sword.pivot
 local snapshots={
     {clip='sword_attack_1',handle=1,time=1,age=.02,alpha=.8,position=pivot.worldPosition+Vector3(.1,0,0),rotation=pivot.worldRotation},
@@ -101,7 +99,7 @@ rig:SetTrail(true);rig:SetAfterimages({});rig:SetCombatVisual(false,nil);rig:Upd
 assert(rig.sampleCount==0,'empty animation snapshots do not imply active')
 rig:SetAfterimages(nil);frames(2);assert(rig.sampleCount==0,'nil snapshots do not imply active')
 local sword=Parts.DefaultWeapon('sword');sword.weapon='sword';sword.parts.blade='blade_broad'
-assert(rig:Apply(sword) and world.rebuilds==beforeBuilds+12,'weapon, two silhouettes, eight bands and blade flash resize only on part edits')
+assert(rig:Apply(sword) and world.rebuilds==beforeBuilds+18,'weapon, silhouettes, bands, blade flash and six reveal slices resize on edits')
 for _,volume in ipairs(world.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
 assert(world.palette[174].r==1 and world.palette[174].g==1 and world.palette[174].b==1)
 for _,band in ipairs(rig.trails) do
@@ -111,7 +109,7 @@ for _,band in ipairs(rig.trails) do
     assert(white and accent,'one band mesh must contain white core plus accent rim')
     local mat=band.material --[[@as any]]
     assert(mat.technique.passes.base.blend==nil and not mat.technique.passes.shadow,'bands do not stack alpha or cast transient shadows')
-    Mock.VectorNear(band.node.scale,Vector3(1,1,1))
+    Mock.VectorNear(band.node.scale,Vector3(1,1.25,1))
 end
 local function Step(active,charge,dt) rig:SetCombatVisual(active,charge);rig:Update(dt or 1/60) end
 local allocated,writesAtFx,buildsAtFx=world.created,world.writes,world.rebuilds
@@ -160,8 +158,9 @@ rawset(_G,'Color',rawColor);rawset(_G,'Variant',rawVariant)
 assert(rig:Flash('draw'));rig:SetTrail(false)
 assert(not rig.flashes.socket.node.enabled and not rig:Flash('draw'))
 rig:SetTrail(true)
-rig:SetPose('back');frames(8)
-assert(not rig.flashes.socket.node.enabled,'pose changes alone must not flash')
+rig:SetPose('back');frames(11)
+assert(rig.flashes.socket.node.enabled,'stow arrival flashes once')
+frames(6);assert(not rig.flashes.socket.node.enabled)
 rig:Dispose();rig:Dispose()
 assert(world.created==world.removed and not nomi.castSocket.removed)
 
@@ -170,7 +169,7 @@ local function SlideCase(weapon)
     local w=Mock.World(root) --[[@as any]]
     local controller=Mock.Nomi(root) --[[@as any]]
     local r=Rig.New(root,w,controller)
-    r:SetActive(weapon);r:SetPose('hand');for _=1,8 do r:Update(1/60) end
+    r:SetActive(weapon);r:SetPose('hand');for _=1,30 do r:Update(1/60) end
     controller.nomi.bones.body.rotation=Quaternion(8,25,11)
     controller.nomi.bones.arm_left.rotation=Quaternion(-75,15,5)
     controller.nomi.bones.arm_right.rotation=Quaternion(-85,-8,-6)
@@ -257,7 +256,7 @@ local function Track(fps,rotation)
     local w=Mock.World(root) --[[@as any]]
     local controller=Mock.Nomi(root) --[[@as any]]
     local r=Rig.New(root,w,controller)
-    r:SetPose('hand');for _=1,8 do r:Update(1/60) end
+    r:SetPose('hand');for _=1,30 do r:Update(1/60) end
     controller.nomi.bones.arm_right.rotation=Quaternion(-90,0,0)
     r:SetCombatVisual(true,nil);r:Update(0)
     local samples={}
@@ -292,4 +291,144 @@ for i=1,8 do
 end
 slow,fast=Track(30,true),Track(60,true)
 for i=1,8 do assert((slow[i].root-fast[i].root):Length()<.003 and (slow[i].tip-fast[i].tip):Length()<.003) end
-print("weapon_rig: PASS (30/60 FPS distance trail, root/tip following, .06s cutoff, pooled charge/flash, palette, snapshots, cleanup)")
+-- §20: timed reveal/flight/stow/dissolve, shared FX budget, world-space bow
+-- orientation, fixed visual sword scaling with unchanged gameplay capsule.
+local function LivelyCase(fps,weapon)
+    local root=Mock.Node('lively') --[[@as any]]
+    local w=Mock.World(root) --[[@as any]]
+    local controller=Mock.Nomi(root) --[[@as any]]
+    local r=Rig.New(root,w,controller)
+    r:SetActive(weapon)
+    local entry=r.entries[weapon]
+    local writes,rebuilds,created=w.writes,w.rebuilds,w.created
+    local makeColor,makeVariant=Color,Variant
+    local colors,variants=0,0
+    rawset(_G,'Color',function(...) colors=colors+1;return makeColor(...) end)
+    rawset(_G,'Variant',function(...) variants=variants+1;return makeVariant(...) end)
+    local function advance(seconds) for _=1,math.ceil(seconds*fps) do r:Update(1/fps) end end
+    local function count(pool) local n=0;for _,v in ipairs(pool) do if v.node.enabled then n=n+1 end end;return n end
+    r:SetPose('back')
+    assert(r.visualState=='materialize' and r:PopEvents()[1]=='materialize')
+    assert(#r:PopEvents()==0,'event queue drains once')
+    local previous=0
+    for frame=1,math.ceil(.30*fps) do
+        r:Update(1/fps)
+        if r.visualState=='materialize' then
+            local visible=count(r.layers[weapon])
+            assert(visible>=previous and visible<=6 and count(r.particles)<=8)
+            for i,layer in ipairs(r.layers[weapon]) do assert(layer.node.enabled==(i<=visible),'reveal must fill bottom first') end
+            previous=visible
+        end
+    end
+    assert(r.visualState=='hang' and entry.mesh.node.enabled and r:PopEvents()[1]=='materialized')
+    assert(r.flashes.socket.node.enabled and r.flashLeft==.08)
+    local socket=r.sockets['back_'..weapon]
+    Mock.Near(socket.worldPosition.y,1.05);Mock.Near(socket.worldPosition.z,-.30)
+    if weapon=='sword' then
+        local up=socket.worldRotation*Vector3.UP;assert(up.x<0 and up.y>0,'sword tip up-left')
+    else
+        local up=socket.worldRotation*Vector3.UP
+        local outward=socket.worldRotation*Vector3.FORWARD
+        assert(math.abs(up.x)>.99 and outward.z<-.99,'back bow horizontal, convex away from body')
+    end
+    local minY,maxY=math.huge,-math.huge
+    for _=1,fps*3 do
+        r:Update(1/fps)
+        minY=math.min(minY,r.hangTarget.y);maxY=math.max(maxY,r.hangTarget.y)
+        assert((r.hangPosition-r.hangTarget):Length()<=.1200001)
+    end
+    assert(maxY-minY>.039 and maxY-minY<=.040001,'0.6Hz target float +/-2cm')
+    controller.node.position=Vector3(.6,0,.2);controller.nomi.bones.body.rotation=Quaternion(0,80,0)
+    r:Update(1/fps)
+    assert((r.hangPosition-r.hangTarget):Length()<=.1200001 and (r.hangPosition-r.hangTarget):Length()>.001,'spring lags but clamps at12cm')
+    advance(.5)
+    controller.nomi.bones.body.rotation=Quaternion()
+    controller.nomi.bones.arm_left.rotation=Quaternion(-90,0,0)
+    controller.nomi.bones.arm_right.rotation=Quaternion(-90,0,0)
+    r:SetPose('hand');assert(r.visualState=='fly_to_hand' and r:GetAfterimagePose()==nil)
+    local from=entry.pivot.worldPosition
+    r:Update(.06)
+    assert(r.visualState=='fly_to_hand' and (entry.pivot.worldPosition-from):Length()>.02)
+    assert(count(r.trails)<=4 and count(r.images)==0 and count(r.bowImages)==0)
+    r:Update(.06)
+    assert(r.visualState=='hand' and r:PopEvents()[1]=='blade_draw')
+    assert(r.flashes.socket.node.enabled and r.flashLeft==.08)
+    advance(.1)
+    local beforeHit=r:GetHit()
+    if weapon=='bow' then
+        Mock.VectorNear(entry.pivot.worldRotation*Vector3.UP,Vector3.UP)
+        Mock.VectorNear(beforeHit.dir,Vector3.FORWARD)
+        local zero=entry.pivot:LocalToWorld(Vector3.ZERO)
+        local string=entry.pivot:LocalToWorld(Vector3(0,0,-.06))
+        local convex=entry.pivot:LocalToWorld(Vector3(0,.15,.06))
+        assert(string.z<zero.z and convex.z>zero.z,'hand basis must preserve -Z string / +Z convex')
+        for _,p in ipairs({0,.05,.1,.5,1,.5,0}) do
+            r:SetBowDraw(p);r:Update(0)
+            assert(r.bowArrow.node.enabled==(p>.05))
+            assert(count(r.bowDrawMeshes)==(p>.05 and 1 or 0))
+            assert(entry.mesh.node.enabled==(p<=.05))
+            if p>.05 then
+                local pose=r.bowDrawMeshes[r.bowStage+1]
+                assert(pose.node.enabled and r.bowArrow.node.position.x>0)
+                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,pose.stringZ)
+            end
+        end
+        r:SetBowDraw(0/0);assert(r.bowDraw==0)
+    else
+        Mock.VectorNear(entry.pivot.scale,Vector3(1,1,1))
+        Mock.VectorNear(entry.mesh.node.scale,Vector3(1.3,1.25,1))
+        Mock.Near(beforeHit.length,entry.mesh.blueprint.hit.length)
+        Mock.Near(r.bladeTip.y,beforeHit.length*1.25)
+        for _,band in ipairs(r.trails) do
+            local min,max=math.huge,-math.huge
+            local grid=band.volume.grid --[[@as any]] -- inspect offline voxel writes
+            for key in pairs(grid.solid) do
+                local x=tonumber(key:match('^(%d+):'));min=math.min(min,x);max=math.max(max,x)
+            end
+            Mock.Near((max-min+1)*.03,.15)
+        end
+    end
+    r:SetPose('back');assert(r.visualState=='stow')
+    r:Update(.18)
+    assert(r.visualState=='hang' and r.recoil==.12 and r:PopEvents()[1]=='blade_sheath')
+    r:Update(.06)
+    Mock.Near((entry.pivot.worldPosition-r.hangPosition):Length(),.02)
+    advance(.10)
+    r:SetPose('hidden');assert(r.visualState=='dissolve')
+    r:Update(.10)
+    assert(count(r.layers[weapon])==4)
+    local radius=(r.particles[1].node.worldPosition-entry.pivot.worldPosition):Length()
+    r:Update(.10)
+    assert(count(r.layers[weapon])==2 and (r.particles[1].node.worldPosition-entry.pivot.worldPosition):Length()>radius)
+    r:Update(.10)
+    assert(r.visualState=='hidden' and count(r.layers[weapon])==0 and not entry.mesh.node.enabled and count(r.particles)==0)
+    assert(r:PopEvents()[1]=='dissolved')
+    -- Interrupt a flight without teleporting to the back socket.
+    r:SetPose('hand');assert(r.motion.duration==.08);r:Update(.04)
+    local mid=entry.pivot.worldPosition
+    r:SetAfterimages({{clip='dodge_slide',age=0,life=.08,position=mid,rotation=entry.pivot.worldRotation}})
+    r:Update(0)
+    assert(count(r.trails)==0 and count(r.particles)==0,'flight interrupted by slide cannot make knife light or grains')
+    r:SetAfterimages(nil)
+    r:SetPose('hidden');r:Update(0)
+    Mock.VectorNear(entry.pivot.worldPosition,mid)
+    r:SetPose('hand');r:Update(.12);assert(r.visualState=='hand')
+    -- Even an earlier hit_on (shortened combo / low FPS event catch-up) cannot
+    -- run AfterPose against a flying grip. It settles before the owner's sweep.
+    r:SetPose('back');r:Update(.18);r:SetPose('hand');r:Update(.02)
+    assert(r.visualState=='fly_to_hand')
+    r:SetCombatVisual(true,nil);r:Update(0)
+    assert(r.visualState=='hand' and r:GetAfterimagePose()~=nil)
+    r:SetCombatVisual(false,nil)
+    r:SetPose('hidden');r:Update(.30)
+    r:SetPose('back');r:Update(.10);assert(count(r.layers[weapon])==2)
+    r:SetPose('hidden');r:Update(0);assert(count(r.layers[weapon])==2,'reversing partial reveal must not pop all six layers')
+    r:SetPose('back');r:Update(0);assert(count(r.layers[weapon])==2,'reversing dissolve preserves visible layers')
+    assert(w.created==created and w.rebuilds==rebuilds and w.writes==writes,'all motion/draw states reuse their pools')
+    assert(colors==0 and variants==0,'new motion/draw path must reuse color/alpha buckets')
+    rawset(_G,'Color',makeColor);rawset(_G,'Variant',makeVariant)
+    for _,volume in ipairs(w.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
+    r:Dispose();r:Dispose();assert(w.created==w.removed)
+end
+for _,fps in ipairs({30,60}) do LivelyCase(fps,'sword');LivelyCase(fps,'bow') end
+print("weapon_rig: PASS (bow axes/draw/nock, timed reveal/flight/stow/dissolve, event drain, spring/float, visual-only sword scale, pooled FX)")

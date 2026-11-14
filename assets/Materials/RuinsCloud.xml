@@ -1,3 +1,6 @@
 <material>
     <surfaceshader name="Shaders/BLGL/RuinsCloud.shader" />
+    <!-- Bound by SkyClouds: low tier must not preload the large density atlas. -->
+    <!-- Scalar data, never an sRGB albedo. Lua validates binding before enabling. -->
+    <parameter name="use_volume" value="0" />
 </material>

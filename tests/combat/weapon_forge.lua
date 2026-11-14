@@ -36,7 +36,7 @@ end
 local width,height,dpr,scale=844,390,3,2
 local safe={left=47,right=47,top=0,bottom=21}
 for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
-for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE','LIGHT_DIRECTIONAL','FILTER_NEAREST','TEXTURE_RENDERTARGET','SURFACE_MANUALUPDATE','CMD_CLEAR','NVG_ALIGN_CENTER','NVG_ALIGN_RIGHT'}) do rawset(_G,name,i) end
+for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE','LIGHT_DIRECTIONAL','FILTER_NEAREST','TEXTURE_RENDERTARGET','SURFACE_MANUALUPDATE','SURFACE_UPDATEALWAYS','CMD_CLEAR','NVG_ALIGN_CENTER','NVG_ALIGN_RIGHT'}) do rawset(_G,name,i) end
 local fakeInput={numTouches=0,mouseMode=MM_RELATIVE,GetKeyDown=function(_,key) return held[key] end,GetMouseButtonDown=function(_,button) return buttons[button] end}
 rawset(_G,'input',fakeInput)
 local timerMs=0
@@ -73,7 +73,9 @@ end
 rawset(_G,'Node',function() return MakeNode('events') end)
 rawset(_G,'Scene',function()
     if nativeFailure then error('test: render target unavailable') end
-    local scene=MakeNode('preview');scenes[#scenes+1]=scene;return scene
+    local scene=MakeNode('preview');scenes[#scenes+1]=scene
+    scene.SetUpdateEnabled=function(self,on) self.updateEnabled=on end
+    return scene
 end)
 rawset(_G,'BoundingBox',function() return {} end)
 rawset(_G,'Texture2D',{new=function()
@@ -84,7 +86,7 @@ rawset(_G,'Texture2D',{new=function()
     texture.GetRenderSurface=function(self) return self.surface end
     texture.Dispose=function(self) assert(self.surface.viewports==0);assert(not self.disposed);self.disposed=true end
     texture.surface.SetViewport=function(self) self.viewports=1 end
-    texture.surface.SetUpdateMode=function(_,mode) assert(mode==SURFACE_MANUALUPDATE) end
+    texture.surface.SetUpdateMode=function(self,mode) assert(mode==SURFACE_MANUALUPDATE or mode==SURFACE_UPDATEALWAYS);self.mode=mode end
     texture.surface.QueueUpdate=function(self) assert(not queueFailure);self.updates=self.updates+1 end
     texture.surface.SetNumViewports=function(self,n) self.viewports=n end
     textures[#textures+1]=texture
@@ -147,13 +149,26 @@ local function State()
     for i=1,10 do local name,value=debug.getupvalue(Forge.IsOpen,i);if name=='session' then return value end end
     error('missing session')
 end
+-- Realistic VariantMap: pointer shortcut deliberately absent; fields contain
+-- typed PTR/VOIDPTR Variants, not raw engine objects.
+local function ViewEvent(p,voidOnly,overrides)
+    local values={Scene=p.scene,Surface=p.surface,Camera=p.camera,Texture=p.texture,View={}}
+    if overrides then for key,value in pairs(overrides) do values[key]=value end end
+    local result={}
+    for key,value in pairs(values) do
+        local expected=key=='Surface' and 'RenderSurface' or key
+        result[key]={GetPtr=function(_,kind) assert(kind==expected,'explicit pointer cast required');if not voidOnly then return value end end,
+            GetVoidPtr=function(_,kind) assert(kind==expected);return value end}
+    end
+    return result
+end
 local function Tick(n)
     for _=1,n or 1 do
         if eventHandlers.Update then eventHandlers.Update(nil,nil,{GetFloat=function() return 1/60 end}) end
         local current=State()
         local p=current and current.preview
         if autoRender and p and eventHandlers.EndViewRender then
-            eventHandlers.EndViewRender(nil,nil,{GetPtr=function(_,name) return name=='Scene' and p.scene or p.surface end})
+            eventHandlers.EndViewRender(nil,nil,ViewEvent(p,true))
         end
     end
 end
@@ -481,6 +496,38 @@ Forge.ForceClose();queueFailure=false
 assert(Open());Flush();Render();assert(Forge.PreviewMode()=='3d')
 Tick(310);Render();assert(Forge.PreviewMode()=='3d','ready is not downgraded by the initial watchdog')
 Forge.ForceClose()
+-- Pointer receipts use Variant fields, never the misleading generated
+-- VariantMap:GetPtr shortcut. View and Viewport intentionally differ.
+autoRender=false
+assert(Open());Flush()
+local receiptPreview=State().preview
+assert(receiptPreview.scene.updateEnabled and receiptPreview.surface.mode==SURFACE_UPDATEALWAYS)
+assert(receiptPreview.queued and receiptPreview.state=='awaiting_render')
+eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Scene={}}))
+assert(not receiptPreview.rendered and receiptPreview.endViews==1 and receiptPreview.sceneMatches==0 and receiptPreview.surfaceMatches==1)
+eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false,{Surface={}}))
+assert(not receiptPreview.rendered and receiptPreview.endViews==2 and receiptPreview.sceneMatches==1 and receiptPreview.surfaceMatches==1)
+eventHandlers.EndViewRender(nil,nil,ViewEvent(receiptPreview,false))
+assert(receiptPreview.rendered and receiptPreview.matchedViews==1 and receiptPreview.pointerErrors==0)
+assert(receiptPreview.surface.mode==SURFACE_MANUALUPDATE and Forge.PreviewMode()==nil)
+assert(receiptPreview.lastReceipt:find('/ptr',1,true),'record typed pointer accessor used')
+Render();assert(Forge.PreviewMode()=='3d')
+local messagesReady=#messages
+Tick(60);Render();assert(#messages==messagesReady,'no per-frame receipt spam after ready')
+Forge.ForceClose()
+assert(Open());Flush();receiptPreview=State().preview
+eventHandlers.Update(nil,nil,{GetFloat=function() return 1.1 end})
+assert(receiptPreview.waitLogged and receiptPreview.endViews==0 and receiptPreview.state=='awaiting_render')
+local failedEvent=ViewEvent(receiptPreview,false)
+failedEvent.Scene={GetPtr=function() error('PTR binding unavailable') end,GetVoidPtr=function() error('VOIDPTR binding unavailable') end}
+eventHandlers.EndViewRender(nil,nil,failedEvent)
+assert(receiptPreview.pointerErrors==1 and not receiptPreview.rendered and receiptPreview.lastReceipt:find('PTR binding unavailable',1,true))
+local voidEvent=ViewEvent(receiptPreview,true)
+for _,variant in pairs(voidEvent) do variant.GetPtr=nil end
+eventHandlers.EndViewRender(nil,nil,voidEvent)
+assert(receiptPreview.rendered and receiptPreview.lastReceipt:find('/void',1,true))
+Render();assert(Forge.PreviewMode()=='3d')
+Forge.ForceClose();autoRender=true
 for _,g in ipairs(geometries) do assert(g.node.removed) end
 for _,texture in ipairs(textures) do assert(texture.disposed) end
 for _,createdScene in ipairs(scenes) do assert(createdScene.disposed) end

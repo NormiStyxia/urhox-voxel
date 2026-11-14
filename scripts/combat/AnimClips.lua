@@ -38,6 +38,9 @@
 ---@field lean table[]|nil Directional blend envelope, normalized time.
 ---@field deprecated boolean|nil
 ---@field replacement string|nil
+---@field handPath table<string, table>|nil Paths in body-aligned, feet-height authoring space.
+---@field bladePath table|nil Desired +Y blade direction in body space.
+---@field legacyKeys table<string, table[]>|nil Pre-path poses for params.legacyPose=1.
 
 ---@class CombatClipCatalog
 ---@field Layer table<string, number>
@@ -355,4 +358,129 @@ add { -- 符号待 Web 校准
         arm_right=k({-65,0,12},{-120,10,30},{-105,5,25},{-65,0,12},.16,.48),
         arm_left=k({0,0,-8},{-70,0,-30},{-50,0,-20},{0,0,-8},.16,.48)},
 }
+-- §20 path layer. All authoring positions are metres: body-aligned axes with
+-- y=0 at the reference feet plane. CombatAnim subtracts the body pivot height
+-- ONCE to express these points in the shoulder parent's local frame.
+-- 符号待 Web 校准: paths amplify silhouette; reachable hands are projected to the
+-- actual shoulder/socket radius, never stretch the mesh to these design points.
+C.RigReference={bodyHeight=18*.022*1.35,
+    rightShoulder={9*.85*.022,28*.022,-.5*.92*.022},
+    leftShoulder={-9*.85*.022,28*.022,-.5*.92*.022},
+    rightGrip={10*.85*.022,-13*.022,.75*.92*.022},
+    leftGrip={-10*.85*.022,-13*.022,.75*.92*.022}}
+
+local function bez(t0,t1,a,b,control,easing)
+    return {kind="bezier",t0=t0,t1=t1,a=a,b=b,control=control,ease=easing or "linear"}
+end
+local function arc(a,b,degrees,plane)
+    local i,j=plane=="yz" and 2 or 1,3
+    local dx,dy=b[i]-a[i],b[j]-a[j]
+    local half=math.rad(degrees)*.5
+    local cx=(a[i]+b[i])*.5-dy/(2*math.tan(half))
+    local cy=(a[j]+b[j])*.5+dx/(2*math.tan(half))
+    return {kind="arc",plane=plane,cx=cx,cy=cy,radius=math.sqrt((a[i]-cx)^2+(a[j]-cy)^2),
+        angle=math.atan(a[j]-cy,a[i]-cx),sweep=math.rad(degrees),a=a,b=b}
+end
+local function arcPoint(spec,u)
+    local angle=spec.angle+spec.sweep*u
+    local x,y=spec.cx+spec.radius*math.cos(angle),spec.cy+spec.radius*math.sin(angle)
+    if spec.plane=="yz" then return {spec.a[1]+(spec.b[1]-spec.a[1])*u,x,y} end
+    return {x,spec.a[2]+(spec.b[2]-spec.a[2])*u,y}
+end
+local function arcPart(spec,t0,t1,u0,u1,easing)
+    return {kind="arc",plane=spec.plane,cx=spec.cx,cy=spec.cy,radius=spec.radius,
+        angle=spec.angle,sweep=spec.sweep,a=spec.a,b=spec.b,t0=t0,t1=t1,u0=u0,u1=u1,ease=easing}
+end
+local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge)
+    local c=C.Clips[id]
+    local on=c.phases.active[1]/c.dur
+    local spec=arc(a,b,degrees,plane)
+    local ready={.35,1.05,.30}
+    local windup=arcPoint(spec,-.12)
+    local overshoot=arcPoint(spec,1.08)
+    c.handPath={arm_right={segments={
+        bez(0,on*.65,ready,windup,{a[1],a[2]+.10,a[3]-.12},"inQuad"),
+        arcPart(spec,on*.65,on,-.12,0,"inQuad"),
+        arcPart(spec,on,contact/c.dur,0,.70,"inCubic"),
+        arcPart(spec,contact/c.dur,ending/c.dur,.70,1,"outCubic"),
+        arcPart(spec,ending/c.dur,(ending+.04)/c.dur,1,1.08,"outQuad"),
+        bez((ending+.04)/c.dur,1,overshoot,ready,{.15,1.30,.55},"outQuad")},
+        amplitude=degrees,windup=.12,overshoot=.08,space="body_feet"}}
+    c.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+    c.motion={{t0=c.phases.active[1],t1=ending,forward=lunge}}
+    -- IK and blade direction update at render cadence; hitstop freezes s.t.
+    c.continuous=true
+end
+local function preservePose(c)
+    c.legacyKeys=c.keys
+    c.keys={}
+    for name,track in pairs(c.legacyKeys) do
+        local copy={}
+        for i,key in ipairs(track) do copy[i]={key[1],{key[2][1],key[2][2],key[2][3]},key[3]} end
+        c.keys[name]=copy
+    end
+end
+for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release","sword_heavy_charge"}) do
+    preservePose(C.Clips[id])
+end
+pathAttack("sword_light_1",{.55,1.35,-.25},{-.55,1.15,.55},170,"xz",.14,.18,.50)
+pathAttack("sword_light_2",{-.55,1,-.25},{.55,1.40,.55},-150,"xz",.14,.18,.45)
+pathAttack("sword_light_3",{.15,1.9,-.15},{.15,.45,.7},190,"yz",.18,.22,.70)
+C.Clips.sword_light_1.keys.body[4][2][2]=-45
+C.Clips.sword_light_1.keys.body[5][2][2]=-49
+C.Clips.sword_light_2.keys.body[4][2][2]=40
+C.Clips.sword_light_2.keys.body[5][2][2]=43
+C.Clips.sword_light_3.keys.body[5][2][1]=22
+C.Clips.sword_light_3.root={{0,-.04},{.11/.52,.05},{.14/.52,.02},
+    {.22/.52,-.12},{.27/.52,-.12},{1,0}}
+-- Downward contact lands at hit_off; hold the grip/root for .05s, then overshoot.
+local slamPath=C.Clips.sword_light_3.handPath.arm_right.segments
+slamPath[5].t0,slamPath[5].t1=.27/.52,.31/.52
+slamPath[6].t0=.31/.52
+table.insert(slamPath,5,bez(.22/.52,.27/.52,{.15,.45,.7},{.15,.45,.7},{.15,.45,.7}))
+
+local heavy=C.Clips.sword_heavy_release
+local circle={kind="arc",plane="xz",cx=0,cy=0,radius=.75,angle=0,sweep=math.pi*2,
+    a={.75,1.1,0},b={.75,1.1,0}}
+heavy.handPath={arm_right={space="body_feet",amplitude=360,windup=.12,overshoot=.08,segments={
+    bez(0,.14/.72,{.30,1.55,-.20},arcPoint(circle,-.12),{.75,1.45,-.5},"inQuad"),
+    arcPart(circle,.14/.72,.22/.72,-.12,0,"inQuad"),
+    arcPart(circle,.22/.72,.27/.72,0,.7,"inCubic"),
+    arcPart(circle,.27/.72,.32/.72,.7,1,"outCubic"),
+    bez(.32/.72,.38/.72,{.75,1.1,0},{.12,.35,.65},{.35,1.9,.65},"inQuad"),
+    bez(.38/.72,.43/.72,{.12,.35,.65},{.10,.28,.70},{.10,.28,.70},"outQuad"),
+    bez(.43/.72,1,{.10,.28,.70},{.35,1.05,.30},{.25,1.25,.55},"outQuad")}}}
+heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+heavy.motion={{t0=.22,t1=.38,forward=.65}}
+heavy.continuous=true
+C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
+    bez(0,1,{.35,1.05,.30},{.30,1.55,-.20},{.65,1.45,-.35},"inQuad")}}}
+
+-- Keep authored legacy poses available, while the bow faces forward rather
+-- than sideways. Single rigid right arm aims toward chin; no elbow is invented.
+for _,id in ipairs({"bow_draw","bow_hold","bow_release"}) do
+    local c=C.Clips[id]
+    c.legacyKeys=c.keys
+    c.keys={}
+    for name,track in pairs(c.legacyKeys) do c.keys[name]=track end
+    c.keys.body=k({6,0,0},{6,0,0},{6,0,0},{6,0,0})
+    c.keys.head=k({4,0,0},{4,0,0},{4,0,0},{4,0,0})
+    c.handPath={arm_left={mode="bow_aim"},arm_right={mode="bow_string"}}
+    c.bladePath={mode="bow_upright",side="arm_left"}
+    c.continuous=true
+end
+-- §20.5 stronger silhouette; timings/motion/cancel/iframe contracts unchanged.
+local slide=C.Clips.dodge_slide
+slide.root={{0,-.04},{.04/.32,-.19},{.10/.32,-.24},{.18/.32,-.20},{.26/.32,-.10},{1,-.04}}
+slide.keys.body={{0,{6,0,0}},{.04/.32,{20,0,0}},{.10/.32,{30,0,0}},
+    {.18/.32,{20,0,0}},{.26/.32,{7,0,0}},{1,{6,0,0}}}
+slide.keys.head={{0,{3,0,0}},{.04/.32,{-13,0,0}},{.10/.32,{-20,0,0}},
+    {.18/.32,{-13,0,0}},{.26/.32,{-5,0,0}},{1,{3,0,0}}}
+slide.keys.arm_right={{0,{-65,0,12}},{.04/.32,{30,0,12}},{.10/.32,{55,0,15}},
+    {.18/.32,{25,0,12}},{.26/.32,{-55,0,10}},{1,{-65,0,12}}}
+slide.keys.arm_left={{0,{0,0,-8}},{.04/.32,{-45,0,-20}},{.10/.32,{-65,0,-25}},
+    {.18/.32,{-40,0,-18}},{.26/.32,{-15,0,-10}},{1,{0,0,-8}}}
+slide.keys.leg_right[3][2][1]=25
+slide.keys.leg_left[3][2][1]=-30
+table.insert(slide.events,3,{t=0,"dust_streak",clock="real"})
 return C

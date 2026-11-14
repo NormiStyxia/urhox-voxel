@@ -71,6 +71,29 @@ local Store=require("combat.WeaponStore")
 ---@field imageKey string
 ---@field trailEnabled boolean
 ---@field disposed boolean
+---@field visualState string
+---@field motion table
+---@field layers table
+---@field bowDrawMeshes table[]
+---@field bowArrow table
+---@field bowDraw number
+---@field bowStage integer
+---@field bowArrowOffset Vector3
+---@field visualKeys table
+---@field visualClock number
+---@field events string[]
+---@field eventOutput string[]
+---@field hangPosition Vector3
+---@field hangVelocity Vector3
+---@field hangRotation Quaternion
+---@field hangReady boolean
+---@field hangTarget Vector3
+---@field moveTarget Vector3
+---@field moveRotation Quaternion
+---@field recoil number
+---@field glowColors Color[]
+---@field glowBucket integer
+---@field arrivalFresh boolean
 local Rig={}
 Rig.__index=Rig
 local TRAIL_SEGMENTS=8
@@ -78,12 +101,39 @@ local TRAIL_SPACING=.09 -- metres, not frames: eight 3-voxel-wide strips
 local TRAIL_TAIL=.06
 local FLASH_TIME=.08
 local WHITE_PALETTE=174 -- reserved weapon bank, adjacent to accent slot 175
-local FADE_FRAMES=8
+local SWORD_LENGTH,SWORD_WIDTH=1.25,1.3 -- visual only: pivot/GetHit remain unscaled
 local function Vec(t) return Vector3(t[1],t[2],t[3]) end
 local function Clamp(n,lo,hi) return math.max(lo,math.min(hi,n)) end
 local function Delta(a,b) return (a-b+180)%360-180 end
 local function SetVec(v,x,y,z) v.x=x;v.y=y;v.z=z end
 local function CopyVec(to,from) SetVec(to,from.x,from.y,from.z) end
+local function SpringAxis(pos,vel,goal,dt,omega,decay)
+    local d=pos-goal;local c=vel+omega*d
+    return goal+(d+c*dt)*decay,(vel-omega*c*dt)*decay
+end
+local function CopyRot(to,from) to.w=from.w;to.x=from.x;to.y=from.y;to.z=from.z end
+local function Rotate(out,q,v)
+    local tx,ty,tz=2*(q.y*v.z-q.z*v.y),2*(q.z*v.x-q.x*v.z),2*(q.x*v.y-q.y*v.x)
+    SetVec(out,v.x+q.w*tx+q.y*tz-q.z*ty,v.y+q.w*ty+q.z*tx-q.x*tz,v.z+q.w*tz+q.x*ty-q.y*tx)
+end
+local function BlendRot(out,a,b,t)
+    local dot=a.w*b.w+a.x*b.x+a.y*b.y+a.z*b.z
+    local sign=dot<0 and -1 or 1
+    dot=Clamp(math.abs(dot),0,1)
+    local wa,wb=1-t,t
+    if dot<.9995 then
+        local angle=math.acos(dot);local sine=math.sin(angle)
+        wa=math.sin((1-t)*angle)/sine;wb=math.sin(t*angle)/sine
+    end
+    wb=wb*sign
+    local w,x,y,z=a.w*wa+b.w*wb,a.x*wa+b.x*wb,a.y*wa+b.y*wb,a.z*wa+b.z*wb
+    local n=math.sqrt(w*w+x*x+y*y+z*z)
+    out.w=w/n;out.x=x/n;out.y=y/n;out.z=z/n
+end
+local function ScaleSword(node,minimum)
+    node.scale=Vector3(SWORD_WIDTH,SWORD_LENGTH,1)
+    node.position=Vector3(minimum.x*SWORD_WIDTH,minimum.y*SWORD_LENGTH,minimum.z)
+end
 local function Distance(a,b) local x,y,z=a.x-b.x,a.y-b.y,a.z-b.z;return math.sqrt(x*x+y*y+z*z) end
 local function Single(config,weapon)
     return {weapon=weapon,parts=config[weapon].parts,colors=config[weapon].colors}
@@ -121,17 +171,27 @@ function Rig:Init(scene,world,controller)
     for i=0,16 do self.fxAlpha[i+1]=Variant(Color(1,1,1,i/16)) end
     for i=1,TRAIL_SEGMENTS do self.samples[i]={root=Vector3(),tip=Vector3(),tangent=Vector3()} end
     self.trailEnabled,self.disposed=true,false
+    self.visualState,self.visualClock,self.recoil='hidden',0,0
+    self.motion={elapsed=0,duration=0,from=Vector3(),rotation=Quaternion(),output=Vector3(),outRotation=Quaternion(),
+        arc=Vector3(),curve=Vector3()}
+    self.events,self.eventOutput,self.layers,self.visualKeys={},{},{},{}
+    self.hangPosition,self.hangVelocity,self.hangTarget,self.moveTarget=Vector3(),Vector3(),Vector3(),Vector3()
+    self.hangRotation,self.moveRotation=Quaternion(),Quaternion()
+    self.hangReady=false
+    self.bowDraw,self.bowStage,self.bowArrowOffset=0,0,Vector3()
+    self.bowDrawMeshes={}
+    self.glowColors,self.glowBucket={},0
     ---@type table<string, Node>
     local bones=controller.nomi.bones
     self.body=assert(bones.body,"WeaponRig requires body bone")
     self.previousBody=self.body.rotation.eulerAngles
     local backSword=self.body:CreateChild("back_sword")
-    backSword.position=Vector3(0.12,0.05,-0.23)
+    backSword.position=Vector3(0,1.05-self.body.position.y,-.30-self.body.position.z)
     -- +35 around Z takes +Y to character-left (-X).
-    backSword.rotation=Quaternion(0,0,35)
+    backSword.rotation=Quaternion(15,0,35) -- +Z roll points +Y blade toward character-left
     local backBow=self.body:CreateChild("back_bow")
-    backBow.position=Vector3(0,0.15,-0.28)
-    backBow.rotation=Quaternion(0,0,90)
+    backBow.position=Vector3(0,1.05-self.body.position.y,-.30-self.body.position.z)
+    backBow.rotation=Quaternion(0,180,90) -- horizontal; convex +Z faces outward(-Z), string toward body
     local left=assert(bones.arm_left):CreateChild("hand_left")
     local rightPosition=controller.castSocket.position
     left.position=Vector3(-rightPosition.x,rightPosition.y,rightPosition.z)
@@ -142,11 +202,13 @@ function Rig:Init(scene,world,controller)
         pivot.temporary=true
         local mesh=assert(Builder.Build(world,pivot,Single(self.config,weapon)))
         self.entries[weapon]={pivot=pivot,mesh=mesh}
+        if weapon=='sword' then ScaleSword(mesh.node,Vec(mesh.blueprint.bounds.min)) end
         Builder.SetOpacity(mesh,0)
     end
     self:CreateTrail()
     self:BuildSwordImages()
     self:BuildBowImages()
+    self:BuildVisualPools('sword');self:BuildVisualPools('bow')
     self:UpdateTrailColor()
 end
 
@@ -156,7 +218,7 @@ local function Effect(self,w,h,name,kind)
     for y=0,h-1 do for x=0,w-1 do
         if kind~='socket' or x==1 or y==1 then
             grid:SetSolid(x,y,0,true)
-            local white=kind=='blade' or (kind=='band' and x==1) or (kind=='socket' and x==1 and y==1)
+            local white=kind=='blade' or (kind=='band' and x>=1 and x<w-1) or (kind=='socket' and x==1 and y==1)
             grid:SetVoxelMaterial(x,y,0,white and WHITE_PALETTE or Builder.TRAIL_PALETTE)
         end
     end end
@@ -205,6 +267,7 @@ local function BuildSilhouettes(self,weapon,blueprint,pool)
         volume.material=material;volume:RebuildGeometry()
         local node=volume:GetNode();node.enabled=false;node.temporary=true
         pool[i]={volume=volume,node=node,material=material}
+        if weapon=='sword' then node.scale=Vector3(SWORD_WIDTH,SWORD_LENGTH,1) end
     end
 end
 
@@ -220,20 +283,96 @@ function Rig:BuildSwordImages()
     if self.imageKey==blueprint.geometry.key then return end
     self.imageKey=blueprint.geometry.key
     local b=blueprint.bounds
-    self.imageMin=Vec(b.min)
+    self.imageMin=Vector3(b.min[1]*SWORD_WIDTH,b.min[2]*SWORD_LENGTH,b.min[3])
     local root,tip,edge=math.huge,-math.huge,-math.huge
     for _,cell in ipairs(blueprint.geometry.cells) do
         if cell.slot=='blade' then root=math.min(root,cell.y);tip=math.max(tip,cell.y);edge=math.max(edge,cell.x) end
     end
-    self.bladeRoot=Vector3(0,(root-.5)*Parts.VOXEL_SIZE,0)
-    self.bladeTip=Vector3(0,(tip+.5)*Parts.VOXEL_SIZE,0)
-    self.bladeFlashX=(edge+.5)*Parts.VOXEL_SIZE -- outside the opaque blade, not buried in it
+    self.bladeRoot=Vector3(0,(root-.5)*Parts.VOXEL_SIZE*SWORD_LENGTH,0)
+    self.bladeTip=Vector3(0,(tip+.5)*Parts.VOXEL_SIZE*SWORD_LENGTH,0)
+    self.bladeFlashX=(edge+.5)*Parts.VOXEL_SIZE*SWORD_WIDTH
     for _,trail in ipairs(self.trails) do self.world:RemoveVolume(trail.volume);trail.material:Dispose() end
-    for i=1,TRAIL_SEGMENTS do self.trails[i]=Effect(self,3,tip-root+1,'WeaponBand_'..i,'band') end
+    for i=1,TRAIL_SEGMENTS do
+        self.trails[i]=Effect(self,5,tip-root+1,'WeaponBand_'..i,'band') -- 0.15m wide
+        self.trails[i].node.scale=Vector3(1,SWORD_LENGTH,1)
+    end
     local oldFlash=self.flashes.blade
     if oldFlash then self.world:RemoveVolume(oldFlash.volume);oldFlash.material:Dispose() end
     self.flashes.blade=Effect(self,1,tip-root+1,'WeaponFullChargeFlash','blade')
+    self.flashes.blade.node.scale=Vector3(1,SWORD_LENGTH,1)
     BuildSilhouettes(self,'sword',blueprint,self.images)
+end
+
+local function DisposeEffect(self,effect)
+    if effect then self.world:RemoveVolume(effect.volume);effect.material:Dispose() end
+end
+
+-- Six non-overlapping horizontal slices reveal bottom-to-top without rebuilding
+-- grids or animating scale. Pools resize only when the selected parts change.
+function Rig:BuildVisualPools(weapon)
+    local entry=self.entries[weapon]
+    local bp=entry.mesh.blueprint
+    if self.visualKeys[weapon]==bp.geometry.key then return end
+    self.visualKeys[weapon]=bp.geometry.key
+    for _,layer in ipairs(self.layers[weapon] or {}) do DisposeEffect(self,layer) end
+    ---@type table[][]
+    local groups={{},{},{},{},{},{}}
+    local b=bp.bounds
+    for _,cell in ipairs(bp.geometry.cells) do
+        local index=math.min(6,math.floor((cell.y-b.gridMin[2])/b.dimensions[2]*6)+1)
+        groups[index][#groups[index]+1]=cell
+    end
+    local layers={}
+    for i=1,6 do
+        local layer=Builder.VisualVolume(self.world,entry.pivot,bp,groups[i],'WeaponReveal_'..weapon..i)
+        if weapon=='sword' then ScaleSword(layer.node,layer.minimum) end
+        layers[i]=layer
+    end
+    self.layers[weapon]=layers
+    if weapon=='bow' then
+        for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
+        for stage=0,2 do
+            local shape=Builder.BowVisual(bp,stage)
+            local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,shape.cells,'BowDraw_'..stage)
+            mesh.stringZ=shape.stringMidpoint[3];self.bowDrawMeshes[stage+1]=mesh
+        end
+        DisposeEffect(self,self.bowArrow)
+        local arrow={}
+        for z=0,21 do arrow[#arrow+1]={x=0,y=0,z=z,channel='secondary'} end
+        for z=1,4 do
+            arrow[#arrow+1]={x=-1,y=0,z=z,channel='accent'}
+            arrow[#arrow+1]={x=1,y=0,z=z,channel='accent'}
+        end
+        local tip=assert(Parts.Get(bp.config.parts.tip))
+        for iy,layer in ipairs(tip.voxels) do for iz,row in ipairs(layer) do for ix=1,#row do
+            local c=row:sub(ix,ix)
+            if c~='.' then arrow[#arrow+1]={x=tip.origin[1]+ix-1,y=tip.origin[3]+iz-1,z=21+iy-1,channel=tip.palette[c]} end
+        end end end
+        self.bowArrow=Builder.VisualVolume(self.world,entry.pivot,bp,arrow,'BowNockedArrow')
+    end
+end
+
+--- Three cached draw shapes; no geometry work on this per-frame entry.
+---@param p number
+function Rig:SetBowDraw(p)
+    if self.disposed then return end
+    self.bowDraw=type(p)=='number' and p==p and Clamp(p,0,1) or 0
+    self.bowStage=self.bowDraw<.25 and 0 or (self.bowDraw<.75 and 1 or 2)
+end
+
+---@param name string materialize | materialized | blade_draw | blade_sheath | dissolved
+function Rig:EmitEvent(name)
+    if #self.events>=8 then table.remove(self.events,1) end
+    self.events[#self.events+1]=name
+end
+
+--- Borrowed string array, valid until the next PopEvents. Drain once per frame.
+---@return string[]
+function Rig:PopEvents()
+    local output=self.eventOutput
+    for i=#output,1,-1 do output[i]=nil end
+    for i=1,#self.events do output[i]=self.events[i];self.events[i]=nil end
+    return output
 end
 
 --- Array belongs to CombatAnim and is valid until the next animation update.
@@ -250,9 +389,11 @@ function Rig:UpdateTrailColor()
     local rgb=preset.rgb
     local r,g,b=rgb[1]/255,rgb[2]/255,rgb[3]/255
     self.world:SetPaletteEntry(Builder.TRAIL_PALETTE,Color(r,g,b,1),1000)
-    self.world:SetPaletteEntryPBR(Builder.TRAIL_PALETTE,0.5,0,0.5,Color(r,g,b,0.6))
+    self.world:SetPaletteEntryPBR(Builder.TRAIL_PALETTE,0.5,0,0.5,Color(r*1.2,g*1.2,b*1.2,0.9))
     self.world:SetPaletteEntry(WHITE_PALETTE,Color(1,1,1,1),1000)
-    self.world:SetPaletteEntryPBR(WHITE_PALETTE,.5,0,.5,Color(1,1,1,.5))
+    self.world:SetPaletteEntryPBR(WHITE_PALETTE,.5,0,.5,Color(1.3,1.3,1.3,1))
+    for i=1,8 do local strength=.9+(i-1)/70;self.glowColors[i]=Color(r*strength,g*strength,b*strength,.6) end
+    self.glowBucket=0
 end
 
 function Rig:ClearTrail()
@@ -286,11 +427,11 @@ function Rig:SetCombatVisual(active,charge)
     self.visualCharge=type(charge)=='number' and charge==charge and Clamp(charge,0,1) or nil
 end
 
---- Events only: SetPose never triggers a flash, and full charge is latched.
+--- Full charge is event-only/latched; draw/sheath also fire at resolved arrival.
 ---@param kind string full_charge | draw | sheath
 ---@return boolean
 function Rig:Flash(kind)
-    if self.disposed or not self.trailEnabled or self.active~='sword' then return false end
+    if self.disposed or not self.trailEnabled or (kind=='full_charge' and self.active~='sword') then return false end
     for i=1,2 do
         local shot=self.afterimages and self.afterimages[i]
         if shot and shot.clip=='dodge_slide' then return false end
@@ -304,7 +445,7 @@ function Rig:Flash(kind)
     self.flashKind,self.flashLeft=kind,FLASH_TIME
     local flash=kind=='full_charge' and self.flashes.blade or self.flashes.socket
     local parent=kind=='full_charge' and self.entries.sword.pivot
-        or (kind=='draw' and self.sockets.hand_right or self.sockets.back_sword)
+        or (kind=='draw' and self.sockets[self.active=='sword' and 'hand_right' or 'hand_left'] or self.sockets['back_'..self.active])
     flash.node:SetParent(parent);flash.node.rotation=flash.rotation
     local size=Parts.VOXEL_SIZE
     SetVec(flash.offset,kind=='full_charge' and self.bladeFlashX or -1.5*size,
@@ -334,10 +475,14 @@ function Rig:SetActive(weapon)
     if self.disposed or (weapon~="sword" and weapon~="bow") then return false end
     if self.active==weapon then return true end
     Builder.SetOpacity(self.entries[self.active].mesh,0)
+    for _,layer in ipairs(self.layers[self.active]) do layer.node.enabled=false end
+    for _,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=false end
+    self.bowArrow.node.enabled=false;self:SetBowDraw(0)
     self.active,self.config.active=weapon,weapon
     self.visualActive,self.visualCharge,self.tailLeft,self.chargeFlashed=false,nil,0,false
     self.flashLeft=0;self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
     self.transition=nil
+    self.visualState,self.hangReady='hidden',false
     self.attached="hidden"
     self.swingOffset,self.swingEuler=Vector3.ZERO,Vector3.ZERO
     self:ClearTrail()
@@ -354,11 +499,24 @@ end
 function Rig:SetPose(pose)
     if self.disposed or (pose~="hidden" and pose~="back" and pose~="hand") then return false end
     if self.pose==pose then return true end
+    local previous=self.pose
     self.pose=pose
     self:ClearTrail()
-    local alpha=self.entries[self.active].mesh.alpha
-    if self.attached=="hidden" and pose~="hidden" then self:Attach(pose) end
-    self.transition={frame=0,fromAlpha=alpha,from=self.attached,to=pose}
+    for _,layer in ipairs(self.layers[self.active]) do layer.node.enabled=false end
+    self:SetBowDraw(0)
+    if pose=='hidden' then
+        self:BeginMotion('dissolve',.30)
+    elseif self.visualState=='hidden' then
+        self:Attach('back');self.hangReady=false
+        if pose=='hand' then self:BeginMotion('fly_to_hand',.08) -- direct attack cannot wait for a .30s reveal
+        else self:BeginMotion('materialize',.30);self:EmitEvent('materialize') end
+    elseif pose=='hand' then
+        self:BeginMotion('fly_to_hand',self.visualState=='materialize' and .08 or .12)
+    elseif previous=='hand' or self.visualState=='fly_to_hand' then
+        self:BeginMotion('stow',.18)
+    else
+        self:Attach('back');self:BeginMotion('materialize',.30)
+    end
     return true
 end
 
@@ -387,7 +545,7 @@ end
 ---@return Vector3? position nil when not held in hand / disposed
 ---@return Quaternion? rotation
 function Rig:GetAfterimagePose()
-    if self.disposed or self.pose~='hand' or self.attached~='hand' then return nil,nil end
+    if self.disposed or self.pose~='hand' or self.visualState~='hand' or self.attached~='hand' then return nil,nil end
     local socket=self.sockets[self.active=='sword' and 'hand_right' or 'hand_left']
     HandRotation(self,self.sampleRotation)
     return socket:LocalToWorld(self.swingOffset),socket.worldRotation*self.sampleRotation
@@ -415,38 +573,140 @@ function Rig:Apply(config)
     local mesh=Builder.Build(self.world,entry.pivot,blueprint.config,entry.mesh)
     if not mesh then return false end
     entry.mesh=mesh
+    if weapon=='sword' then ScaleSword(mesh.node,Vec(blueprint.bounds.min)) end
     -- Persist independent mutable tables, never cached blueprint references.
     local value={parts={},colors={}}
     for k,v in pairs(blueprint.config.parts) do value.parts[k]=v end
     for k,v in pairs(blueprint.config.colors) do value.colors[k]=v end
     self.config[weapon]=value
     if weapon=='sword' then self:BuildSwordImages() else self:BuildBowImages() end
+    self:BuildVisualPools(weapon)
     if weapon==self.active then self:UpdateTrailColor(); self:ClearTrail() end
     Store.Save(self.config)
     return true
 end
 
-function Rig:AdvanceTransition()
-    local transition=self.transition
-    if not transition then return end
-    transition.frame=transition.frame+1
-    local frame=transition.frame
-    local entry=self.entries[self.active]
-    local alpha=1
-    if transition.to=="hidden" then
-        alpha=transition.fromAlpha*(1-frame/FADE_FRAMES)
-    elseif transition.from~=transition.to then
-        if frame<=4 then
-            alpha=transition.fromAlpha*(1-frame/4)
-        else
-            if self.attached~=transition.to then self:Attach(transition.to) end
-            alpha=(frame-4)/4
-        end
-    else
-        alpha=transition.fromAlpha+(1-transition.fromAlpha)*frame/FADE_FRAMES
+-- State storage and motion workspaces are reused across every transition.
+function Rig:BeginMotion(state,duration)
+    local m=self.motion
+    m.elapsed,m.duration=0,duration
+    m.visibleFrom=self.entries[self.active].mesh.alpha
+    SetVec(m.arc,self.active=='sword' and .18 or -.18,.35,0)
+    self.visualState,self.transition=state,m
+    local pivot=self.entries[self.active].pivot
+    CopyVec(m.from,pivot.worldPosition);CopyRot(m.rotation,pivot.worldRotation)
+    if state=='fly_to_hand' or state=='stow' then
+        pivot:SetParent(self.scene)
+        pivot.worldPosition=m.from;pivot.worldRotation=m.rotation
     end
-    Builder.SetOpacity(entry.mesh,alpha)
-    if frame>=FADE_FRAMES then self:Attach(transition.to); self.transition=nil end
+end
+
+local function MainAlpha(self,mesh,a)
+    mesh.alpha=a;mesh.node.enabled=a>0
+    mesh.volume.material=a>=1 and mesh.opaque or mesh.fade
+    if a>0 and a<1 then mesh.fade:SetShaderParameter('MatDiffColor',self.fxAlpha[math.floor(a*16+.5)+1]) end
+end
+
+-- Critically damped position spring (80ms time constant), capped displacement.
+-- A teleport resets the spring instead of dragging a weapon across the world.
+function Rig:UpdateHang(dt)
+    local socket=self.sockets['back_'..self.active]
+    CopyVec(self.hangTarget,socket.worldPosition)
+    local target=self.hangTarget
+    target.y=target.y+.02*math.sin(self.visualClock*math.pi*1.2)
+    if not self.hangReady or Distance(target,self.hangPosition)>2 then
+        CopyVec(self.hangPosition,target);SetVec(self.hangVelocity,0,0,0)
+        CopyRot(self.hangRotation,socket.worldRotation);self.hangReady=true
+    else
+        local omega=25 -- critically damped lag ~2/omega = .08s
+        local decay=math.exp(-omega*dt)
+        local p,v=self.hangPosition,self.hangVelocity
+        p.x,v.x=SpringAxis(p.x,v.x,target.x,dt,omega,decay)
+        p.y,v.y=SpringAxis(p.y,v.y,target.y,dt,omega,decay)
+        p.z,v.z=SpringAxis(p.z,v.z,target.z,dt,omega,decay)
+        local distance=Distance(p,target)
+        if distance>.12 then
+            local k=.12/distance
+            SetVec(p,target.x+(p.x-target.x)*k,target.y+(p.y-target.y)*k,target.z+(p.z-target.z)*k)
+        end
+        BlendRot(self.hangRotation,self.hangRotation,socket.worldRotation,1-math.exp(-dt/.08))
+    end
+    self.recoil=math.max(0,self.recoil-dt)
+end
+
+function Rig:ShowLayers(visible)
+    local entry=self.entries[self.active]
+    MainAlpha(self,entry.mesh,Clamp(visible/6,0,1))
+    entry.mesh.node.enabled=false
+    for i,layer in ipairs(self.layers[self.active]) do
+        layer.node.enabled=i<=visible
+        if layer.node.enabled then layer.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17]) end
+    end
+end
+
+function Rig:ArrivalFlash(kind)
+    -- A repeated animation draw/sheath event in the same 80ms window is ignored.
+    self.arrivalFresh=self:Flash(kind)
+end
+
+function Rig:AdvanceTransition(dt)
+    local entry=self.entries[self.active]
+    local state=self.visualState
+    if state=='hang' or state=='materialize' or state=='dissolve' and entry.pivot.parent==self.sockets['back_'..self.active] then
+        entry.pivot.worldPosition=self.hangPosition;entry.pivot.worldRotation=self.hangRotation
+        if self.recoil>0 then
+            local p=self.motion.output;CopyVec(p,self.hangPosition)
+            Rotate(self.motion.curve,self.body.worldRotation,Vector3.FORWARD)
+            local d=self.motion.curve;local amount=.02*math.sin((1-self.recoil/.12)*math.pi)
+            SetVec(p,p.x-d.x*amount,p.y-d.y*amount,p.z-d.z*amount)
+            entry.pivot.worldPosition=p
+        end
+    end
+    local m=self.transition
+    if not m then return end
+    m.elapsed=math.min(m.duration,m.elapsed+dt)
+    if m.duration-m.elapsed<1e-8 then m.elapsed=m.duration end
+    local t=Clamp(m.elapsed/m.duration,0,1)
+    if state=='materialize' or state=='dissolve' then
+        local fraction=state=='materialize' and (m.visibleFrom+(1-m.visibleFrom)*t) or m.visibleFrom*(1-t)
+        self:ShowLayers(math.min(6,math.floor(fraction*6+1e-7)))
+        if t>=1 then
+            for _,layer in ipairs(self.layers[self.active]) do layer.node.enabled=false end
+            self.transition=nil
+            if state=='dissolve' then
+                self:Attach('hidden');self.visualState='hidden';self:EmitEvent('dissolved')
+            else
+                MainAlpha(self,entry.mesh,1);self:Attach('back');self.visualState='hang'
+                self:EmitEvent('materialized');self:ArrivalFlash('sheath')
+                if self.pose=='hand' then self:BeginMotion('fly_to_hand',.12) end
+            end
+        end
+    elseif state=='fly_to_hand' or state=='stow' then
+        local goal=self.moveTarget
+        if state=='fly_to_hand' then
+            local socket=self.sockets[self.active=='sword' and 'hand_right' or 'hand_left']
+            CopyVec(goal,socket:LocalToWorld(self.swingOffset))
+            HandRotation(self,self.poseRotation)
+            CopyRot(self.moveRotation,socket.worldRotation*self.poseRotation)
+        else CopyVec(goal,self.hangPosition);CopyRot(self.moveRotation,self.hangRotation) end
+        local u=1-(1-t)*(1-t)
+        Rotate(m.curve,self.body.worldRotation,m.arc)
+        local arc=4*u*(1-u)
+        SetVec(m.output,m.from.x+(goal.x-m.from.x)*u+m.curve.x*arc,
+            m.from.y+(goal.y-m.from.y)*u+m.curve.y*arc,m.from.z+(goal.z-m.from.z)*u+m.curve.z*arc)
+        BlendRot(m.outRotation,m.rotation,self.moveRotation,u)
+        entry.pivot.worldPosition=m.output;entry.pivot.worldRotation=m.outRotation
+        MainAlpha(self,entry.mesh,1)
+        if t>=1 then
+            self.transition=nil;self:ClearTrail()
+            if state=='fly_to_hand' then
+                self:Attach('hand');self.visualState='hand';self:EmitEvent('blade_draw');self:ArrivalFlash('draw')
+            else
+                self:Attach('back');self.visualState='hang';self.recoil=.12
+                self:EmitEvent('blade_sheath');self:ArrivalFlash('sheath')
+            end
+        end
+    end
 end
 
 -- Alpha Variants, samples and vector workspaces are pooled outside the FX update.
@@ -491,9 +751,10 @@ function Rig:SampleBlade(entry)
 end
 
 function Rig:DrawBands()
-    local fade=self.visualActive and 1 or math.ceil(Clamp(self.tailLeft/TRAIL_TAIL,0,1)*4)/4
+    local flying=self.visualState=='fly_to_hand'
+    local fade=(self.visualActive or flying) and 1 or math.ceil(Clamp(self.tailLeft/TRAIL_TAIL,0,1)*4)/4
     for i,band in ipairs(self.trails) do
-        band.node.enabled=i<=math.ceil(self.sampleCount*fade) and self.sampleCount>=2 and fade>0
+        band.node.enabled=i<=math.ceil(self.sampleCount*fade) and self.sampleCount>=2 and fade>0 and (not flying or i<=4)
         if band.node.enabled then
             local sample=self.samples[i]
             local x,y,z=band.xAxis,band.yAxis,band.zAxis
@@ -512,7 +773,7 @@ function Rig:DrawBands()
             SetVec(x,x.x/length,x.y/length,x.z/length)
             SetVec(z,x.y*y.z-x.z*y.y,x.z*y.x-x.x*y.z,x.x*y.y-x.y*y.x)
             band.rotation:FromAxes(x,y,z)
-            local halfWidth,halfDepth=Parts.VOXEL_SIZE*1.5,Parts.VOXEL_SIZE*.5
+            local halfWidth,halfDepth=Parts.VOXEL_SIZE*2.5,Parts.VOXEL_SIZE*.5
             SetVec(band.position,sample.root.x-x.x*halfWidth-z.x*halfDepth,
                 sample.root.y-x.y*halfWidth-z.y*halfDepth,sample.root.z-x.z*halfWidth-z.z*halfDepth)
             band.node.worldPosition=band.position;band.node.worldRotation=band.rotation
@@ -577,27 +838,64 @@ function Rig:UpdateFlash(dt)
     Alpha(self,flash,math.ceil(self.flashLeft/FLASH_TIME*4)/4*.75)
 end
 
+function Rig:UpdateBowVisual()
+    local drawn=self.active=='bow' and self.visualState=='hand' and self.bowDraw>.05
+    for i,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=drawn and i==self.bowStage+1 end
+    self.bowArrow.node.enabled=drawn
+    if self.active=='bow' and self.visualState=='hand' then self.entries.bow.mesh.node.enabled=not drawn end
+    if drawn then
+        local minimum=self.bowArrow.minimum
+        SetVec(self.bowArrowOffset,minimum.x+.06,minimum.y,minimum.z+self.bowDrawMeshes[self.bowStage+1].stringZ)
+        self.bowArrow.node.position=self.bowArrowOffset
+        self.bowArrow.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
+        self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
+    end
+end
+
+function Rig:UpdateMaterializeParticles()
+    local state=self.visualState
+    local visible=state=='materialize' or state=='dissolve'
+    local t=visible and self.motion.elapsed/self.motion.duration or 0
+    local center=self.entries[self.active].pivot.worldPosition
+    for _,particle in ipairs(self.particles) do
+        particle.node.enabled=visible
+        if visible then
+            local radius=.02+.3*(state=='materialize' and 1-t or t)
+            local d=particle.direction
+            SetVec(particle.position,center.x+d.x*radius,center.y+d.z*radius,center.z+d.y*radius)
+            particle.node.worldPosition=particle.position
+        end
+    end
+end
+
+function Rig:UpdateGlow()
+    if self.visualState~='hang' then return end
+    local bucket=math.floor((math.sin(self.visualClock*math.pi*1.2)+1)*3.5)+1
+    if bucket~=self.glowBucket then
+        self.glowBucket=bucket
+        self.world:SetPaletteEntryPBR(Builder.PaletteBase[self.active]+Builder.ChannelOffset.accent,.5,0,.5,self.glowColors[bucket])
+    end
+end
+
 ---@param dt number
 function Rig:Update(dt)
     if self.disposed then return end
     dt=math.max(0,dt)
-    self:AdvanceTransition()
+    self.visualClock=self.visualClock+dt
+    self:UpdateHang(dt)
+    -- W2 submits the real hit_on state before Update and performs AfterPose
+    -- sweeps afterwards. Never leave its first hit using a mid-flight pivot.
+    if self.visualActive and self.visualFresh and self.pose=='hand' and self.visualState=='fly_to_hand' then
+        self.motion.elapsed=self.motion.duration
+    end
+    self:AdvanceTransition(dt)
     local entry=self.entries[self.active]
-    local body=self.body.rotation.eulerAngles
-    local gain=1-math.exp(-Clamp(dt,0,0.1)*10)
-    local targetPitch=Clamp(-Delta(body.x,self.previousBody.x)*0.7,-2,2)
-    local targetRoll=Clamp(-Delta(body.z,self.previousBody.z)*0.7,-2,2)
-    SetVec(self.lag,self.lag.x+(targetPitch-self.lag.x)*gain,0,self.lag.z+(targetRoll-self.lag.z)*gain)
-    self.previousBody=body
-    if self.attached=="hand" then
+    if self.visualState=='hand' then
         entry.pivot.position=self.swingOffset
         HandRotation(self,self.poseRotation)
         entry.pivot.rotation=self.poseRotation
-    elseif self.attached=="back" then
-        entry.pivot.position=Vector3.ZERO
-        self.poseRotation:FromEulerAngles(self.lag.x,0,self.lag.z)
-        entry.pivot.rotation=self.poseRotation
     end
+    self:UpdateBowVisual()
     if not self.visualFresh then self:SetCombatVisual(false,nil) end
     self.visualFresh=false
     self.tailLeft=self.visualActive and TRAIL_TAIL or math.max(0,self.tailLeft-dt)
@@ -612,10 +910,18 @@ function Rig:Update(dt)
         self:ClearTrail();self.tailLeft=0;self.visualActive=false;self.visualCharge=nil;self.chargeFlashed=false
         self.flashLeft=0;self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
     end
-    self:UpdateFlash(dt)
-    if not self.trailEnabled or self.pose~="hand" or self.attached~="hand" or entry.mesh.alpha<1 then
-        self:ClearTrail();self.tailLeft=0;return
+    self:UpdateFlash(self.arrivalFresh and 0 or dt);self.arrivalFresh=false
+    if not self.trailEnabled then self:ClearTrail();self.tailLeft=0;return end
+    if slide and self.visualState~='hand' then return end -- interrupted flights cannot emit slide knife/particles
+    if self.visualState~='hand' then
+        if self.visualState=='fly_to_hand' and self.active=='sword' then
+            self:SampleBlade(entry);self:DrawBands()
+        else self:ClearTrail() end
+        self:UpdateMaterializeParticles()
+        self:UpdateGlow()
+        self.tailLeft=0;return
     end
+    if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
     if slide then self:UpdateImages(entry,dt,true);return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
     if self.visualActive or self.tailLeft>0 then
@@ -628,12 +934,15 @@ end
 function Rig:Dispose()
     if self.disposed then return end
     self.disposed=true
-    for _,entry in pairs(self.entries) do Builder.Dispose(entry.mesh); entry.pivot:Remove() end
+    for _,layers in pairs(self.layers) do for _,layer in ipairs(layers) do DisposeEffect(self,layer) end end
+    for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
+    DisposeEffect(self,self.bowArrow)
     for _,trail in ipairs(self.trails) do self.world:RemoveVolume(trail.volume); trail.material:Dispose() end
     for _,image in ipairs(self.images) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,image in ipairs(self.bowImages) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,particle in ipairs(self.particles) do self.world:RemoveVolume(particle.volume);particle.material:Dispose() end
     for _,flash in pairs(self.flashes) do self.world:RemoveVolume(flash.volume);flash.material:Dispose() end
+    for _,entry in pairs(self.entries) do Builder.Dispose(entry.mesh); entry.pivot:Remove() end
     self.sockets.back_sword:Remove()
     self.sockets.back_bow:Remove()
     self.sockets.hand_left:Remove()

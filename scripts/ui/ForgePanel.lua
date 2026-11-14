@@ -24,6 +24,14 @@ local drafts=setmetatable({}, {__mode='k'})
 -- One detailed outcome per opening, and suppress repeated identical outcomes
 -- for 10 seconds across reopenings. No clock capability may block the preview.
 local diagnosticTimes={}
+local function RenderSummary(p)
+    if not p then return 'render=none' end
+    return 'state='..tostring(p.state)..' queued='..tostring(p.queued)..' mode='..tostring(p.updateMode)
+        ..' end_views='..tostring(p.endViews or 0)..' matched='..tostring(p.matchedViews or 0)
+        ..' scene_matches='..tostring(p.sceneMatches or 0)..' surface_matches='..tostring(p.surfaceMatches or 0)
+        ..' camera_matches='..tostring(p.cameraMatches or 0)..' texture_matches='..tostring(p.textureMatches or 0)
+        ..' ptr_errors='..tostring(p.pointerErrors or 0)..' last='..tostring(p.lastReceipt or 'none')
+end
 local function PreviewDiagnostic(s,outcome,detail)
     s.previewDiagnostics=s.previewDiagnostics or {}
     if s.previewDiagnostics[outcome] then return end
@@ -40,7 +48,59 @@ local function PreviewDiagnostic(s,outcome,detail)
     local components=p and (' octree='..tostring(p.octree~=nil)..' zone='..tostring(p.zone~=nil)
         ..' camera='..tostring(p.camera~=nil)..' light='..tostring(p.light~=nil)) or ''
     local extra=detail and (' error='..tostring(detail):gsub('[\r\n]+',' '):sub(1,260)) or ''
-    print('Forge preview mesh: '..outcome..' '..info..components..extra)
+    print('Forge preview mesh: '..outcome..' '..info..components..extra..' '..RenderSummary(p))
+end
+
+-- VariantMap's generated event hint advertises GetPtr(field), but the generic
+-- binding does not guarantee that shortcut. Use the documented field Variant
+-- API, explicitly casting the known field type; support PTR and VOIDPTR events.
+local function EventPointer(data,field,typeName)
+    local ok,value,access=pcall(function()
+        local variant=data[field]
+        local pointer=variant:GetPtr(typeName)
+        if pointer~=nil then return pointer,'ptr' end
+        return variant:GetVoidPtr(typeName),'void'
+    end)
+    if ok then return value,value~=nil and access or 'nil' end
+    -- Some runtime versions expose only the VOIDPTR accessor for these fields.
+    local voidOK,raw=pcall(function() return data[field]:GetVoidPtr(typeName) end)
+    if voidOK then return raw,raw~=nil and 'void' or 'nil' end
+    return nil,tostring(value):gsub('[\r\n]+',' '):sub(1,160)
+end
+
+local function EndPreviewView(s,data)
+    local p=s.preview
+    if not p or not p.queued or p.job or p.state~='awaiting_render' then return end
+    p.endViews=p.endViews+1
+    local scene,sceneStatus=EventPointer(data,'Scene','Scene')
+    local surface,surfaceStatus=EventPointer(data,'Surface','RenderSurface')
+    local camera,cameraStatus=EventPointer(data,'Camera','Camera')
+    local texture,textureStatus=EventPointer(data,'Texture','Texture')
+    local view,viewStatus=EventPointer(data,'View','View')
+    local sceneMatch,surfaceMatch,cameraMatch,textureMatch=scene==p.scene,surface==p.surface,camera==p.camera,texture==p.texture
+    if sceneMatch then p.sceneMatches=p.sceneMatches+1 end
+    if surfaceMatch then p.surfaceMatches=p.surfaceMatches+1 end
+    if cameraMatch then p.cameraMatches=p.cameraMatches+1 end
+    if textureMatch then p.textureMatches=p.textureMatches+1 end
+    if (sceneStatus~='ptr' and sceneStatus~='void' and sceneStatus~='nil')
+        or (surfaceStatus~='ptr' and surfaceStatus~='void' and surfaceStatus~='nil') then
+        p.pointerErrors=p.pointerErrors+1
+    end
+    -- View is the renderer's internal View, NOT our Viewport. Never compare
+    -- those different objects. Require this exact scene and this RTT surface.
+    local ours=sceneMatch and surfaceMatch
+    p.lastReceipt='view='..tostring(view)..'/'..viewStatus
+        ..',scene='..tostring(scene)..'/'..sceneStatus..' expected='..tostring(p.scene)
+        ..',surface='..tostring(surface)..'/'..surfaceStatus..' expected='..tostring(p.surface)
+        ..',camera='..tostring(camera)..'/'..cameraStatus..' match='..tostring(cameraMatch)
+        ..',texture='..tostring(texture)..'/'..textureStatus..' match='..tostring(textureMatch)
+        ..',viewport='..tostring(p.viewport)..',ours='..tostring(ours)
+    if p.endViews==1 then print('Forge preview render: first '..RenderSummary(p)) end
+    if ours then
+        p.matchedViews=p.matchedViews+1;p.rendered=true
+        if not p.receiptLogged then print('Forge preview render: matched '..RenderSummary(p));p.receiptLogged=true end
+        p.surface:SetUpdateMode(SURFACE_MANUALUPDATE);p.updateMode='manual'
+    end
 end
 local SLOT_ORDER={sword={'blade','guard','grip','pommel'},bow={'limbs','grip','tip'}}
 local CHANNEL_NAMES={primary='主色',secondary='副色',accent='点缀'}
@@ -102,6 +162,8 @@ local function UpdatePreview(s)
     Builder.CancelPreview(p.job)
     p.job=Builder.BeginPreview(p.pivot,Single(s.config,s.weapon),p.mesh)
     p.state,p.age,p.rendered,p.queued='building',0,false,false
+    p.awaitAge,p.endViews,p.matchedViews,p.sceneMatches,p.surfaceMatches,p.cameraMatches,p.textureMatches,p.pointerErrors=0,0,0,0,0,0,0,0
+    p.lastReceipt=nil;p.waitLogged=false;p.receiptLogged=false
     p.dirty=true
 end
 local function CreatePreview(s)
@@ -109,6 +171,7 @@ local function CreatePreview(s)
     local p={failureReason='scene'}
     s.preview=p
     p.scene=Scene()
+    p.scene:SetUpdateEnabled(true) -- no physics world/scripts; renderer updates its Octree
     p.octree=assert(p.scene:CreateComponent('Octree'),'Octree nil')
     local zone=assert(p.scene:CreateComponent('Zone'),'Zone nil');p.zone=zone
     zone:SetBoundingBox(BoundingBox(Vector3(-10,-10,-10),Vector3(10,10,10)))
@@ -146,6 +209,7 @@ local function CreatePreview(s)
     p.surface=p.texture:GetRenderSurface()
     p.surface:SetViewport(0,p.viewport)
     p.surface:SetUpdateMode(SURFACE_MANUALUPDATE)
+    p.updateMode='manual'
     UpdatePreview(s)
 end
 local function Rebuild(s)
@@ -580,6 +644,9 @@ local function Update(_,_,data)
                     PreviewDiagnostic(s,'submitted')
                     p.job=nil
                     p.mesh=mesh;p.dirty=true;p.state='awaiting_render'
+                    -- Retry the initial view every render frame until its real
+                    -- receipt. Resume on-demand mode immediately after receipt.
+                    p.surface:SetUpdateMode(SURFACE_UPDATEALWAYS);p.updateMode='always_until_receipt'
                     if s.buildMetrics.overBudget then print('[ForgePanel] preview build step exceeded 2ms: '..s.buildMetrics.maxStepMs..'ms / '..tostring(s.buildMetrics.slowestPhase)) end
                 end
             end
@@ -591,6 +658,12 @@ local function Update(_,_,data)
             end
         end)
         if not ok then Fallback(s,'render',reason) end
+        if s.preview and p.state=='awaiting_render' then
+            p.awaitAge=p.awaitAge+math.max(0,data:GetFloat('TimeStep'))
+            if p.awaitAge>=1 and not p.waitLogged then
+                p.waitLogged=true;print('Forge preview render: waiting '..RenderSummary(p))
+            end
+        end
     end
 end
 --- Open only outside combat; no root replacement and no world pause.
@@ -630,12 +703,7 @@ function M.Open(rigOrCallbacks)
     s.receiver=s.eventNode:CreateScriptObject('LuaScriptObject')
     s.receiver:SubscribeToEvent('Update',Update)
     s.receiver:SubscribeToEvent('EndViewRender',function(_,_,data)
-        local p=s.preview
-        if not p or not p.queued or p.job then return end
-        -- Failed/missing pointer bindings leave the timeout armed. Never claim
-        -- that another view (such as the main scene) rendered this preview.
-        local ok,ours=pcall(function() return data:GetPtr('Scene')==p.scene and data:GetPtr('Surface')==p.surface end)
-        if ok and ours then p.rendered=true end
+        EndPreviewView(s,data)
     end)
     s.receiver:SubscribeToEvent('KeyDown',function(_,_,data)
         if not s.closing and data:GetInt('Key')==KEY_ESCAPE then M.Close() end

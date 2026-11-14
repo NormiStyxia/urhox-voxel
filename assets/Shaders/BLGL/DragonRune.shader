@@ -60,7 +60,7 @@ float star_dist(vec2 p, int n, int k, float R, float a0) {
 // 像素符文带：每格一个 5x5 的随机点阵符文（逐像素查表，天然像素化）
 float rune_band(vec2 p, float r0, float r1, float count, float rot, float px) {
     float r = length(p);
-    if (r < r0 || r > r1) return 0.0;
+    float bandMask = step(r0, r) * step(r, r1);
     float a = atan(p.y, p.x) + rot;
     float cell = K_TAU / count;
     float ci = floor(a / cell);
@@ -68,13 +68,15 @@ float rune_band(vec2 p, float r0, float r1, float count, float rot, float px) {
     // 格子内坐标 0..1，两边各留 15% 空隙
     float u = (fa - 0.15) / 0.7;
     float v = (r - r0) / (r1 - r0);
-    if (u < 0.0 || u > 1.0) return 0.0;
+    bandMask *= step(0.0, u) * step(u, 1.0);
     vec2 g = floor(vec2(u, v) * 5.0);
     // 5x5 点阵：中竖总是亮，其余按哈希
     float on = step(0.52, h21(g + ci * 7.13 + seed));
-    if (g.x == 2.0) on = max(on, step(0.25, h21(vec2(ci, g.y) + 3.1)));
-    if (g.y == 0.0 || g.y == 4.0) on *= step(0.5, h21(vec2(ci * 1.7, g.x)));
-    return on;
+    float middle = 1.0 - step(0.5, abs(g.x - 2.0));
+    float cap = 1.0 - step(0.5, min(abs(g.y), abs(g.y - 4.0)));
+    on = mix(on, max(on, step(0.25, h21(vec2(ci, g.y) + 3.1))), middle);
+    on *= mix(1.0, step(0.5, h21(vec2(ci * 1.7, g.x))), cap);
+    return on * bandMask;
 }
 
 // 返回：x = 主线条（主色）、y = 亮线（亮色）、z = 高光核
@@ -156,7 +158,8 @@ void fragment() {
     vec2 p = ((cellUV + 0.5) / g - 0.5) * 2.0;
     float px = 2.0 / g;
     float r = length(p);
-    if (r > 1.0) discard;
+    // Evaluate shapes before any kill, so FXC need not predicate five helper
+    // expansions on an unrelated per-pixel circle/visibility condition.
 
     vec3 m = shape(p, px);
     float mainM = clamp(m.x, 0.0, 1.0);
@@ -181,21 +184,16 @@ void fragment() {
         + shape(p + vec2(0.0, px), px) + shape(p - vec2(0.0, px), px);
     float outline = step(0.5, m2.x + m2.y + m2.z) * (1.0 - step(0.5, any));
 
-    vec3 col = dark_color.rgb;
-    float a = 0.0;
-    if (any > 0.5) {
-        col = main_color.rgb * intensity;
-        if (lightM > 0.5) col = light_color.rgb * intensity;
-        if (hotM > 0.5 || flare > 0.5 || headCell > 0.5) col = hot_color.rgb * intensity * 1.4;
-        col *= 1.0 + 0.35 * pulse;
-        a = 1.0;
-    } else if (outline > 0.5) {
-        a = 0.85;
-    } else {
-        discard;
-    }
-    a *= vis * alpha_scale;
-    if (a < 0.01) discard;
+    float filled = 1.0 - step(any, 0.5);
+    float lit = 1.0 - step(lightM, 0.5);
+    float hot = 1.0 - step(max(max(hotM, flare), headCell), 0.5);
+    vec3 ink = mix(main_color.rgb, light_color.rgb, lit) * intensity;
+    ink = mix(ink, hot_color.rgb * intensity * 1.4, hot);
+    ink *= 1.0 + 0.35 * pulse;
+    vec3 col = mix(dark_color.rgb, ink, filled);
+    float a = mix(0.85 * outline, 1.0, filled) * vis * alpha_scale;
     ALBEDO = col;
     ALPHA = a;
+    float keep = step(r, 1.0) * step(0.01, a);
+    if (keep < 0.5) discard;
 }

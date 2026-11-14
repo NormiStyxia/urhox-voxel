@@ -79,8 +79,16 @@ local NodeMeta={__index=function(n,key)
     if key=="worldRotation" then return worldRotation(n) end
     return N[key]
 end,__newindex=function(n,key,value)
-    if key=="worldPosition" then rawset(n,"fixedPosition",value)
-    elseif key=="worldRotation" then rawset(n,"fixedRotation",value)
+    if key=="worldPosition" then
+        if n.parent then
+            local rot=worldRotation(n.parent)
+            rawset(n,'position',q(rot.w,-rot.x,-rot.y,-rot.z)*(value-worldPosition(n.parent)))
+        else rawset(n,'position',v(value.x,value.y,value.z)) end
+    elseif key=="worldRotation" then
+        if n.parent then
+            local rot=worldRotation(n.parent)
+            rawset(n,'rotation',q(rot.w,-rot.x,-rot.y,-rot.z)*value)
+        else rawset(n,'rotation',q(value.w,value.x,value.y,value.z)) end
     else rawset(n,key,value) end
 end}
 function M.Node(name,parent)
@@ -92,7 +100,7 @@ function N:CreateChild(name)
     return child
 end
 function N:SetParent(parent) self.parent=parent end
-function N:LocalToWorld(point) return worldPosition(self)+worldRotation(self)*point end
+function N:LocalToWorld(point) return worldPosition(self)+worldRotation(self)*v(point.x*self.scale.x,point.y*self.scale.y,point.z*self.scale.z) end
 function N:Remove() assert(not self.removed,"double node removal"); self.removed=true end
 
 -- Record the public immediate-mode API; no GPU/render/job-system simulation.

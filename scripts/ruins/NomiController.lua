@@ -312,6 +312,26 @@ function N:SetCombatCamera(target,boss,bow,zoom)
     self.combatFocus=target
     self.combatCameraMode=(boss and 'combatBoss' or 'combat')..(bow and ('Bow'..(zoom and 'Zoom' or '')) or '')
 end
+-- Isolated F7 orbit through the same camera library and voxel obstruction guard.
+-- Gameplay yaw/pitch and follow state are preserved for the next normal frame.
+function N:UpdateCombatPreview(dt,view,orbit)
+    self.cam:SetModeConfig('combatPreview',{distance=2.6,offset=Vector3(0,1.2,0),fov=45})
+    self.cam:SetTransitionSpeed(1000); self.cam:SetMode('combatPreview')
+    local saved=self.camTarget.position
+    self.camTarget.position=self.node.worldPosition
+    local angle=({180,90,0,135})[view or 4] or 135
+    self.cam:Update(dt,self.camTarget,self.yaw+angle+(orbit or 0),6)
+    self.camTarget.position=saved
+    self.combatCameraOrigin=self.node.worldPosition+Vector3(0,1.2,0)
+    self:ApplyCombatOffset(Vector3.ZERO)
+end
+function N:ClipAttackMotion(motion)
+    if not self.cc.onGround then return Vector3.ZERO end
+    -- Rebuilt bridges are real collision ground even inside Terrain's void mask.
+    -- Use the same <=.10m footprint/slope/wall sweep as the accepted slide.
+    local clipped=self:ClipSlideMotion(motion)
+    return clipped
+end
 function N:ApplyCombatOffset(offset)
     local cn=self:CameraNode()
     local origin=self.combatCameraOrigin

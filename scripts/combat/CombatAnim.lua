@@ -42,6 +42,21 @@ local BONE_NAMES = {"body","arm_right","arm_left","head","leg_right","leg_left"}
 ---@field mixLayer number|nil Temporary layer used for a dodge-to-attack crossfade.
 ---@field sample number
 ---@field motion number
+---@field ik table<string, CombatIKResult>
+---@class CombatArm
+---@field shoulder Vector3
+---@field grip Vector3
+---@field length number
+---@class CombatIKResult
+---@field target Vector3 Requested body-local grip point, BEFORE reach projection.
+---@field clamped Vector3 Closest reachable point on the rigid arm sphere.
+---@field actual Vector3 Grip after solving (before layer blend).
+---@field applied Vector3 Grip after all layer blends, populated by Apply.
+---@field rotation Quaternion
+---@field requestedDistance number
+---@field reachError number
+---@field degenerate boolean
+---@field enabled boolean
 ---@class CombatAnimEvent
 ---@field name string
 ---@field clip string
@@ -95,6 +110,14 @@ local BONE_NAMES = {"body","arm_right","arm_left","head","leg_right","leg_left"}
 ---@field observedRotation Quaternion
 ---@field observedOffset Vector3
 ---@field observedEuler Vector3
+---@field arms table<string, CombatArm>
+---@field bodyHeight number
+---@field pathIK boolean
+---@field bladeDirection Vector3
+---@field bladeWeight number
+---@field bladeSide string
+---@field bladeMode string
+---@field aimPitch number
 local A = {}
 A.__index = A
 A.Layer = Data.Layer
@@ -135,9 +158,117 @@ local function scalarSample(track,t)
     local a,b,u=segment(track,t)
     return a[2]+(b[2]-a[2])*u
 end
+local function vec(t) return Vector3(t[1],t[2],t[3]) end
+local function length(v) return math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z) end
+local function unit(v,fallback)
+    local n=length(v)
+    if n<1e-7 then return fallback end
+    return Vector3(v.x/n,v.y/n,v.z/n)
+end
+-- Deterministic shortest rotation. Antiparallel rays choose a stable orthogonal
+-- axis instead of dividing by zero. solveArm then aligns a secondary axis to
+-- the path plane pole, avoiding swing-only twist flips across the back.
+local function align(from,to)
+    local a,b=unit(from,Vector3(0,-1,0)),unit(to,Vector3(0,-1,0))
+    local dot=clamp(a.x*b.x+a.y*b.y+a.z*b.z,-1,1)
+    if dot<-.999999 then
+        local axis=math.abs(a.x)<.8 and Vector3(0,a.z,-a.y) or Vector3(-a.z,0,a.x)
+        axis=unit(axis,Vector3(1,0,0))
+        return Quaternion(0,axis.x,axis.y,axis.z)
+    end
+    local x,y,z=a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x
+    local w=1+dot
+    local n=math.sqrt(w*w+x*x+y*y+z*z)
+    return Quaternion(w/n,x/n,y/n,z/n)
+end
+local function inverse(q) return Quaternion(q.w,-q.x,-q.y,-q.z) end
+local function cross(a,b) return Vector3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x) end
+local function dot(a,b) return a.x*b.x+a.y*b.y+a.z*b.z end
+local function project(v,axis)
+    local n=dot(v,axis)
+    return Vector3(v.x-axis.x*n,v.y-axis.y*n,v.z-axis.z*n)
+end
+local function makeArm(shoulder,grip)
+    return {shoulder=shoulder,grip=grip,length=length(grip)}
+end
+local function ikBuffer()
+    return {target=Vector3(0,0,0),clamped=Vector3(0,0,0),actual=Vector3(0,0,0),applied=Vector3(0,0,0),
+        rotation=Quaternion(0,0,0),requestedDistance=0,reachError=0,degenerate=false,enabled=false}
+end
+---@param arm CombatArm
+---@param result CombatIKResult
+local function solveArm(arm,target,authored,result,pole)
+    local d=Vector3(target.x-arm.shoulder.x,target.y-arm.shoulder.y,target.z-arm.shoulder.z)
+    local distance=length(d)
+    local reference=authored*arm.grip
+    local degenerate=distance<1e-7 or arm.length<1e-7
+    local dir=unit(d,unit(reference,Vector3(0,-1,0)))
+    local rotated=authored
+    if not degenerate then
+        -- A fixed plane pole removes the swing-only antipodal twist singularity.
+        -- Horizontal cuts use +Y, vertical cuts / bow use +X. Project the pole
+        -- onto the plane perpendicular to the aim ray; no elbow translation.
+        local swing=align(arm.grip,dir)
+        local fromPole=unit(project(swing*Vector3(0,0,1),dir),unit(cross(dir,Vector3(1,0,0)),Vector3(0,1,0)))
+        local toPole=unit(project(pole or Vector3(0,1,0),dir),fromPole)
+        local angle=math.atan(dot(dir,cross(fromPole,toPole)),clamp(dot(fromPole,toPole),-1,1))*.5
+        local sn=math.sin(angle)
+        rotated=Quaternion(math.cos(angle),dir.x*sn,dir.y*sn,dir.z*sn)*swing
+    end
+    result.target=target
+    result.clamped=Vector3(arm.shoulder.x+dir.x*arm.length,arm.shoulder.y+dir.y*arm.length,arm.shoulder.z+dir.z*arm.length)
+    result.actual=arm.shoulder+rotated*arm.grip
+    result.rotation=rotated
+    result.requestedDistance,result.reachError,result.degenerate=distance,math.abs(distance-arm.length),degenerate
+    result.enabled=true
+    return rotated
+end
+local function pathPoint(path,p)
+    local list=path.segments
+    local seg=list[#list]
+    for _,candidate in ipairs(list) do if p<=candidate.t1 then seg=candidate;break end end
+    local u=ease(seg.ease,clamp((p-seg.t0)/(seg.t1-seg.t0),0,1))
+    if seg.kind=="arc" then
+        local q=(seg.u0 or 0)+((seg.u1 or 1)-(seg.u0 or 0))*u
+        local angle=seg.angle+seg.sweep*q
+        local x,y=seg.cx+seg.radius*math.cos(angle),seg.cy+seg.radius*math.sin(angle)
+        if seg.plane=="yz" then return Vector3(seg.a[1]+(seg.b[1]-seg.a[1])*q,x,y) end
+        return Vector3(x,seg.a[2]+(seg.b[2]-seg.a[2])*q,y)
+    end
+    local a,b,c=seg.a,seg.b,seg.control
+    local v=1-u
+    return Vector3(v*v*a[1]+2*v*u*c[1]+u*u*b[1],v*v*a[2]+2*v*u*c[2]+u*u*b[2],v*v*a[3]+2*v*u*c[3]+u*u*b[3])
+end
+---@param arm CombatArm
+local function handTarget(c,name,p,params,arm,bodyHeight)
+    local path=c.handPath[name]
+    if path.mode=="bow_aim" or path.mode=="bow_string" then
+        local aim=math.rad(clamp(params.aimPitch or 0,-35,35))
+        local cp,sp=math.cos(aim),math.sin(aim)
+        local charge=clamp(params.p or (c.param and p or 0),0,1)
+        local x,y,z
+        if path.mode=="bow_aim" then
+            x,y,z=arm.shoulder.x,arm.shoulder.y,arm.length
+        else
+            -- At full draw, approach the right mouth corner in BODY coordinates.
+            x=.10+(arm.shoulder.x-.10)*.25
+            y=arm.shoulder.y+.02+charge*.13
+            z=.32-charge*.24
+        end
+        local dy=y-arm.shoulder.y
+        return Vector3(x,arm.shoulder.y+dy*cp-z*sp,dy*sp+z*cp)
+    end
+    local target=pathPoint(path,p)
+    return Vector3(target.x,target.y-bodyHeight,target.z)
+end
+local function pathPole(path)
+    if path.mode or (path.segments and path.segments[2] and path.segments[2].plane=="yz") then return Vector3(1,0,0) end
+    return Vector3(0,1,0)
+end
 ---@param c CombatClip
 local function boneSample(c,name,p,params)
-    local track=(params.bow==1 and c.bowKeys and c.bowKeys[name]) or c.keys[name]
+    local tracks=(params.legacyPose==1 and c.legacyKeys) or c.keys
+    local track=(params.bow==1 and c.bowKeys and c.bowKeys[name]) or tracks[name]
     local x,y,z=vectorSample(track,p)
     if c.directional then
         local dx,dz=params.moveX or 0,params.moveZ
@@ -149,10 +280,10 @@ local function boneSample(c,name,p,params)
         if name=="body" then
             x=6*(1-lean)+x*dz*lean
             -- Upper torso extends +Y: negative roll tips it toward +X.
-            z=-8*dx*(bodyPitch/18)*lean
+            z=-12*dx*(bodyPitch/30)*lean
         elseif name=="head" then
             x=3*(1-lean)+x*dz*lean
-            z=8*.65*dx*(bodyPitch/18)*lean
+            z=12*.65*dx*(bodyPitch/30)*lean
         elseif name=="leg_right" or name=="leg_left" then
             -- Rigid legs hang -Y. Opposite hip pitch/roll + root dip suggests knees.
             z=-x*dx
@@ -206,7 +337,7 @@ end
 
 ---@param character BlockCharacter
 ---@param node Node|nil
----@param opts table|nil {quantize=true, quantizeHz=20, stats={}, timeScale=1, handSocket=Node}
+---@param opts table|nil {quantizeHz=20, stats={}, timeScale=1, handSocket=Node, leftHandSocket=Node, pathIK=true, bodyHeight=number}
 ---@return CombatAnim
 function A.New(character,node,opts)
     local self=setmetatable({},A)
@@ -234,6 +365,19 @@ function A:init(character,node,opts)
     local arm=character.bones.arm_right
     self.handSocket=opts.handSocket or (arm and arm:GetChild("SpellPalm",false))
     self.gripRotation=opts.gripRotation or Quaternion(90,0,0)
+    local reference=Data.RigReference
+    local left=character.bones.arm_left
+    local leftSocket=opts.leftHandSocket or (left and left:GetChild("hand_left",false))
+    local body=character.bones.body
+    local rootBase=character.basePos and character.basePos.root
+    self.bodyHeight=opts.bodyHeight or (body and rootBase and body.position.y+rootBase.y) or reference.bodyHeight
+    self.pathIK=opts.pathIK~=false
+    self.arms={
+        arm_right=makeArm(arm and arm.position or vec(reference.rightShoulder),
+            self.handSocket and self.handSocket.position or vec(reference.rightGrip)),
+        arm_left=makeArm(left and left.position or vec(reference.leftShoulder),
+            leftSocket and leftSocket.position or vec(reference.leftGrip))}
+    self.bladeDirection,self.bladeWeight,self.bladeSide,self.bladeMode,self.aimPitch=Vector3(0,1,0),0,"arm_right","radial",0
     self.realTime,self.afterimageWrite,self.trailHandle=0,0,0
     self.lastImageTime,self.lastImageClipTime=-math.huge,-math.huge
     self.nextImageTime,self.observedTime=0,0
@@ -251,7 +395,8 @@ function A:init(character,node,opts)
         self.tracks[i]={clip=Data.Clips.stance_combat,handle=0,live=false,stopping=false,
             t=0,age=0,realAge=0,previousT=0,speed=1,fadeIn=.08,fadeOut=.08,stopAge=0,stopWeight=0,weight=0,
             params={},nextEvent=1,complete=false,hitOpen=false,iframeOpen=false,cancelOpen=false,protectOpen=false,
-            dustOpen=false,afterimageOpen=false,sample=0,motion=0}
+            dustOpen=false,afterimageOpen=false,sample=0,motion=0,
+            ik={arm_right=ikBuffer(),arm_left=ikBuffer()}}
     end
     for i=1,MAX_EVENTS do
         self.queue[i]={name="",clip="",handle=0,t=0}
@@ -321,6 +466,7 @@ function A:Play(clipId,opts)
     slot.t,slot.age,slot.realAge,slot.stopAge,slot.stopWeight,slot.sample,slot.motion=0,0,0,0,0,0,0
     slot.previousT=0
     slot.mixLayer=nil
+    slot.ik.arm_right.enabled,slot.ik.arm_left.enabled=false,false
     slot.speed,slot.fadeIn,slot.fadeOut=speed,fadeIn,fadeOut
     slot.nextEvent,slot.complete=1,false
     slot.hitOpen,slot.iframeOpen,slot.cancelOpen,slot.protectOpen=false,false,false,false
@@ -499,6 +645,7 @@ function A:Apply()
     local baseY=root and root.position.y or 0
     local rootDelta=0
     local ox,oy,oz,ex,ey,ez=0,0,0,0,0,0
+    self.bladeWeight=0
     for _,s in ipairs(self.ordered) do
         if s.live and not s.stopping then s.sample=sampleTime(self,s) end
     end
@@ -521,6 +668,12 @@ function A:Apply()
                         end
                         self.target:FromEulerAngles(x,y,z)
                         local target=c.additive and base*self.target or self.target
+                        local path=c.handPath and c.handPath[name]
+                        if path and self.pathIK and s.params.legacyPose~=1 then
+                            local arm=self.arms[name]
+                            local point=handTarget(c,name,s.sample,s.params,arm,self.bodyHeight)
+                            target=solveArm(arm,point,target,s.ik[name],pathPole(path))
+                        elseif s.ik[name] then s.ik[name].enabled=false end
                         total=total+s.weight
                         mixed=mixed:Slerp(target,s.weight/total)
                     end
@@ -529,6 +682,7 @@ function A:Apply()
             end
         end
         local total,ry,lx,ly,lz,lp,lyaw,lr=0,0,0,0,0,0,0,0
+        local bladeTotal,bx,by,bz=0,0,0,0
         for _,s in ipairs(self.ordered) do
             local c,w=s.clip,s.weight
             if s.live and w>0 and (s.mixLayer or c.layer)==layer then
@@ -540,6 +694,25 @@ function A:Apply()
                 lx,ly,lz=lx+x*w,ly+y*w,lz+z*w
                 x,y,z=vectorSample(c.weapon,s.sample,"euler")
                 lp,lyaw,lr=lp+x*w,lyaw+y*w,lr+z*w
+                if c.bladePath and self.pathIK and s.params.legacyPose~=1 then
+                    local side=c.bladePath.side
+                    local solved=s.ik[side]
+                    if solved.enabled then
+                        local direction
+                        if c.bladePath.mode=="bow_upright" then
+                            local aim=math.rad(clamp(s.params.aimPitch or 0,-35,35))
+                            direction=Vector3(0,math.cos(aim),math.sin(aim))
+                            self.aimPitch=clamp(s.params.aimPitch or 0,-35,35)
+                        else
+                            local origin=c.bladePath.origin
+                            direction=unit(Vector3(solved.target.x-origin[1],solved.target.y+self.bodyHeight-origin[2],
+                                solved.target.z-origin[3]),Vector3(0,1,0))
+                        end
+                        bladeTotal=bladeTotal+w
+                        bx,by,bz=bx+direction.x*w,by+direction.y*w,bz+direction.z*w
+                        self.bladeSide,self.bladeMode=side,c.bladePath.mode
+                    end
+                end
             end
         end
         if total>0 then
@@ -547,10 +720,33 @@ function A:Apply()
             rootDelta=rootDelta+(ry/total-rootDelta)*w
             ox,oy,oz=ox+(lx/total-ox)*w,oy+(ly/total-oy)*w,oz+(lz/total-oz)*w
             ex,ey,ez=ex+(lp/total-ex)*w,ey+(lyaw/total-ey)*w,ez+(lr/total-ez)*w
+            self.bladeWeight=self.bladeWeight*(1-w)+math.min(bladeTotal,1)
+            if bladeTotal>0 then self.bladeDirection=unit(Vector3(bx,by,bz),Vector3(0,1,0)) end
         end
+    end
+    if self.bladeWeight>0 then
+        local arm=self.character.bones[self.bladeSide]
+        local desired=self.bladeMode=="bow_upright" and Quaternion(self.aimPitch,0,0)
+            or align(Vector3(0,1,0),self.bladeDirection)
+        -- Rig composes arm * gripRest * swing. Cancel current arm orientation
+        -- only inside swing, keeping the desired blade/bow direction in body space.
+        local extra=inverse(self.gripRotation)*inverse(arm.rotation)*desired
+        self.target:FromEulerAngles(ex,ey,ez)
+        local result=self.target:Slerp(extra,math.min(1,self.bladeWeight)):EulerAngles()
+        ex,ey,ez=result.x,result.y,result.z
     end
     if root then local pos=root.position;root.position=Vector3(pos.x,baseY+rootDelta,pos.z) end
     self.weaponOffset,self.weaponEuler=Vector3(ox,oy,oz),Vector3(ex,ey,ez)
+    for _,s in ipairs(self.ordered) do
+        if s.live then
+            for name,solved in pairs(s.ik) do
+                if solved.enabled then
+                    local arm=self.arms[name]
+                    solved.applied=arm.shoulder+self.character.bones[name].rotation*arm.grip
+                end
+            end
+        end
+    end
     self:captureAfterimage()
 end
 
@@ -632,6 +828,18 @@ end
 ---@return Vector3 euler
 function A:GetWeaponPose() return self.weaponOffset,self.weaponEuler end
 
+---Reusable IK diagnostics in body-node local space. No allocation; read after Apply.
+---@param clipId string|nil
+---@return table<string, CombatIKResult>|nil
+function A:GetIKDebug(clipId)
+    for i=#self.ordered,1,-1 do
+        ---@type CombatAnimTrack
+        local s=self.ordered[i]
+        if s.live and (not clipId or s.clip.id==clipId) and s.clip.handPath then return s.ik end
+    end
+    return nil
+end
+
 ---@param clipId string|nil
 ---@return boolean
 function A:IsPlaying(clipId)
@@ -671,15 +879,35 @@ end
 ---@param clipId string
 ---@param t number Seconds; bow_hold uses t as p in [0,1]. No quantization or tremor.
 ---@param params table|nil Directional preview: {moveX,moveZ,bow=1}; default rear/sword.
----@return table<string, number[]>|nil
+---@return table|nil Bone Euler arrays plus _ik per-arm requested/clamped/actual points.
 function A.DebugSample(clipId,t,params)
     local c=Data.Clips[clipId]
     if not c then return nil end
     local result={}
+    params=params or EMPTY
     local p=c.param and clamp(t,0,1) or normalized(c,math.max(0,t))
     for name in pairs(c.keys) do
-        local x,y,z=boneSample(c,name,p,params or EMPTY)
+        local x,y,z=boneSample(c,name,p,params)
         result[name]={x,y,z}
+    end
+    if c.handPath and params.legacyPose~=1 then
+        result._ik={}
+        result._bodyHeight=Data.RigReference.bodyHeight
+        for name in pairs(c.handPath) do
+            local ref=Data.RigReference
+            local right=name=="arm_right"
+            local arm=makeArm(vec(right and ref.rightShoulder or ref.leftShoulder),vec(right and ref.rightGrip or ref.leftGrip))
+            local buffer=ikBuffer()
+            local e=result[name]
+            local target=handTarget(c,name,p,params,arm,ref.bodyHeight)
+            local solved=solveArm(arm,target,Quaternion(e[1],e[2],e[3]),buffer,pathPole(c.handPath[name]))
+            local angle=solved:EulerAngles()
+            result[name]={angle.x,angle.y,angle.z}
+            result._ik[name]={target={target.x,target.y,target.z},clamped={buffer.clamped.x,buffer.clamped.y,buffer.clamped.z},
+                actual={buffer.actual.x,buffer.actual.y,buffer.actual.z},shoulder={arm.shoulder.x,arm.shoulder.y,arm.shoulder.z},
+                length=arm.length,reachError=buffer.reachError,degenerate=buffer.degenerate,
+                authored={target.x,target.y+ref.bodyHeight,target.z}}
+        end
     end
     return result
 end

@@ -58,6 +58,10 @@ function H.Active() return data.combat==true end
 function H.Aimed() return data.aimed~=nil end
 function H.Weapon() return data.weapon or 'sword' end
 function H.Charge() return data.charge or 0 end
+function H.CrossGap()
+    local p=math.max(0,math.min(1,data.bowCameraCharge or 0))
+    return 7-2*math.floor(p*2+.5) -- integer two-pixel steps; centre never moves
+end
 function H.Mounted() return data.mounted==true end
 -- Only RuinsHUD renders this text: combat and pointer hints share one slot.
 function H.Hint()

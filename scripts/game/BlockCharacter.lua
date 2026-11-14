@@ -20,10 +20,18 @@
 ---@field crouch number
 ---@field armed number
 ---@field useTimer number
+---@field handSocketPositions table<string, Vector3>|nil
 local M = {}
 ---@type number|nil 截图验证用的强制移动速度
 M.debugMoveSpeed = nil
 M.__index = M
+-- 调用方在创建角色前选择数据；不热替换已创建的角色，不隐式覆盖传入的 data。
+M.USE_ELBOW_DATA = false
+
+function M.LoadVoxelData()
+    if M.USE_ELBOW_DATA then return require "game.NomiVoxelDataElbow" end
+    return require "game.NomiVoxelData"
+end
 
 -- 主场景与骑龙场景只使用这一份修长体型配置。
 M.SLENDER = {
@@ -262,6 +270,20 @@ function M.CreateVoxel(parent, data, variant)
         end
     end
 
+    -- 沿用当前施法/武器掌心坐标，只有所属骨骼变化；零肘角时挂点世界位姿不变。
+    -- 惰性创建挂点，旧调用方不调用 HandSocket 时节点树与旧版一致。
+    self.handSocketPositions = {}
+    for _, side in ipairs({ "right", "left" }) do
+        local owner = self.bones["forearm_" .. side] and ("forearm_" .. side) or ("arm_" .. side)
+        local pivot = pivots[owner]
+        if pivot then
+            local x = side == "right" and 19 or -19
+            local hx, hy, hz = Shape(owner, x, 33, -0.75)
+            local px, py, pz = Shape(owner, pivot[1], pivot[2], pivot[3])
+            self.handSocketPositions[side] = Vector3(hx - px, hy - py, hz - pz) * unit
+        end
+    end
+
     local palette = {}
     for i, c in ipairs(data.palette) do
         palette[i] = Color(c[1], c[2], c[3], 1.0)
@@ -334,6 +356,25 @@ function M.CreateVoxel(parent, data, variant)
     return self
 end
 
+--- 角色拥有的掌心节点；调用方只挂子节点，不删除/移动此节点。
+--- 无肘时复用 arm 下已有 SpellPalm / hand_left；有肘时位于 forearm 末端掌心。
+---@param side string 'right'|'left'
+---@return Node|nil
+function M:HandSocket(side)
+    assert(side == "right" or side == "left", "HandSocket side must be right or left")
+    local owner = self.bones["forearm_" .. side] or self.bones["arm_" .. side]
+    if owner == nil then return nil end
+    local name = side == "right" and "SpellPalm" or "hand_left"
+    local socket = owner:GetChild(name, false)
+    if socket ~= nil then return socket end
+    local position = self.handSocketPositions and self.handSocketPositions[side]
+    -- 历史 Blockbench 路径没有体素掌心标定，不猜测挂点。
+    if position == nil then return nil end
+    socket = owner:CreateChild(name)
+    socket.position = position
+    return socket
+end
+
 ---@param name string
 ---@param pitch number 绕 X（正值：骨骼下端往后摆）
 ---@param yaw number 绕 Y
@@ -403,6 +444,9 @@ function M:Update(timeStep, s)
     -- 绕 Z 正转把下端甩向 +X：右臂（+X 侧）取正值外张，左臂取负值
     self:SetBone("arm_right", armR, 0, spread)
     self:SetBone("arm_left", armL, 0, -spread)
+    -- 基础层归零，CombatAnim / SeatPose 在 Update 之后覆盖；不叠旧整臂角。
+    self:SetBone("forearm_right", 0, 0, 0)
+    self:SetBone("forearm_left", 0, 0, 0)
 
     -- 头：抵消一点身体前倾，待机时轻微左右看
     local headYaw = math.sin(t * 0.7) * 6.0 * idle

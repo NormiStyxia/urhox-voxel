@@ -86,6 +86,8 @@ function T:Finish()
             self:Result(id,self.hits[id]==1 and self.hitTimes[id]~=nil,
                 string.format('hit_on=%.4f damage=%.3f hits=%d',self.hitTimes[id] or -1,self.damage[id] or 0,self.hits[id] or 0))
         end
+        self:Result('combo_all_hit',self.hits.sword_light_1==1 and self.hits.sword_light_2==1 and self.hits.sword_light_3==1,
+            string.format('stage1=%.3f stage2=%.3f stage3=%.3f',self.damage.sword_light_1 or 0,self.damage.sword_light_2 or 0,self.damage.sword_light_3 or 0))
     elseif s.id:find('heavy_',1,true)==1 then
         local damage=self.damage.sword_heavy_release or 0
         local expected=m.rig:GetStats().attack*(s.id=='heavy_full' and 2.2 or 1.6)

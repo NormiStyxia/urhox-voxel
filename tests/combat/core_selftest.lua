@@ -51,6 +51,7 @@ local function Run(hits,abort,fps)
         assert(runner.index==14,'all thirteen cases execute')
         local text=table.concat(logs,'\n')
         assert(text:find('sword_light_1 '..(hits and 'PASS' or 'FAIL'),1,true))
+        assert(text:find('combo_all_hit '..(hits and 'PASS' or 'FAIL'),1,true),'F11 all-three summary uses actual settlements')
         assert(text:find('arrow_cancel PASS',1,true),'cancel test must actually draw/cancel')
         if hits then
             assert(runner.failed==0,text)

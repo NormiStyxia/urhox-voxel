@@ -103,7 +103,7 @@ assert(tuned.stats.crystalDamageMultiplier==.25 and tuned.stats.crystalDamage==n
 for _,grip in ipairs(P.GetOptions('bow','grip')) do
     bow.parts.grip=grip.id
     local bp=assert(B.Compile(bow))
-    Mock.Near(bp.hit.origin[1],0);Mock.Near(bp.hit.origin[2],.06);Mock.Near(bp.hit.origin[3],.09)
+    Mock.Near(bp.hit.origin[1],.06);Mock.Near(bp.hit.origin[2],.06);Mock.Near(bp.hit.origin[3],.09)
     assert(bp.hit.origin[2]<bp.bounds.max[2]/2,'launch must stay near grip')
 end
 -- Time-sliced preview writes, cancellation and measured indivisible native work.
@@ -319,4 +319,34 @@ rawset(_G,'cache',{GetResource=function() return nil end})
 local missing=DiagnosticPreview({},'material_nil')
 assert(missing.stage=='load_material' and not missing.materialLoaded and missing.commitResult=='not_called')
 rawset(_G,'cache',savedCache)
+-- §20 bow orientation: old geometry used X/Y with string at X=-6. New
+-- geometry is Y/Z, convex back on +Z and string behind the palm on -Z.
+for _,limbs in ipairs(P.GetOptions('bow','limbs')) do
+    for _,tip in ipairs(P.GetOptions('bow','tip')) do
+        local value=config('bow');value.parts.limbs=limbs.id;value.parts.tip=tip.id
+        local bp=assert(B.Compile(value))
+        local middle,front=false,false
+        for _,cell in ipairs(bp.geometry.cells) do
+            local mirrored=bp.geometry.sparse[cell.x..':'..(-cell.y)..':'..cell.z]
+            assert(mirrored and mirrored.channel==cell.channel,'bow must be symmetric above/below grip')
+            if cell.feature=='string' and cell.y==0 then assert(cell.x==0 and cell.z<0);middle=true end
+            if cell.slot=='limbs' and cell.feature~='string' and cell.z>0 then front=true end
+        end
+        assert(middle and front and bp.hit.origin[1]>0 and bp.hit.dir[3]==1)
+        local lastZ=0
+        for stage=0,2 do
+            local shape=B.BowVisual(bp,stage)
+            assert(shape.stringMidpoint[3]<lastZ);lastZ=shape.stringMidpoint[3]
+            local occupied={}
+            for _,cell in ipairs(shape.cells) do occupied[cell.x..':'..cell.y..':'..cell.z]=true end
+            for _,cell in ipairs(shape.cells) do
+                assert(occupied[cell.x..':'..(-cell.y)..':'..cell.z],'draw pose must stay vertically symmetric')
+                if cell.feature=='string' and cell.y==0 then
+                    assert(math.abs(cell.z*P.VOXEL_SIZE-shape.stringMidpoint[3])<=P.VOXEL_SIZE/2+.0001)
+                end
+            end
+        end
+    end
+end
+print(B.BowTopASCII(assert(B.Compile(config('bow')))))
 print("weapon_builder: PASS (72 volume+greedy preview combinations, exact surface/color coverage, winding, bounds, cancellation, cache)")

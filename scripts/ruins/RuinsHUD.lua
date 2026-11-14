@@ -159,8 +159,9 @@ function Layer:Render(vg)
         local x,y=math.floor(w/2),math.floor(h/2)
         local c=CombatHUD.Active() and (CombatHUD.Aimed() and SPELL_COLORS.shatter or C.paper) or SPELL_COLORS.shatter
         Draw.Rect(vg,x-1,y-1,2,2,c)
-        Draw.Rect(vg,x-1,y-13,2,6,c); Draw.Rect(vg,x-1,y+7,2,6,c)
-        Draw.Rect(vg,x-13,y-1,6,2,c); Draw.Rect(vg,x+7,y-1,6,2,c)
+        local gap=CombatHUD.Active() and CombatHUD.CrossGap() or 7
+        Draw.Rect(vg,x-1,y-gap-6,2,6,c); Draw.Rect(vg,x-1,y+gap,2,6,c)
+        Draw.Rect(vg,x-gap-6,y-1,6,2,c); Draw.Rect(vg,x+gap,y-1,6,2,c)
         if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
     end
     if not touch and not CombatHUD.Active() then

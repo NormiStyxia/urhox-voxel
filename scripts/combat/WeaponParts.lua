@@ -32,7 +32,7 @@ Parts.BaseStats = {
 Parts.ById = {}
 ---@type WeaponPart[]
 Parts.All = {}
-local CHANNEL_PALETTE = {P="primary", S="secondary", A="accent", D="dark"}
+local CHANNEL_PALETTE = {P="primary", S="secondary", A="accent", D="dark", W="accent"}
 
 ---@param part WeaponPart
 local function Add(part)
@@ -93,26 +93,24 @@ SwordPart("pommel_round","pommel","圆首","触及略长，失衡略低", {".DSD
 SwordPart("pommel_crystal","pommel","晶首","蓄满时间−8%，攻击−0.5", {"..A..",".SAS.","DPAPD",".SSS."},{0,0,0},{0,4,0},{chargeMultiplier=.92,attack=-.5})
 SwordPart("pommel_weight","pommel","配重","攻击+2，破甲+0.15，速度−0.08", {"DSSSD","DPAPD","DPAPD",".SAS."},{0,0,0},{0,4,0},{attack=2,armorBreak=.15,speed=-0.08})
 
--- The grip is at (0,0,0). Bow limbs curve towards the taut string at x=-6.
+-- Bow is in the Y/Z plane: +Y up, +Z target, string on the shooter's -Z side.
+-- W explicitly identifies string voxels for the three cached draw shapes.
 -- Central limb voxels are omitted so either grip can fill the same socket.
 local function Limbs(id, name, desc, halfHeight, recurve, stats)
     local layers = {}
     for y = -halfHeight, halfHeight do
         local t = math.abs(y)/halfHeight
-        local bend = math.floor(6*t*t+0.5)
-        local center = -bend
-        if recurve and math.abs(y)>halfHeight-3 then center = -6 end
-        local front, back = {}, {}
-        for x = -7, 1 do
-            local limb = math.abs(y)>3 and math.abs(x-center)<=1
-            local cap = math.abs(y)==halfHeight and x>=-6 and x<=center
-            front[#front+1] = (limb or cap) and (x==center and "P" or "S") or (x==-6 and "A" or ".")
-            back[#back+1] = limb and "D" or "."
+        local center = 2-math.floor(3*t*t+0.5)
+        if recurve and math.abs(y)>halfHeight-3 then center = -1 end
+        local layer={}
+        for z=-2,3 do
+            local limb=math.abs(y)>3 and math.abs(z-center)<=1
+            layer[#layer+1]=limb and (z==center and 'SPS' or 'DDD') or (z==-2 and '.W.' or '...')
         end
-        layers[#layers+1] = {table.concat(back),table.concat(front)}
+        layers[#layers+1] = layer
     end
-    Add({id=id,weapon="bow",slot="limbs",name=name,desc=desc,voxels=layers,origin={-7,-halfHeight,-1},
-        sockets={root={0,0,0},top={-6,halfHeight,0}},stats=stats,palette=CHANNEL_PALETTE})
+    Add({id=id,weapon="bow",slot="limbs",name=name,desc=desc,voxels=layers,origin={-1,-halfHeight,-2},
+        sockets={root={0,0,0},top={0,halfHeight,-1}},stats=stats,palette=CHANNEL_PALETTE})
 end
 Limbs("limbs_short","短弓","拉弓快，射程近",15,false,{draw=-0.15,range=-8,attack=-1})
 Limbs("limbs_long","长弓","射程远，拉满稍慢",20,false,{draw=0.16,range=10,attack=2})
@@ -122,9 +120,9 @@ local function BowPart(id,slot,name,desc,profile,origin,sockets,stats)
     Add({id=id,weapon="bow",slot=slot,name=name,desc=desc,voxels=Relief(profile),origin=origin,sockets=sockets,stats=stats,palette=CHANNEL_PALETTE})
 end
 BowPart("bow_grip_leather","grip","皮握把","攻击略高，失衡略低",
-    {"SAS","PDP","DPD","PDP","DPD","PDP","SAS"},{-1,-3,-1},{root={0,0,0},top={0,0,0},launch={0,2,3}}, {attack=.5,poise=-.5})
+    {"SAS","PDP","DPD","PDP","DPD","PDP","SAS"},{-1,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {attack=.5,poise=-.5})
 BowPart("bow_grip_stable","grip","稳定握把","移动×0.6，散布−25%，拉弓速度−8%",
-    {".SAS.",".PDP.","DPAPD","DPAPD","DPAPD",".PDP.",".SAS."},{-2,-3,-1},{root={0,0,0},top={0,0,0},launch={0,2,3}}, {spreadMultiplier=.75,move=.1,drawMultiplier=1/.92})
+    {".SAS.",".PDP.","DPAPD","DPAPD","DPAPD",".PDP.",".SAS."},{-2,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {spreadMultiplier=.75,move=.1,drawMultiplier=1/.92})
 BowPart("tip_iron","tip","铁簇","出手略快，攻击略低",{"DAD","SPS",".S."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {speed=.02,attack=-.5})
 BowPart("tip_bone","tip","骨簇","轻骨箭簇，箭速更快",{"DAD",".S."},{-1,0,-1},{root={0,0,0},top={0,2,0}}, {attack=-1,projectileSpeed=0.12})
 BowPart("tip_crystal","tip","晶簇","破甲+25%，晶爆0.8m/箭伤25%；箭速−10%，射程−8%",{"DAD","SAS",".A."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {armorBreak=.25,crystalRadius=.8,crystalDamageMultiplier=.25,projectileSpeedMultiplier=.9,rangeMultiplier=.92})

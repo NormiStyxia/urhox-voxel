@@ -16,11 +16,12 @@ float h21(vec2 p) {
 }
 
 void fragment() {
-    vec4 t = texture(sprite_tex, UV);
+    // Pixel sprites have one mip (VoxelFX.Texture). Explicit LOD avoids implicit
+    // derivatives being pulled through the alpha-kill predicate by D3D11/FXC.
+    vec4 t = textureLod(sprite_tex, UV, 0.0);
     vec4 c = clamp(COLOR, 0.0, 1.0);
     // 像素抖动淡出：同一个粒子内按像素格哈希逐格消失
     float cellN = h21(floor(UV * cells) + 0.37);
-    if (t.a < 0.5 || cellN > c.a * 1.02) discard;
     // 顶点色是 sRGB（粒子 / 公告板颜色按 sRGB 输入），转线性后再乘发光倍数
     vec3 lin = c.rgb * (c.rgb * (c.rgb * 0.305306011 + 0.682171111) + 0.012522878);
     // 发光时向亮色靠一点，避免 HDR 色调映射把高饱和颜色推成一坨纯蓝
@@ -28,4 +29,7 @@ void fragment() {
     // 提亮目标偏冰青（红 < 绿 < 蓝），蓝色粒子提亮后不会发紫
     vec3 col = mix(lin, vec3(mx * 0.55, mx * 0.88, mx), 0.25 * step(1.01, glow));
     ALBEDO = col * t.rgb * glow;
+    // Keep the kill after all sampling/color work; one scalar predicate.
+    float keep = step(0.5, t.a) * step(cellN, c.a * 1.02);
+    if (keep < 0.5) discard;
 }

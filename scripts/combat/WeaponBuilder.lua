@@ -8,6 +8,7 @@ local Parts = require("combat.WeaponParts")
 ---@field z integer
 ---@field channel string
 ---@field slot string
+---@field feature? string
 
 ---@class WeaponGeometry
 ---@field key string
@@ -76,7 +77,7 @@ local function Decode(part)
                 local char = row:sub(ix,ix)
                 if char~="." then
                     result[#result+1] = {x=part.origin[1]+ix-1, y=part.origin[2]+iy-1,
-                        z=part.origin[3]+iz-1, channel=part.palette[char], slot=part.slot}
+                        z=part.origin[3]+iz-1, channel=part.palette[char], slot=part.slot,feature=char=='W' and 'string' or nil}
                 end
             end
         end
@@ -136,7 +137,11 @@ local function Assemble(config,key)
             local x,y,z = cell.x+off[1],cell.y+off[2],cell.z+off[3]
             local cellKey=Key(x,y,z)
             if sparse[cellKey] then overlaps=overlaps+1 end
-            sparse[cellKey]={x=x,y=y,z=z,channel=cell.channel,slot=slot}
+            sparse[cellKey]={x=x,y=y,z=z,channel=cell.channel,slot=slot,feature=cell.feature}
+            -- A selected arrowhead also decorates both bow tips symmetrically.
+            if weapon=='bow' and slot=='tip' then
+                sparse[Key(x,-y,z)]={x=x,y=-y,z=z,channel=cell.channel,slot=slot}
+            end
         end
     end
     local cells = {}
@@ -673,5 +678,85 @@ function Builder.StepPreview(job,budgetMs,clock)
         Builder.CancelPreview(job);job.mesh=nil
     end
     return job.done,job.mesh,job.error
+end
+-- Zero-draw string has 6cm clearance. Draw positions -0.18/-0.35m are absolute;
+-- voxel centres quantize to 3cm. This never changes Compile's hit/stats.
+---@param blueprint WeaponBlueprint
+---@param stage integer 0 | 1 | 2
+---@return table
+function Builder.BowVisual(blueprint,stage)
+    local cells={}
+    local half=assert(Parts.Get(blueprint.config.parts.limbs)).sockets.top[2]
+    local mid=stage==0 and -.06 or (stage==1 and -.18 or -.35)
+    for _,cell in ipairs(blueprint.geometry.cells) do
+        if cell.feature~='string' then
+            local bend=cell.slot=='limbs' and math.floor(stage*math.abs(cell.y)/half+.5) or (cell.slot=='tip' and stage or 0)
+            cells[#cells+1]={x=cell.x,y=cell.y,z=cell.z-bend,channel=cell.channel,slot=cell.slot}
+        end
+    end
+    local seen={}
+    for side=-1,1,2 do
+        for step=0,half*8 do
+            local t=step/(half*8)
+            local y=side*math.floor(half*t+.5)
+            local z=math.floor((mid/SIZE)*(1-t)+(-2-stage)*t+.5)
+            if y==0 then z=math.floor(mid/SIZE+.5) end
+            local key=Key(0,y,z)
+            if not seen[key] then
+                cells[#cells+1]={x=0,y=y,z=z,channel='accent',slot='limbs',feature='string'};seen[key]=true
+            end
+        end
+    end
+    return {cells=cells,stringMidpoint={0,0,mid},stage=stage}
+end
+
+--- Rows run target(+Z) -> shooter(-Z), columns -X -> +X.
+---@param blueprint WeaponBlueprint
+---@return string
+function Builder.BowTopASCII(blueprint)
+    local rows={'Bow top: +Z target; X left -> right; G grip, W string, B bow back'}
+    local b=blueprint.bounds
+    for z=b.gridMax[3],b.gridMin[3],-1 do
+        local row={}
+        for x=b.gridMin[1],b.gridMax[1] do
+            local mark='.'
+            for _,cell in ipairs(blueprint.geometry.cells) do
+                if cell.x==x and cell.z==z then mark=cell.feature=='string' and 'W' or (mark=='W' and mark or 'B') end
+            end
+            if x==0 and z==0 then mark='G' end
+            row[#row+1]=mark
+        end
+        rows[#rows+1]=string.format('%+.2f %s',z*SIZE,table.concat(row))
+    end
+    rows[#rows+1]='-Z shooter; arrow at +X, direction +Z'
+    return table.concat(rows,'\n')
+end
+
+--- Pool creation/edit time only, never called by Rig.Update. Main stepped world.
+---@param world VoxelPhysicsWorld
+---@param parent Node
+---@param blueprint WeaponBlueprint
+---@param cells table[]
+---@param name string
+---@return table
+function Builder.VisualVolume(world,parent,blueprint,cells,name)
+    local lo,hi={math.huge,math.huge,math.huge},{-math.huge,-math.huge,-math.huge}
+    for _,c in ipairs(cells) do
+        for i,n in ipairs({c.x,c.y,c.z}) do lo[i]=math.min(lo[i],n);hi[i]=math.max(hi[i],n) end
+    end
+    assert(#cells>0,'empty visual pool')
+    local volume=world:CreateVolume(hi[1]-lo[1]+1,hi[2]-lo[2]+1,hi[3]-lo[3]+1,SIZE,Vector3.ZERO,Quaternion())
+    volume.destructible=false;volume.evictable=false;volume.collisionLayer=0;volume.collisionMask=0
+    local grid=volume:GetGrid()
+    local base=Builder.PaletteBase[blueprint.config.weapon]
+    for _,c in ipairs(cells) do
+        grid:SetSolid(c.x-lo[1],c.y-lo[2],c.z-lo[3],true)
+        grid:SetVoxelMaterial(c.x-lo[1],c.y-lo[2],c.z-lo[3],base+Builder.ChannelOffset[c.channel])
+    end
+    local material=Builder.FadeMaterial(world,name)
+    volume.material=material;volume:RebuildGeometry()
+    local node=volume:GetNode();node:SetParent(parent);node.name=name;node.temporary=true;node.enabled=false
+    node.rotation=Quaternion();node.position=Vector3((lo[1]-.5)*SIZE,(lo[2]-.5)*SIZE,(lo[3]-.5)*SIZE)
+    return {node=node,volume=volume,material=material,minimum=node.position}
 end
 return Builder

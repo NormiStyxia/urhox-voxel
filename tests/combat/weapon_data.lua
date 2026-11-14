@@ -70,7 +70,7 @@ assert(not Parts.ValidateWeapon("sword",false))
 -- A single-voxel straight string spans the full limb height.
 for _, part in ipairs(Parts.GetOptions("bow","limbs")) do
     for _, layer in ipairs(part.voxels) do
-        local stringRow = assert(layer[2])
+        local stringRow = assert(layer[1]) -- -Z, not -X
         assert(stringRow:sub(2,2)~=".")
     end
 end

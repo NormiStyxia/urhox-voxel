@@ -15,6 +15,19 @@ function Q:FromEulerAngles(p,y,r)
     local v=euler(p,y,r)
     self.w,self.x,self.y,self.z=v.w,v.x,v.y,v.z
 end
+function Q:EulerAngles()
+    local m02=2*(self.x*self.z+self.w*self.y)
+    local m22=1-2*(self.x*self.x+self.y*self.y)
+    local m12=2*(self.y*self.z-self.w*self.x)
+    local m10=2*(self.x*self.y+self.w*self.z)
+    local m11=1-2*(self.x*self.x+self.z*self.z)
+    local pitch=math.asin(math.max(-1,math.min(1,-m12)))
+    local yaw,roll
+    if math.abs(math.cos(pitch))<1e-7 then
+        yaw=math.atan(-2*(self.x*self.z-self.w*self.y),1-2*(self.y*self.y+self.z*self.z));roll=0
+    else yaw=math.atan(m02,m22);roll=math.atan(m10,m11) end
+    return vec(math.deg(pitch),math.deg(yaw),math.deg(roll))
+end
 function Q.__mul(a,b)
     if b.w==nil then
         local v=a*q(0,b.x,b.y,b.z)*q(a.w,-a.x,-a.y,-a.z)
@@ -41,7 +54,10 @@ function Q:Slerp(b,t)
     out.w,out.x,out.y,out.z=out.w/len,out.x/len,out.y/len,out.z/len
     return out
 end
-rawset(_G,"Quaternion",function(p,y,r) return euler(p or 0,y or 0,r or 0) end)
+rawset(_G,"Quaternion",function(p,y,r,z)
+    if z~=nil then return q(p,y,r,z) end
+    return euler(p or 0,y or 0,r or 0)
+end)
 rawset(_G,"Vector3",vec)
 function M.rotate(rot,x,y,z)
     local out=rot*q(0,x,y,z)*q(rot.w,-rot.x,-rot.y,-rot.z)
@@ -53,11 +69,16 @@ function M.character()
         result.bones[name]={position=Vector3(0,1,0),rotation=Quaternion(0,0,0),GetChild=function() return nil end}
         result.basePos[name]=Vector3(0,1,0)
     end
-    local socket={worldPosition=Vector3(1,2,3),worldRotation=Quaternion(0,0,0)}
+    local ref=require("combat.AnimClips").RigReference
+    result.bones.arm_right.position=vec(table.unpack(ref.rightShoulder))
+    result.bones.arm_left.position=vec(table.unpack(ref.leftShoulder))
+    result.bones.body.position=vec(0,ref.bodyHeight-1,0)
+    local socket={position=vec(table.unpack(ref.rightGrip)),worldPosition=Vector3(1,2,3),worldRotation=Quaternion(0,0,0)}
     result.bones.arm_right.GetChild=function(_,name) return name=="SpellPalm" and socket or nil end
     return result
 end
 function M.reset(character)
-    for _,bone in pairs(character.bones) do bone.rotation=Quaternion(0,0,0);bone.position=Vector3(0,1,0) end
+    for _,bone in pairs(character.bones) do bone.rotation=Quaternion(0,0,0) end
+    character.bones.root.position=Vector3(0,1,0)
 end
 return M

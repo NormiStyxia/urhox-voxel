@@ -45,6 +45,8 @@ local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 local combatParticles_
 local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
 local combatLookScale_=1
+local CombatCamera=require('combat.CombatCamera')
+local combatCamera_,combatCameraFrame_
 local arrowNodes_={}
 local emptyAfterimages_={}
 local animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5},direction='后'}
@@ -420,14 +422,25 @@ local function OpenForge()
 end
 local function StartCombat()
     CombatAudio.New(scene_)
+    combatCamera_=CombatCamera.New()
+    local hasDustStreak=false
+    for _,event in ipairs(require('combat.AnimClips').Clips.dodge_slide.events) do
+        if event[1]=='dust_streak' then hasDustStreak=true; break end
+    end
     combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node)
     combatMoves_=CombatMoves.New({anim=combatAnim_,rig=combatRig_,state=CombatState,
         position=function() return nomi_:Position() end,forward=function() return nomi_.node.worldDirection end,
-        enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=CombatAudio,
+        enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=CombatAudio,camera=combatCamera_,
         slideStart=function() return nomi_:CanSlide() end,
         slideMotion=function(motion) return nomi_:ClipSlideMotion(motion) end,
-        dust=function(count,direction)
+        attackMotion=function(motion) return nomi_:ClipAttackMotion(motion) end,
+        dustStreak=function(direction)
             if not nomi_.cc.onGround then return end
+            CombatMoves.EmitDustStreak(combatParticles_,hitParticleOwner_,nomi_:Position(),direction,
+                function(at) return nomi_:SlideGround(at) end)
+        end,
+        dust=function(count,direction)
+            if hasDustStreak or not nomi_.cc.onGround then return end -- §20 shared-pool streak replaces old motes
             local pos=nomi_:Position()+Vector3(0,.04,0)
             for i=1,count do
                 local side=Vector3(direction.z,0,-direction.x)*((i-(count+1)*.5)*.06)
@@ -745,7 +758,9 @@ function Ruins_HandleMouseMove(eventType, eventData)
     local dx, dy = x - drag.x, y - drag.y
     drag.x, drag.y = x, y
     if dx == 0 and dy == 0 then return end
-    nomi_:Look(dx, dy, 0.12*combatLookScale_)
+    if animPreview_.index>0 then
+        animPreview_.orbit=Clamp((animPreview_.orbit or 0)+dx*.12,-25,25)
+    else nomi_:Look(dx, dy, 0.12*combatLookScale_) end
     drag.distance = drag.distance + math.abs(dx) + math.abs(dy)
     drag.samples = drag.samples + 1
     if drag.samples == 1 then
@@ -918,7 +933,7 @@ local function HandleCombatDebugKeys(allowed)
     end
     if Press(KEY_F3) then
         local on=not CombatState.GetSetting('cameraFov')
-        CombatState.SetSetting('cameraFov',on); CombatHUD.Say('FOV 冲击 · '..(on and '开' or '关'))
+        CombatState.SetSetting('cameraFov',on); CombatHUD.Say('动作镜头 / FOV · '..(on and '开' or '关'))
     end
     if Press(KEY_F6) then
         local on=not CombatState.GetSetting('aimAssist')
@@ -1091,7 +1106,9 @@ function Ruins_HandleUpdate(eventType, eventData)
     if not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_TAB) then farView = not farView end
     if not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
         local mm = input.mouseMove
-        nomi_:Look(mm.x, mm.y, 0.12*combatLookScale_)
+        if animPreview_.index>0 then
+            animPreview_.orbit=Clamp((animPreview_.orbit or 0)+mm.x*.12,-25,25)
+        else nomi_:Look(mm.x, mm.y, 0.12*combatLookScale_) end
     end
     -- 龙
     local ctrl = M.ctrl
@@ -1117,6 +1134,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         local list=CombatAnim.DebugList()
         if previewCycle then animPreview_.index=(animPreview_.index+1)%(#list+1)
         else animPreview_.index=(animPreview_.index-1+(previewNext and 1 or -1))%#list+1 end
+        animPreview_.view=animPreview_.view or 4; animPreview_.orbit=0
         animPreview_.t=0; animPreview_.text=nil; animPreview_.paused=false; animPreview_.events='—'
         combatMoves_:Cancel('animation-preview'); TouchControls.Cancel()
         combatArrows_:Clear()
@@ -1134,7 +1152,16 @@ function Ruins_HandleUpdate(eventType, eventData)
         if previewAllowed and Press(KEY_SPACE) then animPreview_.paused=not animPreview_.paused end
         CombatState.SetBusy(true)
         local params=animPreview_.params
+        params.aimPitch=Clamp(nomi_.camPitch,-35,35)
+        if previewAllowed then
+            for i,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_4}) do
+                if Press(key) then animPreview_.view,animPreview_.orbit=i,0 end
+            end
+        end
         local changed=false
+        if previewAllowed and Press(KEY_P) then
+            params.legacyPose=params.legacyPose==1 and 0 or 1; changed=true
+        end
         if previewAllowed and clip.id=='dodge_slide' then
             if Press(KEY_I) then params.moveX,params.moveZ,animPreview_.direction=0,1,'前'; changed=true end
             if Press(KEY_K) then params.moveX,params.moveZ,animPreview_.direction=0,-1,'后'; changed=true end
@@ -1171,6 +1198,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         animPreview_.text=string.format('F7 %s / %.3f / %s%s\n事件：%s\n空格 暂停 · , / . 逐帧 · 左右 切片段',clip.id,animPreview_.t,
             CombatMoves.PreviewPhase(clip.id,animPreview_.t),animPreview_.paused and ' · 暂停' or '',animPreview_.events or '—')
         animPreview_.text=animPreview_.text..string.format('\nIJKL 方向:%s · B:%s · +/- 拉弓:%.1f',animPreview_.direction,params.bow==1 and '弓' or '剑',params.p)
+        animPreview_.text=animPreview_.text..'\nP 对比：'..(params.legacyPose==1 and '旧骨骼轨道 / IK关闭' or '路径驱动 / IK开启')
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
         if not CombatState.InCombat() and (Press(KEY_G) or TouchInput.Press('forge')) then OpenForge() end
@@ -1226,8 +1254,46 @@ function Ruins_HandleUpdate(eventType, eventData)
     caster_:Update(dt)
     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
     if M.ride.mode == "free" then nomi_:Animate(combatMoves_.hitstop>0 and 0 or dt, caster_.charging or caster_.castAnim > 0 or CombatState.Get()==CombatState.ACTIVE) end
+    if combatAnim_ and animPreview_.index==0 then
+        combatAnim_:SetParam('aimPitch',Clamp(nomi_.camPitch,-35,35))
+        combatAnim_:SetParam('p',CombatState.GetWeapon()=='bow' and combatMoves_.charge or 0)
+    end
     if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or animPreview_.index>0) then combatAnim_:Apply() end
+    if animPreview_.index>0 then
+        local clip=CombatAnim.DebugList()[animPreview_.index]
+        local legacy=animPreview_.params.legacyPose==1
+        local sample=not legacy and combatAnim_.GetIKDebug and combatAnim_:GetIKDebug(clip.id) or nil
+        if not sample and not legacy then
+            local sampled=CombatAnim.DebugSample(clip.id,clip.id=='bow_hold' and animPreview_.params.p or animPreview_.t,animPreview_.params)
+            sample=sampled and sampled._ik
+        end
+        local lines={animPreview_.text or '', '1 前 / 2 侧 / 3 背 / 4 斜 · 距离2.6m · 鼠标微调'}
+        local body=nomi_.nomi.bones.body
+        local reference=require('combat.AnimClips').RigReference
+        for _,name in ipairs({'arm_right','arm_left'}) do
+            local result=sample and sample[name]
+            if result and result.target then
+                local target=result.target
+                local bone=nomi_.nomi.bones[name]
+                local grip=reference and (name=='arm_right' and reference.rightGrip or reference.leftGrip)
+                local actual=body and bone and grip and body:WorldToLocal(bone:LocalToWorld(Vector3(grip[1],grip[2],grip[3]))) or nil
+                local label=name=='arm_right' and '右' or '左'
+                lines[#lines+1]=string.format('%s握点目标 (%.3f, %.3f, %.3f)m',label,target.x or target[1],target.y or target[2],target.z or target[3])
+                if actual then lines[#lines+1]=string.format('%s握点实际 (%.3f, %.3f, %.3f)m',label,actual.x,actual.y,actual.z) end
+            end
+        end
+        if #lines==2 then lines[#lines+1]=legacy and '旧轨道对比：不显示残留IK目标' or '此片段未提供握点轨迹' end
+        animPreview_.text=table.concat(lines,'\n')
+    end
     if combatRig_ then
+        if combatRig_.SetBowDraw then
+            local p=(combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold') and combatMoves_.charge or 0
+            if animPreview_.index>0 then
+                local id=CombatAnim.DebugList()[animPreview_.index].id
+                p=(id=='bow_hold' or id=='bow_draw') and animPreview_.params.p or 0
+            end
+            combatRig_:SetBowDraw(p)
+        end
         local offset,euler=combatAnim_:GetWeaponPose()
         combatRig_:SetSwing(offset,euler)
         local slidePosition,slideRotation
@@ -1240,6 +1306,19 @@ function Ruins_HandleUpdate(eventType, eventData)
         end
         combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or (#slideImages>0 and slideImages or combatAnim_:GetAfterimages()))
         combatRig_:Update(dt)
+        if combatRig_.PopEvents then
+            for _,event in ipairs(combatRig_:PopEvents() or {}) do
+                local name=type(event)=='string' and event or event.name
+                if name=='blade_draw' or name=='blade_sheath' then
+                    CombatAudio.Play(name,{pos=nomi_:Position()})
+                    if not combatRig_.ArrivalFlash and combatRig_.Flash then combatRig_:Flash(name=='blade_draw' and 'draw' or 'sheath') end
+                elseif name=='materialize' then
+                    CombatAudio.Play('blade_draw',{pos=nomi_:Position(),volume=.35})
+                elseif name=='materialized' and not combatRig_.ArrivalFlash and combatRig_.Flash then
+                    combatRig_:Flash('sheath')
+                end
+            end
+        end
         if animPreview_.index==0 then combatMoves_:AfterPose() end
     end
     -- 法阵只更新一次，在 PostUpdate 中使用本帧最终相机与施法方向。
@@ -1315,7 +1394,9 @@ end
 
 function Ruins_HandlePostUpdate(eventType, eventData)
     local dt = eventData["TimeStep"]:GetFloat()
-    if M.mounted or M.ride.mode ~= "free" then
+    if animPreview_.index>0 and M.ride.mode=='free' then
+        nomi_:UpdateCombatPreview(dt,animPreview_.view or 4,animPreview_.orbit or 0)
+    elseif M.mounted or M.ride.mode ~= "free" then
         nomi_:UpdateCamera(dt, "mounted", M.rig.bones.chest)
     else
         local mode = farView and "far" or ((caster_.charging or caster_.castAnim > 0) and "aim" or "normal")
@@ -1326,7 +1407,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
             for _,enemy in ipairs(CombatEnemies()) do if enemy.boss and enemy.aggro and not enemy.dead then boss=true; target=target or enemy end end
             local focus=target and not target.dead and target.position or nil
             local drawing=combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold'
-            nomi_:SetCombatCamera(focus,boss,drawing,CombatState.GetSetting('bowZoom') and not combatLowQuality_)
+            nomi_:SetCombatCamera(focus,boss,drawing,false) -- charge envelope owns zoom, avoid double FOV
             mode='combat'
         end
         if M.forceCamMode ~= nil then mode = M.forceCamMode end
@@ -1336,14 +1417,17 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     M.sigils:Update(dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime())
     if combatMoves_ then
         local cn=nomi_:CameraNode()
-        if M.ride.mode=='free' then
-            local shake=combatMoves_:ShakeOffset()
-            if CombatState.InCombat() or shake:LengthSquared()>0 then nomi_:ApplyCombatOffset(shake) end
-            if not combatLowQuality_ then nomi_:Camera().fov=nomi_:Camera().fov+combatMoves_:FovOffset() end
-            local slideAge=combatMoves_.slideFovAge
-            if not combatLowQuality_ and CombatState.GetSetting('cameraFov') and CombatState.GetSetting('dodgeFov') and slideAge and slideAge<.16 then
-                local camera=nomi_:Camera()
-                camera.fov=camera.fov+1.5*math.min(slideAge/.04,(.16-slideAge)/.12)
+        combatCameraFrame_=combatCamera_:Update(dt,combatMoves_,CombatState.GetSetting('cameraFov'),CombatState.GetSetting('cameraShake'))
+        if M.ride.mode=='free' and animPreview_.index==0 then
+            local action=combatCameraFrame_
+            local offset=combatMoves_:ShakeOffset()
+            if CombatState.InCombat() then offset=offset+action.focus-cn.worldDirection*action.distance end
+            if CombatState.InCombat() or offset:LengthSquared()>0 then nomi_:ApplyCombatOffset(offset) end
+            if CombatState.InCombat() then
+                -- The base library resets fov each frame. Merge impacts by maximum,
+                -- not addition, so heavy hits cannot double the authored +2 degrees.
+                local impact=not combatLowQuality_ and combatMoves_:FovOffset() or 0
+                nomi_:Camera().fov=nomi_:Camera().fov+math.min(0,action.fov)+math.max(0,action.fov,impact)
             end
         end
         local enemies=CombatEnemies()
@@ -1352,7 +1436,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
         local wall=CombatCast(a,b)
         local aimed=hits[1] and (not wall or hits[1].t<wall) and hits[1].enemy or nil
         M.combat.aimed=aimed
-        combatLookScale_=1
+        combatLookScale_=CombatState.InCombat() and combatCameraFrame_.look or 1
         if CombatState.InCombat() and CombatState.GetWeapon()=='bow' and CombatState.GetSetting('aimAssist') then
             local near=CombatHit.Query(enemies,a,b,.6)
             for _,candidate in ipairs(near) do
@@ -1360,7 +1444,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
             end
         end
         CombatHUD.Set({moves=combatMoves_,combat=CombatState.InCombat(),mounted=M.ride.mode~='free',weapon=CombatState.GetWeapon(),charge=combatMoves_.charge,
-            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,
+            aimed=aimed,enemies=enemies,camera=nomi_:Camera(),cameraNode=cn,bowCameraCharge=combatCameraFrame_.cross,
             debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)})
     end
     fx_.motesB:Draw(); fx_.motesG:Draw()
@@ -1380,6 +1464,7 @@ function M.Stop()
     CombatState.Stop()
     CombatSettings.RegisterQuality('combat-presentation',nil)
     CombatAudio.Dispose()
+    combatCamera_,combatCameraFrame_=nil,nil
     if trainingDummy_ then trainingDummy_:Destroy(); trainingDummy_=nil end
     if handMotes_ then handMotes_:Clear(); handMotes_=nil end
     handWasOn_,combatDebugText_,combatDebugUntil_,debugDestination_=nil,nil,0,0
