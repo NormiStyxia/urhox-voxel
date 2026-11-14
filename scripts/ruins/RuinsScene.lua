@@ -1662,11 +1662,15 @@ end
 function Ruins_HandlePostUpdate(eventType, eventData)
     local dt = eventData["TimeStep"]:GetFloat()
     Safe('Camera.Base',UpdateBaseCamera,dt)
-    local aim = M.aim or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
+    if combatMoves_ then
+        Safe('Camera.Combat',UpdateCombatCamera,dt,nomi_:CameraNode())
+    end
+    -- 展示准星必须读取最终相机；不能把上一帧射线的结果画在当前帧视角。
+    -- Update 的 aim 仍用于本帧技能输入，PostUpdate 再校准选中反馈与悬停材质。
+    local aim=not M.mounted and UpdateAim() or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
     Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime())
     if combatMoves_ then
         local cn=nomi_:CameraNode()
-        Safe('Camera.Combat',UpdateCombatCamera,dt,cn)
         Safe('HUD.Update',UpdateCombatHUD,cn)
     end
     Safe('FX.MotesB',fx_.motesB.Draw,fx_.motesB); Safe('FX.MotesG',fx_.motesG.Draw,fx_.motesG)

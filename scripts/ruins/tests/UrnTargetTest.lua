@@ -110,7 +110,24 @@ V.atFrame(8,function()
             end
         end
     end
+    -- 禁用体积不再成为隐形墙；仍启用的 mask=0 视觉残片必须保留可选性。
+    local obstacle=world:CreateVolume(8,8,2,.125,urn.center+Vector3(-.5,-.5,-2))
+    obstacle:GetGrid():FillBox(0,0,0,7,7,1,true)
+    obstacle.destructible=false
+    world:FinalizeVolume(obstacle)
+    local obstacleNode=obstacle:GetNode()
+    local sight=Ray(urn.center+Vector3(0,0,-4),Vector3.FORWARD)
+    V.assert(nomi:GridHit(sight,20).volume==obstacle,"启用实心墙仍阻止瓮锁定")
+    obstacleNode.enabled=false
+    V.assert(nomi:AimRay(sight,20).object==urn,"禁用体积不留下隐形遮挡")
+    obstacleNode.enabled=true
+    obstacle.enabled=false
+    V.assert(nomi:AimRay(sight,20).object==urn,"禁用组件不留下隐形遮挡")
+    world:RemoveVolume(obstacle); obstacle:Dispose(); obstacleNode:Dispose()
     nomi.world=saved
+    local clock=Time:GetSystemTime()
+    for i=1,120 do nomi:AimRay(sight,20) end
+    print(string.format("UrnTargetTest: aim average %.3fms over 120 rays",(Time:GetSystemTime()-clock)/120))
     print(string.format("UrnTargetTest: visible=%d / 1296 misses=%d",visible,misses))
 end)
 
