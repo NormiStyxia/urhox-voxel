@@ -686,28 +686,54 @@ end
 ---@return table
 function Builder.BowVisual(blueprint,stage)
     local cells={}
+    local seen={}
     local half=assert(Parts.Get(blueprint.config.parts.limbs)).sockets.top[2]
     local mid=stage==0 and -.06 or (stage==1 and -.18 or -.35)
     for _,cell in ipairs(blueprint.geometry.cells) do
         if cell.feature~='string' then
             local bend=cell.slot=='limbs' and math.floor(stage*math.abs(cell.y)/half+.5) or (cell.slot=='tip' and stage or 0)
             cells[#cells+1]={x=cell.x,y=cell.y,z=cell.z-bend,channel=cell.channel,slot=cell.slot}
+            seen[Key(cell.x,cell.y,cell.z-bend)]=true
         end
     end
-    local seen={}
+    local nockY=math.floor(blueprint.hit.origin[2]/SIZE+.5)
+    local nockZ=0
     for side=-1,1,2 do
         for step=0,half*8 do
             local t=step/(half*8)
             local y=side*math.floor(half*t+.5)
             local z=math.floor((mid/SIZE)*(1-t)+(-2-stage)*t+.5)
             if y==0 then z=math.floor(mid/SIZE+.5) end
+            if y==nockY then nockZ=z*SIZE end
             local key=Key(0,y,z)
             if not seen[key] then
                 cells[#cells+1]={x=0,y=y,z=z,channel='accent',slot='limbs',feature='string'};seen[key]=true
             end
         end
     end
-    return {cells=cells,stringMidpoint={0,0,mid},stage=stage}
+    return {cells=cells,stringMidpoint={0,0,mid},nockZ=nockZ,stage=stage}
+end
+
+--- Local arrow cells; tail cross-nock reaches the string at X=0 after the
+--- right-side launch offset. Two swept vanes face away from the grip/shelf.
+--- Used only when creating pools, also usable by the offline geometry audit.
+---@param blueprint WeaponBlueprint
+---@return table[]
+function Builder.NockedArrow(blueprint)
+    local cells={}
+    for z=0,21 do cells[#cells+1]={x=0,y=0,z=z,channel=z==0 and 'dark' or 'secondary'} end
+    for x=-2,-1 do cells[#cells+1]={x=x,y=0,z=0,channel='dark'} end
+    for z=1,4 do
+        cells[#cells+1]={x=1,y=0,z=z,channel=z==4 and 'secondary' or 'primary'}
+        if z<=3 then cells[#cells+1]={x=0,y=1,z=z,channel='secondary'} end
+    end
+    for _,cell in ipairs(Decode(assert(Parts.Get(blueprint.config.parts.tip)))) do
+        -- Arrowhead +Y becomes the arrow's +Z. Root is attached at shaft 21.
+        if not (cell.x==0 and cell.z==0 and cell.y==0) then
+            cells[#cells+1]={x=cell.x,y=cell.z,z=21+cell.y,channel=cell.channel}
+        end
+    end
+    return cells
 end
 
 --- Rows run target(+Z) -> shooter(-Z), columns -X -> +X.

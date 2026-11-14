@@ -546,7 +546,11 @@ local function StartCombat()
                     life=.12+.04*(i%3),size=.025+.01*(i%3),colors={Color(.48,.46,.40)}}
             end
         end,
-        assist=function() if CombatState.GetSetting('aimAssist') then nomi_:AssistMelee(CombatEnemies(),CombatCast) end end,
+        aimPitch=function()return nomi_.camPitch end,
+        intent=function() local a=math.rad(nomi_.camYaw);return Vector3(math.sin(a),0,math.cos(a)) end,
+        assist=function(intent,selectTarget)
+            return nomi_:AssistMelee(CombatEnemies(),CombatCast,intent,selectTarget and CombatState.GetSetting('aimAssist'))
+        end,
         protected=function() return M.ride.mode~='free' or voidInputBlocked or animPreview_.index>0 end,
         fire=function(charge,stats,forceCrystal)
             local hit=combatRig_:GetHit()
@@ -1223,7 +1227,8 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         end
         if CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
             nomi_:Move(dt,allowed and f or 0,allowed and r or 0,false,
-                allowed and not combatInputBlocked and Press(KEY_SPACE),true,
+                allowed and not combatInputBlocked and Press(KEY_SPACE),
+                combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold',
                 {scale=allowed and not combatMoves_.slideMotionFrame and combatMoves_:MoveScale() or 0,motion=allowed and combatMoves_.motion or Vector3.ZERO,
                     facing=combatMoves_:Facing(),slideChecked=combatMoves_.slideMotionFrame})
             return
@@ -1297,7 +1302,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
                 combatAnim_:Play(clip.id,{fadeIn=0,params=params}); animPreview_.t=0
                 previewDt=0
             end
-            combatAnim_:SetParam('p',clip.id=='bow_hold' and params.p or math.min(1,animPreview_.t/math.max(.01,clip.dur)))
+            combatAnim_:SetParam('p',(clip.id=='bow_hold' or clip.id=='bow_release' or clip.id=='bow_cancel') and params.p or math.min(1,animPreview_.t/math.max(.01,clip.dur)))
             combatAnim_:Update(previewDt,previewDt)
             animPreview_.events=CombatMoves.PreviewEvents(combatAnim_:Poll(),-1,math.huge)
         else
@@ -1342,6 +1347,12 @@ local function UpdateCombatPreviewText()
         AppendHandDebug(lines,nomi_.nomi,sample,legacy)
         animPreview_.text=table.concat(lines,'\n')
     end
+end
+
+local function UpdateCombatAnimationParams()
+    local p,pitch=combatMoves_:BowParameters(nomi_.camPitch)
+    Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'aimPitch',pitch)
+    Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'p',p)
 end
 
 local function UpdateCombatRig(dt)
@@ -1480,8 +1491,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
     if M.ride.mode == "free" then Safe('Animation.Base',nomi_.Animate,nomi_,combatMoves_.hitstop>0 and 0 or dt,caster_.charging or caster_.castAnim > 0 or CombatState.Get()==CombatState.ACTIVE) end
     if combatAnim_ and animPreview_.index==0 then
-        Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'aimPitch',Clamp(nomi_.camPitch,-35,35))
-        Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'p',CombatState.GetWeapon()=='bow' and combatMoves_.charge or 0)
+        Safe('Animation.BowParameters',UpdateCombatAnimationParams)
     end
     if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
     Safe('Debug.F7HUD',UpdateCombatPreviewText)
@@ -1576,6 +1586,7 @@ local function UpdateBaseCamera(dt)
             for _,enemy in ipairs(CombatEnemies()) do if enemy.boss and enemy.aggro and not enemy.dead then boss=true; target=target or enemy end end
             local focus=target and not target.dead and target.position or nil
             local drawing=combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold'
+            if drawing then focus=nil end -- keep the reticle ray stable while aiming
             nomi_:SetCombatCamera(focus,boss,drawing,false) -- charge envelope owns zoom, avoid double FOV
             mode='combat'
         end
@@ -1600,6 +1611,22 @@ local function UpdateCombatCamera(dt,cn)
         end
 end
 
+-- Hide obstructed boundary samples; never paint a promise through a wall or void.
+local function CombatRangeClear(source,point)
+    local delta=point-source
+    local length=delta:Length()
+    if length<.001 then return true end
+    local hit=nomi_:SlideRay(Ray(source,delta/length),length)
+    return not hit or hit.distance>=length-.02
+end
+local function CombatRangeVisible(source,point)
+    if not Terrain.HasGround(point.x,point.z,.05) then return false end
+    local cn=nomi_:CameraNode()
+    local p=cn.worldPosition;local f=cn.worldDirection
+    if (point.x-p.x)*f.x+(point.y-p.y)*f.y+(point.z-p.z)*f.z<=0 then return false end
+    return CombatRangeClear(source,point) and CombatRangeClear(p,point)
+end
+
 local function UpdateCombatHUD(cn)
         local enemies=CombatEnemies()
         local a,b=cn.worldPosition,cn.worldPosition+cn.worldDirection*60
@@ -1608,13 +1635,14 @@ local function UpdateCombatHUD(cn)
         local aimed=hits[1] and (not wall or hits[1].t<wall) and hits[1].enemy or nil
         M.combat.aimed=aimed
         combatLookScale_=CombatState.InCombat() and combatCameraFrame_ and combatCameraFrame_.look or 1
-        if CombatState.InCombat() and CombatState.GetWeapon()=='bow' and CombatState.GetSetting('aimAssist') then
+        if CombatState.InCombat() and (combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold') and CombatState.GetSetting('aimAssist') and CombatState.GetSetting('cameraFov') then
             local near=CombatHit.Query(enemies,a,b,.6)
             for _,candidate in ipairs(near) do
-                if CombatHit.Visible(a,candidate.shape.center,CombatCast) then combatLookScale_=.65; break end
+                if CombatHit.Visible(a,candidate.shape.center,CombatCast) then combatLookScale_=math.min(combatLookScale_,.65); break end
             end
         end
         local hud=combatHUDData
+        hud.rangeVisible=CombatRangeVisible
         hud.moves,hud.combat,hud.mounted=combatMoves_,CombatState.InCombat(),M.ride.mode~='free'
         hud.weapon,hud.charge=CombatState.GetWeapon(),combatMoves_.charge
         hud.aimed,hud.enemies,hud.camera,hud.cameraNode=aimed,enemies,nomi_:Camera(),cn

@@ -36,19 +36,21 @@ function A:Update(dt,moves,enabled,shakeEnabled)
     local out=self.output
     out.focus,out.distance,out.fov,out.cross=Vector3.ZERO,0,0,0
     local drawing=moves.clip=='bow_draw' or moves.clip=='bow_hold'
-    local desired=drawing and clamp(moves.charge or 0,0,1) or 0
     if drawing then
-        self.bow=math.min(desired,self.bow+dt/.5)
-        self.bowRelease=self.bow; self.lookRelease=1
+        if not self.bowDrawing then self.bowStart,self.bowFrom=self.time-dt,self.bow end
+        self.bow=self.bowFrom+(1-self.bowFrom)*ease((self.time-self.bowStart)/.20)
+        self.bowRelease=self.bow
         self.bowReleasedAt=nil
     else
         self.bowReleasedAt=self.bowReleasedAt or self.time-dt
-        self.bow=self.bowRelease*(1-ease((self.time-self.bowReleasedAt)/.1))
+        self.bow=self.bowRelease*(1-ease((self.time-self.bowReleasedAt)/.10))
     end
-    out.look=drawing and .65 or (1-.35*(self.lookRelease or 0)*(1-ease((self.time-(self.bowReleasedAt or self.time-.1))/.1)))
+    self.bowDrawing=drawing
     out.cross=self.bow
+    out.look=enabled and (1-.40*self.bow) or 1
     if not enabled then return out end
-    out.fov=-5*self.bow
+    -- Base camera remains 55. This is the sole bow FOV source (55 -> 43).
+    out.fov=-12*self.bow
     if self.slideAt then
         local t=self.time-self.slideAt
         -- Lag opposes travel; neither yaw/pitch/roll nor screen-space reticle move.

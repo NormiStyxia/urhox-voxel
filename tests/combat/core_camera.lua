@@ -30,7 +30,7 @@ cam:Cancel();out=cam:Update(.01,m,true,true);near(out.focus:Length(),0)
 local function bow(fps)
     local c=Camera.New();local move={clip='bow_hold',charge=1}
     for _=1,fps/2 do c:Update(1/fps,move,true,true) end
-    near(c.output.fov,-5);near(c.output.look,.65);near(c.output.cross,1)
+    near(c.output.fov,-12);near(c.output.look,.60);near(c.output.cross,1)
     move.clip=nil
     for _=1,fps/10 do c:Update(1/fps,move,true,true) end
     near(c.output.fov,0);near(c.output.look,1);return c
@@ -99,7 +99,7 @@ local r={PopEvents=function()local e=events;events={};return e end,ArrivalFlash=
 local env=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,CombatState={PerfCall=function(_,fn,...)return fn(...)end},combatRig_=r,CombatAudio={Play=function(name) sounds[#sounds+1]=name end},nomi_={Position=function()return Vector3.ZERO end}},{__index=_G})
 local consume=assert(load(code,'actual Rig lifecycle consumer','t',env))
 consume();consume();assert(#sounds==3 and flashes==0,'no dual animation/arrival flash and no duplicate event sound')
-assert(scene:find("Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'aimPitch',Clamp(nomi_.camPitch,-35,35))",1,true))
+assert(scene:find("Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'aimPitch',pitch)",1,true))
 assert(scene:find('combatRig_:SetBowDraw(p)',1,true))
 local f=assert(io.open('scripts/ruins/RuinsHUD.lua'));local hud=f:read('*a');f:close()
 assert(hud:find('Draw.Rect(vg,x-1,y-1,2,2,c)',1,true),'reticle centre remains fixed while arms contract')
@@ -116,6 +116,6 @@ C.SeekPreview(preview,'sword_light_1',.12,.12,{legacyPose=1})
 assert(preview.tracks[1].params.legacyPose==1)
 C.SeekPreview(preview,'sword_light_1',.12,.12,{legacyPose=0})
 assert(preview.tracks[1].params.legacyPose==0)
-assert(scene:find("Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'p',CombatState.GetWeapon()=='bow' and combatMoves_.charge or 0)",1,true))
+assert(scene:find("Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'p',p)",1,true))
 assert(scene:find('if not sample and not legacy then',1,true),'legacy preview must not report stale IK sample')
 print('PASS F7 P toggles/reseeks same frame, disabled outside preview, continuous bow p and legacy diagnostics isolation')

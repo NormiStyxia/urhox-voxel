@@ -220,26 +220,13 @@ function N:ClipSlideMotion(motion)
         end)
 end
 
--- One bounded turn at melee startup; no lock, no movement or camera magnetism.
-function N:AssistMelee(enemies,cast)
-    local origin=self:Position()+Vector3(0,.8,0)
-    local best,bestDistance=nil,4
-    for _,enemy in ipairs(enemies) do
-        if enemy.active and not enemy.dead then
-            local target=enemy.position+Vector3(0,.8,0)
-            local delta=target-origin
-            local length=delta:Length()
-            local yaw=math.deg(math.atan(delta.x,delta.z))
-            local turn=WrapDeg(yaw-self.yaw)
-            if length>0 and length<=bestDistance and math.abs(turn)<=35 and (not cast or not cast(origin,target)) then
-                best,bestDistance=turn,length
-            end
-        end
-    end
-    if best then
-        self.yaw=self.yaw+Clamp(best,-20,20)
-        self.node.rotation=Quaternion(self.yaw,Vector3.UP)
-    end
+-- Snap before hit_on; camera yaw stays untouched even for a full body turn.
+function N:AssistMelee(enemies,cast,intent,enabled)
+    local direction,target=intent,nil
+    if enabled then direction,target=require('combat.CombatMoves').SelectMeleeTarget(self:Position(),intent,enemies,cast) end
+    self.yaw=math.deg(math.atan(direction.x,direction.z))
+    self.node.rotation=Quaternion(self.yaw,Vector3.UP)
+    return direction,target
 end
 
 -- 仅 Scene 的徒步路径调用；骑乘/上下龙过渡不作坠落判定。

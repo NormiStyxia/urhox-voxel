@@ -337,20 +337,10 @@ function Rig:BuildVisualPools(weapon)
         for stage=0,2 do
             local shape=Builder.BowVisual(bp,stage)
             local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,shape.cells,'BowDraw_'..stage)
-            mesh.stringZ=shape.stringMidpoint[3];self.bowDrawMeshes[stage+1]=mesh
+            mesh.stringZ=shape.stringMidpoint[3];mesh.nockZ=shape.nockZ;self.bowDrawMeshes[stage+1]=mesh
         end
         DisposeEffect(self,self.bowArrow)
-        local arrow={}
-        for z=0,21 do arrow[#arrow+1]={x=0,y=0,z=z,channel='secondary'} end
-        for z=1,4 do
-            arrow[#arrow+1]={x=-1,y=0,z=z,channel='accent'}
-            arrow[#arrow+1]={x=1,y=0,z=z,channel='accent'}
-        end
-        local tip=assert(Parts.Get(bp.config.parts.tip))
-        for iy,layer in ipairs(tip.voxels) do for iz,row in ipairs(layer) do for ix=1,#row do
-            local c=row:sub(ix,ix)
-            if c~='.' then arrow[#arrow+1]={x=tip.origin[1]+ix-1,y=tip.origin[3]+iz-1,z=21+iy-1,channel=tip.palette[c]} end
-        end end end
+        local arrow=Builder.NockedArrow(bp)
         self.bowArrow=Builder.VisualVolume(self.world,entry.pivot,bp,arrow,'BowNockedArrow')
     end
 end
@@ -860,7 +850,8 @@ function Rig:UpdateBowVisual()
     if self.active=='bow' and self.visualState=='hand' then self.entries.bow.mesh.node.enabled=not drawn end
     if drawn then
         local minimum=self.bowArrow.minimum
-        SetVec(self.bowArrowOffset,minimum.x+.06,minimum.y,minimum.z+self.bowDrawMeshes[self.bowStage+1].stringZ)
+        local launch=self.entries.bow.mesh.blueprint.hit.origin
+        SetVec(self.bowArrowOffset,minimum.x+launch[1],minimum.y+launch[2],minimum.z+self.bowDrawMeshes[self.bowStage+1].nockZ)
         self.bowArrow.node.position=self.bowArrowOffset
         self.bowArrow.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
         self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])

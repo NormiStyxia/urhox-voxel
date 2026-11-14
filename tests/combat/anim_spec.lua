@@ -188,10 +188,11 @@ test("uncontrolled bones untouched and root offset does not accumulate",function
         sameRotation(c.bones.cloak.rotation,Quaternion(17,2,3))
     end
 end)
-test("roll and spin preserve authored multi-turn angle path",function()
+test("roll and legacy spin preserve authored multi-turn angle path",function()
     near(A.DebugSample("dodge_roll",.25).body[1],330)
-    near(A.DebugSample("sword_heavy_release",.25).body[2],-180)
-    near(A.DebugSample("sword_heavy_release",.72).body[2],-360)
+    near(A.DebugSample("sword_heavy_release",.25,{legacyPose=1}).body[2],-180)
+    near(A.DebugSample("sword_heavy_release",.72,{legacyPose=1}).body[2],-360)
+    near(A.DebugSample("sword_heavy_release",.72).body[2],0)
 end)
 test("weapon pose and state buffers reuse tables",function()
     local a,c=new();local ordered,queue,output,pool=a.ordered,a.queue,a.output,a.eventPool
@@ -542,13 +543,13 @@ end)
 test("bow faces target, aims within 35 degrees, and draws toward chin",function()
     local low=A.DebugSample("bow_hold",0,{p=0,aimPitch=0})
     local full=A.DebugSample("bow_hold",1,{p=1,aimPitch=0})
-    near(full.body[2],0);assert(full.head[1]>0)
+    near(full.body[2],0);near(full.body[1]+full.head[1],4)
     assert(full._ik.arm_right.target[3]<low._ik.arm_right.target[3])
     assert(full._ik.arm_right.target[2]>low._ik.arm_right.target[2])
     for _,pitch in ipairs({-100,-35,0,35,100}) do
         local a,c=new();a:Play("bow_hold",{fadeIn=0,params={p=.7,aimPitch=pitch}})
         a:Update(0);a:Apply();local _,e=a:GetWeaponPose()
-        local final=c.bones.arm_left.rotation*Quaternion(90,0,0)*Quaternion(e.x,e.y,e.z)
+        local final=c.bones.body.rotation*c.bones.arm_left.rotation*Quaternion(90,0,0)*Quaternion(e.x,e.y,e.z)
         sameRotation(final,Quaternion(math.max(-35,math.min(35,pitch)),0,0))
     end
 end)
@@ -602,4 +603,82 @@ test("legacy fallback supports clips without separate legacy keys",function()
         assert(A.DebugSample(item.id,0,{legacyPose=1}).body)
     end
 end)
+test("free-facing attacks leave controller heading and horizontal position untouched",function()
+    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
+        for _,yaw in ipairs({-179,-90,0,90,179}) do
+            local a,c=new();local node={rotation=Quaternion(0,yaw,0),position=Vector3(8,2,-4)}
+            a.node=node;c.bones.root.rotation=Quaternion(0,17,0)
+            a:Play(id,{fadeIn=0,fadeOut=0});a:Update(D.Clips[id].phases.active[1]+.04)
+            c.bones.root.position=Vector3(3,1,7);a:Apply()
+            sameRotation(node.rotation,Quaternion(0,yaw,0));sameRotation(c.bones.root.rotation,Quaternion(0,17,0))
+            near(node.position.x,8);near(node.position.z,-4);near(c.bones.root.position.x,3);near(c.bones.root.position.z,7)
+            assert(math.abs(A.DebugSample(id,D.Clips[id].phases.active[1]+.04).body[2])<=55)
+        end
+    end
+end)
+test("both attack feet override gait and head compensation matches final torso keys",function()
+    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
+        local c=D.Clips[id]
+        for i=1,6 do
+            near(c.keys.leg_right[i][2][1],-c.keys.leg_left[i][2][1]*.65)
+            near(c.keys.head[i][2][2],-math.max(-30,math.min(30,c.keys.body[i][2][2]*.65)))
+        end
+        local a,character=new();a:Play(id,{fadeIn=0,fadeOut=0});a:Update(c.phases.active[1]+.04)
+        character.bones.leg_right.rotation=Quaternion(60,0,0);a:Apply()
+        local foot=character.bones.leg_right.rotation
+        Mock.reset(character);character.bones.leg_right.rotation=Quaternion(-60,0,0);a:Update(0);a:Apply()
+        sameRotation(character.bones.leg_right.rotation,foot)
+    end
+end)
+test("bow hand blade and gaze share aim under torso tremor and arbitrary facing",function()
+    for _,yaw in ipairs({-179,0,179}) do
+        for _,pitch in ipairs({-90,-35,0,35,90}) do
+            for _,charge in ipairs({0,.5,1}) do
+                local a,c=new();a:Play("bow_hold",{fadeIn=0,params={p=charge,aimPitch=pitch}})
+                a:Update(.13);a:Apply()
+                local facing=Quaternion(0,yaw,0)
+                local body=c.bones.body.rotation
+                local aim=math.max(-35,math.min(35,pitch))
+                local hand=body*c.bones.arm_left.rotation*a.arms.arm_left.grip
+                local wanted=Quaternion(aim,0,0)*Vector3(0,0,a.arms.arm_left.length)
+                near(hand.x,wanted.x);near(hand.y,wanted.y);near(hand.z,wanted.z)
+                local _,e=a:GetWeaponPose()
+                sameRotation(facing*body*c.bones.arm_left.rotation*Quaternion(90,0,0)*Quaternion(e.x,e.y,e.z),facing*Quaternion(aim,0,0))
+                sameRotation(facing*body*c.bones.head.rotation,facing*Quaternion(aim+4,0,0))
+                local right=a:GetIKDebug().arm_right.actual
+                assert(right.x>.20,"string hand must stay outside centre face silhouette")
+                assert(a.arms.arm_right.length<.35,"must not stretch arm")
+            end
+        end
+    end
+end)
+test("bow release holds left aim for .08s then relaxes; cancel does not twist torso",function()
+    local first=A.DebugSample("bow_release",0,{p=1,aimPitch=-20})
+    for _,t in ipairs({.02,.04,.08}) do
+        local pose=A.DebugSample("bow_release",t,{p=1,aimPitch=-20})
+        near(distance(first._ik.arm_left.actual,pose._ik.arm_left.actual),0)
+    end
+    local rest=A.DebugSample("bow_release",.20,{p=1,aimPitch=-20})
+    assert(rest._ik.arm_left.actual[2]<first._ik.arm_left.actual[2])
+    for i=0,18 do near(A.DebugSample("bow_cancel",i*.01,{p=1}).body[2],0) end
+end)
+local baselinePath=os.getenv("ANIM_BASELINE_FILE")
+if baselinePath then
+    test("all duration events phases and motion exactly match the git baseline",function()
+        local file=assert(io.open(baselinePath,"r"));local source=file:read("*a");file:close()
+        local old=assert(load(source,"baseline","t",_G))()
+        local function equal(a,b,path)
+            assert(type(a)==type(b),path.." type changed")
+            if type(a)~="table" then assert(a==b,path.." value changed");return end
+            for k,v in pairs(a) do equal(v,b[k],path.."."..tostring(k)) end
+            for k in pairs(b) do assert(a[k]~=nil,path.." gained "..tostring(k)) end
+        end
+        equal(old.Order,D.Order,"Order")
+        for id,c in pairs(old.Clips) do
+            for _,field in ipairs({"dur","eventDur","events","motion","phases","speedStat","realTime","cancelAt","cancelBlend"}) do
+                equal(c[field],D.Clips[id][field],id.."."..field)
+            end
+        end
+    end)
+end
 print(string.format("CombatAnim: %d tests passed (Lua 5.4 offline; visual UNVERIFIED)",passed))

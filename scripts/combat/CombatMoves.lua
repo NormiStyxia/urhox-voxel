@@ -15,6 +15,28 @@ local function Flat(v,fallback)
     local d=Vector3(v.x,0,v.z)
     return d:LengthSquared()>.0001 and d:Normalized() or fallback
 end
+-- Intent is independent of body yaw. Select once, never track during a strike.
+function C.SelectMeleeTarget(position,intent,enemies,cast)
+    intent=Flat(intent,Vector3.FORWARD)
+    local best,bestDir,bestScore=nil,intent,math.huge
+    local origin=position+Vector3(0,.9,0)
+    for _,enemy in ipairs(enemies) do
+        if enemy.active~=false and not enemy.dead and enemy.position then
+            local delta=enemy.position-position
+            local distance=math.sqrt(delta.x*delta.x+delta.z*delta.z)
+            if distance>.001 and distance<=3.6 and math.abs(delta.y)<=2 then
+                local direction=Flat(delta,intent)
+                local dot=direction:DotProduct(intent)
+                local limit=distance<=1.5 and 0 or math.cos(math.rad(75))
+                if dot>=limit and Hit.Visible(origin,enemy.position+Vector3(0,.9,0),cast) then
+                    local score=(1-dot)*2+distance/3.6
+                    if score<bestScore then best,bestDir,bestScore=enemy,direction,score end
+                end
+            end
+        end
+    end
+    return bestDir,best
+end
 -- Physical ground port returns height, normal.y. Nine probes cover the centre
 -- and expanded footprint; no endpoint-only jump across a narrow gap.
 function C.SlideFootprint(p,radius,ground)
@@ -69,6 +91,8 @@ function C.New(opts)
         iframe=false,cancelOpen=false,damaged={},dead=false,blocked=false,
         lastAttack=false,lastHeavy=false,shake=0,shakeAge=0,shakeDuration=0,
         eventPool={{},{},{},{},{},{},{},{}},eventWrite=0,swingSerial=0,feedbackGroups={},
+        strikeZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
+        slamZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
         slideShots={},slideShotPool={{},{}},slideShotWrite=0,slideShotAt=-1},C)
 end
 -- Injected sound port keeps offline simulations engine-independent.
@@ -86,10 +110,17 @@ function C:Flash(kind)
     if self.rig.Flash then self.rig:Flash(kind) end
 end
 function C:Play(id,fadeIn)
+    if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
     -- Scale the clip clock; charge_full remains the sole full-charge signal.
     local speed=id=='sword_heavy_charge' and 1/math.max(.1,stats.chargeMultiplier or 1) or 1
     local params
+    if id=='bow_release' or id=='bow_cancel' then
+        self.bowPoseCharge=self.charge
+        self.bowPosePitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
+        self.bowPoseFacing=Flat(self.o.forward(),Vector3.FORWARD)
+        params={p=self.bowPoseCharge,aimPitch=self.bowPosePitch}
+    end
     if id=='dodge_slide' then
         local f=self.slideFacing or self.o.forward()
         local d=self.moveDir or -f
@@ -109,11 +140,21 @@ function C:Play(id,fadeIn)
     if self.observe then self.observe('start',{clip=id,age=self.age}) end
     if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
     self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
-    self.damaged,self.previousHit,self.hitForward={},nil,nil
+    self.damaged,self.previousHit={},nil
+    self.hitForward=(id:find('sword_light_',1,true) or id=='sword_heavy_release') and self.moveDir or nil
     self.state.SetBusy(true)
     return true
 end
 function C:Cancel(reason,keepProtection)
+    local softReason=reason=='blocked' or reason=='focus' or reason=='touch-clear' or reason=='touchcancel' or reason=='menu'
+    -- A focus/touch callback may be followed by the blocked-input pass in the
+    -- same frame. Do not restart or erase the already-safe cosmetic tail.
+    if softReason and not self.clip and self.bowCancelHandle and self.anim:IsPlaying('bow_cancel') then return end
+    local drawing=self.clip=='bow_draw' or self.clip=='bow_hold'
+    local soft=drawing and softReason
+    local charge,pitch=self.charge,math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
+    if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0) end
+    self.bowCancelHandle=nil
     if self.o.camera then self.o.camera:Cancel() end
     local cancelledHandle=self.handle
     self:StopDrawSound()
@@ -145,6 +186,19 @@ function C:Cancel(reason,keepProtection)
     if not self.draining and not keepProtection then self.anim:Poll() end
     self.state.SetBusy(false)
     if self.o.clear then self.o.clear(reason) end
+    -- Cosmetic release only: no attack handle, charge, pending arrow or busy lock.
+    -- Dodge/hit/swap/death/exit replace the pose immediately as before.
+    if soft and self.state.InCombat() and not self.dead then
+        self.bowPoseCharge,self.bowPosePitch=charge,pitch
+        self.bowCancelHandle=self.anim:Play('bow_cancel',{params={p=charge,aimPitch=pitch}})
+    end
+end
+function C:BowParameters(pitch)
+    if self.clip=='bow_release' or self.clip=='bow_cancel'
+        or (self.bowCancelHandle and self.anim:IsPlaying('bow_cancel')) then
+        return self.bowPoseCharge or 0,self.bowPosePitch or 0
+    end
+    return self.state.GetWeapon()=='bow' and self.charge or 0,math.max(-35,math.min(35,pitch or 0))
 end
 function C:CanCancel()
     return not self.clip or self.cancelOpen or self.clip=='sword_heavy_charge'
@@ -171,8 +225,9 @@ function C:BrakeSlide()
     if self.state.Log then self.state.Log('dodge-land','Combat: sfx dodge_land') end
 end
 function C:Facing()
+    if self.clip=='bow_release' then return self.bowPoseFacing end
     if self.clip=='dodge_slide' then return self.slideFacing end
-    return self.clip and self.state.GetWeapon()=='sword' and self.moveDir or nil
+    return self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release' or self.clip=='sword_heavy_charge') and self.moveDir or nil
 end
 -- Snapshot only the authored .04-.16 interval, at most two pooled records.
 -- The optional rig pose port returns its actual active weapon pivot in world
@@ -247,8 +302,13 @@ function C:Action(kind,axis)
         return true
     end
     self.state.Activity(true)
-    if self.state.GetWeapon()=='sword' and kind~='hold' and self.o.assist then self.o.assist() end
-    self.moveDir=self.o.forward()
+    local intent=axis or self.inputAxis or Vector3.ZERO
+    if intent:LengthSquared()<.18*.18 then intent=self.o.intent and self.o.intent() or self.o.forward() end
+    self.moveDir=Flat(intent,Vector3.FORWARD)
+    if self.state.GetWeapon()=='sword' and self.o.assist then
+        self.moveDir,self.strikeTarget=self.o.assist(self.moveDir,kind~='hold')
+        self.moveDir=self.moveDir or Flat(intent,Vector3.FORWARD)
+    end
     if follow then
         if self.o.camera then self.o.camera:Follow() end
         self.followDistance=0; self.slideFollowUntil=nil
@@ -388,7 +448,7 @@ function C:Events()
         if self.observe then self.observe('event',{name=e.name,clip=e.clip,t=e.t,age=self.age}) end
         if e.name=='hit_on' then
             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
-            self.hitForward=Flat(self.o.forward(),Vector3.FORWARD)
+            self.hitForward=self.hitForward or Flat(self.moveDir or self.o.forward(),Vector3.FORWARD)
             self.strikePerfect=self.perfectUntil and self.age<=self.perfectUntil
             self.perfectUntil=nil
         elseif e.name=='hit_off' then
@@ -481,6 +541,7 @@ end
 ---@param dt number
 ---@param controls table attack/heavy held, attackTap/dodge edges, axis world-space, allowed
 function C:Update(dt,controls)
+    self.inputAxis=controls.axis
     self.age=self.age+dt; self.invuln=math.max(0,self.invuln-dt)
     if self.state.InCombat() and not self.anim:IsPlaying('stance_combat') then self.anim:Play('stance_combat') end
     self.dodgeCool=math.max(0,self.dodgeCool-dt); self.shakeAge=self.shakeAge+dt
@@ -543,11 +604,11 @@ function C:Update(dt,controls)
         and self.slideElapsed<.26 then stepDt=math.min(stepDt,.26-self.slideElapsed) end
     local moveDir=self.moveDir or self.o.forward() --[[@as Vector3]]
     -- Sound timing derives from the authored active boundary, not a hit table.
-    if not self.whoosh and self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then
+    if self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then
         local clip=require('combat.AnimClips').Clips[self.clip]
         local threshold=math.max(0,clip.phases.active[1]-.02)
         self.whooshTime=self.whooshTime+stepDt*(clip.speedStat and self.rig:GetStats()[clip.speedStat] or 1)*(self.anim.timeScale or 1)
-        if self.whooshTime>=threshold then
+        if not self.whoosh and self.whooshTime>=threshold then
             self.whoosh=true; self:Sound('sword_whoosh',{pos=self.o.position(),tier=self.combo>0 and self.combo or 3})
         end
     end
@@ -611,18 +672,48 @@ function C:MoveScale()
     if self.clip and (self.clip:find('hit_',1,true) or self.clip=='knockdown') then return 0 end
     if self.clip=='sword_heavy_charge' then return .4 end
     if self.clip=='bow_hold' or self.clip=='bow_draw' then return self.rig:GetStats().move or .5 end
-    if self.clip and self.clip:find('sword_light_',1,true) then return .2 end
+    if self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then return 0 end
     return 1
 end
--- Snapshot the strike's facing at hit_on; translate its zone with the actual
--- controller position every active frame. Neither rig pose nor blade length is
--- a prerequisite for melee settlement (the weapon path remains visual only).
-function C.MeleeZone(id,position,forward,reach,slam)
+-- One geometry source for settlement and the brief range boundary.
+function C.MeleeZone(id,position,forward,reach,slam,out)
+    out=out or {origin=Vector3(0,0,0),source=Vector3(0,0,0)}
     local offset=id=='sword_light_3' and .4 or 0
-    return {origin=position+forward*offset,source=position+Vector3(0,.9,0),forward=forward,
-        radius=(slam and 2 or 1.8)*math.max(.1,reach or 1),
-        angle=slam and 90 or (id=='sword_heavy_release' and 360 or (id=='sword_light_3' and 100 or 120)),
-        low=-.3,high=2}
+    out.origin.x,out.origin.y,out.origin.z=position.x+forward.x*offset,position.y,position.z+forward.z*offset
+    out.source.x,out.source.y,out.source.z=position.x,position.y+.9,position.z
+    out.forward=forward
+    out.radius=(slam and 2 or 1.8)*math.max(.1,reach or 1)
+    out.angle=slam and 90 or (id=='sword_heavy_release' and 360 or (id=='sword_light_3' and 100 or 120))
+    out.low,out.high=-.3,2
+    return out
+end
+function C:StrikeZones()
+    local id=self.hitPending and self.hitClip or self.clip
+    if self.dead or not id or not (id:find('sword_light_',1,true) or id=='sword_heavy_release') then return nil end
+    local phase=require('combat.AnimClips').Clips[id].phases.active
+    local t=self.whooshTime or 0
+    if not (self.hitOpen or self.hitPending) and t>=phase[1] then return nil end
+    local position=self.o.position()
+    local direction=self.hitForward or self.moveDir or self.o.forward()
+    local reach=self.rig:GetStats().reach
+    self.strikeZone=C.MeleeZone(id,position,direction,reach,false,self.strikeZone)
+    local slam
+    if id=='sword_heavy_release' and t>=phase[1]+(phase[2]-phase[1])*2/3 then
+        self.slamZone=C.MeleeZone(id,position,direction,reach,true,self.slamZone)
+        slam=self.slamZone
+    end
+    return self.strikeZone,slam,self.hitOpen or self.hitPending
+end
+-- Samples on the same sector, including both radial edges, into caller storage.
+function C.ZoneBoundary(zone,index,segments,out)
+    local half=math.rad(zone.angle*.5)
+    local angle,radius
+    if index<=segments then angle=-half+2*half*index/segments;radius=zone.radius
+    else angle=index<=segments+4 and -half or half;radius=zone.radius*((index-segments-1)%4)/4 end
+    local x,z=math.sin(angle)*radius,math.cos(angle)*radius
+    local f=zone.forward
+    out.x,out.y,out.z=zone.origin.x+x*f.z+z*f.x,zone.origin.y+.04,zone.origin.z+z*f.z-x*f.x
+    return out
 end
 -- Still called after the physical actor/base animation update. hitPending covers
 -- a low-FPS frame which contains both hit_on and hit_off exactly once.
@@ -632,22 +723,17 @@ function C:AfterPose()
         self.pendingFire=nil
     end
     if not (self.hitOpen or self.hitPending) or self.dead then self.previousHit=nil; return end
+    local zone,slam=self:StrikeZones()
     self.hitPending=false
+    if not zone then return end
     local stats=self.rig:GetStats()
     local position=self.o.position()
     local direction=self.hitForward or Flat(self.o.forward(),Vector3.FORWARD)
     local enemies=self.o.enemies and self.o.enemies() or {}
-    local zone=C.MeleeZone(self.hitClip,position,direction,stats.reach)
     local contacts=Hit.QueryZone(enemies,zone)
-    if self.hitClip=='sword_heavy_release' then
-        local phase=require('combat.AnimClips').Clips.sword_heavy_release.phases.active
-        -- Final third of the EXISTING active interval extends the forward slam;
-        -- it does not open another damage window or reset the swing hit ledger.
-        if (self.whooshTime or 0)>=phase[1]+(phase[2]-phase[1])*2/3 then
-            local slam=C.MeleeZone(self.hitClip,position,direction,stats.reach,true)
-            for _,contact in ipairs(Hit.QueryZone(enemies,slam)) do contacts[#contacts+1]=contact end
-            table.sort(contacts,function(a,b)return a.distance2<b.distance2 end)
-        end
+    if slam then
+        for _,contact in ipairs(Hit.QueryZone(enemies,slam)) do contacts[#contacts+1]=contact end
+        table.sort(contacts,function(a,b)return a.distance2<b.distance2 end)
     end
     for _,contact in ipairs(contacts) do
         local enemy,part=contact.enemy,contact.shape.id

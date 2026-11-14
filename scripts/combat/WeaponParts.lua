@@ -40,13 +40,21 @@ local function Add(part)
     Parts.All[#Parts.All+1] = part
 end
 
--- Profile is ordered bottom -> top. Three Z slices give dark backs and bright ridges.
+-- Profile is ordered bottom -> top. Bevel the front/back instead of extruding
+-- every silhouette cell into a three-voxel slab. Edge pixels stay one voxel.
 ---@param profile string[]
 ---@return string[][]
 local function Relief(profile)
     local layers = {}
     for y, row in ipairs(profile) do
-        layers[y] = { (row:gsub("[PSA]", "D")), row, (row:gsub("P", "S")) }
+        local back,front={},{}
+        for x=1,#row do
+            local c=row:sub(x,x)
+            local interior=c~='.' and x>1 and x<#row and row:sub(x-1,x-1)~='.' and row:sub(x+1,x+1)~='.'
+            back[x]=interior and (c=='A' and 'S' or 'D') or '.'
+            front[x]=interior and c or '.'
+        end
+        layers[y] = {table.concat(back),row,table.concat(front)}
     end
     return layers
 end
@@ -61,11 +69,18 @@ local function Blade(id, name, desc, width, height, stats)
     local layers = {}
     local half = width // 2
     for y = 1, height do
-        local edge = math.min(half, height-y)
+        -- Straight: short ricasso and long converging point. Broad: waisted
+        -- leaf, two shoulders. Rapier: narrow forte then a diamond needle.
+        local edge
+        if id=='blade_straight' then edge=y<=3 and 1 or (y<=13 and 2 or (y<=19 and 1 or 0))
+        elseif id=='blade_broad' then
+            edge=y==1 and 1 or (y==2 and 2 or (y<=6 and 3 or (y<=11 and 2 or (y<=15 and 3 or (y<=18 and 2 or (y<=20 and 1 or 0))))))
+        else edge=y<=6 and 1 or 0 end
         local row, ridge = {}, {}
         for x = -half, half do
             row[#row+1] = math.abs(x) <= edge and (math.abs(x)==edge and "S" or "P") or "."
-            ridge[#ridge+1] = x==0 and "A" or "."
+            -- Ridge is metal highlight, not a continuous emissive light bar.
+            ridge[#ridge+1] = x==0 and y<height-1 and (y==2 and 'A' or 'S') or '.'
         end
         layers[y] = {table.concat(ridge), table.concat(row), table.concat(ridge)}
     end
@@ -81,31 +96,44 @@ local function SwordPart(id, slot, name, desc, profile, root, top, stats)
         origin={-(#profile[1]//2),root[2],-1}, sockets={root=root,top=top}, stats=stats, palette=CHANNEL_PALETTE})
 end
 SwordPart("guard_cross","guard","十字","失衡更强，出手略慢",
-    {"DDSPPAPPSDD","SSSPPAPPSSS"}, {0,0,0},{0,2,0},{poise=1,speed=-.02})
+    {"SS..PAP..SS","DSSSPPPSSSD"}, {0,0,0},{0,2,0},{poise=1,speed=-.02})
 SwordPart("guard_wing","guard","翼形","失衡+3，速度−0.04",
-    {"...DPAPD...",".DSPPAPPSD.","SSSPPAPPSSS"}, {0,0,0},{0,3,0},{poise=3,speed=-0.04})
-SwordPart("guard_slim","guard","窄身","速度+0.08，失衡−1", {"DPAPD","SSASS"},{0,0,0},{0,2,0},{speed=0.08,poise=-1})
+    {"...SPAPS...",".SSSPPPSSS.","SSD..S..DSS"}, {0,0,0},{0,3,0},{poise=3,speed=-0.04})
+SwordPart("guard_slim","guard","窄身","速度+0.08，失衡−1", {".SAS.","SSPSS"},{0,0,0},{0,2,0},{speed=0.08,poise=-1})
 SwordPart("sword_grip_leather","grip","缠革","发力稳，触及略短",
-    {"SAS","PDP","DPD","PDP","DPD","PDP","SAS"}, {0,-3,0},{0,4,0},{attack=.5,reach=-.02})
+    {"SSS","DPP","PDP","PPD","DPP","PDP","SAS"}, {0,-3,0},{0,4,0},{attack=.5,reach=-.02})
 SwordPart("sword_grip_long","grip","长柄","增加触及，出手稍慢",
-    {"SAS","PDP","DPD","PDP","DPD","PDP","DPD","PDP","SAS"}, {0,-4,0},{0,5,0},{reach=0.1,speed=-0.06})
-SwordPart("pommel_round","pommel","圆首","触及略长，失衡略低", {".DSD.","DPAPD",".SAS."},{0,0,0},{0,3,0},{reach=.02,poise=-1})
-SwordPart("pommel_crystal","pommel","晶首","蓄满时间−8%，攻击−0.5", {"..A..",".SAS.","DPAPD",".SSS."},{0,0,0},{0,4,0},{chargeMultiplier=.92,attack=-.5})
-SwordPart("pommel_weight","pommel","配重","攻击+2，破甲+0.15，速度−0.08", {"DSSSD","DPAPD","DPAPD",".SAS."},{0,0,0},{0,4,0},{attack=2,armorBreak=.15,speed=-0.08})
+    {"SSS","DPP","PDP","PPD","SSS","DPP","PDP","PPD","SAS"}, {0,-4,0},{0,5,0},{reach=0.1,speed=-0.06})
+SwordPart("pommel_round","pommel","圆首","触及略长，失衡略低", {".SSS.","SPAPS",".SPS."},{0,0,0},{0,3,0},{reach=.02,poise=-1})
+SwordPart("pommel_crystal","pommel","晶首","蓄满时间−8%，攻击−0.5", {"..A..",".SAS.","SDADS",".SPS."},{0,0,0},{0,4,0},{chargeMultiplier=.92,attack=-.5})
+SwordPart("pommel_weight","pommel","配重","攻击+2，破甲+0.15，速度−0.08", {"SSSSS","SPDPS","SPAPS",".SPS."},{0,0,0},{0,4,0},{attack=2,armorBreak=.15,speed=-0.08})
 
 -- Bow is in the Y/Z plane: +Y up, +Z target, string on the shooter's -Z side.
 -- W explicitly identifies string voxels for the three cached draw shapes.
 -- Central limb voxels are omitted so either grip can fill the same socket.
 local function Limbs(id, name, desc, halfHeight, recurve, stats)
     local layers = {}
+    -- Sampled centreline from |Y|=4 to the tip; same extents and sockets.
+    -- Recurve has an actual reverse bend (0 -> 1 -> -1), not just a colour.
+    local profiles={
+        limbs_short={1,2,2,2,1,1,0,0,-1,-1,-1,-1},
+        limbs_long={1,1,2,2,2,2,2,2,2,1,1,1,0,0,-1,-1,-1},
+        limbs_recurve={1,2,2,2,1,1,0,0,0,1,1,1,0,-1,-1},
+    }
     for y = -halfHeight, halfHeight do
-        local t = math.abs(y)/halfHeight
-        local center = 2-math.floor(3*t*t+0.5)
-        if recurve and math.abs(y)>halfHeight-3 then center = -1 end
+        local ay=math.abs(y)
+        local center=profiles[id][math.max(1,ay-3)]
+        local wide=ay<halfHeight*(recurve and .65 or .5)
         local layer={}
         for z=-2,3 do
-            local limb=math.abs(y)>3 and math.abs(z-center)<=1
-            layer[#layer+1]=limb and (z==center and 'SPS' or 'DDD') or (z==-2 and '.W.' or '...')
+            local limb=ay>3 and (z==center or z==center-1 or (wide and z==center+1))
+            local row='...'
+            if limb then
+                if z==center then row=wide and (ay==4 and 'SAS' or 'DPD') or '.P.'
+                else row=z>center and '.S.' or '.D.' end
+                if ay==halfHeight or ay==halfHeight-1 then row=z==center and '.S.' or '.D.' end
+            elseif z==-2 then row='.W.' end
+            layer[#layer+1]=row
         end
         layers[#layers+1] = layer
     end
@@ -117,15 +145,30 @@ Limbs("limbs_long","长弓","射程远，拉满稍慢",20,false,{draw=0.16,range
 Limbs("limbs_recurve","反曲弓","失衡略强，出手略慢",18,true,{poise=.5,speed=-.02})
 
 local function BowPart(id,slot,name,desc,profile,origin,sockets,stats)
-    Add({id=id,weapon="bow",slot=slot,name=name,desc=desc,voxels=Relief(profile),origin=origin,sockets=sockets,stats=stats,palette=CHANNEL_PALETTE})
+    local layers=Relief(profile)
+    if slot=='grip' then
+        -- One right-side arrow shelf, one voxel BELOW the unchanged launch
+        -- socket (2,2,3). Never fill the shaft corridor at launch Y=2.
+        local width=5
+        for iy,layer in ipairs(layers) do
+            for iz=1,5 do
+                local row=layer[iz] or string.rep('.',#profile[1])
+                if #row==3 then row='.'..row..'.' end
+                if iy==5 and iz>=3 then row=row:sub(1,width-2)..'SS' end
+                layer[iz]=row
+            end
+        end
+        origin={-2,origin[2],origin[3]}
+    end
+    Add({id=id,weapon="bow",slot=slot,name=name,desc=desc,voxels=layers,origin=origin,sockets=sockets,stats=stats,palette=CHANNEL_PALETTE})
 end
 BowPart("bow_grip_leather","grip","皮握把","攻击略高，失衡略低",
-    {"SAS","PDP","DPD","PDP","DPD","PDP","SAS"},{-1,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {attack=.5,poise=-.5})
+    {"SSS","DPP","PDP","PPD","DPP","PDP","SAS"},{-1,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {attack=.5,poise=-.5})
 BowPart("bow_grip_stable","grip","稳定握把","移动×0.6，散布−25%，拉弓速度−8%",
-    {".SAS.",".PDP.","DPAPD","DPAPD","DPAPD",".PDP.",".SAS."},{-2,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {spreadMultiplier=.75,move=.1,drawMultiplier=1/.92})
-BowPart("tip_iron","tip","铁簇","出手略快，攻击略低",{"DAD","SPS",".S."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {speed=.02,attack=-.5})
-BowPart("tip_bone","tip","骨簇","轻骨箭簇，箭速更快",{"DAD",".S."},{-1,0,-1},{root={0,0,0},top={0,2,0}}, {attack=-1,projectileSpeed=0.12})
-BowPart("tip_crystal","tip","晶簇","破甲+25%，晶爆0.8m/箭伤25%；箭速−10%，射程−8%",{"DAD","SAS",".A."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {armorBreak=.25,crystalRadius=.8,crystalDamageMultiplier=.25,projectileSpeedMultiplier=.9,rangeMultiplier=.92})
+    {".SSS.",".DPP.","SPPPS","SPAPS","SPPPS",".PPD.",".SSS."},{-2,-3,-1},{root={0,0,0},top={0,0,0},launch={2,2,3}}, {spreadMultiplier=.75,move=.1,drawMultiplier=1/.92})
+BowPart("tip_iron","tip","铁簇","出手略快，攻击略低",{"SPS",".P.",".S."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {speed=.02,attack=-.5})
+BowPart("tip_bone","tip","骨簇","轻骨箭簇，箭速更快",{"SPD",".S."},{-1,0,-1},{root={0,0,0},top={0,2,0}}, {attack=-1,projectileSpeed=0.12})
+BowPart("tip_crystal","tip","晶簇","破甲+25%，晶爆0.8m/箭伤25%；箭速−10%，射程−8%",{".S.","SAS",".A."},{-1,0,-1},{root={0,0,0},top={0,3,0}}, {armorBreak=.25,crystalRadius=.8,crystalDamageMultiplier=.25,projectileSpeedMultiplier=.9,rangeMultiplier=.92})
 
 ---@param id string
 ---@return WeaponPart?

@@ -21,10 +21,19 @@ local function Target(angle,dist)
     local rad=math.rad(angle)
     return {active=true,position=Vector3(math.sin(rad)*dist,0,math.cos(rad)*dist)}
 end
-n.yaw=0; n:AssistMelee({Target(30,3)},function() return nil end); S.near(n.yaw,20)
-n.yaw=0; n:AssistMelee({Target(40,3),Target(20,5)},function() return nil end); S.near(n.yaw,0)
-n.yaw=0; n:AssistMelee({Target(30,3)},function() return .5 end); S.near(n.yaw,0)
-n.yaw=0; n:AssistMelee({Target(30,3),Target(-10,2)},function() return nil end); S.near(n.yaw,-10)
+n.yaw=180; n:AssistMelee({Target(30,3)},nil,Vector3.FORWARD,true); S.near(n.yaw,30);S.near(n.camYaw,0)
+n.yaw=0; n:AssistMelee({Target(40,3),Target(20,5)},nil,Vector3.FORWARD,true); S.near(n.yaw,40)
+n.yaw=0; n:AssistMelee({Target(30,3)},function() return .5 end,Vector3.FORWARD,true); S.near(n.yaw,0)
+n.yaw=0; n:AssistMelee({Target(30,3),Target(-10,2)},nil,Vector3.FORWARD,true); S.near(n.yaw,-10)
+-- Actual movement method, camera held at yaw 0; all four move directions turn
+-- independently and stationary orbit preserves the actor's previous yaw.
+for _,v in ipairs({{1,0,0},{0,1,90},{-1,0,180},{0,-1,-90}}) do
+    n.yaw=0;n.camYaw=0
+    for _=1,120 do n:Move(1/60,v[1],v[2],false,false,false,{scale=1,motion=Vector3.ZERO}) end
+    assert(math.abs(n.yaw-v[3])<.001 and n.camYaw==0)
+end
+n.yaw=45;n.camYaw=170
+n:Move(.1,0,0,false,false,false,{scale=1,motion=Vector3.ZERO});S.near(n.yaw,45)
 print('PASS actual Nomi Move: gap sweep/no teleport, jump blocked during roll, combat 5m/s/no sprint, bow slow walk')
 local debugBody=assert(source:match('(function N:TeleportForCombatDebug.-)\nend'))..'\nend'
 env.Terrain.IsSafeGround=function(x) return x<10 end

@@ -58,6 +58,13 @@ if case=='boss' then
  moves.numbers={{value=25,pos=enemy.position,untilTime=100,duration=100}}
  moves.partNotice={part='head',untilTime=100};moves.lastHitAt=100
 end
+if case=='range' then
+ local zone={origin=Vector3(0,0,0),source=Vector3(0,.9,0),forward=Vector3(0,0,1),radius=1.8,angle=120,low=-.3,high=2}
+ local screen={x=.5,y=.5}
+ moves.StrikeZones=function()return zone,nil,true end
+ data.camera={WorldToScreenPoint=function()return screen end}
+ data.rangeVisible=function()return true end
+end
 local state={combat=true,weapon='bow',combatCharge=.5,cool={},cooldown={}}
 HUD.Build({});HUD.SetObjective('测试任务','站在岸边瞄准桥片，修复断桥。');HUD.SetClock('12:00');HUD.SetHint('战斗测试')
 Touch.Attach({AddChild=noop},function()return state end)

@@ -240,7 +240,7 @@ local function pathPoint(path,p)
     return Vector3(v*v*a[1]+2*v*u*c[1]+u*u*b[1],v*v*a[2]+2*v*u*c[2]+u*u*b[2],v*v*a[3]+2*v*u*c[3]+u*u*b[3])
 end
 ---@param arm CombatArm
-local function handTarget(c,name,p,params,arm,bodyHeight)
+local function handTarget(c,name,p,params,arm,bodyHeight,bodyRotation)
     local path=c.handPath[name]
     if path.mode=="bow_aim" or path.mode=="bow_string" then
         local aim=math.rad(clamp(params.aimPitch or 0,-35,35))
@@ -251,12 +251,21 @@ local function handTarget(c,name,p,params,arm,bodyHeight)
             x,y,z=arm.shoulder.x,arm.shoulder.y,arm.length
         else
             -- At full draw, approach the right mouth corner in BODY coordinates.
-            x=.10+(arm.shoulder.x-.10)*.25
-            y=arm.shoulder.y+.02+charge*.13
-            z=.32-charge*.24
+            x=arm.shoulder.x+.06+charge*.02
+            y=arm.shoulder.y+.02+charge*.10
+            z=.32-charge*.17
+            -- Release pulls back briefly, never punches the string forward.
+            if c.id=="bow_release" then z=z-.03*math.sin(math.pi*clamp(p*c.dur/.08,0,1)) end
         end
         local dy=y-arm.shoulder.y
-        return Vector3(x,arm.shoulder.y+dy*cp-z*sp,dy*sp+z*cp)
+        local ray=Vector3(x-arm.shoulder.x,dy*cp-z*sp,dy*sp+z*cp)
+        local localRay=bodyRotation and inverse(bodyRotation)*ray or ray
+        -- The shoulder is body-local, but aim is in the controller facing frame.
+        -- Remove actual torso lean (including full-charge tremor) exactly once.
+        local relax=c.id=="bow_cancel" and ease("outQuad",p)
+            or (c.id=="bow_release" and ease("outQuad",clamp((p*c.dur-.08)/(c.dur-.08),0,1)) or 0)
+        return arm.shoulder+Vector3(localRay.x+(arm.grip.x-localRay.x)*relax,
+            localRay.y+(arm.grip.y-localRay.y)*relax,localRay.z+(arm.grip.z-localRay.z)*relax)
     end
     local target=pathPoint(path,p)
     return Vector3(target.x,target.y-bodyHeight,target.z)
@@ -660,7 +669,7 @@ function A:Apply()
                 local total=0
                 for _,s in ipairs(self.ordered) do
                     local c=s.clip
-                    local track=c.keys[name]
+                    local track=((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
                     if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and track then
                         local x,y,z=boneSample(c,name,s.sample,s.params)
                         if c.param=="p" and s.sample>.8 and name=="body" then
@@ -668,10 +677,13 @@ function A:Apply()
                         end
                         self.target:FromEulerAngles(x,y,z)
                         local target=c.additive and base*self.target or self.target
+                        if c.aimFacing and name=="head" and s.params.legacyPose~=1 then
+                            target=inverse(self.character.bones.body.rotation)*Quaternion(clamp(s.params.aimPitch or 0,-35,35)+4,0,0)
+                        end
                         local path=c.handPath and c.handPath[name]
                         if path and self.pathIK and s.params.legacyPose~=1 then
                             local arm=self.arms[name]
-                            local point=handTarget(c,name,s.sample,s.params,arm,self.bodyHeight)
+                            local point=handTarget(c,name,s.sample,s.params,arm,self.bodyHeight,self.character.bones.body.rotation)
                             target=solveArm(arm,point,target,s.ik[name],pathPole(path))
                         elseif s.ik[name] then s.ik[name].enabled=false end
                         total=total+s.weight
@@ -726,7 +738,7 @@ function A:Apply()
     end
     if self.bladeWeight>0 then
         local arm=self.character.bones[self.bladeSide]
-        local desired=self.bladeMode=="bow_upright" and Quaternion(self.aimPitch,0,0)
+        local desired=self.bladeMode=="bow_upright" and inverse(self.character.bones.body.rotation)*Quaternion(self.aimPitch,0,0)
             or align(Vector3(0,1,0),self.bladeDirection)
         -- Rig composes arm * gripRest * swing. Cancel current arm orientation
         -- only inside swing, keeping the desired blade/bow direction in body space.
@@ -886,9 +898,14 @@ function A.DebugSample(clipId,t,params)
     local result={}
     params=params or EMPTY
     local p=c.param and clamp(t,0,1) or normalized(c,math.max(0,t))
-    for name in pairs(c.keys) do
+    for name in pairs((params.legacyPose==1 and c.legacyKeys) or c.keys) do
         local x,y,z=boneSample(c,name,p,params)
         result[name]={x,y,z}
+    end
+    local bodyRotation=Quaternion(table.unpack(result.body))
+    if c.aimFacing and params.legacyPose~=1 then
+        local head=(inverse(bodyRotation)*Quaternion(clamp(params.aimPitch or 0,-35,35)+4,0,0)):EulerAngles()
+        result.head={head.x,head.y,head.z}
     end
     if c.handPath and params.legacyPose~=1 then
         result._ik={}
@@ -898,9 +915,9 @@ function A.DebugSample(clipId,t,params)
             local right=name=="arm_right"
             local arm=makeArm(vec(right and ref.rightShoulder or ref.leftShoulder),vec(right and ref.rightGrip or ref.leftGrip))
             local buffer=ikBuffer()
-            local e=result[name]
-            local target=handTarget(c,name,p,params,arm,ref.bodyHeight)
-            local solved=solveArm(arm,target,Quaternion(e[1],e[2],e[3]),buffer,pathPole(c.handPath[name]))
+            local x,y,z=boneSample(c,name,p,params)
+            local target=handTarget(c,name,p,params,arm,ref.bodyHeight,bodyRotation)
+            local solved=solveArm(arm,target,Quaternion(x,y,z),buffer,pathPole(c.handPath[name]))
             local angle=solved:EulerAngles()
             result[name]={angle.x,angle.y,angle.z}
             result._ik[name]={target={target.x,target.y,target.z},clamped={buffer.clamped.x,buffer.clamped.y,buffer.clamped.z},

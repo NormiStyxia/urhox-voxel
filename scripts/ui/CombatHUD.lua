@@ -1,7 +1,35 @@
 -- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
 local Draw=require('ui.PixelDraw')
 local H={}
+local Moves=require('combat.CombatMoves')
 local EMPTY={}
+local rangePoints={}
+for i=1,50 do rangePoints[i]={world=Vector3(0,0,0),visible=false,x=0,y=0} end
+local rangeCount,rangeActive=0,false
+-- Projection is outside Render; all point records and world vectors are reused.
+function H.UpdateRange(value)
+    rangeCount=0
+    local moves=value and value.moves
+    if not moves or not moves.StrikeZones or not value.combat or not value.camera or not value.rangeVisible then return end
+    local zone,slam,active=moves:StrikeZones()
+    rangeActive=active==true
+    if not zone then return end
+    for pass=1,slam and 2 or 1 do
+        local z=pass==1 and zone or slam
+        local last=z.angle==360 and 16 or 24
+        for i=0,last do
+            rangeCount=rangeCount+1
+            local point=rangePoints[rangeCount]
+            Moves.ZoneBoundary(z,i,16,point.world)
+            point.visible=false
+            if (active or i%2==0) and value.rangeVisible(z.source,point.world) then
+                local sp=value.camera:WorldToScreenPoint(point.world)
+                point.x,point.y=sp.x,sp.y
+                point.visible=sp.x>=0 and sp.x<=1 and sp.y>=0 and sp.y<=1
+            end
+        end
+    end
+end
 local data=EMPTY
 local debugLines={}
 local debugText
@@ -35,6 +63,7 @@ function H.HealthTrail(record,hp,now)
 end
 function H.Set(value)
     data=value or EMPTY
+    H.UpdateRange(value)
     if not value then trails=setmetatable({}, {__mode="k"}); enemyScreen.visible=false;enemyScreen.enemy=nil;debugText=nil;for i=#debugLines,1,-1 do debugLines[i]=nil end;return end
     if debugText~=data.debug then
         debugText=data.debug
@@ -110,6 +139,13 @@ end
 function H.Render(vg,w,h,s,objective)
     if not data.moves then return end
     local moves=data.moves
+    for i=1,rangeCount do
+        local point=rangePoints[i]
+        if point.visible then
+            local size=rangeActive and 4 or 2
+            Draw.Rect(vg,Draw.Snap(point.x*w)-size/2,Draw.Snap(point.y*h)-size/2,size,size,C.gold,rangeActive and 1 or .55)
+        end
+    end
     local x,y=objective.x,objective.y+objective.h+8
     local columns=math.min(5,math.max(1,math.floor((w-s.right-x-32)/32)))
     local rows=math.ceil(10/columns)

@@ -22,7 +22,8 @@ end
 local faults={}
 local clockKind='system'
 local function EngineMilliseconds()
-    local timer=time or (GetTime and GetTime())
+    local timer=Time -- static tolua binding; an instance is not a valid receiver
+    if not timer then timer=time or (GetTime and GetTime()) end -- offline hosts
     if timer and timer.GetSystemTime then return timer:GetSystemTime() end
 end
 local function Milliseconds()

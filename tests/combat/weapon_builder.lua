@@ -40,9 +40,40 @@ local function verify(c)
     end
     if c.weapon=="sword" then
         Mock.Near(b.hit.length,b.bounds.max[2]); assert(b.hit.radius==.12)
+        local tip=-math.huge
+        for _,cell in ipairs(g.cells) do if cell.slot=='blade' then tip=math.max(tip,cell.y) end end
+        Mock.Near(b.hit.length,(tip+.5)*P.VOXEL_SIZE)
+        assert(g.sparse['0:'..tip..':0'].slot=='blade','actual tip must lie on the hit axis')
         assert(b.stats.speed>=.7 and b.stats.speed<=1.4 and b.stats.reach<=1.4)
     else
         assert(g.overlaps>0,"bow tip must overlap the upper limb socket")
+        local lx,ly,lz=math.floor(b.hit.origin[1]/.03+.5),math.floor(b.hit.origin[2]/.03+.5),math.floor(b.hit.origin[3]/.03+.5)
+        assert(b.hit.dir[1]==0 and b.hit.dir[2]==0 and b.hit.dir[3]==1)
+        assert(g.sparse[lx..':'..(ly-1)..':'..lz],'arrow shelf must support the unchanged launch socket')
+        for stage=0,2 do
+            local shape=B.BowVisual(b,stage)
+            local occupied={}
+            for _,cell in ipairs(shape.cells) do
+                local k=cell.x..':'..cell.y..':'..cell.z
+                assert(not occupied[k],'draw shape duplicate voxel');occupied[k]=cell
+                if cell.feature=='string' then
+                    local grip=g.sparse[k]
+                    assert(not grip or grip.slot~='grip','string penetrated grip')
+                end
+            end
+            local nz=math.floor(shape.nockZ/.03+.5)
+            assert(occupied['0:'..ly..':'..nz].feature=='string','arrow nock must touch the actual rasterized string')
+            for z=nz,lz+12 do assert(not occupied[lx..':'..ly..':'..z],'arrow shaft corridor obstructed') end
+            local arrow=B.NockedArrow(b)
+            local arrowSeen={}
+            for _,cell in ipairs(arrow) do
+                local k=cell.x..':'..cell.y..':'..cell.z
+                assert(not arrowSeen[k],'duplicate arrow cell');arrowSeen[k]=true
+                local contact=occupied[(lx+cell.x)..':'..(ly+cell.y)..':'..(nz+cell.z)]
+                assert(not contact or contact.feature=='string','arrow/feather intersects grip or limb')
+            end
+            assert(arrowSeen['-2:0:0'] and arrowSeen['0:0:21'],'nock/shaft missing')
+        end
     end
     checked=checked+1
 end
@@ -328,7 +359,7 @@ for _,limbs in ipairs(P.GetOptions('bow','limbs')) do
         local middle,front=false,false
         for _,cell in ipairs(bp.geometry.cells) do
             local mirrored=bp.geometry.sparse[cell.x..':'..(-cell.y)..':'..cell.z]
-            assert(mirrored and mirrored.channel==cell.channel,'bow must be symmetric above/below grip')
+            if cell.slot~='grip' then assert(mirrored and mirrored.channel==cell.channel,'limbs/tips must be symmetric above/below grip') end
             if cell.feature=='string' and cell.y==0 then assert(cell.x==0 and cell.z<0);middle=true end
             if cell.slot=='limbs' and cell.feature~='string' and cell.z>0 then front=true end
         end
@@ -340,7 +371,7 @@ for _,limbs in ipairs(P.GetOptions('bow','limbs')) do
             local occupied={}
             for _,cell in ipairs(shape.cells) do occupied[cell.x..':'..cell.y..':'..cell.z]=true end
             for _,cell in ipairs(shape.cells) do
-                assert(occupied[cell.x..':'..(-cell.y)..':'..cell.z],'draw pose must stay vertically symmetric')
+                if cell.slot~='grip' then assert(occupied[cell.x..':'..(-cell.y)..':'..cell.z],'draw limbs must stay vertically symmetric') end
                 if cell.feature=='string' and cell.y==0 then
                     assert(math.abs(cell.z*P.VOXEL_SIZE-shape.stringMidpoint[3])<=P.VOXEL_SIZE/2+.0001)
                 end

@@ -41,6 +41,7 @@
 ---@field handPath table<string, table>|nil Paths in body-aligned, feet-height authoring space.
 ---@field bladePath table|nil Desired +Y blade direction in body space.
 ---@field legacyKeys table<string, table[]>|nil Pre-path poses for params.legacyPose=1.
+---@field aimFacing boolean|nil Bow aim is relative to W2 facing, not torso lean.
 
 ---@class CombatClipCatalog
 ---@field Layer table<string, number>
@@ -453,12 +454,29 @@ heavy.handPath={arm_right={space="body_feet",amplitude=360,windup=.12,overshoot=
 heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
 heavy.motion={{t0=.22,t1=.38,forward=.65}}
 heavy.continuous=true
+-- Free-facing cleanup: the hand already describes a full circle. A second
+-- torso revolution doubles the visible turn while the planted feet face W2
+-- heading. Keep a bounded hip/shoulder windup and follow-through instead.
+-- 符号待 Web 校准
+local heavyYaw={40,55,8,-35,-45,0}
+for i,yaw in ipairs(heavyYaw) do heavy.keys.body[i][2][2]=yaw end
+for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
+    local c=C.Clips[id]
+    c.keys.leg_right={}
+    for i,key in ipairs(c.keys.leg_left) do
+        -- A rear support foot opposes the lead step; do not inherit run gait
+        -- on one leg while the other is planted. Translation stays in motion.
+        c.keys.leg_right[i]={key[1],{-key[2][1]*.65,0,0},key[3]}
+        local torso=c.keys.body[i][2]
+        c.keys.head[i][2]={3-torso[1]*.35,-math.max(-30,math.min(30,torso[2]*.65)),0}
+    end
+end
 C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
     bez(0,1,{.35,1.05,.30},{.30,1.55,-.20},{.65,1.45,-.35},"inQuad")}}}
 
 -- Keep authored legacy poses available, while the bow faces forward rather
 -- than sideways. Single rigid right arm aims toward chin; no elbow is invented.
-for _,id in ipairs({"bow_draw","bow_hold","bow_release"}) do
+for _,id in ipairs({"bow_draw","bow_hold","bow_release","bow_cancel"}) do
     local c=C.Clips[id]
     c.legacyKeys=c.keys
     c.keys={}
@@ -467,6 +485,7 @@ for _,id in ipairs({"bow_draw","bow_hold","bow_release"}) do
     c.keys.head=k({4,0,0},{4,0,0},{4,0,0},{4,0,0})
     c.handPath={arm_left={mode="bow_aim"},arm_right={mode="bow_string"}}
     c.bladePath={mode="bow_upright",side="arm_left"}
+    c.aimFacing=true
     c.continuous=true
 end
 -- §20.5 stronger silhouette; timings/motion/cancel/iframe contracts unchanged.

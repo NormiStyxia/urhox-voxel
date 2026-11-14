@@ -74,4 +74,25 @@ for _, part in ipairs(Parts.GetOptions("bow","limbs")) do
         assert(stringRow:sub(2,2)~=".")
     end
 end
-print("weapon_data: PASS (19 parts, 7 slots, channels/sockets/strings/validation)")
+-- Silhouettes are structural differences, not colour swaps or uniform scale.
+local function Widths(id)
+    local out={}
+    for _,layer in ipairs(Parts.Get(id).voxels) do
+        local n=0
+        for c in layer[2]:gmatch('.') do if c~='.' then n=n+1 end end
+        out[#out+1]=n
+    end
+    return out
+end
+local straight,broad,rapier=Widths('blade_straight'),Widths('blade_broad'),Widths('blade_rapier')
+assert(straight[2]<straight[8] and straight[17]<straight[8] and straight[#straight]==1)
+assert(broad[8]<broad[4] and broad[8]<broad[14] and broad[#broad]==1,'broad blade needs a waist and leaf shoulder')
+assert(rapier[3]>rapier[10] and rapier[#rapier]==1,'rapier needs a forte and needle')
+local recurve=Parts.Get('limbs_recurve')
+local centres={}
+for y=4,recurve.sockets.top[2] do
+    local layer=assert(recurve.voxels[y-recurve.origin[2]+1])
+    for z,row in ipairs(layer) do if row:find('P',1,true) then centres[y]=recurve.origin[3]+z-1 end end
+end
+assert(centres[13]>centres[10],'recurve must bend toward target again before its tip')
+print("weapon_data: PASS (19 parts, 7 slots, channels/sockets/strings/validation, distinct blade/limb contours)")

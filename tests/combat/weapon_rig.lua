@@ -370,8 +370,10 @@ local function LivelyCase(fps,weapon)
             assert(entry.mesh.node.enabled==(p<=.05))
             if p>.05 then
                 local pose=r.bowDrawMeshes[r.bowStage+1]
-                assert(pose.node.enabled and r.bowArrow.node.position.x>0)
-                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,pose.stringZ)
+                assert(pose.node.enabled)
+                Mock.Near(r.bowArrow.node.position.x-r.bowArrow.minimum.x,entry.mesh.blueprint.hit.origin[1])
+                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,pose.nockZ)
+                Mock.Near(r.bowArrow.node.position.y-r.bowArrow.minimum.y,entry.mesh.blueprint.hit.origin[2])
             end
         end
         r:SetBowDraw(0/0);assert(r.bowDraw==0)
