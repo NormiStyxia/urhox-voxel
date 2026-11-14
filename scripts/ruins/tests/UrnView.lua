@@ -13,11 +13,11 @@ function Start()
     UnsubscribeFromEvent("SceneUpdate")
     game.world.updateEnabled=false
     local camera=nomi:CameraNode()
-    camera.worldPosition=urn.center+Vector3(-3,1,-3.5)
+    camera.worldPosition=urn.center+Vector3(3,1,3.5)
     camera:LookAt(urn.center)
-    nomi.cc:Teleport(urn.center+Vector3(-1.6,-1.1,-1.8))
+    nomi.cc:Teleport(urn.center+Vector3(1.6,-1.1,1.8))
     nomi.cc.enabled=false
-    nomi.node.rotation=Quaternion(40,Vector3.UP)
+    nomi.node.rotation=Quaternion(220,Vector3.UP)
     nomi.camPitch=12
     for i=1,60 do nomi:Animate(1/60,true) end
     local aim=nomi:Aim(20)
