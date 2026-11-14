@@ -56,9 +56,9 @@ end
 table.sort(ASSETS)
 
 local function milliseconds()
-    -- Wall clock includes file I/O stalls; os.clock is the offline fallback only.
-    if time then
-        local ok, value = pcall(function() return time:GetSystemTime() end)
+    -- 静态绑定必须用 Time 类表；墙钟包含 I/O 停顿，离线测试才退回 CPU 计时。
+    if Time then
+        local ok, value = pcall(function() return Time:GetSystemTime() end)
         if ok and type(value) == 'number' then return value end
     end
     return os.clock() * 1000

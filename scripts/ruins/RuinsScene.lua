@@ -94,6 +94,7 @@ Breath.Register(Controller)
 local M = {}
 
 -- Optional pacing, scoped to this scene. Never switch to generational GC.
+-- GetSystemTime 是静态绑定，三个计时点都必须传 Time 类表而不是实例。
 M.gcEnabled=true
 M.gcDebug=false
 local gcState={running=false,configured=false,steps=0,cycles=0,skipped=0,maxMs=0,reclaimed=0}
@@ -114,17 +115,17 @@ local function StartSceneGC()
     gcState.running=true
     gcState.steps,gcState.cycles,gcState.skipped,gcState.maxMs,gcState.reclaimed=0,0,0,0,0
     gcState.frameStart=nil
-    gcState.at=GetTime():GetSystemTime()
+    gcState.at=Time:GetSystemTime()
     gcState.heap=collectgarbage('count')
     M.SetGCEnabled(M.gcEnabled)
 end
 function Ruins_HandleGCBeginFrame()
-    if gcState.running then gcState.frameStart=GetTime():GetSystemTime() end
+    if gcState.running then gcState.frameStart=Time:GetSystemTime() end
 end
 function Ruins_HandleGCEndFrame()
     if not gcState.running then return end
     M.SetGCEnabled(M.gcEnabled) -- direct debug flag changes also restore pacing
-    local now=GetTime():GetSystemTime()
+    local now=Time:GetSystemTime()
     if M.gcEnabled and gcState.frameStart then
         if now-gcState.frameStart<=12 and now>=gcState.frameStart then
             local before=M.gcDebug and collectgarbage('count') or 0

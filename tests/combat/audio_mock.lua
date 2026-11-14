@@ -68,7 +68,14 @@ function Mock.New(config)
         state.nowMs = state.nowMs + (state.listenerMs or 0)
         return state.listener
     end}
-    _G.time = {GetSystemTime = function() return state.nowMs end,
+    -- 区分静态 Time 类表与实例；错误接收者不能静默通过预算测试。
+    local timeClass = {}
+    function timeClass:GetSystemTime()
+        assert(self == timeClass, 'GetSystemTime requires Time class')
+        return state.nowMs
+    end
+    _G.Time = timeClass
+    _G.time = {GetSystemTime = timeClass.GetSystemTime,
         GetFrameNumber = function() return state.engineFrame end}
     _G.SOUND_EFFECT = 'Effect'
     return state
