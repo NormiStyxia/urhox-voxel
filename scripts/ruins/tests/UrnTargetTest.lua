@@ -54,6 +54,33 @@ V.atFrame(8,function()
             end
         end
     end
+    -- 镜头瞄准外壳而非包围中心：覆盖瓮腹棱角/金环/蓝纹各高度。
+    local urn=urns[1]
+    for heading=0,345,15 do
+        local a=math.rad(heading)
+        local facing=Vector3(math.sin(a),0,math.cos(a))
+        local tangent=Vector3(math.cos(a),0,-math.sin(a))
+        for _,height in ipairs({6.35,6.65,7.05,7.25,7.5,7.75,8.1,8.3}) do
+            for _,offset in ipairs({-.75,-.5,-.25,0,.25,.5,.75}) do
+                local target=Vector3(urn.center.x,height,urn.center.z)+tangent*offset
+                local origin=Vector3(urn.center.x,7.9,urn.center.z)+facing*4
+                local delta=target-origin
+                local r=Ray(origin,delta:Normalized())
+                local native=world:RaycastGridSingle(r,20,nomi.aimMask)
+                local checked=nomi:GridHit(r,20)
+                nomi.world=force
+                local exact=nomi:GridHit(r,20)
+                nomi.world=saved
+                local same=checked.hit==exact.hit and (not exact.hit or checked.volume==exact.volume)
+                if not same then
+                    misses=misses+1
+                    print(string.format("UrnTargetTest: SURFACE MISMATCH angle=%d h=%g offset=%g origin=%s dir=%s native=%s checked=%s exact=%s",
+                        heading,height,offset,tostring(origin),tostring(r.direction),Describe(native),Describe(checked),Describe(exact)))
+                end
+                V.assert(same,"瓮外壳各表面命中一致 angle="..heading.." h="..height.." offset="..offset)
+            end
+        end
+    end
     nomi.world=saved
     print(string.format("UrnTargetTest: visible=%d / 1296 misses=%d",visible,misses))
 end)
