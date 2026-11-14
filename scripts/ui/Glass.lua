@@ -6,7 +6,7 @@ local Draw = require('ui.PixelDraw')
 local M = {}
 M.colors = {
     ink={20,28,50}, ivory={244,240,228}, sub={176,182,204}, dim={118,124,150}, line={170,176,204},
-    gold={242,190,86}, violet={140,166,216}, coral={238,128,112}, leaf={160,210,142}, black={0,0,0},
+    gold={242,190,86}, goldDeep={176,128,46}, plate={28,38,66}, violet={140,166,216}, coral={238,128,112}, leaf={160,210,142}, black={0,0,0},
     -- ruins world palette (RuinsPalette.lua): marble / stone / gold / rune blue
     marble={232,232,224}, marbleShade={196,200,206}, stone={190,188,182}, stoneDark={150,150,150},
     blueMarble={140,168,214}, rune={92,140,250}, crystal={116,166,255}, grass={118,166,84},
@@ -29,16 +29,26 @@ function M.Begin(vg)
     nvgShapeAntiAlias(vg,1)
 end
 function M.Finish(vg) Draw.Finish(vg) end
-local function Font(vg)
+-- Font families. The Forge* files are OFL Noto Sans/Serif SC instances subset to the
+-- glyphs this game uses; MiSans (engine built-in) is the fallback for each of them.
+local FAMILIES={
+    sans='Fonts/ForgeSans-Regular.ttf', medium='Fonts/ForgeSans-Medium.ttf', serif='Fonts/ForgeSerif-SemiBold.ttf',
+}
+local function Face(vg,family)
     local c=contexts[vg]
-    if not c then c={font=-1,retry=0};contexts[vg]=c end
-    if c.font>=0 then return c.font end
+    if not c then c={faces={},retry={}};contexts[vg]=c end
+    local id=c.faces[family]
+    if id and id>=0 then return id end
     local now=time:GetElapsedTime()
-    if now<c.retry then return -1 end
-    c.retry=now+.5
-    local font=nvgCreateFont(vg,'glass-sans','Fonts/MiSans-Regular.ttf')
-    c.font=font or -1
-    return c.font
+    if now<(c.retry[family] or 0) then return c.faces.ui or -1 end
+    c.retry[family]=now+.5
+    id=nvgCreateFont(vg,'glass-'..family,FAMILIES[family] or 'Fonts/MiSans-Regular.ttf') or -1
+    if id<0 then
+        if not c.faces.ui or c.faces.ui<0 then c.faces.ui=nvgCreateFont(vg,'glass-ui','Fonts/MiSans-Regular.ttf') or -1 end
+        return c.faces.ui
+    end
+    c.faces[family]=id
+    return id
 end
 function M.Round(vg,x,y,w,h,r,color,alpha)
     nvgBeginPath(vg);nvgRoundedRect(vg,x,y,w,h,r);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
@@ -149,23 +159,23 @@ function M.Line(vg,x1,y1,x2,y2,color,alpha,width)
     nvgBeginPath(vg);nvgMoveTo(vg,x1,y1);nvgLineTo(vg,x2,y2)
     nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1);nvgStroke(vg)
 end
---- Text with middle baseline. align is an NVG horizontal flag (default left).
-function M.Text(vg,text,x,y,size,color,align,alpha,spacing)
+--- Text with middle baseline. align is an NVG horizontal flag (default left);
+--- family is 'sans' (default), 'medium' or 'serif'.
+function M.Text(vg,text,x,y,size,color,align,alpha,spacing,family)
     if not text or text=='' then return end
-    local font=Font(vg)
+    local font=Face(vg,family or 'sans')
     if font<0 then
-        Draw.Text(vg,text,x,y,SIZE_FALLBACK(size),color or M.colors.text,align,alpha)
+        Draw.Text(vg,text,x,y,SIZE_FALLBACK(size),color or M.colors.ivory,align,alpha)
         return
     end
     nvgFontFaceId(vg,font);nvgFontSize(vg,size);nvgFontBlur(vg,0);nvgTextLetterSpacing(vg,spacing or 0)
     nvgTextAlign(vg,(align or NVG_ALIGN_LEFT)+NVG_ALIGN_MIDDLE)
-    nvgFillColor(vg,Color(color or M.colors.text,alpha))
+    nvgFillColor(vg,Color(color or M.colors.ivory,alpha))
     nvgText(vg,x,y,text)
 end
---- Faux-bold: the regular face drawn twice with a sub-pixel offset.
+--- Heavier look for headings: the serif / medium instances, no smeared double-draw.
 function M.Bold(vg,text,x,y,size,color,align,alpha,spacing)
-    M.Text(vg,text,x,y,size,color,align,alpha,spacing)
-    M.Text(vg,text,x+.7,y,size,color,align,alpha,spacing)
+    M.Text(vg,text,x,y,size,color,align,alpha,spacing,'medium')
 end
 --- Cheap width estimate for layout time (no vg): CJK = 1em, everything else .56em.
 function M.EstimateWidth(text,size,spacing)

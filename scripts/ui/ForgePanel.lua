@@ -37,7 +37,11 @@ local FADE_OUT,REVEAL=.2,.3 -- seconds: to black / from black
 local ROOM_TIMEOUT=6
 local DARK_VOXEL={92,76,60}
 local MENU_FILL={16,22,40}
-local SHADE_TOP,SHADE_CLEAR={8,12,24,120},{8,12,24,0}
+local SHADE_TOP,SHADE_CLEAR,SHADE_BOTTOM={8,12,24,120},{8,12,24,0},{8,12,24,170}
+local LINE_CLEAR,LINE_SOLID={190,196,222,0},{190,196,222,150}
+local CREAM_TOP,CREAM_BOTTOM={252,242,214},{228,204,146}
+local CREAM_DOWN_TOP,CREAM_DOWN_BOTTOM={236,222,186},{206,180,120}
+local CREAM_LINE={150,112,50}
 local SCRIM_CLEAR,SCRIM_MID,SCRIM_SOLID={20,28,50,0},{20,28,50,140},{20,28,50,206}
 
 -- The showroom is optional: a missing/broken module means the 2D side view.
@@ -185,122 +189,130 @@ end
 local function CloseMenu(s) if s.menuOpen then s.menuOpen=false;Layout(s) end end
 
 ---------------------------------------------------------------- layout
--- Look (borrowed from the "反方向的猪" title screen, not its colours): borderless,
--- type-led, an ink scrim that fades in from the left, indexed labels, tiny caps,
--- hairlines, viewfinder corner ticks for the selection and a solid ivory Equip block.
+-- Look: Genshin-leaning forge sheet. A translucent ink scrim that fades in from the
+-- left, serif title + sans body, round weapon badges with the pixel icons, text tabs
+-- with a gliding diamond, parts as glowing pedestals (no frames), round dye swatches,
+-- fading hairlines with a diamond, one cream confirm button. Nothing is boxed.
+local ROW_H=32
 local SLOT_EN={blade='BLADE',guard='GUARD',grip='GRIP',pommel='POMMEL',limbs='LIMBS',tip='TIP'}
 local WEAPON_EN={sword='LONGSWORD',bow='LONGBOW'}
 Layout=function(s)
     local w,h,safe=Draw.Metrics()
     s.width,s.height=w,h
     s.safeLeft,s.safeTop,s.safeRight,s.safeBottom=safe.left,safe.top,safe.right,safe.bottom
-    local pw=math.min(w,Clamp(math.floor(w*.5),340,580))
+    local pw=math.min(w,Clamp(math.floor(w*.52),360,600))
     s.panel=Box(w-pw,0,pw,h)
     s.stage=Box(0,0,w-pw,h)
-    local padR=math.max(18,safe.right+14)
+    local padR=math.max(22,safe.right+16)
     local cx,cw=s.panel.x+40,pw-40-padR
-    local top,bottom=safe.top+10,h-safe.bottom-8
+    local top,bottom=safe.top+12,h-safe.bottom-10
     s.content=Box(cx,top,cw,bottom-top)
     s.buttons={}
-    -- header: tiny caps + title, weapon switch, close
-    s.titlePos={x=cx,y=top+36}
-    local tabW=Clamp(math.floor((cw-124-52)/2),44,72)
+    -- header: caps + serif title, round weapon badges, close
+    s.titlePos={x=cx,y=top+38}
+    local closeX=cx+cw-36
+    local bowX=closeX-58
     for i,weapon in ipairs({'sword','bow'}) do
-        Add(s,'tab_'..weapon,weapon=='sword' and '剑' or '弓',Box(cx+124+(i-1)*tabW,top+10,tabW,40),function()
+        local x=bowX-(2-i)*54
+        Add(s,'tab_'..weapon,weapon=='sword' and '剑' or '弓',Box(x,top+4,48,48),function()
             if s.weapon==weapon then return end
             s.weapon=weapon;s.slot=SLOT_ORDER[weapon][1];s.scroll=0;s.colorChannel=nil;s.moreOpen=false
             Rebuild(s);Layout(s)
-        end,{kind='tab',active=s.weapon==weapon,icon=weapon..'_s'})
+        end,{kind='badge',active=s.weapon==weapon,icon=weapon})
     end
-    Add(s,'close','关闭',Box(cx+cw-36,top,44,44),function() M.Close() end,{kind='close'})
-    -- footer: recommended menu / undo links, solid equip block
-    local fy=bottom-44
+    Add(s,'close','关闭',Box(closeX,top+6,44,44),function() M.Close() end,{kind='close'})
+    s.headerLine=top+58
+    -- slot tabs (fixed under the header): text with a diamond that glides
+    local slots=SLOT_ORDER[s.weapon]
+    local tabY=top+62
+    s.slotCenters={}
+    for i,slot in ipairs(slots) do
+        local sx,sw=Span(cx,cw,i,#slots,0)
+        s.slotCenters[slot]=sx+sw/2
+        Add(s,'slot_'..slot,Parts.SlotNames[slot],Box(sx,tabY,sw,36),function() s.slot=slot;Layout(s) end,
+            {kind='tab',active=s.slot==slot,slot=slot})
+    end
+    s.tabY=tabY
+    -- footer: recommended menu / undo links, cream confirm button
+    local fy=bottom-46
     s.footerY=fy;s.footerLine=fy-8
-    Add(s,'recommend','推荐方案',Box(cx,fy,96,44),function() s.menuOpen=not s.menuOpen;Layout(s) end,{kind='link',menuToggle=true,active=s.menuOpen})
-    Add(s,'undo','撤销',Box(cx+104,fy,52,44),function()
+    Add(s,'recommend','推荐方案',Box(cx,fy,100,46),function() s.menuOpen=not s.menuOpen;Layout(s) end,{kind='link',menuToggle=true,active=s.menuOpen})
+    Add(s,'undo','撤销',Box(cx+110,fy,52,46),function()
         if not s.undo then return end
         s.config,s.weapon,s.slot=s.undo.config,s.undo.weapon,s.undo.slot;s.undo=nil
         Rebuild(s);Layout(s)
     end,{kind='link',disabled=not s.undo})
-    local equipW=Clamp(cw-176,96,132)
-    Add(s,'equip','装备',Box(cx+cw-equipW,fy,equipW,44),function() M.Close() end,{kind='primary'})
+    local equipW=Clamp(cw-184,104,150)
+    Add(s,'equip','装备',Box(cx+cw-equipW,fy,equipW,46),function() M.Close() end,{kind='primary'})
     -- scrolling viewport
-    local vy=top+54
-    local vh=s.footerLine-6-vy
+    local vy=tabY+42
+    local vh=s.footerLine-4-vy
     s.view=Box(s.panel.x,vy,pw,vh)
     local cy=vy
-    local slots=SLOT_ORDER[s.weapon]
-    for i,slot in ipairs(slots) do
-        local sx,sw=Span(cx,cw,i,#slots,0)
-        Add(s,'slot_'..slot,Parts.SlotNames[slot],Box(sx,cy,sw,36),function() s.slot=slot;Layout(s) end,
-            {kind='tab',area='scroll',active=s.slot==slot,slot=slot,index=i})
-    end
-    cy=cy+36+6
     local options=Parts.GetOptions(s.weapon,s.slot)
     for i,part in ipairs(options) do
-        local x,cwid=Span(cx,cw,i,#options,14)
-        local b=Add(s,'part_'..part.id,part.name,Box(x,cy,cwid,86),function()
+        local x,cwid=Span(cx,cw,i,#options,6)
+        local b=Add(s,'part_'..part.id,part.name,Box(x,cy,cwid,92),function()
             Edit(s,function() s.config[s.weapon].parts[s.slot]=part.id end)
         end,{kind='card',area='scroll',active=s.config[s.weapon].parts[s.slot]==part.id,part=part})
-        b.frame=Box(x,cy,cwid,64)
-        b.thumb=Box(x+10,cy+6,cwid-20,52)
+        b.thumb=Box(x+6,cy+3,cwid-12,58)
+        b.glow={x=x+cwid/2,y=cy+32}
     end
-    cy=cy+86+4
+    cy=cy+92
+    s.descPart=assert(Parts.Get(s.config[s.weapon].parts[s.slot]))
+    s.descPos={x=cx+cw/2,y=cy+10}
+    cy=cy+24
     s.dividerY=cy
-    cy=cy+10
-    -- two columns: colours (left) / attributes (right)
-    local colW=math.floor((cw-24)*.46)
-    local rx=cx+colW+24
-    local rw=cw-colW-24
-    s.colorCol=Box(cx,cy,colW,10)
-    local chipY=cy+26
+    cy=cy+12
+    -- dye swatches: one row, label left, round swatches right
+    s.colorCol=Box(cx,cy,cw,10)
+    local chipW=Clamp(math.floor((cw-80)/3),50,76)
     for i,channel in ipairs(Parts.Channels) do
         local preset=Parts.ColorPresets[s.config[s.weapon].colors[channel]]
-        local chx,chw=Span(cx,colW,i,3,4)
-        Add(s,'color_'..channel,CHANNEL_NAMES[channel],Box(chx,chipY,chw,46),function()
+        local chx=cx+cw-(4-i)*chipW
+        Add(s,'color_'..channel,CHANNEL_NAMES[channel],Box(chx,cy,chipW,58),function()
             s.colorChannel=s.colorChannel~=channel and channel or nil;Layout(s)
             if s.colorChannel then s.scroll=s.maxScroll end
         end,{kind='chip',area='scroll',swatch=preset.rgb,active=s.colorChannel==channel})
     end
-    local colBottom=chipY+46
-    s.descriptionLines=G.Wrap(assert(Parts.Get(s.config[s.weapon].parts[s.slot])).desc,13,colW-2)
-    s.descPos={x=cx,y=colBottom+10}
-    colBottom=colBottom+4+#s.descriptionLines*18
-    -- attributes (right column): label / candidate value / difference
-    s.statRows=s.statRows or StatRows(s,STAT_MAIN[s.weapon])
-    s.attrTitle={x=rx,y=cy+10}
-    Add(s,'more',s.moreOpen and '收起' or '更多',Box(rx+rw-56,cy-6,60,34),function() s.moreOpen=not s.moreOpen;Layout(s) end,
-        {kind='link',area='scroll',small=true})
-    s.attrRowsY=cy+26
-    local rows=#s.statRows
-    s.moreBox=nil
-    if s.moreOpen then
-        s.moreRows=s.moreRows or StatRows(s,STAT_MORE[s.weapon])
-        s.moreBox={x=rx,y=s.attrRowsY+rows*24,w=rw,h=#s.moreRows*24}
-        rows=rows+#s.moreRows
-    end
-    local attrBottom=s.attrRowsY+rows*24
-    s.attrRight={x=rx,w=rw}
-    cy=math.max(colBottom,attrBottom)+8
-    -- colour palette: a full-width row under both columns (big enough to tap)
+    cy=cy+58
+    -- dye palette: a full-width row of round swatches
     s.paletteBox=nil;s.paletteTitle=nil
     if s.colorChannel then
         local current=s.config[s.weapon].colors[s.colorChannel]
         local count=#Parts.ColorPresets
-        s.dividerY2=cy
-        s.paletteTitle={x=cx,y=cy+16,text=CHANNEL_NAMES[s.colorChannel]..'  ·  '..Parts.ColorPresets[current].name}
-        s.paletteBox=Box(cx,cy+28,cw,38)
+        s.dividerY2=cy+2
+        s.paletteTitle={x=cx,y=cy+20,text=CHANNEL_NAMES[s.colorChannel]..'  ·  '..Parts.ColorPresets[current].name}
+        s.paletteBox=Box(cx,cy+34,cw,44)
         for i,preset in ipairs(Parts.ColorPresets) do
             local px,pwid=Span(cx,cw,i,count,0)
-            Add(s,'swatch_'..i,preset.name,Box(px,cy+28,pwid,38),function()
+            Add(s,'swatch_'..i,preset.name,Box(px,cy+34,pwid,44),function()
                 Edit(s,function() s.config[s.weapon].colors[s.colorChannel]=i end)
             end,{kind='swatch',area='scroll',swatch=preset.rgb,active=current==i})
         end
-        cy=cy+72
+        cy=cy+86
     else s.dividerY2=nil end
+    cy=cy+6
     s.contentHeight=cy-vy
     s.maxScroll=math.max(0,s.contentHeight-vh)
     s.scroll=Clamp(s.scroll,0,s.maxScroll)
+    -- attributes live on the stage, bottom-left, next to the weapon
+    s.statRows=s.statRows or StatRows(s,STAT_MAIN[s.weapon])
+    local sx=math.max(26,safe.left+14)
+    local sw=Clamp(s.stage.w-sx-28,140,300)
+    local rows=#s.statRows
+    s.moreBox=nil
+    if s.moreOpen then
+        s.moreRows=s.moreRows or StatRows(s,STAT_MORE[s.weapon])
+        rows=rows+#s.moreRows
+    end
+    local statsH=30+rows*ROW_H
+    local sy=h-safe.bottom-66-statsH
+    s.attrTitle={x=sx,y=sy+12}
+    s.attrRowsY=sy+30
+    s.attrRight={x=sx,w=sw}
+    Add(s,'more',s.moreOpen and '收起' or '更多',Box(sx+sw-56,sy-4,60,36),function() s.moreOpen=not s.moreOpen;Layout(s) end,{kind='link',small=true})
+    if s.moreOpen then s.moreBox={x=sx,y=s.attrRowsY+#s.statRows*ROW_H,w=sw,h=#s.moreRows*ROW_H} end
     -- recommended menu (drop-up above the footer)
     if s.menuOpen then
         local items={}
@@ -315,11 +327,11 @@ Layout=function(s)
         items[#items+1]={id='reset',label='恢复默认',action=function()
             Edit(s,function() s.config[s.weapon]=Parts.DefaultWeapon(s.weapon) end)
         end}
-        local mh=#items*40+8
-        local menu=Box(cx,fy-6-mh,156,mh)
+        local mh=#items*42+10
+        local menu=Box(cx-8,fy-8-mh,170,mh)
         s.menuBox=menu
         for i,item in ipairs(items) do
-            Add(s,item.id,item.label,Box(menu.x,menu.y+4+(i-1)*40,menu.w,40),function()
+            Add(s,item.id,item.label,Box(menu.x,menu.y+5+(i-1)*42,menu.w,42),function()
                 s.menuOpen=false
                 item.action()
                 Layout(s)
@@ -331,7 +343,7 @@ Layout=function(s)
     s.stageTitle=WEAPON_NAMES[s.weapon]
     s.stageCaption=WEAPON_EN[s.weapon]
     s.stageSub=string.format('%02d / %s  ·  %s',(function() for i,v in ipairs(SLOT_ORDER[s.weapon]) do if v==s.slot then return i end end return 1 end)(),
-        SLOT_EN[s.slot],assert(Parts.Get(s.config[s.weapon].parts[s.slot])).name)
+        SLOT_EN[s.slot],s.descPart.name)
 end
 
 ---------------------------------------------------------------- pointer
@@ -492,132 +504,144 @@ end
 local function Pressed(s,button)
     return s.pointer and not s.pointer.moved and s.pointer.button==button
 end
-local function Hairline(vg,x,y,w,alpha)
-    G.Line(vg,x,y+.5,x+w,y+.5,C.line,alpha or .3,1)
+-- Fading hairline with a small diamond in the middle.
+local function Ornament(vg,x,y,w,alpha,diamond)
+    G.HGradient(vg,x,y,w/2,1,LINE_CLEAR,LINE_SOLID,alpha or 1)
+    G.HGradient(vg,x+w/2,y,w/2,1,LINE_SOLID,LINE_CLEAR,alpha or 1)
+    if diamond~=false then G.Diamond(vg,x+w/2,y+.5,3,C.gold,.9*(alpha or 1)) end
 end
 local function Caps(vg,text,x,y,size,color,alpha,align)
-    G.Text(vg,text,x,y,size,color or C.sub,align,alpha,2)
+    G.Text(vg,text,x,y,size,color or C.sub,align,alpha,2.5)
+end
+local function Ease(current,target,dt)
+    return current+(target-current)*math.min(1,dt*14)
 end
 
 local DrawButton={}
-function DrawButton.tab(vg,s,b)
+function DrawButton.badge(vg,s,b)
     local bx=b.box
-    local pressed=Pressed(s,b)
-    local color=(b.active or pressed) and C.gold or C.sub
-    if b.icon then
-        Icon(vg,b.icon,bx.x+4,bx.y+(bx.h-20)/2)
-        local draw=b.active and G.Bold or G.Text
-        draw(vg,b.label,bx.x+32,bx.y+bx.h/2,19,color)
-        if b.active then G.Round(vg,bx.x+32,bx.y+bx.h-3,20,2,0,C.gold,1) end
-    else
-        G.Text(vg,string.format('%02d',b.index),bx.x+2,bx.y+9,10,b.active and C.gold or C.dim,nil,nil,1)
-        local draw=b.active and G.Bold or G.Text
-        draw(vg,b.label,bx.x+2,bx.y+25,17,color)
-        if b.active then G.Round(vg,bx.x+2,bx.y+bx.h-3,G.EstimateWidth(b.label,17),2,0,C.gold,1) end
-    end
+    local cx,cy=bx.x+bx.w/2,bx.y+bx.h/2
+    local a=s.anim[b.id] or 0
+    G.Circle(vg,cx,cy,22,C.plate,.55+.3*a)
+    for i=1,3 do G.Circle(vg,cx,cy,22+i*4,C.gold,.07*a) end
+    G.Ring(vg,cx,cy,22,b.active and C.gold or C.line,b.active and .95 or .35,b.active and 1.6 or 1)
+    Icon(vg,b.icon,cx-16,cy-16)
 end
 function DrawButton.close(vg,s,b)
     local bx=b.box
     local cx,cy=bx.x+bx.w/2+4,bx.y+bx.h/2
-    local a=Pressed(s,b) and 1 or .8
-    G.Line(vg,cx-7,cy-7,cx+7,cy+7,C.ivory,a,1.4)
-    G.Line(vg,cx+7,cy-7,cx-7,cy+7,C.ivory,a,1.4)
+    local a=Pressed(s,b) and 1 or .75
+    G.Line(vg,cx-6,cy-6,cx+6,cy+6,C.ivory,a,1.3)
+    G.Line(vg,cx+6,cy-6,cx-6,cy+6,C.ivory,a,1.3)
+end
+function DrawButton.tab(vg,s,b)
+    local bx=b.box
+    local color=(b.active or Pressed(s,b)) and C.gold or C.sub
+    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2-3,17,color,NVG_ALIGN_CENTER,nil,1,b.active and 'medium' or 'sans')
 end
 function DrawButton.link(vg,s,b)
     local bx=b.box
     local color=b.disabled and C.dim or ((b.active or Pressed(s,b)) and C.gold or C.ivory)
-    local size=b.small and 13 or 16
+    local size=b.small and 14 or 16
     local width=G.EstimateWidth(b.label,size)
     if b.small then
-        G.Text(vg,b.label,bx.x+bx.w,bx.y+bx.h/2,size,color,NVG_ALIGN_RIGHT,nil,1)
+        Shadowed(vg,b.label,bx.x+bx.w,bx.y+bx.h/2,size,(Pressed(s,b) and C.gold or C.ivory),NVG_ALIGN_RIGHT,nil,1)
         return
     end
-    G.Text(vg,b.label,bx.x,bx.y+bx.h/2,size,color)
+    G.Text(vg,b.label,bx.x,bx.y+bx.h/2,size,color,nil,nil,1)
     if b.menuToggle then
-        local tx,ty=bx.x+width+10,bx.y+bx.h/2+1
+        local tx,ty=bx.x+width+12,bx.y+bx.h/2+1
         nvgBeginPath(vg)
         if b.active then nvgMoveTo(vg,tx-4,ty+2.5);nvgLineTo(vg,tx+4,ty+2.5);nvgLineTo(vg,tx,ty-2.5)
         else nvgMoveTo(vg,tx-4,ty-2.5);nvgLineTo(vg,tx+4,ty-2.5);nvgLineTo(vg,tx,ty+2.5) end
         nvgClosePath(vg);nvgFillColor(vg,G.Color(color,1));nvgFill(vg)
-    else
-        G.Line(vg,bx.x,bx.y+bx.h/2+11,bx.x+width,bx.y+bx.h/2+11,color,b.disabled and .3 or .7,1)
     end
 end
 function DrawButton.primary(vg,s,b)
     local bx=b.box
     local pressed=Pressed(s,b)
-    G.Round(vg,bx.x,bx.y,bx.w,bx.h,0,pressed and C.gold or C.ivory,1)
-    G.Text(vg,'装 备',bx.x+22,bx.y+bx.h/2,20,C.ink,nil,nil,3)
-    -- thin arrow
-    local ax,ay=bx.x+bx.w-24,bx.y+bx.h/2
-    G.Line(vg,ax-12,ay,ax+6,ay,C.ink,1,1.5)
-    G.Line(vg,ax+1,ay-5,ax+6,ay,C.ink,1,1.5)
-    G.Line(vg,ax+1,ay+5,ax+6,ay,C.ink,1,1.5)
+    local dy=pressed and 1 or 0
+    G.Round(vg,bx.x,bx.y+3,bx.w,bx.h,9,C.black,.25)
+    G.Gradient(vg,bx.x,bx.y+dy,bx.w,bx.h,9,pressed and CREAM_DOWN_TOP or CREAM_TOP,pressed and CREAM_DOWN_BOTTOM or CREAM_BOTTOM,1)
+    G.Stroke(vg,bx.x+3,bx.y+3+dy,bx.w-6,bx.h-6,6,CREAM_LINE,.55,1)
+    G.Diamond(vg,bx.x+16,bx.y+bx.h/2+dy,3,C.goldDeep,1)
+    G.Diamond(vg,bx.x+bx.w-16,bx.y+bx.h/2+dy,3,C.goldDeep,1)
+    G.Text(vg,'装 备',bx.x+bx.w/2+1,bx.y+bx.h/2+dy,19,C.ink,NVG_ALIGN_CENTER,nil,3,'serif')
 end
 function DrawButton.card(vg,s,b)
-    local f=b.frame
-    local pressed=Pressed(s,b)
-    if b.active then
-        G.Corners(vg,f.x-2,f.y-2,f.w+4,f.h+4,9,C.gold,1,1.6)
-    elseif pressed then G.Corners(vg,f.x-2,f.y-2,f.w+4,f.h+4,6,C.ivory,.6,1.2) end
-    SidePixels(vg,s,PartCells(s,b.part),b.thumb,nil,b.active and 1 or .62,10)
-    G.Text(vg,G.Fit(b.label,15,f.w+8),f.x+f.w/2,f.y+f.h+14,15,b.active and C.ivory or C.sub,NVG_ALIGN_CENTER)
+    local f=b.thumb
+    local a=s.anim[b.id] or (b.active and 1 or 0)
+    if a>.01 then
+        for i=1,5 do G.Circle(vg,b.glow.x,b.glow.y,22+i*8,C.gold,a*.065) end
+    end
+    SidePixels(vg,s,PartCells(s,b.part),f,nil,.62+.38*a,10)
+    local bx=b.box
+    G.Text(vg,G.Fit(b.label,16,bx.w+4),bx.x+bx.w/2,bx.y+bx.h-24,16,a>.5 and C.gold or C.sub,NVG_ALIGN_CENTER,nil,1,a>.5 and 'medium' or 'sans')
+    if a>.01 then G.Diamond(vg,bx.x+bx.w/2,bx.y+bx.h-8,3*a,C.gold,a) end
 end
 function DrawButton.chip(vg,s,b)
     local bx=b.box
-    local sw=Box(bx.x+(bx.w-26)/2,bx.y+3,26,26)
-    G.Round(vg,sw.x,sw.y,sw.w,sw.h,0,b.swatch,1)
-    if b.active then G.Corners(vg,sw.x-4,sw.y-4,sw.w+8,sw.h+8,6,C.gold,1,1.5) end
-    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h-9,13,b.active and C.gold or C.sub,NVG_ALIGN_CENTER)
+    local cx,cy=bx.x+bx.w/2,bx.y+16
+    if b.active then
+        G.Ring(vg,cx,cy,19,C.gold,1,1.6)
+        for i=1,3 do G.Circle(vg,cx,cy,19+i*4,C.gold,.06) end
+    end
+    G.Circle(vg,cx,cy,14,b.swatch,1)
+    G.Ring(vg,cx,cy,14,C.ivory,.35,1)
+    G.Text(vg,b.label,cx,bx.y+bx.h-14,13,b.active and C.gold or C.sub,NVG_ALIGN_CENTER,nil,1)
 end
 function DrawButton.swatch(vg,s,b)
     local bx=b.box
-    local sw=Box(bx.x+(bx.w-26)/2,bx.y+6,26,26)
-    G.Round(vg,sw.x,sw.y,sw.w,sw.h,0,b.swatch,1)
-    if b.active then G.Corners(vg,sw.x-4,sw.y-4,sw.w+8,sw.h+8,6,C.gold,1,1.5) end
+    local cx,cy=bx.x+bx.w/2,bx.y+bx.h/2
+    G.Circle(vg,cx,cy,Pressed(s,b) and 12 or 13,b.swatch,1)
+    G.Ring(vg,cx,cy,13,C.ivory,.3,1)
+    if b.active then G.Ring(vg,cx,cy,18,C.gold,1,1.6) end
 end
 function DrawButton.menu(vg,s,b)
     local bx=b.box
-    if b.gap then Hairline(vg,bx.x+12,bx.y,bx.w-24,.3) end
-    if Pressed(s,b) then G.Round(vg,bx.x,bx.y,bx.w,bx.h,0,C.gold,.14) end
-    G.Text(vg,b.label,bx.x+14,bx.y+bx.h/2,16,Pressed(s,b) and C.gold or C.ivory)
+    if b.gap then Ornament(vg,bx.x+14,bx.y,bx.w-28,.5,false) end
+    if Pressed(s,b) then G.Round(vg,bx.x+6,bx.y+3,bx.w-12,bx.h-6,6,C.gold,.14) end
+    G.Text(vg,b.label,bx.x+20,bx.y+bx.h/2,16,Pressed(s,b) and C.gold or C.ivory,nil,nil,1)
 end
 
 local function Attributes(vg,s)
-    G.Bold(vg,'属性',s.attrTitle.x,s.attrTitle.y,16,C.ivory,nil,nil,2)
-    Caps(vg,'STATS',s.attrTitle.x+46,s.attrTitle.y+1,10,C.dim)
+    Shadowed(vg,'属性',s.attrTitle.x,s.attrTitle.y,17,C.ivory,nil,nil,3,'serif')
     local x,w=s.attrRight.x,s.attrRight.w
     local y=s.attrRowsY
     local function Row(row)
         local flash=(s.flash[row.key] or 0)>0 and math.floor(s.clock*16)%2==0
-        G.Text(vg,row.label,x,y+12,15,C.sub)
-        G.Text(vg,row.value,x+w*.36,y+12,17,flash and C.gold or C.ivory)
-        if row.delta then G.Text(vg,row.delta,x+w,y+12,12,row.up and C.leaf or C.coral,NVG_ALIGN_RIGHT) end
-        Hairline(vg,x,y+23,w,.14)
-        y=y+24
+        Shadowed(vg,row.label,x,y+ROW_H/2-1,15,C.ivory,nil,.85,1)
+        Shadowed(vg,row.value,x+w*.42,y+ROW_H/2-1,20,flash and C.gold or C.ivory,nil,nil,0,'medium')
+        if row.delta then
+            local col=row.up and C.leaf or C.coral
+            Shadowed(vg,row.delta,x+w,y+ROW_H/2,13,col,NVG_ALIGN_RIGHT)
+            local tx=x+w-G.EstimateWidth(row.delta,13)-9
+            if row.up then G.Poly(vg,col,1,tx-4,y+ROW_H/2+3,tx+4,y+ROW_H/2+3,tx,y+ROW_H/2-3)
+            else G.Poly(vg,col,1,tx-4,y+ROW_H/2-3,tx+4,y+ROW_H/2-3,tx,y+ROW_H/2+3) end
+        end
+        Ornament(vg,x,y+ROW_H-1,w,.28,false)
+        y=y+ROW_H
     end
     for _,row in ipairs(s.statRows) do Row(row) end
     if s.moreBox then for _,row in ipairs(s.moreRows) do Row(row) end end
+    for _,b in ipairs(s.buttons) do if b.id=='more' then DrawButton.link(vg,s,b) end end
 end
 
 local CLOUDS={{-.38,.28,64},{.22,.18,80},{.52,.34,58}}
 local ISLETS={{-.34,.44,34},{.4,.5,26}}
 local function Backdrop(vg,s)
     -- No 3D room: a flat 2D take on the same showroom (ruins palette) so the
-    -- fallback still looks like part of the world: sky, floating islets, a marble
-    -- arch, a stepped dais with a gold ring and rune disc, blue crystals.
+    -- fallback still looks like part of the world.
     local st=s.stage
     local h=s.height
     local cx=math.floor(st.w*.5)
     local floorY=math.floor(h*.8)
     G.Gradient(vg,0,0,s.width,h,0,C.skyTop,C.skyLow,1)
     for i=1,4 do G.Circle(vg,cx-st.w*.3,h*.16,22+i*16,C.ivory,.07) end
-    -- voxel clouds
     for _,c in ipairs(CLOUDS) do
         local x,y,w=cx+st.w*c[1],h*c[2],c[3]
         G.Round(vg,x,y,w,10,0,C.ivory,.85);G.Round(vg,x+10,y-8,w*.55,10,0,C.ivory,.85)
     end
-    -- floating islets
     for _,o in ipairs(ISLETS) do
         local x,y,w=cx+st.w*o[1],h*o[2],o[3]
         G.Round(vg,x,y,w,6,0,C.grass,1)
@@ -625,7 +649,6 @@ local function Backdrop(vg,s)
         G.Round(vg,x+8,y+12,w-16,6,0,C.stoneDark,1)
         G.Round(vg,x+13,y+18,w-26,5,0,C.stoneDark,1)
     end
-    -- arch + pillars
     local pillarX=st.w*.42
     local top=h*.1
     for sx=-1,1,2 do
@@ -635,16 +658,11 @@ local function Backdrop(vg,s)
         G.Round(vg,x-2,top+88,28,5,0,C.gold,1)
         G.Round(vg,x-2,floorY-60,28,5,0,C.gold,1)
     end
-    nvgBeginPath(vg);nvgArc(vg,cx,top+36+pillarX*.0,pillarX,math.pi,math.pi*2,2)
+    nvgBeginPath(vg);nvgArc(vg,cx,top+36,pillarX,math.pi,math.pi*2,2)
     nvgStrokeColor(vg,G.Color(C.marble,1));nvgStrokeWidth(vg,16);nvgStroke(vg)
     nvgBeginPath(vg);nvgArc(vg,cx,top+36,pillarX-11,math.pi,math.pi*2,2)
     nvgStrokeColor(vg,G.Color(C.blueMarble,1));nvgStrokeWidth(vg,5);nvgStroke(vg)
     G.Round(vg,cx-7,top+36-pillarX-9,14,18,0,C.gold,1)
-    -- banner
-    G.Round(vg,cx-pillarX+14,top+40,22,70,0,C.blueMarble,1)
-    G.Round(vg,cx-pillarX+14,top+40,22,4,0,C.gold,1)
-    G.Poly(vg,C.ivory,1,cx-pillarX+25,top+62,cx-pillarX+31,top+72,cx-pillarX+25,top+82,cx-pillarX+19,top+72)
-    -- floor and dais
     G.Ellipse(vg,cx,floorY+10,st.w*.5,34,C.stoneDark,.55)
     G.Ellipse(vg,cx,floorY+4,st.w*.42,30,C.stone,1)
     G.Ellipse(vg,cx,floorY-4,st.w*.3,24,C.marbleShade,1)
@@ -652,14 +670,12 @@ local function Backdrop(vg,s)
     G.EllipseStroke(vg,cx,floorY-12,st.w*.255,19,C.gold,1,3)
     G.Ellipse(vg,cx,floorY-14,st.w*.2,14,C.rune,1)
     G.EllipseStroke(vg,cx,floorY-14,st.w*.13,9,C.gold,.9,1.5)
-    -- crystals
     for sx=-1,1,2 do
         local x=cx+sx*st.w*.34
         G.Round(vg,x-12,floorY-10,24,8,0,C.gold,1)
         G.Poly(vg,C.crystal,1,x-8,floorY-10,x-2,floorY-44,x+3,floorY-10)
         G.Poly(vg,C.rune,1,x+1,floorY-10,x+8,floorY-30,x+12,floorY-10)
     end
-    -- the weapon, side view, floating above the dais
     local b=s.sideBox
     G.Ellipse(vg,cx,floorY-16,st.w*.1,7,C.gold,.28)
     nvgSave(vg)
@@ -674,13 +690,13 @@ local function Stage(vg,s)
         G.Text(vg,'正在准备展示间…',st.x+st.w/2,st.y+st.h/2,15,C.sub,NVG_ALIGN_CENTER)
     end
     G.Gradient(vg,0,0,st.w,130,0,SHADE_TOP,SHADE_CLEAR,1)
-    G.Gradient(vg,0,s.height-90,st.w,90,0,SHADE_CLEAR,SHADE_TOP,1)
+    G.Gradient(vg,0,s.height-230,st.w,230,0,SHADE_CLEAR,SHADE_BOTTOM,1)
     local x=math.max(26,s.safeLeft+14)
-    local y=s.safeTop+26
-    Shadowed(vg,'ARMORY',x,y,11,C.gold,nil,nil,3)
-    Shadowed(vg,s.stageTitle,x,y+30,30,C.ivory,nil,nil,4)
-    Shadowed(vg,s.stageSub,x,y+58,13,C.sub,nil,nil,1)
-    G.Cross(vg,x-14,y,4,C.ivory,.55,1)
+    local y=s.safeTop+30
+    Shadowed(vg,s.stageCaption,x,y,11,C.gold,nil,nil,3)
+    Shadowed(vg,s.stageTitle,x,y+32,32,C.ivory,nil,nil,5,'serif')
+    Shadowed(vg,s.stageSub,x,y+62,14,C.ivory,nil,.8,1)
+    Attributes(vg,s)
     local by=s.height-s.safeBottom-22
     if s.message then Shadowed(vg,G.Fit(s.message,14,st.w-40),x,by-26,14,C.gold) end
     if s.fallback or s.roomReady then
@@ -725,41 +741,46 @@ local function Render(vg,s)
         G.HGradient(vg,p.x-200,0,200,h,SCRIM_CLEAR,SCRIM_MID,1)
         G.HGradient(vg,p.x-90,0,90,h,SCRIM_CLEAR,SCRIM_MID,1)
         G.Round(vg,p.x,0,p.w,h,0,SCRIM_SOLID,1)
-        Caps(vg,'WEAPON FORGE',s.titlePos.x,s.titlePos.y-26,10,C.gold)
-        G.Bold(vg,'锻造库',s.titlePos.x,s.titlePos.y,28,C.ivory,nil,nil,4)
-        G.Cross(vg,p.x+20,s.safeTop+14,4,C.ivory,.5,1)
-        G.Dots(vg,c.x+c.w-34,s.safeTop+54,4,2,7,1,C.violet,.45)
+        -- the sheet's content eases in from the right while it fades up
+        nvgSave(vg);nvgTranslate(vg,(1-alpha)*28,0)
+        Caps(vg,'WEAPON FORGE',s.titlePos.x,s.titlePos.y-30,10,C.gold)
+        G.Text(vg,'锻造库',s.titlePos.x,s.titlePos.y,31,C.ivory,nil,nil,5,'serif')
         for _,b in ipairs(s.buttons) do
-            if b.kind=='tab' and not b.area or b.kind=='close' then DrawButton[b.kind](vg,s,b) end
+            if b.kind=='badge' or b.kind=='close' then DrawButton[b.kind](vg,s,b) end
         end
+        Ornament(vg,c.x,s.headerLine,c.w,.9)
+        -- slot tabs + the gliding diamond
+        for _,b in ipairs(s.buttons) do if b.kind=='tab' then DrawButton.tab(vg,s,b) end end
+        local ix=s.slotX or s.slotCenters[s.slot]
+        G.Round(vg,ix-12,s.tabY+33,24,1.5,0,C.gold,.9)
+        G.Diamond(vg,ix,s.tabY+34,3,C.gold,1)
         -- scrolling content
         local v=s.view
         nvgSave(vg);nvgIntersectScissor(vg,v.x,v.y,v.w,v.h)
         nvgTranslate(vg,0,-s.scroll)
-        Hairline(vg,c.x,s.dividerY,c.w,.25)
-        G.Bold(vg,'配色',s.colorCol.x,s.colorCol.y+10,16,C.ivory,nil,nil,2)
-        Caps(vg,'COLOR',s.colorCol.x+46,s.colorCol.y+11,10,C.dim)
-        if s.dividerY2 then Hairline(vg,c.x,s.dividerY2,c.w,.2) end
-        if s.paletteTitle then G.Text(vg,s.paletteTitle.text,s.paletteTitle.x+1,s.paletteTitle.y,14,C.sub) end
-        if s.descPos then
-            for i,line in ipairs(s.descriptionLines) do G.Text(vg,line,s.descPos.x+1,s.descPos.y+(i-1)*18,13,C.dim) end
-        end
-        Attributes(vg,s)
+        G.Text(vg,G.Fit(s.descPart.desc,13,c.w),s.descPos.x,s.descPos.y,13,C.sub,NVG_ALIGN_CENTER,nil,1)
+        Ornament(vg,c.x,s.dividerY,c.w,.55)
+        G.Text(vg,'配色',s.colorCol.x,s.colorCol.y+16,17,C.ivory,nil,nil,3,'serif')
+        Caps(vg,'DYE',s.colorCol.x,s.colorCol.y+38,10,C.dim)
+        if s.dividerY2 then Ornament(vg,c.x,s.dividerY2,c.w,.4,false) end
+        if s.paletteTitle then G.Text(vg,s.paletteTitle.text,s.paletteTitle.x+1,s.paletteTitle.y,14,C.sub,nil,nil,1) end
         for _,b in ipairs(s.buttons) do if b.area=='scroll' then DrawButton[b.kind](vg,s,b) end end
         nvgRestore(vg)
         if s.maxScroll>0 then
             local thumb=math.max(24,v.h*v.h/s.contentHeight)
-            G.Round(vg,p.x+p.w-4,v.y+s.scroll/s.maxScroll*(v.h-thumb),2,thumb,1,C.gold,.5)
+            G.Round(vg,p.x+p.w-5,v.y+s.scroll/s.maxScroll*(v.h-thumb),2,thumb,1,C.gold,.45)
         end
-        Hairline(vg,c.x,s.footerLine,c.w,.25)
+        Ornament(vg,c.x,s.footerLine,c.w,.6,false)
         for _,b in ipairs(s.buttons) do
-            if not b.area and (b.kind=='link' or b.kind=='primary') then DrawButton[b.kind](vg,s,b) end
+            if not b.area and b.id~='more' and (b.kind=='link' or b.kind=='primary') then DrawButton[b.kind](vg,s,b) end
         end
         if s.menuBox then
             local m=s.menuBox
-            G.Round(vg,m.x-8,m.y-2,m.w+16,m.h+4,0,MENU_FILL,.97)
+            G.Round(vg,m.x-4,m.y-2,m.w+8,m.h+4,12,C.black,.3)
+            G.Round(vg,m.x,m.y,m.w,m.h,12,MENU_FILL,.98)
             for _,b in ipairs(s.buttons) do if b.area=='menu' then DrawButton.menu(vg,s,b) end end
         end
+        nvgRestore(vg)
         nvgGlobalAlpha(vg,1)
     end
     if black>0 then G.Round(vg,0,0,w,h,0,C.black,black) end
@@ -820,6 +841,13 @@ local function Update(_,_,data)
     s.clock=s.clock+dt
     for key,value in pairs(s.flash) do s.flash[key]=math.max(0,value-dt) end
     s.phaseT=s.phaseT+dt
+    for _,b in ipairs(s.buttons) do
+        if b.kind=='card' or b.kind=='badge' then
+            s.anim[b.id]=Ease(s.anim[b.id] or (b.active and 1 or 0),b.active and 1 or 0,dt)
+        end
+    end
+    local center=s.slotCenters and s.slotCenters[s.slot]
+    if center then s.slotX=Ease(s.slotX or center,center,dt) end
     if s.phase=='opening' and s.phaseT>=FADE_OUT then
         EnterRoom(s);s.phase,s.phaseT='revealing',0
     elseif s.phase=='revealing' and s.phaseT>=REVEAL then
@@ -864,7 +892,7 @@ function M.Open(rigOrCallbacks)
     local weapon=draft and draft.weapon or config.active
     local s={callbacks=callbacks,config=config,original=baseline,weapon=weapon,slot=draft and draft.slot or SLOT_ORDER[weapon][1],
         undo=draft and Copy(draft.undo),owner=owner,scroll=0,clock=0,phase='opening',phaseT=0,closeT=0,
-        thumbnails={},flash={},root=root,updateFrame=0,mouseMode=input.mouseMode,
+        thumbnails={},flash={},anim={},root=root,updateFrame=0,mouseMode=input.mouseMode,
         message=draft and '已恢复草稿' or nil}
     session=s
     s.renderOverlay=function(context) Render(context,s) end
@@ -933,6 +961,15 @@ function M.Close(keepDraft)
     drafts[s.owner]=nil
     TouchInput.Clear()
     return true
+end
+--- True while the forge covers the screen (opening fade past black ... closing fade
+--- back to black). Gameplay HUD layers must not draw during this time.
+---@return boolean
+function M.HudHidden()
+    local s=session
+    if not s or s.finished then return false end
+    local black,alpha=PhaseValues(s)
+    return alpha>0 or black>=.6
 end
 --- Includes the short release latch: callers must gate game input on this.
 function M.IsOpen() return session~=nil end

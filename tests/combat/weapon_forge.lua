@@ -154,14 +154,18 @@ local function CheckLayout()
     local s=State()
     local p,c=s.panel,s.content
     assert(p.x+p.w==width and p.y==0 and p.h==height,'the sheet is flush with the right edge and full height')
-    assert(p.w>=340 and p.w<=math.max(340,width*.5+1) or p.w==width,'sheet takes about half the screen')
+    assert(p.w>=360 and p.w<=math.max(360,width*.52+1) or p.w==width,'sheet takes about half the screen')
     assert(c.x>=p.x and c.x+c.w<=width-safe.right and c.y>=safe.top and c.y+c.h<=height-safe.bottom,'content outside safe area')
     assert(s.stage.x+s.stage.w<=p.x,'stage must stay left of the panel')
     for _,b in ipairs(s.buttons) do
         local min=(b.kind=='primary' or b.id=='recommend' or b.id=='undo') and 44 or ((b.id=='more' or b.kind=='swatch') and 34 or 34)
         assert(b.box.h>=min and b.box.w>=34,b.id..' hit target too small')
-        assert(b.box.x>=p.x and b.box.x+b.box.w<=p.x+p.w,b.id..' horizontal overflow')
-        assert(b.box.x+b.box.w<=width-safe.right+4,b.id..' reaches under the notch')
+        if b.id=='more' then
+            assert(b.box.x>=0 and b.box.x+b.box.w<=p.x+4,'more must sit on the stage, left of the sheet')
+        else
+            assert(b.box.x>=p.x and b.box.x+b.box.w<=p.x+p.w,b.id..' horizontal overflow')
+            assert(b.box.x+b.box.w<=width-safe.right+4,b.id..' reaches under the notch')
+        end
         if not b.area then assert(b.box.y>=0 and b.box.y+b.box.h<=height-safe.bottom+2,b.id..' vertical overflow') end
     end
     for i,a in ipairs(s.buttons) do for j,b in ipairs(s.buttons) do
@@ -209,6 +213,7 @@ assert(opened==1 and Forge.IsOpen() and fakeInput.mouseMode==MM_ABSOLUTE and cle
 local s=State()
 assert(s.phase=='opening' and room.entered==0,'the showroom is entered only after the fade to black')
 assert(Forge.PreviewMode()==nil and LogCount('Forge preview: 3d')==0)
+assert(not Forge.HudHidden(),'HUD stays until the opening fade is mostly black')
 CheckLayout();Render()
 assert(Open() and opened==1,'second Open joins the live session')
 Tick(10);assert(room.entered==0)
@@ -217,6 +222,7 @@ assert(room.focus and room.focus>0 and room.focus<.5,'weapon focus sits in the l
 assert(#room.weapons==1 and room.weapons[1].weapon=='sword' and room.weapons[1].parts.blade=='blade_straight')
 Tick(1);assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
 Tick(30);assert(s.phase=='open' and LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
+assert(Forge.HudHidden(),'HUD hidden while the forge is open')
 assert(room.updates>20,'the showroom is stepped every frame')
 rects=0;Render();local readyRects=rects
 CheckLayout()
@@ -270,10 +276,12 @@ end
 do
     local props=s.layer.props
     s.scroll=0
-    local card=Button('slot_grip');local x,y=card.box.x+card.box.w/2,card.box.y+card.box.h/2
-    local before=s.slot
+    local card
+    for _,b in ipairs(s.buttons) do if b.kind=='card' and not b.active then card=b;break end end
+    local x,y=card.box.x+card.box.w/2,card.box.y+card.box.h/2
+    local before=s.config.sword.parts.blade
     props.onPointerDown(Event(x,y));props.onPointerMove(Event(x,y-30));props.onPointerUp(Event(x,y-30))
-    assert(s.slot==before and s.scroll>0 or s.maxScroll==0,'dragging a button scrolls and does not select it')
+    assert(s.config.sword.parts.blade==before and (s.scroll>0 or s.maxScroll==0),'dragging a card scrolls and does not select it')
     props.onPointerDown(Event(x,y,1));props.onPointerUp(Event(x,y,2));assert(s.pointer)
     props.onPointerCancel(Event(x,y,1));assert(not s.pointer)
 end
@@ -430,5 +438,5 @@ for _,fallback in ipairs({false,true}) do
 end
 ResetRoom()
 assert(room.entered==room.exited,'every entered showroom was exited exactly once')
-for key in pairs(Forge) do assert(key=='Open' or key=='Close' or key=='IsOpen' or key=='ForceClose' or key=='PreviewMode') end
+for key in pairs(Forge) do assert(key=='Open' or key=='Close' or key=='IsOpen' or key=='ForceClose' or key=='PreviewMode' or key=='HudHidden') end
 print('PASS weapon_forge: glass panel, sky-showroom hand-off, fades, drafts/undo/presets, real stats, layouts, fallbacks, input and cleanup')

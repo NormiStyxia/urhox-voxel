@@ -22,16 +22,22 @@ arr[...,2]=(225-150*ys)
 arr[...,3]=255
 img=Image.fromarray(arr,'RGBA')
 fonts={}
-def font(size):
-    k=int(round(size*S))
-    if k not in fonts: fonts[k]=ImageFont.truetype(FONT,k,index=0)
+FACEFILES={}
+def font(size,face=None):
+    k=(int(round(size*S)),face)
+    if k not in fonts:
+        path=FACEFILES.get(face)
+        try:
+            fonts[k]=ImageFont.truetype(f'{ROOT}/{path}' if path else FONT,k[0],index=0)
+        except Exception:
+            fonts[k]=ImageFont.truetype(FONT,k[0],index=0)
     return fonts[k]
 imgcache={}
 
 class St:
     def __init__(s):
         s.m=[1,0,0,1,0,0]; s.fill=(255,255,255,255); s.stroke=(255,255,255,255); s.sw=1.0
-        s.alpha=1.0; s.clip=None; s.fs=16; s.align=1; s.fillpaint=None
+        s.alpha=1.0; s.clip=None; s.fs=16; s.align=1; s.fillpaint=None; s.face=None; s.spacing=0
 stack=[St()]
 cur=lambda: stack[-1]
 paths=[]  # list of (points, closed)
@@ -177,8 +183,15 @@ def R(name,*a):
         cx,cy,r,a0,a1=a[1:6]
         n=16; pts=[tx(cx+r*math.cos(a0+(a1-a0)*i/n),cy+r*math.sin(a0+(a1-a0)*i/n)) for i in range(n+1)]
         sub=pts; paths.append([pts,False]); return
+    if name=='nvgEllipse':
+        cx,cy,rx,ry=a[1:5]
+        paths.append([[tx(cx+rx*math.cos(k*math.pi/20),cy+ry*math.sin(k*math.pi/20)) for k in range(40)],True]); sub=None; return
     if name=='nvgFill': do_fill_wrapped(); return
     if name=='nvgStroke': do_stroke(); return
+    if name=='nvgCreateFont':
+        FACEFILES[len(FACEFILES)+1]=('assets/'+a[2]); return len(FACEFILES)
+    if name=='nvgFontFaceId': st.face=a[1]; return
+    if name=='nvgTextLetterSpacing': st.spacing=a[1]; return
     if name=='nvgFontSize': st.fs=a[1]; return
     if name=='nvgTextAlign': st.align=int(a[1]); return
     if name=='nvgText':
@@ -187,9 +200,16 @@ def R(name,*a):
         h=st.align&7
         anchor={1:'lm',2:'mm',4:'rm'}.get(h,'lm')
         sc=st.m[0]
-        layer_w=int(font(st.fs*sc).getlength(text))+8
+        fnt=font(st.fs*sc,st.face)
         big=Image.new('L',(img.width,img.height),0)
-        d=ImageDraw.Draw(big); d.text((px,py),text,font=font(st.fs*sc),fill=255,anchor=anchor)
+        d=ImageDraw.Draw(big)
+        if st.spacing:
+            total=sum(fnt.getlength(c)+st.spacing*S for c in text)
+            x0=px-(total if h==4 else (total/2 if h==2 else 0))
+            for c in text:
+                d.text((x0,py),c,font=fnt,fill=255,anchor='lm'); x0+=fnt.getlength(c)+st.spacing*S
+        else:
+            d.text((px,py),text,font=fnt,fill=255,anchor=anchor)
         bb=big.getbbox()
         if bb:
             cropped=big.crop(bb)
@@ -226,9 +246,9 @@ lua=LuaRuntime(unpack_returned_tuples=False)
 lua.globals().R=R
 head=open(f'{ROOT}/tests/combat/weapon_forge.lua').read()
 head=head[:head.index("assert(not Forge.Open(),'missing safety")]
-names=['nvgSave','nvgRestore','nvgTranslate','nvgScale','nvgRotate','nvgIntersectScissor','nvgBeginPath','nvgRoundedRect','nvgFillColor','nvgFillPaint','nvgStrokeColor','nvgStrokeWidth','nvgStroke','nvgCircle','nvgMoveTo','nvgLineTo','nvgClosePath','nvgFontSize','nvgTextAlign','nvgText','nvgGlobalAlpha','nvgRect','nvgFill','nvgRGBA','nvgLinearGradient','nvgArc']
+names=['nvgSave','nvgRestore','nvgTranslate','nvgScale','nvgRotate','nvgIntersectScissor','nvgBeginPath','nvgRoundedRect','nvgFillColor','nvgFillPaint','nvgStrokeColor','nvgStrokeWidth','nvgStroke','nvgCircle','nvgMoveTo','nvgLineTo','nvgClosePath','nvgFontSize','nvgTextAlign','nvgText','nvgGlobalAlpha','nvgRect','nvgFill','nvgRGBA','nvgLinearGradient','nvgArc','nvgEllipse','nvgCreateFont','nvgFontFaceId','nvgTextLetterSpacing']
 override='\n'.join(f"rawset(_G,'{n}',function(...) return R('{n}',...) end)" for n in names)
-override+="\nfor _,n in ipairs({'nvgFontFaceId','nvgFontBlur','nvgTextLetterSpacing','nvgShapeAntiAlias'}) do rawset(_G,n,function() end) end\n"
+override+="\nfor _,n in ipairs({'nvgFontBlur','nvgShapeAntiAlias'}) do rawset(_G,n,function() end) end\n"
 body=f'''
 {override}
 width,height,dpr,scale={W},{H},1,1
