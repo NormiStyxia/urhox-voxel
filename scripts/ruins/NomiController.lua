@@ -456,18 +456,20 @@ local function MayIntersect(volume,ray,maxDist)
         local grid=volume:GetGrid()
         if grid==nil then return false end
         local d=grid:GetDimensions()
-        -- 遗迹体积创建后不改 dimensions；重建/碎裂创建新 volume，自然生成新粗筛缓存。
-        bound=d.x*d.x+d.y*d.y+d.z*d.z
+        -- 遗迹体积创建后不改 dimensions；缓存局部中心/半对角线，不缓存移动后的世界位置。
+        bound={x=d.x*.5,y=d.y*.5,z=d.z*.5,r2=(d.x*d.x+d.y*d.y+d.z*d.z)*.25}
         aimBounds[volume]=bound
     end
     local scale=node.worldScale
-    local s=math.max(math.abs(scale.x),math.abs(scale.y),math.abs(scale.z))*volume.voxelSize
+    local size=volume.voxelSize
+    local s=math.max(math.abs(scale.x),math.abs(scale.y),math.abs(scale.z))*size
     local p=node.worldPosition
-    local x,y,z=p.x-ray.origin.x,p.y-ray.origin.y,p.z-ray.origin.z
+    local offset=node.worldRotation*Vector3(bound.x*scale.x*size,bound.y*scale.y*size,bound.z*scale.z*size)
+    local x,y,z=p.x+offset.x-ray.origin.x,p.y+offset.y-ray.origin.y,p.z+offset.z-ray.origin.z
     local dir=ray.direction
     local t=math.max(0,math.min(maxDist,x*dir.x+y*dir.y+z*dir.z))
     local dx,dy,dz=x-dir.x*t,y-dir.y*t,z-dir.z*t
-    return dx*dx+dy*dy+dz*dz<=bound*s*s
+    return dx*dx+dy*dy+dz*dz<=bound.r2*s*s+.0001
 end
 
 ---@param ray Ray
