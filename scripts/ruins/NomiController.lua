@@ -482,10 +482,10 @@ function N:GridHit(ray,maxDist)
     -- 镜头 -> 候选包围球粗筛 -> 最近实心格；可见 mask=0 回溯残片保留，禁用体积排除。
     for i=0,self.world:GetVolumeCount()-1 do
         local volume=self.world:GetVolume(i)
-        if volume~=nil and (volume.collisionLayer & mask)~=0
-            and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
+        if volume~=nil and (volume.collisionLayer & mask)~=0 then
             local limit=nearest.hit and math.min(maxDist,nearest.distance) or maxDist
-            if MayIntersect(volume,ray,limit) then
+            if MayIntersect(volume,ray,limit)
+                and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
                 local actual=TraceVolume(volume,ray,limit)
                 if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
             end
