@@ -103,6 +103,44 @@ V.atFrame(8, function()
             end
         end
     end
+    -- 正式塔台现场：绕悬石水平/俯仰扫视，同时独立遍历当前实心格核对。
+    -- 实心塔壁遮挡就保留塔壁，不将「面上不可见」当成锁定失败。
+    local actualWorld=nomi.world
+    local forceGrid={
+        RaycastGridSingle=function(self,r,d,mask)
+            local hit=VoxelRaycastResult:new()
+            hit.hit,hit.volume,hit.volumeId=true,object.whole,object.whole.volumeId
+            hit.distance,hit.position=0,r.origin
+            return hit
+        end,
+        GetVolumeCount=function() return world:GetVolumeCount() end,
+        GetVolume=function(self,i) return world:GetVolume(i) end
+    }
+    local visibleCount,mismatch=0,0
+    for heading=0,330,30 do for _,height in ipairs({-3,0,3}) do
+        local angle=math.rad(heading)
+        local center=puzzles.boulder.center
+        local origin=center+Vector3(math.sin(angle)*10,height,math.cos(angle)*10)
+        for _,offset in ipairs({Vector3.ZERO,Vector3(0,.5,0),Vector3(0,-.5,0)}) do
+            local delta=center+offset-origin
+            local r=Ray(origin,delta:Normalized())
+            local native=world:RaycastGridSingle(r,30,nomi.aimMask)
+            local selected=nomi:GridHit(r,30)
+            nomi.world=forceGrid
+            local exact=nomi:GridHit(r,30)
+            nomi.world=actualWorld
+            if exact.hit and TimeObject.FindByVolume(exact.volume)==puzzles.boulder then visibleCount=visibleCount+1 end
+            local same=selected.hit==exact.hit and (not exact.hit or selected.volume==exact.volume)
+            if not same then
+                mismatch=mismatch+1
+                print(string.format("TargetingTest: LIVE MISMATCH heading=%d h=%g origin=%s dir=%s native=%s id=%d d=%.6f selected=%s id=%d d=%.6f exact=%s id=%d d=%.6f",
+                    heading,height,tostring(origin),tostring(r.direction),tostring(native.hit),native.volumeId,native.distance,
+                    tostring(selected.hit),selected.volumeId,selected.distance,tostring(exact.hit),exact.volumeId,exact.distance))
+            end
+            V.assert(same,"正式悬石多角度命中与独立实心格一致 "..heading.." h="..height)
+        end
+    end end
+    print(string.format("TargetingTest: live boulder visible=%d / 108 mismatches=%d",visibleCount,mismatch))
     local ray = Ray(Vector3(300.5,5.5,298),Vector3.FORWARD)
     local aim = nomi:AimRay(ray,10)
     V.assert(aim.hit and aim.object==object and aim.breakable,"实心可操作物件正确锁定")
