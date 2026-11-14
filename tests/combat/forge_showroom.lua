@@ -22,6 +22,9 @@ local function Wrap(n)
         if e.fail==kind then return nil end
         local c=kind=='CustomGeometry' and Mock.CustomGeometry(self,e.geometryOptions) or {node=self}
         c.kind=kind;c.viewMask=0xffffffff;c.lightMask=0xffffffff;c.zoneMask=0xffffffff
+        if kind=='Camera' then c.projectionOffset=Vector2(0,0) end
+        if kind=='Zone' then c.ambientSource=0 end
+        if e.missingKind==kind then c[e.missingField]=nil end
         self.components[#self.components+1]=c;return c
     end
     function n:GetComponents(kind,recursive)
@@ -98,6 +101,7 @@ local function Restored(n,g)
 end
 
 Boot();local nodes,components=Live()
+assert(Showroom.Diagnostic()=='')
 assert(Showroom.State()=='off' and not Showroom.Active())
 Showroom.Update(1);Showroom.SetWeapon({});Showroom.DragBegin();Showroom.Home();Showroom.Exit()
 assert(Showroom.Enter(e.scene,{focusX=.3}))
@@ -191,3 +195,79 @@ assert(source:match('local function UpdateBaseCamera%(dt%)%s+if ForgeShowroom an
 assert(source:match('local function UpdateCombatCamera%(dt,cn%)%s+if ForgeShowroom and ForgeShowroom.Active%(%) then return end'))
 assert(source:find('ForgeShowroom.Exit()',1,true))
 print('forge_showroom PASS: 72 configs, viewport/masks rollback, atomic rebuild/cancel, fit, drag/home, timeout/errors, lifecycle; MOCK ONLY')
+
+-- Failure evidence must survive Exit and de-duplicate across reopen attempts.
+-- Control the engine singleton clock; never use a fake Time static binding.
+local realPrint=print
+local lines={}
+local now=1000
+rawset(_G,'print',function(message) lines[#lines+1]=tostring(message) end)
+local function Clock() rawset(_G,'time',{GetElapsedTime=function(self) assert(self==time);return now end}) end
+local function EnterFailure(stage,api,setup)
+    Boot();Clock();local before=#lines
+    setup()
+    assert(not Showroom.Enter(e.scene) and Showroom.State()=='failed')
+    local text=Showroom.Diagnostic()
+    assert(text:find('stage='..stage,1,true) and text:find(api,1,true),text)
+    assert(text:find('viewport_acquired=',1,true) and text:find('mask=1073741824',1,true),text)
+    assert(not text:find('[\r\n]'),'diagnostic must be one line')
+    assert(#lines==before+1 and lines[#lines]:find('ForgeShowroom: enter failed stage='..stage..' error=',1,true)==1)
+    Showroom.Exit();assert(Showroom.Diagnostic()==text,'Exit must not erase evidence')
+end
+EnterFailure('viewport','renderer:GetViewport',function() renderer.GetViewport=nil end)
+EnterFailure('viewport','renderer:SetViewport',function() renderer.SetViewport=nil end)
+EnterFailure('light','Node:GetComponents',function()
+    -- Keep Octree lookup independent, so failure reaches the missing API itself.
+    e.scene.GetComponent=function() return {kind='Octree'} end
+    e.scene.GetComponents=nil
+end)
+for _,field in ipairs({'viewMask','lightMask','zoneMask'}) do
+    EnterFailure('zone','Drawable.'..field,function() e.missingKind='Zone';e.missingField=field end)
+end
+EnterFailure('zone','Zone.ambientSource',function() e.missingKind='Zone';e.missingField='ambientSource' end)
+EnterFailure('camera','Camera.projectionOffset',function() e.missingKind='Camera';e.missingField='projectionOffset' end)
+EnterFailure('camera','Node:CreateComponent',function() e.fail='Camera' end)
+EnterFailure('geometry','Node:CreateComponent',function() e.fail='CustomGeometry' end)
+EnterFailure('geometry','CustomGeometry:DefineVertex',function() e.missingKind='CustomGeometry';e.missingField='DefineVertex' end)
+-- Same missing API at 0/9.99/10s: first and third log, middle is suppressed.
+local before=#lines
+for _,elapsed in ipairs({0,9.99,10}) do
+    now=1100+elapsed;Boot();Clock();renderer.GetViewport=nil
+    assert(not Showroom.Enter(e.scene));assert(Showroom.Diagnostic():find('api_type=nil',1,true))
+    assert(#lines==before+(elapsed<10 and 1 or 2),'10-second dedup/reopen failed')
+end
+now=1200;Boot();Clock();assert(Showroom.Enter(e.scene));assert(Showroom.Diagnostic()=='')
+before=#lines;Showroom.SetWeapon({weapon='axe'})
+assert(Showroom.Diagnostic():find('origin=SetWeapon',1,true))
+assert(#lines==before+1 and lines[#lines]:find('ForgeShowroom: update failed stage=weapon error=',1,true)==1)
+-- The outer pcall catches thrown APIs; the builder also has its own error return.
+local realStep=Builder.StepPreview
+for _,throws in ipairs({true,false}) do
+    now=now+20;Boot();Clock();assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('bow'));Showroom.Update(0)
+    Builder.StepPreview=function(job)
+        job.stage='commit'
+        if throws then error('injected Commit error\nsecond line') end
+        return true,nil,'missing API CustomGeometry:Commit'
+    end
+    before=#lines;Showroom.Update(.01)
+    assert(Showroom.State()=='failed' and #lines==before+1)
+    assert(lines[#lines]:find('ForgeShowroom: update failed stage=geometry error=',1,true)==1)
+    assert(Showroom.Diagnostic():find('geometry_stage=commit',1,true))
+    assert(not Showroom.Diagnostic():find('[\r\n]'))
+    for _=1,60 do Showroom.Update(1/60) end
+    assert(#lines==before+1,'failed Update must not spam on subsequent frames')
+    Builder.StepPreview=realStep
+end
+-- Missing per-frame native method is named, not a generic nil-call error.
+now=now+20;Boot();Clock();assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
+graphics.GetWidth=nil;Showroom.Update(.01)
+assert(Showroom.Diagnostic():find('missing API graphics:GetWidth',1,true))
+-- A missing renderer during failure cleanup must not throw out of Update or
+-- replace the primary error; append the rollback API name to the diagnostic.
+now=now+20;Boot();Clock();assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
+rawset(_G,'graphics',nil);rawset(_G,'renderer',nil)
+assert(pcall(Showroom.Update,.01) and Showroom.State()=='failed')
+assert(Showroom.Diagnostic():find('graphics:GetWidth',1,true))
+assert(Showroom.Diagnostic():find('cleanup=renderer:SetViewport',1,true))
+rawset(_G,'print',realPrint)
+print('forge_showroom diagnostics PASS: missing bindings, stages, single-line errors, Enter/Update/SetWeapon, 10s dedup and recovery; MOCK ONLY')

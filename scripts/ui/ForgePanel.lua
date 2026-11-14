@@ -24,6 +24,10 @@ local M={}
 local session
 local drafts=setmetatable({}, {__mode='k'})
 local C=G.colors
+local function Shadowed(vg,text,x,y,size,color,align,alpha)
+    G.Text(vg,text,x+1,y+1,size,C.black,align,(alpha or 1)*.55)
+    G.Text(vg,text,x,y,size,color,align,alpha)
+end
 local SLOT_ORDER={sword={'blade','guard','grip','pommel'},bow={'limbs','grip','tip'}}
 local CHANNEL_NAMES={primary='主色',secondary='副色',accent='点缀'}
 local WEAPON_NAMES={sword='长剑',bow='长弓'}
@@ -32,15 +36,13 @@ local PAD=14
 local FADE_OUT,REVEAL=.2,.3 -- seconds: to black / from black
 local ROOM_TIMEOUT=6
 local DARK_VOXEL={92,76,60}
-local TAB_TOP,TAB_BOTTOM={70,58,34},{44,36,22}
-local PANEL_TOP,PANEL_BOTTOM={19,30,50},{10,16,28}
-local GOLD_TOP,GOLD_BOTTOM={244,210,128},{206,158,70}
-local GOLD_DOWN_TOP,GOLD_DOWN_BOTTOM={200,156,72},{170,126,52}
-local GOLD_RIM={255,236,170}
-local MENU_FILL={16,24,40}
-local FADE_CLEAR={10,16,28,0}
-local FADE_SOLID={10,16,28,235}
-local STAGE_TOP,STAGE_BOTTOM={16,26,44},{8,12,22}
+local PANEL_TOP,PANEL_BOTTOM={15,27,48},{9,17,32}
+local STAGE_TOP,STAGE_BOTTOM={26,46,80},{9,16,30}
+local EQUIP_TOP,EQUIP_BOTTOM={102,204,244},{48,136,196}
+local EQUIP_DOWN_TOP,EQUIP_DOWN_BOTTOM={70,160,208},{34,100,150}
+local EQUIP_RIM={186,236,255}
+local MENU_FILL={10,19,36}
+local SHADOW_CLEAR,SHADOW_SOLID={0,0,0,0},{0,0,0,110}
 
 -- The showroom is optional: a missing/broken module means the 2D side view.
 local roomModule
@@ -110,7 +112,14 @@ local function EnterRoom(s)
     if not room or not scene then Fallback(s,'unavailable');return end
     local focus=(s.stage.x+s.stage.w*.5)/math.max(1,s.width)
     local ok,entered=pcall(room.Enter,scene,{focusX=focus})
-    if not ok or entered~=true then Fallback(s,'enter',not ok and entered or nil);return end
+    if not ok or entered~=true then
+        local detail=not ok and entered or nil
+        if detail==nil and type(room.Diagnostic)=='function' then
+            local good,text=pcall(room.Diagnostic)
+            detail=good and text or nil
+        end
+        Fallback(s,'enter',detail);return
+    end
     s.room,s.roomWait=true,0
     Single3D(s)
 end
@@ -139,13 +148,12 @@ local function StatRows(s,list)
     local rows={}
     for i,entry in ipairs(list) do
         local key,unit=entry[1],entry[4]
+        local suffix=(unit=='×' or unit=='m') and unit or ''
         local value,before=StatValue(s.blueprint,key),StatValue(s.baseline,key)
         local delta=value-before
-        rows[i]={key=key,label=entry[2]..(unit~='' and (' '..unit) or ''),
-            before=Number(before,unit),value=Number(value,unit),changed=math.abs(delta)>.001,
-            text=math.abs(delta)>.001 and (Number(before,unit)..' → '..Number(value,unit)) or Number(value,unit),
+        rows[i]={key=key,label=entry[2],value=Number(value,unit)..suffix,changed=math.abs(delta)>.001,
             fraction=Clamp(value/entry[3],0,1),
-            delta=math.abs(delta)>.001 and ((delta>0 and '+' or '-')..Number(math.abs(delta),unit)) or nil,
+            delta=math.abs(delta)>.001 and ((delta>0 and '+' or '-')..Number(math.abs(delta),unit)..suffix) or nil,
             up=delta>0}
     end
     return rows
@@ -181,109 +189,122 @@ end
 local function CloseMenu(s) if s.menuOpen then s.menuOpen=false;Layout(s) end end
 
 ---------------------------------------------------------------- layout
+-- Look: one flat deep-navy sheet flush with the right edge, hairline dividers,
+-- text tabs with an underline, sharp square option frames. No nested rounded
+-- boxes; the only filled control is the chamfered Equip button.
 Layout=function(s)
     local w,h,safe=Draw.Metrics()
     s.width,s.height=w,h
     s.safeLeft,s.safeTop,s.safeRight,s.safeBottom=safe.left,safe.top,safe.right,safe.bottom
-    local x0,y0=safe.left+10,safe.top+8
-    local x1,y1=w-safe.right-10,h-safe.bottom-8
-    local aw,ah=x1-x0,y1-y0
-    local pw=math.min(aw,Clamp(math.floor(aw*.44),300,360))
-    local panel=Box(x1-pw,y0,pw,ah)
-    s.panel=panel
-    s.stage=Box(x0,y0,math.max(0,aw-pw-12),ah)
-    local ix,iw=panel.x+PAD,panel.w-2*PAD
-    s.ix,s.iw=ix,iw
+    local pw=math.min(w,Clamp(math.floor(w*.5),340,560))
+    s.panel=Box(w-pw,0,pw,h)
+    s.stage=Box(0,0,w-pw,h)
+    local padR=math.max(16,safe.right+12)
+    local cx,cw=s.panel.x+20,pw-20-padR
+    local top,bottom=safe.top+8,h-safe.bottom-8
+    s.content=Box(cx,top,cw,bottom-top)
     s.buttons={}
-    -- header: title, weapon segmented control, close
-    local hy=panel.y+10
-    s.titlePos={x=ix,y=hy+20}
-    local tabW=math.min(70,math.floor((iw-84-48)/2))
-    s.tabsBox=Box(ix+84,hy+2,tabW*2,36)
+    -- header: title, weapon text tabs (with the pixel weapon icons), close
+    s.titlePos={x=cx,y=top+22}
     for i,weapon in ipairs({'sword','bow'}) do
-        Add(s,'tab_'..weapon,weapon=='sword' and '剑' or '弓',Box(ix+84+(i-1)*tabW,hy+2,tabW,36),function()
+        Add(s,'tab_'..weapon,weapon=='sword' and '剑' or '弓',Box(cx+100+(i-1)*70,top,70,40),function()
             if s.weapon==weapon then return end
             s.weapon=weapon;s.slot=SLOT_ORDER[weapon][1];s.scroll=0;s.colorChannel=nil;s.moreOpen=false
             Rebuild(s);Layout(s)
         end,{kind='tab',active=s.weapon==weapon,icon=weapon..'_s'})
     end
-    Add(s,'close','关闭',Box(ix+iw-34,hy-2,44,44),function() M.Close() end,{kind='close'})
-    -- footer: recommended menu / undo / equip
-    local fy=panel.y+panel.h-PAD-44
-    local equipW,undoW=104,64
-    local recW=iw-equipW-undoW-16
-    s.footerY=fy
-    Add(s,'recommend','推荐方案',Box(ix,fy,recW,44),function() s.menuOpen=not s.menuOpen;Layout(s) end,{kind='plain',menuToggle=true,active=s.menuOpen})
-    Add(s,'undo','撤销',Box(ix+recW+8,fy,undoW,44),function()
+    Add(s,'close','关闭',Box(cx+cw-40,top,44,44),function() M.Close() end,{kind='close'})
+    s.headerLine=top+44
+    -- footer: recommended menu / undo links, chamfered equip button
+    local fy=bottom-44
+    s.footerY=fy;s.footerLine=fy-6
+    Add(s,'recommend','推荐方案',Box(cx,fy,96,44),function() s.menuOpen=not s.menuOpen;Layout(s) end,{kind='link',menuToggle=true,active=s.menuOpen})
+    Add(s,'undo','撤销',Box(cx+104,fy,56,44),function()
         if not s.undo then return end
         s.config,s.weapon,s.slot=s.undo.config,s.undo.weapon,s.undo.slot;s.undo=nil
         Rebuild(s);Layout(s)
-    end,{kind='plain',disabled=not s.undo})
-    Add(s,'equip','装备',Box(ix+iw-equipW,fy,equipW,44),function() M.Close() end,{kind='primary'})
+    end,{kind='link',disabled=not s.undo})
+    Add(s,'equip','装备',Box(cx+cw-140,fy,140,44),function() M.Close() end,{kind='primary'})
     -- scrolling viewport
-    local vy=hy+46
-    local vh=fy-8-vy
-    s.view=Box(panel.x+2,vy,panel.w-4,vh)
+    local vy=top+50
+    local vh=s.footerLine-6-vy
+    s.view=Box(s.panel.x,vy,pw,vh)
     local cy=vy
     local slots=SLOT_ORDER[s.weapon]
     for i,slot in ipairs(slots) do
-        local sx,sw=Span(ix,iw,i,#slots,6)
+        local sx,sw=Span(cx,cw,i,#slots,0)
         Add(s,'slot_'..slot,Parts.SlotNames[slot],Box(sx,cy,sw,34),function() s.slot=slot;Layout(s) end,
-            {kind='slot',area='scroll',active=s.slot==slot})
+            {kind='tab',area='scroll',active=s.slot==slot,slot=true})
     end
-    cy=cy+34+8
+    s.slotLine=cy+34
+    cy=cy+34+6
     local options=Parts.GetOptions(s.weapon,s.slot)
     for i,part in ipairs(options) do
-        local cx,cw=Span(ix,iw,i,#options,8)
-        local card=Box(cx,cy,cw,84)
-        local b=Add(s,'part_'..part.id,part.name,card,function()
+        local x,cwid=Span(cx,cw,i,#options,12)
+        local b=Add(s,'part_'..part.id,part.name,Box(x,cy,cwid,92),function()
             Edit(s,function() s.config[s.weapon].parts[s.slot]=part.id end)
         end,{kind='card',area='scroll',active=s.config[s.weapon].parts[s.slot]==part.id,part=part})
-        b.thumb=Box(card.x+8,card.y+8,card.w-16,46)
+        b.frame=Box(x,cy,cwid,70)
+        b.thumb=Box(x+8,cy+7,cwid-16,56)
     end
-    cy=cy+84+8
-    s.statsBox=Box(ix,cy,iw,58)
-    cy=cy+58+8
+    cy=cy+92+2
+    s.dividerY=cy
+    cy=cy+8
+    -- two columns: colours (left) / attributes (right)
+    local colW=math.floor((cw-20)*.44)
+    local rx=cx+colW+20
+    local rw=cw-colW-20
+    s.colorCol=Box(cx,cy,colW,10)
+    s.attrCol=Box(rx,cy,rw,10)
+    local chipY=cy+24
     for i,channel in ipairs(Parts.Channels) do
         local preset=Parts.ColorPresets[s.config[s.weapon].colors[channel]]
-        local chx,chw=Span(ix,iw,i,3,8)
-        Add(s,'color_'..channel,CHANNEL_NAMES[channel],Box(chx,cy,chw,38),function()
+        local chx,chw=Span(cx,colW,i,3,4)
+        Add(s,'color_'..channel,CHANNEL_NAMES[channel],Box(chx,chipY,chw,44),function()
             s.colorChannel=s.colorChannel~=channel and channel or nil;Layout(s)
             if s.colorChannel then s.scroll=s.maxScroll end
         end,{kind='chip',area='scroll',swatch=preset.rgb,active=s.colorChannel==channel})
     end
-    cy=cy+38+8
-    s.paletteBox=nil
-    if s.colorChannel then
-        local current=s.config[s.weapon].colors[s.colorChannel]
-        s.paletteTitle={x=ix,y=cy+10,text=CHANNEL_NAMES[s.colorChannel]..' · '..Parts.ColorPresets[current].name}
-        cy=cy+22
-        local count=#Parts.ColorPresets
-        s.paletteBox=Box(ix,cy,iw,44)
-        for i,preset in ipairs(Parts.ColorPresets) do
-            local px,pw=Span(ix,iw,i,count,0)
-            Add(s,'swatch_'..i,preset.name,Box(px,cy,pw,44),function()
-                Edit(s,function() s.config[s.weapon].colors[s.colorChannel]=i end)
-            end,{kind='swatch',area='scroll',swatch=preset.rgb,active=current==i})
-        end
-        cy=cy+44+8
-    end
-    Add(s,'more',s.moreOpen and '收起数值' or '更多数值',Box(ix,cy,iw,36),function() s.moreOpen=not s.moreOpen;Layout(s) end,
-        {kind='link',area='scroll'})
-    cy=cy+36
+    local colBottom=chipY+44
+    s.descriptionLines=G.Wrap(assert(Parts.Get(s.config[s.weapon].parts[s.slot])).desc,13,colW-2)
+    s.descPos={x=cx,y=colBottom+10}
+    colBottom=colBottom+4+#s.descriptionLines*18
+    -- attributes (right column): label / candidate value / difference
+    s.statRows=s.statRows or StatRows(s,STAT_MAIN[s.weapon])
+    s.attrTitle={x=rx,y=cy+10}
+    Add(s,'more',s.moreOpen and '收起' or '更多',Box(rx+rw-56,cy-6,60,34),function() s.moreOpen=not s.moreOpen;Layout(s) end,
+        {kind='link',area='scroll',small=true})
+    s.attrRowsY=cy+26
+    local rows=#s.statRows
     s.moreBox=nil
     if s.moreOpen then
         s.moreRows=s.moreRows or StatRows(s,STAT_MORE[s.weapon])
-        s.moreBox=Box(ix,cy,iw,#s.moreRows*24+4)
-        cy=cy+s.moreBox.h
+        s.moreBox={x=rx,y=s.attrRowsY+rows*24,w=rw,h=#s.moreRows*24}
+        rows=rows+#s.moreRows
     end
-    cy=cy+6
-    s.descriptionLines=G.Wrap(assert(Parts.Get(s.config[s.weapon].parts[s.slot])).desc,13,iw-4)
-    s.descriptionBox=Box(ix,cy,iw,#s.descriptionLines*19)
-    cy=cy+s.descriptionBox.h+6
+    local attrBottom=s.attrRowsY+rows*24
+    s.attrRight={x=rx,w=rw}
+    cy=math.max(colBottom,attrBottom)+8
+    -- colour palette: a full-width row under both columns (big enough to tap)
+    s.paletteBox=nil;s.paletteTitle=nil
+    if s.colorChannel then
+        local current=s.config[s.weapon].colors[s.colorChannel]
+        local count=#Parts.ColorPresets
+        s.dividerY2=cy
+        s.paletteTitle={x=cx,y=cy+16,text=CHANNEL_NAMES[s.colorChannel]..' · '..Parts.ColorPresets[current].name}
+        s.paletteBox=Box(cx,cy+28,cw,38)
+        for i,preset in ipairs(Parts.ColorPresets) do
+            local px,pwid=Span(cx,cw,i,count,0)
+            Add(s,'swatch_'..i,preset.name,Box(px,cy+28,pwid,38),function()
+                Edit(s,function() s.config[s.weapon].colors[s.colorChannel]=i end)
+            end,{kind='swatch',area='scroll',swatch=preset.rgb,active=current==i})
+        end
+        cy=cy+72
+    else s.dividerY2=nil end
     s.contentHeight=cy-vy
     s.maxScroll=math.max(0,s.contentHeight-vh)
     s.scroll=Clamp(s.scroll,0,s.maxScroll)
+    s.subtitle=nil
     -- recommended menu (drop-up above the footer)
     if s.menuOpen then
         local items={}
@@ -298,23 +319,19 @@ Layout=function(s)
         items[#items+1]={id='reset',label='恢复默认',action=function()
             Edit(s,function() s.config[s.weapon]=Parts.DefaultWeapon(s.weapon) end)
         end}
-        local mh=#items*40+12
-        local menu=Box(ix,fy-8-mh,math.min(170,iw),mh)
+        local mh=#items*40+8
+        local menu=Box(cx,fy-6-mh,150,mh)
         s.menuBox=menu
         for i,item in ipairs(items) do
-            Add(s,item.id,item.label,Box(menu.x+6,menu.y+6+(i-1)*40,menu.w-12,40),function()
+            Add(s,item.id,item.label,Box(menu.x,menu.y+4+(i-1)*40,menu.w,40),function()
                 s.menuOpen=false
                 item.action()
                 Layout(s)
             end,{kind='menu',area='menu',gap=item.gap})
         end
     else s.menuBox=nil end
-    s.statRows=s.statRows or StatRows(s,STAT_MAIN[s.weapon])
-    local previewing=s.blueprint.geometry.cells
-    s.sideBox=Box(s.stage.x+16,s.stage.y+60,math.max(1,s.stage.w-32),math.max(1,s.stage.h-110))
-    s.sideCells=previewing
-    local part=Parts.Get(s.config[s.weapon].parts[s.slot])
-    s.subtitle='正在编辑 · '..Parts.SlotNames[s.slot]..' · '..part.name
+    s.sideBox=Box(s.stage.x+40,s.stage.y+h*.1,math.max(1,s.stage.w-80),math.max(1,h*.8))
+    s.sideCells=s.blueprint.geometry.cells
 end
 
 ---------------------------------------------------------------- pointer
@@ -326,7 +343,7 @@ local function At(s,x,y)
         return nil
     end
     for _,button in ipairs(s.buttons) do
-        if not button.area and Inside(x,y,button.box) then return button end
+        if not button.area and button.action and Inside(x,y,button.box) then return button end
     end
     if Inside(x,y,s.view) then
         for _,button in ipairs(s.buttons) do
@@ -471,146 +488,141 @@ end
 local function Pressed(s,button)
     return s.pointer and not s.pointer.moved and s.pointer.button==button
 end
-local function Shadowed(vg,text,x,y,size,color,align,alpha)
-    G.Text(vg,text,x+1,y+1,size,C.black,align,(alpha or 1)*.55)
-    G.Text(vg,text,x,y,size,color,align,alpha)
+local function Hairline(vg,x,y,w,alpha,diamond)
+    G.Line(vg,x,y+.5,x+w,y+.5,C.line,alpha or .5,1)
+    if diamond then G.Diamond(vg,x+w/2,y+.5,3,C.cyan,.8) end
+end
+local function Underline(vg,cx,y,w,active)
+    G.Round(vg,cx-w/2,y,w,2,0,C.cyan,1)
+    G.Diamond(vg,cx,y+6,2.5,C.cyan,active and 1 or .6)
 end
 
 local DrawButton={}
 function DrawButton.tab(vg,s,b)
-    local pressed=Pressed(s,b)
     local bx=b.box
-    if b.active then
-        G.Gradient(vg,bx.x+1,bx.y+1,bx.w-2,bx.h-2,17,TAB_TOP,TAB_BOTTOM,1)
-        G.Stroke(vg,bx.x+1,bx.y+1,bx.w-2,bx.h-2,17,C.gold,.9,1.5)
-    elseif pressed then G.Round(vg,bx.x+2,bx.y+2,bx.w-4,bx.h-4,16,C.cardHi,.8) end
-    Icon(vg,b.icon,bx.x+10,bx.y+8)
-    G.Text(vg,b.label,bx.x+38,bx.y+bx.h/2,16,b.active and C.gold or C.sub)
+    local pressed=Pressed(s,b)
+    local color=(b.active or pressed) and C.cyan or C.sub
+    if b.icon then
+        Icon(vg,b.icon,bx.x+8,bx.y+(bx.h-20)/2)
+        local draw=b.active and G.Bold or G.Text
+        draw(vg,b.label,bx.x+36,bx.y+bx.h/2,19,color)
+        if b.active then G.Round(vg,bx.x+36,bx.y+bx.h-3,22,2,0,C.cyan,1) end
+    else
+        local draw=b.active and G.Bold or G.Text
+        draw(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2-2,17,color,NVG_ALIGN_CENTER)
+        if b.active then Underline(vg,bx.x+bx.w/2,bx.y+bx.h-5,math.min(bx.w-12,G.EstimateWidth(b.label,17)+10),true) end
+    end
 end
 function DrawButton.close(vg,s,b)
     local bx=b.box
-    local cx,cy=bx.x+bx.w/2,bx.y+bx.h/2
-    G.Circle(vg,cx,cy,15,Pressed(s,b) and C.cardHi or C.card,.9)
-    G.Line(vg,cx-5,cy-5,cx+5,cy+5,C.text,.9,1.8)
-    G.Line(vg,cx+5,cy-5,cx-5,cy+5,C.text,.9,1.8)
+    local cx,cy=bx.x+bx.w/2+4,bx.y+bx.h/2
+    local a=Pressed(s,b) and 1 or .85
+    G.Line(vg,cx-8,cy-8,cx+8,cy+8,C.text,a,1.6)
+    G.Line(vg,cx+8,cy-8,cx-8,cy+8,C.text,a,1.6)
 end
-function DrawButton.plain(vg,s,b)
+function DrawButton.link(vg,s,b)
     local bx=b.box
-    local a=b.disabled and .4 or 1
-    G.Round(vg,bx.x,bx.y,bx.w,bx.h,12,Pressed(s,b) and C.cardHi or C.card,.95*a)
-    G.Stroke(vg,bx.x,bx.y,bx.w,bx.h,12,b.active and C.gold or C.ice,b.active and .8 or .22*a,1)
-    G.Text(vg,b.label,bx.x+bx.w/2-(b.menuToggle and 8 or 0),bx.y+bx.h/2,15,b.disabled and C.dim or C.text,NVG_ALIGN_CENTER)
+    local color=b.disabled and C.dim or ((b.active or Pressed(s,b)) and C.cyan or C.text)
+    local size=b.small and 14 or 16
+    local width=G.EstimateWidth(b.label,size)
+    if b.small then
+        G.Text(vg,b.label,bx.x+bx.w,bx.y+bx.h/2,size,color,NVG_ALIGN_RIGHT)
+        return
+    end
+    local x=bx.x
+    G.Text(vg,b.label,x,bx.y+bx.h/2,size,color)
     if b.menuToggle then
-        local tx,ty=bx.x+bx.w/2+G.EstimateWidth(b.label,15)/2+10,bx.y+bx.h/2
+        local tx,ty=x+width+9,bx.y+bx.h/2+1
         nvgBeginPath(vg)
-        if b.active then nvgMoveTo(vg,tx-5,ty+3);nvgLineTo(vg,tx+5,ty+3);nvgLineTo(vg,tx,ty-3)
-        else nvgMoveTo(vg,tx-5,ty-3);nvgLineTo(vg,tx+5,ty-3);nvgLineTo(vg,tx,ty+3) end
-        nvgClosePath(vg);nvgFillColor(vg,G.Color(C.sub,1));nvgFill(vg)
+        if b.active then nvgMoveTo(vg,tx-4,ty+2.5);nvgLineTo(vg,tx+4,ty+2.5);nvgLineTo(vg,tx,ty-2.5)
+        else nvgMoveTo(vg,tx-4,ty-2.5);nvgLineTo(vg,tx+4,ty-2.5);nvgLineTo(vg,tx,ty+2.5) end
+        nvgClosePath(vg);nvgFillColor(vg,G.Color(color,1));nvgFill(vg)
+    else
+        G.Line(vg,x,bx.y+bx.h/2+11,x+width,bx.y+bx.h/2+11,color,b.disabled and .4 or .8,1)
     end
 end
 function DrawButton.primary(vg,s,b)
     local bx=b.box
     local pressed=Pressed(s,b)
-    G.Gradient(vg,bx.x,bx.y,bx.w,bx.h,12,pressed and GOLD_DOWN_TOP or GOLD_TOP,pressed and GOLD_DOWN_BOTTOM or GOLD_BOTTOM,1)
-    G.Stroke(vg,bx.x,bx.y,bx.w,bx.h,12,GOLD_RIM,.5,1)
-    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2,18,C.ink,NVG_ALIGN_CENTER)
-end
-function DrawButton.slot(vg,s,b)
-    local bx=b.box
-    G.Round(vg,bx.x,bx.y,bx.w,bx.h,10,Pressed(s,b) and C.cardHi or (b.active and C.cardSel or C.card),b.active and 1 or .7)
-    if b.active then
-        G.Stroke(vg,bx.x,bx.y,bx.w,bx.h,10,C.gold,.75,1.2)
-        G.Round(vg,bx.x+bx.w/2-10,bx.y+bx.h-4,20,2.5,1.2,C.gold,1)
-    end
-    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2-1,15,b.active and C.gold or C.sub,NVG_ALIGN_CENTER)
+    G.ChamferGradient(vg,bx.x,bx.y,bx.w,bx.h,7,pressed and EQUIP_DOWN_TOP or EQUIP_TOP,pressed and EQUIP_DOWN_BOTTOM or EQUIP_BOTTOM,1)
+    G.ChamferStroke(vg,bx.x,bx.y,bx.w,bx.h,7,EQUIP_RIM,.9,1)
+    G.Diamond(vg,bx.x+14,bx.y+bx.h/2,3,EQUIP_RIM,.95)
+    G.Diamond(vg,bx.x+bx.w-14,bx.y+bx.h/2,3,EQUIP_RIM,.95)
+    G.Bold(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2,22,C.white,NVG_ALIGN_CENTER)
 end
 function DrawButton.card(vg,s,b)
-    local bx=b.box
-    G.Round(vg,bx.x,bx.y,bx.w,bx.h,12,Pressed(s,b) and C.cardHi or (b.active and C.cardSel or C.card),.95)
-    G.Stroke(vg,bx.x,bx.y,bx.w,bx.h,12,b.active and C.gold or C.ice,b.active and .95 or .16,b.active and 1.6 or 1)
+    local f=b.frame
+    local pressed=Pressed(s,b)
+    if b.active then
+        G.Round(vg,f.x,f.y,f.w,f.h,2,C.cyan,.1)
+        G.Stroke(vg,f.x,f.y,f.w,f.h,2,C.cyan,1,1.6)
+    else
+        G.Round(vg,f.x,f.y,f.w,f.h,2,pressed and C.cyan or C.line,pressed and .12 or .06)
+        G.Stroke(vg,f.x,f.y,f.w,f.h,2,C.line,.55,1)
+    end
     SidePixels(vg,s,PartCells(s,b.part),b.thumb,nil,1,10)
-    G.Text(vg,G.Fit(b.label,14,bx.w-12),bx.x+bx.w/2,bx.y+bx.h-16,14,b.active and C.gold or C.text,NVG_ALIGN_CENTER)
+    G.Text(vg,G.Fit(b.label,15,f.w+8),f.x+f.w/2,f.y+f.h+12,15,b.active and C.white or C.sub,NVG_ALIGN_CENTER)
 end
 function DrawButton.chip(vg,s,b)
     local bx=b.box
-    G.Round(vg,bx.x,bx.y,bx.w,bx.h,10,Pressed(s,b) and C.cardHi or C.card,.95)
-    G.Stroke(vg,bx.x,bx.y,bx.w,bx.h,10,b.active and C.gold or C.ice,b.active and .9 or .16,b.active and 1.5 or 1)
-    G.Circle(vg,bx.x+20,bx.y+bx.h/2,9,b.swatch,1)
-    G.Ring(vg,bx.x+20,bx.y+bx.h/2,10.5,C.text,.35,1)
-    G.Text(vg,b.label,bx.x+38,bx.y+bx.h/2,14,b.active and C.gold or C.text)
+    local sw=Box(bx.x+(bx.w-40)/2,bx.y+2,40,24)
+    G.Round(vg,sw.x,sw.y,sw.w,sw.h,4,b.swatch,1)
+    G.Stroke(vg,sw.x,sw.y,sw.w,sw.h,4,b.active and C.cyan or C.white,b.active and 1 or .25,b.active and 1.6 or 1)
+    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h-9,13,b.active and C.cyan or C.sub,NVG_ALIGN_CENTER)
 end
 function DrawButton.swatch(vg,s,b)
     local bx=b.box
-    local cx,cy=bx.x+bx.w/2,bx.y+bx.h/2
-    G.Circle(vg,cx,cy,Pressed(s,b) and 13 or 15,b.swatch,1)
-    if b.active then G.Ring(vg,cx,cy,19,C.gold,1,2) end
-end
-function DrawButton.link(vg,s,b)
-    local bx=b.box
-    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2,14,Pressed(s,b) and C.gold or C.ice,NVG_ALIGN_CENTER)
+    local sw=Box(bx.x+(bx.w-28)/2,bx.y+5,28,28)
+    G.Round(vg,sw.x,sw.y,sw.w,sw.h,4,b.swatch,1)
+    if b.active then G.Stroke(vg,sw.x-3,sw.y-3,sw.w+6,sw.h+6,5,C.cyan,1,1.5) end
 end
 function DrawButton.menu(vg,s,b)
     local bx=b.box
-    if b.gap then G.Line(vg,bx.x+8,bx.y-.5,bx.x+bx.w-8,bx.y-.5,C.ice,.2,1) end
-    if Pressed(s,b) then G.Round(vg,bx.x,bx.y,bx.w,bx.h,8,C.cardHi,1) end
-    G.Text(vg,b.label,bx.x+12,bx.y+bx.h/2,15,C.text)
+    if b.gap then Hairline(vg,bx.x+10,bx.y,bx.w-20,.4) end
+    if Pressed(s,b) then G.Round(vg,bx.x,bx.y,bx.w,bx.h,0,C.cyan,.14) end
+    G.Text(vg,b.label,bx.x+14,bx.y+bx.h/2,16,C.text)
 end
 
-local function StatChips(vg,s)
-    local b=s.statsBox
-    local n=#s.statRows
-    local cw=(b.w-8*(n-1))/n
-    for i,row in ipairs(s.statRows) do
-        local x=b.x+(i-1)*(cw+8)
+local function Attributes(vg,s)
+    G.Bold(vg,'武器属性',s.attrTitle.x,s.attrTitle.y,16,C.title)
+    local x,w=s.attrRight.x,s.attrRight.w
+    local y=s.attrRowsY
+    local function Row(row)
         local flash=(s.flash[row.key] or 0)>0 and math.floor(s.clock*16)%2==0
-        G.Round(vg,x,b.y,cw,b.h,10,C.card,.95)
-        G.Stroke(vg,x,b.y,cw,b.h,10,row.changed and (row.up and C.good or C.bad) or C.ice,row.changed and .4 or .16,1)
-        G.Text(vg,row.label,x+9,b.y+14,13,C.sub)
-        if row.delta then G.Text(vg,row.delta,x+cw-8,b.y+14,13,row.up and C.good or C.bad,NVG_ALIGN_RIGHT) end
-        G.Text(vg,row.text,x+9,b.y+33,row.changed and 16 or 18,flash and C.gold or C.text)
-        G.Round(vg,x+9,b.y+b.h-9,cw-18,3,1.5,C.dim,.5)
-        G.Round(vg,x+9,b.y+b.h-9,math.max(3,(cw-18)*row.fraction),3,1.5,C.gold,1)
+        G.Text(vg,row.label,x,y+12,15,C.text)
+        G.Text(vg,row.value,x+w*.5,y+12,17,flash and C.gold or C.white)
+        if row.delta then G.Text(vg,row.delta,x+w,y+12,15,row.up and C.cyan or C.orange,NVG_ALIGN_RIGHT) end
+        Hairline(vg,x,y+23,w,.2)
+        y=y+24
     end
-end
-local function MoreRows(vg,s)
-    local b=s.moreBox
-    if not b then return end
-    G.Round(vg,b.x,b.y,b.w,b.h,10,C.card,.7)
-    for i,row in ipairs(s.moreRows) do
-        local y=b.y+2+(i-1)*24+12
-        G.Text(vg,row.label,b.x+10,y,14,C.sub)
-        G.Text(vg,row.text..(row.delta and ('   '..row.delta) or ''),b.x+b.w-10,y,14,row.changed and (row.up and C.good or C.bad) or C.text,NVG_ALIGN_RIGHT)
-    end
+    for _,row in ipairs(s.statRows) do Row(row) end
+    if s.moreBox then for _,row in ipairs(s.moreRows) do Row(row) end end
 end
 
 local function Backdrop(vg,s)
-    -- Only needed when the 3D room is not showing: dim the world and give the
-    -- 2D side view a calm surface.
+    -- No 3D room: a calm full-bleed backdrop with a tilted side-view of the weapon.
     local st=s.stage
-    G.Round(vg,0,0,s.width,s.height,0,C.black,.5)
-    G.Gradient(vg,st.x,st.y,st.w,st.h,16,STAGE_TOP,STAGE_BOTTOM,.94)
-    G.Stroke(vg,st.x,st.y,st.w,st.h,16,C.ice,.18,1)
+    G.Gradient(vg,0,0,st.w,s.height,0,STAGE_TOP,STAGE_BOTTOM,1)
+    local b=s.sideBox
+    nvgSave(vg)
+    nvgTranslate(vg,b.x+b.w/2,b.y+b.h/2);nvgRotate(vg,-.5);nvgTranslate(vg,-(b.x+b.w/2),-(b.y+b.h/2))
+    SidePixels(vg,s,s.sideCells,b,s.slot,1,18)
+    nvgRestore(vg)
 end
-local function Stage(vg,s,alpha)
+local function Stage(vg,s)
     local st=s.stage
-    if s.fallback then
-        Backdrop(vg,s)
-        local cells=s.sideCells
-        SidePixels(vg,s,cells,s.sideBox,s.slot,alpha,18)
-        G.Text(vg,'3D 展示间不可用 · 侧视图',st.x+st.w/2,st.y+st.h-20,13,C.sub,NVG_ALIGN_CENTER,alpha)
+    if s.fallback then Backdrop(vg,s)
     elseif not s.roomReady then
-        G.Text(vg,'正在准备展示间…',st.x+st.w/2,st.y+st.h/2,15,C.sub,NVG_ALIGN_CENTER,alpha)
+        G.Text(vg,'正在准备展示间…',st.x+st.w/2,st.y+st.h/2,15,C.sub,NVG_ALIGN_CENTER)
     end
-    local tx,ty=st.x+8,st.y+30
-    Shadowed(vg,WEAPON_NAMES[s.weapon],tx,ty,26,C.text,nil,alpha)
-    Shadowed(vg,s.subtitle,tx,ty+28,14,C.sub,nil,alpha)
-    local hint=s.message
-    if hint then Shadowed(vg,G.Fit(hint,13,st.w-16),tx,st.y+st.h-44,13,C.gold,nil,alpha) end
-    if s.roomReady or not s.fallback then
-        Shadowed(vg,'拖动旋转 · 双击回正',tx,st.y+st.h-20,13,C.sub,nil,alpha)
-    end
-    if not s.fallback and not s.message then
-        Shadowed(vg,'Web 刷新后配置会恢复默认',tx,st.y+st.h-44,12,C.dim,nil,alpha)
+    local x=st.x+math.max(20,s.safeLeft+8)
+    local y=s.height-s.safeBottom-22
+    if s.message then Shadowed(vg,G.Fit(s.message,14,st.w-40),x,y-26,14,C.gold) end
+    if s.fallback or s.roomReady then
+        nvgBeginPath(vg);nvgArc(vg,x+8,y,6.5,-2.6,2.6,NVG_CW or 2)
+        nvgStrokeColor(vg,G.Color(C.white,.85));nvgStrokeWidth(vg,1.5);nvgStroke(vg)
+        G.Diamond(vg,x+13.5,y-4,2.4,C.white,.9)
+        Shadowed(vg,'拖动旋转',x+24,y,15,C.white)
     end
 end
 
@@ -643,41 +655,44 @@ local function Render(vg,s)
     G.Begin(vg)
     if alpha>0 then
         nvgGlobalAlpha(vg,alpha)
-        Stage(vg,s,1)
-        local p=s.panel
-        G.Gradient(vg,p.x,p.y,p.w,p.h,16,PANEL_TOP,PANEL_BOTTOM,.94)
-        G.Stroke(vg,p.x,p.y,p.w,p.h,16,C.panelEdge,.55,1)
-        G.Line(vg,p.x+18,p.y+1.5,p.x+p.w-18,p.y+1.5,C.ice,.35,1)
-        G.Text(vg,'锻造库',s.titlePos.x,s.titlePos.y,22,C.text)
-        local tb=s.tabsBox
-        G.Round(vg,tb.x,tb.y,tb.w,tb.h,18,C.card,.95)
+        Stage(vg,s)
+        local p,c=s.panel,s.content
+        -- one flat sheet, flush with the edge; a soft shadow and a hairline on its left rim
+        G.HGradient(vg,p.x-22,0,22,h,SHADOW_CLEAR,SHADOW_SOLID,1)
+        G.Gradient(vg,p.x,0,p.w,h,0,PANEL_TOP,PANEL_BOTTOM,.97)
+        G.Line(vg,p.x+.5,0,p.x+.5,h,C.cyan,.35,1)
+        G.Bold(vg,'锻造库',s.titlePos.x,s.titlePos.y,26,C.title)
         for _,b in ipairs(s.buttons) do
-            if b.kind=='tab' or b.kind=='close' then DrawButton[b.kind](vg,s,b) end
+            if b.kind=='tab' and not b.area or b.kind=='close' then DrawButton[b.kind](vg,s,b) end
         end
+        Hairline(vg,c.x,s.headerLine,c.w,.55)
         -- scrolling content
         local v=s.view
         nvgSave(vg);nvgIntersectScissor(vg,v.x,v.y,v.w,v.h)
         nvgTranslate(vg,0,-s.scroll)
-        StatChips(vg,s)
-        if s.paletteTitle then G.Text(vg,s.paletteTitle.text,s.paletteTitle.x,s.paletteTitle.y,13,C.sub) end
-        MoreRows(vg,s)
-        for i,line in ipairs(s.descriptionLines) do
-            G.Text(vg,line,s.descriptionBox.x+2,s.descriptionBox.y+(i-1)*19+9,13,C.sub)
+        Hairline(vg,c.x,s.slotLine,c.w,.3)
+        Hairline(vg,c.x,s.dividerY,c.w,.5,true)
+        G.Bold(vg,'配色',s.colorCol.x,s.colorCol.y+10,16,C.title)
+        if s.dividerY2 then Hairline(vg,c.x,s.dividerY2,c.w,.4) end
+        if s.paletteTitle then G.Text(vg,s.paletteTitle.text,s.paletteTitle.x+1,s.paletteTitle.y,14,C.sub) end
+        if s.descPos then
+            for i,line in ipairs(s.descriptionLines) do G.Text(vg,line,s.descPos.x+1,s.descPos.y+(i-1)*18,13,C.sub) end
         end
+        Attributes(vg,s)
         for _,b in ipairs(s.buttons) do if b.area=='scroll' then DrawButton[b.kind](vg,s,b) end end
         nvgRestore(vg)
         if s.maxScroll>0 then
             local thumb=math.max(24,v.h*v.h/s.contentHeight)
-            G.Round(vg,v.x+v.w-3,v.y+s.scroll/s.maxScroll*(v.h-thumb),3,thumb,1.5,C.gold,.55)
-            if s.scroll<s.maxScroll-2 then
-                G.Gradient(vg,v.x,v.y+v.h-22,v.w,22,0,FADE_CLEAR,FADE_SOLID,1)
-            end
+            G.Round(vg,p.x+p.w-4,v.y+s.scroll/s.maxScroll*(v.h-thumb),2,thumb,1,C.cyan,.5)
         end
-        for _,b in ipairs(s.buttons) do if not b.area and b.kind~='tab' and b.kind~='close' then DrawButton[b.kind](vg,s,b) end end
+        Hairline(vg,c.x,s.footerLine,c.w,.55)
+        for _,b in ipairs(s.buttons) do
+            if not b.area and (b.kind=='link' or b.kind=='primary') then DrawButton[b.kind](vg,s,b) end
+        end
         if s.menuBox then
             local m=s.menuBox
-            G.Round(vg,m.x,m.y,m.w,m.h,14,MENU_FILL,.99)
-            G.Stroke(vg,m.x,m.y,m.w,m.h,14,C.panelEdge,.6,1)
+            G.Round(vg,m.x-6,m.y,m.w+12,m.h,0,MENU_FILL,.99)
+            G.Stroke(vg,m.x-6,m.y,m.w+12,m.h,0,C.cyan,.6,1)
             for _,b in ipairs(s.buttons) do if b.area=='menu' then DrawButton.menu(vg,s,b) end end
         end
         nvgGlobalAlpha(vg,1)

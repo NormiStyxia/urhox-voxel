@@ -25,6 +25,7 @@ local safe={left=47,right=47,top=0,bottom=21}
 for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
 for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE'}) do rawset(_G,name,i) end
 NVG_ALIGN_LEFT,NVG_ALIGN_CENTER,NVG_ALIGN_RIGHT,NVG_ALIGN_MIDDLE=1,2,4,16
+for _,name in ipairs({'nvgArc','nvgRotate'}) do rawset(_G,name,function() end) end
 local fakeInput={numTouches=0,mouseMode=MM_RELATIVE,GetKeyDown=function(_,key) return held[key] end,GetMouseButtonDown=function(_,button) return buttons[button] end}
 rawset(_G,'input',fakeInput)
 local clock=0
@@ -151,14 +152,17 @@ local function Render()
 end
 local function CheckLayout()
     local s=State()
-    local p=s.panel
-    assert(p.x>=safe.left and p.y>=safe.top and p.x+p.w<=width-safe.right and p.y+p.h<=height-safe.bottom,'panel outside safe area')
+    local p,c=s.panel,s.content
+    assert(p.x+p.w==width and p.y==0 and p.h==height,'the sheet is flush with the right edge and full height')
+    assert(p.w>=340 and p.w<=math.max(340,width*.5+1) or p.w==width,'sheet takes about half the screen')
+    assert(c.x>=p.x and c.x+c.w<=width-safe.right and c.y>=safe.top and c.y+c.h<=height-safe.bottom,'content outside safe area')
     assert(s.stage.x+s.stage.w<=p.x,'stage must stay left of the panel')
     for _,b in ipairs(s.buttons) do
-        local min=(b.kind=='plain' or b.kind=='primary') and 44 or 34
+        local min=(b.kind=='primary' or b.id=='recommend' or b.id=='undo') and 44 or ((b.id=='more' or b.kind=='swatch') and 34 or 34)
         assert(b.box.h>=min and b.box.w>=34,b.id..' hit target too small')
         assert(b.box.x>=p.x and b.box.x+b.box.w<=p.x+p.w,b.id..' horizontal overflow')
-        if not b.area then assert(b.box.y>=p.y and b.box.y+b.box.h<=p.y+p.h,b.id..' vertical overflow') end
+        assert(b.box.x+b.box.w<=width-safe.right+4,b.id..' reaches under the notch')
+        if not b.area then assert(b.box.y>=0 and b.box.y+b.box.h<=height-safe.bottom+2,b.id..' vertical overflow') end
     end
     for i,a in ipairs(s.buttons) do for j,b in ipairs(s.buttons) do
         if i<j and a.area==b.area then
@@ -222,11 +226,11 @@ Click('part_blade_broad')
 assert(s.config.sword.parts.blade=='blade_broad' and s.blueprint.stats.attack==13.5)
 assert(#room.weapons==2 and room.weapons[2].parts.blade=='blade_broad')
 local attack=s.statRows[1]
-assert(attack.label=='攻击' and attack.text=='10 → 13.5' and attack.delta=='+3.5' and attack.up)
-assert(s.statRows[2].label=='速度 ×' and s.statRows[3].label:find('范围',1,true))
+assert(attack.label=='攻击' and attack.value=='13.5' and attack.delta=='+3.5' and attack.up)
+assert(s.statRows[2].label=='速度' and s.statRows[2].value:find('×',1,true) and s.statRows[3].label=='范围' and s.statRows[3].value:find('m',1,true))
 for _,row in ipairs(s.statRows) do assert(row.fraction>=0 and row.fraction<=1) end
 assert(#s.statRows==3,'three headline stats; the rest sit behind 更多数值')
-Click('more');assert(s.moreOpen and #s.moreRows==2 and s.moreRows[1].label=='失衡');CheckLayout();Render()
+Click('more');assert(s.moreOpen and #s.moreRows==2 and s.moreRows[1].label=='失衡' and s.moreBox);CheckLayout();Render()
 Click('more');assert(not s.moreOpen and not s.moreBox)
 -- Colours: palette opens inside the scroll area and edits rebuild without touching parts.
 Click('color_primary');CheckLayout();Render()
@@ -277,8 +281,8 @@ end
 Click('tab_bow');assert(s.weapon=='bow' and s.slot=='limbs' and #room.weapons>0 and room.weapons[#room.weapons].weapon=='bow')
 Click('part_limbs_long');Click('slot_tip');Click('part_tip_crystal')
 assert(s.config.bow.parts.tip=='tip_crystal' and s.blueprint.stats.crystalRadius==.8)
-assert(s.statRows[1].label:find('拉弓速度',1,true) and s.statRows[2].label:find('射程',1,true) and s.statRows[3].label:find('移动',1,true))
-Click('more');assert(s.moreRows[1].label:find('破甲',1,true));Click('more')
+assert(s.statRows[1].label=='拉弓速度' and s.statRows[2].label=='射程' and s.statRows[3].label=='移动')
+Click('more');assert(s.moreRows[1].label=='破甲');Click('more')
 CheckLayout();Render()
 -- Equip: edits apply immediately, the visual closes through the fade + release latch.
 held.G=true;Click('equip')

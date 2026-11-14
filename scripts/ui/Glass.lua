@@ -5,11 +5,9 @@
 local Draw = require('ui.PixelDraw')
 local M = {}
 M.colors = {
-    panel={14,22,36}, panelEdge={201,168,96}, ice={132,190,240},
-    card={26,38,58}, cardHi={44,58,84}, cardSel={52,60,78},
-    text={236,240,247}, sub={150,166,188}, dim={104,118,140},
-    gold={232,196,110}, goldDeep={196,150,64}, ink={34,26,12},
-    good={120,214,150}, bad={238,124,124}, black={0,0,0},
+    cyan={116,208,244}, line={78,104,142}, orange={242,170,70}, gold={232,196,110},
+    title={236,222,176}, text={222,230,242}, white={246,248,252}, sub={138,158,186}, dim={96,110,132},
+    black={0,0,0},
 }
 local SIZE_FALLBACK=function(size) return size>=20 and 24 or 12 end
 local contexts=setmetatable({},{__mode='k'})
@@ -46,23 +44,65 @@ function M.Stroke(vg,x,y,w,h,r,color,alpha,width)
     nvgBeginPath(vg);nvgRoundedRect(vg,x+.5,y+.5,w-1,h-1,math.max(0,r-.5))
     nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1);nvgStroke(vg)
 end
---- Vertical two-stop gradient fill. Paints are memoised per (rect, colours) so a
---- steady frame allocates nothing; falls back to the top colour on failure.
+--- Two-stop linear gradient paints, memoised per geometry/colours so a steady
+--- frame allocates nothing. Returns nil when the binding is unavailable.
 local paints=setmetatable({},{__mode='k'})
-function M.Gradient(vg,x,y,w,h,r,top,bottom,alpha)
+local function Memo(vg,x1,y1,x2,y2,top,bottom,alpha)
     local cTop,cBottom=Color(top,alpha),Color(bottom,alpha)
     local byVg=paints[vg]
     if not byVg then byVg={};paints[vg]=byVg end
-    local key=(x*31+y)*31+h+top[1]*7+bottom[3]*13+(alpha or 1)
+    local key=((x1*31+y1)*31+x2)*31+y2+top[1]*7+bottom[3]*13+(alpha or 1)
     local entry=byVg[key]
-    if not entry or entry.x~=x or entry.y~=y or entry.h~=h or entry.top~=cTop or entry.bottom~=cBottom then
-        local ok,paint=pcall(nvgLinearGradient,vg,x,y,x,y+h,cTop,cBottom)
-        entry={x=x,y=y,h=h,top=cTop,bottom=cBottom,paint=ok and paint or false}
+    if not entry or entry.x1~=x1 or entry.y1~=y1 or entry.x2~=x2 or entry.y2~=y2 or entry.top~=cTop or entry.bottom~=cBottom then
+        local ok,paint=pcall(nvgLinearGradient,vg,x1,y1,x2,y2,cTop,cBottom)
+        entry={x1=x1,y1=y1,x2=x2,y2=y2,top=cTop,bottom=cBottom,paint=ok and paint or false}
         byVg[key]=entry
     end
+    return entry.paint or nil,cTop
+end
+function M.Paint(vg,x,y,h,top,bottom,alpha) return Memo(vg,x,y,x,y+h,top,bottom,alpha) end
+function M.HPaint(vg,x,y,w,top,bottom,alpha) return Memo(vg,x,y,x+w,y,top,bottom,alpha) end
+--- Vertical gradient rectangle (falls back to the top colour).
+function M.Gradient(vg,x,y,w,h,r,top,bottom,alpha)
+    local paint,cTop=M.Paint(vg,x,y,h,top,bottom,alpha)
     nvgBeginPath(vg);nvgRoundedRect(vg,x,y,w,h,r)
-    if entry.paint then nvgFillPaint(vg,entry.paint) else nvgFillColor(vg,cTop) end
+    if paint then nvgFillPaint(vg,paint) else nvgFillColor(vg,cTop) end
     nvgFill(vg)
+end
+--- Horizontal gradient rectangle (left colour -> right colour).
+function M.HGradient(vg,x,y,w,h,left,right,alpha)
+    local paint,cLeft=M.HPaint(vg,x,y,w,left,right,alpha)
+    nvgBeginPath(vg);nvgRect(vg,x,y,w,h)
+    if paint then nvgFillPaint(vg,paint) else nvgFillColor(vg,cLeft) end
+    nvgFill(vg)
+end
+--- Axis-aligned rectangle with cut (chamfered) corners.
+function M.Chamfer(vg,x,y,w,h,cut,color,alpha)
+    nvgBeginPath(vg)
+    nvgMoveTo(vg,x+cut,y);nvgLineTo(vg,x+w-cut,y);nvgLineTo(vg,x+w,y+cut);nvgLineTo(vg,x+w,y+h-cut)
+    nvgLineTo(vg,x+w-cut,y+h);nvgLineTo(vg,x+cut,y+h);nvgLineTo(vg,x,y+h-cut);nvgLineTo(vg,x,y+cut)
+    nvgClosePath(vg)
+    nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
+end
+function M.ChamferGradient(vg,x,y,w,h,cut,top,bottom,alpha)
+    local paint,cTop=M.Paint(vg,x,y,h,top,bottom,alpha)
+    nvgBeginPath(vg)
+    nvgMoveTo(vg,x+cut,y);nvgLineTo(vg,x+w-cut,y);nvgLineTo(vg,x+w,y+cut);nvgLineTo(vg,x+w,y+h-cut)
+    nvgLineTo(vg,x+w-cut,y+h);nvgLineTo(vg,x+cut,y+h);nvgLineTo(vg,x,y+h-cut);nvgLineTo(vg,x,y+cut)
+    nvgClosePath(vg)
+    if paint then nvgFillPaint(vg,paint) else nvgFillColor(vg,cTop) end
+    nvgFill(vg)
+end
+function M.ChamferStroke(vg,x,y,w,h,cut,color,alpha,width)
+    nvgBeginPath(vg)
+    nvgMoveTo(vg,x+cut,y+.5);nvgLineTo(vg,x+w-cut,y+.5);nvgLineTo(vg,x+w-.5,y+cut);nvgLineTo(vg,x+w-.5,y+h-cut)
+    nvgLineTo(vg,x+w-cut,y+h-.5);nvgLineTo(vg,x+cut,y+h-.5);nvgLineTo(vg,x+.5,y+h-cut);nvgLineTo(vg,x+.5,y+cut)
+    nvgClosePath(vg)
+    nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1);nvgStroke(vg)
+end
+function M.Diamond(vg,x,y,r,color,alpha)
+    nvgBeginPath(vg);nvgMoveTo(vg,x,y-r);nvgLineTo(vg,x+r,y);nvgLineTo(vg,x,y+r);nvgLineTo(vg,x-r,y);nvgClosePath(vg)
+    nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
 end
 function M.Circle(vg,x,y,r,color,alpha)
     nvgBeginPath(vg);nvgCircle(vg,x,y,r);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
@@ -86,6 +126,11 @@ function M.Text(vg,text,x,y,size,color,align,alpha)
     nvgTextAlign(vg,(align or NVG_ALIGN_LEFT)+NVG_ALIGN_MIDDLE)
     nvgFillColor(vg,Color(color or M.colors.text,alpha))
     nvgText(vg,x,y,text)
+end
+--- Faux-bold: the regular face drawn twice with a sub-pixel offset.
+function M.Bold(vg,text,x,y,size,color,align,alpha)
+    M.Text(vg,text,x,y,size,color,align,alpha)
+    M.Text(vg,text,x+.7,y,size,color,align,alpha)
 end
 --- Cheap width estimate for layout time (no vg): CJK = 1em, everything else .56em.
 function M.EstimateWidth(text,size)
