@@ -23,7 +23,7 @@
     "icon_url": "https://img.tapimg.com/market/images/ef4719159691d7db73760cadfc67eac4.png"
   },
   "dc_publish_sync": {
-    "synced": false,
+    "synced": true,
     "dcVersion": "V-20261103",
     "dcStatus": "INIT",
     "baseFields": {
@@ -38,13 +38,11 @@
       "cover_vertical_url": null,
       "screenshot_urls": null
     },
-    "pending": {
-      "icon_url": "https://img.tapimg.com/market/images/ef4719159691d7db73760cadfc67eac4.png"
-    },
+    "pending": {},
     "baseGameplayDemoVideoId": 0
   },
   "metadata": {
-    "updated_at": "2026-11-13T05:57:32.520Z"
+    "updated_at": "2026-11-14T08:51:45.505Z"
   },
   "test_qrcode": {
     "url": "https://tapcode-sce.spark.xd.com/qrcode/m_hi4f_1794549452360.png",

@@ -30,10 +30,12 @@ uniform int diagnostic = 0;
 bool finite3(vec3 v) { return all(lessThan(abs(v), vec3(1000000.0))); }
 
 void vertex() {
-    // INV_PROJECTION uses window depth 0..1, even on GL. Keep signed homogeneous w.
-    vec4 near_view = INV_PROJECTION_MATRIX * vec4(UV * 2.0 - 1.0, 0.0, 1.0);
-    float w=abs(near_view.w)>0.000001 ? near_view.w : 1.0;
-    VERTEX = near_view.xyz / w;
+    // REVERSED_Z 下深度0是远平面（可能在无穷远），取两个端点中更近的有效点。
+    vec4 a = INV_PROJECTION_MATRIX * vec4(UV * 2.0 - 1.0, 0.0, 1.0);
+    vec4 b = INV_PROJECTION_MATRIX * vec4(UV * 2.0 - 1.0, 1.0, 1.0);
+    vec3 pa = abs(a.w)>0.000001 ? a.xyz/a.w : vec3(1e12);
+    vec3 pb = abs(b.w)>0.000001 ? b.xyz/b.w : vec3(1e12);
+    VERTEX = length(pa)<=length(pb) ? pa : pb;
     Z_CLIP_SCALE = 0.0;
 }
 
@@ -52,11 +54,12 @@ vec2 volume_interval(vec3 ro, vec3 rd) {
     vec2 x = slab(ro.x,rd.x,-320.0,320.0);
     vec2 z = slab(ro.z,rd.z,-320.0,320.0);
     if (x.y < x.x || z.y < z.x) { return vec2(1.0,-1.0); }
-    vec2 common=vec2(max(0.0,max(x.x,z.x)),min(600.0,min(x.y,z.y)));
+    // 不能命名为 common：GLES 保留字会让整个着色器编译失败。
+    vec2 bounds=vec2(max(0.0,max(x.x,z.x)),min(600.0,min(x.y,z.y)));
     vec2 upper=slab(ro.y,rd.y,30.0,160.0);
     vec2 lower=slab(ro.y,rd.y,-96.0,-8.0);
-    upper=vec2(max(common.x,upper.x),min(common.y,upper.y));
-    lower=vec2(max(common.x,lower.x),min(common.y,lower.y));
+    upper=vec2(max(bounds.x,upper.x),min(bounds.y,upper.y));
+    lower=vec2(max(bounds.x,lower.x),min(bounds.y,lower.y));
     bool has_upper=upper_enabled>0.5 && upper.y>upper.x;
     bool has_lower=lower_enabled>0.5 && lower.y>lower.x;
     if (has_upper && has_lower) { return vec2(min(upper.x,lower.x),max(upper.y,lower.y)); }
@@ -122,14 +125,22 @@ float density(vec3 world) {
 void fragment() {
     ALBEDO=vec3(0.0); ALPHA=0.0;
     vec2 ndc=SCREEN_UV*2.0-1.0;
-    vec4 nv=INV_PROJECTION_MATRIX*vec4(ndc,0.0,1.0);
-    vec4 mv=INV_PROJECTION_MATRIX*vec4(ndc,0.5,1.0);
-    if (!(abs(nv.w)>0.000001) || !(abs(mv.w)>0.000001)) { discard; }
-    vec3 near_view=nv.xyz/nv.w;
-    vec3 middle_view=mv.xyz/mv.w;
-    if (!finite3(near_view) || !finite3(middle_view)) { discard; }
-    vec3 ro=(INV_VIEW_MATRIX*vec4(near_view,1.0)).xyz;
-    vec3 delta=(INV_VIEW_MATRIX*vec4(middle_view-near_view,0.0)).xyz;
+    // 深度约定可能是正向（近0远1）或 REVERSED_Z（近1远0）。射线不再依赖它：
+    // 起点固定为相机，方向取相机到反投影点；两个深度端点都在相机前方。
+    vec4 v0=INV_PROJECTION_MATRIX*vec4(ndc,0.0,1.0);
+    vec4 v1=INV_PROJECTION_MATRIX*vec4(ndc,1.0,1.0);
+    bool ok0=abs(v0.w)>0.000001, ok1=abs(v1.w)>0.000001;
+    vec3 p0=ok0 ? v0.xyz/v0.w : vec3(0.0);
+    vec3 p1=ok1 ? v1.xyz/v1.w : vec3(0.0);
+    ok0=ok0 && finite3(p0); ok1=ok1 && finite3(p1);
+    if (!ok0 && !ok1) { discard; }
+    // 远端可能在无穷远（w≈0）；取更近的有效端点定方向，并据此判定哪个深度值是远平面。
+    float d0=ok0 ? length(p0) : 1e12;
+    float d1=ok1 ? length(p1) : 1e12;
+    vec3 dir_view=d0<=d1 ? p0 : p1;
+    float far_raw=d0<=d1 ? 1.0 : 0.0;
+    vec3 ro=INV_VIEW_MATRIX[3].xyz;
+    vec3 delta=(INV_VIEW_MATRIX*vec4(dir_view,0.0)).xyz;
     float ray_length=length(delta);
     if (!finite3(ro) || !finite3(delta) || !(ray_length>0.000001)) { discard; }
     vec3 rd=delta/ray_length;
@@ -139,12 +150,12 @@ void fragment() {
     // Invalid depth fails transparent; cleared far plane never divides by far w.
     if (!(raw>=0.0 && raw<=1.0)) { discard; }
     float scene_t=600.0;
-    if (raw<0.999999) {
+    if (abs(raw-far_raw)>0.000001) {
         vec4 sv=INV_PROJECTION_MATRIX*vec4(ndc,raw,1.0);
         if (!(abs(sv.w)>0.000001)) { discard; }
         vec3 view=sv.xyz/sv.w;
         if (!finite3(view)) { discard; }
-        scene_t=clamp(length(view-near_view),0.0,600.0);
+        scene_t=clamp(length(view),0.0,600.0);
     }
     hit.y=min(hit.y,scene_t);
     if (!(hit.y>hit.x)) { discard; }
