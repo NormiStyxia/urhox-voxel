@@ -124,6 +124,17 @@ V.atFrame(8,function()
     obstacle.enabled=false
     V.assert(nomi:AimRay(sight,20).object==urn,"禁用组件不留下隐形遮挡")
     world:RemoveVolume(obstacle); obstacle:Dispose(); obstacleNode:Dispose()
+    -- 正式 PostUpdate 应在相机更新后重取准星，不沿用过期或故意清空的 aim。
+    local savedCamera=nomi.UpdateCamera
+    nomi.UpdateCamera=function(self,dt,mode,follow)
+        local camera=self:CameraNode()
+        camera.worldPosition=urn.center+Vector3(3,1,3.5)
+        camera:LookAt(urn.center)
+    end
+    game.aim={hit=false}
+    Ruins_HandlePostUpdate("PostUpdate",{TimeStep=Variant(0.016)})
+    V.assert(game.aim.object==urn and game.sigils.target.node.enabled,"最终相机更新后同帧选中瓮并显示钟面")
+    nomi.UpdateCamera=savedCamera
     nomi.world=saved
     local clock=Time:GetSystemTime()
     for i=1,120 do nomi:AimRay(sight,20) end
