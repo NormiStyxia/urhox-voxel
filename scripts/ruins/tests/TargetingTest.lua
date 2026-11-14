@@ -48,6 +48,7 @@ V.atFrame(8, function()
             local r=Ray(point+normal*3,-normal)
             local native=world:RaycastGridSingle(r,10,nomi.aimMask)
             local selected=nomi:GridHit(r,10)
+            V.assert(native.hit and native.volume==object.whole,"浅角测试射线确实命中物件 slope="..slope.." face="..tostring(entry[1]))
             if native.hit and native.volume==object.whole then
                 local same=selected.hit and selected.volume==object.whole
                 if not same then
@@ -60,6 +61,26 @@ V.atFrame(8, function()
         end
     end
     print("TargetingTest: shallow misses="..shallowMisses)
+    -- 双轴棱/三轴角同时入射，包含混合正负方向；纯外侧擦过不能被夹回网格。
+    for x=-1,1 do for y=-1,1 do for z=-1,1 do
+        if x~=0 or y~=0 or z~=0 then
+            local direction=Vector3(x,y,z):Normalized()
+            local r=Ray(object.center+direction*3,-direction)
+            local hit=nomi:GridHit(r,10)
+            V.assert(hit.hit and hit.volume==object.whole,"棱角同时入射正确取格 "..x..","..y..","..z)
+        end
+    end end end
+    for _,r in ipairs({
+        Ray(Vector3(301.001,5.5,298),Vector3.FORWARD),
+        Ray(Vector3(300.5,6.001,298),Vector3.FORWARD),
+        Ray(Vector3(298,5.5,301.001),Vector3.RIGHT)
+    }) do
+        local hit=nomi:GridHit(r,2.5)
+        V.assert(not hit.hit,"外侧平行擦过不产生实心命中")
+    end
+    local endpoint=nomi:GridHit(Ray(Vector3(300.5,5.5,298),Vector3.FORWARD),2)
+    V.assert(endpoint.hit and endpoint.volume==object.whole and math.abs(endpoint.distance-2)<1e-6,
+        "距离上限恰好触及实心表面仍可选")
     -- 按正式悬石/碑的体素列取最外层实心格，在隔离区复用原始形状。
     -- 相机 → 空气 → 外露格；六个局部面都没有别的体积挡在前面。
     -- 不规则形状、旋转和远距离要分开核对原生命中与二次 Grid 校验。
