@@ -55,6 +55,7 @@ function strip.GroundHeight(x,z) if strip.HasGround(x,z) then return 0 end end
 function strip.IsSafeGround(x,y,z) return strip.HasGround(x,z) and y==0 end
 b=Beetle.New(nil,nil,strip,combat,Vector3.ZERO,'knock')
 b:Knockback({dir=Vector3(1,0,0)},1)
+b:TickKnock(.2)
 assert(b.moveBlocked and b.position.x<.45 and b:SafeHeight(b.position.x,b.position.z)~=nil)
 local sentry=Sentry.New(nil,nil,strip,combat,Vector3.ZERO,'retreat')
 sentry:Chase(.2,Vector3(-2,0,0),2)
@@ -99,7 +100,7 @@ for _,e in ipairs(pack) do
     for _=1,30 do pool:Emit(e,{pos=Vector3.ZERO,dir=Vector3.FORWARD,material='soft',tier='light'}) end
     assert(pool.count<=64)
 end
-assert(pool.count==40,'normal cubes preserve reserved slots and flat quota')
+assert(pool.count==64 and pool:GetStats().cubeCount<=40,'priority1 kernels may reclaim decoration; total remains bounded')
 for _,e in ipairs(pack) do e:ApplyHit({dmg=1000}) end
 assert(pool.count<=64 and pool.peak<=64)
 for _,e in ipairs(pack) do T.Tick(e,1.5,combat.pos) end

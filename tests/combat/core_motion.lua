@@ -68,7 +68,7 @@ print('PASS slide full-footprint edge guard, slope/height/wall probes <=.10m and
 
 -- Actual camera methods: framing is independent of player yaw; effects are
 -- applied after fresh camera placement and cannot enter the follow state.
-local cameraBody=assert(source:match('(function N:SetCombatCamera.-)\n%-%- 只修复'))
+local cameraBody=assert(source:match('(function N:SetCombatCamera.-)\n%-%- 从当前 Grid'))
 local CameraN={}
 local rotation=setmetatable({}, {__mul=function(_,v) return v end})
 local cameraEnv=setmetatable({N=CameraN,Ray=function(origin,direction) return {origin=origin,direction=direction} end,Quaternion=function() return rotation end},{__index=_G})

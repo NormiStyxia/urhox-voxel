@@ -1,6 +1,7 @@
 -- Player combat. Animation events are the only hit/cancel/iframe/fire clock.
 -- Dependencies are injected so collision, cancellation and death can run offline.
 local Hit=require('combat.Hit')
+local Perf=require('combat.SwingPerf')
 ---@class PlayerCombatMoves
 ---@field o table
 ---@field anim table Animation port (real CombatAnim or offline event stub).
@@ -8,9 +9,48 @@ local Hit=require('combat.Hit')
 ---@field rig table
 ---@field moveDir Vector3|nil
 ---@field motion Vector3
+---@field playParams table
+---@field playOpts table
+---@field damaged table
+---@field queryHits table[]
+---@field queryPool table[]
+---@field slamHits table[]
+---@field slamPool table[]
+---@field queryShapes table
+---@field slideShotPool table[]
+---@field feedbackGroups table
+---@field eventPool table[]
+---@field observe fun(kind:string, data:table)|nil
 ---@field partNotice {part:string,untilTime:number}|nil
 local C={}; C.__index=C
 local BUFFER=.160
+-- Immutable after module initialization. Special outcomes inherit the source
+-- stop; a weak point/kill does not silently upgrade the approved 40/80ms.
+local PROFILES={}
+local SOURCES={
+    light_1={.04,.01,.06,0,.06,.85},light_2={.04,.01,.06,0,.06,.85},
+    third={.04,.015,.08,0,.08,.95},heavy={.08,.025,.10,2,.08,1},full={.08,.025,.10,2,.10,1},
+    arrow_weak={.03,0,0,0,.05,.75},arrow_mid={.03,0,0,0,.06,.85},arrow_full={.03,0,0,0,.07,.95},
+}
+for source,v in pairs(SOURCES) do
+    local variants={}
+    for _,outcome in ipairs({'source','critical','kill','stagger','break'}) do
+        local impact=outcome=='break' or outcome=='stagger'
+        variants[outcome]={id=outcome=='source' and source or outcome,
+            stop=outcome=='break' and .10 or v[1],amp=impact and .03 or v[2],
+            duration=impact and .12 or v[3],fov=v[4],
+            flash=math.max(v[5],outcome=='source' and 0 or (outcome=='critical' and .09 or .10)),
+            peak=outcome=='source' and v[6] or 1}
+    end
+    PROFILES[source]=variants
+end
+local ARROW_TIERS={weak='arrow_weak',mid='arrow_mid',full='arrow_full'}
+local function Profile(e,info,arrow)
+    local source=arrow and (ARROW_TIERS[info.tier] or 'arrow_weak')
+        or (info.heavy and (e.full and 'full' or 'heavy') or (e.combo==3 and 'third' or (e.combo==2 and 'light_2' or 'light_1')))
+    local outcome=e.broke and 'break' or (e.staggered and 'stagger' or (e.killed and 'kill' or (e.critical and 'critical' or 'source')))
+    return PROFILES[source][outcome]
+end
 local function Flat(v,fallback)
     local d=Vector3(v.x,0,v.z)
     return d:LengthSquared()>.0001 and d:Normalized() or fallback
@@ -22,7 +62,7 @@ function C.SelectMeleeTarget(position,intent,enemies,cast)
     local origin=position+Vector3(0,.9,0)
     for _,enemy in ipairs(enemies) do
         if enemy.active~=false and not enemy.dead and enemy.position then
-            local delta=enemy.position-position
+            local delta=enemy.position-position --[[@as Vector3]]
             local distance=math.sqrt(delta.x*delta.x+delta.z*delta.z)
             if distance>.001 and distance<=3.6 and math.abs(delta.y)<=2 then
                 local direction=Flat(delta,intent)
@@ -51,54 +91,67 @@ function C.SlideFootprint(p,radius,ground)
     end
     return y
 end
-function C.ClipSlidePath(p,motion,radius,ground,clear)
+local function SlideSafe(base,dir,distance,height,radius,ground,clear)
+    local q=base+dir*distance
+    local h=C.SlideFootprint(q,radius,ground)
+    if not h or math.abs(h-height)>.20+1e-6
+        or (clear and not clear(base,Vector3(q.x,h,q.z),radius+.10)) then return nil end
+    return h
+end
+function C.ClipSlidePath(p,motion,radius,ground,clear,maxSteps)
     local height=C.SlideFootprint(p,radius,ground)
-    if not height then return Vector3.ZERO,true end
+    if not height then return Vector3.ZERO,true,0 end
     local flat=Vector3(motion.x,0,motion.z)
     local length=flat:Length()
-    if length<1e-8 then return Vector3.ZERO,false end
+    if length<1e-8 then return Vector3.ZERO,false,0 end
     local dir=flat/length
-    local done=0
-    while done<length-1e-8 do
+    local done,steps=0,0
+    while done<length-1e-8 and steps<(maxSteps or math.huge) do
         local amount=math.min(.10,length-done)
         local base=Vector3(p.x+dir.x*done,height,p.z+dir.z*done)
-        local function Safe(distance)
-            local q=base+dir*distance
-            local h=C.SlideFootprint(q,radius,ground)
-            if not h or math.abs(h-height)>.20+1e-6
-                or (clear and not clear(base,Vector3(q.x,h,q.z),radius+.10)) then return nil end
-            return h
-        end
-        local nextHeight=Safe(amount)
+        local nextHeight=SlideSafe(base,dir,amount,height,radius,ground,clear)
+        steps=steps+1;Perf.substeps=Perf.substeps+1
         if not nextHeight then
             local lo,hi=0,amount
-            while hi-lo>.02 do
+            -- .10 / 2^3 <= .02: same refinement with an explicit ceiling.
+            for _=1,3 do
+                if hi-lo<=.02 then break end
                 local mid=(lo+hi)*.5
-                if Safe(mid) then lo=mid else hi=mid end
+                if SlideSafe(base,dir,mid,height,radius,ground,clear) then lo=mid else hi=mid end
             end
-            return dir*(done+lo),true
+            return dir*(done+lo),true,0
         end
         done,height=done+amount,nextHeight
     end
-    return flat,false
+    return dir*done,false,math.max(0,length-done)
 end
 ---@param opts table
 ---@return PlayerCombatMoves
 function C.New(opts)
-    return setmetatable({o=opts,anim=opts.anim,state=opts.state,rig=opts.rig,hp=100,maxHP=100,
-        age=0,invuln=0,hitstop=0,dodgeCool=0,charge=0,hold=0,combo=0,
+    local self=setmetatable({o=opts,anim=opts.anim,state=opts.state,rig=opts.rig,hp=100,maxHP=100,
+        age=0,invuln=0,hitstop=0,dodgeCool=0,charge=0,hold=0,combo=0,drawElapsed=0,power=0,fireSnapshot={stats={}},
         motion=Vector3.ZERO,buffer=nil,bufferUntil=0,hitOpen=false,hitPending=false,
         iframe=false,cancelOpen=false,damaged={},dead=false,blocked=false,
         lastAttack=false,lastHeavy=false,shake=0,shakeAge=0,shakeDuration=0,
         eventPool={{},{},{},{},{},{},{},{}},eventWrite=0,swingSerial=0,feedbackGroups={},
         strikeZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
         slamZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
+        queryHits={},queryPool={},slamHits={},slamPool={},queryShapes={},playParams={},playOpts={},
         slideShots={},slideShotPool={{},{}},slideShotWrite=0,slideShotAt=-1},C)
+    self.feedbackPool,self.numberPool,self.numbers,self.soundOpts={},{},{},{}
+    self.partNoticePool={part='',untilTime=0}
+    for i=1,32 do self.feedbackPool[i]={at=-math.huge,amp=0,duration=0,fov=0,stop=0,dir=Vector3()} end
+    for i=1,12 do self.numberPool[i]={} end
+    for _,e in ipairs(self.eventPool) do e.audio={};e.impactDir=Vector3() end
+    self.shakeVector=Vector3()
+    self.feedbackWrite,self.numberWrite=0,0
+    return self
 end
 -- Injected sound port keeps offline simulations engine-independent.
 function C:Sound(name,opts)
     if self.o.audio then
-        local _,handle=self.state.Isolated('Audio.Play',self.state.PerfCall,'audio',self.o.audio.Play,name,opts or {pos=self.o.position()})
+        if not opts then self.soundOpts.pos=self.o.position() end
+        local _,handle=self.state.Isolated('Audio.Play',self.state.PerfCall,'audio',self.o.audio.Play,name,opts or self.soundOpts)
         return handle
     end
 end
@@ -117,7 +170,9 @@ function C:Play(id,fadeIn)
     local stats=self.rig:GetStats()
     -- Scale the clip clock; charge_full remains the sole full-charge signal.
     local speed=id=='sword_heavy_charge' and 1/math.max(.1,stats.chargeMultiplier or 1) or 1
-    local params={weaponInHand=self:WeaponInHand() and 1 or 0}
+    local params=self.playParams
+    for k in pairs(params) do params[k]=nil end
+    params.weaponInHand=self:WeaponInHand() and 1 or 0
     if id=='bow_release' or id=='bow_cancel' then
         self.bowPoseCharge=self.charge
         self.bowPosePitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
@@ -129,7 +184,9 @@ function C:Play(id,fadeIn)
         local d=self.moveDir or -f
         params.moveX,params.moveZ,params.bow=d.x*f.z-d.z*f.x,d:DotProduct(f),self.state.GetWeapon()=='bow' and 1 or 0
     end
-    local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,{stats=stats,speed=speed,fadeIn=fadeIn,params=params})
+    local opts=self.playOpts
+    opts.stats,opts.speed,opts.fadeIn,opts.params=stats,speed,fadeIn,params
+    local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,opts)
     if not handle then return false end
     self.clip,self.handle=id,handle
     self.whoosh,self.whooshTime=false,0
@@ -143,12 +200,15 @@ function C:Play(id,fadeIn)
     if self.observe then self.observe('start',{clip=id,age=self.age}) end
     if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
     self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
-    self.damaged,self.previousHit={},nil
+    for key in pairs(self.damaged) do self.damaged[key]=nil end
+    self.previousHit=nil
+    self.motionDebt=0
     self.hitForward=(id:find('sword_light_',1,true) or id=='sword_heavy_release') and self.moveDir or nil
     self.state.SetBusy(true)
     return true
 end
 function C:Cancel(reason,keepProtection)
+    if self.o.locomotion and reason~='dodge' then self.o.locomotion:Cancel(reason) end
     local softReason=reason=='blocked' or reason=='focus' or reason=='touch-clear' or reason=='touchcancel' or reason=='menu'
     -- A focus/touch callback may be followed by the blocked-input pass in the
     -- same frame. Do not restart or erase the already-safe cosmetic tail.
@@ -170,11 +230,14 @@ function C:Cancel(reason,keepProtection)
     self.combo,self.comboUntil,self.slideFollowUntil,self.followDistance=0,nil,nil,nil
     self.perfectUntil,self.strikePerfect=nil,false
     if self.clip=='bow_draw' or self.clip=='bow_hold' or self.pendingFire~=nil then
+        if self.rig.CancelBow then self.rig:CancelBow() end
         self.cancelUntil=self.age+1.2
         if self.state.Log then self.state.Log('arrow-cancel','Combat: arrow cancel %s',reason or 'unknown') end
     end
     self.buffer,self.pending,self.clip,self.handle=nil,nil,nil,nil
+    self.motionDebt=0
     self.pendingFire=nil
+    self.drawElapsed,self.power=0,0
     self.trailUntil=0
     self.autoFire,self.pendingReleased=false,false
     if not keepProtection then self.protection={} end
@@ -185,6 +248,7 @@ function C:Cancel(reason,keepProtection)
     if keepProtection then
         if cancelledHandle then self.anim:Stop(cancelledHandle,0) end
     else self.anim:Stop(nil,0) end
+    if self.rig.StopCombatVisual then self.rig:StopCombatVisual() end
     self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose(self.state.GetPose())
     if not self.draining and not keepProtection then self.anim:Poll() end
     self.state.SetBusy(false)
@@ -213,18 +277,18 @@ end
 function C:CanDodge()
     return self.clip~='dodge_slide' and self:CanCancel()
 end
-function C:EndSlide()
-    self:BrakeSlide()
+function C:EndSlide(continuing)
+    self:BrakeSlide(continuing)
     self.anim:Stop(self.handle,.04)
     self.clip,self.handle,self.iframe,self.cancelOpen=nil,nil,false,false
     self.slideFacing,self.slideImages=nil,false
     self.state.SetBusy(false)
 end
-function C:BrakeSlide()
+function C:BrakeSlide(continuing)
     if not self.slideDustOpen then return end
     self.slideDustOpen=false
-    self:Sound('dodge_land')
-    if self.o.dust then self.o.dust(2,self.moveDir) end
+    if not continuing and not (self.o.locomotion and self.o.locomotion.pending) then self:Sound('dodge_land') end
+    if not continuing and not (self.o.locomotion and self.o.locomotion.pending) and self.o.dust then self.o.dust(2,self.moveDir) end
     if self.state.Log then self.state.Log('dodge-land','Combat: sfx dodge_land') end
 end
 function C:Facing()
@@ -256,10 +320,11 @@ function C:SlideAfterimages(position,rotation)
     return self.slideShots
 end
 function C:Action(kind,axis)
-    if self.dead or not self.state.InCombat() then return false end
+    if self.dead then return false,'dead' end
     if kind=='dodge' then
-        if self.dodgeCool>1e-8 or not self:CanDodge() then return false end
-        if self.o.slideStart and not self.o.slideStart() then return false end
+        if self.dodgeCool>1e-8 then return false,'cooldown' end
+        if not self:CanDodge() then return false,'locked' end
+        if self.o.slideStart and not self.o.slideStart() then return false,'unsafe' end
         local combo=self:WeaponInHand() and self.combo or 0
         local queued=self.buffer~='dodge' and self.buffer or nil
         local queuedAt=self.bufferAt
@@ -267,17 +332,25 @@ function C:Action(kind,axis)
         local dir=axis or Vector3.ZERO
         dir=dir:LengthSquared()>=.18*.18 and Flat(dir,-facing) or -facing
         self:Cancel('dodge',true) -- discard shot; retain independent getup tail
-        self.state.Activity(true,true) -- dodge never requests a weapon from the back
+        if self.state.InCombat() then self.state.Activity(true,true) end -- explore never enters combat
         self.moveDir,self.slideFacing=dir,facing
         self.state.PerfCall('rigSetActive',self.rig.SetActive,self.rig,self.state.GetWeapon()); self.rig:SetPose(self.state.GetPose())
         if not self:Play('dodge_slide',.04) then return false end
         -- Clear the previous strike before the first slide snapshot at .04s.
-        -- Scene restores the quality/combat trail switch on its next pose pass.
-        if self.rig.SetTrail then self.rig:SetTrail(false) end
+        -- The quality switch no longer clears essential hit/arrival flashes.
+        if not self.rig.StopCombatVisual and self.rig.SetTrail then self.rig:SetTrail(false) end
         if self.o.camera then self.o.camera:Slide(self.moveDir) end
         self.dodgeCool,self.dodgeAt,self.slideElapsed=.50,self.age,0
+        if self._dodgeFrameAt then
+            self._dodgeDelay=math.min(self._dodgeFrameDt,self._dodgeFrameCool)
+            self._dodgeStep=self._dodgeFrameDt-self._dodgeDelay
+            self.dodgeAt=self._dodgeFrameAt+self._dodgeDelay
+            self.dodgeCool=math.max(0,.50-self._dodgeStep)
+        end
         self.combo,self.comboUntil,self.slideFollowUntil=combo,self.age+.60,self.age+.60
         self.perfectUsed,self.slideStopped,self.pending=false,false,nil
+        self.slidePathClipped=false
+        if self.o.locomotion then self.o.locomotion:Accepted() end
         self.iframe=true
         if self.state.GetSetting('dodgeFov') then self.slideFovAge=0 end
         if queued and queuedAt and self.age-queuedAt<=.06 and self.state.GetWeapon()=='sword' then
@@ -285,6 +358,8 @@ function C:Action(kind,axis)
         end
         return true
     end
+    if not self.state.InCombat() then return false,'explore' end
+    if self.o.locomotion and self.o.locomotion:IsRunning() then self.o.locomotion:Cancel('attack') end
     local follow=self.slideFollowUntil and self.age<=self.slideFollowUntil
     if self.clip=='dodge_slide' then
         if not self.cancelOpen then return false end
@@ -301,6 +376,12 @@ function C:Action(kind,axis)
         self.pending,self.pendingReleased=kind,false
         self.hold,self.charge=0,0
         self.autoFire=kind=='heavy' and self.state.GetWeapon()=='bow'
+        if self.state.GetWeapon()=='bow' then
+            -- Equip and draw begin together; no queued short tap after taking bow.
+            self.pending=nil
+            self.drawElapsed,self.power,self.drawFullReached=0,0,false
+            return self:Play('bow_draw',.04)
+        end
         self:Play(self.state.GetWeapon()=='sword' and 'sword_draw' or 'bow_equip')
         return true
     end
@@ -319,6 +400,7 @@ function C:Action(kind,axis)
     local bow=self.state.GetWeapon()=='bow'
     if bow then
         self.charge,self.autoFire,self.pendingReleased=0,kind=='heavy',kind=='light'
+        self.drawElapsed,self.power=0,0
         self.drawFullReached,self.fireCrystal,self.fireCharge=false,false,nil
         return self:Play('bow_draw',follow and .04 or nil)
     elseif kind=='heavy' then self.autoFire=false; self.combo=0; return self:Play('sword_heavy_release')
@@ -336,11 +418,23 @@ function C:Release()
         self.releaseFull=self.charge>=1
         self.anim:Stop(self.handle,0); self.clip=nil
         self:Action(heavy and 'heavy' or 'light')
-    elseif self.clip=='bow_hold' then
+    elseif self.clip=='bow_hold' or self.clip=='bow_draw' then
+        local power=(self.charge*self.charge+2*self.charge)/3
+        if power<.1 or not self:WeaponInHand() then
+            self:Cancel('weak-release');return
+        end
         self.fireCharge=self.charge
         self.fireCrystal=self.autoFire==true
+        local shot=self.fireSnapshot
+        shot.u,shot.power,shot.critical=self.charge,power,self.charge>=1
+        shot.pitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
+        shot.facing=Flat(self.o.forward(),Vector3.FORWARD)
+        if self.o.captureBowShot then self.o.captureBowShot(shot) end
+        for key in pairs(shot.stats) do shot.stats[key]=nil end
+        for key,value in pairs(self.rig:GetStats()) do shot.stats[key]=value end
+        if self.fireCrystal then shot.stats.crystalRadius,shot.stats.crystalDamageMultiplier=.8,.25 end
         self:Play('bow_release')
-    elseif self.clip=='bow_draw' then self.pendingReleased=true
+        self.pendingFire=shot -- release authority; the clip's fire cue cannot create a second shot
     elseif self.pending=='hold' then self.pending,self.pendingReleased='light',true end
 end
 -- Group envelopes start at FIRST contact: later targets raise the maximum,
@@ -348,13 +442,12 @@ end
 function C:Envelope(key,amp,duration,fov,dir,stop)
     local group=self.feedbackGroups[key]
     if not group then
-        local oldestKey,oldest,count=nil,math.huge,0
-        for k,g in pairs(self.feedbackGroups) do
-            count=count+1
-            if g.at<oldest then oldestKey,oldest=k,g.at end
-        end
-        if count>=32 then self.feedbackGroups[oldestKey]=nil end
-        group={at=self.age,amp=0,duration=0,fov=0,stop=0,dir=dir or Vector3.RIGHT}
+        self.feedbackWrite=self.feedbackWrite%32+1
+        group=self.feedbackPool[self.feedbackWrite]
+        if group.key~=nil then self.feedbackGroups[group.key]=nil end
+        group.key,group.at,group.amp,group.duration,group.fov,group.stop=key,self.age,0,0,0,0
+        local d=dir or Vector3.RIGHT
+        local v=group.dir;v.x,v.y,v.z=d.x,d.y,d.z;group.dir=v
         self.feedbackGroups[key]=group
     end
     group.amp=math.max(group.amp,amp or 0)
@@ -372,39 +465,70 @@ function C:Feedback(enemy,info,result,weak,arrow)
     local e=self.eventPool[self.eventWrite]
     e.swingId=info.swingId or ('sword:'..self.swingSerial)
     e.weapon=arrow and (info.kind=='crystal' and 'crystal' or 'bow') or 'sword'
-    e.tier=arrow and ('arrow_'..(info.tier or 'weak')) or (info.heavy and 'heavy' or (info.combo==3 and 'third' or 'light'))
+    e.tier=arrow and (ARROW_TIERS[info.tier] or 'arrow_weak') or (info.heavy and 'heavy' or (info.combo==3 and 'third' or 'light'))
     e.material=result.material or info.material or 'soft'
     e.part,e.pos,e.dir,e.normal=result.part or info.part,info.pos,info.dir,info.normal
-    e.broke,e.staggered,e.killed=result.broke or result.partBroken~=nil,result.staggered==true,result.killed==true
+    e.broke,e.staggered,e.killed=result.broke==true or result.partBroken~=nil,result.staggered==true,result.killed==true
     e.weak,e.damage,e.poise=weak==true or result.weak==true,result.damage or info.dmg,info.poise or 0
+    e.combo,e.full=arrow and 0 or (info.combo or 0),info.full==true
+    e.critical=info.critical==true or (not arrow and e.weak)
+    e.resolved,e.presentationConsumed,e.player=result.resolved~=false,false,false
+    local f=info.dir or Vector3.FORWARD
+    local x,y,z
+    if arrow then x,y,z=f.x,f.y,f.z
+    elseif e.combo==3 then x,y,z=f.x*.3,-1,f.z*.3
+    else
+        local sign=e.combo==2 and -1 or 1
+        x,y,z=f.z*sign,info.heavy and -.3 or 0,-f.x*sign
+    end
+    local length=math.sqrt(x*x+y*y+z*z)
+    if length<1e-8 then x,y,z,length=1,0,0,1 end
+    local v=e.impactDir;v.x,v.y,v.z=x/length,y/length,z/length;e.impactDir=v
+    local profile=Profile(e,info,arrow)
+    e.profileId,e.flash,e.flashPeak=profile.id,profile.flash,profile.peak
     e.kind,e.enemy='hit',enemy
     if self.observe then self.observe('hit',{clip=info.clip,damage=e.damage,weapon=e.weapon,enemy=enemy,age=self.age}) end
     self.lastHitAt,self.lastHitWeak=self.age,e.weak
     if self.state.Log then self.state.Log('hit:'..tostring(enemy.id)..':'..tostring(e.part),
         'Combat: hit %s part=%s dmg=%.2f poise=%.2f',enemy.id or 'enemy',e.part or 'body',e.damage,e.poise) end
-    local stop=e.broke and .10 or (info.heavy and .08 or .04)
-    local amp,duration,fov=.01,.06,0
-    if e.tier=='third' then amp,duration=.015,.08 end
-    if info.heavy then amp,duration,fov=.025,.10,2 end
-    if e.broke or e.staggered then amp,duration=.03,.12 end
+    local stop,amp,duration,fov=profile.stop,profile.amp,profile.duration,profile.fov
     if arrow then
-        stop=info.full and e.weak and .12 or .03
+        stop=(e.broke or e.staggered) and .10 or (e.weak and .06 or .03)
         amp,duration,fov=0,0,0
-        if info.full and e.weak then amp,duration=.008,.05 end
+        if not enemy.boss and not enemy.dead and enemy.Knockback then
+            enemy:Knockback(info,info.critical and .16 or .08)
+            if enemy.knock then enemy.knock.duration=.10 end
+        elseif enemy.boss and e.staggered and enemy.knock then
+            -- Arrow stagger keeps the boss reaction pose, without the legacy
+            -- melee .6m root displacement scheduled by its settlement.
+            enemy.knock.active=false
+        end
     end
-    self:Envelope(e.swingId,amp,duration,fov,e.dir,(not arrow or (info.full and e.weak)) and stop or 0)
+    e.stop,e.attackerStop=stop,not arrow and stop or 0
+    self:Envelope(e.swingId,amp,duration,fov,e.impactDir,e.attackerStop)
     enemy.hitStop=math.max(result.priorHitStop or enemy.hitStop or 0,stop)
+    -- Only the paired deferred path invokes the consumer. Legacy arrows have
+    -- already presented during ApplyHit and must never emit a second burst.
+    if info.deferPresentation and enemy.OnHitEvent then e.presentationConsumed=enemy:OnHitEvent(e)==true end
+    if not arrow and self.rig.HitImpulse then self.rig:HitImpulse(e) end
+    self.lastProfile,self.lastStop,self.lastFlash,self.lastPresented=e.profileId,e.stop,e.flash,e.presentationConsumed
     self.target,self.targetAt=enemy,self.age
-    if e.broke then self.partNotice={part=result.partBroken or e.part,untilTime=self.age+1.2} end
+    if e.broke then
+        self.partNotice=self.partNoticePool
+        self.partNotice.part,self.partNotice.untilTime=result.partBroken or e.part,self.age+1.2
+    end
     if e.weak then self.weakUntil=self.age+1.2 end
     if (enemy.training or self.state.GetSetting('damageNumbers')) and e.damage then
-        self.numbers=self.numbers or {}
-        if #self.numbers>=12 then table.remove(self.numbers,1) end
+        self.numberWrite=self.numberWrite%12+1
+        local number=self.numberPool[self.numberWrite]
+        for i=#self.numbers,1,-1 do if self.numbers[i]==number then table.remove(self.numbers,i) end end
         local durationN=enemy.training and 1.2 or .7
-        self.numbers[#self.numbers+1]={pos=e.pos,value=math.floor(e.damage+.5),untilTime=self.age+durationN,duration=durationN}
+        number.pos,number.value,number.untilTime,number.duration=e.pos,math.floor(e.damage+.5),self.age+durationN,durationN
+        number.screenVisible=false
+        self.numbers[#self.numbers+1]=number
     end
     -- W3 already owns enemy reaction/particles inside the successful settlement.
-    local soundOpts=e.audio or {}; e.audio=soundOpts
+    local soundOpts=e.audio
     soundOpts.pos,soundOpts.material,soundOpts.tier,soundOpts.hitId=e.pos,e.material,e.tier,e.swingId
     if e.broke then self:Sound('armor_break',soundOpts)
     elseif e.material=='stone' and e.part and e.part:find('stone_',1,true)==1 then self:Sound('deflect_stone',soundOpts)
@@ -475,11 +599,12 @@ function C:Events()
         elseif e.name=='iframe_on' then self.iframe=true
         elseif e.name=='iframe_off' then self.iframe=false
         elseif e.name=='charge_full' or e.name=='draw_full' then
-            if e.name=='charge_full' then self.charge,self.fullCharged=1,true; self:Flash('full_charge') end
+            if e.name=='charge_full' and not self.fullCharged then
+                self.charge,self.fullCharged=1,true; self:Flash('full_charge');self:Sound('sword_full')
+            end
             self.fullAt=self.age
-            if e.name=='draw_full' and not self.drawFullReached then
+            if e.name=='draw_full' and self.charge>=1 and not self.drawFullReached then
                 self.drawFullReached=true; self.bowFullAt=self.age; self:Sound('bow_full')
-                if self.o.camera then self.o.camera:Full() end
             end
         elseif e.name=='weapon_ready' then
             if not self.rig.PopEvents then self:Flash('draw'); self:Sound('blade_draw') end
@@ -494,14 +619,13 @@ function C:Events()
         elseif e.name=='draw_start' then self.rig:SetPose('hand')
         elseif e.name=='draw_min' then
             self:Play('bow_hold')
-            if self.pendingReleased then self.pendingReleased=false; self:Release() end
         elseif e.name=='recover_end' then
             if self.state.Log then self.state.Log('clip-finish:'..self.clip,'Combat: clip %s finish',self.clip) end
             self.anim:Stop(self.handle,0); self.clip,self.handle=nil,nil
             self.charge,self.autoFire=0,false
         elseif e.name=='fire' then
             self:StopDrawSound()
-            self.pendingFire=self.fireCharge or 0
+            -- Release owns a single snapshot; this animation cue never queues ammo.
         elseif e.name=='respawn_ready' then
             self.anim:Stop(nil,0)
             self.clip,self.handle=nil,nil
@@ -522,7 +646,7 @@ function C:Events()
                 if pending then self:Action(pending) else self.state.SetBusy(false) end
                 if pending=='hold' then self.hold=heldTime end
                 if released and self.clip=='bow_draw' then self.pendingReleased=true end
-            elseif finished=='bow_draw' then self:Play('bow_hold'); if self.pendingReleased then self:Release() end
+            elseif finished=='bow_draw' then self:Play('bow_hold')
             elseif finished=='knockdown' then self:Play('getup')
             elseif finished=='getup' then self.state.SetBusy(false)
             else self.charge,self.autoFire=0,false; self.state.SetBusy(false) end
@@ -536,7 +660,9 @@ function C:ConsumeBuffer(axis,atBoundary)
     if not self.buffer then return end
     local latch=self.clip=='dodge_slide' and self.buffer~='dodge'
         and self.bufferUntil>=self.dodgeAt+.22-1e-8
-    local valid=self.age<=self.bufferUntil+1e-8 or (atBoundary and self.cancelOpen and latch)
+    local retryAt=self._dodgeFrameAt and self._dodgeFrameAt+self._dodgeFrameCool
+    local cooldownCross=self.buffer=='dodge' and not self.clip and retryAt and retryAt<=self.age+1e-8 and retryAt<=self.bufferUntil+1e-8
+    local valid=self.age<=self.bufferUntil+1e-8 or cooldownCross or (atBoundary and self.cancelOpen and latch)
     if not valid then
         if latch and not self.cancelOpen and (self.slideElapsed or 0)<.22 then return end
         self.buffer=nil; return
@@ -547,6 +673,14 @@ end
 ---@param dt number
 ---@param controls table attack/heavy held, attackTap/dodge edges, axis world-space, allowed
 function C:Update(dt,controls)
+    local inputStart=Perf.Begin()
+    Perf.Context(self.swingSerial,self.combo,self.clip)
+    local foot=self.o.locomotion
+    if foot then
+        foot:Begin(dt,controls,self)
+        self._dodgeFrameAt,self._dodgeFrameDt,self._dodgeFrameCool=self.age,dt,self.dodgeCool
+        self._dodgeStep,self._dodgeDelay=nil,0
+    end
     self.inputAxis=controls.axis
     self.age=self.age+dt; self.invuln=math.max(0,self.invuln-dt)
     if self.state.InCombat() and self:WeaponInHand() then
@@ -557,7 +691,7 @@ function C:Update(dt,controls)
     if not controls.allowed then
         if not self.suspended then
             -- A death/getup animation must finish while its input is disabled.
-            if not self.dead and self.clip~='getup' then self:Cancel('blocked') end
+            if not controls.selecting and not self.dead and self.clip~='getup' then self:Cancel('blocked') end
             self.suspended=true
         end
         self.blocked=true; attack,heavy=false,false
@@ -565,11 +699,22 @@ function C:Update(dt,controls)
     if self.blocked and not controls.attack and not controls.heavy then self.blocked=false end
     local canInput=controls.allowed and not self.blocked and not self.dead and self.state.InCombat()
     local animDt=math.max(0,dt-self.hitstop)
-    if controls.allowed and not self.dead and self.state.InCombat() and controls.dodge then
-        if not self:Action('dodge',controls.axis) then
-            self.buffer,self.bufferAt,self.bufferUntil='dodge',self.age,self.age+BUFFER
+    if controls.allowed and not self.dead and controls.dodge then
+        local accepted,reason
+        if foot and self._dodgeFrameCool>1e-8 then accepted,reason=false,'cooldown'
+        else accepted,reason=self:Action('dodge',controls.axis) end
+        if not accepted then
+            if foot then foot:Rejected(reason) end
+            if reason~='unsafe' and reason~='air' then
+                local edgeAt=foot and self._dodgeFrameAt or self.age
+                self.buffer,self.bufferAt,self.bufferUntil='dodge',edgeAt,edgeAt+BUFFER
+            end
         end
         canInput=false -- old held attack cannot be inherited by the new slide
+    end
+    if foot and controls.allowed and not self.dead and self.buffer=='dodge' then
+        self:ConsumeBuffer(controls.axis)
+        if self._dodgeStep then canInput=false end
     end
     if canInput then
         if ((heavy and not self.lastHeavy) or controls.heavyTap) and self.buffer~='dodge' then
@@ -594,21 +739,34 @@ function C:Update(dt,controls)
             self.charge=self.fullCharged and 1 or math.min(.999,self.hold/math.max(.1,self.rig:GetStats().chargeMultiplier or 1))
         end
         if self.clip=='bow_hold' or self.clip=='bow_draw' then
-            self.charge=math.min(1,self.charge+animDt/(self.rig:GetStats().draw or .7)); self.anim:SetParam('p',self.charge)
+            self.drawElapsed=self.drawElapsed+dt
+            local drawDuration=self.rig:GetStats().draw or 1
+            self.charge=self.drawElapsed+1e-9>=drawDuration and 1 or self.drawElapsed/drawDuration
+            self.power=(self.charge*self.charge+2*self.charge)/3
+            self.anim:SetParam('p',self.charge)
+            if self.charge>=1 and not self.drawFullReached then
+                self.drawFullReached=true;self.bowFullAt=self.age;self:Sound('bow_full')
+                if self.rig.FlashBowFull then self.rig:FlashBowFull() end
+            end
         end
         if self.autoFire and self.drawFullReached and self.clip=='bow_hold' and self.charge>=1 then self:Release() end
         if self.lastAttack and not attack and not self.autoFire then self:Release() end
     end
+    Perf.Context(self.swingSerial,self.combo,self.clip)
+    Perf.Finish('input',inputStart)
+    local motionStart=Perf.Begin()
     self.lastAttack,self.lastHeavy=attack,heavy
     self.hitstop=math.max(0,self.hitstop-dt)
     local sliding=self.clip=='dodge_slide'
     self.slideMotionFrame=sliding
-    local stepDt=sliding and dt or animDt
+    local stepDt=sliding and (self._dodgeStep or dt) or animDt
     if sliding and self.buffer and self.buffer~='dodge' and (self.slideElapsed or 0)<.22
         and self.age-dt<=self.bufferUntil then
         stepDt=math.min(stepDt,.22-self.slideElapsed)
     end
-    if sliding and controls.axis and controls.axis:LengthSquared()>=.18*.18
+    if sliding and foot and foot.pending then
+        stepDt=math.min(stepDt,math.max(0,.30-self.slideElapsed))
+    elseif sliding and controls.axis and controls.axis:LengthSquared()>=.18*.18
         and self.slideElapsed<.26 then stepDt=math.min(stepDt,.26-self.slideElapsed) end
     local moveDir=self.moveDir or self.o.forward() --[[@as Vector3]]
     -- Sound timing derives from the authored active boundary, not a hit table.
@@ -622,6 +780,7 @@ function C:Update(dt,controls)
     end
     -- W4 smooths arm ownership during advancement, so this must precede GetMotion.
     self.anim:SetParam('weaponInHand',self:WeaponInHand() and 1 or 0)
+    self.anim:SetParam('sprintPending',foot and foot.pending and 1 or 0)
     local metres=self.anim:GetMotion(stepDt,sliding and stepDt or dt)
     if sliding then
         self.slideElapsed=(self.slideElapsed or 0)+stepDt
@@ -630,45 +789,60 @@ function C:Update(dt,controls)
         metres=math.min(metres,math.max(0,.35-self.followDistance))
         self.followDistance=self.followDistance+metres
     end
+    local attacking=self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
+    if not sliding and (attacking or not self.clip) and animDt>0 then
+        metres=metres+(self.motionDebt or 0);self.motionDebt=0
+    end
     self.motion=moveDir*metres
     if sliding and self.o.slideMotion and metres>0 then
         self.motion,self.slideStopped=self.o.slideMotion(self.motion)
-    elseif self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
-        and self.o.attackMotion and metres>0 then
-        self.motion=self.o.attackMotion(self.motion)
+        if self.slideStopped then self.slidePathClipped=true end
+    elseif (attacking or not self.clip) and self.o.attackMotion and metres>0 then
+        local stopped,debt
+        self.motion,stopped,debt=self.o.attackMotion(self.motion)
+        self.motionDebt=not stopped and (debt or 0) or 0
         self.slideMotionFrame=true -- already footprint/wall checked, do not re-run endpoint guard
     end
+    Perf.Finish('motion',motionStart)
     if self.fovAge then self.fovAge=self.fovAge+dt end
+    local recoveryStart=Perf.Begin()
     self:Events()
+    Perf.Finish('recovery',recoveryStart)
     if not sliding and not self.clip and canInput then self:ConsumeBuffer(controls.axis) end
     if sliding then
         self.iframe=self.clip=='dodge_slide' and self.slideElapsed<.20-1e-8
         if controls.allowed and not self.dead then
             self:ConsumeBuffer(controls.axis,true)
-            if self.clip=='dodge_slide' and self.slideElapsed>=.26 and controls.axis
+            if self.clip=='dodge_slide' and not (foot and foot.pending) and self.slideElapsed>=.26 and controls.axis
                 and controls.axis:LengthSquared()>=.18*.18 then self:EndSlide() end
         end
-        if stepDt<dt then
-            local remaining=dt-stepDt
+        if foot then foot:Finish(dt,stepDt+(self._dodgeDelay or 0),controls,self) end
+        if stepDt+(self._dodgeDelay or 0)<dt then
+            local remaining=dt-stepDt-(self._dodgeDelay or 0)
             -- The old impulse cannot leak into the incoming attack. Advance
             -- independent protection/afterimage clocks, not a second root move.
             self.anim:GetMotion(0,remaining)
             self:Events()
         end
     end
+    if foot and not sliding then foot:Finish(dt,stepDt,controls,self) end
     if self.slideFovAge then self.slideFovAge=self.slideFovAge+dt end
     if self.knock and self.knock>0 and not self.dead then
         local amount=math.min(self.knock,dt*2.4)
         self.motion=self.motion+(self.moveDir or Vector3.ZERO)*amount; self.knock=self.knock-amount
     end
-    self.state.SetBusy(self.clip~=nil)
+    self.state.SetBusy(self.clip~=nil or controls.selecting==true)
+    self._dodgeFrameAt,self._dodgeStep,self._dodgeDelay=nil,nil,nil
 end
-function C:Swap()
+function C:Swap(targetWeapon)
+    if targetWeapon~=nil and targetWeapon~='sword' and targetWeapon~='bow' then return false end
+    if self.dead then return false end
+    local old=self.state.GetWeapon()
+    local nextWeapon=targetWeapon or (old=='sword' and 'bow' or 'sword')
+    if nextWeapon==old then return true end -- confirmation of the current slot is a no-op
     if not self:CanCancel() or self.dead then return false end
     self.state.BeginSwapPerf()
-    local old=self.state.GetWeapon()
     self.state.SetBusy(false)
-    local nextWeapon=old=='sword' and 'bow' or 'sword'
     local ok=self.state.SetWeapon(nextWeapon)
     if ok then
         self:Cancel('swap')
@@ -731,27 +905,43 @@ end
 -- Still called after the physical actor/base animation update. hitPending covers
 -- a low-FPS frame which contains both hit_on and hit_off exactly once.
 function C:AfterPose()
+    if self.settlingContact then return end -- hit/feedback callbacks may reenter
     if self.pendingFire~=nil then
-        if not self.dead and self.o.fire then self.o.fire(self.pendingFire,self.rig:GetStats(),self.fireCrystal) end
+        local shot=self.pendingFire
+        if not self.dead and self.o.fire then
+            local fired=self.o.fire(shot.u,shot.stats,self.fireCrystal,shot)
+            if fired then
+                if self.rig.ReleaseBow then self.rig:ReleaseBow() end
+            else self.bowFailedUntil=self.age+.10 end
+        end
         self.pendingFire=nil
     end
     if not (self.hitOpen or self.hitPending) or self.dead then self.previousHit=nil; return end
     local zone,slam=self:StrikeZones()
+    -- R8 conservative P0 path: keep the proven gameplay sector/reach and draw
+    -- its actual one-frame slash sample, including a hitch across hit_on/off.
+    -- This is NOT a blade-contact narrowphase; physical blade alignment remains
+    -- a Web acceptance item rather than silently reducing gameplay reach.
+    if zone and self.hitPending and self.rig.ShowContactArc then self.rig:ShowContactArc(zone) end
     self.hitPending=false
     if not zone then return end
     local stats=self.rig:GetStats()
     local position=self.o.position()
     local direction=self.hitForward or Flat(self.o.forward(),Vector3.FORWARD)
     local enemies=self.o.enemies and self.o.enemies() or {}
-    local contacts=Hit.QueryZone(enemies,zone)
+    local queryStart=Perf.Begin()
+    for enemy in pairs(self.queryShapes) do self.queryShapes[enemy]=nil end
+    local contacts=Hit.QueryZone(enemies,zone,self.queryHits,self.queryPool,self.damaged,self.queryShapes)
     if slam then
-        for _,contact in ipairs(Hit.QueryZone(enemies,slam)) do contacts[#contacts+1]=contact end
-        table.sort(contacts,function(a,b)return a.distance2<b.distance2 end)
+        for _,contact in ipairs(Hit.QueryZone(enemies,slam,self.slamHits,self.slamPool,self.damaged,self.queryShapes)) do contacts[#contacts+1]=contact end
+        table.sort(contacts,Hit.DistanceLess)
     end
+    Perf.Finish('QueryZone',queryStart)
+    local hitStart=Perf.Begin()
     for _,contact in ipairs(contacts) do
         local enemy,part=contact.enemy,contact.shape.id
         -- Stone projectiles are distinct targets; a deflection cannot consume the body hit.
-        local key=(part and part:find('stone_',1,true)==1) and (tostring(enemy)..part) or enemy
+        local key=Hit.TargetKey(enemy,part)
         if not self.damaged[key] and Hit.Visible(position+Vector3(0,.9,0),contact.pos,self.o.cast) then
             local heavy=self.hitClip=='sword_heavy_release'
             local perfect=self.strikePerfect
@@ -759,25 +949,45 @@ function C:AfterPose()
                 poise=(stats.poise or 6)*(heavy and (self.releaseFull and 2.5 or 1.8) or 1)*(perfect and 1.5 or 1),
                 armorBreak=(stats.armorBreak or 1)*(heavy and self.releaseFull and 1.5 or 1),knockback=self.combo==3 and .55 or .1,
                 part=part,material=contact.shape.material or 'soft',normal=contact.normal,
+                deferPresentation=type(enemy.OnHitEvent)=='function',full=heavy and self.releaseFull==true,
                 swingId='sword:'..self.swingSerial,tier=heavy and 'heavy' or (self.combo==3 and 'third' or 'light'),kind='sword',clip=self.hitClip,pos=contact.pos,dir=direction,source='player',heavy=heavy,combo=self.combo}
-            local result=Hit.Apply(enemy,info)
-            if result.hit then
-                self.damaged[key]=true; self:Feedback(enemy,info,result,contact.shape.weak,false)
-            end
+            self.settlingContact=true
+            local ok,message=pcall(C.SettleContact,self,enemy,info,key,contact.shape.weak,self.swingSerial)
+            self.settlingContact=false
+            if not ok then error(message,0) end
         end
     end
+    Perf.Finish('HitEvent',hitStart)
 end
-function C:ShakeOffset()
+-- Keep info/result as independent snapshots: enemy/FX callbacks may retain
+-- them. The borrowed QueryZone contacts are never exposed to those callbacks.
+function C:SettleContact(enemy,info,key,weak,swing)
+    local result=Hit.Apply(enemy,info)
+    if result.hit then
+        if self.swingSerial==swing then self.damaged[key]=true end
+        self:Feedback(enemy,info,result,weak,false)
+    end
+end
+function C:ShakeOffset(right,up)
     if self.state.GetSetting('cameraShake')==false then return Vector3.ZERO end
+    right,up=right or Vector3.RIGHT,up or Vector3.UP
     local peak,dir=0,Vector3.RIGHT
     for _,g in pairs(self.feedbackGroups) do
         local age=self.age-g.at
-        if g.duration>0 and age<g.duration then
-            local k=g.amp*(1-age/g.duration)^2
+        if g.duration>0 and age>=0 and age<g.duration then
+            local u=age/g.duration
+            local k=g.amp*math.sin(math.pi*u)
             if k>peak then peak,dir=k,g.dir end
         end
     end
-    return dir:Normalized()*(math.sin(self.age*127)*peak)
+    local x,y=dir:DotProduct(right),dir:DotProduct(up)
+    local length=math.sqrt(x*x+y*y)
+    if length<.05 then x,y,length=.8,-.6,1 end
+    local k=math.min(.03,peak)/length
+    local v=self.shakeVector
+    v.x,v.y,v.z=(right.x*x+up.x*y)*k,(right.y*x+up.y*y)*k,(right.z*x+up.z*y)*k
+    self.shakeVector=v
+    return v -- borrowed, consumed synchronously by the camera
 end
 function C:FovOffset()
     if self.state.GetSetting('cameraFov')==false then return 0 end
@@ -798,7 +1008,7 @@ function C.NewTrainingDummy(position,node)
     function dummy:ApplyHit(info)
         self.hp=math.max(0,self.hp-info.dmg)
         local weapon=info.kind=='sword' and 'sword' or 'bow'
-        print(string.format('Dummy hit: %s %s dmg=%.2f part=%s',weapon,info.tier or info.clip or 'unknown',info.dmg,info.part or 'body'))
+        if self.debugHits then print(string.format('Dummy hit: %s %s dmg=%.2f part=%s',weapon,info.tier or info.clip or 'unknown',info.dmg,info.part or 'body')) end
         return {hit=true,killed=false}
     end
     function dummy:Update() self.hp=9999 end
@@ -863,8 +1073,11 @@ end
 
 -- Adapt the existing bounded dust emitter without owning another particle pool.
 -- Touch only this emission's serials; preserve enemy slots/key-event reserves.
-function C.EmitDustStreak(pool,owner,pos,dir,ground)
+function C.EmitDustStreak(pool,owner,pos,dir,ground,maxCount)
     if not pool or not pool.slots or not pool.Hide then return 0 end
+    -- A run footprint borrows this dust material. Reserve six admissions before
+    -- the pool emits its fixed burst, then keep one; never evict hit/telegraph FX.
+    if maxCount==1 and pool.count and pool.count+6>(pool.limit or 64)-(pool.reserved or 16) then return 0 end
     local originY=ground(pos)
     if not originY then return 0 end
     local first=pool.serial
@@ -873,8 +1086,8 @@ function C.EmitDustStreak(pool,owner,pos,dir,ground)
     for _,slot in ipairs(pool.slots) do
         if slot.active and slot.owner==owner and slot.serial>first then
             local i=slot.serial-first
-            local at=pos-dir*((i-1)*.18)
-            local y=i<=4 and ground(at) or nil
+            local at=pos-dir*((i-1)*.18) --[[@as Vector3]]
+            local y=i<=(maxCount or 4) and ground(at) or nil
             if not y then pool:Hide(slot)
             else
                 count=count+1

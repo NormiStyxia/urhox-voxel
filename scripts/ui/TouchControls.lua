@@ -27,13 +27,14 @@ local eventObject
 local SETS = {
     combat={
         {name='attack',icon='sword',size=80,main=true,x=-48,y=-48},
-        {name='jump',x=-48,y=-148}, {name='dodge',x=-148,y=-32},
+        {name='jump',x=-48,y=-148}, {name='dodge',icon='sprint',label='闪避/跑',x=-148,y=-32},
         {name='heavy',x=-124,y=-124}, {name='swap',x=-212,y=-72},
     },
     foot={
         {name='shatter',size=80,main=true,x=-48,y=-48},
         {name='jump',x=-48,y=-148}, {name='freeze',x=-148,y=-32},
         {name='rewind',x=-124,y=-124}, {name='mount',main=true,x=-212,y=-72},
+        {name='evadeRun',icon='sprint',label='闪避/跑',size=64,x=-292,y=-32},
     },
     ground={
         {name='breath',size=80,main=true,x=-48,y=-48},
@@ -47,7 +48,7 @@ local SETS = {
         {name='breathSpecial',icon='breath',label='大招',x=-196,y=-160},
     },
 }
-local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
+local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','点【闪避/跑】闪避 · 按住续跑','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local FOOT_TOP={{name='menu',icon='menu'},{name='sheath'},{name='forge'},{name='farview'},{name='fastTime',icon='clock'}}
@@ -74,7 +75,7 @@ function M.CancelActions()
 end
 function M.IsBlocked() return SettingsMenu.IsBlocked() or M.menuOpen or state.blocked == true end
 function M.Hint()
-    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 点【闪避】滑步' or '点按挥剑 · 长按重击 · 点【闪避】滑步' end
+    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 点按闪避 · 按住加速跑' or '点按挥剑 · 长按重击 · 点按闪避 · 按住加速跑' end
     if state.charging then return '松手释放碎时' end
     if current=='ground' then return '点【起飞】升空 · 摇杆控制方向' end
     if current=='air' then return '按住【上升】/【下降】· 点【滑翔】省力' end
@@ -130,7 +131,7 @@ local function JoyMove(x,y)
     joy.dx,joy.dy=Draw.Snap(dx*k),Draw.Snap(dy*k)
     local magnitude=Clamp((len/40-.15)/.85,0,1)
     Input.SetMove(len>0 and -dy/len*magnitude or 0,len>0 and dx/len*magnitude or 0)
-    Input.Set('sprint',current=='foot' and len>=36)
+    Input.Set('runIntent',current=='foot' and len>=36)
     local atTop=(current=='air' or current=='ground') and -dy>=36 and math.abs(dx)<18
     if atTop and not joy.atTop then joy.flash=frame end
     joy.atTop=atTop
@@ -177,7 +178,15 @@ function M.MoveTouch(id,x,y)
     elseif o.kind=='button' and o.name=='attack' and current=='combat' and state.weapon=='bow' then
         -- The attack finger remains captured outside the button. It can aim and
         -- release while an independent third finger simultaneously looks.
-        if o.x then Input.AddLook(x-o.x,y-o.y) end
+        if o.x then
+            local dx,dy=x-o.x,y-o.y
+            if not o.bowDragging then
+                o.bowDX,o.bowDY=(o.bowDX or 0)+dx,(o.bowDY or 0)+dy
+                if o.bowDX*o.bowDX+o.bowDY*o.bowDY>=4 then
+                    o.bowDragging=true;Input.AddLook(o.bowDX,o.bowDY)
+                end
+            else Input.AddLook(dx,dy) end
+        end
         o.x,o.y=x,y
     end
 end
@@ -186,7 +195,7 @@ function M.EndTouch(id)
     if not o then return end
     if o.kind=='joy' then
         releasedJoy,releasedFrame=joy,frame
-        joy=nil; Input.SetMove(0,0); Input.Set('sprint',false)
+        joy=nil; Input.SetMove(0,0); Input.Set('runIntent',false)
     elseif o.kind=='look' then lookID=nil
     elseif o.kind=='button' then buttons[o.name]=nil; Input.Set(o.name,false) end
     owners[id]=nil; idle=0
@@ -209,7 +218,7 @@ function M.Update(dt)
         end
     end
     local charge=state.combat and (state.combatCharge or 0) or (state.charge or 0)
-    local threshold=state.combat and state.weapon=='bow' and .8 or 1
+    local threshold=1
     if charge>=threshold and lastCharge<threshold then fullFlash=2 elseif fullFlash>0 then fullFlash=fullFlash-1 end
     lastCharge=charge
 end
@@ -223,8 +232,10 @@ local function DrawSet(vg,mode,alpha,offset)
         local active=(b.name=='glide' and state.gliding) or (b.name=='dash' and down)
         local holding=state.combatCharge and state.combatCharge>0
         local a=(down and 1 or (idle>=3 and not holding and .45 or .78))*alpha
-        local cd=state.cool and state.cool[b.name] or 0
-        local total=state.cooldown and state.cooldown[b.name] or 1
+        local evade=b.name=='evadeRun' or b.name=='dodge'
+        local cd=evade and (state.dodgeCool or 0) or (state.cool and state.cool[b.name] or 0)
+        local total=evade and .50 or (state.cooldown and state.cooldown[b.name] or 1)
+        if evade and (state.sprintPending or state.sprinting) then Draw.Arc(vg,x,y,36,34,1,24,Draw.colors.bright,alpha) end
         local charge=b.name=='shatter' and (state.charge or 0) or (b.name=='attack' and (state.combatCharge or 0) or 0)
         Draw.Button(vg,b,x,y,a,down,active,Disabled(b),0,total,0)
         -- Information never inherits the idle dimming of the button base.
@@ -250,7 +261,7 @@ local function RenderControls(self,vg)
     Draw.Begin(vg)
     local alpha=idle>=3 and .45 or .78
     if joy then
-        local running=Input.Down('sprint')
+        local running=Input.Down('runIntent')
         Draw.Image(vg,running and 'joy_base_run' or 'joy_base',joy.x-64,joy.y-64,1)
         Draw.Image(vg,'joy_thumb',joy.x+joy.dx-28,joy.y+joy.dy-28,1)
         if joy.flash==frame then Draw.Arc(vg,joy.x,joy.y,66,64,1,32,Draw.colors.bright,1) end

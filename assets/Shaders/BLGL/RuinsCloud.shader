@@ -7,7 +7,8 @@ uniform float cloud_enabled = 0.0;
 uniform float day = 1.0;
 uniform float dusk = 0.0;
 uniform float drift_time = 0.0;
-uniform float motion_detail = 1.0; // Reserved for unchanged Lua binding; no fragment deformation.
+uniform float motion_detail = 0.0; // Vertex breathing only; low tier stays static.
+uniform vec4 cloud_wind = vec4(0.0); // displacement XZ metres / velocity XZ m/s
 uniform vec4 sky_top = vec4(0.05,0.16,0.46,1.0);
 uniform vec4 sky_horizon = vec4(0.45,0.60,0.83,1.0);
 uniform vec4 sky_bottom = vec4(0.07,0.10,0.15,1.0);
@@ -22,16 +23,33 @@ void vertex() {
     vec3 world_offset=VERTEX-model_origin;
     float radius=length(world_offset);
     vec3 direction=world_offset/max(radius,0.0001);
-    // World wind: layers respond differently, reversing gently over ~65 minutes.
-    // All frequencies share the Lua clock's 10000*pi wrap period.
-    float angle=sin(drift_time*0.0008)*0.30*(0.5+COLOR.r)
-        +0.012*(sin(drift_time*0.002+COLOR.r*3.0)-sin(COLOR.r*3.0));
-    float cs=cos(angle);float sn=sin(angle);
-    cloud_direction=vec3(cs*direction.x+sn*direction.z,direction.y,-sn*direction.x+cs*direction.z);
     vec3 right=vec3(NORMAL.z,0.0,-NORMAL.x);
     right=right/max(length(right),0.0001);
-    cloud_right=vec3(cs*right.x+sn*right.z,0.0,-sn*right.x+cs*right.z);
-    cloud_data=COLOR;
+    vec3 up=cross(NORMAL,right);
+    float denominator=max(dot(direction,NORMAL),0.0001);
+    vec2 local_patch=vec2(dot(direction,right),dot(direction,up))/denominator;
+    // UNORM vertex colours: horizon=.25, lower=.45, upper=.65.
+    float layer_speed=0.5+step(0.35,COLOR.r)-0.5*step(0.55,COLOR.r);
+    vec3 centre=NORMAL*radius;
+    // Independent local wrap windows retain the approved all-around layout.
+    // A global translated ring would accumulate clouds on the downwind horizon.
+    vec2 start_phase=(vec2(COLOR.g,fract(COLOR.g*5.37))-vec2(0.5))*180.0;
+    vec2 moved=cloud_wind.xy*layer_speed+start_phase;
+    vec2 wrapped=fract((moved+vec2(180.0))/360.0)*360.0-vec2(180.0);
+    vec2 centre_xz=centre.xz+wrapped-start_phase;
+    float phase=COLOR.g*6.28318530718;
+    float breathe_x=1.0+motion_detail*0.02*(sin(drift_time*0.012+phase)-sin(phase));
+    float breathe_y=1.0+motion_detail*0.03*(sin(drift_time*0.008+phase*1.7)-sin(phase*1.7));
+    float heave=motion_detail*1.5*(sin(drift_time*0.006+phase)-sin(phase));
+    vec3 axis=normalize(vec3(centre_xz.x,centre.y+heave,centre_xz.y));
+    // Stable tangent even when a cloud passes directly over/under the camera.
+    vec3 tangent=vec3(axis.z,0.0,-axis.x);
+    float tangent_length=length(tangent);
+    cloud_right=mix(right,tangent/max(tangent_length,0.0001),step(0.0001,tangent_length));
+    vec3 vertical=cross(axis,cloud_right);
+    cloud_direction=normalize(axis+cloud_right*local_patch.x*breathe_x+vertical*local_patch.y*breathe_y);
+    float wrap_fade=1.0-smoothstep(120.0,170.0,max(abs(wrapped.x),abs(wrapped.y)));
+    cloud_data=vec4(COLOR.rgb,COLOR.a*wrap_fade);
     // Recenter by translation ONLY. Return world space, leaving the single
     // view/projection to the engine; never recover it through INV_VIEW_MATRIX.
     // Real 522..548m depth; current camera farClip=600m.

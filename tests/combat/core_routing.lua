@@ -164,20 +164,20 @@ local audioEnv={Safe=function(_,fn,...)return pcall(fn,...)end,combatAudioWarmup
 local warmupBody=assert(source:match('(local function UpdateCombatAudio.-)\nend'))..'\nend\nreturn UpdateCombatAudio'
 local warmup=assert(load(warmupBody,'Scene incremental audio warmup','t',audioEnv))()
 warmup(1);warmup(.99)
-assert(queued==0 and audioMock.readCount==0,'no preload resources during startup')
+assert(queued==0 and audioMock.readCount==1,'New schedules first swing before old two-second hook; second idle frame polls async completion')
 warmup(.02)
-assert(queued==1 and audioMock.readCount==1,'first frame after 2 seconds queues and loads at most one')
+assert(queued==1 and audioMock.readCount==2,'two-second hook is idempotent while priority preload already runs')
 local loaded,total=Audio.PreloadProgress()
 assert(loaded==1 and total==38 and not Audio.IsReady(),'second value is total, not missing')
 local before=audioMock.readCount
 local n,t=Audio.Preload() -- existing enter/draw call remains idempotent and performs zero IO
 assert(n==1 and t==38 and audioMock.readCount==before)
-for _=1,total+5 do
+for _=1,total*2+5 do
     before=audioMock.readCount;warmup(.016)
     assert(audioMock.readCount-before<=1,'Scene never batches resource loads')
 end
 assert(queued==1 and Audio.IsReady() and audioMock.readCount==total)
-assert(updates==3+total+5 and math.abs(elapsed-(2.01+(total+5)*.016))<1e-9,'every call forwards unscaled real dt')
+assert(updates==3+total*2+5 and math.abs(elapsed-(2.01+(total*2+5)*.016))<1e-9,'every call forwards unscaled real dt')
 audioEnv.combatAudioWarmup_=nil;warmup(.5);assert(queued==1,'cleared/finished timer stays dormant')
 audioEnv.combatAudioWarmup_=0;warmup(2);assert(queued==2,'new scene can warm up again')
 assert(source:find('CombatAudio.New(scene_)\n    combatAudioWarmup_ = 0',1,true))

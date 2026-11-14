@@ -10,7 +10,7 @@ local M={}
 local ready=false
 local EMPTY={}
 local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}
-local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='dodge',key='Shift'},{name='swap',key='Q'}}
+local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='dodge',key='Shift'},{name='swap',key='按住 Q'}}
 local MESSAGE_STEPS={-4,0,4,0}
 local MESSAGE_ALPHA={.34,.67,1,1}
 local combatObjective={x=0,y=0,h=0}
@@ -149,6 +149,8 @@ local function RenderHUD(self,vg)
     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
+    local wheel=package.loaded['ui.WeaponWheel']
+    local selecting=wheel and wheel.IsOpen and wheel.IsOpen()
     local preview=not touch and CombatHUD.Preview()
     local left,top,ow,oh,available=Objective(vg,w,h,s,touch)
     local _,clockWidths=Lines(vg,clockCache,clockText,math.max(12,available-48),12,touch,false)
@@ -162,11 +164,13 @@ local function RenderHUD(self,vg)
     -- 按真实矩形避让，而不是固定断点；宽任务卡和非对称安全区
     -- 同样不能与居中的时钟重叠。
     if cx<left+ow+8 then cy=top+oh+8 end
-    Draw.NineSlice(vg,'plaque_ink',cx,cy,cw,ch,12,.9)
-    for i,line in ipairs(clockCache.lines) do
-        Draw.Text(vg,line,cx+cw/2,cy+ch/2+(i-(#clockCache.lines+1)/2)*16,12,C.gold,NVG_ALIGN_CENTER)
+    if not selecting then
+        Draw.NineSlice(vg,'plaque_ink',cx,cy,cw,ch,12,.9)
+        for i,line in ipairs(clockCache.lines) do
+            Draw.Text(vg,line,cx+cw/2,cy+ch/2+(i-(#clockCache.lines+1)/2)*16,12,C.gold,NVG_ALIGN_CENTER)
+        end
     end
-    if crossVisible then
+    if crossVisible and not selecting then
         local x,y=math.floor(w/2),math.floor(h/2)
         local c=CombatHUD.Active() and (CombatHUD.Aimed() and SPELL_COLORS.shatter or C.paper) or SPELL_COLORS.shatter
         Draw.Rect(vg,x-1,y-1,2,2,c)
@@ -175,14 +179,14 @@ local function RenderHUD(self,vg)
         Draw.Rect(vg,x-gap-6,y-1,6,2,c); Draw.Rect(vg,x+gap,y-1,6,2,c)
         if CombatHUD.Active() then CombatHUD.RenderHit(vg,x,y) end
     end
-    if not preview and not touch and not CombatHUD.Active() then
+    if not selecting and not preview and not touch and not CombatHUD.Active() then
         for i,b in ipairs(SPELL_BUTTONS) do
             local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
             Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
         end
     end
-    if not preview and not touch and CombatHUD.Active() then
+    if not selecting and not preview and not touch and CombatHUD.Active() then
         local list=COMBAT_BUTTONS
         list[1].icon=CombatHUD.Weapon()
         for i,b in ipairs(list) do
@@ -194,7 +198,7 @@ local function RenderHUD(self,vg)
     local actionHint=CombatHUD.Hint()
     if not actionHint and charge>0 then actionHint=touch and '碎时蓄力 · 松开【碎时】释放' or '碎时蓄力 · 松开左键释放' end
     local shownHint=M.SelectHint(actionHint,MobileText(target),touch and Controls.Hint() or hint)
-    if not preview and shownHint~='' then
+    if not selecting and not preview and shownHint~='' then
         -- Keep the bottom-center strip in the gap left of the right action cluster.
         -- Longer air instructions wrap instead of covering glide/land buttons.
         local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(640,w-40)
@@ -209,7 +213,7 @@ local function RenderHUD(self,vg)
         Draw.NineSlice(vg,'plaque_ink',hx,hy,hw,hh,12,.9)
         for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.paper,NVG_ALIGN_CENTER) end
     end
-    if not preview and (message~='' or hideFrame>0) then
+    if not selecting and not preview and (message~='' or hideFrame>0) then
         local maxW=math.max(96,w-s.left-s.right-40)
         local ml,widths=Lines(vg,messageCache,displayMessage,maxW-88,24,touch,true)
         local mw=88
@@ -221,7 +225,7 @@ local function RenderHUD(self,vg)
         Draw.Scroll(vg,(w-mw)/2,my,mw,alpha)
         for i,line in ipairs(ml) do Draw.Text(vg,line,w/2,my+48+(i-(#ml+1)/2)*26,24,C.brown,NVG_ALIGN_CENTER,alpha) end
     end
-    if not preview and help and not touch then
+    if not selecting and not preview and help and not touch then
         local hx=w-s.right-320
         local lines=M.HelpLines(CombatHUD.Active() and 'combat' or (CombatHUD.Mounted() and 'mounted' or 'explore'))
         Draw.NineSlice(vg,'panel_paper',hx,top,304,24+#lines*20,8,.95)
@@ -262,9 +266,9 @@ end
 function M.HelpLines(mode)
     if M.helpLines then return M.helpLines[mode] or M.helpLines.explore end
     M.helpLines={
-    combat= {'WASD 移动 · Space 跳跃','左键攻击/蓄力 · 右键重击','Shift 闪避 · Q 切武器 · C 收刃','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
+    combat= {'WASD 移动 · Space 跳跃','左键攻击/蓄力 · 右键重击','Shift 闪避 / 按住续跑 · C 收刃','按住 Q 选武器 · 松开确认','Esc / 右键取消选武器','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
     mounted= {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Tab 远景 · Esc 释放鼠标','H 隐藏说明'},
-    explore= {'WASD 移动 · Shift 奔跑 · Space 跳跃','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+    explore= {'WASD 移动 · Space 跳跃','Shift 点按闪避 · 按住续跑','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
     }
     return M.helpLines[mode] or M.helpLines.explore
 end

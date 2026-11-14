@@ -26,31 +26,35 @@ end
 function A:Follow()
     self.slideAt=nil;self.followAt=self.time
 end
-function A:Land() self.landAt=self.time end
+function A:Land() self.landAt,self.landFresh=self.time,true end
 function A:Full() self.fullAt=self.time end
 function A:Cancel()
     self.slideAt,self.followAt,self.landAt,self.fullAt=nil,nil,nil,nil
+    self.landFresh=false;self.sprint=0
 end
-function A:Update(dt,moves,enabled,shakeEnabled)
+function A:Update(dt,moves,enabled,shakeEnabled,impactEnabled)
     self.time=self.time+math.max(0,dt)
+    if self.landFresh then self.landAt,self.landFresh=self.time,false end
     local out=self.output
-    out.focus,out.distance,out.fov,out.cross=Vector3.ZERO,0,0,0
+    out.focus,out.distance,out.fov,out.cross,out.impact=Vector3.ZERO,0,0,0,Vector3.ZERO
     local drawing=moves.clip=='bow_draw' or moves.clip=='bow_hold'
     if drawing then
-        if not self.bowDrawing then self.bowStart,self.bowFrom=self.time-dt,self.bow end
-        self.bow=self.bowFrom+(1-self.bowFrom)*ease((self.time-self.bowStart)/.20)
+        self.bow=clamp(moves.charge or 0,0,1)^2
         self.bowRelease=self.bow
         self.bowReleasedAt=nil
     else
         self.bowReleasedAt=self.bowReleasedAt or self.time-dt
-        self.bow=self.bowRelease*(1-ease((self.time-self.bowReleasedAt)/.10))
+        self.bow=self.bowRelease*(1-ease((self.time-self.bowReleasedAt)/.12))
     end
     self.bowDrawing=drawing
-    out.cross=self.bow
-    out.look=enabled and (1-.40*self.bow) or 1
-    if not enabled then return out end
-    -- Base camera remains 55. This is the sole bow FOV source (55 -> 43).
-    out.fov=-12*self.bow
+    out.cross=math.sqrt(self.bow)
+    out.look=enabled and math.tan(math.rad((55-8.25*self.bow)/2))/math.tan(math.rad(55/2)) or 1
+    local sprint=enabled and impactEnabled~=false and not drawing and self.bow<=0 and (moves.sprintWeight or 0) or 0
+    local oldSprint=self.sprint or 0
+    self.sprint=sprint>oldSprint and math.min(sprint,oldSprint+dt/.22) or math.max(sprint,oldSprint-dt/.18)
+    if not enabled then self.sprint=0;return out end
+    -- Single source: 55*(1-.15*u^2), full 46.75 degrees.
+    out.fov=-8.25*self.bow
     if self.slideAt then
         local t=self.time-self.slideAt
         -- Lag opposes travel; neither yaw/pitch/roll nor screen-space reticle move.
@@ -60,7 +64,7 @@ function A:Update(dt,moves,enabled,shakeEnabled)
     end
     if self.followAt then out.distance=-.10*pulse(self.time-self.followAt,.06,.18) end
     local id=moves.clip
-    if id and (id:find('sword_light_',1,true) or id=='sword_heavy_release') then
+    if impactEnabled~=false and id and (id:find('sword_light_',1,true) or id=='sword_heavy_release') then
         local clip=require('combat.AnimClips').Clips[id]
         local t=moves.whooshTime or 0 -- existing action clock, frozen by hitstop
         local start=clip.phases.active[1]
@@ -71,10 +75,12 @@ function A:Update(dt,moves,enabled,shakeEnabled)
             out.fov=math.max(out.fov,2*pulse(t-start,.02,.12))
         end
     end
-    if self.landAt then out.focus=out.focus+Vector3(0,-.03*pulse(self.time-self.landAt,.02,.10),0) end
-    if shakeEnabled and self.fullAt and self.time-self.fullAt<.08 then
-        local t=self.time-self.fullAt
-        out.focus=out.focus+Vector3(0,.006*math.sin(t*math.pi*2/.08)*(1-t/.08),0)
+    if self.bow<=0 and impactEnabled~=false and self.sprint>0 then
+        out.distance=math.max(out.distance,.20*self.sprint)
+        out.fov=math.max(out.fov,1.5*self.sprint)
+    end
+    if self.landAt and shakeEnabled~=false and impactEnabled~=false then
+        out.impact=Vector3(0,-.03*pulse(self.time-self.landAt,.02,.10),0)
     end
     return out
 end

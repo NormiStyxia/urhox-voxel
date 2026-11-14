@@ -127,8 +127,8 @@ local crystal=assert(B.Compile(sword))
 Mock.Near(crystal.stats.charge,.45*.92);Mock.Near(crystal.stats.attack,9.5)
 local bow=config('bow');bow.parts.grip='bow_grip_stable';bow.parts.tip='tip_crystal'
 local tuned=assert(B.Compile(bow))
-Mock.Near(tuned.stats.draw,.7/.92);Mock.Near(tuned.stats.spread,.75);Mock.Near(tuned.stats.move,.6)
-Mock.Near(tuned.stats.armorBreak,1.25);Mock.Near(tuned.stats.range,36*.92)
+Mock.Near(tuned.stats.draw,1/.92);Mock.Near(tuned.stats.spread,.75);Mock.Near(tuned.stats.move,.6)
+Mock.Near(tuned.stats.armorBreak,1.25);Mock.Near(tuned.stats.range,64*.92)
 Mock.Near(tuned.stats.projectileSpeed,.9);Mock.Near(tuned.stats.crystalRadius,.8)
 assert(tuned.stats.crystalDamageMultiplier==.25 and tuned.stats.crystalDamage==nil)
 for _,grip in ipairs(P.GetOptions('bow','grip')) do

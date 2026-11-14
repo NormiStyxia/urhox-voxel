@@ -89,7 +89,7 @@ end
 local function Sub(a,b) return {a[1]-b[1],a[2]-b[2],a[3]-b[3]} end
 local function Add(a,b) return {a[1]+b[1],a[2]+b[2],a[3]+b[3]} end
 local LIMITS = {attack={1,40},speed={0.7,1.4},reach={0.8,1.4},poise={0,30},
-    charge={0.2,1.2},draw={0.3,1.4},range={12,60},spread={0.1,2},move={0.2,0.8},
+    charge={0.2,1.2},draw={.3/.7,1.4/.7},range={12*64/36,96},spread={0.1,2},move={0.2,0.8},
     projectileSpeed={0.7,1.4},armorBreak={.5,2},crystalRadius={0,1.5},crystalDamageMultiplier={0,.5}}
 local MULTIPLIERS={chargeMultiplier='charge',drawMultiplier='draw',rangeMultiplier='range',
     spreadMultiplier='spread',projectileSpeedMultiplier='projectileSpeed'}

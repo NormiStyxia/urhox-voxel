@@ -131,6 +131,8 @@ function M.Glow() return (mounted or dead) and 0 or glow end
 function M.ReadyFlash() return readyFlash>0 end
 function M.HasAggro() return options.aggro and options.aggro()==true or false end
 function M.CanSheath() return not M.HasAggro() end
+-- R9: locomotion/sprint is not busy and must not refresh Activity; ordinary
+-- .40s hand-to-back grace and automatic exploration continue while running.
 function M.SetBusy(value)
     local nextBusy=value==true
     if busy and not nextBusy then idle=0 end -- grace starts at recovery, not hit_on

@@ -103,7 +103,7 @@ end
 local hf=assert(io.open('scripts/ui/CombatHUD.lua'));local hs=hf:read('*a');hf:close()
 local points={}
 for i=1,50 do points[i]=valueFields{world=Vector3.ZERO}end
-local he=setmetatable({H={},Moves=C,rangePoints=points},{__index=_G})
+local he=setmetatable({H={},Moves=C,Perf=require('combat.SwingPerf'),rangePoints=points},{__index=_G})
 assert(load(assert(hs:match('(function H.UpdateRange.-)\nlocal data=')),'actual range projection','t',he))()
 local projected=0
 he.H.UpdateRange{combat=true,moves={StrikeZones=function()return z,nil,true end},
@@ -113,5 +113,8 @@ he.H.UpdateRange{combat=true,moves={StrikeZones=function()return z,nil,true end}
  end,camera={WorldToScreenPoint=function(_,world)
   projected=projected+1;assert(world.x>28);return {x=.5,y=.5}
  end}}
-assert(projected==25 and points[1].visible)
+assert(projected==8,'range budget verifies eight points / sixteen rays at most')
+local visible=0
+for i=1,25 do if points[i].visible then visible=visible+1 end end
+assert(visible==8)
 print('PASS native Vector3 boundary: '..tests..' real Action->animation->zone->LOS->Apply matrices; actual F11 prepare aligns body/camera; all light/heavy damages; translated range samples')

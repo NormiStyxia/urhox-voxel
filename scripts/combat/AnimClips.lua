@@ -43,6 +43,10 @@
 ---@field legacyKeys table<string, table[]>|nil Pre-path poses for params.legacyPose=1.
 ---@field aimFacing boolean|nil Bow aim is relative to W2 facing, not torso lean.
 ---@field balanceKeys table<string, table[]>|nil Unarmed slide balance (weaponInHand=0).
+---@field finalDirectional boolean|nil R9 stores final forward Euler angles, without double offsets.
+---@field runKeys table<string, table[]>|nil Pending-run slide tail; same event/motion clocks.
+---@field runBalanceKeys table<string, table[]>|nil Unarmed pending-run arm tail.
+---@field locomotion boolean|nil Pure pose, driven by real displacement gaitPhase.
 ---@field smoothBlend boolean|nil Smooth natural entry/exit, never retime events.
 
 ---@class CombatClipCatalog
@@ -51,7 +55,7 @@
 ---@field Clips table<string, CombatClip>
 ---@field DefaultDodge string
 local C = {}
-C.Layer = { STANCE=1, DRAW=2, ATTACK=3, DODGE=4, HIT=5, KNOCKDOWN=6, DEATH=7 }
+C.Layer = { STANCE=1, LOCOMOTION=2, DRAW=3, ATTACK=4, DODGE=5, HIT=6, KNOCKDOWN=7, DEATH=8 }
 C.DefaultDodge="dodge_slide"
 C.Order = {}
 ---@type table<string, CombatClip>
@@ -225,43 +229,62 @@ attack({ -- 符号待 Web 校准
     {{-28,0,-5},{-25,0,-5},{-15,0,0},{-20,-15,0},{-12,0,0},{0,0,0}},
     {{{0,0,0},{-25,0,10}},{{0,0,-.04},{-30,0,25}},{{0,0,0},{-15,0,30}},
      {{0,0,.08},{25,0,-15}},{{0,0,.05},{38,0,-25}},{{0,0,0},{0,0,0}}})
-add { -- 符号待 Web 校准
-    id="dodge_slide",dur=.32,layer=L.DODGE,realTime=true,continuous=true,directional=true,
-    fadeIn=.02,fadeOut=.02,cancelAt=.22,cancelBlend=.04,
+-- R9 final source: six real rigid bones; body/legs are siblings, no knees.
+local slideTimes={0,.02,.06,.12,.22,.26,.30,.32}
+local function slideTrack(poses,arms)
+    local out={}
+    for i,base in ipairs(slideTimes) do
+        local at=base
+        if arms and i>1 and i<#slideTimes then at=math.min(.32,base+.015) end
+        out[i]={at/.32,poses[i],"smoothStep"}
+    end
+    return out
+end
+local slideBody={{4,0,0},{14,0,0},{24,2,0},{24,1,0},{18,0,0},{10,0,0},{6,0,0},{4,0,0}}
+local slideHead={{-1,0,0},{-10,0,0},{-18,-1,0},{-18,-.5,0},{-13,0,0},{-7,0,0},{-3,0,0},{-1,0,0}}
+local slideRight={{0,0,0},{10,0,0},{18,0,0},{16,0,0},{8,0,0},{-10,0,0},{-4,0,0},{0,0,0}}
+local slideLeft={{0,0,0},{-14,0,0},{-22,0,0},{-20,0,0},{-12,0,0},{10,0,0},{4,0,0},{0,0,0}}
+local balanceR={{0,0,8},{8,0,10},{20,0,12},{24,0,12},{12,0,10},{-6,0,8},{0,0,8},{0,0,8}}
+local balanceL={{0,0,-8},{-8,0,-10},{-20,0,-12},{-18,0,-12},{-12,0,-10},{6,0,-8},{0,0,-8},{0,0,-8}}
+add { -- 符号待 Web 校准；root target is corrected against actual sole contacts.
+    id="dodge_slide",dur=.32,layer=L.DODGE,realTime=true,continuous=true,directional=true,finalDirectional=true,
+    fadeIn=.03,fadeOut=.03,smoothBlend=true,cancelAt=.22,cancelBlend=.04,
     phases=phases(.32,.04,.20),
-    -- Facing/yaw stays with W2. moveX/moveZ is the accepted direction expressed
-    -- in that facing's local X/Z plane; no input defaults to (0,-1), a backstep.
-    -- All tracks are six explicit poses; no nonexistent knee joints are needed.
-    keys={
-        body={{0,{6,0,0}},{.04/.32,{12,0,0},"outQuad"},{.10/.32,{18,0,0}},
-            {.18/.32,{12,0,0}},{.26/.32,{4,0,0}},{1,{6,0,0}}},
-        head={{0,{3,0,0}},{.04/.32,{-8,0,0},"outQuad"},{.10/.32,{-12,0,0}},
-            {.18/.32,{-8,0,0}},{.26/.32,{-3,0,0}},{1,{3,0,0}}},
-        arm_right={{0,{-65,0,12}},{.04/.32,{-50,0,8}},{.10/.32,{-45,0,8}},
-            {.18/.32,{-70,0,12}},{.26/.32,{-75,0,10}},{1,{-65,0,12}}},
-        arm_left={{0,{0,0,-8}},{.04/.32,{-15,0,-20}},{.10/.32,{-20,0,-25}},
-            {.18/.32,{-10,0,-18}},{.26/.32,{-5,0,-10}},{1,{0,0,-8}}},
-        leg_right={{0,{0,0,0}},{.04/.32,{20,0,0}},{.10/.32,{20,0,0}},
-            {.18/.32,{12,0,0}},{.26/.32,{6,0,0}},{1,{0,0,0}}},
-        leg_left={{0,{0,0,0}},{.04/.32,{-25,0,0}},{.10/.32,{-20,0,0}},
-            {.18/.32,{-10,0,0}},{.26/.32,{-6,0,0}},{1,{0,0,0}}},
-    },
-    bowKeys={
-        arm_left={{0,{-65,0,-8}},{.04/.32,{-68,0,-10}},{.10/.32,{-70,0,-12}},
-            {.18/.32,{-68,0,-10}},{.26/.32,{-66,0,-8}},{1,{-65,0,-8}}},
-        arm_right={{0,{-30,0,12}},{.04/.32,{-35,0,16}},{.10/.32,{-40,0,20}},
-            {.18/.32,{-35,0,16}},{.26/.32,{-30,0,12}},{1,{-30,0,12}}},
-    },
-    lean={{0,0},{.04/.32,1},{.10/.32,1},{.18/.32,1},{.26/.32,1},{1,0}},
-    root={{0,-.04},{.04/.32,-.14},{.10/.32,-.18},{.18/.32,-.15},{.26/.32,-.08},{1,-.04}},
+    keys={body=slideTrack(slideBody),head=slideTrack(slideHead),
+        leg_right=slideTrack(slideRight),leg_left=slideTrack(slideLeft),
+        arm_right=slideTrack({{-40,0,8},{-40,0,10},{-32,0,12},{-28,0,12},{-32,0,10},{-36,0,10},{-40,0,8},{-40,0,8}},true),
+        arm_left=slideTrack({{0,0,-8},{-5.6,0,-10},{-14,0,-12},{-12.6,0,-12},{-8.4,0,-10},{4.2,0,-8},{0,0,-8},{0,0,-8}},true)},
+    balanceKeys={arm_right=slideTrack(balanceR,true),arm_left=slideTrack(balanceL,true)},
+    bowKeys={arm_left=slideTrack({{-55,0,-8},{-55,0,-10},{-60,0,-12},{-60,0,-12},{-58,0,-10},{-55,0,-8},{-55,0,-8},{-55,0,-8}},true),
+        arm_right=slideTrack({{-15,0,8},{-18,0,10},{-25,0,12},{-25,0,12},{-20,0,10},{-18,0,8},{-15,0,8},{-15,0,8}},true)},
+    root={{0,0},{.02/.32,-.01},{.06/.32,-.02},{.12/.32,-.02},{.22/.32,-.01},{.26/.32,-.01},{.30/.32,0},{1,0}},
     motion={{t0=0,t1=.06,forward=.72},{t0=.06,t1=.16,forward=.90},
         {t0=.16,t1=.26,forward=.50},{t0=.26,t1=.30,forward=.08}},
-    events={{t=0,"iframe_on",clock="real"},{t=0,"dust_start",clock="real"},
+    events={{t=0,"iframe_on",clock="real"},{t=0,"dust_start",clock="real"},{t=0,"dust_streak",clock="real"},
         {t=.04/.32,"afterimage_on",clock="real"},{t=.16/.32,"afterimage_off",clock="real"},
         {t=.20/.32,"iframe_off",clock="real"},{t=.22/.32,"cancel_open",clock="real"},
-        {t=.26/.32,"dust_stop",clock="real"},{t=.30/.32,"move_end",clock="real"},
-        {t=1,"cancel_close",clock="real"}},
+        {t=.26/.32,"dust_stop",clock="real"},{t=.30/.32,"move_end",clock="real"},{t=1,"cancel_close",clock="real"}},
 }
+local slide=C.Clips.dodge_slide
+slide.runKeys={}
+for name,track in pairs(slide.keys) do
+    local copy={};for i,kf in ipairs(track) do copy[i]={kf[1],{kf[2][1],kf[2][2],kf[2][3]},kf[3]} end
+    slide.runKeys[name]=copy
+end
+local function tail(name,a,b)
+    local track=slide.runKeys[name]
+    track[6][2],track[7][2],track[8][2]=a,b,b
+end
+tail('body',{19,0,0},{18,0,0});tail('head',{-14,0,0},{-13,0,0})
+tail('leg_right',{8,0,0},{18,0,0});tail('leg_left',{-14,0,0},{-18,0,0})
+slide.runBalanceKeys={arm_right=slideTrack({balanceR[1],balanceR[2],balanceR[3],balanceR[4],balanceR[5],{16,0,10},{20,0,10},{20,0,10}},true),
+    arm_left=slideTrack({balanceL[1],balanceL[2],balanceL[3],balanceL[4],balanceL[5],{-14,0,-10},{-20,0,-10},{-20,0,-10}},true)}
+add { -- 符号待 Web 校准；phase follows actual metres, no horizontal root motion.
+    id="sprint_loop",dur=.38,layer=L.LOCOMOTION,loop=true,realTime=true,continuous=true,locomotion=true,
+    fadeIn=.04,fadeOut=.06,keys={body=k({14,0,0},{14,0,0},{14,0,0},{14,0,0}),
+        head=k({-10,0,0},{-10,0,0},{-10,0,0},{-10,0,0}),
+        arm_right=k({0,0,8},{0,0,8},{0,0,8},{0,0,8}),arm_left=k({0,0,-8},{0,0,-8},{0,0,-8},{0,0,-8}),
+        leg_right=k({0,0,0},{0,0,0},{0,0,0},{0,0,0}),leg_left=k({0,0,0},{0,0,0},{0,0,0},{0,0,0})}}
 add { -- 符号待 Web 校准
     id="dodge_roll",dur=.45,layer=L.DODGE,phases=phases(.45,0,.25),deprecated=true,replacement="dodge_slide",
     keys={body={{0,{6,0,0}},{.08,{22,0,0},"inQuad"},{.18,{65,0,0},"inQuad"},{.38,{190,0,0}},{.25/.45,{330,0,0},"outQuad"},{1,{366,0,0},"outQuad"}},
@@ -286,7 +309,7 @@ add { -- 符号待 Web 校准
         head=k({0,-35,0},{0,-35,0},{0,-35,0},{0,-35,0}),
         arm_left=k({-85,-35,-8},{-85,-35,-8},{-86,-35,-8},{-87,-35,-8}),
         arm_right=k({-80,-20,40},{-83,-8,43},{-86,8,49},{-90,28,58})},
-    root={{0,-.04},{1,-.04}},events={{t=.8,"draw_full",param="p"}},
+    root={{0,-.04},{1,-.04}},events={{t=1,"draw_full",param="p"}},
 }
 add { -- 符号待 Web 校准
     id="bow_release",dur=.20,layer=L.ATTACK,weaponType="bow",
@@ -295,8 +318,8 @@ add { -- 符号待 Web 校准
         arm_right=k({-90,28,58},{-72,-30,35},{-82,-5,35},{-45,0,12},.12,.4),
         arm_left=k({-87,-35,-8},{-94,-35,-8},{-85,-20,-8},{-65,0,-8},.12,.4)},
     events={{t=0,"fire"},{t=.18/.20,"recover_end"}},
-    weapon={{0,offset={0,0,0},euler={0,0,0}},{.12,offset={0,0,-.025},euler={-4,0,0}},
-        {.4,offset={0,0,.01},euler={2,0,0}},{1,offset={0,0,0},euler={0,0,0}}},
+    weapon={{0,offset={0,0,0},euler={0,0,0}},{.12,offset={0,0,-.015},euler={-2,0,0}},
+        {.4,offset={0,0,0},euler={0,0,0}},{1,offset={0,0,0},euler={0,0,0}}},
 }
 add { -- 符号待 Web 校准
     id="bow_cancel",dur=.18,layer=L.ATTACK,weaponType="bow",
@@ -490,34 +513,4 @@ for _,id in ipairs({"bow_draw","bow_hold","bow_release","bow_cancel"}) do
     c.aimFacing=true
     c.continuous=true
 end
--- 2026-11-15: grounded slide, replacing §20.5 exaggerated rigid low pose.
--- Six poses: ready -> preload -> push -> glide -> brake -> settle. Arms lag
--- the hips, the knees do not exist, and motion is still owned entirely by W2.
--- 符号待 Web 校准
-local slide=C.Clips.dodge_slide
-slide.fadeIn,slide.fadeOut,slide.smoothBlend=.04,.08,true
-local slideTimes={0,.04,.10,.18,.26,.32}
-local armTimes={0,.055,.12,.20,.27,.32}
-local legTimes={0,.04,.075,.16,.24,.32}
-local function slideTrack(times,poses)
-    local track={}
-    for i=1,6 do track[i]={times[i]/slide.dur,poses[i],"smoothStep"} end
-    return track
-end
-slide.root={{0,0},{.04/.32,-.065,"smoothStep"},{.10/.32,-.10,"smoothStep"},
-    {.18/.32,-.06,"smoothStep"},{.26/.32,-.025,"smoothStep"},{1,0,"smoothStep"}}
--- Body pitch stores the directional lean delta; the sampler adds neutral 4°.
-slide.keys.body=slideTrack(slideTimes,{{0,0,0},{-4,-2,0},{12,4,0},{8,2,0},{-5,-2,0},{0,0,0}})
-slide.keys.head=slideTrack(slideTimes,{{0,0,0},{2.6,1.3,0},{-7.8,-2.6,0},{-5.2,-1.3,0},{3.25,1.3,0},{0,0,0}})
-slide.keys.leg_right=slideTrack(legTimes,{{0,0,0},{-7,0,0},{16,0,0},{10,0,0},{-10,0,0},{0,0,0}})
-slide.keys.leg_left=slideTrack(legTimes,{{0,0,0},{7,0,0},{-20,0,0},{-12,0,0},{13,0,0},{0,0,0}})
-slide.keys.arm_right=slideTrack(armTimes,{{-50,0,10},{-40,0,14},{-24,0,18},{-32,0,16},{-44,0,12},{-50,0,10}})
-slide.keys.arm_left=slideTrack(armTimes,{{0,0,-8},{-12,0,-14},{-22,0,-18},{-10,0,-15},{8,0,-10},{0,0,-8}})
-slide.bowKeys={
-    arm_left=slideTrack(armTimes,{{-65,0,-8},{-63,0,-11},{-60,0,-14},{-62,0,-12},{-65,0,-9},{-65,0,-8}}),
-    arm_right=slideTrack(armTimes,{{-25,0,10},{-18,0,14},{-12,0,18},{-18,0,15},{-28,0,12},{-25,0,10}})}
-slide.balanceKeys={
-    arm_right=slideTrack(armTimes,{{0,0,8},{10,0,14},{18,0,20},{8,0,16},{-8,0,11},{0,0,8}}),
-    arm_left=slideTrack(armTimes,{{0,0,-8},{-10,0,-14},{-18,0,-20},{-8,0,-16},{8,0,-11},{0,0,-8}})}
-table.insert(slide.events,3,{t=0,"dust_streak",clock="real"})
 return C

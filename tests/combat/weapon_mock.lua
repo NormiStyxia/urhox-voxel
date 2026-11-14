@@ -8,6 +8,8 @@ function V.__add(a,b) return v(a.x+b.x,a.y+b.y,a.z+b.z) end
 function V.__sub(a,b) return v(a.x-b.x,a.y-b.y,a.z-b.z) end
 function V.__mul(a,b) return v(a.x*b,a.y*b,a.z*b) end
 function V:Length() return math.sqrt(self.x*self.x+self.y*self.y+self.z*self.z) end
+function V:LengthSquared() return self.x*self.x+self.y*self.y+self.z*self.z end
+function V:Normalized() local n=self:Length();return n>0 and self*(1/n) or v() end
 local Q={}
 local function q(w,x,y,z) return setmetatable({w=w,x=x,y=y,z=z},Q) end
 function Q.__index(a,key)
@@ -117,6 +119,10 @@ function N:SetParent(parent)
     if parent then parent.children[#parent.children+1]=self end
 end
 function N:LocalToWorld(point) return worldPosition(self)+worldRotation(self)*v(point.x*self.scale.x,point.y*self.scale.y,point.z*self.scale.z) end
+function N:SetDirection(direction)
+    local d=direction:Normalized()
+    self.rotation=euler(-math.deg(math.asin(math.max(-1,math.min(1,d.y)))),math.deg(math.atan(d.x,d.z)),0)
+end
 function N:Remove() assert(not self.removed,"double node removal"); self.removed=true end
 
 -- Record the public immediate-mode API; no GPU/render/job-system simulation.

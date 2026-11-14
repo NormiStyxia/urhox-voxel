@@ -113,8 +113,10 @@ function T:Finish()
         local shot=self.shots[1]; local tier=s.id:sub(7)
         local damage=self.damage.bow_release or 0
         local stats=m.rig:GetStats()
-        local speed=({weak=18,mid=30,full=44})[tier]*(stats.projectileSpeed or 1)
-        local expected=(stats.attack or 8)*({weak=.5,mid=1,full=1.8})[tier]
+        local u=shot and shot.actual.drawU or 0
+        local fullSpeed=60*(stats.projectileSpeed or 1)
+        local speed=fullSpeed*(u*u+2*u)/3
+        local expected=(stats.attack or 8)*1.5*math.max(.1,math.min(1.05,(shot and shot.actual.impactSpeed or 0)/fullSpeed))*(u>=1 and 1.2 or 1)
         self:Result(s.id,#self.shots==1 and shot.tier==tier and (self.hits.bow_release or 0)==1
             and math.abs(damage-expected)<.01 and math.abs(shot.speed-speed)<.01,
             string.format('shots=%d tier=%s speed=%.3f hit_damage=%.3f crystal_resolved=%.3f',#self.shots,shot and shot.tier or 'none',shot and shot.speed or -1,damage,shot and shot.actual.crystalDamage or 0))

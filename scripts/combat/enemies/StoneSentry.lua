@@ -116,6 +116,10 @@ function Sentry:ApplyHit(info)
             fx.normal=normal and Vector3(normal.x,normal.y,normal.z) or Vector3(-dir.x,-dir.y,-dir.z)
             fx.material,fx.part,fx.tier,fx.kind,fx.weak='stone',info.part,info.tier or 'light','deflect',false
             fx.swingId,fx.weapon=info.swingId,info.weapon or info.kind
+            local impactDir=info.impactDir or dir
+            fx.impactDir=Vector3(impactDir.x,impactDir.y,impactDir.z)
+            fx.combo,fx.full,fx.critical,fx.profileId=info.combo,info.full==true,info.critical==true,info.profileId
+            fx.stop,fx.attackerStop,fx.flash,fx.flashPeak=info.stop,info.attackerStop,info.flash,info.flashPeak
             hide(stone); self.result.hit=true
             self.result.part,self.result.material=info.part,'stone'
             self:StageHitPresentation(info,self.result)

@@ -2,9 +2,9 @@ local DebugLog=require('ruins.DebugLog')
 local M={}
 -- Budgets centralized here. High preserves the current scene's shadow/grass/capture settings.
 M.PROFILES={
- high={cloudMotionDetail=1,heightFogDensity=0.009,braziers=6,brazierLights=3,cloudCount=24,cloudsEnabled=true,lightShafts=8,motes=80,volumetric='full',grassDensity=1,grassDistance=55,shadowCascades=3,shadowDistance=140,shadowOn=true,shadowMapSize=2048,shadowPCFSamples=4,bloom=true,postFx='full',skyCaptureResolution=64,skyCaptureInterval=.5},
- medium={cloudMotionDetail=0.5,heightFogDensity=0.006,braziers=4,brazierLights=2,cloudCount=12,cloudsEnabled=true,lightShafts=3,motes=28,volumetric='lite',grassDensity=.5,grassDistance=38,shadowCascades=2,shadowDistance=65,shadowOn=true,shadowMapSize=1024,shadowPCFSamples=2,bloom=false,postFx='lite',skyCaptureResolution=32,skyCaptureInterval=2},
- low={cloudMotionDetail=0,heightFogDensity=0,braziers=2,brazierLights=1,cloudCount=4,cloudsEnabled=true,lightShafts=0,motes=0,volumetric='off',grassDensity=.25,grassDistance=24,shadowCascades=0,shadowDistance=0,shadowOn=false,shadowMapSize=512,shadowPCFSamples=1,bloom=false,postFx='off',skyCaptureResolution=32,skyCaptureInterval=5},
+ high={fireflies=48,flameDetail=1,cloudMotionDetail=1,heightFogDensity=0.009,braziers=6,brazierLights=3,cloudCount=24,cloudsEnabled=true,lightShafts=8,motes=80,volumetric='full',grassDensity=1,grassDistance=55,shadowCascades=3,shadowDistance=140,shadowOn=true,shadowMapSize=2048,shadowPCFSamples=4,bloom=true,postFx='full',skyCaptureResolution=64,skyCaptureInterval=.5},
+ medium={fireflies=20,flameDetail=0.5,cloudMotionDetail=0.5,heightFogDensity=0.006,braziers=4,brazierLights=2,cloudCount=12,cloudsEnabled=true,lightShafts=3,motes=28,volumetric='lite',grassDensity=.5,grassDistance=38,shadowCascades=2,shadowDistance=65,shadowOn=true,shadowMapSize=1024,shadowPCFSamples=2,bloom=false,postFx='lite',skyCaptureResolution=32,skyCaptureInterval=2},
+ low={fireflies=0,flameDetail=0.25,cloudMotionDetail=0,heightFogDensity=0,braziers=2,brazierLights=1,cloudCount=4,cloudsEnabled=true,lightShafts=0,motes=0,volumetric='off',grassDensity=.25,grassDistance=24,shadowCascades=0,shadowDistance=0,shadowOn=false,shadowMapSize=512,shadowPCFSamples=1,bloom=false,postFx='off',skyCaptureResolution=32,skyCaptureInterval=5},
 }
 local allowed={quality={high=true,medium=true,low=true,auto=true},grass={full=true,half=true,off=true},shadows={high=true,low=true,off=true},postFx={full=true,lite=true,off=true}}
 local booleanKeys={cloudMotion=true,atmosphereFog=true,nightBraziers=true,debugLog=true,perfHud=true,clouds=true,lowClouds=true,cloudShadow=true,lightShafts=true,floatingMotes=true,volumetric=true}
@@ -43,6 +43,7 @@ function M.Resolve()
     result.cloudShadowEnabled=result.cloudsEnabled and tier~='low' and values.cloudShadow~=false
     if values.lightShafts~=nil then result.lightShafts=values.lightShafts and math.max(3,result.lightShafts) or 0 end
     if values.floatingMotes~=nil then result.motes=values.floatingMotes and math.max(28,result.motes) or 0 end
+    if values.floatingMotes==false then result.fireflies=0 end
     if values.volumetric~=nil then result.volumetric=values.volumetric and 'full' or 'off' end
     if values.grass then result.grassDensity=({full=1,half=.5,off=0})[values.grass] end
     if values.shadows then

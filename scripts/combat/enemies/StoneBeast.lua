@@ -160,10 +160,10 @@ function Beast:AfterRecover()
         if self:SetState(Base.State.TELEGRAPH) then self.doubleCharge=false end
     else Base.AfterRecover(self) end
 end
-function Beast:TickExtras(dt,target)
+function Beast:TickExtras(_,target,poseDt)
     self.lastTarget=target
-    if self.hitStop<=0 and self.state==Base.State.TELEGRAPH and self.attack.name=='stomp' then
-        if self.stateTime<self.attack.telegraph*.3 then self:Move(-self.fx*dt*1.4,-self.fz*dt*1.4) end
+    if poseDt>0 and self.state==Base.State.TELEGRAPH and self.attack.name=='stomp' then
+        if self.stateTime<self.attack.telegraph*.3 then self:Move(-self.fx*poseDt*1.4,-self.fz*poseDt*1.4) end
     end
 end
 function Beast:UpdatePose()
@@ -190,6 +190,8 @@ function Beast:Reset()
         self.ragePending,self.rageActive,self.rageDone=false,false,false
         self.rageTime,self.rageRoared=0,false
         self.pendingTrip,self.chargeWillTrip,self.chargeStunned=false,false,false
+        self:UpdatePose()
+        if self.visual then self.visual:ClearFlash(); self.visual:Update(self) end
     end
     return reset
 end

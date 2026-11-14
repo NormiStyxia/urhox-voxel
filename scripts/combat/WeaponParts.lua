@@ -26,7 +26,7 @@ Parts.ColorPresets = {
 }
 Parts.BaseStats = {
     sword = {attack=10, speed=1, reach=1, poise=6, armorBreak=1, charge=0.45},
-    bow = {attack=8, speed=1, reach=1, poise=4, armorBreak=1, draw=0.7, range=36, spread=1, move=0.5, projectileSpeed=1},
+    bow = {attack=8, speed=1, reach=1, poise=4, armorBreak=1, draw=1, range=64, spread=1, move=0.5, projectileSpeed=1},
 }
 ---@type table<string, WeaponPart>
 Parts.ById = {}
@@ -140,8 +140,8 @@ local function Limbs(id, name, desc, halfHeight, recurve, stats)
     Add({id=id,weapon="bow",slot="limbs",name=name,desc=desc,voxels=layers,origin={-1,-halfHeight,-2},
         sockets={root={0,0,0},top={0,halfHeight,-1}},stats=stats,palette=CHANNEL_PALETTE})
 end
-Limbs("limbs_short","短弓","拉弓快，射程近",15,false,{draw=-0.15,range=-8,attack=-1})
-Limbs("limbs_long","长弓","射程远，拉满稍慢",20,false,{draw=0.16,range=10,attack=2})
+Limbs("limbs_short","短弓","拉弓快，射程近",15,false,{draw=-.15/.7,range=-8*64/36,attack=-1})
+Limbs("limbs_long","长弓","射程远，拉满稍慢",20,false,{draw=.16/.7,range=10*64/36,attack=2})
 Limbs("limbs_recurve","反曲弓","失衡略强，出手略慢",18,true,{poise=.5,speed=-.02})
 
 local function BowPart(id,slot,name,desc,profile,origin,sockets,stats)

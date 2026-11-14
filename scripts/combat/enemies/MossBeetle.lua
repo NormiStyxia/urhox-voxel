@@ -32,7 +32,7 @@ function Beetle:Chase(dt,target,distance)
         self:StartAttack()
     else
         -- Orbit into bite distance, then commit to the readable straight lunge.
-        local side=math.sin(self.age*.7)>.0 and 1 or -1
+        local side=math.sin(self.poseAge*.7)>.0 and 1 or -1
         self:Move((self.fx*.92+self.fz*.38*side)*self.config.speed*dt,
             (self.fz*.92-self.fx*.38*side)*self.config.speed*dt)
     end

@@ -3,6 +3,7 @@ local Clouds = require("ruins.SkyClouds")
 local Shafts = require("ruins.LightShafts")
 local Motes = require("ruins.FloatingMotes")
 local Braziers = require("ruins.NightBraziers")
+local Fireflies = require("ruins.Fireflies")
 local Quality = require("ruins.LightQuality")
 local settingsOK,GameSettings = pcall(require,"ruins.GameSettings")
 if not settingsOK then GameSettings=nil end
@@ -33,6 +34,8 @@ function M:Init(scene,dn)
     self.motes = nil
     ---@type RuinsNightBraziers|nil
     self.braziers=nil
+    ---@type RuinsFireflies|nil
+    self.fireflies=nil
     ---@type Vector3[]
     self.pillarAnchors={}
     self.active,self.stopped,self.realFog,self.shadowActive = false,false,false,false
@@ -46,6 +49,14 @@ function M:Init(scene,dn)
     self.ground = nil
     ---@type Material|nil 本次开启已绑定（或已尝试失败）的地表，避免每帧重试/查资源
     self.shadowGround = nil
+    ---@type Material|nil Only the documented fallback tuft shader, not native GrassField.
+    self.shadowGrass=nil
+    ---@type Texture2D|nil
+    self.shadowTexture=nil
+    ---@type Texture2D|nil
+    self.grassShadowTexture=nil
+    self.shadowBound,self.grassShadowBound=false,false
+    self.shadowProjection=Vector4(0,0,120,0)
     self.profile = Quality.PROFILES[Quality.Default()]
     Quality.ConfigureScene(dn.zone,dn.sun)
     if GameSettings then
@@ -133,10 +144,13 @@ function M:ApplySwitches()
     if self.clouds then self.clouds:SetMotion(f.cloudMotion,p.cloudMotionDetail or 0) end
     local fires=f.nightBraziers and math.min(#self.pillarAnchors,p.braziers or 0) or 0
     local lamps=math.min(fires,p.brazierLights or 0)
-    if self.braziers and (fires~=self.braziers.count or lamps~=self.braziers.lightCount) then
+    if self.braziers and (fires~=self.braziers.count or lamps~=self.braziers.lightCount or (p.flameDetail or 1)~=self.braziers.detail) then
         self.braziers:Dispose();self.braziers=nil
     end
-    if fires>0 and not self.braziers then self.braziers=Braziers.New(self.scene,self.pillarAnchors,fires,lamps) end
+    if fires>0 and not self.braziers then self.braziers=Braziers.New(self.scene,self.pillarAnchors,fires,lamps,p.flameDetail) end
+    local flies=f.motes and math.max(0,math.min(60,math.floor(p.fireflies or 0))) or 0
+    if self.fireflies and flies~=self.fireflies.count then self.fireflies:Dispose();self.fireflies=nil end
+    if flies>0 and not self.fireflies then self.fireflies=Fireflies.New(self.scene,flies) end
     self:ApplyFog()
     local shafts = f.shafts and math.max(0,math.min(8,math.floor(p.lightShafts or 0))) or 0
     if self.shafts and shafts~=self.shafts.count then self.shafts:Dispose(); self.shafts=nil end
@@ -146,8 +160,8 @@ function M:ApplySwitches()
     if motes>0 and not self.motes then self.motes=Motes.New(self.scene,motes) end
     self.realFog=Quality.ApplyVolume(self.dayNight.zone,self.dayNight.sun,p.volumetric or "off",f.volumetric and p.shadowOn~=false)
     if not self.settingsManaged then Quality.ApplyStandaloneScene(self.dayNight.zone,self.dayNight.sun,p,f.bloom) end
-    self.shadowActive=count>0 and f.cloudShadow==true
-    self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive or self.braziers~=nil
+    self.shadowActive=count>4 and upper and f.cloudShadow==true
+    self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive or self.braziers~=nil or self.fireflies~=nil
     if self.clouds then self.clouds:Update(0,self.dayNight.day or 1,self.dayNight.dusk or 0,self.dayNight) end
     if self.shafts then self.shafts:Update(self.dayNight,true,self.realFog) end
     if self.braziers then self.braziers:Update(self.dayNight.nightK or 0,self.clock,self.realFog) end
@@ -156,20 +170,53 @@ function M:ApplySwitches()
 end
 
 function M:ApplyCloudShadow()
-    local ground = self.ground
-    if not ground then return end
-    ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowActive and 0.16 or 0))
-    if not self.shadowActive then
-        ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))
-        self.shadowGround=nil
-        return
+    -- No require/circular terrain dependency, no native GrassField override.
+    local terrain=package.loaded["ruins.RuinsTerrain"]
+    ---@type Material|nil
+    local grass=terrain and terrain.tufts and terrain.tufts.material or nil
+    if grass~=self.shadowGrass then
+        if self.shadowGrass then self.shadowGrass:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
+        self.shadowGrass,self.grassShadowTexture,self.grassShadowBound=grass,nil,false
     end
-    if self.shadowGround==ground then return end
-    local texture = cache:GetResource("Texture2D","Textures/Sky/cloud_flat_atlas.png")
-    local bound = texture~=nil and ground:SetSurfaceTexture("cloud_shadow_atlas",texture)
-    ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(bound and 1 or 0))
-    self.shadowGround=ground
-    if not bound and DebugLog and DebugLog.enabled then DebugLog.Log("SkyFx","cloud shadow atlas unavailable; analytic round mask") end
+    local clouds,dn=self.clouds,self.dayNight
+    local texture=self.shadowActive and clouds and clouds.ready and clouds.texture or nil
+    if self.shadowGround~=self.ground or self.shadowTexture~=texture then
+        self.shadowGround,self.shadowTexture=self.ground,texture
+        self.shadowBound=self.ground~=nil and texture~=nil and self.ground:SetSurfaceTexture("cloud_shadow_atlas",texture)
+    end
+    if self.grassShadowTexture~=texture then
+        self.grassShadowTexture=texture
+        self.grassShadowBound=grass~=nil and texture~=nil and grass:SetSurfaceTexture("cloud_shadow_atlas",texture)
+    end
+    -- DayNight's light points toward the surface; negate to point at the sun.
+    -- The same node becomes a moon at night, so actual solar elevation gates it.
+    local direction=dn.sunNode and dn.sunNode.direction
+    local elevation=math.max(0,math.min(1,((dn.elev or 0)-0.04)/0.26))
+    local strength=texture and (dn.day or 0)*elevation*elevation*(3-2*elevation)*0.16*math.min(1,(clouds.budget or 0)/24) or 0
+    local projection=self.shadowProjection
+    if direction and direction.y<0 then
+        local denominator=math.max(-direction.y,0.15)
+        projection.x=math.max(-4,math.min(4,-direction.x/denominator))
+        projection.y=math.max(-4,math.min(4,-direction.z/denominator))
+    else
+        projection.x,projection.y=0,0
+        strength=0
+    end
+    projection.w=clouds and clouds.budget>12 and 1 or 0
+    if self.ground then
+        self.ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowBound and strength or 0))
+        if texture then
+            self.ground:SetShaderParameter("cloud_wind",Variant(clouds.wind))
+            self.ground:SetShaderParameter("cloud_shadow_projection",Variant(projection))
+        end
+    end
+    if grass then
+        grass:SetShaderParameter("cloud_shadow_strength",Variant(self.grassShadowBound and strength or 0))
+        if texture then
+            grass:SetShaderParameter("cloud_wind",Variant(clouds.wind))
+            grass:SetShaderParameter("cloud_shadow_projection",Variant(projection))
+        end
+    end
 end
 
 ---@param position Vector3 玩家/骑乘位置，不跟随拉远的观察相机
@@ -178,6 +225,9 @@ function M:Update(dt,position,ground)
     if not self.active or self.stopped then return end
     if self.clouds then self.clouds:Follow(position) end
     self.clock,self.elapsed = self.clock+math.max(0,dt),self.elapsed+math.max(0,dt)
+    -- Fire/light and firefly clocks run every frame, outside the 5Hz sky tint gate.
+    if self.braziers then self.braziers:Update(self.dayNight.nightK or 0,self.clock,self.realFog) end
+    if self.fireflies then self.fireflies:Update(dt,position,self.dayNight.nightK or 0,self.clock) end
     if ground~=self.ground then
         if self.ground then self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
         self.ground=ground
@@ -189,15 +239,10 @@ function M:Update(dt,position,ground)
     self.elapsed = 0
     local dn = self.dayNight
     self:ApplyFog()
-    if self.braziers then self.braziers:Update(dn.nightK or 0,self.clock,self.realFog) end
     if self.clouds then self.clouds:Update(step,dn.day or 1,dn.dusk or 0,dn) end
     if self.shafts then self.shafts:Update(dn,true,self.realFog) end
     if self.motes then self.motes:Update(position,true,dn.day or 1) end
-    if self.ground and self.shadowActive then
-        -- 独立实时时钟：快进昼夜不会让云影狂奔，也不触碰原 daynight_tint 接口。
-        self.ground:SetShaderParameter("cloud_shadow_time",Variant(self.clock))
-        self.ground:SetShaderParameter("cloud_shadow_day",Variant(dn.day or 1))
-    end
+    if self.shadowActive then self:ApplyCloudShadow() end
 end
 
 -- 只被DebugLog的开启态probe调用；关闭日志时不构造统计表，不遍历粒子。
@@ -210,9 +255,13 @@ function M:Probe()
         cloudTextureReads=self.clouds and self.clouds.textureReads or 0,
         braziers=self.braziers and self.braziers.count or 0,pointLights=self.braziers and self.braziers.lightCount or 0,
         fireReady=self.braziers and self.braziers.available or false,
+        fireFallback=self.braziers and self.braziers.fallback or false,
+        fireflies=self.fireflies and self.fireflies.liveCount or 0,
+        firefliesBudget=self.fireflies and self.fireflies.count or 0,
+        firefliesReady=self.fireflies and self.fireflies.ready or false,
         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,
-        batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)+(self.braziers and self.braziers.batchCount or 0)}
+        batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)+(self.braziers and self.braziers.batchCount or 0)+(self.fireflies and self.fireflies.batchCount or 0)}
 end
 
 function M:Stop()
@@ -222,12 +271,14 @@ function M:Stop()
     if self.clouds then self.clouds:Dispose(); self.clouds=nil end
     if self.shafts then self.shafts:Dispose(); self.shafts=nil end
     if self.motes then self.motes:Dispose(); self.motes=nil end
+    if self.fireflies then self.fireflies:Dispose();self.fireflies=nil end
     if self.braziers then self.braziers:Dispose();self.braziers=nil end
     self.pillarAnchors={}
     if self.ground then
         self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0))
-        self.ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))
     end
+    if self.shadowGrass then self.shadowGrass:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
+    self.shadowGrass,self.shadowTexture,self.grassShadowTexture=nil,nil,nil
     Quality.ApplyVolume(self.dayNight.zone,self.dayNight.sun,"off",false)
     self.scene,self.ground,self.shadowGround=nil,nil,nil -- 不让已停止的大气模块继续持有场景/地表资源。
     self.active,self.stopped,self.realFog,self.shadowActive=false,true,false,false

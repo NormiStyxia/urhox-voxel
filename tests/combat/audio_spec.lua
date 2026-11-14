@@ -12,7 +12,7 @@ local function fresh(config, cold)
     local manager = Audio.New(mock.scene)
     if not cold then
         manager:Preload()
-        for _ = 1, 39 do manager:Update(1/60) end
+        for _ = 1, 80 do manager:Update(1/60) end
     end
     return manager, mock
 end
@@ -22,9 +22,9 @@ end
 local function isActive(manager, handle) return sourceFor(manager, handle) ~= nil end
 math.randomseed(731)
 
-local expected = {sword_whoosh=3, hit_soft=3, hit_armor=3, hit_heavy=2, hit_core=1,
+local expected = {sword_whoosh=3, sword_full=1, hit_soft=3, hit_armor=3, hit_heavy=2, hit_core=1,
     armor_break=2, deflect_stone=2, bow_draw=1, bow_full=1, bow_fire=2, arrow_hit=3,
-    blade_draw=1, blade_sheath=1, enemy_windup=3, player_hurt=2, dodge=2, dodge_land=1,
+    blade_draw=1, blade_sheath=1, enemy_windup=3, player_hurt=2, dodge=2, dodge_land=1, run_step=1,
     stagger_land=1, enemy_die=2, boss_roar=1, victory=1}
 local manifest, total, names = Audio.Events(), 0, 0
 for name, row in pairs(manifest) do
@@ -41,7 +41,7 @@ for name, row in pairs(manifest) do
         total = total + 1
     end
 end
-check(total == 38 and names == 21, '38 assets / 21 events')
+check(total == 40 and names == 23, '40 references / 23 events, sword_full/run_step reuse existing assets (38 unique assets)')
 manifest.hit_soft.files[1] = 'corrupted'
 check(Audio.Events().hit_soft.files[1] ~= 'corrupted', 'manifest isolated')
 
@@ -52,15 +52,19 @@ local manager, mock = fresh(nil, true)
 local loaded, assetTotal = Audio.Preload()
 check(loaded == 0 and assetTotal == 38 and mock.readCount == 0, 'Preload only queues, no synchronous I/O')
 check(not Audio.IsReady(), 'queued but not ready')
-for frame = 1, 38 do
+for frame = 1, 80 do
+    local readsBefore = mock.readCount
     Audio.Preload(); Audio.Update(1/60)
     loaded, assetTotal = Audio.PreloadProgress()
-    check(loaded == frame and assetTotal == 38, 'monotonic frame progress')
-    check(mock.readCount == frame, 'at most one resource each frame')
-    check(Audio.IsReady() == (frame == 38), 'ready only after all resources loaded')
+    check(loaded == math.min(math.floor(frame/2),38) and assetTotal == 38, 'async monotonic progress')
+    check(mock.readCount-readsBefore <= 1, 'at most one file request each frame')
+    check(Audio.IsReady() == (frame >= 76), 'ready only after all async resources completed')
 end
-Audio.Preload()
-Audio.Update(1/60)
+check(mock.readCount == 38 and mock.syncReads == 0, 'async preload without GetResource')
+check(manager:IsFirstStrikeReady() and manager.readySources==12, 'idle prebuilt first-strike readiness')
+check(mock.order[1]:find('sword_whoosh_1') and mock.order[2]:find('sword_whoosh_2') and mock.order[3]:find('sword_whoosh_3'), 'all three swings are first')
+check(mock.order[4]:find('hit_heavy_1') and mock.order[6]:find('hit_soft_1'), 'heavy then materials')
+Audio.Preload(); Audio.Update(1/60)
 check(mock.readCount == 38, 'completed Preload is idempotent')
 for _, count in pairs(mock.reads) do check(count == 1, 'cache preloaded once') end
 check(mock.sounds['audio/sfx/cmb_bow_draw.mp3'].looped, 'bow looping resource')
@@ -72,7 +76,8 @@ for name, variants in pairs(expected) do
         check(handle ~= nil, 'event plays ' .. name)
         local source = sourceFor(manager, handle)
         local pitch = source.frequency / source.sound.frequency
-        check(pitch >= 0.97 and pitch <= 1.03, 'pitch within 3 percent')
+        local basePitch=name=='sword_full' and .8 or 1
+        check(pitch >= basePitch*.97 and pitch <= basePitch*1.03, 'pitch within 3 percent of authored base')
         if variants > 1 and name ~= 'arrow_hit' and name ~= 'enemy_windup' then
             check(source.sound.path ~= previous, 'no repeat ' .. name)
         end
@@ -132,6 +137,7 @@ check(Mock.Active(mock) == 3, 'implicit same-frame impact budget')
 
 for _, quality in ipairs({'low','mid','high'}) do
     manager, mock = fresh(); manager:SetQuality(quality)
+    for _ = 1, 15 do manager:Update(1/60) end
     local first
     for _ = 1, manager.limit do
         local handle = manager:Play('sword_whoosh'); first = first or handle; manager:Update(0.06)
@@ -164,13 +170,17 @@ check(source.seek and source.seek < 0.65, 'bow uses 650ms loop region, skips MP3
 check(manager:Play('bow_draw') == bow, 'held bow does not stack loops')
 manager:Stop(bow)
 check(source.stopCalls == 1 and source.fadingOut, 'fade requested synchronously')
-manager:Update(0.02)
+manager:Update(0.01)
 check(source.gain > 0 and source.gain < 10 ^ (-18/20), 'fade gain ramps down')
 manager:Stop(bow); check(source.stopCalls == 1, 'repeated stop does not restart fade')
-manager:Update(0.021)
-check(source.gain == 0 and not source.fadingOut and not isActive(manager, bow), 'loop silent by 41ms')
+manager:Update(0.011)
+check(source.gain == 0 and not source.fadingOut and not isActive(manager, bow), 'loop silent by 21ms')
 local newBow = manager:Play('bow_draw')
 check(newBow and not manager:Stop(bow) and isActive(manager, newBow), 'stale handle cannot stop reused slot')
+manager, mock = fresh()
+local fullBow=manager:Play('bow_full')
+manager:Update(.119);check(isActive(manager,fullBow),'full cue remains audible before 120ms')
+manager:Update(.002);check(not isActive(manager,fullBow),'full cue ends within 120ms plus frame boundary')
 
 manager, mock = fresh()
 mock.listener = {node = {worldPosition = {x=0,y=0,z=0}}}
@@ -186,7 +196,7 @@ for i = 1, 100 do
     else handle = manager:Play('sword_whoosh') end
     manager:Stop(handle); manager:Update(0.1)
 end
-check(#mock.nodes == 1 and #mock.sources == 2, '2D/3D switching reuses bounded components on one slot')
+check(#mock.nodes == 12 and #mock.sources == 24, '2D/3D switching never expands prebuilt components')
 manager, mock = fresh({no3D=true})
 mock.listener = {node = {worldPosition = {x=0,y=0,z=0}}}
 local savedPrint, logs = print, {}
@@ -198,7 +208,7 @@ check(close(source.gain, 10 ^ (-11/20) * 0.5), 'fallback distance gain')
 mock.listener.node.worldPosition = {x=18.5,y=0,z=0}; manager:Update(0.1)
 check(close(source.gain, 10 ^ (-11/20)), 'moving listener changes fallback gain')
 manager:Play('enemy_windup', {pos={x=20,y=0,z=0}})
-check(mock.attempts3D == 1 and #logs == 1, 'unsupported 3D probes/logs once')
+check(mock.attempts3D == 1 and #logs == 0, 'unsupported 3D probes/logs once')
 _G.print = savedPrint
 manager, mock = fresh()
 manager:SetListenerPosition({x=100,y=0,z=0})
@@ -212,74 +222,113 @@ for _, config in ipairs({{missing=true}, {resourceError=true}, {noSource=true}, 
         manager:Preload(); check(manager:Play('hit_soft') == nil, 'failure is silent'); manager:Update(0.1)
     end
     check(#logs == 1, 'failure logs once per category')
-    check(#mock.nodes <= 1 and Mock.Active(mock) == 0, 'failure does not leak nodes/voices')
+    check(#mock.nodes <= 12 and Mock.Active(mock) == 0, 'failure does not leak nodes/voices')
     _G.print = savedPrint
 end
 
--- Cold combat: only one demand load, never plays its late sound in this frame.
+-- Cold combat has no I/O, nodes, components, or automatic late replay.
 manager, mock = fresh(nil, true)
-check(manager:Play('bow_draw') == nil and mock.readCount == 1, 'cold play loads one and stays silent')
-check(manager:Play('bow_draw') == nil and mock.readCount == 1, 'same-frame repeat cannot play newly loaded asset')
-check(manager:Play('bow_full') == nil and mock.readCount == 1, 'second cold event shares frame load allowance')
-for _ = 1, 10 do manager:Play('bow_full') end
-check(#manager.demandQueue == 1, 'deferred demand is deduplicated')
-manager:Preload(); check(mock.readCount == 1, 'combat Preload never performs bulk I/O')
+check(manager:Play('bow_draw') == nil and mock.readCount == 0, 'cold Play never loads')
+for _ = 1, 10 do
+    manager:Play('sword_whoosh', {tier=1}); manager:Preload(); manager:Update(1/60, false)
+end
+check(mock.readCount==0 and #mock.nodes==0, 'combat suppresses all idle warmup')
+local priorState = package.loaded['combat.CombatState']
+local stateName = 'COMBAT_ACTIVE'
+package.loaded['combat.CombatState'] = {EXPLORE='EXPLORE', Get=function() return stateName end}
 manager:Update(1/60)
-check(mock.readCount == 2 and mock.reads['audio/sfx/cmb_bow_full.mp3'] == 1, 'next frame loads demand before idle queue')
-check(manager:Play('bow_full') == nil, 'background load also cannot play in its load frame')
-check(Mock.Active(mock) == 0, 'cold events are not replayed automatically')
-check(manager:Play('bow_draw') ~= nil, 'later fresh event can use ready asset')
-manager:Update(1/60)
-check(manager:Play('bow_full') ~= nil, 'next-frame explicit event plays normally')
-for _ = 1, 45 do manager:Preload(); manager:Update(1/60) end
-check(manager:IsReady() and mock.readCount == 38, 'demand and idle queue share cache without duplicate loads')
-for _, count in pairs(mock.reads) do check(count == 1, 'each successful path loaded once') end
+check(mock.readCount==0 and #mock.nodes==0, 'default Update uses existing CombatState, no Scene changes')
+package.loaded['combat.CombatState'] = priorState
+for _ = 1, 6 do manager:Update(1/60, true) end
+check(manager:IsFirstStrikeReady(), 'first three swings warm before other files')
+check(Mock.Active(mock)==0, 'warming never plays or unlocks browser audio')
+manager:Update(1/60, false)
+local readyHandle=manager:Play('sword_whoosh', {tier=1})
+check(readyHandle~=nil, 'hot cue plays at current call, not a later Update')
+local readsBefore,nodesBefore,sourcesBefore=mock.readCount,#mock.nodes,#mock.sources
+for _ = 1, 40 do
+    manager:Update(0.1, false)
+    manager:Play('sword_whoosh', {tier=3}); manager:Play('armor_break')
+end
+check(mock.readCount==readsBefore and #mock.nodes==nodesBefore and #mock.sources==sourcesBefore, 'combat neither expands partial pool nor loads cold materials')
+for _=1,100 do manager:Update(1/60,true) end
+check(manager:IsReady() and mock.readCount==38 and #mock.nodes==12, 'idle resumes complete warmup without duplicate requests')
+for _,count in pairs(mock.reads) do check(count==1,'requests deduplicated') end
 
--- Budget uses wall time, not dt (a long dt must not cause catch-up batches).
-manager, mock = fresh(nil, true)
-mock.engineFrame = 100
-manager:Play('bow_full'); manager:Preload(); manager:Update(1/60)
-check(mock.readCount == 1 and manager:Play('bow_full') == nil, 'Play before Update shares native frame budget and silent frame')
-manager:Update(1/60)
-check(mock.readCount == 1, 'repeated Update in same engine frame cannot duplicate loads')
-mock.engineFrame = 101
-manager:Update(1/60); manager:Play('bow_draw')
-check(mock.readCount == 2, 'Update before Play shares native frame budget')
-check(manager:Play('bow_full') ~= nil, 'native next-frame playback allowed')
-manager, mock = fresh({loadMs=0.5}, true)
-manager:Preload(); manager:Update(20)
-check(mock.readCount == 1 and close(manager.loadSpentMs, 0.5), 'cheap loads still limited to one, large dt no catch-up')
-mock.listenerMs = 2
-manager:Update(1/60)
-check(mock.readCount == 1, 'spent 2ms Update budget defers work')
-manager:Play('bow_full')
-check(mock.readCount == 1, 'cold Play cannot bypass exhausted Update budget')
-mock.listenerMs = 0
-manager:Update(1/60)
-check(mock.readCount == 2, 'budget-deferred queue resumes next frame')
-manager, mock = fresh({loadMs=3}, true)
-manager:Preload(); manager:Update(1/60)
-check(mock.readCount == 1 and manager.loadSpentMs == 3, 'single non-preemptible slow load is measured')
-manager:Play('bow_full'); manager:Preload()
-check(mock.readCount == 1, 'over-budget load prevents further loads in frame')
-manager:Update(1/60)
-check(mock.readCount == 2, 'slow-load remainder continues next frame')
+-- Quality changes during combat cannot allocate; saturated warnings reject decor.
+manager:SetQuality('high')
+for _=1,20 do manager:Update(0.1,false); manager:Play('enemy_windup') end
+nodesBefore,sourcesBefore=#mock.nodes,#mock.sources
+check(Mock.Active(mock)==12,'high quality is limited by idle-prebuilt capacity until next exploration')
+check(manager:Play('sword_whoosh',{tier=1})==nil,'saturated warning pool drops lower priority cue')
+check(#mock.nodes==nodesBefore and #mock.sources==sourcesBefore,'pool exhaustion never builds')
+for _=1,12 do manager:Update(1/60,true) end
+check(manager.readySources==16 and #mock.nodes==16,'high quality expansion occurs only in idle')
 
-manager, mock = fresh({missing=true}, true); logs = {}
-_G.print = function(message) logs[#logs+1] = message end
-manager:Preload()
-for _ = 1, 80 do manager:Preload(); manager:Update(1/60); manager:Play('bow_full') end
-loaded, assetTotal = manager:PreloadProgress()
-check(loaded == 0 and assetTotal == 38 and not manager:IsReady(), 'failed assets do not count as ready')
-check(mock.readCount == 38 and #logs == 1, 'failed resource paths terminal, one failure log')
-_G.print = savedPrint
-manager:Dispose(); manager:Preload(); manager:Update(1)
-check(not manager:IsReady() and mock.readCount == 38 and #manager.demandQueue == 0, 'dispose cancels pending loads')
+-- Same native frame admits at most one resource and one construction operation.
+manager, mock = fresh(nil,true); mock.engineFrame=100
+manager:Update(1/60); manager:Update(1/60); manager:Play('bow_full')
+check(mock.readCount==1 and #mock.nodes==1 and #mock.sources==0, 'same frame budget')
+mock.engineFrame=101; manager:Update(1/60)
+check(mock.readCount==1 and #mock.sources==1, 'async completion uses frame allowance')
 
-manager, mock = fresh(nil, true)
-manager:Preload(); manager:Update(1/60)
-manager:Dispose(); manager:Update(1)
-check(mock.readCount == 1, 'dispose interrupts incomplete preload')
+-- Budget includes earlier audio work; sync compatibility only ever runs in idle.
+manager,mock=fresh({noAsync=true,loadMs=3},true)
+manager:Update(1/60)
+check(mock.syncReads==0, 'unsupported async does not retry synchronously same frame')
+manager:Update(1/60,false)
+check(mock.syncReads==0, 'compatibility loader forbidden in combat')
+manager:Update(1/60,true)
+check(mock.syncReads==1 and #mock.sources==0, '3ms non-preemptible load defers source creation')
+manager:Play('bow_full'); check(mock.syncReads==1, 'Play never bypasses budget')
+mock.listenerMs=2; manager:Update(1/60,true)
+check(mock.syncReads==1, '2ms prior work defers remaining queue')
+mock.listenerMs=0; manager:Update(1/60,true)
+check(mock.syncReads==2, 'next idle frame resumes queue')
+manager,mock=fresh({loadMs=3},true); mock.engineFrame=300
+manager:Update(1/60,true); manager:Update(1/60,true)
+check(mock.readCount==1 and #mock.nodes==0,'same native frame cannot bypass over-budget resource via second Update')
+manager,mock=fresh({asyncReject=true},true)
+manager:Update(1/60,true)
+check(mock.syncReads==0,'rejected background request cannot synchronously retry')
+manager:Update(1/60,false)
+check(mock.syncReads==0,'rejected async fallback remains exploration-only')
+manager:Update(1/60,true)
+check(mock.syncReads==1 and manager.loadedCount==1,'API-present-but-rejected host supports later idle fallback')
+
+-- Diagnostic clock, fields, rate limit and RUINS.combat.state switch.
+manager,mock=fresh({loadMs=5},true);logs={}
+_G.print=function(message) logs[#logs+1]=message end
+_G.RUINS={combat={state={audioPerf=true}}}
+for _=1,8 do manager:Update(1/60,true) end
+check(#logs==1 and logs[1]:find('cue=sword_whoosh') and logs[1]:find('cold=true') and logs[1]:find('newSource=false'),'cold load diagnostic and rate limit')
+_G.RUINS.combat.state.audioPerf=false
+for _=1,10 do manager:Update(1,true) end
+check(#logs==1,'diagnostics disabled by live state switch')
+_G.print=savedPrint;_G.RUINS=nil
+manager,mock=fresh({createMs=5},true);logs={}
+_G.print=function(message) logs[#logs+1]=message end
+manager:Update(1/60,true)
+check(#logs==1 and logs[1]:find('cue=pool') and logs[1]:find('cold=false') and logs[1]:find('newSource=true'),'source construction diagnostic')
+_G.print=savedPrint
+
+manager,mock=fresh({missing=true},true);logs={}
+_G.print=function(message) logs[#logs+1]=message end
+for _=1,100 do manager:Preload();manager:Update(1/60,true) end
+loaded,assetTotal=manager:PreloadProgress()
+check(loaded==0 and assetTotal==38 and not manager:IsReady(),'failed resources are not ready')
+check(mock.readCount==38 and #logs==1,'terminal failures log once, no repeated loads')
+_G.print=savedPrint
+manager:Dispose();manager:Preload();manager:Update(1,true)
+check(not manager:IsReady() and mock.readCount==38,'dispose cancels queued work')
+
+-- Async pending work is not finalized by Lua in combat and never replays a cue.
+manager,mock=fresh({asyncDelay=4},true)
+manager:Update(1/60,true)
+for _=1,20 do manager:Update(1/60,false) end
+check(manager.loadedCount==0 and mock.syncReads==0,'pending resource does not force blocking retrieval')
+manager:Dispose();manager:Update(1,true)
+check(mock.readCount==1,'dispose abandons pending resource reference')
 
 manager, mock = fresh({stopError=true})
 bow = manager:Play('bow_draw'); source = sourceFor(manager, bow)
@@ -300,9 +349,28 @@ for i = 1, 600 do
     source.playing = false -- mixer completed a one-shot
     manager:Update(0.1)
 end
-check(#mock.nodes == 1 and #mock.sources == 1, '600 events reuse one node/source')
+check(#mock.nodes == 12 and #mock.sources == 24, '600 events stay in prebuilt pool')
 manager:Dispose(); manager:Dispose()
 check(mock.nodes[1].removed and mock.nodes[1].disposed, 'dispose releases owned pool nodes')
 check(manager:Play('hit_soft') == nil, 'disposed manager ignores play')
 manager:Update(1)
 print('PASS CombatAudio: ' .. checks .. ' assertions (' .. _VERSION .. ')')
+manager,mock=fresh()
+local swordFull=manager:Play('sword_full')
+local bowFull=manager:Play('bow_full')
+check(swordFull and bowFull and swordFull~=bowFull,'separate full cue rate keys')
+local fullSource=sourceFor(manager,swordFull)
+check(fullSource.sound.path=='audio/sfx/cmb_bow_full.mp3','sword full reuses existing sample')
+check(close(fullSource.gain,10^(-12/20)),'sword full -6dB plus existing -6dB bus')
+check(manager:Play('sword_full')==nil,'duplicate edge is independently rate limited')
+manager:Dispose()
+print('PASS R8 sword_full reused sample, .8 pitch, -6dB cue and independent key; same-frame material/core+heavy layering retained')
+manager,mock=fresh()
+local runStep=manager:Play('run_step')
+check(runStep~=nil,'prewarmed existing sample is ready for a run step')
+local stepSource=sourceFor(manager,runStep)
+check(stepSource.sound.path=='audio/sfx/cmb_dodge_land.mp3','run step reuses landing asset')
+check(close(stepSource.gain,10^(-20/20)),'run step -14dB plus -6dB bus')
+check(manager:Play('run_step')==nil,'footsteps rate limited to .12s')
+manager:Dispose()
+print('PASS R9 reused run_step sample, -14dB cue, no new preload or runtime resources')

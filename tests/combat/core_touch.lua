@@ -41,6 +41,13 @@ x,y=Input.ConsumeLook(); assert(x==10 and y==5,'third finger remains independent
 Controls.MoveTouch(1,100,250); assert(not Input.Down('sprint'))
 callbacks.TouchCancel()
 assert(not Input.Down('attack') and not Input.Press('attack') and Input.MoveAxis()==0)
+Controls.BeginTouch(12,776,322)
+Controls.MoveTouch(12,776.7,322);Controls.MoveTouch(12,777.4,322)
+x,y=Input.ConsumeLook();assert(x==0 and y==0,'under 2dp stays below drag threshold')
+Controls.MoveTouch(12,778.1,322);x,y=Input.ConsumeLook()
+assert(math.abs(x-2.1)<1e-8 and y==0,'crossing threshold delivers all accumulated movement')
+Controls.MoveTouch(12,777.1,322);x,y=Input.ConsumeLook();assert(math.abs(x+1)<1e-8)
+Controls.Cancel()
 Controls.BeginTouch(5,776,222) -- jump, not attack
 assert(not Input.Down('attack'))
 Controls.Cancel()

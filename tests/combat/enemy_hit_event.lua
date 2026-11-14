@@ -62,7 +62,7 @@ assert(r.broke and r.staggered and boss.down and boss.parts.back_armor.broken an
 assert(boss:GetHurtShapes()[5].enabled and boss.particles.count==0 and boss.reaction.age==1)
 borrowed=event(info,r); assert(boss:OnHitEvent(borrowed))
 assert(boss.particles:CountOwner(boss)==12 and boss.presentedHits==1 and boss.reaction.angle==8)
-for _,p in ipairs(boss.particles.slots) do if p.active then assert(p.shape=='plate' and p.vz<0) end end
+for _,p in ipairs(boss.particles.slots) do if p.active then assert(p.material=='flash' or (p.shape=='plate' and p.vz<0)) end end
 serial=boss.particles.serial; assert(not boss:OnHitEvent(borrowed) and boss.particles.serial==serial)
 boss:Destroy()
 print('PASS armor/HP/poise settlement before presentation; one armor burst replaces heavy particles; shared HitEvent tier drives recoil')
@@ -75,8 +75,16 @@ info={dmg=10000,part='head',swingId=55,deferPresentation=true,heavy=true,
 r=boss:ApplyHit(info)
 assert(r.killed and boss.dead and not boss.deathPresentationReady and boss.particles.count==0)
 assert(boss.reaction.age==1 and not boss.deathBurst)
-borrowed=event(info,r); assert(boss:OnHitEvent(borrowed))
-assert(boss.deathPresentationReady and boss.presentedHits==1 and boss.particles.count==0)
+borrowed=event(info,r)
+borrowed.impactDir=Vector3(0,-1,0)
+borrowed.combo,borrowed.full,borrowed.critical,borrowed.profileId=3,true,true,'kill'
+borrowed.stop,borrowed.attackerStop,borrowed.flash,borrowed.flashPeak=.1,.1,.1,1
+assert(boss:OnHitEvent(borrowed))
+assert(boss.deathPresentationReady and boss.presentedHits==1 and boss.particles.count==1 and boss.hitStop==.1)
+assert(boss.deathImpact.impactDir~=borrowed.impactDir)
+borrowed.impactDir.y=10; borrowed.full=false; borrowed.stop=10
+assert(boss.deathImpact.impactDir.y==-1 and boss.deathImpact.full and boss.deathImpact.stop==.1)
+assert(boss.deathImpact.flash==.1 and boss.reaction.flash==.08,'P0 keeps approved enemy 60/80ms baseline')
 assert(boss.deathImpact.pos~=borrowed.pos and boss.deathImpact.dir~=borrowed.dir and boss.deathImpact.normal~=borrowed.normal)
 borrowed.pos.x,borrowed.pos.y,borrowed.pos.z=99,99,99
 borrowed.dir.x,borrowed.dir.z=0,1; borrowed.normal.y=0
@@ -85,7 +93,7 @@ assert(boss.deathImpact.part=='head' and boss.deathImpact.material=='armor' and 
 assert(boss.deathImpact.weapon=='sword' and boss.deathImpact.swingId==55 and boss.deathImpact.killed)
 T.Near(boss.deathImpact.pos.x,1); T.Near(boss.deathImpact.dir.x,1); T.Near(boss.deathImpact.normal.y,1)
 assert(not boss:OnHitEvent(borrowed))
-T.Tick(boss,.25,combat.pos)
+T.Tick(boss,boss.hitStop+.25,combat.pos)
 assert(boss.particles:CountOwner(boss)==24)
 for _,p in ipairs(boss.particles.slots) do if p.active then T.Near(p.x,1); T.Near(p.y,2); T.Near(p.z,3) end end
 T.Tick(boss,.85,combat.pos)

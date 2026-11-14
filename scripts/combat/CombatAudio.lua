@@ -1,11 +1,13 @@
 -- Combat audio, §19.6. No engine work at require time.
 -- New(scene) installs the default manager; use Audio.Play(...) OR manager:Play(...).
 -- Update(realDt) once per frame (also during hit-stop); Dispose before scene teardown.
--- Call Preload once during scene idle time (W2: two seconds after scene startup).
--- It only schedules work. Update loads at most ONE resource per frame, sharing
--- that allowance with cold Play calls; each cold request is silent for this frame.
--- 2 ms is an admission budget: synchronous ResourceCache:GetResource cannot be
--- interrupted mid-decode. A single slow resource may overrun; no more work follows.
+-- New schedules idle prewarming immediately; Update uses the already-loaded
+-- CombatState (or an explicit allowWarmup override in isolated tests).
+-- Playback NEVER loads resources or creates engine objects.
+-- Missing cues are dropped, never queued for late replay. Browser gesture unlock
+-- remains the engine/host's responsibility; warmup does not play silent sounds.
+-- The 2ms admission budget cannot preempt one native operation or engine-side
+-- async finalization. Unsupported async loading falls back ONLY while exploring.
 -- opts: pos (world Vector3), material, tier, enemy, volume [0,1], pitch multiplier;
 -- hitId optionally groups layers across frames. Without hitId, impacts in one frame
 -- share a conservative three-voice budget. Explicit sword tier 1/2/3 selects a swing;
@@ -17,7 +19,7 @@ local Manager = {}
 Manager.__index = Manager
 local defaultManager
 local BUS_GAIN = 10 ^ (-6 / 20)
-local FADE_SECONDS = 0.04
+local FADE_SECONDS = 0.02 -- bow draw loop release/cancel; no queued fire sound
 local BOW_LOOP_SECONDS = 0.65 -- skip generated MP3 encoder padding beyond 0.7 s
 local LOAD_BUDGET_MS = 2
 local NEAR, FAR = 2, 35
@@ -32,6 +34,7 @@ local EVENTS = {
     deflect_stone = { files = { 'audio/sfx/cmb_deflect_stone_1.mp3', 'audio/sfx/cmb_deflect_stone_2.mp3' }, db = -1, impact = true },
     bow_draw = { files = { 'audio/sfx/cmb_bow_draw.mp3' }, db = -12, loop = true, interval = 0.10 },
     bow_full = { files = { 'audio/sfx/cmb_bow_full.mp3' }, db = -4, interval = 0.10 },
+    sword_full = { files = { 'audio/sfx/cmb_bow_full.mp3' }, db = -6, pitch = .8, interval = 0.10 },
     bow_fire = { files = { 'audio/sfx/cmb_bow_fire_1.mp3', 'audio/sfx/cmb_bow_fire_2.mp3' }, db = -5 },
     arrow_hit = { files = { 'audio/sfx/cmb_arrow_hit_stone_1.mp3', 'audio/sfx/cmb_arrow_hit_body_1.mp3', 'audio/sfx/cmb_arrow_hit_armor_1.mp3' }, db = -2, impact = true },
     blade_draw = { files = { 'audio/sfx/cmb_blade_draw.mp3' }, db = -8, interval = 0.10 },
@@ -40,25 +43,47 @@ local EVENTS = {
     player_hurt = { files = { 'audio/sfx/cmb_player_hurt_1.mp3', 'audio/sfx/cmb_player_hurt_2.mp3' }, db = 0, priority = 3, interval = 0.06 },
     dodge = { files = { 'audio/sfx/cmb_dodge_slide_1.mp3', 'audio/sfx/cmb_dodge_slide_2.mp3' }, db = -10, interval = 0.06 },
     dodge_land = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -10, interval = 0.06 },
+    run_step = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -14, interval = 0.12 },
     stagger_land = { files = { 'audio/sfx/cmb_stagger_land.mp3' }, db = 0, interval = 0.10 },
     enemy_die = { files = { 'audio/sfx/cmb_enemy_die_1.mp3', 'audio/sfx/cmb_enemy_die_2.mp3' }, db = 0, gains = {0, -6} },
     boss_roar = { files = { 'audio/sfx/cmb_boss_roar.mp3' }, db = 2, priority = 4, interval = 0.20 },
     victory = { files = { 'audio/sfx/cmb_victory.mp3' }, db = -4, interval = 0.50 },
 }
 
-local ASSETS, ASSET_LOOPS = {}, {}
-for _, definition in pairs(EVENTS) do
+local ASSETS, ASSET_LOOPS, ASSET_CUES = {}, {}, {}
+local WARM_ORDER = {'sword_whoosh','hit_heavy','hit_soft','hit_armor','hit_core',
+    'armor_break','deflect_stone','bow_draw','bow_fire','arrow_hit','bow_full',
+    'blade_draw','blade_sheath','enemy_windup','player_hurt','dodge','dodge_land',
+    'stagger_land','enemy_die','boss_roar','victory'}
+for _, cue in ipairs(WARM_ORDER) do
+    local definition = EVENTS[cue]
     for _, path in ipairs(definition.files) do
-        if ASSET_LOOPS[path] == nil then ASSETS[#ASSETS + 1] = path end
-        ASSET_LOOPS[path] = definition.loop == true
+        ASSETS[#ASSETS + 1] = path
+        ASSET_LOOPS[path], ASSET_CUES[path] = definition.loop == true, cue
     end
 end
-table.sort(ASSETS)
+
+-- Static pcall targets: no new closures in Play/Update or instrumentation.
+local function method(object, name, ...) return object[name](object, ...) end
+local function engineClock() return Time:GetSystemTime() end
+local function engineFrame() return time:GetFrameNumber() end
+local function listenerPosition(listener) return listener.node.worldPosition end
+local function positionNode(node, pos) node.worldPosition = pos end
+local function playSource(source, sound, pitch, gain)
+    source:Play(sound, sound:GetFrequency() * pitch, gain)
+end
+local function configurePooledSource(source, spatial)
+    source:SetAutoRemoveMode(REMOVE_DISABLED or 0)
+    source:SetDeclickEnabled(true)
+    source:SetSoundType(SOUND_EFFECT or 'Effect')
+    source:SetGain(0)
+    if spatial then source:SetDistanceAttenuation(NEAR, FAR, 1) end
+end
 
 local function milliseconds()
     -- 静态绑定必须用 Time 类表；墙钟包含 I/O 停顿，离线测试才退回 CPU 计时。
     if Time then
-        local ok, value = pcall(function() return Time:GetSystemTime() end)
+        local ok, value = pcall(engineClock)
         if ok and type(value) == 'number' then return value end
     end
     return os.clock() * 1000
@@ -71,7 +96,7 @@ end
 local function beginLoadFrame(self)
     local frame = self.frame
     if time then
-        local ok, value = pcall(function() return time:GetFrameNumber() end)
+        local ok, value = pcall(engineFrame)
         if ok and type(value) == 'number' then frame = value end
     end
     if self.loadFrameKey ~= frame then
@@ -90,39 +115,76 @@ local function warnOnce(self, key, message)
     print('[CombatAudio] ' .. message)
 end
 
+local function slowLog(self, cue, duration, cold, created)
+    if duration < 4 or self.time - self.lastSlowLog < 5 then return end
+    local ruins = rawget(_G, 'RUINS')
+    local state = ruins and ruins.combat and ruins.combat.state
+    if state and state.audioPerf == false then return end
+    self.lastSlowLog = self.time
+    print(string.format('Perf: combatAudio cue=%s ms=%.3f cold=%s newSource=%s',
+        cue, duration, tostring(cold), tostring(created)))
+end
+
 function Manager:Init(scene)
     self.scene = scene -- strong reference; caller owns the scene
     self.pool, self.sounds, self.lastVariant, self.lastPlay, self.warned = {}, {}, {}, {}, {}
     self.enabled, self.disposed, self.volume, self.limit = true, false, 1, LIMITS.mid
     self.time, self.frame, self.serial = 0, 0, 0
-    self.preloadQueued, self.preloadCursor, self.loadedCount = false, 1, 0
-    self.demandQueue, self.demandQueued, self.loadedFrame = {}, {}, {}
+    self.preloadQueued, self.preloadCursor, self.loadedCount = true, 1, 0
+    self.poolCursor, self.poolPhase, self.readySources = 1, 1, 0
+    self.pendingPath, self.pendingAt, self.noAsync = nil, 0, false
+    self.lastSlowLog = -math.huge
+    self.loadedFrame = {}
     self.loadsThisFrame, self.loadSpentMs = 0, 0
     self.loadFrameKey = nil
     self.listenerPosition = {x = 0, y = 0, z = 0}
 end
 
-local function loadSound(self, path, looped)
-    local sound = self.sounds[path]
-    if sound ~= nil then return sound or nil end
-    if self.loadsThisFrame >= 1 or self.loadSpentMs >= LOAD_BUDGET_MS then return nil end
-    self.loadsThisFrame = self.loadsThisFrame + 1
-    local start = milliseconds()
-    local ok, result = pcall(function()
-        local resource = cache:GetResource('Sound', path)
-        if resource then resource:SetLooped(looped == true) end
-        return resource
-    end)
-    self.loadSpentMs = self.loadSpentMs + elapsed(start)
-    if not ok or not result then
-        self.sounds[path] = false -- do not retry missing resources every frame
-        warnOnce(self, 'resource', '战斗音效加载失败，已静音降级：' .. path)
-        return nil
+local function finishSound(self, path, resource)
+    if resource then
+        local ok = pcall(method, resource, 'SetLooped', ASSET_LOOPS[path])
+        if not ok then resource = nil end
     end
-    self.sounds[path] = result
+    if not resource then
+        self.sounds[path] = false
+        warnOnce(self, 'resource', '战斗音效加载失败，已静音降级：' .. path)
+        return
+    end
+    self.sounds[path] = resource
     self.loadedCount = self.loadedCount + 1
     self.loadedFrame[path] = self.loadFrameKey
-    return result
+end
+
+local function loadSound(self, path)
+    local start = milliseconds()
+    self.loadsThisFrame = self.loadsThisFrame + 1
+    if not self.noAsync and self.syncPath ~= path then
+        local ok, accepted = pcall(method, cache, 'BackgroundLoadResource', 'Sound', path, false)
+        if ok and accepted then
+            self.pendingPath, self.pendingAt = path, self.time
+        elseif ok then
+            local existsOK, resource = pcall(method, cache, 'GetExistingResource', 'Sound', path)
+            if existsOK and resource then finishSound(self, path, resource)
+            else
+                -- Some hosts expose the API but reject background requests.
+                -- Try this file once on a later idle frame, never in Play.
+                self.syncPath = path
+                self.preloadCursor = self.preloadCursor - 1
+            end
+        else
+            -- No speculative synchronous retry in this frame. Retry the same
+            -- asset on a later EXPLORE frame, using the compatibility loader.
+            self.noAsync = true
+            self.preloadCursor = self.preloadCursor - 1
+        end
+    else
+        self.syncPath = nil
+        local ok, resource = pcall(method, cache, 'GetResource', 'Sound', path, false)
+        finishSound(self, path, ok and resource or nil)
+    end
+    local duration = elapsed(start)
+    self.loadSpentMs = self.loadSpentMs + duration
+    slowLog(self, ASSET_CUES[path], duration, true, false)
 end
 
 function Manager:Preload()
@@ -141,29 +203,92 @@ function Manager:IsReady()
 end
 
 local function preloadStep(self, updateStart)
-    while self.loadsThisFrame < 1 and self.loadSpentMs < LOAD_BUDGET_MS and elapsed(updateStart) < LOAD_BUDGET_MS do
-        local path
-        if #self.demandQueue > 0 then
-            path = table.remove(self.demandQueue, 1)
-            self.demandQueued[path] = nil
-        elseif self.preloadQueued then
-            path = ASSETS[self.preloadCursor]
-            if not path then return end
-            self.preloadCursor = self.preloadCursor + 1
-        else return end
-        -- On-demand loads may already have fulfilled items in the background list.
-        if self.sounds[path] == nil then loadSound(self, path, ASSET_LOOPS[path]) end
+    if self.loadsThisFrame >= 1 or self.loadSpentMs >= LOAD_BUDGET_MS or elapsed(updateStart) >= LOAD_BUDGET_MS then return end
+    if self.pendingPath then
+        local path, start = self.pendingPath, milliseconds()
+        self.loadsThisFrame = self.loadsThisFrame + 1
+        -- GetExistingResource never invokes a synchronous resource load.
+        local ok, resource = pcall(method, cache, 'GetExistingResource', 'Sound', path)
+        if ok and resource then
+            finishSound(self, path, resource)
+            self.pendingPath = nil
+        else
+            local countOK, count = pcall(method, cache, 'GetNumBackgroundLoadResources')
+            if not ok or (countOK and count == 0) or self.time - self.pendingAt >= 30 then
+                finishSound(self, path, nil)
+                self.pendingPath = nil
+            end
+        end
+        local duration = elapsed(start)
+        self.loadSpentMs = self.loadSpentMs + duration
+        slowLog(self, ASSET_CUES[path], duration, true, false)
+        return
     end
+    if not self.preloadQueued then return end
+    local path = ASSETS[self.preloadCursor]
+    if path then
+        self.preloadCursor = self.preloadCursor + 1
+        loadSound(self, path)
+    end
+end
+
+-- At most one Node/Component construction operation per engine frame; each slot
+-- holds both 2D and 3D paths so the first spatial cue cannot expand the pool.
+local function warmPool(self, updateStart)
+    if self.poolWorkFrame == self.loadFrameKey or self.poolCursor > self.limit or self.poolFailed or self.loadSpentMs >= LOAD_BUDGET_MS or elapsed(updateStart) >= LOAD_BUDGET_MS then return end
+    self.poolWorkFrame = self.loadFrameKey
+    local start, created = milliseconds(), false
+    local slot = self.pool[self.poolCursor]
+    if self.poolPhase == 1 then
+        local ok, node = pcall(method, self.scene, 'CreateChild', 'CombatAudioVoice')
+        if not ok or not node then
+            self.poolFailed = true
+            warnOnce(self, 'source', '无法预建战斗声源，已静音降级。')
+            return
+        end
+        slot = {node = node, active = false, ready = false}
+        self.pool[self.poolCursor] = slot
+        self.poolPhase, created = 2, true
+    else
+        local spatial = self.poolPhase == 3
+        local ok, source
+        if not spatial or not self.no3D then
+            ok, source = pcall(method, slot.node, 'CreateComponent', spatial and 'SoundSource3D' or 'SoundSource')
+            created = source ~= nil
+            if ok and source then ok = pcall(configurePooledSource, source, spatial) end
+        end
+        if spatial then
+            if ok and source then slot.source3D = source
+            else
+                if source then pcall(method, source, 'Remove') end
+                if not self.no3D then warnOnce(self, 'spatial', '空间音源不可用，改为平面播放并按距离衰减。') end
+                self.no3D = true
+            end
+            slot.ready = true
+            self.readySources = self.readySources + 1
+            self.poolCursor, self.poolPhase = self.poolCursor + 1, 1
+        elseif ok and source then
+            slot.source2D, self.poolPhase = source, 3
+        else
+            self.poolFailed = true
+            warnOnce(self, 'source', '无法预建战斗声源，已静音降级。')
+        end
+    end
+    slowLog(self, 'pool', elapsed(start), false, created)
+end
+
+function Manager:IsFirstStrikeReady()
+    if self.readySources == 0 then return false end
+    for _, path in ipairs(EVENTS.sword_whoosh.files) do if not self.sounds[path] then return false end end
+    return true
 end
 
 local function stopVoice(self, slot)
     if slot.source then
-        local ok = pcall(function()
-            slot.source:SetGain(0) -- even an unavailable stop API must not leave audible loops
-            slot.source:StopImmediate()
-        end)
+        pcall(method, slot.source, 'SetGain', 0)
+        local ok = pcall(method, slot.source, 'StopImmediate')
         if not ok then
-            pcall(function() slot.source:Stop() end)
+            pcall(method, slot.source, 'Stop')
             warnOnce(self, 'stop', '声源停止接口不可用，已尝试静音。')
         end
     end
@@ -172,9 +297,9 @@ local function stopVoice(self, slot)
 end
 
 local function getListener(self)
-    local ok, listener = pcall(function() return audio:GetListener() end)
+    local ok, listener = pcall(method, audio, 'GetListener')
     if ok and listener then
-        local posOk, pos = pcall(function() return listener.node.worldPosition end)
+        local posOk, pos = pcall(listenerPosition, listener)
         if posOk and pos then return listener, pos end
     end
     return nil, self.listenerPosition
@@ -190,7 +315,7 @@ end
 local function setGain(self, slot, listenerPos)
     local attenuation = slot.spatial and 1 or distanceGain(slot.pos, listenerPos)
     local fade = slot.fade and clamp(1 - (self.time - slot.fade) / FADE_SECONDS, 0, 1) or 1
-    local ok = pcall(function() slot.source:SetGain(slot.baseGain * self.volume * attenuation * fade) end)
+    local ok = pcall(method, slot.source, 'SetGain', slot.baseGain * self.volume * attenuation * fade)
     if not ok then
         warnOnce(self, 'playback', '战斗音效播放接口失败，已静音降级。')
         stopVoice(self, slot)
@@ -221,47 +346,23 @@ local function acquire(self, priority, hitId)
         end
     end
     local victim, count = weakest(self)
-    if count >= self.limit then
+    if count >= math.min(self.limit, self.readySources) then
+        if not victim then return nil end
         if victim.priority > priority then return nil end
         stopVoice(self, victim)
     end
-    for _, slot in ipairs(self.pool) do if not slot.active then return slot end end
-    if #self.pool >= self.limit then return nil end
-    local ok, node = pcall(function() return self.scene:CreateChild('CombatAudioVoice') end)
-    if not ok or not node then
-        warnOnce(self, 'source', '无法创建战斗声源，已静音降级。')
-        return nil
-    end
-    local slot = { node = node, active = false }
-    self.pool[#self.pool + 1] = slot
-    return slot
+    for _, slot in ipairs(self.pool) do if slot.ready and not slot.active then return slot end end
+    return nil -- combat never expands the pool
 end
 
 local function configureSource(self, slot, pos, listener)
-    slot.spatial = false
-    if pos and listener and not self.no3D then
-        local ok, source = pcall(function()
-            local s = slot.source3D or slot.node:CreateComponent('SoundSource3D')
-            slot.source3D = s
-            s:SetDistanceAttenuation(NEAR, FAR, 1)
-            slot.node.worldPosition = pos
-            return s
-        end)
-        if ok and source then slot.source, slot.spatial = source, true; return true end
-        self.no3D = true
-        warnOnce(self, 'spatial', '空间音源不可用，改为平面播放并按距离衰减。')
+    slot.spatial = pos ~= nil and listener ~= nil and slot.source3D ~= nil
+    if slot.spatial then
+        local ok = pcall(positionNode, slot.node, pos)
+        if not ok then slot.spatial = false end
     end
-    local ok, source = pcall(function()
-        local s = slot.source2D or slot.node:CreateComponent('SoundSource')
-        slot.source2D = s
-        return s
-    end)
-    if not ok or not source then
-        warnOnce(self, 'source', '无法创建战斗声源，已静音降级。')
-        return false
-    end
-    slot.source = source
-    return true
+    slot.source = slot.spatial and slot.source3D or slot.source2D
+    return slot.source ~= nil
 end
 
 local function resolve(event, opts)
@@ -310,14 +411,7 @@ function Manager:Play(eventName, opts)
     local index = chooseVariant(self, event, definition, opts)
     local path = definition.files[index]
     local sound = self.sounds[path]
-    if sound == nil then
-        loadSound(self, path, definition.loop)
-        if self.sounds[path] == nil and not self.demandQueued[path] then
-            self.demandQueued[path] = true
-            self.demandQueue[#self.demandQueue + 1] = path
-        end
-        return nil -- no late replay: gameplay timing takes precedence over audio
-    end
+    if sound == nil then return nil end -- drop cold cue; only idle Update does I/O
     if self.loadedFrame[path] == self.loadFrameKey then return nil end
     if not sound then return nil end
     local priority = definition.priority or 1
@@ -330,16 +424,11 @@ function Manager:Play(eventName, opts)
     local db = definition.gains and definition.gains[index] or definition.db
     if event == 'hit_core' and (opts.tier == 'critical' or opts.tier == 'core' or opts.tier == 2) then db = db + 2 end
     if event == 'enemy_windup' and (opts.tier == 'danger' or opts.tier == 2) then db = -2 end
-    local pitch = clamp(finite(opts.pitch, 1), 0.25, 4) * (0.97 + math.random() * 0.06)
+    local pitch = clamp(finite(opts.pitch, definition.pitch or 1), 0.25, 4) * (0.97 + math.random() * 0.06)
     slot.baseGain = BUS_GAIN * 10 ^ (db / 20) * clamp(finite(opts.volume, 1), 0, 1)
     slot.pos, slot.fade = opts.pos, nil
     local attenuation = slot.spatial and 1 or distanceGain(slot.pos, listenerPos)
-    local ok = pcall(function()
-        slot.source:SetAutoRemoveMode(REMOVE_DISABLED or 0)
-        slot.source:SetDeclickEnabled(true)
-        slot.source:SetSoundType(SOUND_EFFECT or 'Effect')
-        slot.source:Play(sound, sound:GetFrequency() * pitch, slot.baseGain * self.volume * attenuation)
-    end)
+    local ok = pcall(playSource, slot.source, sound, pitch, slot.baseGain * self.volume * attenuation)
     if not ok then
         stopVoice(self, slot)
         warnOnce(self, 'playback', '战斗音效播放接口失败，已静音降级。')
@@ -349,6 +438,7 @@ function Manager:Play(eventName, opts)
     slot.active, slot.serial, slot.handle = true, self.serial, { id = self.serial }
     slot.priority, slot.event, slot.hitId, slot.loop = priority, event, hitId, definition.loop
     slot.loopTime, slot.pitch = 0, pitch
+    slot.bowFullEnd = event == 'bow_full' and self.time + .12 or nil
     self.lastPlay[event], self.lastVariant[event] = self.time, index
     return slot.handle
 end
@@ -359,10 +449,10 @@ function Manager:Stop(handle)
         if slot.active and slot.handle == handle then
             if slot.loop then
                 -- Native Stop performs the engine's short declick fade immediately,
-                -- even while game Update is paused. Update enforces a 40 ms hard cap.
+                -- even while game Update is paused. Update enforces a 20 ms hard cap.
                 if not slot.fade then
                     slot.fade = self.time
-                    local ok = pcall(function() slot.source:Stop() end)
+                    local ok = pcall(method, slot.source, 'Stop')
                     if not ok then stopVoice(self, slot) end
                 end
             else stopVoice(self, slot) end
@@ -372,23 +462,27 @@ function Manager:Stop(handle)
     return false
 end
 
-function Manager:Update(dt)
+function Manager:Update(dt, allowWarmup)
     if self.disposed then return end
+    if allowWarmup == nil then
+        local state = package.loaded['combat.CombatState']
+        allowWarmup = not state or state.Get() == state.EXPLORE
+    end
     local updateStart = milliseconds()
     self.time, self.frame = self.time + math.max(0, finite(dt, 0)), self.frame + 1
     beginLoadFrame(self)
     local _, listenerPos = getListener(self)
     for _, slot in ipairs(self.pool) do
         if slot.active then
-            local ok, playing = pcall(function() return slot.source:IsPlaying() end)
-            if (slot.fade and self.time - slot.fade >= FADE_SECONDS) or not ok or (not slot.fade and not playing) then
+            local ok, playing = pcall(method, slot.source, 'IsPlaying')
+            if (slot.bowFullEnd and self.time >= slot.bowFullEnd) or (slot.fade and self.time - slot.fade >= FADE_SECONDS) or not ok or (not slot.fade and not playing) then
                 stopVoice(self, slot)
             else
                 if slot.loop and not slot.fade then
                     slot.loopTime = slot.loopTime + math.max(0, finite(dt, 0)) * slot.pitch
                     if slot.loopTime >= BOW_LOOP_SECONDS then
                         slot.loopTime = slot.loopTime % BOW_LOOP_SECONDS
-                        local seekOk = pcall(function() slot.source:Seek(slot.loopTime) end)
+                        local seekOk = pcall(method, slot.source, 'Seek', slot.loopTime)
                         if not seekOk then
                             stopVoice(self, slot)
                             warnOnce(self, 'loop', '拉弓循环接口不可用，已静音降级。')
@@ -401,7 +495,10 @@ function Manager:Update(dt)
     end
     -- Preserve exhausted Update budget for Play calls later in this same frame.
     self.loadSpentMs = math.max(self.loadSpentMs, elapsed(updateStart))
-    preloadStep(self, updateStart)
+    if allowWarmup ~= false then
+        preloadStep(self, updateStart)
+        warmPool(self, updateStart)
+    end
 end
 
 function Manager:SetEnabled(enabled)
@@ -432,11 +529,12 @@ function Manager:Dispose()
     if self.disposed then return end
     for _, slot in ipairs(self.pool) do
         stopVoice(self, slot)
-        pcall(function() slot.node:Remove() end)
-        pcall(function() slot.node:Dispose() end)
+        pcall(method, slot.node, 'Remove')
+        pcall(method, slot.node, 'Dispose')
     end
     self.pool, self.sounds, self.scene, self.disposed = {}, {}, nil, true
-    self.demandQueue, self.demandQueued, self.loadedFrame, self.loadedCount = {}, {}, {}, 0
+    self.loadedFrame, self.loadedCount, self.readySources = {}, 0, 0
+    self.pendingPath = nil
     self.preloadQueued = false
 end
 
@@ -459,10 +557,10 @@ function Audio.New(scene)
 end
 
 -- Module facade allows W2/W3 to share the scene-owned manager without globals.
-for _, name in ipairs({'Play', 'Stop', 'SetEnabled', 'SetVolume', 'SetQuality', 'Preload', 'PreloadProgress', 'IsReady', 'Update', 'Dispose', 'SetListenerPosition'}) do
+for _, name in ipairs({'Play', 'Stop', 'SetEnabled', 'SetVolume', 'SetQuality', 'Preload', 'PreloadProgress', 'IsReady', 'IsFirstStrikeReady', 'Update', 'Dispose', 'SetListenerPosition'}) do
     Audio[name] = function(...)
         if defaultManager then return Manager[name](defaultManager, ...) end
-        if name == 'IsReady' then return false end
+        if name == 'IsReady' or name == 'IsFirstStrikeReady' then return false end
         if name == 'PreloadProgress' then return 0, #ASSETS end
         return nil
     end

@@ -62,6 +62,8 @@ local origin=boss.position
 boss:ApplyHit({dmg=1,poise=1,part='foreleg_l',kind='sword',dir=Vector3(1,0,0)})
 T.Near(boss.position.x,origin.x); T.Near(boss.position.z,origin.z)
 boss:ApplyHit({dmg=1,poise=100,part='foreleg_l',kind='sword',dir=Vector3(1,0,0)})
+T.Near(boss.position.x,origin.x)
+T.Tick(boss,boss.hitStop+.2,combat.pos)
 T.Near(boss.position.x-origin.x,.6)
 print('PASS one pillar stun per charge; ordinary Boss hits zero knockback, poise break moves safely')
 

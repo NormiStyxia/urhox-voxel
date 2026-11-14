@@ -8,7 +8,7 @@ local logs,calls={},{}
 local timeClass={}
 function timeClass:GetSystemTime()assert(self==timeClass,'GetSystemTime requires Time class');return now end
 local timer=setmetatable({},{__index=timeClass})
-local env={Safe=function(_,fn,...)return pcall(fn,...)end,CombatState={FlushSwapPerf=function()end},M={},Time=timeClass,GetTime=function()return timer end,os={clock=function()return cpu end},math=math,string=string,
+local env={SwingPerf={BeginFrame=function()end,EndFrame=function()end},Safe=function(_,fn,...)return pcall(fn,...)end,CombatState={FlushSwapPerf=function()end},M={},Time=timeClass,GetTime=function()return timer end,os={clock=function()return cpu end},math=math,string=string,
  print=function(text)logs[#logs+1]=text end,
  collectgarbage=function(action,a,b)
   calls[#calls+1]=action

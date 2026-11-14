@@ -1,0 +1,5 @@
+<material>
+    <surfaceshader name="Shaders/BLGL/EnemyVoxelHit.shader" />
+    <parameter name="hit_flash" value="0" />
+    <parameter name="rage_glow" value="0" />
+</material>

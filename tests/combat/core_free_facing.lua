@@ -61,12 +61,12 @@ for _,reason in ipairs({'menu','focus','touchcancel','dodge','swap','exit','deat
  m=new();State.SetBusy(false);State.SetWeapon('bow');State.FinishTransition();State.Activity(true)
  m:Cancel('setup');m.blocked=false;m:Action('hold')
  m.clip='bow_hold';m.charge=.01
- cam:Update(.2,m,true,false);S.near(cam.output.fov,-12);S.near(cam.output.look,.6)
+ cam:Update(.2,m,true,false);S.near(cam.output.fov,-.000825);S.near(cam.output.look,math.tan(math.rad((55-.000825)/2))/math.tan(math.rad(55/2)))
  m:Cancel(reason);assert(m.pendingFire==nil and m.charge==0)
- cam:Update(.1,m,true,false);S.near(cam.output.fov,0);S.near(cam.output.look,1)
+ cam:Update(.12,m,true,false);S.near(cam.output.fov,0);S.near(cam.output.look,1)
 end
-cam=Camera.New();cam:Update(.1,{clip='bow_draw',charge=0},true,false);S.near(cam.output.fov,-6)
-cam:Update(.1,{clip='bow_draw',charge=0},true,false);S.near(cam.output.fov,-12)
+cam=Camera.New();cam:Update(.1,{clip='bow_draw',charge=0},true,false);S.near(cam.output.fov,0)
+cam:Update(.1,{clip='bow_draw',charge=0},true,false);S.near(cam.output.fov,0)
 cam:Update(.01,{clip='bow_draw',charge=1},false,false);S.near(cam.output.fov,0);S.near(cam.output.look,1)
 print('PASS free-facing: intent selection/filter/turn snapshot, shared region samples, physical lunge clipping, bow zoom start/disable/all cancel reasons')
 -- Real release and cosmetic cancellation tracks retain the pose snapshot even
@@ -111,9 +111,9 @@ local env=setmetatable({combatCamera_=Camera.New(),combatMoves_=cm,CombatState=S
 local update=assert(load(code,'actual Scene zoom composition','t',env))()
 State.SetSetting('cameraFov',true)
 for _=1,120 do camera.fov=55;update(1/60,{worldDirection=Vector3.FORWARD});assert(camera.fov>=43-1e-8) end
-S.near(camera.fov,43)
-cm.clip=nil;camera.fov=55;update(.1,{worldDirection=Vector3.FORWARD});S.near(camera.fov,55)
-print('PASS actual Scene FOV composition: one 55->43 envelope, no double zoom or drift, restore55')
+S.near(camera.fov,55-.000825)
+cm.clip=nil;camera.fov=55;update(.12,{worldDirection=Vector3.FORWARD});S.near(camera.fov,55)
+print('PASS actual Scene FOV composition: one charge-squared envelope, no double zoom or drift, restore55')
 
 m=new();State.SetBusy(false);State.SetWeapon('bow');State.FinishTransition();State.Activity(true)
 m:Cancel('setup');m.blocked=false;m:Action('hold');m:Play('bow_hold');m.charge=.8

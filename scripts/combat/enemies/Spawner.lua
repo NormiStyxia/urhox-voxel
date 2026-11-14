@@ -216,6 +216,7 @@ function Spawner:GetPerfStats()
         p.particleCapacity,p.particleReserved=particles.capacity,particles.reserved
         p.particleCubes,p.particleFlat,p.particleTrianglesEstimate=particles.cubeCount,particles.flatCount,particles.trianglesEstimate
         p.particleEvicted,p.particleDropped=particles.evicted,particles.dropped
+        p.whiteKernels,p.whiteKernelsDropped=particles.whiteKernels,particles.whiteKernelsDropped
         p.rebuildCpuMs=p.rebuildCpuMs+first.particles.rebuildCpuMs
     end
     p.surfaceFacesEstimate=p.surfaceFacesEstimate+p.particleCount*8

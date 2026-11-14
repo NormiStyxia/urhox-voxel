@@ -23,18 +23,21 @@ end
 
 ---@param scene Scene
 ---@param anchors Vector3[]
-function M.New(scene,anchors,count,lights)
+function M.New(scene,anchors,count,lights,detail)
     local self=setmetatable({},M)
-    self:Init(scene,anchors,count,lights)
+    self:Init(scene,anchors,count,lights,detail)
     return self
 end
 
 ---@param scene Scene
 ---@param anchors Vector3[]
-function M:Init(scene,anchors,count,lights)
+function M:Init(scene,anchors,count,lights,detail)
     self.count=math.max(0,math.min(6,#anchors,math.floor(count)))
     self.lightCount=math.max(0,math.min(3,self.count,math.floor(lights)))
     self.available,self.disposed,self.level=false,false,0
+    self.detail=math.max(0,math.min(1,detail or 1))
+    self.sparkCount=self.detail>=0.9 and 4 or 2
+    self.fallback=false
     self.batchCount,self.triangleCount=0,0
     ---@type Node|nil
     self.root=nil
@@ -44,12 +47,14 @@ function M:Init(scene,anchors,count,lights)
     self.basinMaterial=nil
     ---@type Light[]
     self.lights={}
+    ---@type Color[]
+    self.lightColors={}
     if self.count==0 then return end
     -- Async material loading is required on cold DWP caches too. Nothing visible
     -- or illuminating until the SurfaceShader resource has really arrived.
     self.loading=true
     self.pendingNight,self.pendingClock,self.pendingFog=0,0,false
-    cache:GetResourceAsync("Material","Materials/RuinsPillarFlame.xml",function(source)
+    local function Build(source)
         ---@cast source Material|nil
         if self.disposed or not self.loading then return end
         self.loading=false
@@ -83,7 +88,16 @@ function M:Init(scene,anchors,count,lights)
                     local v=corners[k]
                     g:DefineVertex(Vector3(plane==2 and 0 or v[1],v[2],plane==2 and v[1] or 0))
                     g:DefineNormal(Vector3.UP)
-                    g:DefineColor(Color(i/7,halo and 1 or 0,0,1));g:DefineTexCoord(uv[k])
+                    g:DefineColor(Color(self.fallback and i/7 or i/255,halo and 1 or 0,0,1));g:DefineTexCoord(uv[k])
+                end
+            end
+            if not self.fallback then
+                for spark=1,self.sparkCount do
+                    for _,k in ipairs(order) do
+                        g:DefineVertex(Vector3(0,0.8,0));g:DefineNormal(Vector3.UP)
+                        g:DefineColor(Color(i/255,1,spark/5,1))
+                        g:DefineTexCoord(Vector2((k==2 or k==3) and 1 or 0,k>=3 and 1 or 0))
+                    end
                 end
             end
             -- Conservative symmetric bounds for the camera-facing halo.
@@ -113,7 +127,8 @@ function M:Init(scene,anchors,count,lights)
                 local lampNode=node:CreateChild("WarmPointLight")
                 lampNode.position=Vector3(0,0.55,0)
                 local light=lampNode:CreateComponent("Light")
-                light.lightType=LIGHT_POINT;light.color=Color(1,0.50,0.18)
+                self.lightColors[i]=Color(1,0.50,0.18)
+                light.lightType=LIGHT_POINT;light.color=self.lightColors[i]
                 light.range,light.brightness,light.castShadows=12,0,false
                 light.useTemperature=false;light.affectVolumetricFog=false
                 self.lights[#self.lights+1]=light
@@ -121,9 +136,18 @@ function M:Init(scene,anchors,count,lights)
         end
         basin:Commit();basin:SetMaterial(self.basinMaterial)
         basin.castShadows,basin.occluder=false,false
-        self.batchCount,self.triangleCount=self.count+1,self.count*(8+36)
+        self.batchCount,self.triangleCount=self.count+1,self.count*(8+36+(self.fallback and 0 or self.sparkCount*2))
+        if not self.fallback then self.material:SetShaderParameter("flame_detail",Variant(self.detail)) end
         self.available=true
         self:Update(self.pendingNight,self.pendingClock,self.pendingFog)
+    end
+    cache:GetResourceAsync("Material","Materials/RuinsPillarFlameDynamic.xml",function(source)
+        if self.disposed or not self.loading then return end
+        if source then Build(source);return end
+        -- Preserve the approved old material and geometry as an independent
+        -- fallback. If both fail, stay hidden rather than bind a white default.
+        self.fallback=true
+        cache:GetResourceAsync("Material","Materials/RuinsPillarFlame.xml",Build)
     end)
 end
 
@@ -140,8 +164,15 @@ function M:Update(night,clock,realFog)
         return
     end
     self.material:SetShaderParameter("night_strength",Variant(self.level))
+    if not self.fallback then self.material:SetShaderParameter("flame_time",Variant(clock)) end
     for i,light in ipairs(self.lights) do
-        light.brightness=self.level*7.0*(0.94+0.06*math.sin(clock*1.6+i*2.1))
+        local phase=i*2.1
+        local flicker=0.94+0.04*math.sin(clock*7+phase)+0.02*math.sin(clock*13+phase*1.7)
+        light.brightness=self.level*7.0*flicker
+        local color=self.lightColors[i]
+        color.g=0.48+(flicker-0.88)*0.3
+        color.b=0.16+(flicker-0.88)*0.2
+        light.color=color
         light.affectVolumetricFog=realFog==true
         light.volumetricFogIntensity=0.35
     end
@@ -154,5 +185,7 @@ function M:Dispose()
     if self.material then self.material:Dispose() end
     if self.basinMaterial then self.basinMaterial:Dispose() end
     self.lights={}
+    self.lightColors={}
+    self.root,self.material,self.basinMaterial=nil,nil,nil
 end
 return M

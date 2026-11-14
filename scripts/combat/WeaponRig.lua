@@ -169,6 +169,10 @@ function Rig:Init(scene,world,controller)
     self.lag=Vector3()
     self.poseRotation,self.swingRotation,self.gripRest=Quaternion(),Quaternion(),Quaternion(90,0,0)
     self.sampleRotation=Quaternion()
+    -- Dedicated visual-only impulse: mesh child, never gameplay pivot/socket.
+    self.hitRotation,self.hitOffset=Quaternion(),Vector3()
+    self.hitPosition=Vector3()
+    self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
     self.trails,self.samples,self.images,self.particles={},{},{},{}
     self.bowImages={}
     self.sampleCount,self.imageElapsed,self.distanceCarry=0,0,0
@@ -348,12 +352,34 @@ function Rig:BuildVisualPools(weapon)
         for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
         for stage=0,2 do
             local shape=Builder.BowVisual(bp,stage)
-            local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,shape.cells,'BowDraw_'..stage)
+            local limbs={}
+            for _,cell in ipairs(shape.cells) do if cell.feature~='string' then limbs[#limbs+1]=cell end end
+            local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,limbs,'BowDraw_'..stage)
             mesh.stringZ=shape.stringMidpoint[3];mesh.nockZ=shape.nockZ;self.bowDrawMeshes[stage+1]=mesh
         end
         DisposeEffect(self,self.bowArrow)
         local arrow=Builder.NockedArrow(bp)
         self.bowArrow=Builder.VisualVolume(self.world,entry.pivot,bp,arrow,'BowNockedArrow')
+        self.arrowTip=0
+        for _,cell in ipairs(arrow) do self.arrowTip=math.max(self.arrowTip,(cell.z+.5)*.03) end
+        for _,mesh in ipairs(self.bowStrings or {}) do DisposeEffect(self,mesh) end
+        self.bowStrings={}
+        for i=1,2 do
+            local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,{{x=0,y=0,z=0,channel='accent'}},'BowString_'..i)
+            self.bowStrings[i]=mesh
+        end
+        self.bowHalfHeight=assert(Parts.Get(bp.config.parts.limbs)).sockets.top[2]*.03
+        -- Twelve complete arrows are rebuilt only on idle equipment geometry change.
+        for _,mesh in ipairs(self.flightArrows or {}) do DisposeEffect(self,mesh);mesh.root:Remove() end
+        self.flightArrows={}
+        for i=1,12 do
+            local root=self.scene:CreateChild('BowFlight_'..i)
+            local mesh=Builder.VisualVolume(self.world,root,bp,arrow,'BowFlightGeometry_'..i)
+            mesh.root,mesh.tip=root,self.arrowTip
+            mesh.node.position=mesh.minimum-Vector3(0,0,self.arrowTip)
+            root.enabled=false;mesh.node.enabled=true
+            self.flightArrows[i]=mesh
+        end
     end
 end
 
@@ -362,7 +388,66 @@ end
 function Rig:SetBowDraw(p)
     if self.disposed then return end
     self.bowDraw=self.pose=='hand' and type(p)=='number' and p==p and Clamp(p,0,1) or 0
-    self.bowStage=self.bowDraw<.25 and 0 or (self.bowDraw<.75 and 1 or 2)
+    self.bowStage=self.bowDraw<.65 and 0 or (self.bowDraw<.90 and 1 or 2)
+end
+
+function Rig:GetBowNockLocal(u)
+    u=Clamp(u or self.bowDraw,0,1)
+    local z=u<=.5 and -.36*u or -.18-.34*(u-.5)
+    return Vector3(0,self.entries.bow.mesh.blueprint.hit.origin[2],z)
+end
+
+function Rig:GetBowArrowTip()
+    local launch=self.entries.bow.mesh.blueprint.hit.origin
+    local nock=self:GetBowNockLocal()
+    return self.entries.bow.pivot:LocalToWorld(Vector3(launch[1],launch[2],nock.z+self.arrowTip))
+end
+
+-- With grip/rotation this evaluates this frame's target BEFORE rig rendering;
+-- without them returns the rendered world point, for debug/launch checks.
+function Rig:GetBowNock(u,grip,rotation)
+    local localPoint=self:GetBowNockLocal(u)
+    if grip and rotation then return grip+rotation*localPoint end
+    return self.entries.bow.pivot:LocalToWorld(localPoint)
+end
+
+function Rig:ReleaseBow()
+    self.bowReleaseAt=self.visualClock
+    self.bowDraw=0;self.bowStage=0
+    self:UpdateBowVisual()
+end
+
+function Rig:CancelBow()
+    self.bowReleaseAt=nil
+    self.bowDraw,self.bowStage=0,0
+    self:UpdateBowVisual()
+end
+
+function Rig:FlashBowFull()
+    if self.active~='bow' or self.pose~='hand' or not self.trailEnabled then return end
+    -- Reuse the arrival spark's existing geometry/material; no full-body shake.
+    local flash=self.flashes.socket
+    self.flashKind,self.flashLeft='bow_full',.08
+    flash.node:SetParent(self.entries.bow.pivot)
+    flash.node.rotation=Quaternion()
+    flash.node.position=self:GetBowNockLocal(1)-Vector3(.045,.045,.015)
+    flash.node.enabled=true
+    flash.material:SetShaderParameter('MatDiffColor',self.fxAlpha[13])
+end
+
+function Rig:DrawArrow(p,visible)
+    local mesh=self.flightArrows and self.flightArrows[p.index]
+    if not mesh then return end
+    mesh.root.enabled=visible
+    if not visible then return end
+    local direction=p.vel:LengthSquared()>.01 and p.vel:Normalized() or Vector3.FORWARD
+    mesh.root.position=(p.embedded and p.pos or p.renderPos or p.pos)
+    mesh.root:SetDirection(direction)
+    local shake=p.embedded and p.age<.35 and 4*math.sin(p.age*math.pi*14)*2^(-p.age/.1) or 0
+    mesh.node.rotation=Quaternion(shake,0,0)
+    mesh.node.position=mesh.node.rotation*(mesh.minimum-Vector3(0,0,mesh.tip))
+    local alpha=p.embedded and p.age>.7 and (p.age>.75 and 0 or .5) or 1
+    mesh.material:SetShaderParameter('MatDiffColor',self.fxAlpha[math.floor(alpha*16)+1])
 end
 
 ---@param name string materialize | materialized | blade_draw | blade_sheath | dissolved
@@ -414,6 +499,7 @@ function Rig:UpdateTrailColor()
 end
 
 function Rig:ClearTrail()
+    self.contactArc=false
     self.sampleCount,self.distanceCarry,self.sampleValid=0,0,false
     for _,trail in ipairs(self.trails) do trail.node.enabled=false end
     for _,image in ipairs(self.images) do image.node.enabled=false end
@@ -425,10 +511,71 @@ end
 function Rig:SetTrail(on)
     self.trailEnabled=on==true
     if not self.trailEnabled then
-        self:ClearTrail();self.flashLeft=0
-        self.tailLeft=0;self.visualActive=false;self.visualCharge=nil;self.chargeFlashed=false
-        self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
+        -- Decorative silhouettes/charge grains can be disabled independently
+        -- of arrival flashes and essential hit confirmation.
+        for _,image in ipairs(self.images) do image.node.enabled=false end
+        for _,image in ipairs(self.bowImages) do image.node.enabled=false end
+        for _,particle in ipairs(self.particles) do particle.node.enabled=false end
     end
+end
+
+--- Borrowed synchronous HitEvent; only scalar state is retained.
+function Rig:HitImpulse(event)
+    if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
+    if self.hitGroup~=event.swingId or self.visualClock-self.hitAt>.25 then
+        self.hitGroup,self.hitAt=event.swingId,self.visualClock
+        self.hitStop,self.hitWhite,self.hitAngle=0,0,0
+    end
+    local strong=event.tier=='heavy' or event.tier=='third'
+    self.hitStop=math.max(self.hitStop,event.attackerStop or 0)
+    self.hitWhite=math.max(self.hitWhite,(strong or event.critical or event.killed) and .06 or .04)
+    self.hitAngle=math.max(self.hitAngle,strong and 1.5 or .8)
+    self.hitSign=event.combo==2 and 1 or -1
+    self:UpdateHitImpulse() -- AfterPose runs after Rig.Update; show on contact frame.
+    return true
+end
+
+function Rig:UpdateHitImpulse()
+    local entry=self.entries.sword
+    local age=self.visualClock-self.hitAt
+    local alive=self.pose=='hand' and self.active=='sword' and age<self.hitStop+.05
+    local k=alive and math.max(0,1-math.max(0,age-self.hitStop)/.05) or 0
+    self.hitRotation:FromEulerAngles(0,0,(self.hitSign or -1)*self.hitAngle*k)
+    local b=entry.mesh.blueprint.bounds.min
+    self.hitOffset=SetVec(self.hitOffset,b[1]*SWORD_WIDTH,b[2]*SWORD_LENGTH,b[3])
+    entry.mesh.node.rotation=self.hitRotation
+    self.hitPosition=Rotate(self.hitPosition,self.hitRotation,self.hitOffset)
+    entry.mesh.node.position=self.hitPosition
+    if alive and age<self.hitWhite-1e-8 then
+        local flash=self.flashes.blade
+        flash.node:SetParent(entry.pivot)
+        flash.offset=SetVec(flash.offset,self.bladeFlashX,self.bladeRoot.y,-.015)
+        flash.node.position=flash.offset;flash.node.rotation=flash.rotation
+        flash.node.enabled=true
+        flash.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
+    elseif self.flashKind~='full_charge' or self.flashLeft<=0 then self.flashes.blade.node.enabled=false end
+end
+
+--- Conservative contact confirmation, matching the existing gameplay sector.
+--- Reuses the eight bands; no new volume, shader, table or hit is created.
+function Rig:ShowContactArc(zone)
+    if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
+    self:ClearTrail()
+    local count=self.trailEnabled and 8 or 4
+    local half=math.rad(zone.angle*.5)
+    local f,o=zone.forward,zone.origin
+    for i=1,count do
+        local a=-half+2*half*(i-.5)/count
+        local x,z=math.sin(a),math.cos(a)
+        local dx,dz=x*f.z+z*f.x,z*f.z-x*f.x
+        local radius=zone.radius
+        local inner=math.max(0,radius-(self.bladeTip.y-self.bladeRoot.y))
+        self:RecordSample(o.x+dx*inner,o.y+.9,o.z+dz*inner,
+            o.x+dx*radius,o.y+.9,o.z+dz*radius,dz,0,-dx)
+    end
+    self.contactArc=true;self.tailLeft=TRAIL_TAIL
+    self:DrawBands()
+    return true
 end
 
 --- Called each frame by the combat owner; no pose/motion inference.
@@ -449,7 +596,7 @@ end
 ---@param kind string full_charge | draw | sheath
 ---@return boolean
 function Rig:Flash(kind)
-    if self.disposed or self.pose=='hidden' or self.retiring.weapon or not self.trailEnabled
+    if self.disposed or self.pose=='hidden' or self.retiring.weapon
         or (kind=='full_charge' and (self.active~='sword' or self.visualState~='hand')) then return false end
     for i=1,2 do
         local shot=self.afterimages and self.afterimages[i]
@@ -496,6 +643,9 @@ end
 
 function Rig:StopCombatVisual()
     self:ClearTrail()
+    self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
+    self.hitGroup,self.contactArc=nil,false
+    self:UpdateHitImpulse()
     self.afterimages=nil;self.afterimagesFresh=false;self.imageElapsed=0
     self.visualActive,self.visualFresh,self.visualCharge=false,false,nil
     self.tailLeft,self.flashLeft,self.chargeFlashed=0,0,false
@@ -507,6 +657,7 @@ function Rig:HideWeapon(weapon)
     for _,layer in ipairs(self.layers[weapon]) do layer.node.enabled=false end
     if weapon=='bow' then
         for _,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=false end
+        for _,mesh in ipairs(self.bowStrings) do mesh.node.enabled=false end
         self.bowArrow.node.enabled=false
     end
 end
@@ -526,6 +677,7 @@ function Rig:RetireCurrent()
         if layer.node.enabled then r.layerMask=r.layerMask|(1<<(i-1)) end
     end
     if self.active=='bow' then
+        for _,mesh in ipairs(self.bowStrings) do mesh.node.enabled=false end
         for i,mesh in ipairs(self.bowDrawMeshes) do if mesh.node.enabled then r.bowStage=i end end
         r.arrow=self.bowArrow.node.enabled
     end
@@ -602,6 +754,7 @@ function Rig:SetPose(pose)
         self:BeginMotion('dissolve',HIDE_TIME)
         -- No arrow, flash, trail or afterimage survives the setter itself.
         for _,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=false end
+        for _,mesh in ipairs(self.bowStrings) do mesh.node.enabled=false end
         self.bowArrow.node.enabled=false
     elseif self.visualState=='hidden' then
         self:Attach('back');self.hangReady=false
@@ -864,7 +1017,7 @@ function Rig:DrawBands()
     local flying=self.visualState=='fly_to_hand'
     local fade=(self.visualActive or flying) and 1 or math.ceil(Clamp(self.tailLeft/TRAIL_TAIL,0,1)*4)/4
     for i,band in ipairs(self.trails) do
-        band.node.enabled=i<=math.ceil(self.sampleCount*fade) and self.sampleCount>=2 and fade>0 and (not flying or i<=4)
+        band.node.enabled=i<=math.ceil(self.sampleCount*fade) and self.sampleCount>=2 and fade>0 and (not flying or i<=4) and (self.trailEnabled or i<=4)
         if band.node.enabled then
             local sample=self.samples[i]
             local x,y,z=band.xAxis,band.yAxis,band.zAxis
@@ -951,13 +1104,33 @@ end
 
 function Rig:UpdateBowVisual()
     local drawn=self.active=='bow' and self.visualState=='hand' and self.bowDraw>.05
+    local vibrating=self.bowReleaseAt and self.visualClock-self.bowReleaseAt<.05
+    local showString=self.active=='bow' and self.visualState=='hand' and (drawn or vibrating)
+    local nock=self:GetBowNockLocal()
+    if vibrating then
+        local t=self.visualClock-self.bowReleaseAt
+        nock=nock+Vector3(.03*math.cos(t*math.pi*60)*(1-t/.05),0,0)
+    end
+    for i,mesh in ipairs(self.bowStrings) do
+        mesh.node.enabled=showString
+        if showString then
+            local tip=Vector3(0,(i==1 and 1 or -1)*self.bowHalfHeight,(-2-self.bowStage)*.03)
+            local delta=tip-nock
+            mesh.node:SetDirection(delta:Normalized())
+            mesh.node.scale=Vector3(.35,.35,delta:Length()/.03)
+            mesh.node.position=nock-mesh.node.rotation*Vector3(.00525,.00525,0)
+        end
+    end
     for i,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=drawn and i==self.bowStage+1 end
     self.bowArrow.node.enabled=drawn
-    if self.active=='bow' and self.visualState=='hand' then self.entries.bow.mesh.node.enabled=not drawn end
+    if self.active=='bow' and self.visualState=='hand' then
+        self.entries.bow.mesh.node.enabled=not (drawn or vibrating)
+        if vibrating and not drawn then self.bowDrawMeshes[1].node.enabled=true end
+    end
     if drawn then
         local minimum=self.bowArrow.minimum
         local launch=self.entries.bow.mesh.blueprint.hit.origin
-        self.bowArrowOffset=SetVec(self.bowArrowOffset,minimum.x+launch[1],minimum.y+launch[2],minimum.z+self.bowDrawMeshes[self.bowStage+1].nockZ)
+        self.bowArrowOffset=SetVec(self.bowArrowOffset,minimum.x+launch[1],minimum.y+launch[2],minimum.z+nock.z)
         self.bowArrow.node.position=self.bowArrowOffset
         self.bowArrow.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
         self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
@@ -1026,24 +1199,26 @@ function Rig:Update(dt)
         self.flashLeft=0;self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
     end
     self:UpdateFlash(self.arrivalFresh and 0 or dt);self.arrivalFresh=false
-    if not self.trailEnabled then self:ClearTrail();self.tailLeft=0;return end
+    if slide then self.hitAt=-math.huge end
+    self:UpdateHitImpulse()
+    if self.contactArc then self:ClearTrail() end -- one presented contact frame
     if slide and self.visualState~='hand' then return end -- interrupted flights cannot emit slide knife/particles
     if self.visualState~='hand' then
         if self.visualState=='fly_to_hand' and self.active=='sword' and entry.mesh.alpha>0 then
             self:SampleBlade(entry);self:DrawBands()
         else self:ClearTrail() end
-        self:UpdateMaterializeParticles()
+        if self.trailEnabled then self:UpdateMaterializeParticles() end
         self:UpdateGlow()
         self.tailLeft=0;return
     end
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
-    if slide then self:UpdateImages(entry,dt,true);return end
+    if slide then if self.trailEnabled then self:UpdateImages(entry,dt,true) end;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
-        self:DrawBands();self:UpdateImages(entry,dt)
+        self:DrawBands();if self.trailEnabled then self:UpdateImages(entry,dt) end
     else self:ClearTrail() end
-    self:UpdateCharge(entry)
+    if self.trailEnabled then self:UpdateCharge(entry) end
 end
 
 function Rig:Dispose()
@@ -1052,6 +1227,8 @@ function Rig:Dispose()
     for _,layers in pairs(self.layers) do for _,layer in ipairs(layers) do DisposeEffect(self,layer) end end
     for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
     DisposeEffect(self,self.bowArrow)
+    for _,mesh in ipairs(self.bowStrings or {}) do DisposeEffect(self,mesh) end
+    for _,mesh in ipairs(self.flightArrows or {}) do DisposeEffect(self,mesh);mesh.root:Remove() end
     for _,trail in ipairs(self.trails) do self.world:RemoveVolume(trail.volume); trail.material:Dispose() end
     for _,image in ipairs(self.images) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,image in ipairs(self.bowImages) do self.world:RemoveVolume(image.volume);image.material:Dispose() end

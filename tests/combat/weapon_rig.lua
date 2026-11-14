@@ -8,7 +8,7 @@ local nomi=Mock.Nomi(scene) --[[@as any]]
 local rig=Rig.New(scene,world,nomi)
 assert(rig.active=="sword" and rig.pose=="hidden")
 assert(#rig.trails==8 and #rig.images==2 and #rig.bowImages==2 and #rig.particles==6)
-assert(world.created==2+#rig.trails+#rig.images+#rig.bowImages+#rig.particles+2+12+4,"weapons/FX plus twelve reveal slices, three bow shapes and arrow")
+assert(world.created==2+#rig.trails+#rig.images+#rig.bowImages+#rig.particles+2+12+4+14,"weapons/FX plus twelve reveal slices, three bow shapes and arrow")
 assert(rig:GetAfterimagePose()==nil,'hidden weapons are not hand snapshots')
 for _,volume in ipairs(world.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
 assert(rig.sockets.hand_right==nomi.castSocket)
@@ -58,7 +58,7 @@ assert(rig.retiring.weapon=='sword' and not rig.entries.bow.mesh.node.enabled an
 frames(18);rig:SetPose("hand");frames(8)
 assert(rig.entries.bow.pivot.parent==rig.sockets.hand_left)
 local bowHit=rig:GetHit()
-assert(bowHit.radius==nil and bowHit.length==nil and rig:GetStats().draw==.7)
+assert(bowHit.radius==nil and bowHit.length==nil and rig:GetStats().draw==1)
 rig:SetPose("back");frames(11)
 nomi.nomi.bones.body.rotation=Quaternion(25,0,20);frames(1)
 assert((rig.hangPosition-rig.hangTarget):Length()<=.1200001)
@@ -69,7 +69,7 @@ local c=Parts.DefaultWeapon("bow");c.weapon="bow";c.colors.accent=6
 assert(rig:Apply(c) and world.rebuilds==initialRebuilds)
 assert(world.palette[175].r==Parts.ColorPresets[6].rgb[1]/255)
 c.parts.limbs="limbs_long"
-assert(rig:Apply(c) and world.rebuilds==initialRebuilds+13 and rig:GetStats().range==46,'bow edit refreshes fixed visual pools')
+assert(rig:Apply(c) and world.rebuilds==initialRebuilds+27 and math.abs(rig:GetStats().range-(64+10*64/36))<1e-8,'bow edit refreshes fixed visual pools')
 assert(not rig:SetActive("axe") and not rig:SetPose("fly") and not rig:Apply({}))
 rig:SetPose("hidden");frames(18)
 assert(not rig.entries.bow.mesh.node.enabled)
@@ -157,7 +157,7 @@ assert(world.created==allocated and world.writes==writesAtFx and world.rebuilds=
 assert(colorAllocations==0 and variantAllocations==0,'FX update must reuse alpha buckets')
 rawset(_G,'Color',rawColor);rawset(_G,'Variant',rawVariant)
 assert(rig:Flash('draw'));rig:SetTrail(false)
-assert(not rig.flashes.socket.node.enabled and not rig:Flash('draw'))
+assert(rig.flashes.socket.node.enabled and not rig:Flash('draw'),'low quality retains essential arrival; duplicate stays latched')
 rig:SetTrail(true)
 rig:SetPose('back');frames(11)
 assert(rig.flashes.socket.node.enabled,'stow arrival flashes once')
@@ -211,7 +211,7 @@ local function SlideCase(weapon)
         assert(r.trails[1].node.enabled)
         -- W2's accepted-dodge hook clears the prior attack before the first
         -- .04s slide sample. Its normal per-frame quality gate restores effects.
-        r:SetTrail(false);r:SetTrail(true)
+        r:StopCombatVisual()
         r:SetAfterimages({{clip='sword_attack_1',age=0,position=currentPosition,rotation=currentRotation}})
         r:SetCombatVisual(false,nil);r:Update(.02)
         assert(r.tailLeft==0)
@@ -373,7 +373,7 @@ local function LivelyCase(fps,weapon)
                 local pose=r.bowDrawMeshes[r.bowStage+1]
                 assert(pose.node.enabled)
                 Mock.Near(r.bowArrow.node.position.x-r.bowArrow.minimum.x,entry.mesh.blueprint.hit.origin[1])
-                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,pose.nockZ)
+                Mock.Near(r.bowArrow.node.position.z-r.bowArrow.minimum.z,r:GetBowNockLocal(p).z)
                 Mock.Near(r.bowArrow.node.position.y-r.bowArrow.minimum.y,entry.mesh.blueprint.hit.origin[2])
             end
         end
@@ -667,3 +667,41 @@ do
 end
 print('weapon_rig shared palms: PASS (legacy and zero-elbow hit/snapshot equality, bent forearm routing, owned-child-only idempotent cleanup)')
 print("weapon_rig: PASS (bow axes/draw/nock, timed reveal/flight/stow/dissolve, event drain, spring/float, visual-only sword scale, pooled FX)")
+
+do
+    local root=Mock.Node('r8_hit') --[[@as any]]
+    local w=Mock.World(root) --[[@as any]]
+    local n=Mock.Nomi(root) --[[@as any]]
+    local r=Rig.New(root,w,n)
+    r:SetPose('hand');for _=1,30 do r:Update(1/60) end
+    r:SetSwing(Vector3(.02,.01,.03),Vector3(8,12,4));r:Update(0)
+    local hit=r:GetHit();local pos,rot=r:GetAfterimagePose()
+    local created,writes,rebuilds=w.created,w.writes,w.rebuilds
+    local e={swingId=1,tier='light',combo=1,attackerStop=.04}
+    r:SetTrail(false)
+    assert(r:HitImpulse(e) and r.flashes.blade.node.enabled,'low tier preserves essential blade white on same contact frame')
+    Mock.Near(r.hitAngle,.8);Mock.Near(r.hitWhite,.04)
+    local after=r:GetHit();Mock.VectorNear(after.origin,hit.origin);Mock.VectorNear(after.dir,hit.dir);Mock.Near(after.length,hit.length)
+    local p,q=r:GetAfterimagePose();Mock.VectorNear(p,pos)
+    Mock.VectorNear(q*Vector3.UP,rot*Vector3.UP)
+    r:Update(.04);assert(not r.flashes.blade.node.enabled);Mock.Near(math.abs(r.entries.sword.mesh.node.rotation.eulerAngles.z),.8)
+    r:Update(.05);Mock.Near(r.entries.sword.mesh.node.rotation.eulerAngles.z,0)
+    e.swingId,e.tier,e.attackerStop=2,'heavy',.08
+    assert(r:HitImpulse(e));Mock.Near(r.hitAngle,1.5);Mock.Near(r.hitWhite,.06)
+    local zone={origin=Vector3.ZERO,forward=Vector3.FORWARD,radius=1.8,angle=120}
+    assert(r:ShowContactArc(zone) and r.sampleCount==4)
+    for i,band in ipairs(r.trails) do assert(band.node.enabled==(i<=4)) end
+    for _,sample in ipairs(r.samples) do
+        if sample.tip.x~=0 or sample.tip.z~=0 then
+            assert(math.sqrt(sample.tip.x^2+sample.tip.z^2)<=zone.radius+.00001)
+        end
+    end
+    for i=1,100 do e.swingId=i+10;r:HitImpulse(e);r:Update(.14) end
+    assert(w.created==created and w.writes==writes and w.rebuilds==rebuilds,'hit FX reuse existing volumes/materials/geometry')
+    r:HitImpulse(e);r:SetPose('hidden');r:Update(1)
+    assert(not r:HitImpulse(e) and not r:ShowContactArc(zone))
+    assert(not r.flashes.blade.node.enabled and not r.flashes.socket.node.enabled)
+    for _,band in ipairs(r.trails) do assert(not band.node.enabled) end
+    r:Dispose();assert(w.created==w.removed)
+end
+print('PASS R8 essentialHit at low quality, 40/60ms white, .8/1.5 degree mesh-only impulse, stop+50ms reset, 4-band contact sample, 100-hit pool stability, hidden clears')

@@ -30,17 +30,18 @@ cam:Cancel();out=cam:Update(.01,m,true,true);near(out.focus:Length(),0)
 local function bow(fps)
     local c=Camera.New();local move={clip='bow_hold',charge=1}
     for _=1,fps/2 do c:Update(1/fps,move,true,true) end
-    near(c.output.fov,-12);near(c.output.look,.60);near(c.output.cross,1)
+    near(c.output.fov,-8.25);near(c.output.look,math.tan(math.rad(46.75/2))/math.tan(math.rad(55/2)));near(c.output.cross,1)
     move.clip=nil
-    for _=1,fps/10 do c:Update(1/fps,move,true,true) end
+    for _=1,math.ceil(fps*.12) do c:Update(1/fps,move,true,true) end
     near(c.output.fov,0);near(c.output.look,1);return c
 end
 bow(30);bow(60)
 cam=Camera.New();m={clip='sword_light_1',whooshTime=.07}
 out=cam:Update(0,m,true,true);near(out.distance,.08)
 m.whooshTime=.10;out=cam:Update(0,m,true,true);near(out.distance,0)
-cam:Land();out=cam:Update(.02,m,true,true);near(out.focus.y,-.03)
-cam=Camera.New();cam:Full();out=cam:Update(.02,{clip='bow_hold',charge=1},true,true);assert(out.focus.y>0)
+cam:Land();out=cam:Update(.02,m,true,true);near(out.impact.y,0)
+out=cam:Update(.02,m,true,true);near(out.impact.y,-.03);near(out.focus.y,0)
+cam=Camera.New();cam:Full();out=cam:Update(.02,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)
 out=cam:Update(.08,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)
 out=cam:Update(.5,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)
 -- Real authored motion is sent to exactly one terrain/wall clip port per frame.
@@ -119,3 +120,12 @@ assert(preview.tracks[1].params.legacyPose==0)
 assert(scene:find("Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'p',p)",1,true))
 assert(scene:find('if not sample and not legacy then',1,true),'legacy preview must not report stale IK sample')
 print('PASS F7 P toggles/reseeks same frame, disabled outside preview, continuous bow p and legacy diagnostics isolation')
+cam=Camera.New();cam:Land()
+out=cam:Update(.02,{clip='sword_heavy_release',whooshTime=.24},true,true,false)
+near(out.fov,0);near(out.impact:Length(),0);near(out.distance,0)
+out=cam:Update(0,{clip='bow_hold',charge=1},true,true,false);near(out.fov,-8.25)
+local combined=(Vector3(.03,0,0)+Vector3(0,-.03,0))
+if combined:Length()>.03 then combined=combined*(.03/combined:Length()) end
+near(combined:Length(),.03)
+assert(scene:find('if impactLength>.03 then offset=offset*(.03/impactLength) end',1,true))
+print('PASS R8 low quality suppresses impact action only, bow zoom preserved; Scene clamps hit+land before independent follow movement')

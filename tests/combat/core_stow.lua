@@ -65,7 +65,7 @@ assert(m:Swap());frames(21);assert(m:Action('dodge',Vector3.RIGHT))
 assert(rig.active=='sword' and rig.pose=='back','swap cancel never resurrects old hand weapon')
 -- Late buffered attack after swap selects target weapon once, then bow_draw.
 New();assert(m:Swap());frames(30);tick(.01,{allowed=true,attack=true});frames(58,{allowed=true,attack=true})
-assert(count('bow_equip')==1 and m.clip=='bow_hold' and rig.active=='bow')
+assert(count('bow_equip')==0 and count('bow_draw')==1 and m.clip=='bow_hold' and rig.active=='bow')
 -- Form boundaries prevent stale animation events from bringing a weapon back.
 for _,reason in ipairs({'manual','quiet','mount','death','stop'}) do
  New('bow');State.Activity(true);m:Action('hold');frames(25,{allowed=true,attack=true})

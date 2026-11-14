@@ -13,7 +13,7 @@ local function New()
     return C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,
         forward=function() return Vector3(0,0,1) end,position=function() return Vector3.ZERO end,
         enemies=function() return {enemy} end,respawn=function() respawns=respawns+1 end,
-        fire=function(charge,stats,crystal) shots=shots+1; lastShot={charge=charge,crystal=crystal} end}
+        fire=function(charge,stats,crystal) shots=shots+1; lastShot={charge=charge,crystal=crystal};return true end}
 end
 local m=New()
 local function Tick(t,c)
@@ -60,9 +60,9 @@ end
 Bow(); before=shots
 Tick(.01,{attack=true}); Tick(.01)
 for i=1,4 do Tick(.02) end
-assert(shots==before,'tap must wait for draw_min event')
+assert(shots==before,'weak tap cancels immediately')
 for i=1,5 do Tick(.02) end
-assert(shots==before+1,'tap after draw_min must fire once')
+assert(shots==before,'weak tap never queues a later shot')
 Bow(); before=shots
 Tick(.01,{heavy=true}); for i=1,10 do Tick(.02) end
 Tick(.01,{dodge=true,axis=Vector3(1,0,0)})
@@ -278,7 +278,7 @@ m:Feedback(enemy,info,{hit=true},false,true)
 S.near(m.feedbackGroups['arrow:1'].amp,0);S.near(m.hitstop,0)
 info.swingId='arrow:2';info.full=true;info.tier='full'
 m:Feedback(enemy,info,{hit=true},true,true)
-S.near(m.feedbackGroups['arrow:2'].amp,.008);S.near(m.hitstop,.12)
+S.near(m.feedbackGroups['arrow:2'].amp,0);S.near(m.hitstop,0)
 State.SetSetting('cameraShake',false);S.near(m:ShakeOffset():Length(),0)
 State.SetSetting('cameraShake',true)
 for i=1,80 do m:Envelope('bounded:'..i,0,0,0,nil,0) end
@@ -327,3 +327,104 @@ for _,cancel in ipairs({true,false}) do
     assert(stopped==0 and shots==beforeShots+(cancel and 0 or 1),'cold sound never changes cancel/fire behavior')
 end
 print('PASS cold nil bow handle: no retry, safe cancellation, release still fires once')
+
+-- R8 profiles are selected without upgrading weak/kill stop, and borrowed
+-- slots overwrite false/nil fields after a strong impact wraps the ring.
+do
+    m=New()
+    local captured,consumed=0,0
+    local target={hitStop=0,OnHitEvent=function(_,e)
+        assert(e.resolved and e.combo~=nil and type(e.full)=='boolean')
+        consumed=consumed+1;return true
+    end}
+    local input={dmg=10,poise=6,pos=Vector3.ZERO,dir=Vector3.FORWARD,combo=1,deferPresentation=true}
+    local result={hit=true,resolved=true}
+    local expectedId,expectedStop,expectedFlash
+    m.o.feedback=function(e)
+        captured=captured+1
+        assert(e.profileId==expectedId and e.presentationConsumed and not e.player)
+        S.near(e.stop,expectedStop);S.near(e.attackerStop,expectedStop);S.near(e.flash,expectedFlash)
+        S.near(e.impactDir:Length(),1)
+    end
+    local cases={{1,false,false,false,false,'light_1',.04,.06},
+        {2,false,false,false,false,'light_2',.04,.06},{3,false,false,false,false,'third',.04,.08},
+        {0,true,false,false,false,'heavy',.08,.08},{0,true,true,false,false,'full',.08,.10},
+        {1,false,false,true,false,'critical',.04,.09},{1,false,false,false,true,'kill',.04,.10}}
+    for i,c in ipairs(cases) do
+        input.combo,input.heavy,input.full,input.swingId=c[1],c[2],c[3],i
+        result.weak,result.killed=c[4],c[5]
+        expectedId,expectedStop,expectedFlash=c[6],c[7],c[8]
+        m:Feedback(target,input,result,false,false)
+    end
+    result.broke=true;expectedId,expectedStop,expectedFlash='break',.10,.10
+    m:Feedback(target,input,result,false,false)
+    result.broke,result.killed,result.weak=false,false,false
+    input.combo,input.heavy,input.full=1,false,false
+    expectedId,expectedStop,expectedFlash='light_1',.04,.06
+    for i=1,16 do
+        input.swingId=i+100;m:Feedback(target,input,result,false,false)
+        local e=m.eventPool[m.eventWrite]
+        assert(not e.full and not e.critical and not e.weak and not e.killed and not e.broke and not e.staggered and e.part==nil)
+    end
+    assert(captured==consumed and #m.eventPool==8 and #m.feedbackPool==32)
+    local pool={}
+    for _,g in ipairs(m.feedbackPool) do pool[g]=true end
+    for i=1,200 do m:Envelope(i,1,.12,0,Vector3.FORWARD,.04) end
+    for _,g in pairs(m.feedbackGroups) do assert(pool[g]) end
+    S.near(m:ShakeOffset():Length(),0)
+    m.age=m.age+.02
+    local punch=m:ShakeOffset(Vector3.RIGHT,Vector3.UP)
+    assert(punch:Length()<=.030001 and punch:Length()>0 and punch.z==0,'local-time screen-plane punch, including forward-direction fallback')
+    m.age=m.age+1;S.near(m:ShakeOffset():Length(),0)
+end
+do
+    m=New();local arcCalls=0
+    rig.ShowContactArc=function(_,zone)arcCalls=arcCalls+1;S.near(zone.radius,1.8);assert(zone.angle==120)end
+    m:Play('sword_light_1');m.anim:Update(.25);m:Events()
+    assert(m.hitPending and not m.hitOpen,'hitch crosses on/off')
+    local before=count;m:AfterPose();m:AfterPose()
+    assert(arcCalls==1 and count==before+1,'one visible arc and one hit, unchanged broadphase/reach/dedupe')
+    rig.ShowContactArc=nil
+    m=New();local full=0
+    m.o.audio={Play=function(cue)if cue=='sword_full' then full=full+1 end end}
+    m:Play('sword_heavy_charge');m.anim:Update(1.1);m:Events();m:Events()
+    m.anim:Update(.5);m:Events()
+    assert(full==1,'sword full cue only on charge_full edge, never hold frames')
+end
+print('PASS R8 profiles 40/40/80/100ms, complete pooled event overwrite/consumer, bounded groups, local punch, low-FPS visible contact fallback, sword full once')
+do
+    local owner=C.New{state={GetSetting=function()return false end},rig={},anim={}}
+    local target={hitStop=0}
+    local input={dmg=10,poise=6,pos=Vector3.ZERO,dir=Vector3.FORWARD,combo=1,swingId=1}
+    local result={hit=true,resolved=true}
+    for i=1,100 do input.swingId=i;owner:Feedback(target,input,result,false,false) end
+    collectgarbage('collect');collectgarbage('stop')
+    local before=collectgarbage('count')
+    for i=101,1100 do input.swingId=i;owner:Feedback(target,input,result,false,false);owner:ShakeOffset() end
+    local bytes=(collectgarbage('count')-before)*1024/1000
+    collectgarbage('restart')
+    assert(bytes<=256,'new feedback layer mock allocation budget, excluding existing Apply/audio/native bindings')
+    print(string.format('R8 Feedback+Shake mock gross allocation %.2f B/iteration; 8 events/32 groups fixed. Excludes existing info/result snapshots, audio handles and native userdata.',bytes))
+end
+do
+    local vector,quaternion=Vector3,Quaternion
+    local EnemySupport=dofile('tests/combat/enemy_support.lua')
+    Vector3,Quaternion=vector,quaternion
+    local terrain,port=EnemySupport.Fixture()
+    local beetle=require('combat.enemies.MossBeetle').New(nil,nil,terrain,port,Vector3.ZERO,'r8_contract')
+    local owner=C.New{state={GetSetting=function()return false end},rig={},anim={}}
+    local input={dmg=1,poise=0,part='side_l',kind='sword',swingId=21,deferPresentation=true,combo=1,
+        pos=Vector3(-.6,.3,0),dir=Vector3.FORWARD,normal=Vector3.LEFT or Vector3(-1,0,0)}
+    local result=H.Apply(beetle,input)
+    assert(result.resolved and beetle.presentedHits==0)
+    owner:Feedback(beetle,input,result,result.weak,false)
+    assert(beetle.presentedHits==1 and beetle.particles:CountOwner(beetle)==6)
+    assert(owner.eventPool[owner.eventWrite].presentationConsumed and not beetle:OnHitEvent(owner.eventPool[owner.eventWrite]))
+    input.dmg,input.swingId=10000,22
+    result=H.Apply(beetle,input);assert(result.killed)
+    owner:Feedback(beetle,input,result,result.weak,false)
+    assert(beetle.deathPresentationReady and beetle.particles:CountOwner(beetle)==1,'kill still presents immediate shared white kernel once')
+    assert(beetle.deathImpact.profileId=='kill' and beetle.deathImpact.flash==.10)
+    beetle:Destroy()
+end
+print('PASS R8 actual Hit.Apply -> Moves.Feedback -> EnemyBase.OnHitEvent, one kernel on kill, copied profile contract and no double presentation')

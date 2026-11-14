@@ -13,7 +13,7 @@ Pool.__index=Pool
 Pool.LIMIT=64
 Pool.RESERVED=16
 local pools=setmetatable({}, {__mode='k'})
-local COLORS={soft={.63,.66,.36},armor={.95,.79,.49},core={.58,.85,1},stone={.62,.63,.59},flash={1,.94,.72}}
+local COLORS={soft={.63,.66,.36},armor={.95,.79,.49},core={.58,.85,1},stone={.62,.63,.59},flash={1,1,1}}
 -- Construction only. Unit box and two crossed tapered diamonds; transforms set size.
 local function mesh(parent,name,cross)
     local node=parent:CreateChild(name)
@@ -50,7 +50,7 @@ function Pool.Acquire(scene,world,fallbackKey)
     local self=pools[key]
     if not self then
         self=setmetatable({slots={},references=0,count=0,peak=0,key=key,rebuildCpuMs=0,
-            limit=Pool.LIMIT,reserved=Pool.RESERVED,serial=0,materials={},evicted=0,dropped=0,
+            limit=Pool.LIMIT,reserved=Pool.RESERVED,serial=0,materials={},evicted=0,dropped=0,kernels=0,kernelsDropped=0,
             stats={count=0,cubeCount=0,flatCount=0,reserved=16,capacity=64,peak=0,evicted=0,dropped=0,trianglesEstimate=0}},Pool)
         pools[key]=self
         local started=os.clock()
@@ -100,7 +100,7 @@ function Pool:SetLimit(limit)
         self:Hide(oldest)
     end
 end
-function Pool:Claim(priority,family)
+function Pool:Claim(priority,family,protected)
     if priority==0 then
         local used=0
         for _,slot in ipairs(self.slots) do if slot.active and slot.family==family then used=used+1 end end
@@ -115,7 +115,7 @@ function Pool:Claim(priority,family)
         local candidate
         for i=1,Pool.LIMIT do
             local slot=self.slots[i]
-            if slot.active and slot.priority<priority and (not candidate or slot.priority<candidate.priority
+            if slot~=protected and slot.active and slot.priority<priority and (not candidate or slot.priority<candidate.priority
                 or (slot.priority==candidate.priority and slot.serial<candidate.serial)) then candidate=slot end
         end
         if candidate then self:Hide(candidate); self.evicted=self.evicted+1; return candidate end
@@ -131,11 +131,14 @@ function Pool:Emit(owner,info)
     local heavy=info.tier=='heavy' or info.tier=='third'
     local weak=info.weak or info.material=='core'
     local dust,phase=info.kind=='dust',info.kind=='phase'
+    local contact=not death and not dust and not phase
     local count=death and (owner.boss and 24 or 12) or (broken and 12 or (heavy and 11 or (weak and 6 or (info.material=='armor' and 8 or 6))))
     if dust then count=6 elseif phase then count=10 end
+    if contact and info.killed then count=1 end
     local priority=death and 3 or (broken and 2 or 0)
     if death then self:ClearOwner(owner) end
-    local dx,dy,dz=info.dir.x,info.dir.y,info.dir.z
+    local direction=info.impactDir or info.dir -- visual slash direction never changes gameplay knock
+    local dx,dy,dz=direction.x,direction.y,direction.z
     local n=math.sqrt(dx*dx+dy*dy+dz*dz)
     if n<.001 then dx,dy,dz=0,0,1 else dx,dy,dz=dx/n,dy/n,dz/n end
     local normal=info.normal
@@ -150,22 +153,37 @@ function Pool:Emit(owner,info)
     end
     tx,ty,tz=tx/n,ty/n,tz/n
     local emitted=0
+    local contactKernel
     for i=1,count do
-        local flat=not (death or broken or phase or dust) and ((heavy and i==11) or (not heavy and (weak or info.material=='armor' or info.material=='stone')))
+        local kernel=contact and i==1
+        local flat=kernel or (not (death or broken or phase or dust or heavy) and (weak or info.material=='armor' or info.material=='stone'))
         local family=flat and 'flat' or 'cube'
-        local slot=self:Claim(priority,family)
-        if not slot then break end
+        local slotPriority=kernel and 1 or priority
+        local slot=self:Claim(slotPriority,family,contactKernel)
+        if not slot then
+            if kernel then self.kernelsDropped=self.kernelsDropped+1 end
+            if kernel and broken then goto nextParticle end -- higher-priority chips still get a chance
+            self.dropped=self.dropped+(count-i) -- Claim counts current denial; include unattempted remainder
+            break
+        end
+        if kernel then contactKernel=slot end
         local q=(i%5)/4
-        slot.active,slot.owner,slot.age,slot.priority,slot.family=true,owner,0,priority,family
+        slot.active,slot.owner,slot.age,slot.priority,slot.family=true,owner,0,slotPriority,family
         self.serial=self.serial+1; slot.serial=self.serial
         slot.x,slot.y,slot.z=info.pos.x,info.pos.y,info.pos.z
+        if contact then slot.x,slot.y,slot.z=slot.x+nx*.02,slot.y+ny*.02,slot.z+nz*.02 end
         slot.material=COLORS[info.material] and info.material or 'stone'
         slot.shape,slot.gravity='cube',3
         local speed=.6+q*.6
         local ax,ay,az=dx,dy,dz
         slot.ttl=.18+q*.12
         slot.sx,slot.sy,slot.sz=.04+q*.04,.04+q*.04,.04+q*.04
-        if death or broken or phase then
+        if kernel then
+            self.kernels=self.kernels+1
+            slot.shape,slot.material,slot.ttl,slot.gravity='cross','flash',.06,0
+            local size=heavy and .18 or .12
+            slot.sx,slot.sy,slot.sz=size,size,size; speed=0
+        elseif death or broken or phase then
             slot.shape='plate'; slot.ttl=death and (.6+q*.25) or (.35+q*.25)
             slot.sx,slot.sy,slot.sz=.12+q*.08,.025,.10+q*.06
             speed=death and (.8+q) or (1.2+q)
@@ -175,10 +193,6 @@ function Pool:Emit(owner,info)
             ax,ay,az=tx*(i%2==0 and 1 or -1),.2,tz*(i%2==0 and 1 or -1)
         elseif heavy then
             slot.ttl=.25+q*.15; slot.sx,slot.sy,slot.sz=.09+q*.05,.07,.09
-            if i==11 then
-                slot.shape,slot.material,slot.ttl,slot.gravity='cross','flash',.06,0
-                slot.sx,slot.sy,slot.sz=.18,.18,.18; speed=0
-            end
         elseif weak then
             slot.shape='cross'; slot.ttl=.18+q*.1
             slot.sx,slot.sy,slot.sz=.10+q*.06,.10+q*.06,.10+q*.06
@@ -200,6 +214,7 @@ function Pool:Emit(owner,info)
             slot.node.scale=Vector3(slot.sx,slot.sy,slot.sz); slot.node.enabled=true
         end
         self.count=self.count+1; emitted=emitted+1
+        ::nextParticle::
     end
     self.peak=math.max(self.peak,self.count)
     return emitted
@@ -226,6 +241,7 @@ function Pool:GetStats()
     local s=self.stats
     s.count,s.capacity,s.reserved,s.peak=self.count,self.limit,self.reserved,self.peak
     s.evicted,s.dropped,s.cubeCount,s.flatCount,s.trianglesEstimate=self.evicted,self.dropped,0,0,0
+    s.whiteKernels,s.whiteKernelsDropped=self.kernels,self.kernelsDropped
     for _,slot in ipairs(self.slots) do
         if slot.active then
             if slot.family=='flat' then s.flatCount=s.flatCount+1 else s.cubeCount=s.cubeCount+1 end

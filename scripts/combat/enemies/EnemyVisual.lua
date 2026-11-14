@@ -1,5 +1,6 @@
 -- Visual-only volumes follow the DragonRig CreateVolume/SetParent pattern.
 -- Voxel pieces are pre-split for armor presentation; no runtime grid rebuilds.
+local HitMaterial=require('combat.enemies.EnemyHitMaterial')
 ---@class EnemyVisual
 ---@field root Node
 ---@field body Node
@@ -7,6 +8,11 @@
 ---@field pieces table[]
 ---@field warnings table<string, Node>
 ---@field bones table<string, Node>
+---@field config table
+---@field hitGroups table<string, table>
+---@field hitTemplate Material?
+---@field hitMaterialId integer
+---@field hitMaterialCount integer
 local Visual={}
 Visual.__index=Visual
 local paletteWorlds=setmetatable({}, {__mode='k'})
@@ -101,6 +107,7 @@ function Visual:Init(scene,world,config)
     self.pieces,self.bones,self.warnings={},{},{}
     self.removed=false
     self.flashSupported=false
+    HitMaterial.Init(self)
     local chunks,count=Visual.Sculpt(config)
     self.voxelCount=count
     for index,p in ipairs(chunks) do
@@ -122,24 +129,9 @@ function Visual:Init(scene,world,config)
         local rest=Vector3(p.origin[1]-p.center[1],p.origin[2]-p.center[2],p.origin[3]-p.center[3])
         node.position=rest
         local a=index*2.399963
-        -- Only clone an existing color-aware material. Unsupported voxel shaders
-        -- retain original palette/material and use the local pose fallback.
-        local material,baseColor,brightColor
-        if vol.GetMaterial then
-            local original=vol:GetMaterial()
-            if original and original.GetShaderParameter then
-                local color=original:GetShaderParameter('MatDiffColor')
-                if color and not color:IsEmpty() then
-                    material=original:Clone('enemy_hit_'..config.kind..'_'..index)
-                    baseColor=color
-                    local c=color:GetVector4()
-                    brightColor=Variant(Color(c.x*1.6,c.y*1.6,c.z*1.6,c.w))
-                    vol:SetMaterial(material); self.flashSupported=true
-                end
-            end
-        end
+        local hitGroup,original=HitMaterial.Attach(self,vol,p.name)
         self.pieces[#self.pieces+1]={volume=vol,node=node,rest=rest,name=p.name,
-            material=material,baseColor=baseColor,brightColor=brightColor,lit=false,
+            hitGroup=hitGroup,originalMaterial=original,material=hitGroup.material,lit=false,
             vx=math.cos(a)*(1.1+index%3*.25),vy=.6+(index%5)*.2,vz=math.sin(a)*(1.1+index%3*.25)}
     end
     for _,a in ipairs(config.attacks) do
@@ -148,6 +140,10 @@ function Visual:Init(scene,world,config)
     if config.boss then self.phaseRing=self:MakeWarning('ring',true) end
     self.rebuildCpuMs=(os.clock()-started)*1000
 end
+
+function Visual:StartHit(part,heavy) HitMaterial.Start(self,part,heavy) end
+function Visual:TickFlash(realDt) HitMaterial.Update(self,realDt,false) end
+function Visual:ClearFlash() HitMaterial.Update(self,0,true); HitMaterial.Rage(self,false) end
 
 function Visual:MakeWarning(kind,decorative)
     local node=self.root:CreateChild('warning_'..kind)
@@ -213,12 +209,14 @@ function Visual:Update(enemy)
     end
     if self.bones.back_armor then self.bones.back_armor.enabled=not enemy.parts.back_armor.broken end
     local reaction=enemy.reaction
-    local recoil=math.max(0,1-reaction.age/.12)
+    HitMaterial.Rage(self,enemy.rageActive and not enemy.dead and not enemy.down
+        and (enemy.rageTime or 0)>=.2 and (enemy.rageTime or 0)<.7)
+    local recoil=math.max(0,1-reaction.recoilAge/.12)
     for name,bone in pairs(self.bones) do
         if not enemy.dead then
             local angle=0
             if name:find('leg') or name:find('rear') then
-                angle=(enemy.state=='CHASE' or enemy.state=='PATROL') and math.sin(enemy.age*9)*14 or 0
+                angle=(enemy.state=='CHASE' or enemy.state=='PATROL') and math.sin(enemy.poseAge*9)*14 or 0
                 if enemy.state=='TELEGRAPH' and enemy.attack.name=='sweep' then angle=angle-35 end
                 if enemy.down then angle=angle+math.sin(enemy.stateTime*8)*8 end
                 if enemy.rageActive and not enemy.down and name:find('foreleg') then
@@ -250,12 +248,7 @@ function Visual:Update(enemy)
         if not enemy.dead and pulse>0 and p.name=='back_armor' and not enemy.parts.back_armor.broken then
             p.node.position=p.node.position+Vector3(0,math.sin((enemy.rageTime or 0)*24)*.025,0)
         end
-        local bright=(localHit and reaction.age<reaction.flash)
-            or (enemy.rageActive and (enemy.rageTime or 0)>=.2 and (enemy.rageTime or 0)<.7 and p.name=='back_armor')
-        if p.material and bright~=p.lit then
-            p.material:SetShaderParameter('MatDiffColor',bright and p.brightColor or p.baseColor)
-            p.lit=bright
-        end
+        p.lit=p.hitGroup.level>0
         if enemy.dead and enemy.deathTime>=.12 and enemy.deathTime<.25 then
             local loosen=(enemy.deathTime-.12)/.13
             p.node.position=p.deathRest+Vector3(p.vx*.07*loosen,-.06*loosen,p.vz*.07*loosen)
@@ -269,8 +262,10 @@ function Visual:Update(enemy)
 end
 function Visual:Destroy()
     if self.removed then return end
+    self:ClearFlash()
     self.removed=true
     for _,p in ipairs(self.pieces) do self.world:RemoveVolume(p.volume) end
     self.root:Remove()
+    self.hitGroups,self.hitTemplate={},nil -- release only our clones, never dispose world/cache materials
 end
 return Visual

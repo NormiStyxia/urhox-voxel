@@ -13,7 +13,7 @@ local Data = require("combat.AnimClips")
 local MAX_TRACKS, MAX_EVENTS = 32, 512
 local EPS = 1e-10
 local EMPTY = {}
-local BONE_NAMES = {"body","arm_right","arm_left","head","leg_right","leg_left"}
+local BONE_NAMES = {"body","arm_left","arm_right","head","leg_right","leg_left"}
 
 ---@class CombatAnimTrack
 ---@field clip CombatClip
@@ -161,9 +161,9 @@ local function scalarSample(track,t)
     return a[2]+(b[2]-a[2])*u
 end
 local function vec(t) return Vector3(t[1],t[2],t[3]) end
-local function length(v) return math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z) end
+local function vectorLength(v) return math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z) end
 local function unit(v,fallback)
-    local n=length(v)
+    local n=vectorLength(v)
     if n<1e-7 then return fallback end
     return Vector3(v.x/n,v.y/n,v.z/n)
 end
@@ -184,14 +184,14 @@ local function align(from,to)
     return Quaternion(w/n,x/n,y/n,z/n)
 end
 local function inverse(q) return Quaternion(q.w,-q.x,-q.y,-q.z) end
-local function cross(a,b) return Vector3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x) end
+local function vectorCross(a,b) return Vector3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x) end
 local function dot(a,b) return a.x*b.x+a.y*b.y+a.z*b.z end
 local function project(v,axis)
     local n=dot(v,axis)
     return Vector3(v.x-axis.x*n,v.y-axis.y*n,v.z-axis.z*n)
 end
 local function makeArm(shoulder,grip)
-    return {shoulder=shoulder,grip=grip,length=length(grip)}
+    return {shoulder=shoulder,grip=grip,length=vectorLength(grip)}
 end
 local function ikBuffer()
     return {target=Vector3(0,0,0),clamped=Vector3(0,0,0),actual=Vector3(0,0,0),applied=Vector3(0,0,0),
@@ -201,7 +201,7 @@ end
 ---@param result CombatIKResult
 local function solveArm(arm,target,authored,result,pole)
     local d=Vector3(target.x-arm.shoulder.x,target.y-arm.shoulder.y,target.z-arm.shoulder.z)
-    local distance=length(d)
+    local distance=vectorLength(d)
     local reference=authored*arm.grip
     local degenerate=distance<1e-7 or arm.length<1e-7
     local dir=unit(d,unit(reference,Vector3(0,-1,0)))
@@ -211,9 +211,9 @@ local function solveArm(arm,target,authored,result,pole)
         -- Horizontal cuts use +Y, vertical cuts / bow use +X. Project the pole
         -- onto the plane perpendicular to the aim ray; no elbow translation.
         local swing=align(arm.grip,dir)
-        local fromPole=unit(project(swing*Vector3(0,0,1),dir),unit(cross(dir,Vector3(1,0,0)),Vector3(0,1,0)))
+        local fromPole=unit(project(swing*Vector3(0,0,1),dir),unit(vectorCross(dir,Vector3(1,0,0)),Vector3(0,1,0)))
         local toPole=unit(project(pole or Vector3(0,1,0),dir),fromPole)
-        local angle=math.atan(dot(dir,cross(fromPole,toPole)),clamp(dot(fromPole,toPole),-1,1))*.5
+        local angle=math.atan(dot(dir,vectorCross(fromPole,toPole)),clamp(dot(fromPole,toPole),-1,1))*.5
         local sn=math.sin(angle)
         rotated=Quaternion(math.cos(angle),dir.x*sn,dir.y*sn,dir.z*sn)*swing
     end
@@ -278,7 +278,24 @@ local function pathPole(path)
 end
 ---@param c CombatClip
 local function boneSample(c,name,p,params,handWeight)
-    local tracks=(params.legacyPose==1 and c.legacyKeys) or c.keys
+    if c.locomotion then
+        local phase=(params.gaitPhase or 0)*math.pi*2
+        local wave=math.cos(phase)
+        local cross=math.sin(phase)^2
+        local accel=clamp(params.sprintAccel or 1,0,1)
+        local legs,arms=18+16*accel,18+6*accel
+        local x,y,z=0,0,0
+        if name=="body" then return 14+2*cross+4*(1-accel),-3*wave,0 end
+        if name=="head" then return -10-2*cross-3*(1-accel),1.5*wave,0 end
+        if name=="leg_right" then return -legs*wave*(wave<0 and 28/34 or 1),0,0 end
+        if name=="leg_left" then return legs*wave*(wave>0 and 28/34 or 1),0,0 end
+        local side=name=="arm_right" and 1 or -1
+        x,z=side*arms*wave,side*(8+2*math.abs(wave))
+        local held=handWeight or clamp(params.weaponInHand==nil and 1 or params.weaponInHand,0,1)
+        local heldPitch=params.bow==1 and (side==1 and -20 or -58) or (side==1 and -40 or x*.7)
+        return x+(heldPitch-x)*held,y,z
+    end
+    local tracks=(params.legacyPose==1 and c.legacyKeys) or (params.sprintPending==1 and c.runKeys) or c.keys
     local track=(params.bow==1 and c.bowKeys and c.bowKeys[name]) or tracks[name]
     local x,y,z=vectorSample(track,p)
     if c.directional then
@@ -286,28 +303,30 @@ local function boneSample(c,name,p,params,handWeight)
         if dz==nil then dz=-1 end
         local length=math.sqrt(dx*dx+dz*dz)
         if length>EPS then dx,dz=dx/length,dz/length else dx,dz=0,-1 end
-        local bodyPitch=vectorSample(c.keys.body,p)
+        local bodyPitch=vectorSample(tracks.body,p)
+        if c.finalDirectional then bodyPitch=bodyPitch-4 end
         if name=="body" then
-            x=4+x*dz
-            y=y*dx
+            x=math.max(-14,4+(c.finalDirectional and x-4 or x)*dz)
+            y=y*(c.finalDirectional and dz or dx)
             -- Upper torso extends +Y: negative roll tips it toward +X.
-            z=-bodyPitch*.5*dx
+            z=clamp(-bodyPitch*(c.finalDirectional and .65 or .5)*dx,-12,12)
         elseif name=="head" then
-            x=-1+x*dz
-            y=y*dx
-            z=bodyPitch*.325*dx
+            x=-1+(c.finalDirectional and x+1 or x)*dz
+            y=y*(c.finalDirectional and dz or dx)
+            z=-clamp(-bodyPitch*.65*dx,-12,12)*.7
         elseif name=="leg_right" or name=="leg_left" then
             -- Hip rotations only: side-leading leg swaps with direction. Both
             -- hips override gait, but no nonexistent knee or extra displacement.
             local other=name=="leg_right" and "leg_left" or "leg_right"
-            local sidePitch=dx>0 and vectorSample(c.keys[other],p) or x
-            z=-sidePitch*dx*.65
+            local sidePitch=dx>0 and vectorSample(tracks[other],p) or x
+            z=clamp(-sidePitch*dx*.65,-12,12)
             x=x*dz
         elseif c.balanceKeys and c.balanceKeys[name] then
             local neutral=track[1][2][1]
             z=z-(x-neutral)*dx*.35
             x=neutral+(x-neutral)*dz
-            local bx,by,bz=vectorSample(c.balanceKeys[name],p)
+            local balance=params.sprintPending==1 and c.runBalanceKeys or c.balanceKeys
+            local bx,by,bz=vectorSample(balance[name],p)
             bz=bz-bx*dx*.6
             bx=bx*dz
             local held=handWeight or clamp(params.weaponInHand==nil and 1 or params.weaponInHand,0,1)
@@ -337,12 +356,13 @@ local function weight(s)
     end
     local w=s.fadeIn<=0 and 1 or clamp(s.age/s.fadeIn,0,1)
     if s.clip.smoothBlend then w=ease("smoothStep",w) end
-    if not s.clip.loop and not s.clip.hold and s.fadeOut>0 then
+    if not s.clip.loop and not s.clip.hold and s.fadeOut>0 and not (s.clip.directional and s.params.sprintPending==1) then
         -- fadeOut is wall/animation-clock seconds, not normalized time.
         local remaining=(s.clip.dur-s.t)/math.max(s.speed,EPS)
         local out=clamp(remaining/s.fadeOut,0,1)
         w=math.min(w,s.clip.smoothBlend and ease("smoothStep",out) or out)
     end
+    if s.clip.locomotion then w=w*clamp(s.params.sprintWeight or 0,0,1) end
     return w
 end
 ---@param s CombatAnimTrack
@@ -375,6 +395,7 @@ end
 ---@param opts table
 function A:init(character,node,opts)
     self.character,self.node=character,node
+    self.bowRig=opts.bowRig
     self.tracks,self.ordered,self.queue,self.output,self.eventPool={},{},{},{},{}
     self.queueCount,self.serial,self.motion=0,0,0
     self.stats=opts.stats or EMPTY
@@ -396,6 +417,7 @@ function A:init(character,node,opts)
     local leftSocket=opts.leftHandSocket or (left and left:GetChild("hand_left",false))
     local body=character.bones.body
     local rootBase=character.basePos and character.basePos.root
+    self.footBaseY=rootBase and rootBase.y or 0
     self.bodyHeight=opts.bodyHeight or (body and rootBase and body.position.y+rootBase.y) or reference.bodyHeight
     self.pathIK=opts.pathIK~=false
     self.arms={
@@ -468,7 +490,7 @@ function A:Play(clipId,opts)
     if not finite(fadeIn) or not finite(fadeOut) or fadeIn<0 or fadeOut<0 then return nil,"invalid_fade" end
     for _,s in ipairs(self.ordered) do
         if s.live and not s.stopping and (not s.complete or s.clip.hold) and s.clip.layer>c.layer
-            and c.layer~=Data.Layer.STANCE and not slideToAttack(s,c) then
+            and c.layer~=Data.Layer.STANCE and not c.locomotion and not slideToAttack(s,c) then
             return nil,"higher_priority"
         end
         if s.live and slideToAttack(s,c) then fadeIn=s.clip.cancelBlend or .04 end
@@ -480,7 +502,9 @@ function A:Play(clipId,opts)
     -- Remove dead references before reusing a slot; ordered retains blend order.
     for i=#self.ordered,1,-1 do if not self.ordered[i].live then table.remove(self.ordered,i) end end
     for _,s in ipairs(self.ordered) do
-        if s.live and slideToAttack(s,c) then
+        if s.live and s.stopping and s.clip.id=="dodge_slide" and c.locomotion then
+            s.mixLayer=c.layer
+        elseif s.live and slideToAttack(s,c) then
             if not s.stopping then self:Stop(s.handle,fadeIn) end
             s.fadeOut=s.clip.cancelBlend or .04
             -- Blend on the incoming layer so .5 old + .5 new does not expose
@@ -532,6 +556,7 @@ function A:SetParam(name,value)
     for _,s in ipairs(self.ordered) do
         if s.live and not s.stopping and not (s.clip.directional and (name=="moveX" or name=="moveZ")) then
             s.params[name]=value
+            if s.clip.locomotion then s.weight=weight(s) end
         end
     end
 end
@@ -599,7 +624,7 @@ function A:Update(dt,realDt)
                 s.weight=weight(s)
                 if s.weight<=0 then s.live=false end
             else
-                if s.clip.balanceKeys then
+                if s.clip.balanceKeys or s.clip.locomotion then
                     local held=clamp(s.params.weaponInHand==nil and 1 or s.params.weaponInHand,0,1)
                     s.handWeight=s.handWeight+(held-s.handWeight)*(1-math.exp(-realDt/.05))
                 end
@@ -682,6 +707,7 @@ function A:Apply()
     self.bladeWeight=0
     for _,s in ipairs(self.ordered) do
         if s.live and not s.stopping then s.sample=sampleTime(self,s) end
+        if s.live and s.weight>0 and (s.clip.finalDirectional or s.clip.locomotion) then baseY=self.footBaseY end
     end
     -- Normalize competing tracks WITHIN each layer, then cover lower layers.
     -- Sequential old*.5 then new*.5 would leak 25% of the base at mid-crossfade.
@@ -709,6 +735,35 @@ function A:Apply()
                         if path and self.pathIK and s.params.legacyPose~=1 then
                             local arm=self.arms[name]
                             local point=handTarget(c,name,s.sample,s.params,arm,self.bodyHeight,self.character.bones.body.rotation)
+                            if self.bowRig and (path.mode=='bow_aim' or path.mode=='bow_string') then
+                                local bodyRotation=self.character.bones.body.rotation
+                                local bowRotation=inverse(bodyRotation)*Quaternion(clamp(s.params.aimPitch or 0,-35,35),0,0)
+                                local u=clamp(s.params.p or 0,0,1)
+                                if path.mode=='bow_aim' and c.id~='bow_cancel' and c.id~='bow_release' then
+                                    -- Couple the two rigid arms: choose left grip on the
+                                    -- intersection of shoulder reach spheres so the right
+                                    -- hand can meet the real nock without scaling either arm.
+                                    local right=self.arms.arm_right
+                                    local offset=bowRotation*self.bowRig:GetBowNockLocal(u)
+                                    local delta=right.shoulder-offset-arm.shoulder
+                                    local d=vectorLength(delta)
+                                    if d>EPS and d<arm.length+right.length and d>math.abs(arm.length-right.length) then
+                                        local axis=delta*(1/d)
+                                        local along=(arm.length^2-right.length^2+d*d)/(2*d)
+                                        local center=arm.shoulder+axis*along
+                                        local radial=point-center
+                                        radial=radial-axis*dot(radial,axis)
+                                        point=center+unit(radial,Vector3(0,0,1))*math.sqrt(math.max(0,arm.length^2-along^2))
+                                    end
+                                elseif path.mode=='bow_string' and c.id~='bow_cancel' then
+                                    local left=self.arms.arm_left
+                                    local grip=left.shoulder+self.character.bones.arm_left.rotation*left.grip
+                                    point=self.bowRig:GetBowNock(u,grip,bowRotation)
+                                    if c.id=='bow_release' then
+                                        point=point+bowRotation*Vector3(0,0,-.03*math.sin(math.pi*clamp(s.sample*c.dur/.08,0,1)))
+                                    end
+                                end
+                            end
                             target=solveArm(arm,point,target,s.ik[name],pathPole(path))
                         elseif s.ik[name] then s.ik[name].enabled=false end
                         total=total+s.weight

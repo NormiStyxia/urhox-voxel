@@ -1,7 +1,10 @@
 -- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
 local Draw=require('ui.PixelDraw')
 local H={}
+H.BOW_PREDICTION=true -- independently switchable; never changes actual shot direction
+local bowPoint={visible=false,x=0,y=0}
 local Moves=require('combat.CombatMoves')
+local Perf=require('combat.SwingPerf')
 local EMPTY={}
 local rangePoints={}
 for i=1,50 do rangePoints[i]={world=Vector3(0,0,0),visible=false,x=0,y=0} end
@@ -14,25 +17,46 @@ function H.UpdateRange(value)
     local zone,slam,active=moves:StrikeZones()
     rangeActive=active==true
     if not zone then return end
+    local start=Perf.Begin()
+    local total=(zone.angle==360 and 17 or 25)+(slam and (slam.angle==360 and 17 or 25) or 0)
+    local budget=active and 8 or 4 -- two LOS rays per verified point, <=16/frame
+    local phase=Perf.frame%total
     for pass=1,slam and 2 or 1 do
         local z=pass==1 and zone or slam
         local last=z.angle==360 and 16 or 24
         for i=0,last do
             rangeCount=rangeCount+1
             local point=rangePoints[rangeCount]
-            point.world=Moves.ZoneBoundary(z,i,16,point.world)
-            point.visible=false
-            if (active or i%2==0) and value.rangeVisible(z.source,point.world) then
-                local sp=value.camera:WorldToScreenPoint(point.world)
-                point.x,point.y=sp.x,sp.y
-                point.visible=sp.x>=0 and sp.x<=1 and sp.y>=0 and sp.y<=1
+            if point.angle~=z.angle or point.radius~=z.radius or point.index~=i then
+                local half=math.rad(z.angle*.5)
+                local angle,radius
+                if i<=16 then angle=-half+2*half*i/16;radius=z.radius
+                else angle=i<=20 and -half or half;radius=z.radius*((i-17)%4)/4 end
+                point.lx,point.lz=math.sin(angle)*radius,math.cos(angle)*radius
+                point.angle,point.radius,point.index=z.angle,z.radius,i
+            end
+            local f=z.forward
+            local w=point.world
+            w.x,w.y,w.z=z.origin.x+point.lx*f.z+point.lz*f.x,z.origin.y+.04,z.origin.z+point.lz*f.z-point.lx*f.x
+            point.world=w -- native value type: assign back
+            point.visible=false -- never retain a prior frame's unverified point
+            local slot=(rangeCount-1+phase)%total
+            if math.floor(slot*budget/total)~=math.floor((slot+1)*budget/total) and Perf.rangeUsed<8 then
+                Perf.rangeUsed=Perf.rangeUsed+1
+                if value.rangeVisible(z.source,point.world) then
+                    local sp=value.camera:WorldToScreenPoint(point.world)
+                    point.x,point.y=sp.x,sp.y
+                    point.visible=sp.x>=0 and sp.x<=1 and sp.y>=0 and sp.y<=1
+                end
             end
         end
     end
+    Perf.Finish('range',start)
 end
 local data=EMPTY
 local debugLines={}
 local debugText
+local feedbackDebug,feedbackMetrics='',{}
 local enemyScreen={visible=false}
 local headOffset=Vector3(0,0,0)
 local PART_TEXT={}
@@ -63,6 +87,7 @@ function H.HealthTrail(record,hp,now)
 end
 function H.Set(value)
     data=value or EMPTY
+    bowPoint.visible=false
     H.UpdateRange(value)
     if not value then trails=setmetatable({}, {__mode="k"}); enemyScreen.visible=false;enemyScreen.enemy=nil;debugText=nil;for i=#debugLines,1,-1 do debugLines[i]=nil end;return end
     if debugText~=data.debug then
@@ -72,13 +97,31 @@ function H.Set(value)
     end
     local moves=data.moves
     if not moves then return end
-    local enemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
+    if data.debug then
+        local d=feedbackMetrics
+        if d.profile~=moves.lastProfile or d.stop~=moves.lastStop or d.flash~=moves.lastFlash
+            or d.ready~=data.audioReady or d.kernels~=data.hitKernels or d.dropped~=data.hitDropped then
+            d.profile,d.stop,d.flash=moves.lastProfile,moves.lastStop,moves.lastFlash
+            d.ready,d.kernels,d.dropped=data.audioReady,data.hitKernels,data.hitDropped
+            feedbackDebug=string.format('%s stop %.0fms flash %.0fms 核 %d ready %s dropped %d',
+                d.profile or '-',(d.stop or 0)*1000,(d.flash or 0)*1000,d.kernels or 0,tostring(d.ready==true),d.dropped or 0)
+        end
+    end
+    bowPoint.visible=false
+    local predicted=data.bowPrediction
+    if H.BOW_PREDICTION and predicted and predicted.valid and data.camera
+        and (predicted.contact-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
+        local sp=data.camera:WorldToScreenPoint(predicted.contact)
+        bowPoint.x,bowPoint.y=sp.x,sp.y
+        bowPoint.visible=sp.x>0 and sp.x<1 and sp.y>0 and sp.y<1
+    end
+    local aimedEnemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
     enemyScreen.visible=false
-    if enemy and not enemy.boss and not enemy.dead and enemy.active and data.camera then
-        headOffset.x,headOffset.y,headOffset.z=enemy.position.x,enemy.position.y+(enemy.config and enemy.config.height or 1.5)+.5,enemy.position.z
+    if aimedEnemy and not aimedEnemy.boss and not aimedEnemy.dead and aimedEnemy.active and data.camera then
+        headOffset.x,headOffset.y,headOffset.z=aimedEnemy.position.x,aimedEnemy.position.y+(aimedEnemy.config and aimedEnemy.config.height or 1.5)+.5,aimedEnemy.position.z
         if (headOffset-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
             local sp=data.camera:WorldToScreenPoint(headOffset)
-            enemyScreen.x,enemyScreen.y,enemyScreen.enemy=sp.x,sp.y,enemy
+            enemyScreen.x,enemyScreen.y,enemyScreen.enemy=sp.x,sp.y,aimedEnemy
             enemyScreen.visible=sp.x>0 and sp.x<1 and sp.y>0 and sp.y<1
         end
     end
@@ -128,8 +171,10 @@ function H.Mounted() return data.mounted==true end
 -- Only RuinsHUD renders this text: combat and pointer hints share one slot.
 function H.Hint()
     local moves=data.moves
+    if moves and moves.bowFailedUntil and moves.age<moves.bowFailedUntil then return '未发出' end
     if moves and (moves.clip=='bow_draw' or moves.clip=='bow_hold') then
-        return BOW_HINT[moves.charge>=.8 and 3 or (moves.charge>=.3 and 2 or 1)]
+        if moves.autoFire then return '自动蓄力中' end
+        return BOW_HINT[moves.charge>=1 and 3 or (moves.charge>=.65 and 2 or 1)]
     end
     if moves and moves.cancelUntil and moves.age<moves.cancelUntil then return '已取消拉弓' end
     return noticeUntil>GetTime():GetElapsedTime() and notice or nil
@@ -171,6 +216,12 @@ function H.Render(vg,w,h,s,objective)
         and (moves.clip=='bow_hold' or moves.clip=='bow_draw') then
         Draw.Text(vg,'满蓄',Draw.Snap(w/2),Draw.Snap(h/2-34),12,C.gold,NVG_ALIGN_CENTER)
     end
+    if bowPoint.visible then
+        local px,py=Draw.Snap(bowPoint.x*w),Draw.Snap(bowPoint.y*h)
+        -- Hollow 4dp contact marker, separate from the straight-ray reticle.
+        Draw.Rect(vg,px-4,py-4,8,2,C.gold);Draw.Rect(vg,px-4,py+2,8,2,C.gold)
+        Draw.Rect(vg,px-4,py-2,2,4,C.gold);Draw.Rect(vg,px+2,py-2,2,4,C.gold)
+    end
     if enemyScreen.visible then
         local enemy=enemyScreen.enemy
         local bx,by=Draw.Snap(enemyScreen.x*w-40),Draw.Snap(enemyScreen.y*h)
@@ -210,8 +261,9 @@ function H.Render(vg,w,h,s,objective)
     end
     if data.debug then
         local lines=debugLines
-        Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,math.min(500,w-s.left-s.right-32),32+#lines*16,8,1)
+        Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,math.min(500,w-s.left-s.right-32),48+#lines*16,8,1)
         for i,line in ipairs(lines) do Draw.Text(vg,line,s.left+32,s.top+32+(i-1)*16,12,C.gold) end
+        Draw.Text(vg,feedbackDebug,s.left+32,s.top+32+#lines*16,12,C.gold)
     end
 end
 return H

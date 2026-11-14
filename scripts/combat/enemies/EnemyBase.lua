@@ -67,6 +67,8 @@ function Base:Init(scene, world, terrain, combat, config, position, id)
     self.metrics=Visual.Measure(config)
     self.fx, self.fz = 0, 1
     self.state, self.stateTime, self.age = S.IDLE, 0, 0
+    self.poseAge,self.poseDt,self.realDt,self.deathRealTime=0,0,0,0
+    self.knock={active=false,age=0,duration=.09,distance=0,travel=0,dx=0,dz=0,blocked=false}
     self.aggro, self.active, self.dead, self.defeated = false, true, false, false
     self.attackIndex, self.attackHit, self.attackTravel = 0, false, 0
     self.attackToken,self.directionLocked=false,false
@@ -76,7 +78,7 @@ function Base:Init(scene, world, terrain, combat, config, position, id)
     self.phasePulse=0
     self.aggroClock, self.hitStop, self.poseY, self.posePitch = 0, 0, 0, 0
     self.poseRoll,self.posePivot=0,config.boss and .85 or .38
-    self.reaction={part='',age=1,angle=0,shift=0,flash=0,dx=0,dy=0,dz=0}
+    self.reaction={part='',age=1,recoilAge=1,flashAge=1,peak=.85,angle=0,shift=0,flash=0,dx=0,dy=0,dz=0}
     self.impact={pos=Vector3(0,0,0),dir=Vector3(0,0,1),normal=Vector3(0,0,-1),material='soft',tier='light',part='',weak=false,broke=false,kind='hit'}
     self.deathImpact={pos=Vector3(0,0,0),dir=Vector3(0,0,1),normal=Vector3(0,1,0),material='stone',tier='light',part='',kind='death'}
     self.deathBurst,self.deathFinished,self.staggerLanded=false,false,false
@@ -301,7 +303,7 @@ function Base:OnBreak(_) end
 function Base:OnDamaged() end
 ---@return number
 function Base:DamageScale(_, _) return 1 end
-function Base:TickExtras(_, _) end
+function Base:TickExtras(_, _, _) end -- realDt, target, poseDt (projectiles stay real-time)
 function Base:TickPresentation(_, _) return false end
 function Base:ClearExtras() end
 
@@ -340,9 +342,9 @@ function Base:DamagePlayer(target, range, cosine, jumpable)
     return true
 end
 
-function Base:AttackStep(dt, target)
+function Base:AttackStep(dt, target, knocked)
     local a=self.attack
-    if a.travel then
+    if a.travel and not knocked then
         local step=min(a.travel-self.attackTravel,a.travel/a.duration*dt)
         self:Move(self.fx*step,self.fz*step)
         self.attackTravel=self.attackTravel+step
@@ -382,7 +384,27 @@ function Base:Knockback(info, distance)
     local dir=info.dir
     if not dir then return end
     local n=sqrt(dir.x*dir.x+dir.z*dir.z)
-    if n>.001 then self:Move(dir.x/n*distance,dir.z/n*distance) end
+    if n>.001 then
+        local k=self.knock
+        k.active,k.age,k.distance,k.travel,k.blocked=true,0,distance,0,false
+        k.dx,k.dz=dir.x/n,dir.z/n
+        k.duration=self.boss and .2 or (distance>=.55 and .15 or (info.heavy and .12 or .09))
+    end
+end
+-- Stop consumes no knock distance. Each increment sweeps the unchanged ground/wall/pillar rules.
+function Base:TickKnock(poseDt)
+    local k=self.knock
+    if not k.active or poseDt<=0 then return false end
+    k.age=min(k.duration,k.age+poseDt)
+    local u=k.age/k.duration
+    local nextTravel=k.distance*(1-(1-u)^3)
+    local step=nextTravel-k.travel
+    local x,z=self.position.x,self.position.z
+    local safe=self:Move(k.dx*step,k.dz*step)
+    k.travel=k.travel+sqrt((self.position.x-x)^2+(self.position.z-z)^2)
+    if not safe then k.blocked,k.active=true,false
+    elseif k.age+1e-8>=k.duration then k.active=false end
+    return true
 end
 
 -- Capture actual contact before any physical knockback. Fallback is the selected
@@ -404,6 +426,10 @@ function Base:PrepareImpact(info,part)
     fx.tier=info.tier or (info.heavy and 'heavy' or (info.combo==3 and 'third' or 'light'))
     fx.weak,fx.broke,fx.kind=part.spec.weak or false,false,'hit'
     fx.swingId,fx.weapon=info.swingId,info.weapon or info.kind
+    local impactDir=info.impactDir or fx.dir
+    fx.impactDir=Vector3(impactDir.x,impactDir.y,impactDir.z)
+    fx.combo,fx.full,fx.critical,fx.profileId=info.combo,info.full==true,info.critical==true,info.profileId
+    fx.stop,fx.attackerStop,fx.flash,fx.flashPeak=info.stop,info.attackerStop,info.flash,info.flashPeak
 end
 
 -- Reset ONLY in the presentation consumer, never in a deferred settlement.
@@ -414,12 +440,19 @@ function Base:ReactToImpact()
     local heavy=fx.tier=='heavy' or fx.tier=='third'
     r.part=part.spec.bone or part.spec.id
     r.age,r.angle,r.shift,r.flash=0,heavy and 8 or 5,heavy and .05 or .025,heavy and .08 or .06
+    r.recoilAge,r.flashAge,r.peak=0,0,heavy and 1 or .85
     r.dx,r.dy,r.dz=fx.dir.x*self.fz-fx.dir.z*self.fx,fx.dir.y,fx.dir.x*self.fx+fx.dir.z*self.fz
+    if self.visual then self.visual:StartHit(r.part,heavy) end
 end
 
 function Base:ConsumeHitPresentation()
     local fx=self.impact
     self.presentedHits=self.presentedHits+1
+    -- Both immediate and deferred paths resolve the same approved stop baseline.
+    local stop=fx.broke and .1 or (fx.tier=='heavy' and .08 or .04)
+    if fx.weapon=='bow' or fx.weapon=='crystal' then stop=fx.full and fx.weak and .12 or .03 end
+    if type(fx.stop)=='number' then stop=max(0,fx.stop) end
+    self.hitStop=max(self.hitStop,stop)
     self:ReactToImpact()
     if fx.killed then
         local d=self.deathImpact
@@ -428,8 +461,14 @@ function Base:ConsumeHitPresentation()
         d.normal=Vector3(fx.normal.x,fx.normal.y,fx.normal.z)
         d.material,d.tier,d.part=fx.material,fx.tier,fx.part
         d.swingId,d.weapon,d.broke,d.staggered,d.killed,d.weak=fx.swingId,fx.weapon,fx.broke,fx.staggered,true,fx.weak
+        d.impactDir=Vector3(fx.impactDir.x,fx.impactDir.y,fx.impactDir.z)
+        d.combo,d.full,d.critical,d.profileId=fx.combo,fx.full,fx.critical,fx.profileId
+        d.stop,d.attackerStop,d.flash,d.flashPeak=fx.stop,fx.attackerStop,fx.flash,fx.flashPeak
         self.deathPresentationReady=true
-        if self.particles then self.particles:ClearOwner(self) end
+        if self.particles then
+            self.particles:ClearOwner(self)
+            self.particles:Emit(self,fx) -- killed hit: exactly one immediate kernel, no other burst
+        end
     elseif self.particles then self.particles:Emit(self,fx) end
     if self.visual then self.visual:Update(self) end
 end
@@ -444,6 +483,16 @@ function Base:StageHitPresentation(info,result)
     if not self.presentationPending then self:ConsumeHitPresentation() end
 end
 
+-- Feedback contract (R8): pair ApplyHit{deferPresentation=true} with one synchronous
+-- OnHitEvent on success, BEFORE the next settlement/update. Default ApplyHit presents
+-- immediately; calling OnHitEvent afterwards is a no-op. Never also call Emit.
+-- Event: swingId/weapon/tier/part/material/pos/dir/normal/impactDir,
+-- broke/staggered/killed/weak/combo/full/critical/profileId, stop/attackerStop/flash/flashPeak.
+-- Vectors/scalars are copied; dir remains gameplay direction, impactDir is FX only.
+-- stop takes max, never sums. flash metadata is retained; this P0 deliberately keeps
+-- the approved enemy 60ms/.85 or heavy/third 80ms/1 curve, independent of player VFX.
+-- Killed: 1 contact kernel now, one 12/24 death burst at .25 pose seconds;
+-- enemy owns delayed die/victory, with final cleanup by 1.22 real seconds.
 ---@param event table Borrowed synchronous HitEvent; never retain its table or vectors.
 ---@return boolean consumed False for duplicates, unmatched events, or the legacy path.
 function Base:OnHitEvent(event)
@@ -455,6 +504,10 @@ function Base:OnHitEvent(event)
     if event.pos then fx.pos=Vector3(event.pos.x,event.pos.y,event.pos.z) end
     if event.dir then fx.dir=Vector3(event.dir.x,event.dir.y,event.dir.z) end
     if event.normal then fx.normal=Vector3(event.normal.x,event.normal.y,event.normal.z) end
+    local impactDir=event.impactDir or fx.dir
+    fx.impactDir=Vector3(impactDir.x,impactDir.y,impactDir.z)
+    fx.combo,fx.full,fx.critical,fx.profileId=event.combo,event.full==true,event.critical==true,event.profileId
+    fx.stop,fx.attackerStop,fx.flash,fx.flashPeak=event.stop,event.attackerStop,event.flash,event.flashPeak
     fx.material,fx.tier,fx.part=event.material or fx.material,event.tier or fx.tier,event.part
     fx.swingId,fx.weapon=event.swingId,event.weapon
     fx.broke,fx.staggered,fx.killed,fx.weak=event.broke==true,event.staggered==true,event.killed==true,event.weak==true
@@ -498,6 +551,7 @@ function Base:ApplyHit(info)
         self:EmitAttackCue('stop')
         self.dead,self.defeated,self.aggro=true,true,false
         self.state,self.stateTime,self.deathTime=S.DEAD,0,0
+        self.deathRealTime=0
         self.deathBurst,self.deathFinished,self.deathPresentationReady=false,false,false
         self.warning.visible=false
         self:ClearExtras()
@@ -513,9 +567,6 @@ function Base:ApplyHit(info)
                 result.staggered=self:Stagger(self.boss and 3 or .8,self.boss)
             end
         end
-        if not info.deferPresentation then
-            self.hitStop=max(self.hitStop,result.partBroken and .1 or (info.heavy and .08 or .04))
-        end
     end
     self:SyncShapes()
     self:StageHitPresentation(info,result)
@@ -523,13 +574,23 @@ function Base:ApplyHit(info)
 end
 
 function Base:Update(dt, playerPos)
-    dt=max(0,min(dt,.2)) -- bounded catch-up; never skip a full telegraph on a hitch
-    self.age=self.age+dt
-    self.reaction.age=self.reaction.age+dt
-    if self.particles then self.particles:UpdateOwner(self,dt) end
+    local realDt=max(0,dt)
+    local held=min(realDt,self.hitStop) -- snapshot BEFORE decrement
+    self.hitStop=max(0,self.hitStop-held)
+    dt=min(.2,max(0,realDt-held)) -- bounded AI catch-up, real FX/deadline is not clamped
+    self.realDt,self.poseDt=realDt,dt
+    self.age,self.poseAge=self.age+realDt,self.poseAge+dt
+    self.reaction.flashAge=self.reaction.flashAge+realDt
+    self.reaction.recoilAge=self.reaction.recoilAge+dt
+    self.reaction.age=self.reaction.recoilAge -- compatibility: now explicitly pose time
+    if self.visual and not self.visual.removed then self.visual:TickFlash(realDt) end
+    if self.particles then self.particles:UpdateOwner(self,realDt) end
     if self.dead then
-        local old=self.deathTime
+        self.deathRealTime=self.deathRealTime+realDt
+        self:TickKnock(dt)
         self.deathTime=self.deathTime+dt
+        -- Never let external stop writes prolong a dead actor indefinitely.
+        if self.deathRealTime+1e-8>=1.22 then self.deathTime=max(self.deathTime,1.1) end
         if self.deathPresentationReady and not self.deathBurst and self.deathTime+1e-8>=.25 then
             self.deathBurst=true
             if self.particles then
@@ -538,7 +599,7 @@ function Base:Update(dt, playerPos)
             end
             self:EmitEvent('die')
         end
-        if not self.deathFinished and old<1.1 and self.deathTime+1e-8>=1.1 then
+        if not self.deathFinished and self.deathTime+1e-8>=1.1 then
             self.deathFinished=true
             if self.particles then self.particles:ClearOwner(self) end
             if self.boss then self:EmitEvent('victory') end
@@ -551,8 +612,8 @@ function Base:Update(dt, playerPos)
     -- Recovery/protection use real time, including animation hit-stop. Only poise
     -- damage resets this clock; HP/armor hits alone cannot keep the meter full.
     local oldQuiet=self.poiseQuiet
-    self.poiseQuiet=self.poiseQuiet+dt
-    self.poiseProtection=max(0,self.poiseProtection-dt)
+    self.poiseQuiet=self.poiseQuiet+realDt
+    self.poiseProtection=max(0,self.poiseProtection-realDt)
     if self.state~=S.STAGGER or self.stumble then
         local recoveryTime=max(0,self.poiseQuiet-3)-max(0,oldQuiet-3)
         self.poise=max(0,self.poise-10*recoveryTime)
@@ -560,22 +621,17 @@ function Base:Update(dt, playerPos)
     local target=playerPos or (self.combat.PlayerPos and self.combat.PlayerPos())
     if not target then return end
     self.lastTarget=target
-    self:TickExtras(dt,target)
-    if self:TickPresentation(dt,target) then
-        self.hitStop=max(0,self.hitStop-dt)
+    self:TickExtras(realDt,target,dt)
+    if self:TickPresentation(min(realDt,.2),target) then
         self:UpdatePose(); self:SyncShapes()
         if self.visual then self.visual:Update(self) end
         return
     end
-    if self.hitStop>0 then
-        local held=min(dt,self.hitStop)
-        self.hitStop=max(0,self.hitStop-held)
-        dt=dt-held
-        if dt<=1e-8 then
-            if self.visual then self.visual:Update(self) end
-            return
-        end
+    if dt<=1e-8 then
+        if self.visual then self.visual:Update(self) end
+        return
     end
+    local knocked=self:TickKnock(dt)
     self.stateTime=self.stateTime+dt
     local distance=sqrt((target.x-self.position.x)^2+(target.z-self.position.z)^2)
     if self.aggro and distance>self.config.leash then
@@ -603,11 +659,11 @@ function Base:Update(dt, playerPos)
         if distance<=self.config.aggro and math.abs(target.y-self.position.y)<5 then
             self:Face(target); self:SetState(S.ALERT)
         elseif state==S.IDLE and self.stateTime>=1.2 then self:SetState(S.PATROL)
-        elseif state==S.PATROL then
+        elseif state==S.PATROL and not knocked then
             local d=self:Face(self.home)
             if d>.4 then self:Move(self.fx*dt,self.fz*dt)
             else
-                local a=self.age*.35
+                local a=self.poseAge*.35
                 self:Move(math.cos(a)*dt*.35,math.sin(a)*dt*.35)
                 if self.stateTime>=3 then self:SetState(S.IDLE) end
             end
@@ -615,7 +671,7 @@ function Base:Update(dt, playerPos)
     elseif state==S.ALERT then
         self:Face(target)
         if self.stateTime>=.4 then self:SetState(S.CHASE) end
-    elseif state==S.CHASE then self:Chase(dt,target,distance)
+    elseif state==S.CHASE and not knocked then self:Chase(dt,target,distance)
     elseif state==S.TELEGRAPH then
         local lockTime=max(0,self.attack.telegraph-.18)
         if not self.directionLocked then
@@ -628,7 +684,7 @@ function Base:Update(dt, playerPos)
         self.warning.step=min(6,1+math.floor(self.warning.progress*6))
         if self.stateTime+1e-8>=self.attack.telegraph then self:SetState(S.ATTACK) end
     elseif state==S.ATTACK then
-        self:AttackStep(dt,target)
+        self:AttackStep(dt,target,knocked)
         if self.state==S.ATTACK and self.stateTime+1e-8>=self.attack.duration then self:FinishAttack() end
     elseif state==S.RECOVER then
         if self.stateTime+1e-8>=self.attack.recover then self:AfterRecover() end
@@ -653,6 +709,8 @@ function Base:SetActive(active)
         if self.particles then self.particles:ClearOwner(self) end
         self.down,self.stumble,self.poseY,self.posePitch,self.hitStop=false,false,0,0,0
         self.poseRoll=0; self.reaction.age=1
+        self.reaction.recoilAge,self.reaction.flashAge,self.knock.active=1,1,false
+        if self.visual and not self.visual.removed then self.visual:ClearFlash() end
     end
     if self.node and not (self.visual and self.visual.removed) then self.node.enabled=active end
     self:SyncShapes()
@@ -665,6 +723,8 @@ function Base:Reset()
     self.stumble=false
     self.presentationPending=false
     self.reaction.age=1; self.staggerLanded=false
+    self.reaction.recoilAge,self.reaction.flashAge,self.knock.active=1,1,false
+    if self.visual then self.visual:ClearFlash() end
     self.position=Vector3(self.home.x,self.home.y,self.home.z)
     self.fx,self.fz,self.yaw=0,1,0
     self.aggro,self.hitStop,self.poseY,self.posePitch=false,0,0,0
@@ -690,6 +750,8 @@ function Base:GetStats()
     if s.activeCount>0 and self.phasePulse>0 then s.drawSubmissionsEstimate=s.drawSubmissionsEstimate+1 end
     s.deathStage=self.dead and (self.deathTime+1e-8<.12 and 'hold' or (self.deathTime+1e-8<.25 and 'release' or (self.deathTime+1e-8<1.1 and 'fragments' or 'cleared'))) or 'alive'
     s.presentedHits=self.presentedHits
+    s.poseDt,s.flashAge,s.recoilAge,s.stopRemaining=self.poseDt,self.reaction.flashAge,self.reaction.recoilAge,self.hitStop
+    s.hitMaterialCount=self.visual and self.visual.hitMaterialCount or 0
     s.flashSupported=self.visual and self.visual.flashSupported or false
     s.rebuildCpuMs=self.visual and self.visual.rebuildCpuMs or 0
     return s

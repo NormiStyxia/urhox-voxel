@@ -25,7 +25,7 @@ local a0=assert(src:find('    if combatAnim_ and (CombatState.InCombat()',1,true
 local b0=assert(src:find('    -- 法阵只更新一次',a0,true))
 local count={}
 local function tick(name)count[name]=(count[name] or 0)+1 end
-local env=setmetatable({Safe=State.Isolated,CombatState={InCombat=function()return true end},
+local env=setmetatable({nomi_={BeginQueryScope=function()end,EndQueryScope=function()end},Safe=State.Isolated,CombatState={InCombat=function()return true end},
  combatAnim_={Apply=bad},combatMoves_={AfterPose=function()tick('hit')end},animPreview_={index=0},
  UpdateCombatPreviewText=function()tick('debug')end,UpdateCombatRig=bad,dt=.016},{__index=_G})
 local tail=assert(load(src:sub(a0,b0-1),'actual Scene combat tail','t',env))
@@ -35,7 +35,8 @@ tail();tail();assert(count.hit==2 and count.debug==2,'Apply/Rig failure cannot a
 local post=assert(src:match('(function Ruins_HandlePostUpdate.-)\nfunction M.Stop'))
 env.UpdateBaseCamera=bad;env.UpdateCombatCamera=bad;env.UpdateCombatHUD=function()tick('hud')end
 env.M={aim={},sigils={Update=bad}}
-env.nomi_={HandPos=function()return 0 end,CameraNode=function()return 0 end}
+env.SwingPerf=require('combat.SwingPerf')
+env.nomi_={BeginQueryScope=function()end,EndQueryScope=function()end,HandPos=function()return 0 end,CameraNode=function()return 0 end}
 env.caster_={charge=0};env.Spells={ShatterRadius=function()return 0 end}
 env.CombatState.CanUseTime=function()return true end
 env.fx_={motesB={Draw=function()tick('b')end},motesG={Draw=function()tick('g')end}}

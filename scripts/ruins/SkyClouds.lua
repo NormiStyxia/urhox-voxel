@@ -25,7 +25,7 @@ local function AddPatch(g,yaw,elevation,width,radius,tile,speed,haze)
     local cx,cz=sy*ce,cy*ce
     local tangent=math.tan(width*0.5)
     local normal=Vector3(cx,se,cz)
-    local color=Color(speed,0,haze,1)
+    local color=Color(speed,(yaw*0.173+tile*0.137)%1,haze,1)
     local function vertex(u,v)
         local x=cx+cy*u*tangent-sy*se*v*tangent
         local y=se+ce*v*tangent
@@ -67,6 +67,8 @@ function M:Init(scene,count,upper,lower)
     self.geometry={}
     ---@type number
     self.elapsed=0
+    -- Shared with ground/grass: XZ displacement (m), XZ velocity (m/s).
+    self.wind=Vector4(0,0,0,0)
     self.motionEnabled,self.motionDetail=true,self.budget>12 and 1 or (self.budget>4 and 0.5 or 0)
     self.fallback,self.unavailable=false,false
     self.loading=false
@@ -201,9 +203,17 @@ function M:Update(dt,day,dusk,dn)
         if self.loading then self.pendingDay,self.pendingDusk,self.pendingDN=day,dusk,dn end
         return
     end
-    -- 四个漂移频率的共同周期，重置时相位连续且uniform长期有界。
-    if self.motionEnabled then self.elapsed = (self.elapsed+Finite(dt,0,0,1))%(10000*math.pi) end
-    self.material:SetShaderParameter("drift_time",Variant(self.elapsed))
+    -- Keep the double clock; wrap only the upload. 3600m is a common period
+    -- for the three sky layers and the 600x300m ground pattern.
+    local moving=self.motionEnabled and not self.horizonOnly
+    if moving then self.elapsed=self.elapsed+Finite(dt,0,0,1) end
+    local t=self.horizonOnly and 0 or self.elapsed
+    self.wind.x=(0.24*t+75*(1-math.cos(t*0.0008)))%3600
+    self.wind.y=(0.10*t+(0.04/0.0006)*(math.cos(0.7)-math.cos(t*0.0006+0.7)))%3600
+    self.wind.z=moving and (0.24+0.06*math.sin(t*0.0008)) or 0
+    self.wind.w=moving and (0.10+0.04*math.sin(t*0.0006+0.7)) or 0
+    self.material:SetShaderParameter("cloud_wind",Variant(self.wind))
+    self.material:SetShaderParameter("drift_time",Variant(t%(10000*math.pi)))
     self.material:SetShaderParameter("motion_detail",Variant(self.motionDetail))
     -- 转头/重新启用时也必须显示当前时段。
     self.material:SetShaderParameter("day",Variant(Finite(day,1,0,1)))
