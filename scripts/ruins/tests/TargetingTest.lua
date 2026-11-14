@@ -11,6 +11,30 @@ V.atFrame(8, function()
     end end end
     local object = TimeObject.New({id="aim_regression",world=world,scene=game.scene,
         voxels=voxels,dims={4,4,4},size=.25,origin=Vector3(300,5,300)})
+    -- 六面检测示意：相机 → 2m空气 → [1m实心盒]；±X / ±Y / ±Z 对称。
+    -- 每面九个可见表面点；负向射线、边界点和旋转后的局部面必须同样可选。
+    -- 空心/遮挡案例仍由下方测试保证：不能以放大包围盒或穿墙来补锁定。
+    for _,entry in ipairs({
+        {"+X",Vector3.RIGHT,Vector3.UP,Vector3.FORWARD},
+        {"-X",-Vector3.RIGHT,Vector3.UP,Vector3.FORWARD},
+        {"+Y",Vector3.UP,Vector3.RIGHT,Vector3.FORWARD},
+        {"-Y",-Vector3.UP,Vector3.RIGHT,Vector3.FORWARD},
+        {"+Z",Vector3.FORWARD,Vector3.RIGHT,Vector3.UP},
+        {"-Z",-Vector3.FORWARD,Vector3.RIGHT,Vector3.UP},
+    }) do
+        local face,normal,u,v=entry[1],entry[2],entry[3],entry[4]
+        for _,a in ipairs({-.375,0,.375}) do for _,b in ipairs({-.375,0,.375}) do
+            local point=object.origin+Vector3(.5,.5,.5)+normal*.5+u*a+v*b
+            local faceRay=Ray(point+normal*2,-normal)
+            local native=world:RaycastGridSingle(faceRay,10,nomi.aimMask)
+            local selected=nomi:AimRay(faceRay,10)
+            if selected.object~=object then
+                print(string.format("TargetingTest: FACE MISS %s offsets=%.3f,%.3f native=%s id=%d distance=%.4f selected=%s",
+                    face,a,b,tostring(native.hit),native.volumeId,native.distance,tostring(selected.volumeId)))
+            end
+            V.assert(selected.object==object,"同一实心物件六面均可锁定 "..face.." "..a..","..b)
+        end end
+    end
     local ray = Ray(Vector3(300.5,5.5,298),Vector3.FORWARD)
     local aim = nomi:AimRay(ray,10)
     V.assert(aim.hit and aim.object==object and aim.breakable,"实心可操作物件正确锁定")
