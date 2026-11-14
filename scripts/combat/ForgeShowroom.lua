@@ -168,7 +168,8 @@ end
 local function Room(s)
     local mat=Call(s,'material',Material,'new','Material:new');s.roomMaterial=mat
     local technique=Call(s,'material',cache,'GetResource','cache:GetResource','Technique','Techniques/NoTextureUnlit.xml')
-    Call(s,'material',mat,'SetTechnique','Material:SetTechnique',0,assert(technique,'unlit technique missing'))
+    assert(technique,'unlit technique missing') -- assert(v,msg) returns BOTH values; never forward as the final argument
+    Call(s,'material',mat,'SetTechnique','Material:SetTechnique',0,technique)
     mat.vertexShaderDefines='VERTEXCOLOR';mat.pixelShaderDefines='VERTEXCOLOR'
     Call(s,'material',mat,'SetShaderParameter','Material:SetShaderParameter','MatDiffColor',Variant(Color(1,1,1,1)))
     mat.cullMode=CULL_NONE

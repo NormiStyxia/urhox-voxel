@@ -281,7 +281,7 @@ end
 Click('tab_bow');assert(s.weapon=='bow' and s.slot=='limbs' and #room.weapons>0 and room.weapons[#room.weapons].weapon=='bow')
 Click('part_limbs_long');Click('slot_tip');Click('part_tip_crystal')
 assert(s.config.bow.parts.tip=='tip_crystal' and s.blueprint.stats.crystalRadius==.8)
-assert(s.statRows[1].label=='拉弓速度' and s.statRows[2].label=='射程' and s.statRows[3].label=='移动')
+assert(s.statRows[1].label=='拉速' and s.statRows[2].label=='射程' and s.statRows[3].label=='移动')
 Click('more');assert(s.moreRows[1].label=='破甲');Click('more')
 CheckLayout();Render()
 -- Equip: edits apply immediately, the visual closes through the fade + release latch.

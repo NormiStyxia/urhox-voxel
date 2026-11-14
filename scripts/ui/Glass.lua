@@ -5,9 +5,8 @@
 local Draw = require('ui.PixelDraw')
 local M = {}
 M.colors = {
-    cyan={116,208,244}, line={78,104,142}, orange={242,170,70}, gold={232,196,110},
-    title={236,222,176}, text={222,230,242}, white={246,248,252}, sub={138,158,186}, dim={96,110,132},
-    black={0,0,0},
+    ink={13,17,34}, ivory={240,234,218}, sub={156,156,178}, dim={104,106,130}, line={150,150,184},
+    gold={236,190,98}, violet={126,138,216}, coral={238,128,112}, leaf={160,210,142}, black={0,0,0},
 }
 local SIZE_FALLBACK=function(size) return size>=20 and 24 or 12 end
 local contexts=setmetatable({},{__mode='k'})
@@ -104,6 +103,24 @@ function M.Diamond(vg,x,y,r,color,alpha)
     nvgBeginPath(vg);nvgMoveTo(vg,x,y-r);nvgLineTo(vg,x+r,y);nvgLineTo(vg,x,y+r);nvgLineTo(vg,x-r,y);nvgClosePath(vg)
     nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
 end
+--- Viewfinder corner ticks around a rectangle.
+function M.Corners(vg,x,y,w,h,len,color,alpha,width)
+    nvgBeginPath(vg)
+    nvgMoveTo(vg,x,y+len);nvgLineTo(vg,x,y);nvgLineTo(vg,x+len,y)
+    nvgMoveTo(vg,x+w-len,y);nvgLineTo(vg,x+w,y);nvgLineTo(vg,x+w,y+len)
+    nvgMoveTo(vg,x+w,y+h-len);nvgLineTo(vg,x+w,y+h);nvgLineTo(vg,x+w-len,y+h)
+    nvgMoveTo(vg,x+len,y+h);nvgLineTo(vg,x,y+h);nvgLineTo(vg,x,y+h-len)
+    nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1.5);nvgStroke(vg)
+end
+function M.Cross(vg,x,y,r,color,alpha,width)
+    nvgBeginPath(vg);nvgMoveTo(vg,x-r,y);nvgLineTo(vg,x+r,y);nvgMoveTo(vg,x,y-r);nvgLineTo(vg,x,y+r)
+    nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1);nvgStroke(vg)
+end
+function M.Dots(vg,x,y,cols,rows,gap,r,color,alpha)
+    nvgBeginPath(vg)
+    for i=0,cols-1 do for j=0,rows-1 do nvgRect(vg,x+i*gap-r,y+j*gap-r,r*2,r*2) end end
+    nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
+end
 function M.Circle(vg,x,y,r,color,alpha)
     nvgBeginPath(vg);nvgCircle(vg,x,y,r);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
 end
@@ -115,27 +132,27 @@ function M.Line(vg,x1,y1,x2,y2,color,alpha,width)
     nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1);nvgStroke(vg)
 end
 --- Text with middle baseline. align is an NVG horizontal flag (default left).
-function M.Text(vg,text,x,y,size,color,align,alpha)
+function M.Text(vg,text,x,y,size,color,align,alpha,spacing)
     if not text or text=='' then return end
     local font=Font(vg)
     if font<0 then
         Draw.Text(vg,text,x,y,SIZE_FALLBACK(size),color or M.colors.text,align,alpha)
         return
     end
-    nvgFontFaceId(vg,font);nvgFontSize(vg,size);nvgFontBlur(vg,0);nvgTextLetterSpacing(vg,0)
+    nvgFontFaceId(vg,font);nvgFontSize(vg,size);nvgFontBlur(vg,0);nvgTextLetterSpacing(vg,spacing or 0)
     nvgTextAlign(vg,(align or NVG_ALIGN_LEFT)+NVG_ALIGN_MIDDLE)
     nvgFillColor(vg,Color(color or M.colors.text,alpha))
     nvgText(vg,x,y,text)
 end
 --- Faux-bold: the regular face drawn twice with a sub-pixel offset.
-function M.Bold(vg,text,x,y,size,color,align,alpha)
-    M.Text(vg,text,x,y,size,color,align,alpha)
-    M.Text(vg,text,x+.7,y,size,color,align,alpha)
+function M.Bold(vg,text,x,y,size,color,align,alpha,spacing)
+    M.Text(vg,text,x,y,size,color,align,alpha,spacing)
+    M.Text(vg,text,x+.7,y,size,color,align,alpha,spacing)
 end
 --- Cheap width estimate for layout time (no vg): CJK = 1em, everything else .56em.
-function M.EstimateWidth(text,size)
+function M.EstimateWidth(text,size,spacing)
     local width=0
-    for _,cp in utf8.codes(text or '') do width=width+(cp>=0x2E80 and size or size*.56) end
+    for _,cp in utf8.codes(text or '') do width=width+(cp>=0x2E80 and size or size*.56)+(spacing or 0) end
     return width
 end
 --- Wrap by estimated width; returns lines.

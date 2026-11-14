@@ -6,28 +6,101 @@ local Builder=require('combat.WeaponBuilder')
 local Parts=require('combat.WeaponParts')
 local Showroom=require('combat.ForgeShowroom')
 local MASK=0x40000000
-rawset(_G,'Vector2',function(x,y)return {x=x,y=y}end)
-rawset(_G,'BoundingBox',function(a,b)return {min=a,max=b}end)
+local function Number(value,label)
+    assert(type(value)=='number' and value==value and math.abs(value)<math.huge,label..': number expected')
+end
+local function Integer(value,label) Number(value,label);assert(value%1==0,label..': integer expected') end
+local function Vector(value,dimensions,label)
+    assert(type(value)=='table',label..': vector expected')
+    Number(value.x,label..'.x');Number(value.y,label..'.y')
+    if dimensions==3 then Number(value.z,label..'.z') end
+end
+local function Resource(value,kind)
+    assert(type(value)=='table' and value.resourceType==kind,kind..' expected')
+end
+local function NoExtra(label,...) assert(select('#',...)==0,label..': unexpected extra arguments') end
+-- Every property write uses a backing table, including repeated writes: a plain
+-- __newindex on the original table would validate only the first assignment.
+local numeric={viewMask=true,lightMask=true,zoneMask=true,brightness=true,range=true,fov=true,
+    nearClip=true,farClip=true,priority=true,ambientSource=true}
+local integral={viewMask=true,lightMask=true,zoneMask=true,priority=true,ambientSource=true,lightType=true}
+local boolean={enabled=true,castShadows=true,occluder=true,depthFogEnable=true,heightFogEnable=true,
+    volumetricFogEnabled=true,autoExposureEnabled=true,affectVolumetricFog=true}
+local function ComponentProxy(data)
+    return setmetatable({}, {__index=data,__newindex=function(_,key,value)
+        if integral[key] then Integer(value,data.kind..'.'..key)
+        elseif numeric[key] then Number(value,data.kind..'.'..key)
+        elseif boolean[key] then assert(type(value)=='boolean',data.kind..'.'..key..': boolean expected')
+        elseif key=='projectionOffset' then Vector(value,2,'Camera.projectionOffset') end
+        data[key]=value
+    end})
+end
+local function StrictGeometry(g)
+    local begin,vertex,normal,color,commit,set,get,count=g.BeginGeometry,g.DefineVertex,g.DefineNormal,g.DefineColor,g.Commit,g.SetMaterial,g.GetMaterial,g.GetNumVertices
+    function g:BeginGeometry(index,primitive,...)
+        NoExtra('BeginGeometry',...);Integer(index,'index');Integer(primitive,'primitive');return begin(self,index,primitive)
+    end
+    function g:DefineVertex(value,...) NoExtra('DefineVertex',...);Vector(value,3,'position');return vertex(self,value) end
+    function g:DefineNormal(value,...) NoExtra('DefineNormal',...);Vector(value,3,'normal');return normal(self,value) end
+    function g:DefineColor(value,...)
+        NoExtra('DefineColor',...);assert(type(value)=='table','Color expected')
+        for _,key in ipairs({'r','g','b','a'}) do Number(value[key],'Color.'..key) end
+        return color(self,value)
+    end
+    function g:Commit(...) NoExtra('Commit',...);return commit(self) end -- native void return
+    function g:SetMaterial(...)
+        local n=select('#',...);assert(n==1 or n==2,'SetMaterial: 1 or 2 arguments expected')
+        local index,mat=...;if n==1 then mat,index=index,0 end
+        Integer(index,'SetMaterial index');Resource(mat,'Material');return set(self,index,mat)
+    end
+    function g:GetMaterial(index,...) NoExtra('GetMaterial',...);index=index or 0;Integer(index,'index');return get(self,index) end
+    function g:GetNumVertices(index,...) NoExtra('GetNumVertices',...);Integer(index,'index');return count(self,index) end
+    return g
+end
+rawset(_G,'Vector2',function(x,y,...)NoExtra('Vector2',...);Number(x,'x');Number(y,'y');return {x=x,y=y}end)
+rawset(_G,'BoundingBox',function(a,b,...)NoExtra('BoundingBox',...);Vector(a,3,'min');Vector(b,3,'max');return {min=a,max=b}end)
+local quaternion=Quaternion
+rawset(_G,'Quaternion',function(pitch,yaw,roll,...)
+    NoExtra('Quaternion Euler overload',...)
+    Number(pitch or 0,'pitch');Number(yaw or 0,'yaw');Number(roll or 0,'roll')
+    local q=quaternion(pitch,yaw,roll);local from=q.FromEulerAngles
+    q.FromEulerAngles=function(self,x,y,z,...)
+        NoExtra('FromEulerAngles',...);Number(x,'x');Number(y,'y');Number(z,'z');return from(self,x,y,z)
+    end
+    return q
+end)
 rawset(_G,'CULL_NONE',0);rawset(_G,'AMBIENT_COLOR',2);rawset(_G,'LIGHT_POINT',2)
 for _,name in ipairs({'Scene','Texture2D','RenderTexture','VoxelPhysicsWorld'}) do rawset(_G,name,function()error('forbidden '..name)end) end
 local e
 local function Wrap(n)
     e.nodes[#e.nodes+1]=n;n.components={}
-    function n:CreateChild(name)
+    function n:CreateChild(name,mode,id,temporary,...)
+        NoExtra('CreateChild',...);assert(name==nil or type(name)=='string')
+        if mode~=nil then Integer(mode,'CreateMode') end
+        if id~=nil then Integer(id,'node id') end
+        assert(temporary==nil or type(temporary)=='boolean')
         if e.fail=='child' then error('injected child error') end
         local child=Wrap(Mock.Node(name,self));self.children[#self.children+1]=child;return child
     end
-    function n:CreateComponent(kind)
+    function n:CreateComponent(kind,mode,id,...)
+        NoExtra('CreateComponent',...);assert(type(kind)=='string')
+        if mode~=nil then Integer(mode,'CreateMode') end
+        if id~=nil then Integer(id,'component id') end
         assert(kind~='VoxelPhysicsWorld' and kind~='Octree','must reuse main scene world/octree')
         if e.fail==kind then return nil end
-        local c=kind=='CustomGeometry' and Mock.CustomGeometry(self,e.geometryOptions) or {node=self}
+        local c=kind=='CustomGeometry' and StrictGeometry(Mock.CustomGeometry(self,e.geometryOptions)) or {node=self}
         c.kind=kind;c.viewMask=0xffffffff;c.lightMask=0xffffffff;c.zoneMask=0xffffffff
         if kind=='Camera' then c.projectionOffset=Vector2(0,0) end
         if kind=='Zone' then c.ambientSource=0 end
+        for method,field in pairs({SetBrightness='brightness',SetRange='range',SetFov='fov'}) do
+            c[method]=function(target,value,...) NoExtra(method,...);Number(value,method);target[field]=value end
+        end
         if e.missingKind==kind then c[e.missingField]=nil end
+        c=ComponentProxy(c)
         self.components[#self.components+1]=c;return c
     end
-    function n:GetComponents(kind,recursive)
+    function n:GetComponents(kind,recursive,...)
+        NoExtra('GetComponents',...);assert(type(kind)=='string' and (recursive==nil or type(recursive)=='boolean'))
         local out={}
         local function Visit(node)
             if node.removed then return end
@@ -36,8 +109,9 @@ local function Wrap(n)
         end
         Visit(self);return out
     end
-    function n:GetComponent(kind) return self:GetComponents(kind,false)[1] end
-    function n:Remove()
+    function n:GetComponent(kind,recursive,...) NoExtra('GetComponent',...);return self:GetComponents(kind,recursive)[1] end
+    function n:Remove(...)
+        NoExtra('Node:Remove',...)
         assert(not self.removed,'node removed twice')
         for _,child in ipairs(self.children) do if not child.removed then child:Remove() end end
         self.removed=true
@@ -54,23 +128,30 @@ local function Boot()
     e.sky=e.scene:CreateChild('Sky'):CreateComponent('Skybox')
     e.cloud=e.scene:CreateChild('SkyClouds'):CreateComponent('CustomGeometry')
     e.cloud.viewMask=0xefffffff
-    rawset(_G,'graphics',{GetWidth=function()return e.width end,GetHeight=function()return e.height end})
-    rawset(_G,'renderer',{GetViewport=function(self,index) assert(self==renderer and index==0);return e.viewport end,
-        SetViewport=function(self,index,v)assert(self==renderer and index==0);e.viewport=v;e.setCalls=e.setCalls+1;
+    rawset(_G,'graphics',{GetWidth=function(self,...)NoExtra('GetWidth',...);assert(self==graphics);return e.width end,
+        GetHeight=function(self,...)NoExtra('GetHeight',...);assert(self==graphics);return e.height end})
+    rawset(_G,'renderer',{GetViewport=function(self,index,...) NoExtra('GetViewport',...);Integer(index,'index');assert(self==renderer and index==0);return e.viewport end,
+        SetViewport=function(self,index,v,...)NoExtra('SetViewport',...);Integer(index,'index');assert(self==renderer and index==0);assert(v==nil or type(v)=='table');e.viewport=v;e.setCalls=e.setCalls+1;
             if e.fail=='switch' then e.fail=nil;error('partial switch failure') end end})
-    rawset(_G,'Viewport',{new=function(self,scene,camera) assert(self==Viewport and scene==e.scene);return {scene=scene,camera=camera} end})
-    rawset(_G,'Material',{new=function(self)
-        assert(self==Material);local m={};e.materials[#e.materials+1]=m
-        function m:SetTechnique(_,t) assert(t) end
-        function m:SetShaderParameter(k,v) self[k]=v end
-        function m:Dispose() assert(not self.disposed);self.disposed=true end
+    rawset(_G,'Viewport',{new=function(self,scene,camera,...) NoExtra('Viewport selected overload',...);assert(self==Viewport and scene==e.scene and camera.kind=='Camera');return {scene=scene,camera=camera} end})
+    rawset(_G,'Material',{new=function(self,...)
+        NoExtra('Material:new',...);assert(self==Material);local m={resourceType='Material'};e.materials[#e.materials+1]=m
+        function m:SetTechnique(index,t,qualityLevel,lodDistance,...)
+            NoExtra('SetTechnique',...);assert(self==m);Integer(index,'SetTechnique index');Resource(t,'Technique')
+            if qualityLevel~=nil then Number(qualityLevel,"SetTechnique argument #4") end
+            if lodDistance~=nil then Number(lodDistance,"SetTechnique argument #5") end
+            self.technique=t;self.qualityLevel=qualityLevel;self.lodDistance=lodDistance
+        end
+        function m:SetShaderParameter(k,v,...) NoExtra('SetShaderParameter',...);assert(self==m and type(k)=='string' and v~=nil);self[k]=v end
+        function m:Dispose(...) NoExtra('Material:Dispose',...);assert(self==m and not self.disposed);self.disposed=true end
         return m
     end})
-    rawset(_G,'cache',{GetResource=function(self,kind,path)
-        assert(self==cache)
+    rawset(_G,'cache',{GetResource=function(self,kind,path,sendEventOnFailure,...)
+        NoExtra('GetResource',...);assert(self==cache and type(kind)=='string' and type(path)=='string')
+        assert(sendEventOnFailure==nil or type(sendEventOnFailure)=='boolean')
         if e.fail=='material' then return nil end
         assert(path=='Materials/NomiVoxel.xml' or path=='Techniques/NoTextureUnlit.xml')
-        return {name=path}
+        return {name=path,resourceType=kind}
     end})
     rawset(_G,'time',{GetElapsedTime=function(self)assert(self==time,'Time singleton must use colon');return os.clock()end})
 end
@@ -99,6 +180,47 @@ local function Restored(n,g)
     local nn,gg=Live();assert(nn==n and gg==g,'nodes/components leaked')
     for _,mat in ipairs(e.materials) do assert(mat.disposed,'owned material leaked') end
 end
+
+-- Reproduce the real tolua failure: assert(v,msg) in last position expands into
+-- technique + message. The optional native numeric slots MUST reject that text.
+Boot()
+do
+    local material=Material:new()
+    local technique=cache:GetResource('Technique','Techniques/NoTextureUnlit.xml')
+    local ok,err=pcall(function() material:SetTechnique(0,assert(technique,'unlit technique missing')) end)
+    assert(not ok and tostring(err):find('SetTechnique argument #4',1,true),'strict mock missed the real Web failure')
+    material:SetTechnique(0,technique)
+    material:SetTechnique(0,technique,nil,nil)
+    material:SetTechnique(0,technique,2,15)
+    assert(not pcall(material.SetTechnique,material,0,technique,2,'bad lod'))
+    assert(not pcall(material.SetTechnique,material,0,technique,2,15,'extra'))
+    assert(not pcall(material.SetTechnique,0,technique),'dot call must not silently substitute self')
+    local light=e.sun
+    light:SetBrightness(5);light:SetRange(8);light:SetFov(34)
+    for _,method in ipairs({'SetBrightness','SetRange','SetFov'}) do
+        assert(not pcall(light[method],light,'invalid'))
+        assert(not pcall(light[method],light,3,'extra'))
+    end
+    assert(not pcall(function() light.range='invalid repeated property write' end))
+    assert(not pcall(function() light.brightness=nil end))
+    local geometry=e.cloud
+    assert(not pcall(geometry.BeginGeometry,geometry,0,'triangles'))
+    assert(not pcall(geometry.DefineVertex,geometry,Vector3(0,0,0),'extra'))
+    assert(not pcall(geometry.DefineNormal,geometry,'wrong vector'))
+    assert(not pcall(geometry.DefineColor,geometry,Vector3(1,1,1)))
+    assert(not pcall(geometry.Commit,geometry,'extra'))
+    assert(not pcall(geometry.SetMaterial,geometry,0,technique),'Technique must not stand in for Material')
+    local camera=e.scene:CreateChild('TypeProbeCamera'):CreateComponent('Camera')
+    camera:SetFov(34);camera.nearClip=.05;camera.farClip=32
+    assert(not pcall(camera.SetFov,camera,'wide'))
+    assert(not pcall(function() camera.fov='wide' end))
+    assert(not pcall(function() camera.projectionOffset=.3 end))
+    local rotation=Quaternion(0,25,0)
+    assert(not pcall(rotation.FromEulerAngles,rotation,0,'bad yaw',0))
+    assert(not pcall(rotation.FromEulerAngles,rotation,0,25,0,'extra'))
+    material:Dispose()
+end
+print('forge_showroom binding signatures PASS: assert multi-return regression, numeric methods/properties, geometry types/arity, colon self')
 
 Boot();local nodes,components=Live()
 assert(Showroom.Diagnostic()=='')
