@@ -57,3 +57,28 @@ V.atFrame(8,function()
     nomi.world=saved
     print(string.format("UrnTargetTest: visible=%d / 1296 misses=%d",visible,misses))
 end)
+
+-- 固定与截图相近的西侧瓮视角，先验证真实相机准星，再渲染目标钟面。
+V.atFrame(120,function()
+    local game=_G["RUINS"]
+    local nomi=game.nomiCtl
+    local urn=game.puzzles.objects.urn1
+    UnsubscribeFromEvent("PostUpdate")
+    UnsubscribeFromEvent("Update")
+    local center=urn.center
+    local position=center+Vector3(-3,1,-3.5)
+    local camera=nomi:CameraNode()
+    camera.worldPosition=position
+    camera:LookAt(center)
+    nomi.cc:Teleport(center+Vector3(-1.6,-1.1,-1.8))
+    nomi.yaw,nomi.camYaw=40,40
+    nomi.node.rotation=Quaternion(40,Vector3.UP)
+    for i=1,60 do nomi:Animate(1/60,true) end
+    local aim=nomi:Aim(20)
+    V.assert(aim.object==urn,"截图类似视角的实际相机准星锁定瓮")
+    game.caster.charging,game.caster.charge=true,.5
+    game.sigils:Update(0,aim,nomi:HandPos(),camera,game.caster,1,true)
+    V.assert(game.sigils.target.node.enabled,"选中钟面实际启用")
+    print(string.format("UrnTargetTest: SCREEN camera=%s dir=%s target=%s clock=%s surfaceNormal=%s",tostring(position),tostring(camera.worldDirection),
+        tostring(aim.pos),tostring(game.sigils.target.node.worldPosition),tostring(aim.normal)))
+end)
