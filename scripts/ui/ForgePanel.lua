@@ -36,9 +36,9 @@ local PAD=14
 local FADE_OUT,REVEAL=.2,.3 -- seconds: to black / from black
 local ROOM_TIMEOUT=6
 local DARK_VOXEL={92,76,60}
-local STAGE_TOP,STAGE_BOTTOM={26,32,66},{9,12,26}
-local MENU_FILL={10,13,28}
-local SCRIM_CLEAR,SCRIM_MID,SCRIM_SOLID={13,17,34,0},{13,17,34,164},{13,17,34,222}
+local MENU_FILL={16,22,40}
+local SHADE_TOP,SHADE_CLEAR={8,12,24,120},{8,12,24,0}
+local SCRIM_CLEAR,SCRIM_MID,SCRIM_SOLID={20,28,50,0},{20,28,50,140},{20,28,50,206}
 
 -- The showroom is optional: a missing/broken module means the 2D side view.
 local roomModule
@@ -326,7 +326,7 @@ Layout=function(s)
             end,{kind='menu',area='menu',gap=item.gap})
         end
     else s.menuBox=nil end
-    s.sideBox=Box(s.stage.x+40,s.stage.y+h*.24,math.max(1,s.stage.w-80),math.max(1,h*.62))
+    s.sideBox=Box(s.stage.x+60,s.stage.y+h*.2,math.max(1,s.stage.w-120),math.max(1,h*.52))
     s.sideCells=s.blueprint.geometry.cells
     s.stageTitle=WEAPON_NAMES[s.weapon]
     s.stageCaption=WEAPON_EN[s.weapon]
@@ -600,22 +600,70 @@ local function Attributes(vg,s)
     if s.moreBox then for _,row in ipairs(s.moreRows) do Row(row) end end
 end
 
+local CLOUDS={{-.38,.28,64},{.22,.18,80},{.52,.34,58}}
+local ISLETS={{-.34,.44,34},{.4,.5,26}}
 local function Backdrop(vg,s)
-    -- No 3D room: an ink backdrop with a compass ring, dots and a side view of the weapon.
+    -- No 3D room: a flat 2D take on the same showroom (ruins palette) so the
+    -- fallback still looks like part of the world: sky, floating islets, a marble
+    -- arch, a stepped dais with a gold ring and rune disc, blue crystals.
     local st=s.stage
-    G.Gradient(vg,0,0,s.width,s.height,0,STAGE_TOP,STAGE_BOTTOM,1)
-    local b=s.sideBox
-    local cx,cy=b.x+b.w/2,b.y+b.h/2
-    local r=math.min(b.w,b.h)*.52
-    for i=0,59 do
-        local a=i*math.pi/30
-        local c,sn=math.cos(a),math.sin(a)
-        local inner=(i%5==0) and r-9 or r-4
-        G.Line(vg,cx+c*inner,cy+sn*inner,cx+c*r,cy+sn*r,C.violet,(i%5==0) and .55 or .28,1)
+    local h=s.height
+    local cx=math.floor(st.w*.5)
+    local floorY=math.floor(h*.8)
+    G.Gradient(vg,0,0,s.width,h,0,C.skyTop,C.skyLow,1)
+    for i=1,4 do G.Circle(vg,cx-st.w*.3,h*.16,22+i*16,C.ivory,.07) end
+    -- voxel clouds
+    for _,c in ipairs(CLOUDS) do
+        local x,y,w=cx+st.w*c[1],h*c[2],c[3]
+        G.Round(vg,x,y,w,10,0,C.ivory,.85);G.Round(vg,x+10,y-8,w*.55,10,0,C.ivory,.85)
     end
-    G.Dots(vg,st.x+40,s.height-s.safeBottom-84,5,4,10,1,C.violet,.5)
+    -- floating islets
+    for _,o in ipairs(ISLETS) do
+        local x,y,w=cx+st.w*o[1],h*o[2],o[3]
+        G.Round(vg,x,y,w,6,0,C.grass,1)
+        G.Round(vg,x+3,y+6,w-6,6,0,C.stone,1)
+        G.Round(vg,x+8,y+12,w-16,6,0,C.stoneDark,1)
+        G.Round(vg,x+13,y+18,w-26,5,0,C.stoneDark,1)
+    end
+    -- arch + pillars
+    local pillarX=st.w*.42
+    local top=h*.1
+    for sx=-1,1,2 do
+        local x=cx+sx*pillarX-12
+        G.Round(vg,x,top+34,24,floorY-top-34,0,C.marble,1)
+        G.Round(vg,x+17,top+34,7,floorY-top-34,0,C.marbleShade,1)
+        G.Round(vg,x-2,top+88,28,5,0,C.gold,1)
+        G.Round(vg,x-2,floorY-60,28,5,0,C.gold,1)
+    end
+    nvgBeginPath(vg);nvgArc(vg,cx,top+36+pillarX*.0,pillarX,math.pi,math.pi*2,2)
+    nvgStrokeColor(vg,G.Color(C.marble,1));nvgStrokeWidth(vg,16);nvgStroke(vg)
+    nvgBeginPath(vg);nvgArc(vg,cx,top+36,pillarX-11,math.pi,math.pi*2,2)
+    nvgStrokeColor(vg,G.Color(C.blueMarble,1));nvgStrokeWidth(vg,5);nvgStroke(vg)
+    G.Round(vg,cx-7,top+36-pillarX-9,14,18,0,C.gold,1)
+    -- banner
+    G.Round(vg,cx-pillarX+14,top+40,22,70,0,C.blueMarble,1)
+    G.Round(vg,cx-pillarX+14,top+40,22,4,0,C.gold,1)
+    G.Poly(vg,C.ivory,1,cx-pillarX+25,top+62,cx-pillarX+31,top+72,cx-pillarX+25,top+82,cx-pillarX+19,top+72)
+    -- floor and dais
+    G.Ellipse(vg,cx,floorY+10,st.w*.5,34,C.stoneDark,.55)
+    G.Ellipse(vg,cx,floorY+4,st.w*.42,30,C.stone,1)
+    G.Ellipse(vg,cx,floorY-4,st.w*.3,24,C.marbleShade,1)
+    G.Ellipse(vg,cx,floorY-12,st.w*.3,24,C.marble,1)
+    G.EllipseStroke(vg,cx,floorY-12,st.w*.255,19,C.gold,1,3)
+    G.Ellipse(vg,cx,floorY-14,st.w*.2,14,C.rune,1)
+    G.EllipseStroke(vg,cx,floorY-14,st.w*.13,9,C.gold,.9,1.5)
+    -- crystals
+    for sx=-1,1,2 do
+        local x=cx+sx*st.w*.34
+        G.Round(vg,x-12,floorY-10,24,8,0,C.gold,1)
+        G.Poly(vg,C.crystal,1,x-8,floorY-10,x-2,floorY-44,x+3,floorY-10)
+        G.Poly(vg,C.rune,1,x+1,floorY-10,x+8,floorY-30,x+12,floorY-10)
+    end
+    -- the weapon, side view, floating above the dais
+    local b=s.sideBox
+    G.Ellipse(vg,cx,floorY-16,st.w*.1,7,C.gold,.28)
     nvgSave(vg)
-    nvgTranslate(vg,cx,cy);nvgRotate(vg,s.weapon=='sword' and -.5 or 0);nvgTranslate(vg,-cx,-cy)
+    nvgTranslate(vg,b.x+b.w/2,b.y+b.h/2);nvgRotate(vg,s.weapon=='sword' and -.22 or 0);nvgTranslate(vg,-(b.x+b.w/2),-(b.y+b.h/2))
     SidePixels(vg,s,s.sideCells,b,s.slot,1,18)
     nvgRestore(vg)
 end
@@ -625,6 +673,8 @@ local function Stage(vg,s)
     elseif not s.roomReady then
         G.Text(vg,'正在准备展示间…',st.x+st.w/2,st.y+st.h/2,15,C.sub,NVG_ALIGN_CENTER)
     end
+    G.Gradient(vg,0,0,st.w,130,0,SHADE_TOP,SHADE_CLEAR,1)
+    G.Gradient(vg,0,s.height-90,st.w,90,0,SHADE_CLEAR,SHADE_TOP,1)
     local x=math.max(26,s.safeLeft+14)
     local y=s.safeTop+26
     Shadowed(vg,'ARMORY',x,y,11,C.gold,nil,nil,3)

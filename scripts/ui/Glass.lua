@@ -5,8 +5,12 @@
 local Draw = require('ui.PixelDraw')
 local M = {}
 M.colors = {
-    ink={13,17,34}, ivory={240,234,218}, sub={156,156,178}, dim={104,106,130}, line={150,150,184},
-    gold={236,190,98}, violet={126,138,216}, coral={238,128,112}, leaf={160,210,142}, black={0,0,0},
+    ink={20,28,50}, ivory={244,240,228}, sub={176,182,204}, dim={118,124,150}, line={170,176,204},
+    gold={242,190,86}, violet={140,166,216}, coral={238,128,112}, leaf={160,210,142}, black={0,0,0},
+    -- ruins world palette (RuinsPalette.lua): marble / stone / gold / rune blue
+    marble={232,232,224}, marbleShade={196,200,206}, stone={190,188,182}, stoneDark={150,150,150},
+    blueMarble={140,168,214}, rune={92,140,250}, crystal={116,166,255}, grass={118,166,84},
+    skyTop={112,166,232}, skyLow={236,230,208},
 }
 local SIZE_FALLBACK=function(size) return size>=20 and 24 or 12 end
 local contexts=setmetatable({},{__mode='k'})
@@ -120,6 +124,20 @@ function M.Dots(vg,x,y,cols,rows,gap,r,color,alpha)
     nvgBeginPath(vg)
     for i=0,cols-1 do for j=0,rows-1 do nvgRect(vg,x+i*gap-r,y+j*gap-r,r*2,r*2) end end
     nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
+end
+function M.Ellipse(vg,x,y,rx,ry,color,alpha)
+    nvgBeginPath(vg);nvgEllipse(vg,x,y,rx,ry);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
+end
+function M.EllipseStroke(vg,x,y,rx,ry,color,alpha,width)
+    nvgBeginPath(vg);nvgEllipse(vg,x,y,rx,ry);nvgStrokeColor(vg,Color(color,alpha));nvgStrokeWidth(vg,width or 1);nvgStroke(vg)
+end
+function M.Poly(vg,color,alpha,...)
+    local n=select('#',...)
+    nvgBeginPath(vg)
+    local x1,y1=...
+    nvgMoveTo(vg,x1,y1)
+    for i=3,n,2 do local x,y=select(i,...);nvgLineTo(vg,x,y) end
+    nvgClosePath(vg);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
 end
 function M.Circle(vg,x,y,r,color,alpha)
     nvgBeginPath(vg);nvgCircle(vg,x,y,r);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)

@@ -25,7 +25,7 @@ local safe={left=47,right=47,top=0,bottom=21}
 for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
 for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE'}) do rawset(_G,name,i) end
 NVG_ALIGN_LEFT,NVG_ALIGN_CENTER,NVG_ALIGN_RIGHT,NVG_ALIGN_MIDDLE=1,2,4,16
-for _,name in ipairs({'nvgArc','nvgRotate'}) do rawset(_G,name,function() end) end
+for _,name in ipairs({'nvgArc','nvgRotate','nvgEllipse'}) do rawset(_G,name,function() end) end
 local fakeInput={numTouches=0,mouseMode=MM_RELATIVE,GetKeyDown=function(_,key) return held[key] end,GetMouseButtonDown=function(_,button) return buttons[button] end}
 rawset(_G,'input',fakeInput)
 local clock=0
