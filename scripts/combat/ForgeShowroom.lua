@@ -1,8 +1,8 @@
 -- Sky showroom in the EXISTING scene; never creates a Scene, RTT or voxel world.
 -- Binding evidence: .emmylua/Drawable.d.lua exposes viewMask/lightMask/zoneMask;
 -- Light and Zone inherit Drawable. Camera.d.lua exposes viewMask/projectionOffset.
--- rendering.md: small high-priority Zone + AMBIENT_COLOR, depth/height fog off.
--- lights-and-shadows.md: ordinary unshadowed point lights work across Web/mobile.
+-- rendering.md: high-priority Zone + AMBIENT_COLOR, local depth/volumetric fog.
+-- lights-and-shadows.md: directional shadows + ordinary point lights on Web.
 -- Reserved view/light bit 0x40000000: temporarily exclude existing lights,
 -- Skyboxes and CustomGeometry (including camera-relative clouds), restore on Exit.
 -- Main camera and its viewport are borrowed, never modified by this module.
@@ -11,10 +11,16 @@
 -- around player, despite visible radii 522..548: y=1200 ALONE does not avoid it!
 -- x=2304 leaves >150m beyond that inflated bound at the island edge. Float32
 -- ULP here is <0.25mm (weapon cells=30mm). The dressing dome radius is 90m (still outside main-cloud bounds).
--- Draw budget: eight dressing batches plus one weapon; low quality uses seven.
+-- Twelve dressing material batches plus one weapon; low uses seven plus one.
+-- Native per-light/shadow/post-process passes are additional, not included here.
 -- Dressing spans <100m (same x=2304 clearance); Zone includes the full sky dome.
 -- Native Commit is indivisible; StepPreview's 2ms budget is cooperative, not a
 -- guarantee that a GPU upload/Compile cannot exceed 2ms on a slow platform.
+-- Round 3: Zone-only Bloom/ACES/vignette/fog; camera-only DOF. No renderer
+-- pipeline/HDR/shadow-map/compute switches are mutated. docs post-processing
+-- and volumetric-fog: Web forward has simplified directional fog, mobile
+-- forward may have none. Three feathered additive shafts ALWAYS remain as
+-- fallback. No compute-only local fog or unsupported area lights are required.
 local Builder=require('combat.WeaponBuilder')
 local Dressing=require('combat.ForgeShowroomScene')
 local M={}
@@ -107,6 +113,7 @@ local function Cleanup(s)
     if not s then return end
     Cancel(s)
     if s.mesh then CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,s.mesh);s.mesh=nil end
+    if s.weaponMaterial then CleanupMethod(s,s.weaponMaterial,'Dispose','Material:Dispose');s.weaponMaterial=nil end
     -- Attempt every cleanup even if one native handle was already invalidated.
     if s.switched then
         CleanupMethod(s,renderer,'SetViewport','renderer:SetViewport',0,s.previousViewport)
@@ -170,8 +177,105 @@ end
 -- DOF is camera-local (post-processing.md §5; Web supported). It never attaches
 -- to scene root, so the borrowed main camera cannot inherit this effect.
 local function Haze(s,distance)
-    s.zone.depthFogEnable=true;s.zone.depthFogStart=distance+2
-    s.zone.depthFogEnd=distance+32;s.zone.depthFogDensity=.35
+    s.zone.depthFogEnable=true;s.zone.depthFogStart=distance+4
+    s.zone.depthFogEnd=distance+42;s.zone.depthFogDensity=.42
+end
+-- Optional enhancement failure never destroys the ready weapon/viewport.
+local function Enhancement(s,stage,fn)
+    s.stage,s.api,s.apiType=stage,stage,'function'
+    local ok,err=pcall(fn)
+    if not ok then ReportFailure(s,'Update',err) end
+    return ok
+end
+local function ZoneSet(s,stage,method,value)
+    Call(s,stage,s.zone,method,'Zone:'..method,value)
+end
+local function PostEffects(s)
+    -- Bloom's compositor also owns tone mapping. Low disables its blur weight,
+    -- not the compositor (otherwise HDR highlights clip rather than tone map).
+    Enhancement(s,'tonemap',function() ZoneSet(s,'tonemap','SetTonemapMode',TONEMAP_MODE_ACES) end)
+    local bloom=Enhancement(s,'bloom',function()
+        Call(s,'bloom',s.zone,'SetAttribute','Zone:SetAttribute','Bloom Enable',Variant(true))
+        ZoneSet(s,'bloom','SetBloomMode',BLOOM_MODE_LEGACY)
+        ZoneSet(s,'bloom','SetBloomThreshold',1.15)
+        ZoneSet(s,'bloom','SetBloomWeight',s.low and 0 or .18)
+    end)
+    if not bloom then pcall(function() s.zone.bloomWeight=0 end) end
+    if s.low then
+        Enhancement(s,'vignette',function() ZoneSet(s,'vignette','SetVignetteEnabled',false) end)
+        return
+    end
+    Enhancement(s,'vignette',function()
+        -- Exact built-in resource used by examples/27-voxel-town TownDay.xml.
+        local texture=Call(s,'vignette',cache,'GetResource','cache:GetResource','Texture2D','Editor/Textures/Engine/Vignetting.png')
+        assert(texture,'built-in vignette texture unavailable')
+        ZoneSet(s,'vignette','SetVignetteTexture',texture)
+        ZoneSet(s,'vignette','SetVignetteIntensity',.32)
+        ZoneSet(s,'vignette','SetVignetteEnabled',true)
+    end)
+end
+local function NewLight(s,name,position,color,brightness,range,directional)
+    local light,node
+    local ok=Enhancement(s,'light.'..name,function()
+        node=Call(s,'light.'..name,s.root,'CreateChild','Node:CreateChild',name)
+        node.position=position
+        light=Call(s,'light.'..name,node,'CreateComponent','Node:CreateComponent','Light')
+        assert(light,'Light component unavailable')
+        Isolate(s,'light.'..name,light)
+        light.lightType=directional and LIGHT_DIRECTIONAL or LIGHT_POINT
+        light.range=range;light.brightness=brightness;light.color=color
+        light.affectVolumetricFog=false
+    end)
+    if not ok then Remove(s,node);return nil end
+    s.lights[#s.lights+1]=light
+    return light
+end
+local function Lighting(s)
+    s.lights={}
+    s.sun=NewLight(s,'WarmKey',Vector3(-6,7,-5),Color(1,.9,.72,1),s.low and 1.2 or 1.65,18,true)
+    if s.sun then
+        s.sun.node.direction=Vector3(.68,-.62,.52) -- light travels from upper-left/front toward right/back
+        if not s.low then
+            local ok=Enhancement(s,'shadow',function()
+                s.sun.shadowCascade=CascadeParameters(10,32,0,0,.8)
+                s.sun.shadowBias=BiasParameters(.00025,.5)
+                s.sun.shadowResolution=.75;s.sun.shadowIntensity=.20
+                s.sun.castShadows=true
+            end)
+            if not ok then s.sun.castShadows=false end
+        end
+    end
+    NewLight(s,'CoolRim',Vector3(2.6,3.1,2.4),Color(.36,.58,1,1),s.low and .7 or 1.35,7,false)
+    if s.low then return end
+    s.crystalLeft=NewLight(s,'CrystalLeft',Vector3(-1.9,1.0,-1.5),Color(.22,.48,1,1),1.35,3.3,false)
+    s.crystalRight=NewLight(s,'CrystalRight',Vector3(1.9,1.0,-1.5),Color(.22,.48,1,1),1.35,3.3,false)
+    NewLight(s,'CompassGold',Vector3(0,.88,.05),Color(1,.72,.30,1),.45,2.1,false)
+    s.weaponKey=NewLight(s,'WeaponSoftKey',Vector3(-1.25,2.5,-1.4),Color(1,.94,.83,1),.72,4,false)
+    if s.sun and s.sun.castShadows then
+        local ok=Enhancement(s,'volumetric',function()
+            ZoneSet(s,'volumetric','SetVolumetricFogDensity',.003)
+            ZoneSet(s,'volumetric','SetVolumetricFogHeight',0) -- Zone-local, not world y=1200
+            ZoneSet(s,'volumetric','SetVolumetricFogHeightFalloff',.025)
+            ZoneSet(s,'volumetric','SetVolumetricFogViewDistance',45)
+            ZoneSet(s,'volumetric','SetVolumetricFogStartDistance',1.5)
+            ZoneSet(s,'volumetric','SetVolumetricFogPhaseG',.5)
+            ZoneSet(s,'volumetric','SetVolumetricFogMaxOpacity',.18)
+            ZoneSet(s,'volumetric','SetVolumetricFogScatteringColor',Color(1,.94,.84,1))
+            s.sun.affectVolumetricFog=true;s.sun.volumetricFogShadows=true;s.sun.volumetricFogIntensity=1.4
+            ZoneSet(s,'volumetric','SetVolumetricFogEnabled',true)
+        end)
+        if not ok then pcall(function() s.zone.volumetricFogEnabled=false end) end
+    end
+end
+local function AnimateLights(s,dt)
+    s.lightAge=(s.lightAge or 0)+dt
+    local breath=.92+.08*math.sin(s.lightAge*math.pi/2)
+    if s.crystalLeft then s.crystalLeft.brightness=1.35*breath end
+    if s.crystalRight then s.crystalRight.brightness=1.35*breath end
+    if s.weaponKey then
+        local a=math.rad(s.yaw)
+        s.weaponKey.node.position=Vector3(-1.25*math.cos(a)-1.4*math.sin(a),2.5,1.25*math.sin(a)-1.4*math.cos(a))
+    end
 end
 local function Dof(s)
     local ok,err=pcall(function()
@@ -244,18 +348,10 @@ local function EnterImpl(s,scene,opts)
     local zone=Call(s,'zone',s.root,'CreateComponent','Node:CreateComponent','Zone');assert(zone,'showroom Zone missing');s.zone=zone
     Isolate(s,'zone',zone);zone.boundingBox=BoundingBox(Vector3(-110,-110,-110),Vector3(110,110,110))
     Read(s,'zone',zone,'ambientSource','Zone.ambientSource')
-    zone.priority=100;zone.ambientSource=AMBIENT_COLOR;zone.ambientColor=Color(.55*.55,.62*.55,.78*.55,1)
+    zone.priority=100;zone.ambientSource=AMBIENT_COLOR;zone.ambientColor=Color(.5*.5,.58*.5,.78*.5,1)
     zone.depthFogEnable=false;zone.heightFogEnable=false;zone.volumetricFogEnabled=false
-    zone.autoExposureEnabled=false;zone.fogColor=Color(.93,.90,.82,1)
-    for i=1,2 do
-        local n=Call(s,'light',s.root,'CreateChild','Node:CreateChild',i==1 and 'WarmKey' or 'CoolRim')
-        n.position=i==1 and Vector3(-2,3,-2) or Vector3(2,2,2)
-        local light=assert(Call(s,'light',n,'CreateComponent','Node:CreateComponent','Light'),'showroom light missing')
-        Isolate(s,'light',light);light.lightType=LIGHT_POINT;light.range=8
-        light.brightness=i==1 and 1.2 or 1.0
-        light.color=i==1 and Color(1,.93,.78,1) or Color(.40,.65,1,1)
-        light.affectVolumetricFog=false
-    end
+    zone.autoExposureEnabled=false;zone.fogColor=Color(.72,.79,.88,1)
+    Lighting(s);PostEffects(s);s.haze=true
     s.dressing=Dressing.Begin(s.root,MASK,opts)
     s.spin=Call(s,'geometry',s.root,'CreateChild','Node:CreateChild','WeaponTurntable');s.rotation=Quaternion(0,HOME_YAW,0);s.spin.rotation=s.rotation
     s.cameraNode=Call(s,'camera',s.root,'CreateChild','Node:CreateChild','ForgeCamera');s.cameraNode.position=Vector3(0,1,-3)
@@ -263,7 +359,7 @@ local function EnterImpl(s,scene,opts)
     Read(s,'camera',s.camera,'viewMask','Camera.viewMask')
     s.camera.fov=34;s.camera.nearClip=.05;s.camera.farClip=180;s.camera.viewMask=MASK
     Focus(s,opts and opts.focusX,opts and opts.focusY)
-    Dof(s)
+    if not s.low then Dof(s) end
     Fit(s,{bounds={min={-.3,-.6,-.3},max={.3,.6,.3}}})
     s.viewport=Call(s,'viewport',Viewport,'new','Viewport:new',scene,s.camera)
     assert(s.viewport,'showroom Viewport missing')
@@ -276,7 +372,7 @@ end
 ---@return boolean
 function M.Enter(scene,opts)
     M.Exit()
-    local s={masks={},focusX=.30,focusY=.5,yaw=HOME_YAW,velocity=0,idle=1.5,dragging=false,home=false}
+    local s={masks={},focusX=.30,focusY=.5,yaw=HOME_YAW,velocity=0,idle=1.5,dragging=false,home=false,low=opts and opts.quality=='low' or false}
     session=s;state=BUILDING;diagnostic=''
     local ok,err=pcall(EnterImpl,s,scene,opts)
     if not ok then Failed(err,'Enter');return false end
@@ -310,9 +406,21 @@ local function BuildStep(s,dt)
     s.stage,s.api,s.apiType='geometry','WeaponBuilder.StepPreview',type(Builder.StepPreview)
     s.buildAge=s.buildAge+dt;assert(s.buildAge<=5,'mesh build timeout')
     local done,mesh,err=Check(s,'geometry',Builder,'StepPreview','WeaponBuilder.StepPreview')(job,1)
-    if job.geometry and not err then Isolate(s,'geometry',job.geometry) end -- hidden ancestor until atomic publish
+    if job.geometry and not err then Isolate(s,'geometry',job.geometry);job.geometry.castShadows=not s.low end -- hidden ancestor until atomic publish
     if not done then return end
     assert(mesh,err or 'mesh missing')
+    Enhancement(s,'weapon_material',function()
+        if not s.weaponMaterialReady then
+            local mat=s.weaponMaterial or Material:new();s.weaponMaterial=mat
+            local tech=cache:GetResource('Technique','Techniques/PBR/PBRNoTexture.xml')
+            assert(tech,'weapon PBR technique unavailable');mat:SetTechnique(0,tech)
+            mat.vertexShaderDefines='VERTEXCOLOR';mat.pixelShaderDefines='VERTEXCOLOR'
+            mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
+            mat:SetShaderParameter('Metallic',Variant(.35));mat:SetShaderParameter('Roughness',Variant(.68))
+            s.weaponMaterialReady=true -- partial failure retries setup, never reuses incomplete state
+        end
+        assert(mesh.geometry:SetMaterial(0,s.weaponMaterial)~=false,'weapon PBR SetMaterial failed')
+    end)
     local b=mesh.blueprint.bounds
     s.pendingRoot.position=Vector3(-(b.min[1]+b.max[1])*.5,-(b.min[2]+b.max[2])*.5,-(b.min[3]+b.max[3])*.5)
     Fit(s,mesh.blueprint)
@@ -351,6 +459,10 @@ local function UpdateImpl(s,dt)
         s.yaw=s.yaw+AUTO_SPEED*(dt-coast)
     end
     s.yaw=s.yaw%360;Call(s,'rotation',s.rotation,'FromEulerAngles','Quaternion:FromEulerAngles',0,s.yaw,0);s.spin.rotation=s.rotation
+    if not s.lightsFailed then
+        local ok,err=pcall(AnimateLights,s,dt)
+        if not ok then s.lightsFailed=true;s.stage='light_animation';ReportFailure(s,'Update',err) end
+    end
 end
 ---@param dt number
 function M.Update(dt)

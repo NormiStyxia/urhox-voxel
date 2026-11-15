@@ -3,6 +3,10 @@ package.path='scripts/?.lua;tests/combat/?.lua;'..package.path
 local width,height,dpr,scale=1280,720,1,1
 local safe={left=0,right=0,top=0,bottom=0}
 local mouse={x=640,y=360}
+local relative={x=0,y=0} -- IntVector2 fields from Input:GetMouseMove(), not Vector3
+local frame,platform,locked=0,'Mac',true
+GetTime=function()return {GetFrameNumber=function()return frame end}end
+GetPlatform=function()return platform end
 local keys,buttons,presses={},{},{}
 KEY_Q,KEY_ESCAPE='Q','ESCAPE'
 MOUSEB_LEFT,MOUSEB_MIDDLE,MOUSEB_RIGHT=0,1,2
@@ -14,7 +18,8 @@ input={numTouches=0,focus=true,mouseMode=MM_RELATIVE,
     GetMouseButtonDown=function(_,key) return buttons[key]==true end,
     GetKeyPress=function(_,key) local v=presses[key];presses[key]=nil;return v end,
     GetMouseButtonPress=function(_,key) local v=presses[key];presses[key]=nil;return v end,
-    GetMousePosition=function() return mouse end}
+    GetMousePosition=function() return mouse end,GetMouseMove=function()return relative end,
+    IsMouseLocked=function()return locked end}
 graphics={GetWidth=function() return width*dpr end,GetHeight=function() return height*dpr end,GetDPR=function() return dpr end}
 local Widget={};Widget.__index=Widget
 function Widget:AddChild(child) self.children[#self.children+1]=child;child.parent=self end
@@ -47,9 +52,11 @@ package.loaded['urhox-libs/UI/Core/ImageCache']={GetContext=function() return vg
 package.loaded['ui.TouchInput']={Clear=function() cleared=cleared+1 end}
 package.loaded['ui.Glass']={Color=function(color,alpha) return {color,alpha} end}
 for _,name in ipairs({'Line','Cross','Circle'}) do package.loaded['ui.Glass'][name]=function() draws=draws+1 end end
+-- medallion/icon art: pretend the PNGs load so the art path (not the vector fallback) is exercised
+package.loaded['ui.Glass'].Picture=function() draws=draws+1;return true end
 local arcs,quads,pathPoints={},{},{}
 for _,name in ipairs({'Save','Restore','Scale','Translate','ShapeAntiAlias','GlobalAlpha','BeginPath',
-    'FillColor','Fill','StrokeColor','StrokeWidth','Stroke','ClosePath','BezierTo'}) do
+    'FillColor','Fill','StrokeColor','StrokeWidth','Stroke','ClosePath','BezierTo','Rotate'}) do
     rawset(_G,'nvg'..name,function() draws=draws+1 end)
 end
 nvgArc=function(_,x,y,r,a,b,dir) arcs[#arcs+1]={x=x,y=y,r=r,a=a,b=b,dir=dir} end
@@ -72,6 +79,7 @@ local function Reset()
     safe={left=0,right=0,top=0,bottom=0}
     input.numTouches,input.focus,input.mouseMode=0,true,MM_RELATIVE
     mouse.x,mouse.y=640,360
+    relative.x,relative.y=0,0;frame=frame+1;platform,locked='Mac',true
 end
 local function Event(x,y,id,button,touch)
     return PointerEvent.new('PointerDown',{x=x*dpr/scale,y=y*dpr/scale,
@@ -108,7 +116,7 @@ Reset()
 local hud=New({id='existing-hud'});root:AddChild(hud)
 overlay=New({});assert(not Wheel.Open(Options()));overlay=nil
 assert(Wheel.Open(Options()));Eq(#root.children,2);Eq(root.children[1],hud)
-assert(not Wheel.Open(Options()));Eq(input.mouseMode,MM_ABSOLUTE)
+assert(not Wheel.Open(Options()));Eq(input.mouseMode,MM_RELATIVE,'PC opening preserves relative mode')
 local unfoldOuter=Wheel.DebugLayout().outer
 Wheel.Update(.06)
 assert(Wheel.DebugLayout().outer>unfoldOuter,'outward unfold advances')
@@ -162,8 +170,32 @@ accept=true;assert(Wheel.Confirm());assert(not Wheel.Confirm());Eq(calls,2);Flus
 
 -- PC movement selects direction; Escape and secondary click only cancel.
 Reset();assert(Wheel.Open(Options()));local l=Wheel.DebugLayout();local slot=l.slots[2]
-mouse.x,mouse.y=slot.x*dpr,slot.y*dpr;Wheel.Update(.02)
+relative.x,relative.y=math.floor((slot.x-l.cx)*dpr),math.floor((slot.y-l.cy)*dpr);frame=frame+1;Wheel.Update(.02)
 Eq(Wheel.DebugState().selected,'bow');assert(Wheel.Confirm());Flush()
+Eq(input.mouseMode,MM_RELATIVE,'PC retirement preserves relative mode')
+-- Dead zone, DPR, frame sampling, final release delta, and anchor motion.
+for _,density in ipairs({1,2,3})do
+ Reset();dpr=density;assert(Wheel.Open(Options()))
+ relative.x,relative.y=3*dpr,0;Wheel.Update(.02);Eq(Wheel.DebugState().selected,'sword','deadzone retains current')
+ l=Wheel.DebugLayout();slot=l.slots[2]
+ relative.x,relative.y=math.floor((slot.x-l.cx)*dpr),math.floor((slot.y-l.cy)*dpr);frame=frame+1
+ -- Q-up may Confirm before late-frame Update, so consume its final delta here.
+ assert(Wheel.Confirm());Eq(selected[#selected],'bow');Flush();Eq(input.mouseMode,MM_RELATIVE)
+ Reset();assert(Wheel.Open(Options()));l=Wheel.DebugLayout();slot=l.slots[2]
+ relative.x,relative.y=50,0;Wheel.Update(.02)
+ local once=Wheel.DebugState().virtualX;Wheel.Update(.02,{anchorX=.8,anchorY=.3})
+ Eq(Wheel.DebugState().virtualX,once,'frame delta accumulated once, anchor is independent')
+ layer=overlay;layer.props.onPointerMove(SlotEvent(1));Eq(Wheel.DebugState().selected,'bow','absolute pointer events ignored')
+ layer.props.onPointerDown(SlotEvent(1));layer.props.onPointerUp(SlotEvent(1));assert(not Wheel.DebugState().closing,'left click cannot confirm PC selection')
+end
+Reset();assert(Wheel.Open(Options()));relative.x=-120;Wheel.Update(.02)
+assert(not Wheel.Confirm(),'outside arc cancels, no forced closest sector');Flush()
+-- Web loss is reported once and never requests pointer lock or changes mode.
+Reset();platform='Web';assert(Wheel.Open(Options()));locked=false;input.mouseMode=0
+local oldPrint=print;local losses=0
+print=function(line)if tostring(line):find('pointer lock lost',1,true)then losses=losses+1 else oldPrint(line)end end
+Wheel.Update(.02);Wheel.Update(.02);assert(not Wheel.Confirm());Flush()
+print=oldPrint;Eq(losses,1);Eq(closed[#closed],'pointer-unlocked');Eq(input.mouseMode,0,'no relock after browser Escape')
 Reset();assert(Wheel.Open(Options()));presses.ESCAPE=true;Wheel.Update(.02)
 assert(Wheel.DebugState().closing);Flush();Eq(closed[#closed],'cancelled')
 Reset();assert(Wheel.Open(Options()));before=#selected;layer=overlay
@@ -183,10 +215,10 @@ Wheel.ForceClose();assert(not Wheel.IsBlocked())
 opts=Options();opts.onSelect=function() Wheel.ForceClose('scene-stop');return true end
 assert(Wheel.Open(opts));assert(Wheel.Confirm());assert(not Wheel.IsOpen());Eq(closed[#closed],'scene-stop')
 
--- Actual draw code retains inner/outer arcs and rounded corner commands.
+-- Actual draw code keeps the fine inner/outer arcs; the old filled rounded band is gone (art medallions instead).
 local layout=Wheel.Layout(1280,720,.5,.5,false,2)
 Wheel.Draw(vg,layout,1)
-assert(draws>50 and #arcs>=8 and #quads>=8,'real geometry path recorded')
+assert(draws>50 and #arcs>=6 and #quads>=4,'real geometry path recorded')
 local inner,outer=false,false
 for _,arc in ipairs(arcs) do
     inner=inner or arc.r==layout.inner;outer=outer or arc.r==layout.outer

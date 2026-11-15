@@ -24,10 +24,11 @@ local function NoExtra(label,...) assert(select('#',...)==0,label..': unexpected
 -- __newindex on the original table would validate only the first assignment.
 local numeric={viewMask=true,lightMask=true,zoneMask=true,brightness=true,range=true,fov=true,
     nearClip=true,farClip=true,priority=true,ambientSource=true,focalDistance=true,focalRange=true,maxBlur=true,
-    nearBlurScale=true,farBlurScale=true,depthFogStart=true,depthFogEnd=true,depthFogDensity=true}
+    nearBlurScale=true,farBlurScale=true,depthFogStart=true,depthFogEnd=true,depthFogDensity=true,
+    shadowResolution=true,shadowIntensity=true,volumetricFogIntensity=true}
 local integral={viewMask=true,lightMask=true,zoneMask=true,priority=true,ambientSource=true,lightType=true,quality=true}
 local boolean={enabled=true,castShadows=true,occluder=true,depthFogEnable=true,heightFogEnable=true,
-    volumetricFogEnabled=true,autoExposureEnabled=true,affectVolumetricFog=true}
+    volumetricFogEnabled=true,autoExposureEnabled=true,affectVolumetricFog=true,volumetricFogShadows=true}
 local function ComponentProxy(data)
     return setmetatable({}, {__index=data,__newindex=function(_,key,value)
         if integral[key] then Integer(value,data.kind..'.'..key)
@@ -38,11 +39,20 @@ local function ComponentProxy(data)
     end})
 end
 local function StrictGeometry(g)
-    local begin,vertex,normal,color,commit,set,get,count=g.BeginGeometry,g.DefineVertex,g.DefineNormal,g.DefineColor,g.Commit,g.SetMaterial,g.GetMaterial,g.GetNumVertices
-    function g:BeginGeometry(index,primitive,...)
-        NoExtra('BeginGeometry',...);Integer(index,'index');Integer(primitive,'primitive');return begin(self,index,primitive)
+    local vertex,normal,color,commit=g.DefineVertex,g.DefineNormal,g.DefineColor,g.Commit
+    g.numGeometries=1;g.groups={};g.materials={}
+    function g:SetNumGeometries(n,...)
+        NoExtra('SetNumGeometries',...);Integer(n,'geometry count');assert(n>0);self.numGeometries=n
     end
-    function g:DefineVertex(value,...) NoExtra('DefineVertex',...);Vector(value,3,'position');return vertex(self,value) end
+    function g:BeginGeometry(index,primitive,...)
+        NoExtra('BeginGeometry',...);Integer(index,'index');Integer(primitive,'primitive')
+        assert(index>=0 and index<self.numGeometries and primitive==TRIANGLE_LIST)
+        self.activeGroup=index;self.groups[index]=0
+    end
+    function g:DefineVertex(value,...)
+        NoExtra('DefineVertex',...);Vector(value,3,'position')
+        self.groups[self.activeGroup]=self.groups[self.activeGroup]+1;return vertex(self,value)
+    end
     function g:DefineNormal(value,...) NoExtra('DefineNormal',...);Vector(value,3,'normal');return normal(self,value) end
     function g:DefineColor(value,...)
         NoExtra('DefineColor',...);assert(type(value)=='table','Color expected')
@@ -53,10 +63,13 @@ local function StrictGeometry(g)
     function g:SetMaterial(...)
         local n=select('#',...);assert(n==1 or n==2,'SetMaterial: 1 or 2 arguments expected')
         local index,mat=...;if n==1 then mat,index=index,0 end
-        Integer(index,'SetMaterial index');Resource(mat,'Material');return set(self,index,mat)
+        Integer(index,'SetMaterial index');Resource(mat,'Material');assert(index>=0 and index<self.numGeometries and self.commits>0)
+        self.materials[index]=mat;if index==0 then self.material=mat end;return true
     end
-    function g:GetMaterial(index,...) NoExtra('GetMaterial',...);index=index or 0;Integer(index,'index');return get(self,index) end
-    function g:GetNumVertices(index,...) NoExtra('GetNumVertices',...);Integer(index,'index');return count(self,index) end
+    function g:GetMaterial(index,...) NoExtra('GetMaterial',...);index=index or 0;Integer(index,'index');return self.materials[index] end
+    function g:GetNumVertices(index,...)
+        NoExtra('GetNumVertices',...);Integer(index,'index');assert(self.commits>0);return self.groups[index] or 0
+    end
     return g
 end
 rawset(_G,'Vector2',function(x,y,...)NoExtra('Vector2',...);Number(x,'x');Number(y,'y');return {x=x,y=y}end)
@@ -72,6 +85,15 @@ rawset(_G,'Quaternion',function(pitch,yaw,roll,...)
     return q
 end)
 rawset(_G,'DOF_QUALITY_MEDIUM',1);rawset(_G,'BLEND_ADDALPHA',4);rawset(_G,'CULL_NONE',0);rawset(_G,'AMBIENT_COLOR',2);rawset(_G,'LIGHT_POINT',2)
+rawset(_G,'LIGHT_DIRECTIONAL',0);rawset(_G,'TONEMAP_MODE_ACES',1);rawset(_G,'BLOOM_MODE_LEGACY',0)
+rawset(_G,'CascadeParameters',function(a,b,c,d,f,bias,...)
+    NoExtra('CascadeParameters',...);for _,v in ipairs({a,b,c,d,f}) do Number(v,'cascade') end
+    if bias~=nil then Number(bias,'bias') end;return {a,b,c,d,f}
+end)
+rawset(_G,'BiasParameters',function(a,b,c,...)
+    NoExtra('BiasParameters',...);Number(a,'constant bias');Number(b,'slope bias')
+    if c~=nil then Number(c,'normal offset') end;return {a,b,c}
+end)
 for _,name in ipairs({'Scene','Texture2D','RenderTexture','VoxelPhysicsWorld'}) do rawset(_G,name,function()error('forbidden '..name)end) end
 local e
 local function Wrap(n)
@@ -97,7 +119,23 @@ local function Wrap(n)
         local c=kind=='CustomGeometry' and StrictGeometry(Mock.CustomGeometry(self,e.geometryOptions)) or {node=self}
         c.kind=kind;c.viewMask=0xffffffff;c.lightMask=0xffffffff;c.zoneMask=0xffffffff
         if kind=='Camera' then c.projectionOffset=Vector2(0,0) end
-        if kind=='Zone' then c.ambientSource=0 end
+        if kind=='Zone' then
+            c.ambientSource=0
+            for _,method in ipairs({'SetTonemapMode','SetBloomMode','SetBloomThreshold','SetBloomWeight','SetVignetteIntensity',
+                'SetVolumetricFogDensity','SetVolumetricFogHeight','SetVolumetricFogHeightFalloff','SetVolumetricFogViewDistance',
+                'SetVolumetricFogStartDistance','SetVolumetricFogPhaseG','SetVolumetricFogMaxOpacity'}) do
+                c[method]=function(target,value,...) NoExtra(method,...);Number(value,method);target[method:sub(4)]=value end
+            end
+            for _,method in ipairs({'SetVignetteEnabled','SetVolumetricFogEnabled'}) do
+                c[method]=function(target,value,...) NoExtra(method,...);assert(type(value)=='boolean');target[method:sub(4)]=value end
+            end
+            function c:SetVignetteTexture(value,...) NoExtra('SetVignetteTexture',...);Resource(value,'Texture2D');self.VignetteTexture=value end
+            function c:SetVolumetricFogScatteringColor(value,...)
+                NoExtra('SetVolumetricFogScatteringColor',...)
+                for _,k in ipairs({'r','g','b','a'}) do Number(value[k],'color.'..k) end;self.ScatteringColor=value
+            end
+            function c:SetAttribute(key,value,...) NoExtra('Zone:SetAttribute',...);assert(key=='Bloom Enable' and type(value)=='boolean');self.BloomEnable=value end
+        end
         for method,field in pairs({SetBrightness='brightness',SetRange='range',SetFov='fov',SetFocalDistance='focalDistance',SetFocalRange='focalRange',SetMaxBlur='maxBlur',SetQuality='quality',SetNearBlurScale='nearBlurScale',SetFarBlurScale='farBlurScale'}) do
             c[method]=function(target,value,...) NoExtra(method,...);Number(value,method);target[field]=value end
         end
@@ -148,7 +186,11 @@ local function Boot()
             if lodDistance~=nil then Number(lodDistance,"SetTechnique argument #5") end
             self.technique=t;self.qualityLevel=qualityLevel;self.lodDistance=lodDistance
         end
-        function m:SetShaderParameter(k,v,...) NoExtra('SetShaderParameter',...);assert(self==m and type(k)=='string' and v~=nil);self[k]=v end
+        function m:SetShaderParameter(k,v,...)
+            NoExtra('SetShaderParameter',...);assert(self==m and type(k)=='string' and v~=nil)
+            if e.failShader==k then e.failShader=nil;error('injected shader parameter '..k) end
+            self[k]=v
+        end
         function m:Dispose(...) NoExtra('Material:Dispose',...);assert(self==m and not self.disposed);self.disposed=true end
         return m
     end})
@@ -156,7 +198,9 @@ local function Boot()
         NoExtra('GetResource',...);assert(self==cache and type(kind)=='string' and type(path)=='string')
         assert(sendEventOnFailure==nil or type(sendEventOnFailure)=='boolean')
         if e.fail=='material' then return nil end
-        assert(path=='Materials/NomiVoxel.xml' or path=='Techniques/NoTextureUnlit.xml' or path=='Techniques/PBR/PBRNoTexture.xml')
+        if e.failResource==path then return nil end
+        assert(path=='Materials/NomiVoxel.xml' or path=='Techniques/NoTextureUnlit.xml' or path=='Techniques/PBR/PBRNoTexture.xml'
+            or path=='Editor/Textures/Engine/Vignetting.png')
         local resource={name=path,resourceType=kind}
         function resource:Clone(name,...)
             NoExtra('Technique:Clone',...);assert(self==resource and type(name)=='string')
@@ -252,9 +296,9 @@ assert(Showroom.Active() and Showroom.State()=='building' and not Showroom.IsRea
 assert(Room().position.x==2304 and Room().position.y==1200)
 assert(e.viewport.camera.viewMask==MASK and e.viewport.scene==e.scene)
 assert((e.sun.lightMask&MASK)==0 and (e.sky.viewMask&MASK)==0 and (e.cloud.viewMask&MASK)==0)
-local zone=Room():GetComponent('Zone');assert(zone.ambientSource==AMBIENT_COLOR and not zone.depthFogEnable and not zone.heightFogEnable)
-local lights=Room():GetComponents('Light',true);assert(#lights==2)
-for _,l in ipairs(lights) do assert(l.viewMask==MASK and l.lightMask==MASK and l.range==8 and not l.castShadows) end
+local zone=Room():GetComponent('Zone');assert(zone.ambientSource==AMBIENT_COLOR and zone.depthFogEnable and not zone.heightFogEnable)
+local lights=Room():GetComponents('Light',true);assert(#lights==6)
+for _,l in ipairs(lights) do assert(l.viewMask==MASK and l.lightMask==MASK and l.range>0) end
 assert(not Room():GetChild('RuinsShowroom_sky'),'Enter must not emit scene geometry')
 local c=Config('sword');Showroom.SetWeapon(c);c.parts.blade='invalid-mutated-after-call'
 Finish();assert(Shape() and Shape():GetComponent('CustomGeometry')==nil)
@@ -330,9 +374,9 @@ for _,weapon in ipairs({'sword','bow'}) do
     end
     Visit(1)
 end
-assert(combos==72);print('weapon occupancy min/max='..occupancyMin..'/'..occupancyMax);Showroom.Exit();Restored(nodes,components)
+assert(combos==72);print('weapon occupancy min/max='..occupancyMin..'/'..occupancyMax..' max_weapon_triangles='..maxWeaponTriangles);Showroom.Exit();Restored(nodes,components)
 
-for _,fail in ipairs({'child','Zone','Light','Camera','switch'}) do
+for _,fail in ipairs({'child','Zone','Camera','switch'}) do
     Boot();nodes,components=Live();e.fail=fail
     assert(not Showroom.Enter(e.scene));assert(Showroom.State()=='failed');Restored(nodes,components)
     Showroom.Exit();assert(Showroom.State()=='off')
@@ -444,7 +488,7 @@ for _,failure in ipairs({'none','component','method','focus'}) do
     local dof=Room():GetChild('ForgeCamera'):GetComponent('DepthOfField')
     if failure=='none' then
         assert(dof.maxBlur==7 and dof.quality==DOF_QUALITY_MEDIUM and dof.nearBlurScale==.08 and dof.farBlurScale==.9)
-        assert(not zone.depthFogEnable and Showroom.Diagnostic()=='')
+        assert(zone.depthFogEnable and Showroom.Diagnostic()=='',Showroom.Diagnostic())
         assert(not pcall(dof.SetFocalDistance,dof,'bad'))
         assert(not pcall(dof.SetMaxBlur,dof,7,'extra'))
     else
@@ -457,6 +501,75 @@ for _,failure in ipairs({'none','component','method','focus'}) do
     Showroom.Exit();Showroom.Exit();Restored(nodes,components)
 end
 print('forge_showroom DOF PASS: camera-local scope, strict signatures, nil/method/focus fallback, haze and cleanup; MOCK ONLY')
+
+-- Round 3: local lights/post effects; never change renderer-wide settings.
+for _,quality in ipairs({'high','low'}) do
+    Boot();nodes,components=Live();assert(Showroom.Enter(e.scene,{quality=quality}))
+    local zone=Room():GetComponent('Zone');local lights=Room():GetComponents('Light',true)
+    local low=quality=='low';local shadows=0
+    assert(#lights==(low and 2 or 6))
+    for _,light in ipairs(lights) do
+        assert(light.lightMask==MASK and light.viewMask==MASK and light.zoneMask==MASK)
+        if light.castShadows then shadows=shadows+1 end
+    end
+    assert(shadows==(low and 0 or 1))
+    local key=Room():GetChild('WarmKey'):GetComponent('Light')
+    assert(key.lightType==LIGHT_DIRECTIONAL and key.node.direction.x>0 and key.node.direction.y<0 and key.node.direction.z>0)
+    Mock.Near(key.brightness,low and 1.2 or 1.65);Mock.Near(zone.ambientColor.b,.39)
+    assert(zone.TonemapMode==TONEMAP_MODE_ACES and zone.BloomMode==BLOOM_MODE_LEGACY and zone.BloomEnable)
+    Mock.Near(zone.BloomThreshold,1.15);Mock.Near(zone.BloomWeight,low and 0 or .18)
+    assert(zone.depthFogEnable and zone.depthFogEnd>zone.depthFogStart)
+    assert(not pcall(zone.SetBloomWeight,zone,'bad') and not pcall(zone.SetBloomWeight,zone,.18,'extra'))
+    assert(not pcall(zone.SetVolumetricFogEnabled,zone,1))
+    assert(not pcall(zone.SetVignetteTexture,zone,{resourceType='Material'}))
+    if low then
+        assert(not zone.VignetteEnabled and not zone.VolumetricFogEnabled)
+        assert(not Room():GetChild('ForgeCamera'):GetComponent('DepthOfField'))
+    else
+        assert(zone.VignetteEnabled and zone.VignetteIntensity==.32 and zone.VolumetricFogEnabled)
+        assert(zone.VolumetricFogDensity==.003 and zone.VolumetricFogHeight==0 and zone.VolumetricFogMaxOpacity==.18)
+        assert(key.shadowCascade[1]==10 and key.shadowCascade[2]==32 and key.affectVolumetricFog)
+        local rim=Room():GetChild('CoolRim'):GetComponent('Light');assert(rim.range==7 and rim.color.b==1)
+    end
+    Showroom.SetWeapon(Config('sword'));Finish()
+    local g=Shape().children[1]:GetComponent('CustomGeometry')
+    assert(g.castShadows==not low and g.material.Roughness==.68 and g.material.Metallic==.35)
+    if not low then
+        local left=Room():GetChild('CrystalLeft'):GetComponent('Light')
+        local right=Room():GetChild('CrystalRight'):GetComponent('Light')
+        Showroom.Update(.5);assert(left.brightness==right.brightness and left.brightness>=1.35*.84 and left.brightness<=1.35)
+        local point=Room():GetChild('WeaponSoftKey').position
+        Showroom.DragBegin();Showroom.DragBy(100);Showroom.Update(0)
+        local after=Room():GetChild('WeaponSoftKey').position
+        assert(after.x~=point.x and after.y==point.y,'key must orbit with weapon yaw')
+    end
+    for field in pairs(renderer) do assert(field=='GetViewport' or field=='SetViewport','global renderer changed: '..field) end
+    Showroom.Exit();Restored(nodes,components)
+end
+for _,missing in ipairs({'SetTonemapMode','SetBloomWeight','SetVignetteTexture','SetVolumetricFogDensity'}) do
+    Boot();nodes,components=Live();e.missingKind='Zone';e.missingField=missing
+    assert(Showroom.Enter(e.scene),'optional post effect must not reject Enter')
+    assert(Showroom.Diagnostic():find(missing,1,true),Showroom.Diagnostic())
+    Showroom.SetWeapon(Config('sword'));Finish();Showroom.Exit();Restored(nodes,components)
+end
+for _,failure in ipairs({'Light','shadow','vignette','material'}) do
+    Boot();nodes,components=Live()
+    local cascade=CascadeParameters
+    if failure=='Light' then e.fail='Light'
+    elseif failure=='shadow' then rawset(_G,'CascadeParameters',nil)
+    elseif failure=='vignette' then e.failResource='Editor/Textures/Engine/Vignetting.png' end
+    assert(Showroom.Enter(e.scene))
+    rawset(_G,'CascadeParameters',cascade)
+    if failure=='material' then e.failShader='Metallic' end
+    Showroom.SetWeapon(Config('sword'));Finish()
+    assert(Showroom.Diagnostic()~='' and Showroom.IsReady(),'enhancement failure must preserve weapon readiness')
+    if failure=='material' then
+        Showroom.SetWeapon(Config('bow'));Finish()
+        assert(Shape().children[1]:GetComponent('CustomGeometry').material.Roughness==.68,'partial material must retry configuration')
+    end
+    Showroom.Exit();Restored(nodes,components)
+end
+print('forge_showroom light/post PASS: high 6/1 lights/shadows; low 2/0, strict setters, isolation, all optional fallbacks, material retry, teardown; MOCK ONLY')
 
 local function Signature(j)
     local hash,count=0,0
@@ -493,9 +606,9 @@ local function CompleteDressing(quality,seed,failName)
         local g=node:GetComponent('CustomGeometry')
         assert(node.enabled and g.viewMask==MASK and g.lightMask==MASK and g.zoneMask==MASK)
         assert(g.commits==1 and #g.vertices/3==j.counts[kind])
-        batches=batches+1;total=total+j.counts[kind]
+        batches=batches+j.batches[kind];total=total+j.counts[kind]
     end
-    assert(total==j.triangles and total<=55000 and batches<=8)
+    assert(total==j.triangles and total<=55000 and batches<=12)
     if not failName then assert(#errors==0,table.concat(errors,';')) end
     local signature,vertices=Signature(j)
     print(('dressing %s seed=%d batches=%d triangles=%d vertex_bytes=%d frames=%d max_ops=%d joints=%d chips=%d cracks=%d moss=%d ao=%d signature=%d'):format(
@@ -505,6 +618,27 @@ end
 local high,root,firstSignature,firstVertices=CompleteDressing('high',71115)
 assert(high.joints>0 and high.chips>0 and high.cracks>0 and high.moss>0 and high.aoVertices>0)
 assert(high.nodes.atmosphere and high.nodes.arch and high.nodes.emission)
+assert(high.materials.stone.Roughness==.92 and high.materials.stone.Metallic==0)
+assert(high.materials.gold.Roughness==.38 and high.materials.gold.Metallic==.78)
+assert(high.materials.emission.MatEmissiveColor.b>1 and high.materials.emissionGold.MatEmissiveColor.r>1)
+assert(high.nodes.stone:GetComponent('CustomGeometry').numGeometries==3)
+assert(high.nodes.emission:GetComponent('CustomGeometry').numGeometries==2)
+for _,kind in ipairs({'stone','arch','emission'}) do
+    local g=high.nodes[kind]:GetComponent('CustomGeometry');assert(g.castShadows)
+    for i=1,#g.vertices,3 do
+        local a,b,c=g.vertices[i],g.vertices[i+1],g.vertices[i+2]
+        local u,v=b.position-a.position,c.position-a.position
+        local dot=(u.y*v.z-u.z*v.y)*a.normal.x+(u.z*v.x-u.x*v.z)*a.normal.y+(u.x*v.y-u.y*v.x)*a.normal.z
+        assert(dot>=0,'voxel winding disagrees with normal / shadow culling')
+    end
+end
+for _,kind in ipairs({'sky','halo','clouds','atmosphere'}) do assert(not high.nodes[kind]:GetComponent('CustomGeometry').castShadows) end
+assert(#high.nodes.atmosphere:GetComponent('CustomGeometry').vertices==36*6,'24 ambient + 12 beam dust cards')
+local transparentEdge=false
+for _,vertex in ipairs(high.nodes.halo:GetComponent('CustomGeometry').vertices) do
+    if vertex.color.a==0 then transparentEdge=true;break end
+end
+assert(transparentEdge,'beam wings need zero-alpha edges')
 for _,v in ipairs(high.nodes.emission:GetComponent('CustomGeometry').vertices) do
     local r=v.color.r
     assert(math.abs(r-.35)<1e-6 or math.abs(r-.45)<1e-6 or math.abs(r-1)<1e-6,'runes/crystals must bypass AO and jitter')
@@ -539,4 +673,4 @@ for _,steps in ipairs({0,1,50,250}) do
     for _=1,steps do Dressing.Step(j,.1) end
     Dressing.Dispose(j);r:Remove();Restored(nodes,components)
 end
-print('forge_showroom detail PASS: 5cm high/10cm low, 55k/8-batch bounds, deterministic stone/AO, partial failure, budget, idle no rebuild and all resources reclaimed; MOCK ONLY')
+print('forge_showroom detail PASS: 5cm high/10cm low, 55k/12-batch bounds, deterministic stone/AO, partial failure, budget, idle no rebuild and all resources reclaimed; MOCK ONLY')

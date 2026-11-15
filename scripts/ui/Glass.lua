@@ -149,6 +149,65 @@ function M.Poly(vg,color,alpha,...)
     for i=3,n,2 do local x,y=select(i,...);nvgLineTo(vg,x,y) end
     nvgClosePath(vg);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
 end
+-- ---------------------------------------------------------------- image art
+-- Hand-made / generated PNG art (linear filtered). Handles are cached per context;
+-- paints are memoised per placement so a steady frame allocates nothing.
+local images=setmetatable({},{__mode='k'})
+local function Entry(vg,path)
+    local c=images[vg]
+    if not c then c={};images[vg]=c end
+    local e=c[path]
+    if e and e.h>0 then return e end
+    local now=time:GetElapsedTime()
+    if e and now<e.retry then return nil end
+    local handle=nvgCreateImage(vg,path,0) or 0
+    local w,h=0,0
+    if handle>0 then w,h=nvgImageSize(vg,handle) end
+    if handle<=0 or not w or w<=0 then c[path]={h=0,retry=now+.75};return nil end
+    e={h=handle,w=w,ih=h,paints={}}
+    c[path]=e
+    return e
+end
+M.Img=Entry
+local function Paint(vg,e,ox,oy,ex,ey,alpha)
+    local key=((ox*31+oy)*31+ex)*31+ey+(alpha or 1)*7
+    local p=e.paints[key]
+    if not p or p.ox~=ox or p.oy~=oy or p.ex~=ex or p.ey~=ey or p.alpha~=alpha then
+        p={ox=ox,oy=oy,ex=ex,ey=ey,alpha=alpha,paint=nvgImagePattern(vg,ox,oy,ex,ey,0,e.h,alpha or 1)}
+        e.paints[key]=p
+    end
+    return p.paint
+end
+--- Stretch a picture over a rectangle (use nvgRotate/nvgTranslate around it for rotation).
+function M.Picture(vg,path,x,y,w,h,alpha)
+    local e=Entry(vg,path)
+    if not e then return false end
+    nvgBeginPath(vg);nvgRect(vg,x,y,w,h);nvgFillPaint(vg,Paint(vg,e,x,y,w,h,alpha));nvgFill(vg)
+    return true
+end
+--- 9-slice with `border` source pixels drawn at `scale`; corners keep their proportions.
+function M.NineSlice(vg,path,x,y,w,h,border,scale,alpha)
+    local e=Entry(vg,path)
+    if not e then return false end
+    local iw,ih=e.w,e.ih
+    local b=math.min(border,iw/2-1,ih/2-1)
+    local db=math.min(b*scale,w/2,h/2)
+    local sxs={0,b,iw-b,iw}
+    local dxs={x,x+db,x+w-db,x+w}
+    local sys={0,b,ih-b,ih}
+    local dys={y,y+db,y+h-db,y+h}
+    for j=1,3 do for i=1,3 do
+        local sx,sy,sw,sh=sxs[i],sys[j],sxs[i+1]-sxs[i],sys[j+1]-sys[j]
+        local dx,dy,dw,dh=dxs[i],dys[j],dxs[i+1]-dxs[i],dys[j+1]-dys[j]
+        if dw>0 and dh>0 and sw>0 and sh>0 then
+            local kx,ky=dw/sw,dh/sh
+            nvgBeginPath(vg);nvgRect(vg,dx,dy,dw,dh)
+            nvgFillPaint(vg,Paint(vg,e,dx-sx*kx,dy-sy*ky,iw*kx,ih*ky,alpha))
+            nvgFill(vg)
+        end
+    end end
+    return true
+end
 function M.Circle(vg,x,y,r,color,alpha)
     nvgBeginPath(vg);nvgCircle(vg,x,y,r);nvgFillColor(vg,Color(color,alpha));nvgFill(vg)
 end

@@ -1,4 +1,5 @@
--- Same main scene/masks; no physics/RTT. Eight scene batches (seven on low).
+-- Same main scene/masks; no physics/RTT. Twelve material batches (seven on low).
+-- Eight high-tier nodes; stone/gold/rune submeshes receive different PBR values.
 -- RGB from RuinsPalette.DEF. Authoring boxes use 10cm units; high foreground
 -- refines to 5cm before masonry/chips/AO. Greedy faces interpolate +/-2% lattice
 -- vertex noise inside a brick; mortar, cracks and corner chips retain 5cm detail.
@@ -85,6 +86,9 @@ local function Details(j,g,glow)
     Box(j,g,16,0,9,9,3,7,'stoneC');Box(j,g,18,3,11,4,5,4,'dark')
     Box(j,g,15,8,9,11,3,7,'dark');Box(j,g,12,9,11,3,1,3,'dark')
     Box(j,glow,19,11,11,3,1,3,'rune',true)
+    -- Recessed dark backing is visible through plaza joints; gaps must not
+    -- expose the bright sky dome and invert the intended contact shading.
+    if not j.low then Disc(j,g,44,-2,1,'dark') end
     local tiles={'tileA','tileB','tileC'}
     for x=-45,44 do for z=-45,44 do
         local r=math.sqrt((x+.5)^2+(z+.5)^2)
@@ -362,7 +366,12 @@ local function Greedy(j,g,emit,emissionLift)
                 local normal={0,0,0};normal[plane.axis]=plane.sign
                 local stone=name:find('_',1,true)~=nil
                 local corners=VertexShade(j,g,plane,u,v,w,h,color,stone)
-                emit(a,b,c,d,color,normal,nil,corners);Pause(j)
+                local surface=(name=='gold' or name=='darkGold' or name=='runeGold') and 'gold'
+                    or ((name=='crystal' or name=='rune') and 'emission' or 'stone')
+                -- Match outward normal and winding, including shadow passes
+                -- which may use their own culling mode rather than CULL_NONE.
+                if plane.sign<0 then b,d=d,b;corners[2],corners[4]=corners[4],corners[2] end
+                emit(a,b,c,d,color,normal,nil,corners,surface);Pause(j)
             end
         end end
     end
@@ -374,29 +383,52 @@ local function Clock()
 end
 local function MaterialFor(j,kind)
     if j.materials[kind] then return j.materials[kind] end
-    local mat=Material:new();j.materials[kind]=mat
-    local path=(kind=='stone' or kind=='arch') and 'Techniques/PBR/PBRNoTexture.xml' or 'Techniques/NoTextureUnlit.xml'
-    local tech=cache:GetResource('Technique',path);assert(tech,'missing '..path)
-    if kind=='halo' or kind=='atmosphere' then
-        tech=tech:Clone('ForgeShowroomAdditive');assert(tech,'missing additive clone');j.techniques[#j.techniques+1]=tech
-        local pass=tech:GetPass('base');assert(pass,'missing additive base pass')
-        pass.blendMode=BLEND_ADDALPHA;pass.depthWrite=false
-    end
-    mat:SetTechnique(0,tech)
-    mat.vertexShaderDefines='VERTEXCOLOR';mat.pixelShaderDefines='VERTEXCOLOR';mat.cullMode=CULL_NONE
-    mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
-    if kind=='stone' or kind=='arch' then mat:SetShaderParameter('Roughness',Variant(.9));mat:SetShaderParameter('Metallic',Variant(0)) end
+    local mat=Material:new()
+    local ok,err=pcall(function()
+        local glowing=kind=='emission' or kind=='emissionGold'
+        local lit=kind=='stone' or kind=='arch' or kind=='gold' or kind=='islands' or (glowing and not j.low)
+        local path=lit and 'Techniques/PBR/PBRNoTexture.xml' or 'Techniques/NoTextureUnlit.xml'
+        local tech=cache:GetResource('Technique',path);assert(tech,'missing '..path)
+        if kind=='halo' or kind=='atmosphere' then
+            tech=tech:Clone('ForgeShowroomAdditive');assert(tech,'missing additive clone');j.techniques[#j.techniques+1]=tech
+            local pass=tech:GetPass('base');assert(pass,'missing additive base pass')
+            pass.blendMode=BLEND_ADDALPHA;pass.depthWrite=false
+        end
+        mat:SetTechnique(0,tech)
+        mat.vertexShaderDefines='VERTEXCOLOR';mat.pixelShaderDefines='VERTEXCOLOR';mat.cullMode=CULL_NONE
+        mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
+        if lit then
+            mat:SetShaderParameter('Roughness',Variant(kind=='gold' and .38 or glowing and .32 or .92))
+            mat:SetShaderParameter('Metallic',Variant(kind=='gold' and .78 or 0))
+            if glowing then
+                local tint=kind=='emissionGold' and Color(1.45,.85,.24,1) or Color(.32,.68,1.65,1)
+                mat:SetShaderParameter('MatEmissiveColor',Variant(tint))
+            end
+        end
+    end)
+    if not ok then mat:Dispose();error(err,0) end
+    j.materials[kind]=mat -- cache only completely initialized materials
     return mat
 end
 local function Publish(j,kind,produce)
     j.stage=kind
     local node=j.root:CreateChild('RuinsShowroom_'..kind);assert(node,'missing scene mesh node');j.pending=node;node.enabled=false
     local g=node:CreateComponent('CustomGeometry');assert(g,'missing CustomGeometry')
-    g.viewMask=j.mask;g.lightMask=j.mask;g.zoneMask=j.mask;g.castShadows=false;g.occluder=false
+    g.viewMask=j.mask;g.lightMask=j.mask;g.zoneMask=j.mask
+    g.castShadows=not j.low and (kind=='stone' or kind=='arch' or kind=='emission');g.occluder=false
     local mat=MaterialFor(j,kind)
-    g:BeginGeometry(0,TRIANGLE_LIST)
+    -- Native immediate mode selects one subgeometry at a time. Re-run the
+    -- cooperative greedy traversal per surface family rather than buffering
+    -- another full copy of all vertices. Loading cost is intentional here;
+    -- the final mesh/material split has genuine PBR metal/stone differences.
+    local groups=not j.low and ((kind=='stone' or kind=='arch') and 3 or kind=='emission' and 2 or 1) or 1
+    if groups>1 then g:SetNumGeometries(groups) end
+    local group,groupTriangles=0,{}
     local triangles=0
-    local function Quad(a,b,c,d,color,normal,upperColor,cornerColors)
+    local function Quad(a,b,c,d,color,normal,upperColor,cornerColors,surface)
+        local wanted=surface=='gold' and 1 or surface=='emission' and 2 or 0
+        if kind=='emission' then wanted=surface=='gold' and 1 or 0 end
+        if groups>1 and wanted~=group then return end
         local points={a,b,c,a,c,d}
         for index,p in ipairs(points) do
             local rgb=cornerColors and cornerColors[({1,2,3,1,3,4})[index]] or upperColor and (index==3 or index==5 or index==6) and upperColor or color
@@ -406,17 +438,27 @@ local function Publish(j,kind,produce)
                 g:DefineColor(Color((rgb[1]*.90+grey*.10)*1.04,(rgb[2]*.90+grey*.10)*1.04,(rgb[3]*.90+grey*.10)*1.04,rgb[4] or 1))
             else g:DefineColor(Color(rgb[1],rgb[2],rgb[3],rgb[4] or 1)) end
         end
-        triangles=triangles+2;Pause(j)
+        triangles=triangles+2;groupTriangles[group]=(groupTriangles[group] or 0)+2;Pause(j)
         if triangles%16==0 then coroutine.yield() end
     end
-    produce(Quad)
+    for index=0,groups-1 do
+        group=index;g:BeginGeometry(index,TRIANGLE_LIST)
+        produce(Quad)
+    end
     local total=j.triangles-(j.counts[kind] or 0)+triangles
     assert(total<=55000,'scene triangle budget exceeded: '..total)
     coroutine.yield()
     assert(g:Commit()~=false,'scene Commit failed')
     assert(g:SetMaterial(0,mat)~=false,'scene SetMaterial failed')
+    local batches=1
+    if groups>1 then
+        assert(g:SetMaterial(1,MaterialFor(j,kind=='emission' and 'emissionGold' or 'gold'))~=false,'gold SetMaterial failed')
+        if groups>2 then assert(g:SetMaterial(2,MaterialFor(j,'emission'))~=false,'rune SetMaterial failed') end
+        batches=0;for _,count in pairs(groupTriangles) do if count>0 then batches=batches+1 end end
+    end
     local old=j.nodes[kind];if old then old:Remove() end
     j.nodes[kind]=node;j.counts[kind]=triangles;j.triangles=total
+    j.batches[kind]=batches
     node.enabled=true;j.pending=nil
     if (kind=='stone' or kind=='arch') and j.base then j.base.enabled=false end
     coroutine.yield()
@@ -459,12 +501,39 @@ local function Halo(j,emit)
         emit({x-r,.9-r,-1.92},{x+r,.9-r,-1.92},{x+r,.9+r,-1.92},{x-r,.9+r,-1.92},
             {.45,.65,1,(4-layer)*.018},{0,0,-1})
     end end
+    -- Restrained concentric glint on the polished top lip, not a planar SSR
+    -- claim: reflections are supplied by real PBR highlights from the key.
+    for layer=1,3 do for i=0,47 do
+        local a,b=i*math.pi/24,(i+1)*math.pi/24
+        local r=1.27+layer*.025
+        emit({math.cos(a)*r,.658,math.sin(a)*r},{math.cos(a)*(r+.022),.658,math.sin(a)*(r+.022)},
+            {math.cos(b)*(r+.022),.658,math.sin(b)*(r+.022)},{math.cos(b)*r,.658,math.sin(b)*r},
+            {1,.91,.68,(4-layer)*.018},{0,1,0})
+    end end
     if not j.low then
-        for beam=1,2 do for layer=1,3 do
-            local x=-2.6+(beam-1)*.6;local w=layer*.09
-            emit({x-w,6.8,1.6},{x+w,6.8,1.6},{x+2+w,.75,-.6},{x+2-w,.75,-.6},
-                {1,.80,.38,(4-layer)*.006},{0,0,-1})
-        end end
+        for beam=1,3 do
+            local x=-2.6+(beam-1)*.68;local w=.20+(beam-1)*.035
+            -- One alpha-gradient quad, two feathered wings. Zero-alpha outer
+            -- vertices avoid a hard rectangular edge and stacked bright cores.
+            for side=-1,1 do
+                local a,b=side==-1 and -1 or side==0 and -.25 or .25,side==-1 and -.25 or side==0 and .25 or 1
+                local left=side==-1 and 0 or .035;local right=side==1 and 0 or .035
+                local rgba={1,.87,.58,1}
+                emit({x+w*a,6.8,1.6},{x+w*b,6.8,1.6},{x+2+w*b,.75,-.6},{x+2+w*a,.75,-.6},
+                    rgba,{0,0,-1},nil,{{1,.87,.58,left},{1,.87,.58,right},{1,.87,.58,right*.25},{1,.87,.58,left*.25}})
+            end
+        end
+        -- Faceted translucent crystal shell (two-sided additive), inner core
+        -- stays in the emission mesh. No alpha-sorted duplicate solid volume.
+        for _,x in ipairs({-1.9,1.9}) do
+            local z=-1.5;local top={x,1.9,z};local base={x,.3,z}
+            for i=0,3 do
+                local a,b=i*math.pi/2,(i+1)*math.pi/2
+                local p={x+math.cos(a)*.43,.85,z+math.sin(a)*.43}
+                local q={x+math.cos(b)*.43,.85,z+math.sin(b)*.43}
+                emit(base,p,top,q,{.40,.67,1,.06},{math.cos(a),0,math.sin(a)})
+            end
+        end
     end
 end
 local function Vines(j,g)
@@ -489,6 +558,12 @@ local function Atmosphere(j,emit)
         local z=(Hash(j.seed,i,3,1)%100)/100*2
         local r=.012+(i%3)*.006
         emit({x-r,y-r,z},{x+r,y-r,z},{x+r,y+r,z},{x-r,y+r,z},{1,.80,.38,.18},{0,0,-1})
+    end
+    for i=1,12 do
+        local beam=(i-1)%3;local t=(i//3+.5)/4
+        local x=-2.6+beam*.68+2*t;local y=6.8-6.05*t;local z=1.6-2.2*t
+        local r=.007+(i%3)*.003
+        emit({x-r,y-r,z},{x+r,y-r,z},{x+r,y+r,z},{x-r,y+r,z},{1,.91,.68,.11},{0,0,-1})
     end
 end
 local function Stage(j,name,fn)
@@ -551,7 +626,7 @@ end
 ---@param opts table? quality=low|high; fixed integer seed for reproducibility
 ---@return table
 function M.Begin(root,mask,opts)
-    local j={root=root,mask=mask,nodes={},counts={},materials={},techniques={},triangles=0,operations=0,elapsed=0,stage='sky',
+    local j={root=root,mask=mask,nodes={},counts={},batches={},materials={},techniques={},triangles=0,operations=0,elapsed=0,stage='sky',
         low=opts and opts.quality=='low' or false,seed=opts and opts.seed or 71115,
         joints=0,chips=0,cracks=0,moss=0,aoVertices=0,errors={},skipped={}}
     assert(type(j.seed)=='number' and j.seed%1==0,'integer scene seed required')
@@ -598,10 +673,18 @@ local function Animate(j,dt)
         local k=.88+.12*math.sin(j.elapsed*.8)
         j.materials.halo:SetShaderParameter('MatDiffColor',Variant(Color(k,k,k,1)))
     end
-    if j.nodes.atmosphere then j.nodes.atmosphere.position=Vector3(0,(j.elapsed*.08)%1.2,0) end
+    if j.nodes.atmosphere then
+        j.nodes.atmosphere.position=Vector3(0,(j.elapsed*.08)%1.2,0)
+        local k=.65+.35*math.sin(j.elapsed*1.7)^2
+        j.materials.atmosphere:SetShaderParameter('MatDiffColor',Variant(Color(k,k,k,1)))
+    end
     if j.nodes.emission then
         local k=.92+.08*math.sin(j.elapsed*math.pi/2)
         j.materials.emission:SetShaderParameter('MatDiffColor',Variant(Color(k,k,k,1)))
+        if not j.low then
+            j.materials.emission:SetShaderParameter('MatEmissiveColor',Variant(Color(.32*k,.68*k,1.65*k,1)))
+            j.materials.emissionGold:SetShaderParameter('MatEmissiveColor',Variant(Color(1.45*k,.85*k,.24*k,1)))
+        end
     end
 end
 ---@param j table
@@ -621,6 +704,6 @@ function M.Dispose(j)
     if j.base then j.base:Remove();j.base=nil end
     for _,mat in pairs(j.materials) do mat:Dispose() end
     for _,tech in ipairs(j.techniques) do tech:Dispose() end;j.techniques={}
-    j.nodes={};j.materials={};j.counts={};j.triangles=0
+    j.nodes={};j.materials={};j.counts={};j.batches={};j.triangles=0
 end
 return M

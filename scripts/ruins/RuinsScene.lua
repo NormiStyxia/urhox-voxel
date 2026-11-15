@@ -522,8 +522,16 @@ end
 local function OpenForge()
     if weaponGesture_ then weaponGesture_:ForceClose('forge') end
     if not CanOpenForge() then caster_:Say('请在安全地面、脱离警戒后锻造',1.2); return end
+    -- Bind the exact live module's read-only getter; no package.loaded key or
+    -- separately maintained HUD state is required for the primary route.
+    HUD.SetForgeVisibility(ForgePanel.HudHidden); CombatHUD.SetForgeVisibility(ForgePanel.HudHidden)
+    TouchControls.SetForgeVisibility(ForgePanel.HudHidden); PerformanceHUD.SetForgeVisibility(ForgePanel.HudHidden)
     ForgePanel.Open({rig=combatRig_,canOpen=CanOpenForge,
         onOpen=function()
+            -- Once per opening: distinguish a stale/missing module cache from a
+            -- phase issue in Web logs, without probing or printing each frame.
+            print('Forge: HUD lookup cachedSame='..tostring(package.loaded['ui.ForgePanel']==ForgePanel)
+                ..' getter='..tostring(type(ForgePanel.HudHidden)))
             pointer:Release('forge'); pointer:SetBlocked(true)
             TouchControls.Cancel(); drag.buttons=0
             caster_.charging,caster_.charge=false,0
@@ -640,13 +648,16 @@ local function StartCombat()
         end,
         takeInput=function()
             combatInputBlocked=true
-            TouchControls.Cancel(); pointer:SetBlocked(true); drag.buttons=0
+            -- WeaponWheel's gameplay gates own input without releasing pointer lock.
+            TouchControls.Cancel(); drag.buttons=0
+            pointer.attackArmed,pointer.skipLook=false,true
             caster_.charging,caster_.charge,caster_.castAnim=false,0,0
         end,
         releaseInput=function()
             combatInputBlocked=true; drag.buttons=0
             TouchControls.Cancel()
             pointer:SetBlocked(M.debugOn==true or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or voidInputBlocked)
+            pointer.attackArmed,pointer.skipLook=false,true
             if input.focus and not input.minimized then pointer:Resume() end
         end})
     local tailMaterial=Material:new()
@@ -753,7 +764,7 @@ local function AttachTouchControls()
     PerformanceHUD.Attach(HUD.root)
     SettingsMenu.Attach(HUD.root,function(blocked)
         if blocked and weaponGesture_ then weaponGesture_:ForceClose('settings') end
-        pointer:SetBlocked(blocked or M.debugOn==true or WeaponWheel.IsBlocked())
+        pointer:SetBlocked(blocked or M.debugOn==true)
         TouchControls.Cancel()
         drag.buttons=0
         caster_.charging,caster_.charge=false,0
@@ -1584,7 +1595,8 @@ function Ruins_HandleUpdate(eventType, eventData)
     if TouchInput.IsEnabled() and not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked() then nomi_:Look(tx*.14,ty*.12,combatLookScale_) end
     if M.DEBUG_PANEL and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_F10) then M.ToggleDebugPanel() end
     if not WeaponWheel.IsBlocked() and not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_TAB) then farView = not farView end
-    if not WeaponWheel.IsBlocked() and not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
+    if not WeaponWheel.IsBlocked() and not (CombatState.InCombat() and Down(KEY_Q))
+        and not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
         local mm = input.mouseMove
         if animPreview_.index>0 then
             animPreview_.orbit=Clamp((animPreview_.orbit or 0)+mm.x*.12,-25,25)

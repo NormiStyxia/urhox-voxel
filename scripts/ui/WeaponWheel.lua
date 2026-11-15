@@ -134,9 +134,9 @@ function M.Draw(vg,layout,selected,items,alpha)
     local l,k=layout,layout.size
     items=items or DEFAULT_ITEMS
     nvgSave(vg);nvgShapeAntiAlias(vg,1);nvgGlobalAlpha(vg,alpha or 1)
-    Band(vg,l,l.inner,l.outer,START,START+SPAN,8*k,INK,.86)
-    Arc(vg,l,l.inner,START+.035,START+SPAN-.035,IVORY,.6,.8)
-    Arc(vg,l,l.outer,START+.02,START+SPAN-.02,IVORY,.7,1)
+    -- No filled plastic band: two fine arcs, a tick scale, and one ruins medallion per weapon.
+    Arc(vg,l,l.inner,START+.035,START+SPAN-.035,IVORY,.5,.8)
+    Arc(vg,l,l.outer,START+.02,START+SPAN-.02,IVORY,.5,.8)
     Arc(vg,l,l.outer+9*k,START-.02,START+SPAN+.02,IVORY,.22,.7)
     for i=0,24 do
         local a=START+SPAN*i/24
@@ -146,18 +146,36 @@ function M.Draw(vg,layout,selected,items,alpha)
             l.cx+math.cos(a)*(r+length),l.cy+math.sin(a)*(r+length),IVORY,i%6==0 and .55 or .24,.8)
     end
     for i,slot in ipairs(l.slots) do
-        if selected==i then
-            Band(vg,l,l.inner+4*k,l.outer-4*k,slot.from+.035,slot.to-.035,6*k,IVORY,.065)
-            Band(vg,l,l.outer-6*k,l.outer-3*k,slot.angle-.14,slot.angle+.14,1*k,AMBER,.95)
-        end
+        local sel=selected==i
+        local d=(sel and 70 or 64)*k
         if i>1 then
             local a=slot.from
             Glass.Line(vg,l.cx+math.cos(a)*(l.inner+13*k),l.cy+math.sin(a)*(l.inner+13*k),
                 l.cx+math.cos(a)*(l.outer-13*k),l.cy+math.sin(a)*(l.outer-13*k),IVORY,.18,.8)
         end
-        Glyph(vg,items[i].id,slot.x,slot.y-8*k,k,selected==i and AMBER or IVORY)
+        -- soft backing so the medallion reads on any scene colour
+        Glass.Circle(vg,slot.x,slot.y,d*.5+2*k,INK,sel and .0 or .28)
+        local drawn=Glass.Picture(vg,'ui/forge/medal_idle.png',slot.x-d/2,slot.y-d/2,d,d,sel and .5 or .95)
+        if drawn and sel then
+            local w=d*1.16
+            Glass.Picture(vg,'ui/forge/medal_active.png',slot.x-w/2,slot.y-w*.53,w,w*1.064,1)
+        end
+        local iconPath=items[i].id=='sword' and 'ui/forge/icon_sword.png' or (items[i].id=='bow' and 'ui/forge/icon_bow.png' or nil)
+        local iconDrawn=false
+        if drawn and iconPath then
+            nvgSave(vg);nvgTranslate(vg,slot.x,slot.y);nvgRotate(vg,math.pi/4)
+            local ih=(sel and 46 or 42)*k
+            local iw=ih*(items[i].id=='sword' and .328 or .258)
+            iconDrawn=Glass.Picture(vg,iconPath,-iw/2,-ih/2,iw,ih,sel and 1 or .9)
+            nvgRestore(vg)
+        end
+        if not iconDrawn then Glyph(vg,items[i].id,slot.x,slot.y-2*k,k,sel and AMBER or IVORY) end
+        if sel then
+            Band(vg,l,l.outer-6*k,l.outer-3*k,slot.angle-.14,slot.angle+.14,1*k,AMBER,.95)
+            Band(vg,l,l.inner+3*k,l.inner+6*k,slot.angle-.14,slot.angle+.14,1*k,AMBER,.95)
+        end
         local px,py=l.cx+math.cos(slot.angle)*(l.inner-9*k),l.cy+math.sin(slot.angle)*(l.inner-9*k)
-        Glass.Circle(vg,px,py,1.8*k,selected==i and AMBER or IVORY,.9)
+        Glass.Circle(vg,px,py,1.8*k,sel and AMBER or IVORY,.9)
         Glass.Line(vg,px,py,l.cx+math.cos(slot.angle)*(l.inner+5*k),l.cy+math.sin(slot.angle)*(l.inner+5*k),IVORY,.3,.8)
     end
     -- Hand registration mark + short broken leader, never a central filled disc.
@@ -176,7 +194,7 @@ local function Labels(s)
     local l,k=s.layout,s.layout.size
     local alpha=s.closing and math.max(0,1-s.closeTime/.1) or math.min(1,s.age/.12)
     for i,slot in ipairs(l.slots) do
-        PlaceLabel(s.names[i],slot.x-34*k,slot.y+18*k,68*k,20*k,14*k,s.factor,
+        PlaceLabel(s.names[i],slot.x-34*k,slot.y+38*k,68*k,20*k,14*k,s.factor,
             s.selected==i and AMBER or IVORY,alpha)
     end
     local choice=s.items[s.selected or 0]
@@ -200,6 +218,7 @@ local function Down(event)
     local s=session
     if not s or s.closing then return end
     if event:IsMouse() and event:IsSecondaryButton() then M.Cancel();return end
+    if not s.touch then return end -- desktop selection is relative direction + Q release
     if not event:IsPrimaryAction() then return end
     if s.pointer~=nil and s.pointer~=event.pointerId then return end
     s.pointer=event.pointerId
@@ -212,13 +231,13 @@ local function Move(event)
     if not s or s.closing then return end
     if s.touch then
         if s.pointer==event.pointerId then s.selected=Pick(s,event,true) end
-    else s.selected=Pick(s,event,false) end
+    end -- absolute UI pointer coordinates must not override desktop gestures
 end
 local function Up(event)
     Consume(event)
     if not event:IsPrimaryAction() then return end
     local s=session
-    if not s or s.closing or s.pointer~=event.pointerId then return end
+    if not s or s.closing or not s.touch or s.pointer~=event.pointerId then return end
     local choice=Pick(s,event,true)
     local down=s.down
     s.pointer,s.down=nil,nil
@@ -234,7 +253,7 @@ local function Retire(s)
     layer.props.onPointerDown=Consume;layer.props.onPointerUp=Consume
     layer.props.onPointerMove=Consume;layer.props.onPointerCancel=Consume
     layer:Destroy()
-    if input.mouseMode==MM_ABSOLUTE then input.mouseMode=s.mouseMode end
+    if s.touch and input.mouseMode==MM_ABSOLUTE then input.mouseMode=s.mouseMode end
     session=nil
     TouchInput.Clear()
     if s.onClose then s.onClose(s.reason or 'closed') end
@@ -251,9 +270,12 @@ function M.Open(opts)
     end
     if #items==0 then return false end
     local s={root=root,items=items,anchorX=opts.anchorX or .52,anchorY=opts.anchorY or .5,
-        touch=opts.touch==true,selected=1,names={},age=0,closeTime=0,
+        touch=opts.touch==true,selected=1,names={},age=0,closeTime=0,virtualX=0,virtualY=0,
         onSelect=opts.onSelect,onClose=opts.onClose,mouseMode=input.mouseMode}
     for i,item in ipairs(items) do if item.id==opts.weapon then s.selected=i end end
+    s.initialSelected=s.selected
+    s.wasLocked=input.mouseMode==MM_RELATIVE
+    if GetPlatform()=='Web' then s.wasLocked=input:IsMouseLocked() end
     session=s
     Metrics(s)
     s.layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',pointerEvents='auto',
@@ -275,8 +297,7 @@ function M.Open(opts)
     s.hint:SetStyle({textAlign='left'})
     Labels(s)
     root:AddChild(s.layer);UI.PushOverlay(s.layer)
-    input.mouseMode=MM_ABSOLUTE
-    local p=input:GetMousePosition();s.lastX,s.lastY=p.x,p.y
+    if s.touch then input.mouseMode=MM_ABSOLUTE end
     TouchInput.Clear()
     return true
 end
@@ -296,9 +317,42 @@ function M.ForceClose(reason)
     if s then s.reason=reason or 'forced';Retire(s) end
     releaseGuard,guardFrames=false,0
 end
+-- GetMouseMove is this frame's relative IntVector2 (physical pixels), not an
+-- absolute cursor and not a consuming read. Confirm can run before Update.
+local function RelativeSelection(s)
+    if s.touch or s.closing then return end
+    local frame=GetTime():GetFrameNumber()
+    if s.mouseFrame==frame then return end
+    s.mouseFrame=frame
+    local delta=input:GetMouseMove()
+    local dpr=math.max(1,graphics:GetDPR())
+    local x,y=s.virtualX+delta.x/dpr,s.virtualY+delta.y/dpr
+    local radius=math.sqrt(x*x+y*y)
+    local limit=s.layout.outer
+    if radius>limit then x,y=x*limit/radius,y*limit/radius;radius=limit end
+    s.virtualX,s.virtualY=x,y
+    if radius<18*s.layout.size then s.selected=s.initialSelected;return end
+    local r=(s.layout.inner+s.layout.outer)*.5
+    s.selected=M.HitTest(s.layout,s.layout.cx+x/radius*r,s.layout.cy+y/radius*r,false)
+end
+local function PointerLost(s)
+    if s.touch or not s.wasLocked then return false end
+    local locked=input.mouseMode==MM_RELATIVE
+    if GetPlatform()=='Web' then locked=input:IsMouseLocked() end
+    if locked then return false end
+    if not s.lockLossLogged then
+        print('WeaponWheel: pointer lock lost during Q selection; cancel, no automatic relock')
+        s.lockLossLogged=true
+    end
+    M.Close('pointer-unlocked')
+    return true
+end
 function M.Confirm()
     local s=session
     if not s or s.closing then return false end
+    if PointerLost(s) then return false end
+    if input:GetKeyPress(KEY_ESCAPE) or input:GetMouseButtonPress(MOUSEB_RIGHT) then M.Cancel();return false end
+    RelativeSelection(s)
     local item=s.items[s.selected or 0]
     if not item then M.Cancel();return false end
     if s.onSelect and s.onSelect(item.id)==false then return false end
@@ -322,6 +376,7 @@ function M.Update(dt,anchor)
         return
     end
     if UI.GetRoot()~=s.root then M.ForceClose('root-changed');return end
+    PointerLost(s) -- observe browser Escape loss even during the closing fade
     if input.focus==false then M.Close('focus-lost') end
     local step=math.max(0,math.min(.1,dt or 0))
     if s.closing then
@@ -335,13 +390,7 @@ function M.Update(dt,anchor)
     if anchor then M.SetAnchor(anchor.anchorX,anchor.anchorY) end
     Metrics(s)
     if input:GetKeyPress(KEY_ESCAPE) or input:GetMouseButtonPress(MOUSEB_RIGHT) then M.Cancel();return end
-    if not s.touch then
-        local p=input:GetMousePosition()
-        if p.x~=s.lastX or p.y~=s.lastY then
-            s.lastX,s.lastY=p.x,p.y
-            s.selected=M.HitTest(s.layout,p.x/graphics:GetDPR(),p.y/graphics:GetDPR(),false)
-        end
-    end
+    RelativeSelection(s)
     Labels(s)
 end
 -- Read-only snapshots; callers must not mutate the returned layout.
@@ -350,6 +399,7 @@ function M.DebugState()
     local s=session
     return {open=s~=nil,closing=s and s.closing==true or false,blocked=M.IsBlocked(),
         selected=s and s.items[s.selected or 0] and s.items[s.selected].id or nil,
-        touch=s and s.touch or false,reason=s and s.reason or nil}
+        touch=s and s.touch or false,reason=s and s.reason or nil,
+        virtualX=s and s.virtualX or 0,virtualY=s and s.virtualY or 0}
 end
 return M

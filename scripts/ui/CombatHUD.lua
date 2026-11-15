@@ -1,6 +1,20 @@
 -- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
 local Draw=require('ui.PixelDraw')
 local H={}
+-- Forge owns the visibility signal; the global survives module-cache key differences.
+local forgeHiddenLogged=false
+local forgeRead
+function H.SetForgeVisibility(reader) forgeRead=reader end
+local function ForgeHidden()
+    local forge=package.loaded['ui.ForgePanel']
+    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
+        or (forgeRead and forgeRead()==true)
+        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
+    if hidden then
+        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=CombatHUD)');forgeHiddenLogged=true end
+    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
+    return hidden
+end
 H.BOW_PREDICTION=true -- independently switchable; never changes actual shot direction
 local bowPoint={visible=false,x=0,y=0}
 local Moves=require('combat.CombatMoves')
@@ -148,8 +162,7 @@ function H.HitPulse(moves)
     return age<.04 and 10 or 8,moves.lastHitWeak==true
 end
 function H.RenderHit(vg,x,y)
-    local forge=package.loaded['ui.ForgePanel']
-    if forge and forge.HudHidden and forge.HudHidden() then return end
+    if ForgeHidden() then return end
     local distance,weak=H.HitPulse(data.moves)
     if not distance then return end
     local color=weak and C.gold or C.paper
@@ -185,8 +198,7 @@ function H.HasBoss()
 end
 function H.Preview() return data.preview==true end
 function H.Render(vg,w,h,s,objective)
-    local forge=package.loaded['ui.ForgePanel']
-    if forge and forge.HudHidden and forge.HudHidden() then return end
+    if ForgeHidden() then return end
     if not data.moves then return end
     local moves=data.moves
     for i=1,rangeCount do

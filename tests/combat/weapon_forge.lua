@@ -40,6 +40,9 @@ rawset(_G,'nvgFill',function() fills=fills+1 end)
 rawset(_G,'nvgRGBA',function() return {} end)
 rawset(_G,'nvgLinearGradient',function() return {} end)
 rawset(_G,'nvgCreateFont',function() return 1 end)
+rawset(_G,'nvgCreateImage',function() return 7 end)
+rawset(_G,'nvgImageSize',function() return 100,60 end)
+rawset(_G,'nvgImagePattern',function() return {} end)
 local function MakeNode()
     local node={}
     node.CreateScriptObject=function()
@@ -222,7 +225,7 @@ assert(room.focus and room.focus>0 and room.focus<.5,'weapon focus sits in the l
 assert(#room.weapons==1 and room.weapons[1].weapon=='sword' and room.weapons[1].parts.blade=='blade_straight')
 Tick(1);assert(Forge.PreviewMode()=='3d' and LogCount('Forge preview: 3d')==1)
 Tick(30);assert(s.phase=='open' and LogCount('Forge preview: 3d')==1,'no per-frame readiness log spam')
-assert(Forge.HudHidden(),'HUD hidden while the forge is open')
+assert(Forge.HudHidden() and rawget(_G,'FORGE_HUD_HIDDEN')==true,'HUD hidden while the forge is open (module getter and published global)')
 assert(room.updates>20,'the showroom is stepped every frame')
 rects=0;Render();local readyRects=rects
 CheckLayout()
@@ -302,6 +305,7 @@ assert(room.exited==1 and Forge.IsOpen(),'showroom exits at full black, then the
 Tick(30)
 assert(not Forge.IsOpen() and closed==1 and fakeInput.mouseMode==MM_RELATIVE and not next(eventHandlers) and #root.children==0 and not overlay)
 assert(room.entered==room.exited)
+assert(rawget(_G,'FORGE_HUD_HIDDEN')==false,'global cleared once the forge is gone')
 
 -- ---------------------------------------------------------------- layouts
 for _,case in ipairs({{844,390},{960,420},{720,360},{667,375},{568,320},{1280,720}}) do

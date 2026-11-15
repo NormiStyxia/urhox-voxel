@@ -327,11 +327,11 @@ Layout=function(s)
         items[#items+1]={id='reset',label='恢复默认',action=function()
             Edit(s,function() s.config[s.weapon]=Parts.DefaultWeapon(s.weapon) end)
         end}
-        local mh=#items*42+10
-        local menu=Box(cx-8,fy-8-mh,170,mh)
+        local mh=#items*36+28
+        local menu=Box(cx-8,fy-14-mh,176,mh)
         s.menuBox=menu
         for i,item in ipairs(items) do
-            Add(s,item.id,item.label,Box(menu.x,menu.y+5+(i-1)*42,menu.w,42),function()
+            Add(s,item.id,item.label,Box(menu.x+8,menu.y+14+(i-1)*36,menu.w-16,36),function()
                 s.menuOpen=false
                 item.action()
                 Layout(s)
@@ -522,10 +522,18 @@ function DrawButton.badge(vg,s,b)
     local bx=b.box
     local cx,cy=bx.x+bx.w/2,bx.y+bx.h/2
     local a=s.anim[b.id] or 0
-    G.Circle(vg,cx,cy,22,C.plate,.55+.3*a)
-    for i=1,3 do G.Circle(vg,cx,cy,22+i*4,C.gold,.07*a) end
-    G.Ring(vg,cx,cy,22,b.active and C.gold or C.line,b.active and .95 or .35,b.active and 1.6 or 1)
-    Icon(vg,b.icon,cx-16,cy-16)
+    -- ruins medallion (generated art): quiet disc, crossfading to the lit one
+    if G.Picture(vg,'ui/forge/medal_idle.png',cx-24,cy-24,48,48,1-a*.6) then
+        if a>.01 then G.Picture(vg,'ui/forge/medal_active.png',cx-29,cy-29,58,58,a) end
+    else
+        G.Circle(vg,cx,cy,22,C.plate,.55+.3*a)
+        G.Ring(vg,cx,cy,22,b.active and C.gold or C.line,b.active and .95 or .35,b.active and 1.6 or 1)
+    end
+    local icon=b.icon=='sword' and 'ui/forge/icon_sword.png' or 'ui/forge/icon_bow.png'
+    nvgSave(vg);nvgTranslate(vg,cx,cy);nvgRotate(vg,math.pi/4)
+    local drawn=G.Picture(vg,icon,b.icon=='sword' and -6.2 or -5.2,-19,b.icon=='sword' and 12.4 or 9.8,38,.95)
+    nvgRestore(vg)
+    if not drawn then Icon(vg,b.icon,cx-16,cy-16) end
 end
 function DrawButton.close(vg,s,b)
     local bx=b.box
@@ -561,11 +569,12 @@ function DrawButton.primary(vg,s,b)
     local bx=b.box
     local pressed=Pressed(s,b)
     local dy=pressed and 1 or 0
-    G.Round(vg,bx.x,bx.y+3,bx.w,bx.h,9,C.black,.25)
-    G.Gradient(vg,bx.x,bx.y+dy,bx.w,bx.h,9,pressed and CREAM_DOWN_TOP or CREAM_TOP,pressed and CREAM_DOWN_BOTTOM or CREAM_BOTTOM,1)
-    G.Stroke(vg,bx.x+3,bx.y+3+dy,bx.w-6,bx.h-6,6,CREAM_LINE,.55,1)
-    G.Diamond(vg,bx.x+16,bx.y+bx.h/2+dy,3,C.goldDeep,1)
-    G.Diamond(vg,bx.x+bx.w-16,bx.y+bx.h/2+dy,3,C.goldDeep,1)
+    G.Round(vg,bx.x+2,bx.y+4,bx.w-4,bx.h-4,0,C.black,.28)
+    if G.NineSlice(vg,'ui/forge/plate_button.png',bx.x,bx.y+dy,bx.w,bx.h,64,bx.h/145,1) then
+        if pressed then G.Round(vg,bx.x+3,bx.y+3+dy,bx.w-6,bx.h-6,0,C.black,.14) end
+    else
+        G.Gradient(vg,bx.x,bx.y+dy,bx.w,bx.h,9,pressed and CREAM_DOWN_TOP or CREAM_TOP,pressed and CREAM_DOWN_BOTTOM or CREAM_BOTTOM,1)
+    end
     G.Text(vg,'装 备',bx.x+bx.w/2+1,bx.y+bx.h/2+dy,19,C.ink,NVG_ALIGN_CENTER,nil,3,'serif')
 end
 function DrawButton.card(vg,s,b)
@@ -600,7 +609,7 @@ end
 function DrawButton.menu(vg,s,b)
     local bx=b.box
     if b.gap then Ornament(vg,bx.x+14,bx.y,bx.w-28,.5,false) end
-    if Pressed(s,b) then G.Round(vg,bx.x+6,bx.y+3,bx.w-12,bx.h-6,6,C.gold,.14) end
+    if Pressed(s,b) then G.Round(vg,bx.x+8,bx.y+3,bx.w-16,bx.h-6,0,C.gold,.18) end
     G.Text(vg,b.label,bx.x+20,bx.y+bx.h/2,16,Pressed(s,b) and C.gold or C.ivory,nil,nil,1)
 end
 
@@ -776,8 +785,10 @@ local function Render(vg,s)
         end
         if s.menuBox then
             local m=s.menuBox
-            G.Round(vg,m.x-4,m.y-2,m.w+8,m.h+4,12,C.black,.3)
-            G.Round(vg,m.x,m.y,m.w,m.h,12,MENU_FILL,.98)
+            G.Round(vg,m.x-2,m.y+3,m.w+4,m.h+2,0,C.black,.3)
+            if not G.NineSlice(vg,'ui/forge/plate_menu.png',m.x-8,m.y-8,m.w+16,m.h+16,64,.42,1) then
+                G.Round(vg,m.x,m.y,m.w,m.h,0,MENU_FILL,.98)
+            end
             for _,b in ipairs(s.buttons) do if b.area=='menu' then DrawButton.menu(vg,s,b) end end
         end
         nvgRestore(vg)
@@ -797,6 +808,16 @@ local function Released()
     if input.numTouches>0 or input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT) or input:GetMouseButtonDown(MOUSEB_MIDDLE) then return false end
     for _,key in ipairs(HELD_KEYS) do if input:GetKeyDown(key) then return false end end
     return true
+end
+-- The HUD layers read this (plus HudHidden()); published as soon as the phase moves,
+-- before the HUD draws, and cleared on every close path.
+local hudPublished=false
+rawset(_G,'FORGE_HUD_HIDDEN',false)
+local function PublishHud(hidden)
+    if hudPublished==hidden then return end
+    hudPublished=hidden
+    rawset(_G,'FORGE_HUD_HIDDEN',hidden)
+    print('Forge: hudHidden='..tostring(hidden))
 end
 local function FinishClose(s)
     if s.finished then return end
@@ -818,10 +839,11 @@ local function FinishClose(s)
     if input.mouseMode==MM_ABSOLUTE then input.mouseMode=s.mouseMode end
     TouchInput.Clear()
     session=nil
+    PublishHud(false)
     if s.callbacks.onClose then s.callbacks.onClose(Copy(s.config),s.saved,s.keptDraft==true) end
 end
 ---@param data VariantMap
-local function Update(_,_,data)
+local function UpdateInner(_,_,data)
     local s=session
     if not s then return end
     local rawDt=math.max(0,data:GetFloat('TimeStep'))
@@ -868,6 +890,10 @@ local function Update(_,_,data)
             if s.roomWait>=ROOM_TIMEOUT then Fallback(s,'timeout') end
         else s.roomWait=0 end
     end
+end
+local function Update(a,b,data)
+    UpdateInner(a,b,data)
+    PublishHud(session~=nil and M.HudHidden() or false)
 end
 --- Open only outside combat; no root replacement and no world pause.
 ---@param rigOrCallbacks WeaponRig|ForgeCallbacks|nil

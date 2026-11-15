@@ -26,9 +26,12 @@ function wheel.ForceClose(reason)
 end
 function wheel.Confirm()if wheel.options.onSelect(wheel.selected)then wheel.Close('confirm')end end
 function wheel.Update(dt,anchor)wheel.anchor=anchor end
+local releases,requests=0,0
 local pointer=Pointer.New{web=true,now=function()return 0 end,focused=function()return true end,
- captured=function()return false end,release=function()end,changed=function()end}
+ captured=function()return true end,release=function()releases=releases+1 end,
+ request=function()requests=requests+1 end,changed=function()end}
 pointer:Resume()
+pointer:Confirm()
 local TC={cancelCount=0}
 function TC.Attach(_,provider,mode,cancel)TC.provider,TC.cancel=provider,cancel end
 -- Keep the real Clear/revision and invoke the actual Scene onCancel callback.
@@ -54,7 +57,8 @@ chunk(assert(source:match('(    weaponGesture_=WeaponSelectGesture.New.-)\n    l
 local gesture=assert(env.weaponGesture_)
 local function ResetPose()character.bones.arm_right.rotation=Quaternion();if character.bones.forearm_right then character.bones.forearm_right.rotation=Quaternion()end end
 assert(gesture:Open(false) and gesture:IsOpen(),'actual takeInput/Cancel must not self-close')
-assert(pointer.blocked and not pointer:IsEnabled() and env.drag.buttons==0)
+assert(not pointer.blocked and pointer:IsCaptured() and env.drag.buttons==0)
+assert(releases==0 and requests==0 and not pointer:CanAttack(),'selection keeps lock and gates actions without recapture')
 assert(not env.caster_.charging and env.caster_.charge==0 and env.caster_.castAnim==0)
 TC.Cancel();assert(gesture:IsOpen(),'own TouchControls.Sync takeover must preserve wheel')
 for _=1,10 do moves:Update(.02,{allowed=false,selecting=true});ResetPose();gesture:Apply(.02)end
@@ -69,6 +73,7 @@ wheel.selected='bow';gesture:Confirm()
 assert(not gesture:IsOpen() and State.GetWeapon()=='bow')
 assert(moves.clip=='weapon_swap_sword_to_bow','actual releaseInput/Cancel must not erase confirmed swap')
 assert(not pointer.blocked and pointer:IsEnabled(),'pointer resumes after wheel releases it')
+assert(releases==0 and requests==0 and pointer:IsCaptured(),'Q release never unlocks or re-requests pointer lock')
 assert(gesture.weight==1,'normal close retains pose for smooth release')
 ResetPose();gesture:Apply(.06);assert(gesture.weight>0 and gesture.weight<1)
 ResetPose();gesture:Apply(.07);assert(gesture.weight==0)
@@ -138,3 +143,18 @@ State.SetMounted(true)
 assert(not gesture:IsOpen() and rig.pose=='hidden' and gesture.weight==0,'mount must not restore a saved hand weapon')
 State.SetMounted(false)
 print('PASS actual WeaponWheel + Scene callback integration: pointer tap, deferred fade/onClose, blocker takeover, swap ready, mounted hidden pose')
+-- Execute the actual relative-camera routing, including the first Q-down frame
+-- before the wheel is constructed, and the invisible release-guard frame.
+local cameraBlock=assert(source:match('(    if not WeaponWheel.IsBlocked%(%) and not %(CombatState.InCombat%(%) and Down%(KEY_Q%)%).-)\n    %-%- 龙'))
+local lookCalls,held,blocked,combat=0,false,false,true
+local ce=setmetatable({WeaponWheel={IsBlocked=function()return blocked end},
+ CombatState={InCombat=function()return combat end},Down=function()return held end,
+ TouchInput={IsEnabled=function()return false end},pointer={CanLook=function()return true end},
+ mouseLocked=true,input={mouseMove={x=15,y=-5}},animPreview_={index=0},combatLookScale_=1,
+ nomi_={Look=function()lookCalls=lookCalls+1 end}}, {__index=_G})
+local route=assert(load(cameraBlock,'actual wheel camera gate','t',ce))
+held=true;route();assert(lookCalls==0,'first Q-down cannot rotate camera')
+held=false;blocked=true;route();assert(lookCalls==0,'selection/closing/release guard freeze camera')
+blocked=false;route();assert(lookCalls==1,'normal camera resumes')
+held=true;combat=false;route();assert(lookCalls==2,'exploration Q retains normal camera')
+print('PASS actual camera gate: first Q frame, selection/fade/release latch, normal and exploration restoration')

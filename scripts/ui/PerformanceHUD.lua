@@ -2,6 +2,20 @@ local UI=require('urhox-libs/UI')
 local Draw=require('ui.PixelDraw')
 local Settings=require('ruins.GameSettings')
 local M={}
+-- Forge owns the visibility signal; the global survives module-cache key differences.
+local forgeHiddenLogged=false
+local forgeRead
+function M.SetForgeVisibility(reader) forgeRead=reader end
+local function ForgeHidden()
+    local forge=package.loaded['ui.ForgePanel']
+    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
+        or (forgeRead and forgeRead()==true)
+        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
+    if hidden then
+        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=PerformanceHUD)');forgeHiddenLogged=true end
+    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
+    return hidden
+end
 ---@type Widget?
 local parent
 ---@type Widget?
@@ -16,8 +30,7 @@ local elapsed,frames=0,0
 local text='FPS -- · -- ms'
 local Layer=UI.Panel:Extend('RuinsPerformanceHUD')
 function Layer:Render(vg)
-    local forge=package.loaded['ui.ForgePanel']
-    if forge and forge.HudHidden and forge.HudHidden() then return end
+    if ForgeHidden() then return end
     local w,_,safe=Draw.Metrics()
     Draw.Begin(vg,true)
     Draw.Rect(vg,w-safe.right-196,safe.top+94,176,24,Draw.colors.ink,.85)

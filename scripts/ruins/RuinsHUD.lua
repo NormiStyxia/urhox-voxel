@@ -7,6 +7,20 @@ local Controls=require('ui.TouchControls')
 local CombatHUD=require('ui.CombatHUD')
 local CombatState=require('combat.CombatState')
 local M={}
+-- Forge owns the visibility signal; the global survives module-cache key differences.
+local forgeHiddenLogged=false
+local forgeRead
+function M.SetForgeVisibility(reader) forgeRead=reader end
+local function ForgeHidden()
+    local forge=package.loaded['ui.ForgePanel']
+    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
+        or (forgeRead and forgeRead()==true)
+        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
+    if hidden then
+        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=RuinsHUD)');forgeHiddenLogged=true end
+    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
+    return hidden
+end
 local ready=false
 local EMPTY={}
 local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}
@@ -146,6 +160,7 @@ function Layer:Update(dt)
     if input:GetKeyPress(KEY_H) and not Touch.IsEnabled() then help=not help end
 end
 local function RenderHUD(self,vg)
+    if ForgeHidden() then return end
     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
@@ -238,8 +253,7 @@ local function RenderHUD(self,vg)
     Draw.Finish(vg)
 end
 function Layer:Render(vg)
-    local forge=package.loaded['ui.ForgePanel']
-    if forge and forge.HudHidden and forge.HudHidden() then return end
+    if ForgeHidden() then return end
     local depth=Draw.Depth(vg)
     CombatState.Isolated('HUD.Render',CombatState.PerfCall,'hudRebuild',RenderHUD,self,vg)
     Draw.Unwind(vg,depth)
