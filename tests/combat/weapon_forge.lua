@@ -163,7 +163,9 @@ local function CheckLayout()
     for _,b in ipairs(s.buttons) do
         local min=(b.kind=='primary' or b.id=='recommend' or b.id=='undo') and 44 or ((b.id=='more' or b.kind=='swatch') and 34 or 34)
         assert(b.box.h>=min and b.box.w>=34,b.id..' hit target too small')
-        if b.id=='more' then
+        if b.kind=='route' then
+            assert(b.box.x>=0 and b.box.x+b.box.w<=p.x,'route chips stay on the stage')
+        elseif b.id=='more' then
             assert(b.box.x>=0 and b.box.x+b.box.w<=p.x+4,'more must sit on the stage, left of the sheet')
         else
             assert(b.box.x>=p.x and b.box.x+b.box.w<=p.x+p.w,b.id..' horizontal overflow')

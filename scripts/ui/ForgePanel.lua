@@ -221,6 +221,22 @@ Layout=function(s)
         end,{kind='badge',active=s.weapon==weapon,icon=weapon})
     end
     Add(s,'close','关闭',Box(closeX,top+6,44,44),function() M.Close() end,{kind='close'})
+    -- temporary blade-route comparison chips on the stage (sword only)
+    if s.weapon=='sword' then
+        local rx=math.max(26,safe.left+14)
+        local ry=h-safe.bottom-78
+        local rw=math.max(40,math.min(70,((w-pw)-rx-12-18)/4))
+        for i,r in ipairs({{'original','体素'},{'A','A硬边'},{'B','B方块'},{'flow','流光'}}) do
+            Add(s,'route_'..r[1],r[2],Box(rx+(i-1)*(rw+6),ry,rw,34),function()
+                local room=Room()
+                if not (s.room and room) then return end
+                if r[1]=='flow' then
+                    local cur=room.GetFlowStrength and room.GetFlowStrength() or 0
+                    pcall(room.SetFlowStrength,cur>0 and 0 or .7)
+                else pcall(room.SetModelRoute,r[1]) end
+            end,{kind='route',route=r[1]})
+        end
+    end
     s.headerLine=top+58
     -- slot tabs (fixed under the header): text with a diamond that glides
     local slots=SLOT_ORDER[s.weapon]
@@ -542,6 +558,19 @@ function DrawButton.close(vg,s,b)
     G.Line(vg,cx-6,cy-6,cx+6,cy+6,C.ivory,a,1.3)
     G.Line(vg,cx+6,cy-6,cx-6,cy+6,C.ivory,a,1.3)
 end
+function DrawButton.route(vg,s,b)
+    local bx=b.box
+    local room=Room()
+    local active=false
+    if room then
+        if b.route=='flow' then active=(room.GetFlowStrength and room.GetFlowStrength() or 0)>0
+        else active=(room.GetModelRoute and room.GetModelRoute())==b.route end
+    end
+    local color=(active or Pressed(s,b)) and C.gold or C.ivory
+    G.Round(vg,bx.x,bx.y,bx.w,bx.h,0,C.black,active and .5 or .32)
+    G.Stroke(vg,bx.x,bx.y,bx.w,bx.h,0,color,active and .9 or .35,1)
+    G.Text(vg,b.label,bx.x+bx.w/2,bx.y+bx.h/2,14,color,NVG_ALIGN_CENTER,nil,1)
+end
 function DrawButton.tab(vg,s,b)
     local bx=b.box
     local color=(b.active or Pressed(s,b)) and C.gold or C.sub
@@ -712,6 +741,9 @@ local function Stage(vg,s)
         nvgBeginPath(vg);nvgArc(vg,x+8,by,6.5,-2.6,2.6,NVG_CW or 2)
         nvgStrokeColor(vg,G.Color(C.ivory,.85));nvgStrokeWidth(vg,1.5);nvgStroke(vg)
         Shadowed(vg,'拖动旋转',x+24,by,14,C.ivory,nil,nil,1)
+        if s.roomReady and s.weapon=='sword' then
+            for _,b in ipairs(s.buttons) do if b.kind=='route' then DrawButton.route(vg,s,b) end end
+        end
     end
 end
 

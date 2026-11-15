@@ -1,0 +1,28 @@
+{
+  "A": {
+    "triangles": 178.0,
+    "vertices": 534,
+    "cuboids": 1,
+    "aabb_m": [
+      0.24,
+      1.7,
+      0.15
+    ],
+    "aabb_m3": 0.06119999999999999,
+    "vertex_bytes": 19224,
+    "texture_bytes": 0
+  },
+  "B": {
+    "triangles": 396.0,
+    "vertices": 1188,
+    "cuboids": 33,
+    "aabb_m": [
+      0.24,
+      1.7,
+      0.14
+    ],
+    "aabb_m3": 0.057120000000000004,
+    "vertex_bytes": 42768,
+    "texture_bytes": 0
+  }
+}

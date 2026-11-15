@@ -5,6 +5,7 @@ local Mock=require('weapon_mock')
 local Builder=require('combat.WeaponBuilder')
 local Parts=require('combat.WeaponParts')
 local Showroom=require('combat.ForgeShowroom')
+assert(Showroom.GetModelRoute()=='original','startup must retain the original voxel sword')
 local Dressing=require('combat.ForgeShowroomScene')
 local MASK=0x40000000
 local function Number(value,label)
@@ -54,6 +55,9 @@ local function StrictGeometry(g)
         self.groups[self.activeGroup]=self.groups[self.activeGroup]+1;return vertex(self,value)
     end
     function g:DefineNormal(value,...) NoExtra('DefineNormal',...);Vector(value,3,'normal');return normal(self,value) end
+    function g:DefineTexCoord(value,...)
+        NoExtra('DefineTexCoord',...);Vector(value,2,'UV');self.vertices[#self.vertices].uv=value
+    end
     function g:DefineColor(value,...)
         NoExtra('DefineColor',...);assert(type(value)=='table','Color expected')
         for _,key in ipairs({'r','g','b','a'}) do Number(value[key],'Color.'..key) end
@@ -727,3 +731,81 @@ assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'))
 graphics.GetWidth=nil -- fail after model load, before publication transfers ownership
 Showroom.Update(0);assert(Showroom.State()=='failed');Restored(nodes,components)
 print('forge_showroom model pending rollback PASS')
+
+-- Route studies share the same camera/masks and cannot affect inventory/rig.
+local Blades=require('combat.ForgeShowroomBlades')
+for _,route in ipairs({'A','B'}) do
+    Boot();nodes,components=Live();Showroom.SetModelRoute(route);Showroom.SetFlowStrength(.7)
+    assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
+    local g=Shape():GetComponent('CustomGeometry',true)
+    local expected=Blades.Data(route)
+    assert(#g.vertices==#expected.vertices and g.commits==1)
+    assert(g.viewMask==MASK and g.lightMask==MASK and g.zoneMask==MASK)
+    Mock.Near(Spin().scale.y,1);assert(g.material.flow_strength==(route=='B' and .7 or 0))
+    for _,v in ipairs(g.vertices) do assert(v.uv and v.uv.y>=0 and v.uv.y<=1) end
+    local same=g.material;Showroom.SetFlowStrength(99);assert(same.flow_strength==(route=='B' and 2 or 0))
+    Showroom.SetFlowStrength(0);assert(same.flow_strength==0)
+    Showroom.SetFlowStrength(.7);Showroom.SetFlowStrength(0/0);Mock.Near(Showroom.GetFlowStrength(),.7)
+    for _=1,120 do Showroom.Update(1/60) end
+    assert(g.commits==1,'TIME animation must never re-upload geometry')
+    local config=Config('sword');config.colors={primary=5,secondary=6,accent=4}
+    Showroom.SetWeapon(config);Finish()
+    local changed=Shape():GetComponent('CustomGeometry',true).material
+    assert(same.disposed and changed.primary_color.r~=same.primary_color.r)
+    assert(changed.secondary_color.r~=same.secondary_color.r and changed.accent_color.r~=same.accent_color.r)
+    Showroom.SetWeapon(Config('bow'));Finish();assert(not Shape():GetChild('BladeRoute'..route))
+    Showroom.SetWeapon(Config('sword'));Finish();assert(Shape():GetChild('BladeRoute'..route))
+    Showroom.SetModelRoute('original');Finish();assert(not Shape():GetChild('BladeRoute'..route))
+    Showroom.Exit();Restored(nodes,components)
+end
+for _,failure in ipairs({'material','geometry','emit','cancel','fit'}) do
+    Boot();nodes,components=Live();Showroom.SetModelRoute('B');assert(Showroom.Enter(e.scene))
+    Showroom.SetWeapon(Config('sword'))
+    if failure=='material' then e.failResource='model/forge-blades/BladeStudy.xml'
+    elseif failure=='geometry' then e.fail='CustomGeometry' end
+    Showroom.Update(0);e.fail=nil
+    if failure=='cancel' then Showroom.SetModelRoute('A');Showroom.Update(0);Showroom.Exit()
+    elseif failure=='fit' then
+        -- Fail the final Fit after native Commit, before pending ownership transfers.
+        local pending=Spin():GetChild('PendingWeapon'):GetComponent('CustomGeometry',true)
+        while #pending.vertices+96<#Blades.Data('B').vertices do Showroom.Update(0) end
+        graphics.GetWidth=nil;Showroom.Update(0)
+        assert(Showroom.State()=='failed');Showroom.Exit()
+    else
+        if failure=='emit' then
+            local pending=Spin():GetChild('PendingWeapon')
+            pending:GetComponent('CustomGeometry',true).DefineTexCoord=function()error('injected UV failure')end
+        end
+        Finish();assert(Showroom.IsReady() and Showroom.Diagnostic():find('blade_route',1,true))
+        assert(not Shape():GetChild('BladeRouteB'),'failed route leaves no geometry')
+        Showroom.Exit()
+    end
+    Restored(nodes,components)
+end
+Boot();nodes,components=Live();assert(Showroom.GetModelRoute()=='original')
+assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
+Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='A')
+Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='B')
+Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='original')
+Showroom.Exit();Restored(nodes,components)
+Boot();nodes,components=Live();assert(Showroom.Enter(e.scene,{quality='low'}))
+Showroom.SetWeapon(Config('sword'));Finish()
+local oldInput,oldF6,oldF7=input,KEY_F6,KEY_F7
+rawset(_G,'KEY_F6',6);rawset(_G,'KEY_F7',7)
+local press=6
+rawset(_G,'input',{GetKeyPress=function(_,key)
+    if key==press then press=nil;return true end
+    return false
+end})
+Showroom.Update(0);Finish();assert(Showroom.GetModelRoute()=='A')
+press=6;Showroom.Update(0);Finish();assert(Showroom.GetModelRoute()=='B')
+local lowBlade=Shape():GetComponent('CustomGeometry',true)
+assert(not lowBlade.castShadows)
+press=7;Showroom.Update(0);assert(lowBlade.material.flow_strength==0)
+press=7;Showroom.Update(0);Mock.Near(lowBlade.material.flow_strength,.7)
+e.width,e.height=390,844;Showroom.SetFocus(.3,.5);Showroom.Update(0);Mock.Near(Spin().scale.y,1)
+Showroom.SetWeapon(Config('bow'));Finish();press=6;Showroom.Update(0)
+assert(Showroom.GetModelRoute()=='B','bow must not consume route hotkey')
+rawset(_G,'input',oldInput);rawset(_G,'KEY_F6',oldF6);rawset(_G,'KEY_F7',oldF7)
+Showroom.Exit();Restored(nodes,components)
+print('forge_showroom blade routes PASS: A/B masks, 1.7m, three colors, strengths, no reupload, bow exclusion, cancel/fallback/cleanup; MOCK ONLY')

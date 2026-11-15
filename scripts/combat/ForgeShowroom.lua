@@ -23,11 +23,14 @@
 -- fallback. No compute-only local fog or unsupported area lights are required.
 local Builder=require('combat.WeaponBuilder')
 local Dressing=require('combat.ForgeShowroomScene')
+local Blades=require('combat.ForgeShowroomBlades')
 -- Temporary showroom-only comparison; nil restores the voxel sword default.
 local MODEL_TEST='model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.mdl'
 local MODEL_MATERIAL='model/c8d2cfd2bc29455abb72b044deb16d5d/Materials/c8d2cfd2bc29455abb72b044deb16d5d_00_tripo_material_af5190d1-e320-4160-9951-ed50bff7a75e.xml'
 local MODEL_TEXTURE='model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_'
-local modelOverride=MODEL_TEST
+local modelOverride=nil -- original voxel sword remains the startup default
+local modelRoute='original'
+local flowStrength=.7
 local M={}
 local MASK=0x40000000
 local KEEP=0xffffffff~MASK
@@ -112,12 +115,14 @@ end
 local function Remove(s,node) if node then CleanupMethod(s,node,'Remove','Node:Remove') end end
 local function DisposeMesh(s,mesh)
     if not mesh then return end
-    if mesh.modelOverride then CleanupMethod(s,mesh.material,'Dispose','Material:Dispose')
+    if mesh.bladeRoute then CleanupFunction(s,'ForgeShowroomBlades.Dispose',Blades.Dispose,mesh)
+    elseif mesh.modelOverride then CleanupMethod(s,mesh.material,'Dispose','Material:Dispose')
     else CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,mesh) end
 end
 local function Cancel(s)
     if s.job then CleanupFunction(s,'WeaponBuilder.CancelPreview',Builder.CancelPreview,s.job);s.job=nil end
     if s.pendingModel then DisposeMesh(s,s.pendingModel);s.pendingModel=nil end
+    if s.bladeJob then DisposeMesh(s,s.bladeJob);s.bladeJob=nil end
     Remove(s,s.pendingRoot);s.pendingRoot=nil;s.pending=nil
 end
 local function Cleanup(s)
@@ -410,15 +415,38 @@ function M.SetWeapon(single) Protect('SetWeapon',Weapon,single) end
 function M.SetModelOverride(resPath)
     assert(resPath==nil or type(resPath)=='string','model override must be a resource path or nil')
     modelOverride=resPath
+    modelRoute=resPath and 'imported' or 'original'
     if session and session.selection then M.SetWeapon(session.selection) end
 end
+
+--- Showroom study only; does not write the inventory, rig or selected blade ID.
+---@param route string original | A | B | imported
+function M.SetModelRoute(route)
+    assert(route=='original' or route=='A' or route=='B' or route=='imported','invalid blade route')
+    modelRoute=route;modelOverride=route=='imported' and MODEL_TEST or nil
+    if session and session.selection then M.SetWeapon(session.selection) end
+    print('ForgeShowroom: blade route='..route)
+end
+function M.GetModelRoute() return modelRoute end
+function M.CycleModelRoute()
+    M.SetModelRoute(modelRoute=='original' and 'A' or (modelRoute=='A' and 'B' or 'original'))
+end
+---@param strength number 0 disables, 0.7 default, 2 maximum
+function M.SetFlowStrength(strength)
+    flowStrength=Clamp(Finite(strength,flowStrength),0,2)
+    Protect('SetFlowStrength',function(s)
+        if s.mesh and s.mesh.bladeRoute then Blades.SetFlowStrength(s.mesh,flowStrength) end
+        if s.bladeJob then Blades.SetFlowStrength(s.bladeJob,flowStrength) end
+    end)
+end
+function M.GetFlowStrength() return flowStrength end
 
 local function PublishWeapon(s,mesh)
     local b=mesh.blueprint.bounds
     s.pendingRoot.position=Vector3(-(b.min[1]+b.max[1])*.5,-(b.min[2]+b.max[2])*.5,-(b.min[3]+b.max[3])*.5)
     Fit(s,mesh.blueprint)
     DisposeMesh(s,s.mesh);Remove(s,s.meshRoot)
-    s.mesh,s.meshRoot=mesh,s.pendingRoot;s.pendingRoot=nil;s.job=nil;s.pendingModel=nil
+    s.mesh,s.meshRoot=mesh,s.pendingRoot;s.pendingRoot=nil;s.job=nil;s.pendingModel=nil;s.bladeJob=nil
     s.meshRoot.enabled=true;state=READY
     print('Forge showroom: ready')
 end
@@ -473,12 +501,30 @@ local function BuildStep(s,dt)
     if s.pending then
         local single=s.pending;s.pending=nil
         s.pendingRoot=Call(s,'geometry',s.spin,'CreateChild','Node:CreateChild','PendingWeapon');s.pendingRoot.enabled=false
+        if single.weapon=='sword' and (modelRoute=='A' or modelRoute=='B') then
+            s.stage,s.api,s.apiType='blade_route','ForgeShowroomBlades.Begin','function'
+            local job,err=Blades.Begin(s.pendingRoot,modelRoute,single.colors,MASK,s.low,flowStrength)
+            if job then s.bladeJob=job;return end
+            ReportFailure(s,'Update',err) -- unavailable shader/resources: retain voxel fallback
+        end
         if single.weapon=='sword' and modelOverride then
             local mesh=TryModel(s,modelOverride)
             if mesh then PublishWeapon(s,mesh);return end
         end
         s.job=Check(s,'geometry',Builder,'BeginPreview','WeaponBuilder.BeginPreview')(s.pendingRoot,single)
         return -- Compile and native emission never share one frame
+    end
+    if s.bladeJob then
+        s.stage,s.api,s.apiType='blade_route','ForgeShowroomBlades.Step','function'
+        local ok,done=pcall(Blades.Step,s.bladeJob)
+        if ok then
+            if done then PublishWeapon(s,s.bladeJob) end
+        else
+            ReportFailure(s,'Update',done)
+            DisposeMesh(s,s.bladeJob);Remove(s,s.bladeJob.node);s.bladeJob=nil
+            s.job=Builder.BeginPreview(s.pendingRoot,s.selection)
+        end
+        return
     end
     local job=s.job
     if not job then return end
@@ -504,6 +550,11 @@ local function BuildStep(s,dt)
 end
 local function UpdateImpl(s,dt)
     dt=Clamp(Finite(dt,0),0,1)
+    -- Desktop debug entry. Mobile/UI buttons may call the same public methods.
+    if s.selection and s.selection.weapon=='sword' and input and input.GetKeyPress then
+        if KEY_F6 and input:GetKeyPress(KEY_F6) then M.CycleModelRoute() end
+        if KEY_F7 and input:GetKeyPress(KEY_F7) then M.SetFlowStrength(flowStrength>0 and 0 or .7) end
+    end
     local compiling=s.pending~=nil
     BuildStep(s,dt)
     if s.dressing and not compiling then
