@@ -240,6 +240,11 @@ end
 ---@param arm CombatArm
 local function handTarget(c,name,p,params,arm,bodyHeight,bodyRotation)
     local path=c.handPath[name]
+    if path.mode=="plunge" then
+        local u=math.max(clamp(((params.plungeSpeed or 1)-.5)*2,0,1),clamp(params.plungeTuck or 0,0,1))
+        u=ease("smoothStep",u)
+        return Vector3(.5-.02*u,1.6-.75*u-bodyHeight,.42+.20*u)
+    end
     if path.mode=="bow_aim" or path.mode=="bow_string" then
         local aim=math.rad(clamp(params.aimPitch or 0,-35,35))
         local cp,sp=math.cos(aim),math.sin(aim)
@@ -274,6 +279,14 @@ local function pathPole(path)
 end
 ---@param c CombatClip
 local function boneSample(c,name,p,params,handWeight)
+    if c.id=="plunge_loop" then
+        local u=ease("smoothStep",math.max(clamp(((params.plungeSpeed or 1)-.5)*2,0,1),clamp(params.plungeTuck or 0,0,1)))
+        local tuck=clamp(params.plungeTuck or 0,0,1)
+        if name=="body" then return -4+34*u,0,0 end
+        if name=="head" then return 3-13*u,0,0 end
+        if name=="leg_right" then return 14+11*u*(1-tuck),0,0 end
+        if name=="leg_left" then return -10-10*u*(1-tuck),0,0 end
+    end
     if c.locomotion then
         local phase=(params.gaitPhase or 0)*math.pi*2
         local wave=math.cos(phase)
@@ -722,6 +735,10 @@ function A:Apply()
                         elseif c.bladePath.mode=="fixed" then
                             local d=c.bladePath.direction
                             direction=unit(Vector3(d[1],d[2],d[3]),Vector3(0,-1,0))
+                            if c.id=="plunge_loop" then
+                                local u=ease("smoothStep",math.max(clamp(((s.params.plungeSpeed or 1)-.5)*2,0,1),clamp(s.params.plungeTuck or 0,0,1)))
+                                direction=unit(Vector3(.4*(1-u),math.cos(math.pi*u),.25+.05*(1-u)+.6*math.sin(math.pi*u)),Vector3(0,-1,0))
+                            end
                         else
                             local origin=c.bladePath.origin
                             direction=unit(Vector3(solved.target.x-origin[1],solved.target.y+self.bodyHeight-origin[2],

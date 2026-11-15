@@ -424,9 +424,12 @@ for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light
 end
 pathAttack("sword_light_1",{.55,1.35,-.25},{-.55,1.15,.55},170,"xz",.14,.18,.50)
 pathAttack("sword_light_2",{-.55,1,-.25},{.55,1.40,.55},-150,"xz",.14,.18,.45)
-pathAttack("sword_light_3",{.15,1.9,-.15},{.15,.45,.7},190,"yz",.18,.22,.70)
+pathAttack("sword_light_3",{.58,1.9,-.15},{.48,.45,.7},190,"yz",.18,.22,.70)
 pathAttack("sword_light_4",{.65,1.2,.05},{.62,1.18,-.12},340,"xz",.23,.30,.55)
-pathAttack("sword_light_5",{.18,2.0,-.18},{.14,.35,.75},200,"yz",.28,.34,1.0)
+pathAttack("sword_light_5",{.62,2.0,-.18},{.50,.35,.75},200,"yz",.28,.34,1.0)
+-- Route reverse-slash entry around the chest while its arm/weapon fade in.
+-- The active arc and all event/motion times remain unchanged.
+C.Clips.sword_light_2.handPath.arm_right.segments[1].control={.55,1.25,.65}
 C.Clips.sword_light_1.keys.body[4][2][2]=-45
 C.Clips.sword_light_1.keys.body[5][2][2]=-49
 C.Clips.sword_light_2.keys.body[4][2][2]=40
@@ -438,7 +441,7 @@ C.Clips.sword_light_3.root={{0,-.04},{.11/.52,.05},{.14/.52,.02},
 local slamPath=C.Clips.sword_light_3.handPath.arm_right.segments
 slamPath[5].t0,slamPath[5].t1=.27/.52,.31/.52
 slamPath[6].t0=.31/.52
-table.insert(slamPath,5,bez(.22/.52,.27/.52,{.15,.45,.7},{.15,.45,.7},{.15,.45,.7}))
+table.insert(slamPath,5,bez(.22/.52,.27/.52,{.48,.45,.7},{.48,.45,.7},{.48,.45,.7}))
 
 local heavy=C.Clips.sword_heavy_release
 local circle={kind="arc",plane="xz",cx=0,cy=0,radius=.75,angle=0,sweep=math.pi*2,
@@ -462,6 +465,11 @@ local heavyYaw={40,55,8,-35,-45,0}
 for i,yaw in ipairs(heavyYaw) do heavy.keys.body[i][2][2]=yaw end
 for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release"}) do
     local c=C.Clips[id]
+    -- Torso arrives before the blade, with finite acceleration at contact.
+    -- Remove recovery Euler overshoot; follow-through remains the fifth pose.
+    c.keys.body[4][3]="smoothStep"
+    c.keys.head[4][3]="smoothStep"
+    for _,track in pairs(c.keys) do track[#track][3]="smoothStep" end
     c.keys.leg_right={}
     for i,key in ipairs(c.keys.leg_left) do
         -- A rear support foot opposes the lead step; do not inherit run gait
@@ -472,15 +480,34 @@ for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light
     end
 end
 C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
-    bez(0,1,{.35,1.05,.30},{.30,1.55,-.20},{.65,1.45,-.35},"inQuad")}}}
+    bez(0,1,{.35,1.05,.30},{.65,1.55,-.20},{.70,1.45,-.35},"inQuad")}}}
 
-for _,id in ipairs({"plunge_start","plunge_loop","plunge_land"}) do
-    local c=C.Clips[id]
-    local start=id=="plunge_start" and {.35,1.05,.30} or {.20,.75,.38}
-    local finish=id=="plunge_land" and {.35,1.05,.30} or {.20,.75,.38}
-    c.handPath={arm_right={space="body_feet",segments={bez(0,1,start,finish,{.30,.90,.48},"outQuad")}}}
-    c.bladePath={mode="fixed",direction={0,-1,.08},side="arm_right"}
-end
+C.Clips.sword_heavy_charge.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+
+-- 多关键帧悬停→俯冲→落地随动；符号待 Web 校准。
+local ps,pl,pd=C.Clips.plunge_start,C.Clips.plunge_loop,C.Clips.plunge_land
+ps.hold,ps.fadeOut=true,0
+pl.root={{0,-.04},{1,-.04}}
+ps.keys.body=k({6,0,0},{-12,8,0},{-10,5,0},{-4,0,0},.5,.83)
+ps.keys.head=k({3,0,0},{8,-5,0},{6,-3,0},{3,0,0},.5,.83)
+ps.keys.leg_right=k({0,0,0},{12,0,0},{18,0,0},{14,0,0},.5,.83)
+ps.keys.leg_left=k({0,0,0},{-8,0,0},{-14,0,0},{-10,0,0},.5,.83)
+ps.handPath={arm_right={space="body_feet",segments={
+    bez(0,.55,{.35,1.05,.30},{.5,1.7,.35},{.6,1.35,.45},"outQuad"),
+    bez(.55,1,{.5,1.7,.35},{.5,1.6,.42},{.55,1.72,.4},"smoothStep")}}}
+ps.bladePath={mode="fixed",direction={.4,1,.3},side="arm_right"}
+pl.handPath={arm_right={space="body_feet",mode="plunge"}}
+pl.bladePath={mode="fixed",direction={0,-1,.25},side="arm_right"}
+pd.keys.body=k({30,0,0},{40,0,0},{18,0,0},{6,0,0},.18,.52)
+pd.keys.head=k({-10,0,0},{-16,0,0},{-7,0,0},{3,0,0},.18,.52)
+pd.keys.leg_right=k({14,0,0},{20,0,0},{8,0,0},{0,0,0},.18,.52)
+pd.keys.leg_left=k({-10,0,0},{-14,0,0},{-6,0,0},{0,0,0},.18,.52)
+pd.root={{0,-.04},{.18,-.14},{.40,-.10},{.60,.015},{.80,.006},{1,0}}
+pd.handPath={arm_right={space="body_feet",segments={
+    bez(0,.18,{.48,.85,.62},{.5,.72,.66},{.5,.75,.64},"outQuad"),
+    bez(.18,.52,{.5,.72,.66},{.55,1.05,.55},{.58,.90,.70},"outQuad"),
+    bez(.52,1,{.55,1.05,.55},{.35,1.05,.30},{.50,1.12,.5},"smoothStep")}}}
+pd.bladePath={mode="fixed",direction={0,-1,.25},side="arm_right"}
 
 -- Keep authored legacy poses available, while the bow faces forward rather
 -- than sideways. Single rigid right arm aims toward chin; no elbow is invented.

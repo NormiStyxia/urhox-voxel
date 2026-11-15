@@ -25,6 +25,14 @@ local COMBO=Data.Combo
 ---@field partNotice {part:string,untilTime:number}|nil
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
+-- Real seconds; frame-average velocity integrates across hover/terminal boundaries.
+C.PLUNGE={hover=.10,initialSpeed=6,terminalSpeed=12,accelerationTime=.25}
+function C.PlungeDistance(age)
+    local p=C.PLUNGE
+    local t=math.max(0,age-p.hover);local a=math.min(t,p.accelerationTime)
+    return p.initialSpeed*a+(p.terminalSpeed-p.initialSpeed)*a*a/(2*p.accelerationTime)
+        +p.terminalSpeed*math.max(0,t-p.accelerationTime)
+end
 local BUFFER=.160
 local RING_EVENT={material='stone',kind='dust'}
 -- Immutable after module initialization. Special outcomes inherit the source
@@ -175,6 +183,10 @@ function C:Play(id,fadeIn)
     local params=self.playParams
     for k in pairs(params) do params[k]=nil end
     params.weaponInHand=self:WeaponInHand() and 1 or 0
+    if id=='plunge_loop' then
+        params.plungeSpeed=(self.plungeSpeed or 6)/C.PLUNGE.terminalSpeed
+        params.plungeTuck=math.max(0,1-(self.airState.height or 1)/.4)
+    end
     if id=='bow_release' or id=='bow_cancel' then
         self.bowPoseCharge=self.charge
         self.bowPosePitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
@@ -226,6 +238,7 @@ function C:Cancel(reason,keepProtection)
         if self.state.Log then self.state.Log('arrow-cancel','Combat: arrow cancel %s',reason or 'unknown') end
     end
     self.plunging,self.plungePeak,self.plungeLanded=false,nil,false
+    if self.rig.SetPlunging then self.rig:SetPlunging(false) end
     self.buffer,self.pending,self.clip,self.handle=nil,nil,nil,nil
     self.motionDebt=0
     self.pendingFire=nil
@@ -287,15 +300,29 @@ function C:StartPlunge(air)
     if not self:Play('plunge_start',.04) then return false end
     self.plunging,self.plungePeak,self.plungeLanded=true,air.y,false
     self.plungeVelocity=Vector3(air.vx or 0,0,air.vz or 0)
+    self.plungeAge,self.plungeSpeed=0,0
+    if self.rig.SetPlunging then self.rig:SetPlunging(false) end
     self.buffer=nil
     return true
 end
-function C:UpdatePlunge()
+function C:UpdatePlunge(dt)
     if not self.plunging then return end
     local air=self:Air()
     if not air or air.invalid then self:Cancel('void');return end
     self.plungePeak=math.max(self.plungePeak or air.y,air.y)
-    if not air.onGround then return end
+    if not air.onGround then
+        local old=self.plungeAge or 0
+        self.plungeAge=old+math.max(0,dt or 0)
+        self.plungeSpeed=dt and dt>0 and (C.PlungeDistance(self.plungeAge)-C.PlungeDistance(old))/dt or 0
+        self.plungeVelocity.y=-self.plungeSpeed
+        if self.rig.SetPlunging then self.rig:SetPlunging(self.plungeSpeed>0) end
+        if self.anim.SetParam and self.handle then
+            self.anim:SetParam('plungeSpeed',self.plungeSpeed/C.PLUNGE.terminalSpeed)
+            self.anim:SetParam('plungeTuck',math.max(0,1-(air.height or 1)/.4))
+        end
+        return
+    end
+    if self.rig.SetPlunging then self.rig:SetPlunging(false) end
     self.plunging,self.plungeLanded=false,true
     self.plungeMultiplier=math.min(2.2,1.4+math.max(0,self.plungePeak-air.y)*.1)
     if self.handle then self.anim:Stop(self.handle,0) end
@@ -305,7 +332,8 @@ function C:UpdatePlunge()
     self.landedAt=self.age
     self:Envelope('plunge:'..self.swingSerial,.03,.12,0,Vector3(0,-1,0),.10)
     if self.o.camera then self.o.camera:Land() end
-    if self.o.impactRing then self.o.impactRing(self.o.position(),self.moveDir) end
+    if self.rig.ImpactFx then self.rig:ImpactFx(self.o.position(),self.moveDir,true)
+    elseif self.o.impactRing then self.o.impactRing(self.o.position(),self.moveDir) end
     local sound=self.soundOpts
     sound.pos,sound.tier,sound.pitch,sound.hitId=self.o.position(),'heavy',.8,'plunge:'..self.swingSerial
     self:Sound('hit_heavy',sound);sound.material='stone';self:Sound('arrow_hit',sound)
@@ -526,6 +554,7 @@ function C:Events()
         if self.observe then self.observe('event',{name=e.name,clip=e.clip,t=e.t,age=self.age}) end
         if e.name=='hit_on' then
             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
+            if self.rig.BeginSlash then self.rig:BeginSlash(self.combo,e.clip=='sword_heavy_release') end
             self.hitForward=self.hitForward or Flat(self.moveDir or self.o.forward(),Vector3.FORWARD)
         elseif e.name=='hit_off' then
             self.hitOpen=false; self.trailUntil=self.age+.06
@@ -534,7 +563,8 @@ function C:Events()
                 self.comboUntil=self.age+.75
                 if stage.cooldown then self.comboCooldownUntil=self.age+stage.cooldown end
                 if stage.impactRing then
-                    if self.o.impactRing then self.o.impactRing(self.o.position(),self.hitForward or self.o.forward()) end
+                    if self.rig.ImpactFx then self.rig:ImpactFx(self.o.position(),self.hitForward or self.o.forward(),false)
+                    elseif self.o.impactRing then self.o.impactRing(self.o.position(),self.hitForward or self.o.forward()) end
                     if self.o.camera then self.o.camera:Land() end
                 end
             end
@@ -581,7 +611,7 @@ function C:Events()
             local finished=self.clip
             if self.state.Log then self.state.Log('clip-finish:'..finished,'Combat: clip %s finish',finished) end
             self.clip,self.handle=nil,nil
-            if finished=='plunge_start' and self.plunging then self:Play('plunge_loop',.04)
+            if finished=='plunge_start' and self.plunging then self:Play('plunge_loop',.08)
             elseif finished=='sword_draw' or finished=='bow_equip' then
                 local pending,released=self.pending,self.pendingReleased
                 local heldTime=self.hold
@@ -628,7 +658,7 @@ function C:Update(dt,controls)
     else self.suspended=false end
     if self.blocked and not controls.attack and not controls.heavy then self.blocked=false end
     local canInput=controls.allowed and not self.blocked and not self.dead and self.state.InCombat()
-    if controls.allowed and not self.dead then self:UpdatePlunge() end
+    if controls.allowed and not self.dead then self:UpdatePlunge(dt) end
     local animDt=math.max(0,dt-self.hitstop)
     if canInput and not self.plunging then
         if (heavy and not self.lastHeavy) or controls.heavyTap then

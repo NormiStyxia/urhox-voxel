@@ -1,0 +1,26 @@
+{
+  "head": "9295708351e7bb2d4e6e9603c03eb58fd389bfad",
+  "review": "PASS: fixed start/loop pose hold, bow FOV regression, 30Hz flash freshness, spin direction, low-quality ground FX preservation; no gameplay window changes",
+  "files": {
+    "scripts/combat/AnimClips.lua": "b7f8fe50408ed26f9c38864fc5930e333d0830bb8277fcf2b31ad6c5674fa591",
+    "scripts/combat/CombatAnim.lua": "ac968fe7e5f05fa434d8ceaba67128ceb0f2e17a2a2a4ef6120029ce17b89de2",
+    "scripts/combat/CombatMoves.lua": "49cb3fe004ab64cc81dc417a995bd1ecb46c216a6c94d224b6f624ccb68308f1",
+    "scripts/combat/CombatCamera.lua": "9064265b311b53e6becdb5cb72928fe1a8f60f0c04ecd77f7c7e3662597304b6",
+    "scripts/combat/CombatFx.lua": "2bc5f7c2683058ebe183f97c09b86a7a71d661623cc041b1b369279986e06639",
+    "scripts/combat/WeaponRig.lua": "ffc1f2c430cc37d70d5cc67a7bc58a966f585d17f0a181e0ccdc710c8d999a00",
+    "scripts/ruins/NomiController.lua": "b356756d87aa704fe43bf902ebc2099ebb63f549ac82870a0be3353c19bc9d83",
+    "tests/combat/anim_clearance.lua": "994a211349e71ce6f30f43417fb63ea8f9a730bfed3b307f4c6588bf5001af43",
+    "tests/combat/anim_spec.lua": "5f8ab6830eed21d97560bec7987be60f0e51869582f23ab65ad5a224e521cc58",
+    "tests/combat/feel_fx.lua": "9c898890bc8ed574f03133d9b8e1c045cfdbf045c48ef4c3c7f4b03ac5da9f5e",
+    "tests/combat/feel_plunge.lua": "b8e6054294464798bf52ce8f2bf719338ddcbcab2a53f2c028eec804816c2dfa",
+    "tests/combat/core_camera.lua": "d81aa9546f132fbb3f80b90a9f39381e3adf08572de75528f62d466745f3a948",
+    "tests/combat/locomotion_camera_motion.lua": "d7e6e0966f9b9547d0ac553cc3c260f33f30fef6cf91928c70b2e5d8cfcf5e94",
+    "tests/combat/locomotion_pose.lua": "897c5441c83ed1a11bf7cfb5101bbae8d6572511692c154de8e66a47773dec77",
+    "tests/combat/weapon_mock.lua": "e20870da9799f666501bf6a4fbcd0590af108dbc0c3fc9a01c034cbcf7b015ad"
+  },
+  "unverified": [
+    "Web rendering and poses",
+    "native allocation/GPU timings",
+    "terrain slopes and low FPS appearance"
+  ]
+}

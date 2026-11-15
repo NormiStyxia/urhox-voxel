@@ -58,9 +58,9 @@ end
 print('PASS actual Scene creates run before hitch tail advances; one pooled footprint / key-event reserve preserved')
 -- Real controller descent port uses existing velocity setter, not root translation.
 n.cc.onGround=false;n.cc.SetLinearVelocity=function(_,v)n.lastVertical=v end
-opts.scale=0;opts.plungeVelocity=Vector3(2,0,1)
+opts.scale=0;opts.plungeVelocity=Vector3(2,-9,1)
 n:Move(.016,-1,1,true,false,false,opts)
-S.near(n.lastVertical.y,-18);S.near(n.cc.desiredVelocity.x,2);S.near(n.cc.desiredVelocity.z,1)
+S.near(n.lastVertical.y,-9);S.near(n.cc.desiredVelocity.x,2);S.near(n.cc.desiredVelocity.z,1)
 local airCode=assert(source:match('(function N:MeasureMotion%b().-)\nend'))..'\nend\n'
  ..assert(source:match('(function N:CombatAirState%b().-)\nend'))..'\nend'
 local groundQueries=0;env.Terrain.GroundHeight=function()groundQueries=groundQueries+1;return 0 end
@@ -73,7 +73,7 @@ assert(groundQueries==q,'eligibility reuses current frame height; no additional 
 n.cc.onGround=true;n.node.worldPosition=Vector3(0,1,0);n:MeasureMotion(.016);S.near(n:CombatAirState(out).height,0)
 n.cc.onGround=false;n.node.worldPosition=Vector3(0,1.5,0);n:MeasureMotion(.016);S.near(n:CombatAirState(out).height,.5)
 n.voidReturning=true;assert(n:CombatAirState(out).invalid)
-print('PASS actual CC -18m/s setter, locked horizontal inertia, cached physical/terrain support and void rejection')
+print('PASS actual CC consumes authored velocity, locked horizontal inertia, cached physical/terrain support and void rejection')
 
 -- Airborne over a bridge keeps nearby physical support; a real landing is never
 -- rejected merely because the terrain heightmap has no island under the bridge.

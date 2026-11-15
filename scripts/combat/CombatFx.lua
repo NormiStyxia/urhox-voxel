@@ -1,0 +1,246 @@
+-- Presentation only. Fixed 30 landing slots + 24 slash wedges + 3 descent ribbons.
+-- No emit/update creates a node, mesh, material, table, Color or Variant.
+---@class CombatFx
+---@field land table[] Fixed landing slots (30).
+---@field arcs table[] Fixed slash wedges (24).
+---@field ribbons table[] Fixed descent strips (3).
+---@field plunging boolean
+local F={};F.__index=F
+F.LANDING_COUNT=30;F.ARC_COUNT=24
+local function set(v,x,y,z) v.x,v.y,v.z=x,y,z;return v end
+local function clamp(x,a,b)return math.max(a,math.min(b,x))end
+local function vertex(g,x,y,z,a)
+    g:DefineVertex(Vector3(x,y,z));g:DefineNormal(Vector3(0,1,0));g:DefineColor(Color(1,1,1,a or 1))
+end
+local function tri(g,ax,ay,az,bx,by,bz,cx,cy,cz,a,b,c)
+    vertex(g,ax,ay,az,a);vertex(g,bx,by,bz,b);vertex(g,cx,cy,cz,c)
+    vertex(g,cx,cy,cz,c);vertex(g,bx,by,bz,b);vertex(g,ax,ay,az,a)
+end
+local function geometry(node,kind,material)
+    local g=node:CreateComponent('CustomGeometry')
+    g:BeginGeometry(0,TRIANGLE_LIST)
+    if kind=='ring' then
+        for i=0,31 do
+            local a,b=i*math.pi/16,(i+1)*math.pi/16
+            local ax,az,bx,bz=math.cos(a),math.sin(a),math.cos(b),math.sin(b)
+            tri(g,ax,.03,az,bx,.03,bz,ax*.76,0,az*.76,1,1,0)
+            tri(g,bx,.03,bz,bx*.76,0,bz*.76,ax*.76,0,az*.76,1,0,0)
+        end
+    elseif kind=='star' then
+        -- Four pointed arms; one surface, no long radial rays.
+        for i=0,3 do
+            local a=i*math.pi*.5;local b=a+math.pi*.25;local c=a-math.pi*.25
+            tri(g,0,0,0,math.cos(c)*.16,0,math.sin(c)*.16,math.cos(a)*.5,0,math.sin(a)*.5)
+            tri(g,0,0,0,math.cos(a)*.5,0,math.sin(a)*.5,math.cos(b)*.16,0,math.sin(b)*.16)
+        end
+    elseif kind=='arc' then
+        -- +X follows actual tip motion, -Y extends inward along blade. Tapered ends.
+        tri(g,-.5,0,0,.5,0,0,0,-1,0,1,1,0)
+        tri(g,-.5,0,0,0,-.10,0,.5,0,0,1,1,1)
+    else
+        -- Unit cube; crack/spark/star dimensions supplied through node scale.
+        for axis=1,3 do for sign=-1,1,2 do
+            local p={-.5,-.5,-.5};local q={-.5,-.5,-.5};local r={-.5,-.5,-.5};local s={-.5,-.5,-.5}
+            local j,k=axis%3+1,(axis+1)%3+1
+            p[axis],q[axis],r[axis],s[axis]=sign*.5,sign*.5,sign*.5,sign*.5
+            q[j],r[j],r[k],s[k]=.5,.5,.5,.5
+            tri(g,p[1],p[2],p[3],q[1],q[2],q[3],r[1],r[2],r[3])
+            tri(g,p[1],p[2],p[3],r[1],r[2],r[3],s[1],s[2],s[3])
+        end end
+    end
+    g:Commit();g:SetMaterial(0,material)
+    g.castShadows=false
+    return g
+end
+local function slot(self,kind,i)
+    local node=self.scene:CreateChild('CombatFx_'..kind..i);node.temporary=true;node.enabled=false
+    local mat=Material:new() -- do not inherit voxel/surface-shader state from terrain
+    mat:SetTechnique(0,self.technique)
+    geometry(node,kind,mat)
+    return {node=node,mat=mat,pos=Vector3(),scale=Vector3(),rot=Quaternion(),
+        x=Vector3(),y=Vector3(),z=Vector3(),age=1,ttl=0,active=false,color=1,vx=0,vy=0,vz=0,size=0,ground=0,arc=kind=='arc'}
+end
+---@param scene Scene
+---@param world VoxelPhysicsWorld
+---@return CombatFx
+function F.New(scene,world)
+    local self=setmetatable({scene=scene,land={},arcs={},ribbons={},
+        colors={},head=0,width=.55,ttl=.16,tip=Vector3(),root=Vector3(),sampleTip=Vector3(),sampleRoot=Vector3(),valid=false,plunging=false},F)
+    self.technique=cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'):Clone('CombatFxAlpha')
+    local pass=self.technique:GetPass('base')
+    pass:SetBlendMode(BLEND_ALPHA);pass:SetDepthWrite(false);pass:SetDepthTestMode(CMP_LESSEQUAL)
+    -- RuinsPalette: marble105, gold109, rune111, stone103, dark147.
+    local palette={{1,.96,.83},{.95,.74,.32},{.35,.55,1},{.66,.67,.68},{.32,.33,.38}}
+    for i,c in ipairs(palette) do
+        self.colors[i]={}
+        for j=0,16 do self.colors[i][j+1]=Variant(Color(c[1],c[2],c[3],j/16)) end
+    end
+    for i=1,F.LANDING_COUNT do self.land[i]=slot(self,i==1 and 'ring' or (i==30 and 'star' or 'cube'),i) end
+    for i=1,F.ARC_COUNT do self.arcs[i]=slot(self,'arc',i) end
+    for i=1,3 do self.ribbons[i]=slot(self,'cube',i+30) end
+    return self
+end
+local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
+    s.pos=set(s.pos,x,y,z);s.scale=set(s.scale,sx,sy,sz)
+    s.node.position=s.pos;s.node.scale=s.scale;s.node.enabled=true
+    s.color,s.ttl,s.age,s.active=color,ttl,0,true
+    s.vx,s.vy,s.vz=0,0,0
+    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 1 or color][17])
+end
+function F:Impact(pos,forward,plunge)
+    self.plunging=false
+    local radius=plunge and 2.4 or 1.5
+    local cx,cz=pos.x+(plunge and 0 or forward.x*.65),pos.z+(plunge and 0 or forward.z*.65)
+    local ring=self.land[1]
+    show(self,ring,cx,pos.y+.035,cz,.3,1,.3,plunge and 2 or 3,.28)
+    ring.radius=radius
+    ring.forwardX,ring.forwardZ=plunge and 0 or forward.x,plunge and 0 or forward.z
+    ring.centerX,ring.centerZ=cx,cz
+    ring.narrow=plunge and 1 or .55
+    ring.rot:FromEulerAngles(0,math.deg(math.atan(forward.x,forward.z)),0);ring.node.rotation=ring.rot
+    for i=2,15 do
+        local s=self.land[i];local a=(i-2)*math.pi*2/14+.19
+        local r=.18+(i%3)*.07;local size=.06+(i%4)*.018
+        show(self,s,cx+math.cos(a)*r,pos.y+.08,cz+math.sin(a)*r,size,size,size,i%7==0 and 2 or (i%11==0 and 3 or 4),.5+(i%5)*.05)
+        s.ground=pos.y+size*.5;s.vx=math.cos(a)*(1.2+i%3*.4);s.vz=math.sin(a)*(1.2+i%3*.4);s.vy=2+i%4*.25;s.size=size
+    end
+    -- Six short, displaced fissures; never radial beams from the origin.
+    for i=16,21 do
+        local a=(i-16)*math.pi/3+.3;local s=self.land[i]
+        show(self,s,cx+math.cos(a)*.5,pos.y+.018,cz+math.sin(a)*.5,.12,.018,.32+(i%2)*.10,5,.6)
+        s.rot:FromEulerAngles(0,math.deg(a)+38,0);s.node.rotation=s.rot
+    end
+    for i=22,29 do
+        local s=self.land[i];local a=(i-22)*math.pi/4
+        show(self,s,cx,pos.y+.12,cz,.035,.055,.035,i%3==0 and 3 or 2,.12+(i%4)*.03)
+        s.ground=pos.y+.02;s.vx,s.vy,s.vz=math.cos(a)*2,1.5+i%3*.4,math.sin(a)*2;s.size=.035
+    end
+    show(self,self.land[30],cx,pos.y+.08,cz,.55,.055,.55,1,2/60+.15)
+    self.land[30].fresh,self.land[30].frames=true,0
+end
+function F:Contact(pos)
+    if not pos then return end
+    for i=22,25 do
+        local s=self.land[i];local a=(i-22)*math.pi*.5
+        show(self,s,pos.x,pos.y,pos.z,.035,.035,.035,1,.12)
+        s.vx,s.vy,s.vz=math.cos(a)*1.6,1,math.sin(a)*1.6;s.ground=pos.y-.4;s.size=.035
+    end
+end
+function F:Begin(combo,heavy)
+    self.valid=false
+    self.slash=heavy or (combo and combo>=1 and combo<=5)
+    self.spin=heavy or combo==4
+    self.width=heavy and .8 or (combo==5 and .85 or (combo==4 and .7 or (combo==3 and .65 or .55)))
+    self.ttl=combo==4 and .20 or .16
+    self.color=combo==5 and 3 or 2
+end
+function F:Segment(root,tip)
+    if self.valid then
+        local dx,dy,dz=tip.x-self.tip.x,tip.y-self.tip.y,tip.z-self.tip.z
+        local distance=math.sqrt(dx*dx+dy*dy+dz*dz)
+        if distance>.015 and distance<3 then
+            self.head=self.head%F.ARC_COUNT+1;local s=self.arcs[self.head]
+            set(s.x,dx/distance,dy/distance,dz/distance)
+            local ax,ay,az=tip.x-root.x,tip.y-root.y,tip.z-root.z
+            local dot=ax*s.x.x+ay*s.x.y+az*s.x.z
+            ax,ay,az=ax-dot*s.x.x,ay-dot*s.x.y,az-dot*s.x.z
+            local length=math.sqrt(ax*ax+ay*ay+az*az)
+            if length>1e-5 then
+                set(s.y,ax/length,ay/length,az/length)
+                set(s.z,s.x.y*s.y.z-s.x.z*s.y.y,s.x.z*s.y.x-s.x.x*s.y.z,s.x.x*s.y.y-s.x.y*s.y.x)
+                s.rot:FromAxes(s.x,s.y,s.z);s.node.rotation=s.rot
+                show(self,s,(tip.x+self.tip.x)*.5,(tip.y+self.tip.y)*.5,(tip.z+self.tip.z)*.5,distance*1.15,self.width,1,(self.color==3 and self.head%3~=0) and 2 or (self.color or 2),self.ttl)
+            end
+        end
+    end
+    set(self.tip,tip.x,tip.y,tip.z);set(self.root,root.x,root.y,root.z);self.valid=true
+end
+-- Subdivide the measured blade rotation, not the gameplay strike sector.
+-- Bounded work even for low FPS; interpolated roots preserve actor translation.
+function F:Blade(root,tip)
+    if not self.slash then return end
+    if not self.valid then self:Segment(root,tip);return end
+    local rx,ry,rz=self.root.x,self.root.y,self.root.z
+    local ax,ay,az=self.tip.x-rx,self.tip.y-ry,self.tip.z-rz
+    local bx,by,bz=tip.x-root.x,tip.y-root.y,tip.z-root.z
+    local al=math.sqrt(ax*ax+ay*ay+az*az);local bl=math.sqrt(bx*bx+by*by+bz*bz)
+    if al<1e-5 or bl<1e-5 then self.valid=false;return end
+    local angle=math.acos(clamp((ax*bx+ay*by+az*bz)/(al*bl),-1,1))
+    -- A fast authored positive XZ revolution can advance >180 degrees at
+    -- 30 Hz. Preserve its direction instead of drawing the shortest reverse arc.
+    local crossY=az*bx-ax*bz
+    if self.spin and angle>math.pi*.5 and crossY>al*bl*.05
+        and math.abs(ay/al)<.6 and math.abs(by/bl)<.6 then angle=math.pi*2-angle end
+    local count=math.min(8,math.max(1,math.ceil(angle/math.rad(15))))
+    local sine=math.sin(angle)
+    for i=1,count do
+        local u=i/count;local a,b=1-u,u
+        if math.abs(sine)>.001 then a=math.sin((1-u)*angle)/sine;b=math.sin(u*angle)/sine end
+        local x,y,z=rx+(root.x-rx)*u,ry+(root.y-ry)*u,rz+(root.z-rz)*u
+        set(self.sampleRoot,x,y,z)
+        set(self.sampleTip,x+ax*a+bx*b,y+ay*a+by*b,z+az*a+bz*b)
+        self:Segment(self.sampleRoot,self.sampleTip)
+    end
+end
+function F:Descent(root,tip)
+    for i,s in ipairs(self.ribbons) do
+        s.node.enabled=self.plunging
+        if self.plunging then
+            local u=(i-1)*.5
+            show(self,s,root.x+(tip.x-root.x)*u,root.y+(tip.y-root.y)*u+.22,root.z+(tip.z-root.z)*u,.035+i*.008,.45+i*.08,.035,i==1 and 1 or 3,1)
+        end
+    end
+end
+local function ageSlot(self,s,dt)
+    if not s.active then return end
+    s.age=s.age+dt
+    if s.age>=s.ttl then s.active=false;s.node.enabled=false;return end
+    local alpha=clamp(1-s.age/s.ttl,0,1)
+    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and s.age<.025 and 1 or s.color][math.floor(alpha*16)+1])
+end
+function F:Update(dt)
+    for i,s in ipairs(self.land) do
+        -- Impact is emitted before Rig.Update. Preserve the first presented
+        -- centre flash instead of consuming it entirely on a 30 Hz frame.
+        local elapsed=dt
+        if i==30 and s.fresh then elapsed=0;s.fresh=false end
+        ageSlot(self,s,elapsed)
+        if s.active then
+            if i==1 then
+                local u=1-(1-s.age/s.ttl)^3;local radius=.3+(s.radius-.3)*u
+                set(s.scale,radius*s.narrow,1,radius);s.node.scale=s.scale
+                set(s.pos,s.centerX+s.forwardX*u*.65,s.pos.y,s.centerZ+s.forwardZ*u*.65);s.node.position=s.pos
+            elseif i>=2 and i<=15 or i>=22 and i<=29 then
+                local dy=s.vy*dt-6*dt*dt
+                set(s.pos,s.pos.x+s.vx*dt,math.max(s.ground,s.pos.y+dy),s.pos.z+s.vz*dt)
+                s.vy=s.vy-12*dt
+                if s.pos.y<=s.ground then s.vx,s.vy,s.vz=0,0,0 end
+                s.node.position=s.pos
+            elseif i==30 then
+                s.frames=s.frames+1
+                s.color=s.frames<=2 and 1 or 2
+                s.mat:SetShaderParameter('MatDiffColor',self.colors[s.color][math.floor((1-s.age/s.ttl)*16)+1])
+                local u=1-s.age/s.ttl
+                set(s.scale,.55*u,.055,.55*u);s.node.scale=s.scale
+            end
+        end
+    end
+    for _,s in ipairs(self.arcs) do ageSlot(self,s,dt) end
+    if not self.plunging then for _,s in ipairs(self.ribbons) do s.node.enabled=false end end
+end
+local function clearPool(pool)
+    for _,s in ipairs(pool) do s.active=false;s.node.enabled=false end
+end
+function F:ClearSword()
+    self.valid,self.plunging,self.slash=false,false,false
+    clearPool(self.arcs);clearPool(self.ribbons)
+end
+function F:Clear()
+    self:ClearSword();clearPool(self.land)
+end
+function F:Dispose()
+    for _,pool in ipairs({self.land,self.arcs,self.ribbons}) do
+        for _,s in ipairs(pool) do s.node:Remove();s.mat:Dispose() end
+    end
+end
+return F

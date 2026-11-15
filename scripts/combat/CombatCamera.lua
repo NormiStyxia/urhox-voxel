@@ -14,7 +14,7 @@ function A:Land() self.landAt,self.landFresh=self.time,true end
 function A:Full() self.fullAt=self.time end
 function A:Cancel()
     self.landAt,self.fullAt=nil,nil
-    self.landFresh=false;self.sprint=0
+    self.landFresh=false;self.sprint=0;self.plungeFov=0
 end
 function A:Update(dt,moves,enabled,shakeEnabled,impactEnabled)
     self.time=self.time+math.max(0,dt)
@@ -36,9 +36,12 @@ function A:Update(dt,moves,enabled,shakeEnabled,impactEnabled)
     local sprint=enabled and impactEnabled~=false and not drawing and self.bow<=0 and (moves.sprintWeight or 0) or 0
     local oldSprint=self.sprint or 0
     self.sprint=sprint>oldSprint and math.min(sprint,oldSprint+dt/.22) or math.max(sprint,oldSprint-dt/.18)
-    if not enabled then self.sprint=0;return out end
+    if not enabled then self.sprint=0;self.plungeFov=0;return out end
     -- Single source: 55*(1-.15*u^2), full 46.75 degrees.
     out.fov=-8.25*self.bow
+    self.plungeFov=moves.plunging and 4*ease((moves.plungeAge or 0)/.35)
+        or math.max(0,(self.plungeFov or 0)-dt*4/.12)
+    if impactEnabled~=false and self.plungeFov>0 then out.fov=math.max(out.fov,self.plungeFov) end
     local id=moves.clip
     if impactEnabled~=false and id and (id:find('sword_light_',1,true) or id=='sword_heavy_release') then
         local clip=require('combat.AnimClips').Clips[id]
@@ -56,7 +59,7 @@ function A:Update(dt,moves,enabled,shakeEnabled,impactEnabled)
         out.fov=math.max(out.fov,1.5*self.sprint)
     end
     if self.landAt and shakeEnabled~=false and impactEnabled~=false then
-        out.impact=Vector3(0,-.03*pulse(self.time-self.landAt,.02,.10),0)
+        out.impact=Vector3(0,-.03*(1-ease((self.time-self.landAt)/.12)),0)
     end
     return out
 end

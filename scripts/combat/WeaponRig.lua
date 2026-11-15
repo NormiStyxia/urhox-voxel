@@ -223,6 +223,7 @@ function Rig:Init(scene,world,controller)
         if weapon=='sword' then ScaleSword(mesh.node,Vec(mesh.blueprint.bounds.min)) end
         Builder.SetOpacity(mesh,0)
     end
+    self.combatFx=require("combat.CombatFx").New(scene,world)
     self:CreateTrail()
     self:BuildSwordImages()
     self:BuildBowImages()
@@ -511,6 +512,7 @@ end
 function Rig:SetTrail(on)
     self.trailEnabled=on==true
     if not self.trailEnabled then
+        self.combatFx:ClearSword()
         -- Decorative silhouettes/charge grains can be disabled independently
         -- of arrival flashes and essential hit confirmation.
         for _,image in ipairs(self.images) do image.node.enabled=false end
@@ -520,6 +522,15 @@ function Rig:SetTrail(on)
 end
 
 --- Borrowed synchronous HitEvent; only scalar state is retained.
+function Rig:BeginSlash(combo,heavy)
+    if self.trailEnabled then self.combatFx:Begin(combo,heavy) end
+end
+function Rig:ImpactFx(position,forward,plunge)
+    if self.pose=='hand' then self.combatFx:Impact(position,forward,plunge) end
+end
+function Rig:SetPlunging(on)
+    self.combatFx.plunging=on==true and self.trailEnabled and self.pose=='hand'
+end
 function Rig:HitImpulse(event)
     if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
     if self.hitGroup~=event.swingId or self.visualClock-self.hitAt>.25 then
@@ -531,6 +542,7 @@ function Rig:HitImpulse(event)
     self.hitWhite=math.max(self.hitWhite,(strong or event.critical or event.killed) and .06 or .04)
     self.hitAngle=math.max(self.hitAngle,strong and 1.5 or .8)
     self.hitSign=event.combo==2 and 1 or -1
+    if self.trailEnabled then self.combatFx:Contact(event.pos) end
     self:UpdateHitImpulse() -- AfterPose runs after Rig.Update; show on contact frame.
     return true
 end
@@ -638,6 +650,7 @@ local function MainAlpha(self,mesh,a)
 end
 
 function Rig:StopCombatVisual()
+    self.combatFx:Clear()
     self:ClearTrail()
     self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
     self.hitGroup,self.contactArc=nil,false
@@ -985,6 +998,7 @@ end
 function Rig:SampleBlade(entry)
     local root=entry.pivot:LocalToWorld(self.bladeRoot)
     local tip=entry.pivot:LocalToWorld(self.bladeTip)
+    if self.visualActive and self.trailEnabled then self.combatFx:Blade(root,tip) end
     local previousRoot,previousTip=self.previousRoot,self.previousTip
     local distance=self.sampleValid and math.max(Distance(root,previousRoot),Distance(tip,previousTip)) or 0
     local bend=(tip.x-root.x)*(previousTip.x-previousRoot.x)
@@ -1161,6 +1175,7 @@ function Rig:Update(dt)
     if self.disposed then return end
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
+    self.combatFx:Update(dt)
     self:UpdateHang(dt)
     -- W2 submits the real hit_on state before Update and performs AfterPose
     -- sweeps afterwards. Never leave its first hit using a mid-flight pivot.
@@ -1196,6 +1211,10 @@ function Rig:Update(dt)
     end
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
+    if self.trailEnabled and self.combatFx.plunging then
+        self.combatFx:Descent(entry.pivot:LocalToWorld(self.bladeRoot),entry.pivot:LocalToWorld(self.bladeTip))
+    end
+    if not self.visualActive then self.combatFx.valid=false end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
         self:DrawBands();if self.trailEnabled then self:UpdateImages(entry,dt) end
@@ -1206,6 +1225,7 @@ end
 function Rig:Dispose()
     if self.disposed then return end
     self.disposed=true
+    self.combatFx:Dispose()
     for _,layers in pairs(self.layers) do for _,layer in ipairs(layers) do DisposeEffect(self,layer) end end
     for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
     DisposeEffect(self,self.bowArrow)

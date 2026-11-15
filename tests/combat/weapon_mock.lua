@@ -183,6 +183,8 @@ local function Material()
     result.Dispose=function(self) assert(not self.disposed); self.disposed=true end
     return result
 end
+rawset(_G,'Material',{new=Material})
+rawset(_G,'cache',{GetResource=function(_,kind,path) assert(kind=='Technique' and path=='Techniques/NoTextureUnlit.xml');return Technique() end})
 function M.World(scene)
     local world={created=0,rebuilds=0,writes=0,removed=0,paletteWrites=0,palette={},volumes={},base=Material()}
     world.GetPaletteMaterial=function(self) return self.base end

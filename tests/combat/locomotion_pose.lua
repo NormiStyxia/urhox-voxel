@@ -75,7 +75,7 @@ S.near(F.PhaseForLegs(0,0,.7),.75)
 print('PASS first run phase fits actual rigid hips at entry amplitude and preserves nearest cycle branch')
 for frame=0,25 do
  local p=A.DebugSample('plunge_land',frame*.01)
- char.bones.root.position=Vector3(0,lift-.08,0)
+ char.bones.root.position=Vector3(0,lift-.14,0)
  for _,name in ipairs({'leg_right','leg_left'}) do
   local e=p[name];char.bones[name].rotation=Quaternion(e[1],e[2],e[3])
  end

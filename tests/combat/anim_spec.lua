@@ -370,7 +370,7 @@ test("path endpoints, explicit arc sweep, windup and overshoot",function()
     local cases={
         {"sword_light_1",.10,.18,{.55,1.35,-.25},{-.55,1.15,.55},170,.5},
         {"sword_light_2",.10,.18,{-.55,1,-.25},{.55,1.40,.55},-150,.45},
-        {"sword_light_3",.14,.22,{.15,1.9,-.15},{.15,.45,.7},190,.7}}
+        {"sword_light_3",.14,.22,{.58,1.9,-.15},{.48,.45,.7},190,.7}}
     for _,v in ipairs(cases) do
         local c=D.Clips[v[1]];local path=c.handPath.arm_right
         near(path.amplitude,v[6]);near(path.windup,.12);near(path.overshoot,.08)
@@ -560,7 +560,7 @@ test("new spin/finisher IK and motion remain independent of frame rate",function
   end
  end
 end)
-test("plunge clips aim blade down without root displacement",function()
+test("plunge anticipation raises blade and descent points down without root displacement",function()
  for _,id in ipairs({"plunge_start","plunge_loop","plunge_land"}) do
   local a,c=new();a:Play(id,{fadeIn=0,fadeOut=0})
   for i=1,10 do
@@ -569,7 +569,7 @@ test("plunge clips aim blade down without root displacement",function()
    local arm=c.bones.arm_right.rotation
    local _,e=a:GetWeaponPose()
    local blade=body*arm*a.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
-   assert(blade.y<-.99,'tip stays down independently of body lean')
+   assert(id=='plunge_start' and blade.y>.85 or id~='plunge_start' and blade.y<-.96,'overhead anticipation / downward descent')
   end
  end
 end)

@@ -183,9 +183,10 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     local onGround = cc.onGround
     local want = dir * target * moveAmount
     if combat and combat.plungeVelocity and not onGround then
-        want=combat.plungeVelocity
+        local plungeVelocity=combat.plungeVelocity
+        want=Vector3(plungeVelocity.x,0,plungeVelocity.z)
         self.vel=want
-        cc:SetLinearVelocity(Vector3(want.x,-18,want.z))
+        cc:SetLinearVelocity(plungeVelocity)
     end
     local k = onGround and (1 - math.exp(-12 * dt)) or (1 - math.exp(-12 * AIR_CONTROL * dt))
     self.vel = self.vel:Lerp(want, k)
