@@ -86,6 +86,7 @@ rawset(_G,'Quaternion',function(pitch,yaw,roll,...)
 end)
 rawset(_G,'DOF_QUALITY_MEDIUM',1);rawset(_G,'BLEND_ADDALPHA',4);rawset(_G,'CULL_NONE',0);rawset(_G,'AMBIENT_COLOR',2);rawset(_G,'LIGHT_POINT',2)
 rawset(_G,'LIGHT_DIRECTIONAL',0);rawset(_G,'TONEMAP_MODE_ACES',1);rawset(_G,'BLOOM_MODE_LEGACY',0)
+rawset(_G,'TU_DIFFUSE',0);rawset(_G,'TU_NORMAL',1)
 rawset(_G,'CascadeParameters',function(a,b,c,d,f,bias,...)
     NoExtra('CascadeParameters',...);for _,v in ipairs({a,b,c,d,f}) do Number(v,'cascade') end
     if bias~=nil then Number(bias,'bias') end;return {a,b,c,d,f}
@@ -118,6 +119,13 @@ local function Wrap(n)
         if e.fail==kind then return nil end
         local c=kind=='CustomGeometry' and StrictGeometry(Mock.CustomGeometry(self,e.geometryOptions)) or {node=self}
         c.kind=kind;c.viewMask=0xffffffff;c.lightMask=0xffffffff;c.zoneMask=0xffffffff
+        if kind=='StaticModel' then
+            function c:SetModel(model,...) NoExtra('StaticModel:SetModel',...);Resource(model,'Model');self.model=model end
+            function c:SetMaterial(index,mat,...)
+                NoExtra('StaticModel:SetMaterial',...);Integer(index,'material index');Resource(mat,'Material')
+                assert(index==0);self.material=mat;return true
+            end
+        end
         if kind=='Camera' then c.projectionOffset=Vector2(0,0) end
         if kind=='Zone' then
             c.ambientSource=0
@@ -163,7 +171,7 @@ local function Wrap(n)
     return n
 end
 local function Boot()
-    Showroom.Exit();e={nodes={},materials={},techniques={},width=844,height=390,setCalls=0}
+    Showroom.Exit();Showroom.SetModelOverride(nil);e={nodes={},materials={},techniques={},width=844,height=390,setCalls=0}
     e.scene=Wrap(Mock.Node('MainScene'));e.scene.components={{kind='Octree'}}
     e.oldCamera={fov=61,projectionOffset={x=.12,y=.2}}
     e.original={scene=e.scene,camera=e.oldCamera};e.viewport=e.original
@@ -192,6 +200,10 @@ local function Boot()
             self[k]=v
         end
         function m:Dispose(...) NoExtra('Material:Dispose',...);assert(self==m and not self.disposed);self.disposed=true end
+        function m:SetTexture(unit,texture,...)
+            NoExtra('Material:SetTexture',...);Integer(unit,'texture unit');Resource(texture,'Texture2D')
+            self.textures=self.textures or {};self.textures[unit]=texture
+        end
         return m
     end})
     rawset(_G,'cache',{GetResource=function(self,kind,path,sendEventOnFailure,...)
@@ -200,10 +212,18 @@ local function Boot()
         if e.fail=='material' then return nil end
         if e.failResource==path then return nil end
         assert(path=='Materials/NomiVoxel.xml' or path=='Techniques/NoTextureUnlit.xml' or path=='Techniques/PBR/PBRNoTexture.xml'
-            or path=='Editor/Textures/Engine/Vignetting.png')
+            or path=='Editor/Textures/Engine/Vignetting.png' or path=='Techniques/PBR/PBRDiffNormal.xml' or path:find('model/',1,true)==1)
+        if kind=='Model' then
+            if e.modelFail then return nil end
+            return {resourceType='Model',boundingBox={min=Vector3(-.09,-.95,-.035),max=Vector3(.09,e.emptyModel and -.95 or .95,.035)},
+                GetNumGeometries=function(self,...) NoExtra('Model:GetNumGeometries',...);Resource(self,'Model');return 1 end,
+                GetGeometry=function(self,index,lod,...) NoExtra('Model:GetGeometry',...);Resource(self,'Model');assert(index==0 and lod==0);return {vertexCount=300,indexCount=600} end}
+        end
+        if kind=='Material' and path:find('model/',1,true)==1 and e.modelMaterialMissing then return nil end
         local resource={name=path,resourceType=kind}
         function resource:Clone(name,...)
             NoExtra('Technique:Clone',...);assert(self==resource and type(name)=='string')
+            if kind=='Material' then return Material:new() end
             local clone={name=name,resourceType='Technique'};e.techniques[#e.techniques+1]=clone
             function clone:Dispose(...) NoExtra('Technique:Dispose',...);assert(self==clone and not self.disposed);self.disposed=true end
             function clone:GetPass(name,...)
@@ -674,3 +694,36 @@ for _,steps in ipairs({0,1,50,250}) do
     Dressing.Dispose(j);r:Remove();Restored(nodes,components)
 end
 print('forge_showroom detail PASS: 5cm high/10cm low, 55k/12-batch bounds, deterministic stone/AO, partial failure, budget, idle no rebuild and all resources reclaimed; MOCK ONLY')
+
+local modelPath='model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.mdl'
+for _,failure in ipairs({'none','model','bounds','material_xml','texture','component'}) do
+    Boot();nodes,components=Live();Showroom.SetModelOverride(modelPath)
+    if failure=='model' then e.modelFail=true
+    elseif failure=='bounds' then e.emptyModel=true
+    elseif failure=='material_xml' then e.modelMaterialMissing=true
+    elseif failure=='texture' then e.failResource='model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_N.png'
+    elseif failure=='component' then e.fail='StaticModel' end
+    assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
+    local static=Shape():GetComponent('StaticModel',true)
+    if failure=='none' or failure=='material_xml' then
+        assert(static and static.model and static.material.textures[TU_DIFFUSE] and static.material.textures[TU_NORMAL])
+        assert(static.viewMask==MASK and static.lightMask==MASK and static.zoneMask==MASK)
+        Mock.Near(Spin().scale.y*1.9,1.7)
+        Showroom.DragBegin();local before=Spin().rotation.eulerAngles.y;Showroom.DragBy(80);Showroom.Update(0)
+        assert(Spin().rotation.eulerAngles.y~=before);Showroom.Home();Showroom.Update(.1)
+        e.width,e.height=390,844;Showroom.SetFocus(.3,.5);Showroom.Update(0);Mock.Near(Spin().scale.y*1.9,1.7)
+        Showroom.SetWeapon(Config('bow'));Finish();assert(not Shape():GetComponent('StaticModel',true),'bow must remain voxel')
+        Showroom.SetWeapon(Config('sword'));Finish();assert(Shape():GetComponent('StaticModel',true))
+        Showroom.SetModelOverride(nil);Finish();assert(not Shape():GetComponent('StaticModel',true),'nil must restore voxel selection')
+    else
+        assert(not static and Shape():GetComponent('CustomGeometry',true),'failed model must fall back to voxel')
+        assert(Showroom.Diagnostic():find('model_test',1,true))
+    end
+    Showroom.Exit();Showroom.Exit();Restored(nodes,components)
+end
+print('forge_showroom model override PASS: strict StaticModel/Model/texture signatures, 1.7m normalization, rotation, resize, bow exclusion, nil disable, failures and cleanup; MOCK ONLY')
+Boot();nodes,components=Live();Showroom.SetModelOverride(modelPath)
+assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'))
+graphics.GetWidth=nil -- fail after model load, before publication transfers ownership
+Showroom.Update(0);assert(Showroom.State()=='failed');Restored(nodes,components)
+print('forge_showroom model pending rollback PASS')

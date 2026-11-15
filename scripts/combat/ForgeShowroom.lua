@@ -23,6 +23,11 @@
 -- fallback. No compute-only local fog or unsupported area lights are required.
 local Builder=require('combat.WeaponBuilder')
 local Dressing=require('combat.ForgeShowroomScene')
+-- Temporary showroom-only comparison; nil restores the voxel sword default.
+local MODEL_TEST='model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.mdl'
+local MODEL_MATERIAL='model/c8d2cfd2bc29455abb72b044deb16d5d/Materials/c8d2cfd2bc29455abb72b044deb16d5d_00_tripo_material_af5190d1-e320-4160-9951-ed50bff7a75e.xml'
+local MODEL_TEXTURE='model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_'
+local modelOverride=MODEL_TEST
 local M={}
 local MASK=0x40000000
 local KEEP=0xffffffff~MASK
@@ -105,14 +110,20 @@ local function CleanupMethod(s,object,key,label,...)
     CleanupFunction(s,label,method,object,...)
 end
 local function Remove(s,node) if node then CleanupMethod(s,node,'Remove','Node:Remove') end end
+local function DisposeMesh(s,mesh)
+    if not mesh then return end
+    if mesh.modelOverride then CleanupMethod(s,mesh.material,'Dispose','Material:Dispose')
+    else CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,mesh) end
+end
 local function Cancel(s)
     if s.job then CleanupFunction(s,'WeaponBuilder.CancelPreview',Builder.CancelPreview,s.job);s.job=nil end
+    if s.pendingModel then DisposeMesh(s,s.pendingModel);s.pendingModel=nil end
     Remove(s,s.pendingRoot);s.pendingRoot=nil;s.pending=nil
 end
 local function Cleanup(s)
     if not s then return end
     Cancel(s)
-    if s.mesh then CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,s.mesh);s.mesh=nil end
+    if s.mesh then DisposeMesh(s,s.mesh);s.mesh=nil end
     if s.weaponMaterial then CleanupMethod(s,s.weaponMaterial,'Dispose','Material:Dispose');s.weaponMaterial=nil end
     -- Attempt every cleanup even if one native handle was already invalidated.
     if s.switched then
@@ -296,8 +307,9 @@ local function Fit(s,bp)
     local lo,hi=bp.bounds.min,bp.bounds.max
     local rawHeight=hi[2]-lo[2]
     assert(rawHeight>0,'weapon height must be positive')
-    local scale=2.05/rawHeight -- display-only; Compile bounds/fingerprint stay untouched
-    local halfY=1.025
+    local height=bp.displayHeight or 2.05
+    local scale=height/rawHeight -- display-only; Compile bounds/fingerprint stay untouched
+    local halfY=height*.5
     local hx,hz=(hi[1]-lo[1])*.5*scale,(hi[3]-lo[3])*.5*scale
     local w=Call(s,'camera',graphics,'GetWidth','graphics:GetWidth')
     local h=Call(s,'camera',graphics,'GetHeight','graphics:GetHeight')
@@ -389,15 +401,82 @@ local function Weapon(s,single)
     local copy={weapon=single.weapon,parts={},colors={}}
     for k,v in pairs(single.parts or {}) do copy.parts[k]=v end
     for k,v in pairs(single.colors or {}) do copy.colors[k]=v end
-    Cancel(s);s.pending=copy;s.buildAge=0;state=BUILDING
+    Cancel(s);s.selection=copy;s.pending=copy;s.buildAge=0;state=BUILDING
 end
 ---@param single table
 function M.SetWeapon(single) Protect('SetWeapon',Weapon,single) end
+
+---@param resPath string? nil disables the model experiment, including subsequent Enter calls
+function M.SetModelOverride(resPath)
+    assert(resPath==nil or type(resPath)=='string','model override must be a resource path or nil')
+    modelOverride=resPath
+    if session and session.selection then M.SetWeapon(session.selection) end
+end
+
+local function PublishWeapon(s,mesh)
+    local b=mesh.blueprint.bounds
+    s.pendingRoot.position=Vector3(-(b.min[1]+b.max[1])*.5,-(b.min[2]+b.max[2])*.5,-(b.min[3]+b.max[3])*.5)
+    Fit(s,mesh.blueprint)
+    DisposeMesh(s,s.mesh);Remove(s,s.meshRoot)
+    s.mesh,s.meshRoot=mesh,s.pendingRoot;s.pendingRoot=nil;s.job=nil;s.pendingModel=nil
+    s.meshRoot.enabled=true;state=READY
+    print('Forge showroom: ready')
+end
+
+-- StaticModel/Model/Material signatures are from their .emmylua definitions.
+-- Imported XML uses UUID textures; explicitly rebind the delivered paths on a
+-- PRIVATE material so Web bundles without UUID resolution still show the skin.
+local function TryModel(s,path)
+    local node,mat
+    local ok,result=pcall(function()
+        local model=cache:GetResource('Model',path);assert(model,'Model resource unavailable: '..path)
+        local b=model.boundingBox;assert(b,'Model.boundingBox unavailable')
+        local lo,hi=b.min,b.max
+        assert(Finite(hi.y-lo.y,0)>0,'Model has empty/invalid bounds')
+        node=s.pendingRoot:CreateChild('ModelTest')
+        local drawable=node:CreateComponent('StaticModel');assert(drawable,'StaticModel unavailable')
+        drawable:SetModel(model);Isolate(s,'model_test',drawable);drawable.castShadows=not s.low
+        local source=cache:GetResource('Material',MODEL_MATERIAL)
+        if source then mat=source:Clone('ForgeModelTest') else
+            mat=Material:new()
+            local tech=cache:GetResource('Technique','Techniques/PBR/PBRDiffNormal.xml')
+            assert(tech,'textured PBR technique unavailable');mat:SetTechnique(0,tech)
+            mat:SetShaderParameter('Metallic',Variant(1));mat:SetShaderParameter('Roughness',Variant(1))
+        end
+        assert(mat,'model material clone unavailable')
+        local diffuse=cache:GetResource('Texture2D',MODEL_TEXTURE..'D.jpg')
+        local normal=cache:GetResource('Texture2D',MODEL_TEXTURE..'N.png')
+        assert(diffuse and normal,'model diffuse/normal texture unavailable')
+        mat:SetTexture(TU_DIFFUSE,diffuse);mat:SetTexture(TU_NORMAL,normal)
+        local count=model:GetNumGeometries();assert(count>0,'Model has no geometry')
+        local verts,tris=0,0
+        for i=0,count-1 do
+            assert(drawable:SetMaterial(i,mat)~=false,'StaticModel:SetMaterial failed')
+            local geometry=model:GetGeometry(i,0)
+            if geometry then verts=verts+geometry.vertexCount;tris=tris+geometry.indexCount/3 end
+        end
+        local mesh={modelOverride=true,material=mat,blueprint={displayHeight=1.7,
+            bounds={min={lo.x,lo.y,lo.z},max={hi.x,hi.y,hi.z}}}}
+        print(('ForgeShowroom: model test loaded verts=%d tris=%d bbox=(%.4f,%.4f,%.4f)-(%.4f,%.4f,%.4f)'):format(
+            verts,tris,lo.x,lo.y,lo.z,hi.x,hi.y,hi.z))
+        return mesh
+    end)
+    if ok then s.pendingModel=result;return result end
+    Remove(s,node)
+    if mat then CleanupMethod(s,mat,'Dispose','Material:Dispose') end
+    print('ForgeShowroom: model test load failed: '..OneLine(result))
+    s.stage,s.api,s.apiType='model_test',path,'resource';ReportFailure(s,'Update',result)
+    return nil
+end
 
 local function BuildStep(s,dt)
     if s.pending then
         local single=s.pending;s.pending=nil
         s.pendingRoot=Call(s,'geometry',s.spin,'CreateChild','Node:CreateChild','PendingWeapon');s.pendingRoot.enabled=false
+        if single.weapon=='sword' and modelOverride then
+            local mesh=TryModel(s,modelOverride)
+            if mesh then PublishWeapon(s,mesh);return end
+        end
         s.job=Check(s,'geometry',Builder,'BeginPreview','WeaponBuilder.BeginPreview')(s.pendingRoot,single)
         return -- Compile and native emission never share one frame
     end
@@ -421,14 +500,7 @@ local function BuildStep(s,dt)
         end
         assert(mesh.geometry:SetMaterial(0,s.weaponMaterial)~=false,'weapon PBR SetMaterial failed')
     end)
-    local b=mesh.blueprint.bounds
-    s.pendingRoot.position=Vector3(-(b.min[1]+b.max[1])*.5,-(b.min[2]+b.max[2])*.5,-(b.min[3]+b.max[3])*.5)
-    Fit(s,mesh.blueprint)
-    if s.mesh then Check(s,'geometry',Builder,'DisposePreview','WeaponBuilder.DisposePreview')(s.mesh) end
-    Remove(s,s.meshRoot)
-    s.mesh,s.meshRoot=mesh,s.pendingRoot;s.pendingRoot=nil;s.job=nil
-    s.meshRoot.enabled=true;state=READY
-    print('Forge showroom: ready')
+    PublishWeapon(s,mesh)
 end
 local function UpdateImpl(s,dt)
     dt=Clamp(Finite(dt,0),0,1)
