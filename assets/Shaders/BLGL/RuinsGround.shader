@@ -245,5 +245,5 @@ void fragment() {
     if (cloud_shadow_strength>0.0 && n.y>0.35) {
         ALBEDO*=mix(vec3(1.0),cloud_illumination(wp),smoothstep(0.35,0.75,n.y));
     }
-    AO=ruins_contact_ao(VERTEX,n,0.0);
+    AO=ruins_contact_ao(VERTEX,n,0.0,CAMERA_POSITION_WORLD);
 }
