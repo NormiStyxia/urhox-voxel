@@ -5,28 +5,9 @@ local A=require('combat.CombatAnim')
 local State=require('combat.CombatState')
 local Particles=require('combat.enemies.EnemyParticles')
 local function near(a,b,tolerance) assert(math.abs(a-b)<(tolerance or 1e-6),a..' ~= '..b) end
-near(Camera.Spring(0),1);near(Camera.Spring(.18),0)
-local low=0
-for i=0,650 do low=math.min(low,Camera.Spring(i/1000)) end
-assert(low<-.028 and low>-.032,'second order spring 3% overshoot')
 local m={charge=0}
-local function sample(fps)
-    local cam=Camera.New();cam:Slide(Vector3.FORWARD)
-    for _=1,fps/10 do cam:Update(1/fps,m,true,true) end
-    return cam.output
-end
-local a,b=sample(30),sample(60)
-near(a.focus.z,b.focus.z);near(a.distance,b.distance);near(a.fov,b.fov)
-local cam=Camera.New();cam:Slide(Vector3.RIGHT)
-local out=cam:Update(0,m,true,true)
-near(out.focus.x,0);near(out.focus.y,0);near(out.focus.z,0)
-out=cam:Update(.05,m,true,true);near(out.fov,.8*Camera.Pulse(.05,.08,.22))
-out=cam:Update(.03,m,true,true);near(out.distance,.12*Camera.Pulse(.08,.10,.22))
-cam:Follow();out=cam:Update(.06,m,true,true);near(out.distance,-.10);near(out.fov,0)
-out=cam:Update(.9,m,true,true);near(out.distance,0);near(out.focus:Length(),0);near(out.fov,0)
-cam:Slide(Vector3.FORWARD);out=cam:Update(.03,m,false,true)
-near(out.distance,0);near(out.focus:Length(),0);near(out.fov,0)
-cam:Cancel();out=cam:Update(.01,m,true,true);near(out.focus:Length(),0)
+local cam=Camera.New()
+local out=cam:Update(.1,m,true,true);near(out.fov,0);near(out.focus:Length(),0)
 local function bow(fps)
     local c=Camera.New();local move={clip='bow_hold',charge=1}
     for _=1,fps/2 do c:Update(1/fps,move,true,true) end
@@ -78,19 +59,7 @@ local n=setmetatable({yaw=12,camYaw=34,camPitch=10,node={worldPosition=Vector3(1
  Update=function(_,dt,target,yaw,pitch)near(yaw,12+180+15);near(pitch,6);near(target.position.x,1)end},
  ApplyCombatOffset=function(_,offset)near(offset:Length(),0)end},{__index=N})
 n:UpdateCombatPreview(.016,1,15);near(n.camYaw,34);near(n.camPitch,10);near(n.camTarget.position.x,4)
-print('PASS core_camera: spring/overshoot/FPS/F3/no drift, bow reset/full-once, real lunge clipping, shared ground streak, F7 orbit preservation')
--- Accepted-only camera impulses; cancellation changes neither health nor input.
-State.Configure{rig=rig};State.Enter();State.FinishTransition();State.Activity(true)
-local safe=false
-local cc=Camera.New()
-local controller=C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,camera=cc,
- position=function()return Vector3.ZERO end,forward=function()return Vector3.FORWARD end,
- slideStart=function()return safe end}
-assert(not controller:Action('dodge',Vector3.RIGHT) and not cc.slideAt)
-safe=true;assert(controller:Action('dodge',Vector3.RIGHT));assert(cc.slideDir.x==1)
-controller:Update(.01,{allowed=true,attackTap=true})
-controller:Update(.21,{allowed=true})
-assert(controller.clip=='sword_light_1' and cc.followAt and not cc.slideAt)
+print('PASS core_camera: idle/F3/no drift, bow reset/full-once, real lunge clipping, shared ground streak, F7 orbit preservation')
 -- Actual Scene rig-event consumer drains once; new Rig owns arrival flash.
 local file=assert(io.open('scripts/ruins/RuinsScene.lua'));local scene=file:read('*a');file:close()
 local code=assert(scene:match('(        if combatRig_%.PopEvents then.-)\n    end\nend'))
@@ -104,7 +73,7 @@ assert(scene:find("Safe('Animation.Params',combatAnim_.SetParam,combatAnim_,'aim
 assert(scene:find('combatRig_:SetBowDraw(p)',1,true))
 local f=assert(io.open('scripts/ruins/RuinsHUD.lua'));local hud=f:read('*a');f:close()
 assert(hud:find('Draw.Rect(vg,x-1,y-1,2,2,c)',1,true),'reticle centre remains fixed while arms contract')
-print('PASS accepted-only slide/follow impulse, Rig arrival-only sound/flash, aimPitch/bow draw ports, reticle centre unchanged')
+print('PASS Rig arrival-only sound/flash, aimPitch/bow draw ports, reticle centre unchanged')
 
 local branch=assert(scene:match('(        if previewAllowed and Press%(KEY_P%) then.-)\n        if previewAllowed and clip.id'))
 local penv={params={},previewAllowed=true,KEY_P=80,Press=function(key)return key==80 end}

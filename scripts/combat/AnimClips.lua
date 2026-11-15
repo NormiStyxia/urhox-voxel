@@ -1,4 +1,4 @@
--- Keys/events: normalized time. Phases/motion: seconds. §18 owns dodge_slide;
+-- Keys/events: normalized time. Phases/motion: seconds;
 -- §14 overrides earlier timing drafts for the remaining combat moves.
 -- weaponType identifies equipment; weapon stores its pose track. The design
 -- example used "weapon" twice; Lua would discard the first value.
@@ -31,10 +31,6 @@
 ---@field continuous boolean|nil Bypass local pose quantization.
 ---@field fadeIn number|nil
 ---@field fadeOut number|nil
----@field cancelAt number|nil Real seconds before this dodge can yield to attack.
----@field cancelBlend number|nil
----@field directional boolean|nil Snapshot params.moveX/moveZ in character-local space.
----@field bowKeys table<string, table[]>|nil Arm variant selected by params.bow=1.
 ---@field lean table[]|nil Directional blend envelope, normalized time.
 ---@field deprecated boolean|nil
 ---@field replacement string|nil
@@ -42,10 +38,6 @@
 ---@field bladePath table|nil Desired +Y blade direction in body space.
 ---@field legacyKeys table<string, table[]>|nil Pre-path poses for params.legacyPose=1.
 ---@field aimFacing boolean|nil Bow aim is relative to W2 facing, not torso lean.
----@field balanceKeys table<string, table[]>|nil Unarmed slide balance (weaponInHand=0).
----@field finalDirectional boolean|nil R9 stores final forward Euler angles, without double offsets.
----@field runKeys table<string, table[]>|nil Pending-run slide tail; same event/motion clocks.
----@field runBalanceKeys table<string, table[]>|nil Unarmed pending-run arm tail.
 ---@field locomotion boolean|nil Pure pose, driven by real displacement gaitPhase.
 ---@field smoothBlend boolean|nil Smooth natural entry/exit, never retime events.
 
@@ -53,10 +45,8 @@
 ---@field Layer table<string, number>
 ---@field Order string[]
 ---@field Clips table<string, CombatClip>
----@field DefaultDodge string
 local C = {}
-C.Layer = { STANCE=1, LOCOMOTION=2, DRAW=3, ATTACK=4, DODGE=5, HIT=6, KNOCKDOWN=7, DEATH=8 }
-C.DefaultDodge="dodge_slide"
+C.Layer = { STANCE=1, LOCOMOTION=2, DRAW=3, ATTACK=4, HIT=6, KNOCKDOWN=7, DEATH=8 }
 C.Order = {}
 ---@type table<string, CombatClip>
 C.Clips = {}
@@ -229,72 +219,55 @@ attack({ -- 符号待 Web 校准
     {{-28,0,-5},{-25,0,-5},{-15,0,0},{-20,-15,0},{-12,0,0},{0,0,0}},
     {{{0,0,0},{-25,0,10}},{{0,0,-.04},{-30,0,25}},{{0,0,0},{-15,0,30}},
      {{0,0,.08},{25,0,-15}},{{0,0,.05},{38,0,-25}},{{0,0,0},{0,0,0}}})
--- R9 final source: six real rigid bones; body/legs are siblings, no knees.
-local slideTimes={0,.02,.06,.12,.22,.26,.30,.32}
-local function slideTrack(poses,arms)
-    local out={}
-    for i,base in ipairs(slideTimes) do
-        local at=base
-        if arms and i>1 and i<#slideTimes then at=math.min(.32,base+.015) end
-        out[i]={at/.32,poses[i],"smoothStep"}
-    end
-    return out
-end
-local slideBody={{4,0,0},{14,0,0},{24,2,0},{24,1,0},{18,0,0},{10,0,0},{6,0,0},{4,0,0}}
-local slideHead={{-1,0,0},{-10,0,0},{-18,-1,0},{-18,-.5,0},{-13,0,0},{-7,0,0},{-3,0,0},{-1,0,0}}
-local slideRight={{0,0,0},{10,0,0},{18,0,0},{16,0,0},{8,0,0},{-10,0,0},{-4,0,0},{0,0,0}}
-local slideLeft={{0,0,0},{-14,0,0},{-22,0,0},{-20,0,0},{-12,0,0},{10,0,0},{4,0,0},{0,0,0}}
-local balanceR={{0,0,8},{8,0,10},{20,0,12},{24,0,12},{12,0,10},{-6,0,8},{0,0,8},{0,0,8}}
-local balanceL={{0,0,-8},{-8,0,-10},{-20,0,-12},{-18,0,-12},{-12,0,-10},{6,0,-8},{0,0,-8},{0,0,-8}}
-add { -- 符号待 Web 校准；root target is corrected against actual sole contacts.
-    id="dodge_slide",dur=.32,layer=L.DODGE,realTime=true,continuous=true,directional=true,finalDirectional=true,
-    fadeIn=.03,fadeOut=.03,smoothBlend=true,cancelAt=.22,cancelBlend=.04,
-    phases=phases(.32,.04,.20),
-    keys={body=slideTrack(slideBody),head=slideTrack(slideHead),
-        leg_right=slideTrack(slideRight),leg_left=slideTrack(slideLeft),
-        arm_right=slideTrack({{-40,0,8},{-40,0,10},{-32,0,12},{-28,0,12},{-32,0,10},{-36,0,10},{-40,0,8},{-40,0,8}},true),
-        arm_left=slideTrack({{0,0,-8},{-5.6,0,-10},{-14,0,-12},{-12.6,0,-12},{-8.4,0,-10},{4.2,0,-8},{0,0,-8},{0,0,-8}},true)},
-    balanceKeys={arm_right=slideTrack(balanceR,true),arm_left=slideTrack(balanceL,true)},
-    bowKeys={arm_left=slideTrack({{-55,0,-8},{-55,0,-10},{-60,0,-12},{-60,0,-12},{-58,0,-10},{-55,0,-8},{-55,0,-8},{-55,0,-8}},true),
-        arm_right=slideTrack({{-15,0,8},{-18,0,10},{-25,0,12},{-25,0,12},{-20,0,10},{-18,0,8},{-15,0,8},{-15,0,8}},true)},
-    root={{0,0},{.02/.32,-.01},{.06/.32,-.02},{.12/.32,-.02},{.22/.32,-.01},{.26/.32,-.01},{.30/.32,0},{1,0}},
-    motion={{t0=0,t1=.06,forward=.72},{t0=.06,t1=.16,forward=.90},
-        {t0=.16,t1=.26,forward=.50},{t0=.26,t1=.30,forward=.08}},
-    events={{t=0,"iframe_on",clock="real"},{t=0,"dust_start",clock="real"},{t=0,"dust_streak",clock="real"},
-        {t=.04/.32,"afterimage_on",clock="real"},{t=.16/.32,"afterimage_off",clock="real"},
-        {t=.20/.32,"iframe_off",clock="real"},{t=.22/.32,"cancel_open",clock="real"},
-        {t=.26/.32,"dust_stop",clock="real"},{t=.30/.32,"move_end",clock="real"},{t=1,"cancel_close",clock="real"}},
+-- Five-stage catalogue: gameplay and presentation read these same rows.
+C.Combo={
+    {id="sword_light_1",damage=1,poise=1,radius=1.8,angle=120,offset=0,profile="light_1",tier="light",knockback=.1,pitch=1},
+    {id="sword_light_2",damage=1,poise=1,radius=1.8,angle=120,offset=0,profile="light_2",tier="light",knockback=.1,pitch=1.04},
+    {id="sword_light_3",damage=1,poise=1,radius=1.8,angle=100,offset=.4,profile="third",tier="third",knockback=.55,pitch=.96},
+    {id="sword_light_4",damage=.85,poise=1.6,radius=2.1,angle=340,offset=0,profile="spin",tier="third",knockback=.3,pitch=1.12},
+    {id="sword_light_5",damage=1.9,poise=2.3,radius=2.2,angle=150,offset=.4,profile="finisher",tier="heavy",knockback=.7,pitch=.82,cooldown=.35,impactRing=true},
 }
-local slide=C.Clips.dodge_slide
-slide.runKeys={}
-for name,track in pairs(slide.keys) do
-    local copy={};for i,kf in ipairs(track) do copy[i]={kf[1],{kf[2][1],kf[2][2],kf[2][3]},kf[3]} end
-    slide.runKeys[name]=copy
+C.ComboLength=#C.Combo
+for stage=4,C.ComboLength do
+    local finish=stage==C.ComboLength
+    local dur=finish and .69 or .58
+    local on,off=finish and .22 or .16,finish and .34 or .30
+    -- 符号待 Web 校准；controller heading is never animated by the torso track.
+    attack({id=C.Combo[stage].id,dur=dur,layer=L.ATTACK,weaponType="sword",speedStat="speed",
+        phases=phases(dur,on,off),events=hits(on/dur,off/dur,finish and 1 or .34/dur),
+        root={{0,0},{on*.6/dur,-.04},{on/dur,.02},{off/dur,-.10},{(off+.05)/dur,-.10},{1,0}}},
+        {0,on*.6,on,(on+off)*.5,off+.05,dur},
+        finish and {{6,0,0},{-8,24,0},{10,10,0},{28,-12,0},{24,-18,0},{6,0,0}}
+            or {{6,0,0},{2,45,0},{10,25,0},{12,-35,0},{8,-48,0},{6,0,0}},
+        {{-65,0,12},{-145,25,45},{-110,15,40},{-45,-20,35},{-20,-30,25},{-65,0,12}},
+        {{0,0,-8},{-20,0,-15},{-40,0,-22},{-25,0,-30},{-10,0,-15},{0,0,-8}},
+        {{0,0,0},{18,0,0},{-25,0,0},{-30,0,0},{-15,0,0},{0,0,0}},
+        {{{0,0,0},{0,0,0}},{{0,0,0},{-20,0,15}},{{0,0,0},{-10,0,20}},
+         {{0,0,0},{20,0,-10}},{{0,0,0},{25,0,-15}},{{0,0,0},{0,0,0}}})
 end
-local function tail(name,a,b)
-    local track=slide.runKeys[name]
-    track[6][2],track[7][2],track[8][2]=a,b,b
-end
-tail('body',{19,0,0},{18,0,0});tail('head',{-14,0,0},{-13,0,0})
-tail('leg_right',{8,0,0},{18,0,0});tail('leg_left',{-14,0,0},{-18,0,0})
-slide.runBalanceKeys={arm_right=slideTrack({balanceR[1],balanceR[2],balanceR[3],balanceR[4],balanceR[5],{16,0,10},{20,0,10},{20,0,10}},true),
-    arm_left=slideTrack({balanceL[1],balanceL[2],balanceL[3],balanceL[4],balanceL[5],{-14,0,-10},{-20,0,-10},{-20,0,-10}},true)}
+-- 符号待 Web 校准；air clips supply pose only, physical descent belongs to CC.
+add {id="plunge_start",dur=.12,layer=L.ATTACK,weaponType="sword",continuous=true,
+    keys={body=k({6,0,0},{18,0,0},{30,0,0},{30,0,0}),head=k({3,0,0},{-3,0,0},{-10,0,0},{-10,0,0}),
+        arm_right=k({-65,0,12},{-50,0,20},{-20,0,8},{-20,0,8}),arm_left=k({0,0,-8},{-30,0,-20},{-50,0,-25},{-50,0,-25}),
+        leg_right=k({0,0,0},{15,0,0},{25,0,0},{25,0,0}),leg_left=k({0,0,0},{-10,0,0},{-20,0,0},{-20,0,0})}}
+add { -- 符号待 Web 校准
+    id="plunge_loop",dur=.5,layer=L.ATTACK,weaponType="sword",continuous=true,loop=true,
+    keys={body=k({30,0,0},{30,0,0},{30,0,0},{30,0,0}),head=k({-10,0,0},{-10,0,0},{-10,0,0},{-10,0,0}),
+        arm_right=k({-20,0,8},{-20,0,8},{-20,0,8},{-20,0,8}),arm_left=k({-50,0,-25},{-50,0,-25},{-50,0,-25},{-50,0,-25}),
+        leg_right=k({25,0,0},{25,0,0},{25,0,0},{25,0,0}),leg_left=k({-20,0,0},{-20,0,0},{-20,0,0},{-20,0,0})}}
+add { -- 符号待 Web 校准
+    id="plunge_land",dur=.25,layer=L.ATTACK,weaponType="sword",continuous=true,
+    phases=phases(.25,0,.04),events=hits(0,.04/.25,1),
+    keys={body=k({30,0,0},{38,0,0},{20,0,0},{6,0,0}),head=k({-10,0,0},{-14,0,0},{-8,0,0},{3,0,0}),
+        arm_right=k({-20,0,8},{-10,0,12},{-35,0,12},{-65,0,12}),arm_left=k({-50,0,-25},{-35,0,-30},{-20,0,-15},{0,0,-8}),
+        leg_right=k({25,0,0},{16,0,0},{6,0,0},{0,0,0}),leg_left=k({-20,0,0},{-16,0,0},{-6,0,0},{0,0,0})},
+    root={{0,-.04},{.2,-.08},{.6,-.04},{1,0}}}
 add { -- 符号待 Web 校准；phase follows actual metres, no horizontal root motion.
     id="sprint_loop",dur=.38,layer=L.LOCOMOTION,loop=true,realTime=true,continuous=true,locomotion=true,
     fadeIn=.04,fadeOut=.06,keys={body=k({14,0,0},{14,0,0},{14,0,0},{14,0,0}),
         head=k({-10,0,0},{-10,0,0},{-10,0,0},{-10,0,0}),
         arm_right=k({0,0,8},{0,0,8},{0,0,8},{0,0,8}),arm_left=k({0,0,-8},{0,0,-8},{0,0,-8},{0,0,-8}),
         leg_right=k({0,0,0},{0,0,0},{0,0,0},{0,0,0}),leg_left=k({0,0,0},{0,0,0},{0,0,0},{0,0,0})}}
-add { -- 符号待 Web 校准
-    id="dodge_roll",dur=.45,layer=L.DODGE,phases=phases(.45,0,.25),deprecated=true,replacement="dodge_slide",
-    keys={body={{0,{6,0,0}},{.08,{22,0,0},"inQuad"},{.18,{65,0,0},"inQuad"},{.38,{190,0,0}},{.25/.45,{330,0,0},"outQuad"},{1,{366,0,0},"outQuad"}},
-        arm_right=k({0,0,8},{-60,0,20},{-45,0,15},{0,0,8},.18,.55),
-        arm_left=k({0,0,-8},{-60,0,-20},{-45,0,-15},{0,0,-8},.18,.55),
-        leg_right=k({0,0,0},{-70,0,0},{-55,0,0},{0,0,0},.18,.55),
-        leg_left=k({0,0,0},{-60,0,0},{-40,0,0},{0,0,0},.18,.55)},
-    root={{0,-.04},{.18,-.28},{.55,-.28},{1,0}},motion={{t0=0,t1=.315,forward=2.6*.85},{t0=.315,t1=.45,forward=2.6*.15}},
-    events={{t=0,"iframe_on",clock="real"},{t=.25/.45,"iframe_off",clock="real"}},
-}
 add { -- 符号待 Web 校准
     id="bow_draw",dur=.30,layer=L.DRAW,weaponType="bow",
     keys={body=k({6,0,0},{6,15,0},{6,35,0},{6,35,0},.3,.8),
@@ -446,12 +419,14 @@ local function preservePose(c)
         c.keys[name]=copy
     end
 end
-for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release","sword_heavy_charge"}) do
+for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release","sword_heavy_charge"}) do
     preservePose(C.Clips[id])
 end
 pathAttack("sword_light_1",{.55,1.35,-.25},{-.55,1.15,.55},170,"xz",.14,.18,.50)
 pathAttack("sword_light_2",{-.55,1,-.25},{.55,1.40,.55},-150,"xz",.14,.18,.45)
 pathAttack("sword_light_3",{.15,1.9,-.15},{.15,.45,.7},190,"yz",.18,.22,.70)
+pathAttack("sword_light_4",{.65,1.2,.05},{.62,1.18,-.12},340,"xz",.23,.30,.55)
+pathAttack("sword_light_5",{.18,2.0,-.18},{.14,.35,.75},200,"yz",.28,.34,1.0)
 C.Clips.sword_light_1.keys.body[4][2][2]=-45
 C.Clips.sword_light_1.keys.body[5][2][2]=-49
 C.Clips.sword_light_2.keys.body[4][2][2]=40
@@ -485,7 +460,7 @@ heavy.continuous=true
 -- 符号待 Web 校准
 local heavyYaw={40,55,8,-35,-45,0}
 for i,yaw in ipairs(heavyYaw) do heavy.keys.body[i][2][2]=yaw end
-for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
+for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release"}) do
     local c=C.Clips[id]
     c.keys.leg_right={}
     for i,key in ipairs(c.keys.leg_left) do
@@ -498,6 +473,14 @@ for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy
 end
 C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
     bez(0,1,{.35,1.05,.30},{.30,1.55,-.20},{.65,1.45,-.35},"inQuad")}}}
+
+for _,id in ipairs({"plunge_start","plunge_loop","plunge_land"}) do
+    local c=C.Clips[id]
+    local start=id=="plunge_start" and {.35,1.05,.30} or {.20,.75,.38}
+    local finish=id=="plunge_land" and {.35,1.05,.30} or {.20,.75,.38}
+    c.handPath={arm_right={space="body_feet",segments={bez(0,1,start,finish,{.30,.90,.48},"outQuad")}}}
+    c.bladePath={mode="fixed",direction={0,-1,.08},side="arm_right"}
+end
 
 -- Keep authored legacy poses available, while the bow faces forward rather
 -- than sideways. Single rigid right arm aims toward chin; no elbow is invented.

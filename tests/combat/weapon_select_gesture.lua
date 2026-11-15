@@ -87,9 +87,9 @@ assert(gesture:Open(false));gesture:Apply(.2)
 moves:ApplyHit{dmg=10,dir=Vector3(1,0,0)}
 assert(not gesture:IsOpen() and gesture.weight==0 and moves.clip=='hit_light','hit immediately owns pose')
 wheel.blocked=false;local calls=wheel.forced;gesture:ForceClose('stop');assert(wheel.forced==calls+1,'inactive close clears stale UI release guard')
--- The first open cannot bypass the authored lock on a strike/dodge.
+-- The first open cannot bypass the authored lock on a strike/hit.
 moves:Cancel('test');moves:Play('sword_light_1');assert(not gesture:Open(false) and moves.clip=='sword_light_1')
-moves:Cancel('test');moves:Play('dodge_slide');assert(not gesture:Open(false))
+moves:Cancel('test');moves:Play('hit_light');assert(not gesture:Open(false))
 moves:Cancel('test');moves:Play('bow_draw');assert(gesture:Open(false) and moves.charge==0 and not moves.pendingFire,'selection cancels bow charge, never fires')
 gesture:ForceClose('test')
 -- Existing Swap() toggles; targeted invalid/same selections make no state mutation.

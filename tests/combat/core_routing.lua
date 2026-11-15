@@ -121,10 +121,10 @@ assert(source:find('combatEnemies_:GetParticlePool()',1,true))
 assert(not source:find('combatParticles_:Release',1,true),'borrower must not release owner pool reference')
 local rigStart=assert(source:find('local offset,euler=combatAnim_:GetWeaponPose()',1,true))
 local swing=assert(source:find('combatRig_:SetSwing(offset,euler)',rigStart,true))
-local sample=assert(source:find('combatRig_:GetAfterimagePose()',rigStart,true))
+local sample=assert(source:find('combatRig_:SetAfterimages(',rigStart,true))
 local update=assert(source:find("Safe('Rig.Update',combatRig_.Update,combatRig_,dt)",rigStart,true))
 assert(swing<sample and sample<update,'SetSwing this frame before world pose sample, then advance Rig once')
-print('PASS no duplicate enemy particles, player/wall shared pool table port, borrower cleanup, current-frame slide snapshot order')
+print('PASS no duplicate enemy particles, player/wall shared pool table port, borrower cleanup, animation afterimage consumer order')
 
 local exclusionBody=assert(source:match('(local function IsCombatVisualVolume.-)\nend'))..'\nend\nreturn IsCombatVisualVolume'
 local volumes={{},{},{},{},{},{},{}}
@@ -168,10 +168,10 @@ assert(queued==0 and audioMock.readCount==1,'New schedules first swing before ol
 warmup(.02)
 assert(queued==1 and audioMock.readCount==2,'two-second hook is idempotent while priority preload already runs')
 local loaded,total=Audio.PreloadProgress()
-assert(loaded==1 and total==38 and not Audio.IsReady(),'second value is total, not missing')
+assert(loaded==1 and total==36 and not Audio.IsReady(),'second value is total, not missing')
 local before=audioMock.readCount
 local n,t=Audio.Preload() -- existing enter/draw call remains idempotent and performs zero IO
-assert(n==1 and t==38 and audioMock.readCount==before)
+assert(n==1 and t==36 and audioMock.readCount==before)
 for _=1,total*2+5 do
     before=audioMock.readCount;warmup(.016)
     assert(audioMock.readCount-before<=1,'Scene never batches resource loads')

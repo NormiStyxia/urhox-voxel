@@ -4,12 +4,12 @@ local M = { enabled = false, revision = 0 }
 local held, pressed = {}, {}
 local forward, right, lookX, lookY = 0, 0, 0, 0
 local detected, override = false, nil
-local padHeld,padPressed=false,false
+local padHeld=false
 
 function M.IsEnabled() return M.enabled end
 function M.Clear()
     held, pressed = {}, {}
-    padHeld,padPressed=false,false
+    padHeld=false
     forward, right, lookX, lookY = 0, 0, 0, 0
     M.revision = M.revision + 1
 end
@@ -65,22 +65,15 @@ function M.ConsumeLook()
 end
 -- Logical gamepad action port; binding selection belongs to the controller
 -- adapter. No unverified PS/Xbox button number is silently assumed.
-function M.SetGamepadEvade(down)
-    if down and not padHeld then padPressed=true end
-    padHeld=down==true
-end
-function M.SampleEvade(out,keyPressed,keyHeld)
-    local touchPress=M.Press('evadeRun')
-    local legacyPress=M.Press('dodge') -- existing combat button/callers
-    out.evadePressed=keyPressed or touchPress or legacyPress or padPressed
-    out.evadeHeld=keyHeld or M.Down('evadeRun') or M.Down('dodge') or padHeld
+function M.SetGamepadRun(down) padHeld=down==true end
+function M.SampleRun(out,keyHeld)
+    out.runIntent=keyHeld or M.Down('run') or M.Down('runIntent') or padHeld
     out.inputRevision=M.revision
-    padPressed=false
     return out
 end
 local function Actions(key)
     if key == KEY_SPACE then return 'jump', 'ascend' end
-    if key == KEY_SHIFT then return 'dash' end -- foot runIntent/evadeRun are not keyboard Shift
+    if key == KEY_SHIFT then return 'dash' end -- foot runIntent/run are not keyboard Shift
     if key == KEY_F then return 'mount', 'dismount' end
     if key == KEY_E then return 'freeze' end
     if key == KEY_Q then return 'rewind' end

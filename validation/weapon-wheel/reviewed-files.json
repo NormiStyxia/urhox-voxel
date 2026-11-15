@@ -1,0 +1,10 @@
+{
+  "scripts/ui/WeaponWheel.lua": "1d4c7d21f9eb426abce63e19dec9b9b1be7daf7e89e8bd34b1172f04e35ba894",
+  "scripts/combat/WeaponSelectGesture.lua": "24171d980882801c651983d0fe7839b89c9c306a1f6f67baa9d70091b857cd94",
+  "scripts/combat/CombatMoves.lua": "d0cb1f8f4ab9800fc21c5e17f908c2e4813053c222ab25bcccc2ea285f69c4ba",
+  "scripts/ruins/RuinsScene.lua": "1b7eb1764ba0a30cb4d70ba4621e7a3466e6da8f6c1a56a000baa9f96a682c51",
+  "scripts/ruins/RuinsHUD.lua": "db9bd559fe58b88efd9ba523e1a0134419cc3951d0a24aa6f31930557e0ca810",
+  "scripts/ui/TouchControls.lua": "c9027c56fd69e4ca0e58c0a3fe97e47266f3b64ae8b645bdbb02f2e582262dad",
+  "tests/combat/weapon_wheel.lua": "785760d8ba2d6ae901f7f4983fd58d7046569c18f207cb407337f2bfb0bec505",
+  "tests/combat/weapon_select_gesture.lua": "ec190280f208956ba30ab98bc7396f76a57efadc987d9a63cf0ab88ea56d82df"
+}

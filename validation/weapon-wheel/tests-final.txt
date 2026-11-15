@@ -1,0 +1,6 @@
+BASELINE_FAILURE tests/combat/core_motion.lua [string "<python>"]:71: assertion failed!
+stack traceback:
+	[string "<python>"]:71: in main chunk
+	[C]: in function 'assert'
+RESULT 38 PASS 37
+PARSE PASS 6

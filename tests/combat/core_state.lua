@@ -17,7 +17,7 @@ eq(State.Get(),'EXPLORE');eq(State.CanUseTime(),true);eq(State.Glow(),1);eq(rig.
 State.Enter('manual')
 eq(State.Get(),'COMBAT_IDLE');eq(State.CanUseTime(),false);eq(State.Glow(),0);eq(rig.pose,'back')
 eq(State.Activity(),false) -- draw transition cannot be bypassed by ordinary attack
-eq(State.Activity(true),true) -- dodge is the explicit cancellation exception
+eq(State.Activity(true),true) -- attack is the explicit cancellation exception
 eq(rig.pose,'hand');eq(State.Get(),'COMBAT_ACTIVE')
 State.Update(.39);eq(State.Get(),'COMBAT_ACTIVE')
 State.Update(.02);eq(State.Get(),'COMBAT_IDLE');eq(rig.pose,'back')
@@ -55,7 +55,7 @@ State.Stop();eq(State.Get(),'EXPLORE');eq(rig.pose,'hidden')
 State.Configure{rig=rig,aggro=function() return true end}
 State.OnEnemyAggro('enemy');eq(State.Exit('manual'),false);eq(State.InCombat(),true)
 State.SetMounted(true);eq(State.InCombat(),false)
-print('PASS core_state: visibility, draw/dodge gate, 0.4s recovery grace/back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation')
+print('PASS core_state: visibility, draw/attack gate, 0.4s recovery grace/back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation')
 local logs={}
 State.Configure{log=function(line) logs[#logs+1]=line end}
 State.Enter('manual');State.Enter('manual')

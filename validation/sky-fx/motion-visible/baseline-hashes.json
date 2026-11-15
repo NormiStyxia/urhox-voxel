@@ -1,0 +1,5 @@
+{
+  "scripts/ruins/SkyClouds.lua": "71308108b91f69672af0040c463cff7e0e4ccc89be2c05b76915f8628513ce11",
+  "scripts/ruins/SkyAtmosphere.lua": "4c8e071c6a253d7248c7238784ce77f063749bb01e87bfceec7a91b9b6b9d84a",
+  "assets/Shaders/BLGL/RuinsCloud.shader": "0fc41a798d423918b4132697cf3fba107e94213d06d8d68891103d7353957bd8"
+}

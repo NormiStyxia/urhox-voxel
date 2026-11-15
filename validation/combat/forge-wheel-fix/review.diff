@@ -1,0 +1,567 @@
+diff --git a/scripts/ruins/RuinsHUD.lua b/scripts/ruins/RuinsHUD.lua
+index ed0efc0..6973b32 100644
+--- a/scripts/ruins/RuinsHUD.lua
++++ b/scripts/ruins/RuinsHUD.lua
+@@ -7,6 +7,20 @@ local Controls=require('ui.TouchControls')
+ local CombatHUD=require('ui.CombatHUD')
+ local CombatState=require('combat.CombatState')
+ local M={}
++-- Forge owns the visibility signal; the global survives module-cache key differences.
++local forgeHiddenLogged=false
++local forgeRead
++function M.SetForgeVisibility(reader) forgeRead=reader end
++local function ForgeHidden()
++    local forge=package.loaded['ui.ForgePanel']
++    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
++        or (forgeRead and forgeRead()==true)
++        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
++    if hidden then
++        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=RuinsHUD)');forgeHiddenLogged=true end
++    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
++    return hidden
++end
+ local ready=false
+ local EMPTY={}
+ local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}
+@@ -146,6 +160,7 @@ function Layer:Update(dt)
+     if input:GetKeyPress(KEY_H) and not Touch.IsEnabled() then help=not help end
+ end
+ local function RenderHUD(self,vg)
++    if ForgeHidden() then return end
+     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
+     local w,h,s=Draw.Metrics()
+     local touch=Touch.IsEnabled()
+@@ -238,8 +253,7 @@ local function RenderHUD(self,vg)
+     Draw.Finish(vg)
+ end
+ function Layer:Render(vg)
+-    local forge=package.loaded['ui.ForgePanel']
+-    if forge and forge.HudHidden and forge.HudHidden() then return end
++    if ForgeHidden() then return end
+     local depth=Draw.Depth(vg)
+     CombatState.Isolated('HUD.Render',CombatState.PerfCall,'hudRebuild',RenderHUD,self,vg)
+     Draw.Unwind(vg,depth)
+diff --git a/scripts/ruins/RuinsScene.lua b/scripts/ruins/RuinsScene.lua
+index be6df76..c2c030f 100644
+--- a/scripts/ruins/RuinsScene.lua
++++ b/scripts/ruins/RuinsScene.lua
+@@ -522,8 +522,16 @@ end
+ local function OpenForge()
+     if weaponGesture_ then weaponGesture_:ForceClose('forge') end
+     if not CanOpenForge() then caster_:Say('请在安全地面、脱离警戒后锻造',1.2); return end
++    -- Bind the exact live module's read-only getter; no package.loaded key or
++    -- separately maintained HUD state is required for the primary route.
++    HUD.SetForgeVisibility(ForgePanel.HudHidden); CombatHUD.SetForgeVisibility(ForgePanel.HudHidden)
++    TouchControls.SetForgeVisibility(ForgePanel.HudHidden); PerformanceHUD.SetForgeVisibility(ForgePanel.HudHidden)
+     ForgePanel.Open({rig=combatRig_,canOpen=CanOpenForge,
+         onOpen=function()
++            -- Once per opening: distinguish a stale/missing module cache from a
++            -- phase issue in Web logs, without probing or printing each frame.
++            print('Forge: HUD lookup cachedSame='..tostring(package.loaded['ui.ForgePanel']==ForgePanel)
++                ..' getter='..tostring(type(ForgePanel.HudHidden)))
+             pointer:Release('forge'); pointer:SetBlocked(true)
+             TouchControls.Cancel(); drag.buttons=0
+             caster_.charging,caster_.charge=false,0
+@@ -640,13 +648,16 @@ local function StartCombat()
+         end,
+         takeInput=function()
+             combatInputBlocked=true
+-            TouchControls.Cancel(); pointer:SetBlocked(true); drag.buttons=0
++            -- WeaponWheel's gameplay gates own input without releasing pointer lock.
++            TouchControls.Cancel(); drag.buttons=0
++            pointer.attackArmed,pointer.skipLook=false,true
+             caster_.charging,caster_.charge,caster_.castAnim=false,0,0
+         end,
+         releaseInput=function()
+             combatInputBlocked=true; drag.buttons=0
+             TouchControls.Cancel()
+             pointer:SetBlocked(M.debugOn==true or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or voidInputBlocked)
++            pointer.attackArmed,pointer.skipLook=false,true
+             if input.focus and not input.minimized then pointer:Resume() end
+         end})
+     local tailMaterial=Material:new()
+@@ -753,7 +764,7 @@ local function AttachTouchControls()
+     PerformanceHUD.Attach(HUD.root)
+     SettingsMenu.Attach(HUD.root,function(blocked)
+         if blocked and weaponGesture_ then weaponGesture_:ForceClose('settings') end
+-        pointer:SetBlocked(blocked or M.debugOn==true or WeaponWheel.IsBlocked())
++        pointer:SetBlocked(blocked or M.debugOn==true)
+         TouchControls.Cancel()
+         drag.buttons=0
+         caster_.charging,caster_.charge=false,0
+@@ -1584,7 +1595,8 @@ function Ruins_HandleUpdate(eventType, eventData)
+     if TouchInput.IsEnabled() and not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked() then nomi_:Look(tx*.14,ty*.12,combatLookScale_) end
+     if M.DEBUG_PANEL and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_F10) then M.ToggleDebugPanel() end
+     if not WeaponWheel.IsBlocked() and not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_TAB) then farView = not farView end
+-    if not WeaponWheel.IsBlocked() and not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
++    if not WeaponWheel.IsBlocked() and not (CombatState.InCombat() and Down(KEY_Q))
++        and not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
+         local mm = input.mouseMove
+         if animPreview_.index>0 then
+             animPreview_.orbit=Clamp((animPreview_.orbit or 0)+mm.x*.12,-25,25)
+diff --git a/scripts/ui/CombatHUD.lua b/scripts/ui/CombatHUD.lua
+index d4bf863..7bbd5a0 100644
+--- a/scripts/ui/CombatHUD.lua
++++ b/scripts/ui/CombatHUD.lua
+@@ -1,6 +1,20 @@
+ -- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
+ local Draw=require('ui.PixelDraw')
+ local H={}
++-- Forge owns the visibility signal; the global survives module-cache key differences.
++local forgeHiddenLogged=false
++local forgeRead
++function H.SetForgeVisibility(reader) forgeRead=reader end
++local function ForgeHidden()
++    local forge=package.loaded['ui.ForgePanel']
++    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
++        or (forgeRead and forgeRead()==true)
++        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
++    if hidden then
++        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=CombatHUD)');forgeHiddenLogged=true end
++    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
++    return hidden
++end
+ H.BOW_PREDICTION=true -- independently switchable; never changes actual shot direction
+ local bowPoint={visible=false,x=0,y=0}
+ local Moves=require('combat.CombatMoves')
+@@ -148,8 +162,7 @@ function H.HitPulse(moves)
+     return age<.04 and 10 or 8,moves.lastHitWeak==true
+ end
+ function H.RenderHit(vg,x,y)
+-    local forge=package.loaded['ui.ForgePanel']
+-    if forge and forge.HudHidden and forge.HudHidden() then return end
++    if ForgeHidden() then return end
+     local distance,weak=H.HitPulse(data.moves)
+     if not distance then return end
+     local color=weak and C.gold or C.paper
+@@ -185,8 +198,7 @@ function H.HasBoss()
+ end
+ function H.Preview() return data.preview==true end
+ function H.Render(vg,w,h,s,objective)
+-    local forge=package.loaded['ui.ForgePanel']
+-    if forge and forge.HudHidden and forge.HudHidden() then return end
++    if ForgeHidden() then return end
+     if not data.moves then return end
+     local moves=data.moves
+     for i=1,rangeCount do
+diff --git a/scripts/ui/PerformanceHUD.lua b/scripts/ui/PerformanceHUD.lua
+index 1574ab1..7b978f0 100644
+--- a/scripts/ui/PerformanceHUD.lua
++++ b/scripts/ui/PerformanceHUD.lua
+@@ -2,6 +2,20 @@ local UI=require('urhox-libs/UI')
+ local Draw=require('ui.PixelDraw')
+ local Settings=require('ruins.GameSettings')
+ local M={}
++-- Forge owns the visibility signal; the global survives module-cache key differences.
++local forgeHiddenLogged=false
++local forgeRead
++function M.SetForgeVisibility(reader) forgeRead=reader end
++local function ForgeHidden()
++    local forge=package.loaded['ui.ForgePanel']
++    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
++        or (forgeRead and forgeRead()==true)
++        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
++    if hidden then
++        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=PerformanceHUD)');forgeHiddenLogged=true end
++    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
++    return hidden
++end
+ ---@type Widget?
+ local parent
+ ---@type Widget?
+@@ -16,8 +30,7 @@ local elapsed,frames=0,0
+ local text='FPS -- · -- ms'
+ local Layer=UI.Panel:Extend('RuinsPerformanceHUD')
+ function Layer:Render(vg)
+-    local forge=package.loaded['ui.ForgePanel']
+-    if forge and forge.HudHidden and forge.HudHidden() then return end
++    if ForgeHidden() then return end
+     local w,_,safe=Draw.Metrics()
+     Draw.Begin(vg,true)
+     Draw.Rect(vg,w-safe.right-196,safe.top+94,176,24,Draw.colors.ink,.85)
+diff --git a/scripts/ui/TouchControls.lua b/scripts/ui/TouchControls.lua
+index 1b04d13..2c2a0da 100644
+--- a/scripts/ui/TouchControls.lua
++++ b/scripts/ui/TouchControls.lua
+@@ -7,6 +7,20 @@ local SettingsMenu = require('ui.SettingsMenu')
+ local Settings = require('ruins.GameSettings')
+ local CombatState=require('combat.CombatState')
+ local M = { menuOpen=false }
++-- Forge owns the visibility signal; the global survives module-cache key differences.
++local forgeHiddenLogged=false
++local forgeRead
++function M.SetForgeVisibility(reader) forgeRead=reader end
++local function ForgeHidden()
++    local forge=package.loaded['ui.ForgePanel']
++    local hidden=rawget(_G,'FORGE_HUD_HIDDEN')==true
++        or (forgeRead and forgeRead()==true)
++        or (type(forge)=='table' and forge.HudHidden and forge.HudHidden()==true)
++    if hidden then
++        if not forgeHiddenLogged then print('HUD: hidden by forge (layer=TouchControls)');forgeHiddenLogged=true end
++    elseif not (type(forge)=='table' and forge.IsOpen and forge.IsOpen()) then forgeHiddenLogged=false end
++    return hidden
++end
+ local provider, onModeChanged, onCancel
+ local owners, buttons = {}, {}
+ local joy, lookID
+@@ -289,8 +303,7 @@ local function RenderControls(self,vg)
+     Draw.Finish(vg)
+ end
+ function Layer:Render(vg)
+-    local forge=package.loaded['ui.ForgePanel']
+-    if forge and forge.HudHidden and forge.HudHidden() then return end
++    if ForgeHidden() then return end
+     local wheel=package.loaded['ui.WeaponWheel']
+     if wheel and wheel.IsOpen and wheel.IsOpen() then return end
+     local depth=Draw.Depth(vg)
+diff --git a/scripts/ui/WeaponWheel.lua b/scripts/ui/WeaponWheel.lua
+index 6445303..3189159 100644
+--- a/scripts/ui/WeaponWheel.lua
++++ b/scripts/ui/WeaponWheel.lua
+@@ -200,6 +200,7 @@ local function Down(event)
+     local s=session
+     if not s or s.closing then return end
+     if event:IsMouse() and event:IsSecondaryButton() then M.Cancel();return end
++    if not s.touch then return end -- desktop selection is relative direction + Q release
+     if not event:IsPrimaryAction() then return end
+     if s.pointer~=nil and s.pointer~=event.pointerId then return end
+     s.pointer=event.pointerId
+@@ -212,13 +213,13 @@ local function Move(event)
+     if not s or s.closing then return end
+     if s.touch then
+         if s.pointer==event.pointerId then s.selected=Pick(s,event,true) end
+-    else s.selected=Pick(s,event,false) end
++    end -- absolute UI pointer coordinates must not override desktop gestures
+ end
+ local function Up(event)
+     Consume(event)
+     if not event:IsPrimaryAction() then return end
+     local s=session
+-    if not s or s.closing or s.pointer~=event.pointerId then return end
++    if not s or s.closing or not s.touch or s.pointer~=event.pointerId then return end
+     local choice=Pick(s,event,true)
+     local down=s.down
+     s.pointer,s.down=nil,nil
+@@ -234,7 +235,7 @@ local function Retire(s)
+     layer.props.onPointerDown=Consume;layer.props.onPointerUp=Consume
+     layer.props.onPointerMove=Consume;layer.props.onPointerCancel=Consume
+     layer:Destroy()
+-    if input.mouseMode==MM_ABSOLUTE then input.mouseMode=s.mouseMode end
++    if s.touch and input.mouseMode==MM_ABSOLUTE then input.mouseMode=s.mouseMode end
+     session=nil
+     TouchInput.Clear()
+     if s.onClose then s.onClose(s.reason or 'closed') end
+@@ -251,9 +252,12 @@ function M.Open(opts)
+     end
+     if #items==0 then return false end
+     local s={root=root,items=items,anchorX=opts.anchorX or .52,anchorY=opts.anchorY or .5,
+-        touch=opts.touch==true,selected=1,names={},age=0,closeTime=0,
++        touch=opts.touch==true,selected=1,names={},age=0,closeTime=0,virtualX=0,virtualY=0,
+         onSelect=opts.onSelect,onClose=opts.onClose,mouseMode=input.mouseMode}
+     for i,item in ipairs(items) do if item.id==opts.weapon then s.selected=i end end
++    s.initialSelected=s.selected
++    s.wasLocked=input.mouseMode==MM_RELATIVE
++    if GetPlatform()=='Web' then s.wasLocked=input:IsMouseLocked() end
+     session=s
+     Metrics(s)
+     s.layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',pointerEvents='auto',
+@@ -275,8 +279,7 @@ function M.Open(opts)
+     s.hint:SetStyle({textAlign='left'})
+     Labels(s)
+     root:AddChild(s.layer);UI.PushOverlay(s.layer)
+-    input.mouseMode=MM_ABSOLUTE
+-    local p=input:GetMousePosition();s.lastX,s.lastY=p.x,p.y
++    if s.touch then input.mouseMode=MM_ABSOLUTE end
+     TouchInput.Clear()
+     return true
+ end
+@@ -296,9 +299,42 @@ function M.ForceClose(reason)
+     if s then s.reason=reason or 'forced';Retire(s) end
+     releaseGuard,guardFrames=false,0
+ end
++-- GetMouseMove is this frame's relative IntVector2 (physical pixels), not an
++-- absolute cursor and not a consuming read. Confirm can run before Update.
++local function RelativeSelection(s)
++    if s.touch or s.closing then return end
++    local frame=GetTime():GetFrameNumber()
++    if s.mouseFrame==frame then return end
++    s.mouseFrame=frame
++    local delta=input:GetMouseMove()
++    local dpr=math.max(1,graphics:GetDPR())
++    local x,y=s.virtualX+delta.x/dpr,s.virtualY+delta.y/dpr
++    local radius=math.sqrt(x*x+y*y)
++    local limit=s.layout.outer
++    if radius>limit then x,y=x*limit/radius,y*limit/radius;radius=limit end
++    s.virtualX,s.virtualY=x,y
++    if radius<18*s.layout.size then s.selected=s.initialSelected;return end
++    local r=(s.layout.inner+s.layout.outer)*.5
++    s.selected=M.HitTest(s.layout,s.layout.cx+x/radius*r,s.layout.cy+y/radius*r,false)
++end
++local function PointerLost(s)
++    if s.touch or not s.wasLocked then return false end
++    local locked=input.mouseMode==MM_RELATIVE
++    if GetPlatform()=='Web' then locked=input:IsMouseLocked() end
++    if locked then return false end
++    if not s.lockLossLogged then
++        print('WeaponWheel: pointer lock lost during Q selection; cancel, no automatic relock')
++        s.lockLossLogged=true
++    end
++    M.Close('pointer-unlocked')
++    return true
++end
+ function M.Confirm()
+     local s=session
+     if not s or s.closing then return false end
++    if PointerLost(s) then return false end
++    if input:GetKeyPress(KEY_ESCAPE) or input:GetMouseButtonPress(MOUSEB_RIGHT) then M.Cancel();return false end
++    RelativeSelection(s)
+     local item=s.items[s.selected or 0]
+     if not item then M.Cancel();return false end
+     if s.onSelect and s.onSelect(item.id)==false then return false end
+@@ -322,6 +358,7 @@ function M.Update(dt,anchor)
+         return
+     end
+     if UI.GetRoot()~=s.root then M.ForceClose('root-changed');return end
++    PointerLost(s) -- observe browser Escape loss even during the closing fade
+     if input.focus==false then M.Close('focus-lost') end
+     local step=math.max(0,math.min(.1,dt or 0))
+     if s.closing then
+@@ -335,13 +372,7 @@ function M.Update(dt,anchor)
+     if anchor then M.SetAnchor(anchor.anchorX,anchor.anchorY) end
+     Metrics(s)
+     if input:GetKeyPress(KEY_ESCAPE) or input:GetMouseButtonPress(MOUSEB_RIGHT) then M.Cancel();return end
+-    if not s.touch then
+-        local p=input:GetMousePosition()
+-        if p.x~=s.lastX or p.y~=s.lastY then
+-            s.lastX,s.lastY=p.x,p.y
+-            s.selected=M.HitTest(s.layout,p.x/graphics:GetDPR(),p.y/graphics:GetDPR(),false)
+-        end
+-    end
++    RelativeSelection(s)
+     Labels(s)
+ end
+ -- Read-only snapshots; callers must not mutate the returned layout.
+@@ -350,6 +381,7 @@ function M.DebugState()
+     local s=session
+     return {open=s~=nil,closing=s and s.closing==true or false,blocked=M.IsBlocked(),
+         selected=s and s.items[s.selected or 0] and s.items[s.selected].id or nil,
+-        touch=s and s.touch or false,reason=s and s.reason or nil}
++        touch=s and s.touch or false,reason=s and s.reason or nil,
++        virtualX=s and s.virtualX or 0,virtualY=s and s.virtualY or 0}
+ end
+ return M
+diff --git a/tests/combat/core_ui_alloc.lua b/tests/combat/core_ui_alloc.lua
+index 7be5922..ae61e5d 100644
+--- a/tests/combat/core_ui_alloc.lua
++++ b/tests/combat/core_ui_alloc.lua
+@@ -106,8 +106,10 @@ end
+ if not base then
+  -- Exercise every public draw entry, not a replacement renderer. Forge state is
+  -- deliberately loaded late: HUD modules must neither require nor cache it.
+- require('ui.PerformanceHUD')
++ local Performance=require('ui.PerformanceHUD')
+  local forgeBefore=package.loaded['ui.ForgePanel']
++ local globalBefore=rawget(_G,'FORGE_HUD_HIDDEN')
++ rawset(_G,'FORGE_HUD_HIDDEN',false)
+  local hidden=false
+  package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
+  data.preview=false;moves.lastHitAt=moves.age;Combat.Set(data)
+@@ -126,6 +128,59 @@ if not base then
+   hidden=false;calls=0;entry.run();local visible=calls;assert(visible>0,entry.name..' visible baseline')
+   hidden=true;calls=0;entry.run();assert(calls==0,entry.name..' must not issue any draw call')
+   hidden=false;calls=0;entry.run();assert(calls==visible,entry.name..' restores without reinitialization')
++  -- Missing/canonicalized package.loaded entry must not leak any HUD pixels.
++  package.loaded['ui.ForgePanel']=nil;rawset(_G,'FORGE_HUD_HIDDEN',true)
++  calls=0;entry.run();entry.run();assert(calls==0,entry.name..' global-only fallback')
++  package.loaded['ui.ForgePanel']={HudHidden=function()return false end}
++  calls=0;entry.run();assert(calls==0,entry.name..' global true wins over module false')
++  rawset(_G,'FORGE_HUD_HIDDEN',false)
++  package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
++  hidden=true;calls=0;entry.run();assert(calls==0,entry.name..' module true wins over global false')
++  hidden=false;calls=0;entry.run();assert(calls==visible,entry.name..' both cleared restores')
++ end
++ -- Exact Scene module binding works even without either cache or global flag.
++ local sourceHidden=true
++ local function readSource()return sourceHidden end
++ for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(readSource)end
++ package.loaded['ui.ForgePanel']=nil;rawset(_G,'FORGE_HUD_HIDDEN',nil)
++ calls=0;for _,entry in ipairs(renders)do entry.run()end;assert(calls==0,'direct authoritative getter is cache-independent')
++ sourceHidden=false;calls=0;for _,entry in ipairs(renders)do entry.run()end;assert(calls>0)
++ for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(nil)end
++ package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
++ -- Use ForgePanel's actual phase function/getter, not a hand-written boolean,
++ -- with the registered getter route and a deliberately absent module cache.
++ local ff=assert(io.open('scripts/ui/ForgePanel.lua'));local fs=ff:read('*a');ff:close()
++ local constants=assert(fs:match('(local FADE_OUT,REVEAL=[^\n]+)'))
++ local phase=assert(fs:match('(local function PhaseValues.-)\nlocal function Render'))
++ local getter=assert(fs:match('(function M.HudHidden.-)\nend'))..'\nend'
++ local fe={M={},Clamp=function(x,a,b)return math.max(a,math.min(b,x))end}
++ local actual=assert(load(constants..'\n'..phase..'\n'..getter..'\nreturn M.HudHidden','actual Forge phase getter','t',fe))()
++ for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(actual)end
++ package.loaded['ui.ForgePanel']=nil
++ for _,v in ipairs({{phase='opening',phaseT=0,want=false},{phase='opening',phaseT=.13,want=true},
++  {phase='revealing',phaseT=.15,want=true},{phase='open',phaseT=0,want=true},
++  {closing=true,closeStage=1,closeT=.1,want=true},{closing=true,closeStage=2,closeT=.05,want=true},
++  {closing=true,closeStage=2,closeT=.3,want=false},{finished=true,want=false}})do
++  fe.session=v;assert(actual()==v.want);calls=0
++  for _,entry in ipairs(renders)do entry.run()end
++  assert((calls==0)==v.want,'actual opening/revealing/open/closing/finish visibility contract')
++ end
++ for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(nil)end
++ package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
++ -- A long open session emits only one hide log per layer, not one per frame.
++ local oldPrint=print;local hiddenLogs=0
++ print=function(line)if tostring(line):find('HUD: hidden by forge',1,true)then hiddenLogs=hiddenLogs+1 else oldPrint(line)end end
++ hidden=true
++ for _=1,120 do for _,entry in ipairs(renders)do entry.run()end end
++ assert(hiddenLogs==4,'exactly one log per HUD layer (CombatHUD owns both entry points)')
++ hidden=false;for _,entry in ipairs(renders)do entry.run()end
++ hidden=true;for _,entry in ipairs(renders)do entry.run()end
++ assert(hiddenLogs==8,'new opening logs once again');print=oldPrint
++ -- Scene has no raw NanoVG HUD path; its banners/targets only update RuinsHUD.
++ local sf=assert(io.open('scripts/ruins/RuinsScene.lua'));local scene=sf:read('*a');sf:close()
++ assert(not scene:find('nvg%u[%w_]*%s*%('),'new direct Scene drawing path requires explicit forge guard review')
++ for _,setter in ipairs({'HUD.SetMessage','HUD.SetTarget','HUD.SetHint','HUD.SetCrossVisible'})do
++  assert(scene:find(setter,1,true),'HUD source routed via '..setter)
+  end
+  -- Timers and data updates continue while covered; rendering alone is gated.
+  hidden=true;local age=moves.age;frame();assert(moves.age>age)
+@@ -133,6 +188,7 @@ if not base then
+  hidden=false;calls=0;layer:Render(vg);assert(calls>0)
+  for name,fn in pairs(saved)do Draw[name]=fn end
+  package.loaded['ui.ForgePanel']=forgeBefore
++ rawset(_G,'FORGE_HUD_HIDDEN',globalBefore)
+  print('PASS forge HudHidden: all five HUD draw entries zero calls; close restores; covered updates continue')
+ end
+ return growth/600
+diff --git a/tests/combat/weapon_select_gesture.lua b/tests/combat/weapon_select_gesture.lua
+index 6e99f33..02d74cd 100644
+--- a/tests/combat/weapon_select_gesture.lua
++++ b/tests/combat/weapon_select_gesture.lua
+@@ -26,9 +26,12 @@ function wheel.ForceClose(reason)
+ end
+ function wheel.Confirm()if wheel.options.onSelect(wheel.selected)then wheel.Close('confirm')end end
+ function wheel.Update(dt,anchor)wheel.anchor=anchor end
++local releases,requests=0,0
+ local pointer=Pointer.New{web=true,now=function()return 0 end,focused=function()return true end,
+- captured=function()return false end,release=function()end,changed=function()end}
++ captured=function()return true end,release=function()releases=releases+1 end,
++ request=function()requests=requests+1 end,changed=function()end}
+ pointer:Resume()
++pointer:Confirm()
+ local TC={cancelCount=0}
+ function TC.Attach(_,provider,mode,cancel)TC.provider,TC.cancel=provider,cancel end
+ -- Keep the real Clear/revision and invoke the actual Scene onCancel callback.
+@@ -54,7 +57,8 @@ chunk(assert(source:match('(    weaponGesture_=WeaponSelectGesture.New.-)\n    l
+ local gesture=assert(env.weaponGesture_)
+ local function ResetPose()character.bones.arm_right.rotation=Quaternion();if character.bones.forearm_right then character.bones.forearm_right.rotation=Quaternion()end end
+ assert(gesture:Open(false) and gesture:IsOpen(),'actual takeInput/Cancel must not self-close')
+-assert(pointer.blocked and not pointer:IsEnabled() and env.drag.buttons==0)
++assert(not pointer.blocked and pointer:IsCaptured() and env.drag.buttons==0)
++assert(releases==0 and requests==0 and not pointer:CanAttack(),'selection keeps lock and gates actions without recapture')
+ assert(not env.caster_.charging and env.caster_.charge==0 and env.caster_.castAnim==0)
+ TC.Cancel();assert(gesture:IsOpen(),'own TouchControls.Sync takeover must preserve wheel')
+ for _=1,10 do moves:Update(.02,{allowed=false,selecting=true});ResetPose();gesture:Apply(.02)end
+@@ -69,6 +73,7 @@ wheel.selected='bow';gesture:Confirm()
+ assert(not gesture:IsOpen() and State.GetWeapon()=='bow')
+ assert(moves.clip=='weapon_swap_sword_to_bow','actual releaseInput/Cancel must not erase confirmed swap')
+ assert(not pointer.blocked and pointer:IsEnabled(),'pointer resumes after wheel releases it')
++assert(releases==0 and requests==0 and pointer:IsCaptured(),'Q release never unlocks or re-requests pointer lock')
+ assert(gesture.weight==1,'normal close retains pose for smooth release')
+ ResetPose();gesture:Apply(.06);assert(gesture.weight>0 and gesture.weight<1)
+ ResetPose();gesture:Apply(.07);assert(gesture.weight==0)
+@@ -138,3 +143,18 @@ State.SetMounted(true)
+ assert(not gesture:IsOpen() and rig.pose=='hidden' and gesture.weight==0,'mount must not restore a saved hand weapon')
+ State.SetMounted(false)
+ print('PASS actual WeaponWheel + Scene callback integration: pointer tap, deferred fade/onClose, blocker takeover, swap ready, mounted hidden pose')
++-- Execute the actual relative-camera routing, including the first Q-down frame
++-- before the wheel is constructed, and the invisible release-guard frame.
++local cameraBlock=assert(source:match('(    if not WeaponWheel.IsBlocked%(%) and not %(CombatState.InCombat%(%) and Down%(KEY_Q%)%).-)\n    %-%- 龙'))
++local lookCalls,held,blocked,combat=0,false,false,true
++local ce=setmetatable({WeaponWheel={IsBlocked=function()return blocked end},
++ CombatState={InCombat=function()return combat end},Down=function()return held end,
++ TouchInput={IsEnabled=function()return false end},pointer={CanLook=function()return true end},
++ mouseLocked=true,input={mouseMove={x=15,y=-5}},animPreview_={index=0},combatLookScale_=1,
++ nomi_={Look=function()lookCalls=lookCalls+1 end}}, {__index=_G})
++local route=assert(load(cameraBlock,'actual wheel camera gate','t',ce))
++held=true;route();assert(lookCalls==0,'first Q-down cannot rotate camera')
++held=false;blocked=true;route();assert(lookCalls==0,'selection/closing/release guard freeze camera')
++blocked=false;route();assert(lookCalls==1,'normal camera resumes')
++held=true;combat=false;route();assert(lookCalls==2,'exploration Q retains normal camera')
++print('PASS actual camera gate: first Q frame, selection/fade/release latch, normal and exploration restoration')
+diff --git a/tests/combat/weapon_wheel.lua b/tests/combat/weapon_wheel.lua
+index b5da390..dc4d386 100644
+--- a/tests/combat/weapon_wheel.lua
++++ b/tests/combat/weapon_wheel.lua
+@@ -3,6 +3,10 @@ package.path='scripts/?.lua;tests/combat/?.lua;'..package.path
+ local width,height,dpr,scale=1280,720,1,1
+ local safe={left=0,right=0,top=0,bottom=0}
+ local mouse={x=640,y=360}
++local relative={x=0,y=0} -- IntVector2 fields from Input:GetMouseMove(), not Vector3
++local frame,platform,locked=0,'Mac',true
++GetTime=function()return {GetFrameNumber=function()return frame end}end
++GetPlatform=function()return platform end
+ local keys,buttons,presses={},{},{}
+ KEY_Q,KEY_ESCAPE='Q','ESCAPE'
+ MOUSEB_LEFT,MOUSEB_MIDDLE,MOUSEB_RIGHT=0,1,2
+@@ -14,7 +18,8 @@ input={numTouches=0,focus=true,mouseMode=MM_RELATIVE,
+     GetMouseButtonDown=function(_,key) return buttons[key]==true end,
+     GetKeyPress=function(_,key) local v=presses[key];presses[key]=nil;return v end,
+     GetMouseButtonPress=function(_,key) local v=presses[key];presses[key]=nil;return v end,
+-    GetMousePosition=function() return mouse end}
++    GetMousePosition=function() return mouse end,GetMouseMove=function()return relative end,
++    IsMouseLocked=function()return locked end}
+ graphics={GetWidth=function() return width*dpr end,GetHeight=function() return height*dpr end,GetDPR=function() return dpr end}
+ local Widget={};Widget.__index=Widget
+ function Widget:AddChild(child) self.children[#self.children+1]=child;child.parent=self end
+@@ -72,6 +77,7 @@ local function Reset()
+     safe={left=0,right=0,top=0,bottom=0}
+     input.numTouches,input.focus,input.mouseMode=0,true,MM_RELATIVE
+     mouse.x,mouse.y=640,360
++    relative.x,relative.y=0,0;frame=frame+1;platform,locked='Mac',true
+ end
+ local function Event(x,y,id,button,touch)
+     return PointerEvent.new('PointerDown',{x=x*dpr/scale,y=y*dpr/scale,
+@@ -108,7 +114,7 @@ Reset()
+ local hud=New({id='existing-hud'});root:AddChild(hud)
+ overlay=New({});assert(not Wheel.Open(Options()));overlay=nil
+ assert(Wheel.Open(Options()));Eq(#root.children,2);Eq(root.children[1],hud)
+-assert(not Wheel.Open(Options()));Eq(input.mouseMode,MM_ABSOLUTE)
++assert(not Wheel.Open(Options()));Eq(input.mouseMode,MM_RELATIVE,'PC opening preserves relative mode')
+ local unfoldOuter=Wheel.DebugLayout().outer
+ Wheel.Update(.06)
+ assert(Wheel.DebugLayout().outer>unfoldOuter,'outward unfold advances')
+@@ -162,8 +168,32 @@ accept=true;assert(Wheel.Confirm());assert(not Wheel.Confirm());Eq(calls,2);Flus
+ 
+ -- PC movement selects direction; Escape and secondary click only cancel.
+ Reset();assert(Wheel.Open(Options()));local l=Wheel.DebugLayout();local slot=l.slots[2]
+-mouse.x,mouse.y=slot.x*dpr,slot.y*dpr;Wheel.Update(.02)
++relative.x,relative.y=math.floor((slot.x-l.cx)*dpr),math.floor((slot.y-l.cy)*dpr);frame=frame+1;Wheel.Update(.02)
+ Eq(Wheel.DebugState().selected,'bow');assert(Wheel.Confirm());Flush()
++Eq(input.mouseMode,MM_RELATIVE,'PC retirement preserves relative mode')
++-- Dead zone, DPR, frame sampling, final release delta, and anchor motion.
++for _,density in ipairs({1,2,3})do
++ Reset();dpr=density;assert(Wheel.Open(Options()))
++ relative.x,relative.y=3*dpr,0;Wheel.Update(.02);Eq(Wheel.DebugState().selected,'sword','deadzone retains current')
++ l=Wheel.DebugLayout();slot=l.slots[2]
++ relative.x,relative.y=math.floor((slot.x-l.cx)*dpr),math.floor((slot.y-l.cy)*dpr);frame=frame+1
++ -- Q-up may Confirm before late-frame Update, so consume its final delta here.
++ assert(Wheel.Confirm());Eq(selected[#selected],'bow');Flush();Eq(input.mouseMode,MM_RELATIVE)
++ Reset();assert(Wheel.Open(Options()));l=Wheel.DebugLayout();slot=l.slots[2]
++ relative.x,relative.y=50,0;Wheel.Update(.02)
++ local once=Wheel.DebugState().virtualX;Wheel.Update(.02,{anchorX=.8,anchorY=.3})
++ Eq(Wheel.DebugState().virtualX,once,'frame delta accumulated once, anchor is independent')
++ layer=overlay;layer.props.onPointerMove(SlotEvent(1));Eq(Wheel.DebugState().selected,'bow','absolute pointer events ignored')
++ layer.props.onPointerDown(SlotEvent(1));layer.props.onPointerUp(SlotEvent(1));assert(not Wheel.DebugState().closing,'left click cannot confirm PC selection')
++end
++Reset();assert(Wheel.Open(Options()));relative.x=-120;Wheel.Update(.02)
++assert(not Wheel.Confirm(),'outside arc cancels, no forced closest sector');Flush()
++-- Web loss is reported once and never requests pointer lock or changes mode.
++Reset();platform='Web';assert(Wheel.Open(Options()));locked=false;input.mouseMode=0
++local oldPrint=print;local losses=0
++print=function(line)if tostring(line):find('pointer lock lost',1,true)then losses=losses+1 else oldPrint(line)end end
++Wheel.Update(.02);Wheel.Update(.02);assert(not Wheel.Confirm());Flush()
++print=oldPrint;Eq(losses,1);Eq(closed[#closed],'pointer-unlocked');Eq(input.mouseMode,0,'no relock after browser Escape')
+ Reset();assert(Wheel.Open(Options()));presses.ESCAPE=true;Wheel.Update(.02)
+ assert(Wheel.DebugState().closing);Flush();Eq(closed[#closed],'cancelled')
+ Reset();assert(Wheel.Open(Options()));before=#selected;layer=overlay

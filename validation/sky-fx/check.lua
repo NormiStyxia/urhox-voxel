@@ -1,9 +1,13 @@
 package.path='scripts/?.lua;'..package.path
 local vm={}
+-- Engine Vector3:Lerp returns a new vector; no clamping, inputs unchanged.
+function vm:Lerp(b,t)return Vector3(self.x+(b.x-self.x)*t,self.y+(b.y-self.y)*t,self.z+(b.z-self.z)*t)end
 function vm:Normalized() local n=math.sqrt(self.x*self.x+self.y*self.y+self.z*self.z);return Vector3(self.x/n,self.y/n,self.z/n) end
 Vector3=setmetatable({},{__call=function(_,x,y,z)return setmetatable({x=x or 0,y=y or 0,z=z or 0},{__index=vm})end})
 Vector3.ZERO=Vector3(0,0,0);Vector3.UP=Vector3(0,1,0)
-function Vector2(x,y)return{x=x,y=y}end
+Vector2=setmetatable({},{__call=function(_,x,y)return{x=x,y=y}end})
+Vector2.ZERO=Vector2(0,0)
+function Vector4(x,y,z,w)return{x=x,y=y,z=z,w=w}end
 local cm={}
 function cm:Lerp(b,t)return Color(self.r+(b.r-self.r)*t,self.g+(b.g-self.g)*t,self.b+(b.b-self.b)*t)end
 function Color(r,g,b,a)return setmetatable({r=r,g=g,b=b,a=a or 1},{__index=cm})end
@@ -106,8 +110,8 @@ assert(atmosphere.realFog and dn.zone.volumetricFogViewDistance==60)
 print('PASS medium budgets and high instances explicitly disposed, not just hidden')
 local ground=Material:new()
 atmosphere:Update(.2,Vector3(0,6,0),ground)
-assert(ground.params.cloud_shadow_strength==.16)
-assert(ground.params.cloud_shadow_use_atlas==1 and ground.textureName=='cloud_shadow_atlas' and ground.textureBinds==1)
+assert(ground.params.cloud_shadow_strength==.08)
+assert(atmosphere.shadowBound and ground.textureName=='cloud_shadow_atlas' and ground.textureBinds==1)
 local keep=atmosphere.clouds
 settings.Apply()
 assert(atmosphere.clouds==keep,'unchanged quality must not rebuild clouds')
@@ -167,16 +171,18 @@ assert(dn.zone.volumetricFogScatteringColor==oldScatter and dn.sun.volumetricFog
 print('PASS cloud master/lower/shadow settings round-trip and release; disabled volume skips DayNight scattering writes')
 
 -- Exercise actual SceneQuality callbacks with only Terrain mocked, since no geometry is needed.
-package.loaded['ruins.RuinsTerrain']={}
+local contactTerrain=require('ruins.RuinsTerrain')
+contactTerrain.groundMaterial=ground
 require('ruins.SceneQuality').Attach({sun=dn.sun,zone=dn.zone,dayNight=dn})
+assert(dn.contactAO.layoutSupported and ground.params.contact_columns.x==require('ruins.RuinsBuild').COLONNADE_R)
 assert(registrations[1]=='skyfx')
-for _,name in ipairs({'scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
+for _,name in ipairs({'scene-night-contact','scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
  local found=false
  for i,k in ipairs(registrations)do if k==name then assert(i>1);found=true end end
  assert(found,'scene callback missing: '..name)
 end
 executions={};settings.Apply();assert(executions[1]=='skyfx')
-for _,name in ipairs({'scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
+for _,name in ipairs({'scene-night-contact','scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
  local found=false
  for i,k in ipairs(executions)do if k==name then assert(i>1);found=true end end
  assert(found)
@@ -264,45 +270,23 @@ print('PASS missing optional settings/log modules: safe standalone high defaults
 local resource=cache.GetResource
 assert(loadfile('validation/sky-fx/skycards_contract.lua'))()(scene,dn,FinishCloud)
 
+-- The former independent flat-atlas lookup/fallback contract was replaced by
+-- reuse of the async-ready sky texture; the new full contract is wind/check.py.
 local projected=Standalone.New(scene,dn)
 local groundA,groundB=Material:new(),Material:new()
 local lookups=0
 cache.GetResource=function(s,k,p)lookups=lookups+1;return resource(s,k,p)end
 projected:Update(.2,Vector3.ZERO,groundA)
-assert(lookups==1 and groundA.params.cloud_shadow_use_atlas==1 and groundA.textureName=='cloud_shadow_atlas')
+assert(lookups==0 and projected.shadowBound and groundA.textureName=='cloud_shadow_atlas')
 for i=1,600 do projected:Update(1/60,Vector3.ZERO,groundA)end
-assert(lookups==1 and groundA.textureBinds==1,'shadow must bind once, not every frame')
+assert(lookups==0 and groundA.textureBinds==1)
 projected:Update(.2,Vector3.ZERO,groundB)
-assert(lookups==2 and groundA.params.cloud_shadow_strength==0 and groundB.textureBinds==1)
+assert(lookups==0 and groundA.params.cloud_shadow_strength==0 and groundB.textureBinds==1)
 projected:SetFeature('cloudShadow',false)
-assert(groundB.params.cloud_shadow_strength==0 and groundB.params.cloud_shadow_use_atlas==0 and not projected.shadowGround)
-for i=1,600 do projected:Update(1/60,Vector3.ZERO,groundB)end
-assert(lookups==2,'disabled shadows must not load or bind textures')
+assert(groundB.params.cloud_shadow_strength==0)
 projected:SetFeature('cloudShadow',true)
-assert(lookups==3 and groundB.textureBinds==2 and groundB.params.cloud_shadow_use_atlas==1)
+assert(groundB.textureBinds==2 and projected.shadowBound)
 projected:Stop()
-assert(groundB.params.cloud_shadow_strength==0 and groundB.params.cloud_shadow_use_atlas==0 and not projected.shadowGround)
+assert(groundB.params.cloud_shadow_strength==0 and not projected.shadowGround)
 cache.GetResource=resource
-
-for _,failure in ipairs({'missing','binding'})do
- local s=Standalone.New(scene,dn)
- local target=Material:new()
- local attempts=0
- cache.GetResource=function(owner,kind,path)
-  attempts=attempts+1
-  if failure=='missing' and kind=='Texture2D' then return nil end
-  return resource(owner,kind,path)
- end
- if failure=='binding' then target.SetSurfaceTexture=function()return false end end
- local savedPrint,savedFormat=print,string.format
- print=function()error('ungated shadow fallback log')end
- string.format=function()error('ungated shadow fallback formatting')end
- s:Update(.2,Vector3.ZERO,target)
- assert(target.params.cloud_shadow_use_atlas==0 and target.params.cloud_shadow_strength==.16)
- for i=1,600 do s:Update(1/60,Vector3.ZERO,target)end
- assert(attempts==1,'failed binding must not retry every frame')
- s:Stop()
- print,string.format=savedPrint,savedFormat
- cache.GetResource=resource
-end
-print('PASS same-atlas ground shadow: one binding per enable/ground; 600 frames no resource lookups; replacement/off/Stop clear old strength; missing/binding failure analytic fallback without retries/logging')
+print('PASS sky-atlas cloud shadow: no extra resource lookups, one bind per enable/target, replacement/off/Stop clear strength')

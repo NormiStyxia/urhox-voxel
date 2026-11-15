@@ -1,0 +1,1373 @@
+--- validation/combat/sword-hitch/before/CombatMoves.lua.txt
++++ scripts/combat/CombatMoves.lua
+@@ -1,6 +1,7 @@
+ -- Player combat. Animation events are the only hit/cancel/iframe/fire clock.
+ -- Dependencies are injected so collision, cancellation and death can run offline.
+ local Hit=require('combat.Hit')
++local Perf=require('combat.SwingPerf')
+ ---@class PlayerCombatMoves
+ ---@field o table
+ ---@field anim table Animation port (real CombatAnim or offline event stub).
+@@ -8,6 +9,18 @@
+ ---@field rig table
+ ---@field moveDir Vector3|nil
+ ---@field motion Vector3
++---@field playParams table
++---@field playOpts table
++---@field damaged table
++---@field queryHits table[]
++---@field queryPool table[]
++---@field slamHits table[]
++---@field slamPool table[]
++---@field queryShapes table
++---@field slideShotPool table[]
++---@field feedbackGroups table
++---@field eventPool table[]
++---@field observe fun(kind:string, data:table)|nil
+ ---@field partNotice {part:string,untilTime:number}|nil
+ local C={}; C.__index=C
+ local BUFFER=.160
+@@ -22,7 +35,7 @@
+     local origin=position+Vector3(0,.9,0)
+     for _,enemy in ipairs(enemies) do
+         if enemy.active~=false and not enemy.dead and enemy.position then
+-            local delta=enemy.position-position
++            local delta=enemy.position-position --[[@as Vector3]]
+             local distance=math.sqrt(delta.x*delta.x+delta.z*delta.z)
+             if distance>.001 and distance<=3.6 and math.abs(delta.y)<=2 then
+                 local direction=Flat(delta,intent)
+@@ -51,48 +64,52 @@
+     end
+     return y
+ end
+-function C.ClipSlidePath(p,motion,radius,ground,clear)
++local function SlideSafe(base,dir,distance,height,radius,ground,clear)
++    local q=base+dir*distance
++    local h=C.SlideFootprint(q,radius,ground)
++    if not h or math.abs(h-height)>.20+1e-6
++        or (clear and not clear(base,Vector3(q.x,h,q.z),radius+.10)) then return nil end
++    return h
++end
++function C.ClipSlidePath(p,motion,radius,ground,clear,maxSteps)
+     local height=C.SlideFootprint(p,radius,ground)
+-    if not height then return Vector3.ZERO,true end
++    if not height then return Vector3.ZERO,true,0 end
+     local flat=Vector3(motion.x,0,motion.z)
+     local length=flat:Length()
+-    if length<1e-8 then return Vector3.ZERO,false end
++    if length<1e-8 then return Vector3.ZERO,false,0 end
+     local dir=flat/length
+-    local done=0
+-    while done<length-1e-8 do
++    local done,steps=0,0
++    while done<length-1e-8 and steps<(maxSteps or math.huge) do
+         local amount=math.min(.10,length-done)
+         local base=Vector3(p.x+dir.x*done,height,p.z+dir.z*done)
+-        local function Safe(distance)
+-            local q=base+dir*distance
+-            local h=C.SlideFootprint(q,radius,ground)
+-            if not h or math.abs(h-height)>.20+1e-6
+-                or (clear and not clear(base,Vector3(q.x,h,q.z),radius+.10)) then return nil end
+-            return h
+-        end
+-        local nextHeight=Safe(amount)
++        local nextHeight=SlideSafe(base,dir,amount,height,radius,ground,clear)
++        steps=steps+1;Perf.substeps=Perf.substeps+1
+         if not nextHeight then
+             local lo,hi=0,amount
+-            while hi-lo>.02 do
++            -- .10 / 2^3 <= .02: same refinement with an explicit ceiling.
++            for _=1,3 do
++                if hi-lo<=.02 then break end
+                 local mid=(lo+hi)*.5
+-                if Safe(mid) then lo=mid else hi=mid end
++                if SlideSafe(base,dir,mid,height,radius,ground,clear) then lo=mid else hi=mid end
+             end
+-            return dir*(done+lo),true
++            return dir*(done+lo),true,0
+         end
+         done,height=done+amount,nextHeight
+     end
+-    return flat,false
++    return dir*done,false,math.max(0,length-done)
+ end
+ ---@param opts table
+ ---@return PlayerCombatMoves
+ function C.New(opts)
+     return setmetatable({o=opts,anim=opts.anim,state=opts.state,rig=opts.rig,hp=100,maxHP=100,
+-        age=0,invuln=0,hitstop=0,dodgeCool=0,charge=0,hold=0,combo=0,
++        age=0,invuln=0,hitstop=0,dodgeCool=0,charge=0,hold=0,combo=0,drawElapsed=0,power=0,fireSnapshot={stats={}},
+         motion=Vector3.ZERO,buffer=nil,bufferUntil=0,hitOpen=false,hitPending=false,
+         iframe=false,cancelOpen=false,damaged={},dead=false,blocked=false,
+         lastAttack=false,lastHeavy=false,shake=0,shakeAge=0,shakeDuration=0,
+         eventPool={{},{},{},{},{},{},{},{}},eventWrite=0,swingSerial=0,feedbackGroups={},
+         strikeZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
+         slamZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
++        queryHits={},queryPool={},slamHits={},slamPool={},queryShapes={},playParams={},playOpts={},
+         slideShots={},slideShotPool={{},{}},slideShotWrite=0,slideShotAt=-1},C)
+ end
+ -- Injected sound port keeps offline simulations engine-independent.
+@@ -117,7 +134,9 @@
+     local stats=self.rig:GetStats()
+     -- Scale the clip clock; charge_full remains the sole full-charge signal.
+     local speed=id=='sword_heavy_charge' and 1/math.max(.1,stats.chargeMultiplier or 1) or 1
+-    local params={weaponInHand=self:WeaponInHand() and 1 or 0}
++    local params=self.playParams
++    for k in pairs(params) do params[k]=nil end
++    params.weaponInHand=self:WeaponInHand() and 1 or 0
+     if id=='bow_release' or id=='bow_cancel' then
+         self.bowPoseCharge=self.charge
+         self.bowPosePitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
+@@ -129,7 +148,9 @@
+         local d=self.moveDir or -f
+         params.moveX,params.moveZ,params.bow=d.x*f.z-d.z*f.x,d:DotProduct(f),self.state.GetWeapon()=='bow' and 1 or 0
+     end
+-    local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,{stats=stats,speed=speed,fadeIn=fadeIn,params=params})
++    local opts=self.playOpts
++    opts.stats,opts.speed,opts.fadeIn,opts.params=stats,speed,fadeIn,params
++    local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,opts)
+     if not handle then return false end
+     self.clip,self.handle=id,handle
+     self.whoosh,self.whooshTime=false,0
+@@ -143,7 +164,9 @@
+     if self.observe then self.observe('start',{clip=id,age=self.age}) end
+     if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
+     self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
+-    self.damaged,self.previousHit={},nil
++    for key in pairs(self.damaged) do self.damaged[key]=nil end
++    self.previousHit=nil
++    self.motionDebt=0
+     self.hitForward=(id:find('sword_light_',1,true) or id=='sword_heavy_release') and self.moveDir or nil
+     self.state.SetBusy(true)
+     return true
+@@ -174,7 +197,9 @@
+         if self.state.Log then self.state.Log('arrow-cancel','Combat: arrow cancel %s',reason or 'unknown') end
+     end
+     self.buffer,self.pending,self.clip,self.handle=nil,nil,nil,nil
++    self.motionDebt=0
+     self.pendingFire=nil
++    self.drawElapsed,self.power=0,0
+     self.trailUntil=0
+     self.autoFire,self.pendingReleased=false,false
+     if not keepProtection then self.protection={} end
+@@ -301,6 +326,12 @@
+         self.pending,self.pendingReleased=kind,false
+         self.hold,self.charge=0,0
+         self.autoFire=kind=='heavy' and self.state.GetWeapon()=='bow'
++        if self.state.GetWeapon()=='bow' then
++            -- Equip and draw begin together; no queued short tap after taking bow.
++            self.pending=nil
++            self.drawElapsed,self.power,self.drawFullReached=0,0,false
++            return self:Play('bow_draw',.04)
++        end
+         self:Play(self.state.GetWeapon()=='sword' and 'sword_draw' or 'bow_equip')
+         return true
+     end
+@@ -319,6 +350,7 @@
+     local bow=self.state.GetWeapon()=='bow'
+     if bow then
+         self.charge,self.autoFire,self.pendingReleased=0,kind=='heavy',kind=='light'
++        self.drawElapsed,self.power=0,0
+         self.drawFullReached,self.fireCrystal,self.fireCharge=false,false,nil
+         return self:Play('bow_draw',follow and .04 or nil)
+     elseif kind=='heavy' then self.autoFire=false; self.combo=0; return self:Play('sword_heavy_release')
+@@ -336,11 +368,22 @@
+         self.releaseFull=self.charge>=1
+         self.anim:Stop(self.handle,0); self.clip=nil
+         self:Action(heavy and 'heavy' or 'light')
+-    elseif self.clip=='bow_hold' then
++    elseif self.clip=='bow_hold' or self.clip=='bow_draw' then
++        local power=(self.charge*self.charge+2*self.charge)/3
++        if power<.1 or not self:WeaponInHand() then
++            self:Cancel('weak-release');return
++        end
+         self.fireCharge=self.charge
+         self.fireCrystal=self.autoFire==true
++        local shot=self.fireSnapshot
++        shot.u,shot.power,shot.critical=self.charge,power,self.charge>=1
++        shot.pitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
++        shot.facing=Flat(self.o.forward(),Vector3.FORWARD)
++        for key in pairs(shot.stats) do shot.stats[key]=nil end
++        for key,value in pairs(self.rig:GetStats()) do shot.stats[key]=value end
++        if self.fireCrystal then shot.stats.crystalRadius,shot.stats.crystalDamageMultiplier=.8,.25 end
+         self:Play('bow_release')
+-    elseif self.clip=='bow_draw' then self.pendingReleased=true
++        self.pendingFire=shot -- release authority; the clip's fire cue cannot create a second shot
+     elseif self.pending=='hold' then self.pending,self.pendingReleased='light',true end
+ end
+ -- Group envelopes start at FIRST contact: later targets raise the maximum,
+@@ -388,11 +431,10 @@
+     if info.heavy then amp,duration,fov=.025,.10,2 end
+     if e.broke or e.staggered then amp,duration=.03,.12 end
+     if arrow then
+-        stop=info.full and e.weak and .12 or .03
++        stop=(e.broke or e.staggered) and .10 or (e.weak and .06 or .03)
+         amp,duration,fov=0,0,0
+-        if info.full and e.weak then amp,duration=.008,.05 end
+-    end
+-    self:Envelope(e.swingId,amp,duration,fov,e.dir,(not arrow or (info.full and e.weak)) and stop or 0)
++    end
++    self:Envelope(e.swingId,amp,duration,fov,e.dir,not arrow and stop or 0)
+     enemy.hitStop=math.max(result.priorHitStop or enemy.hitStop or 0,stop)
+     self.target,self.targetAt=enemy,self.age
+     if e.broke then self.partNotice={part=result.partBroken or e.part,untilTime=self.age+1.2} end
+@@ -477,9 +519,8 @@
+         elseif e.name=='charge_full' or e.name=='draw_full' then
+             if e.name=='charge_full' then self.charge,self.fullCharged=1,true; self:Flash('full_charge') end
+             self.fullAt=self.age
+-            if e.name=='draw_full' and not self.drawFullReached then
++            if e.name=='draw_full' and self.charge>=1 and not self.drawFullReached then
+                 self.drawFullReached=true; self.bowFullAt=self.age; self:Sound('bow_full')
+-                if self.o.camera then self.o.camera:Full() end
+             end
+         elseif e.name=='weapon_ready' then
+             if not self.rig.PopEvents then self:Flash('draw'); self:Sound('blade_draw') end
+@@ -494,14 +535,13 @@
+         elseif e.name=='draw_start' then self.rig:SetPose('hand')
+         elseif e.name=='draw_min' then
+             self:Play('bow_hold')
+-            if self.pendingReleased then self.pendingReleased=false; self:Release() end
+         elseif e.name=='recover_end' then
+             if self.state.Log then self.state.Log('clip-finish:'..self.clip,'Combat: clip %s finish',self.clip) end
+             self.anim:Stop(self.handle,0); self.clip,self.handle=nil,nil
+             self.charge,self.autoFire=0,false
+         elseif e.name=='fire' then
+             self:StopDrawSound()
+-            self.pendingFire=self.fireCharge or 0
++            -- Release owns a single snapshot; this animation cue never queues ammo.
+         elseif e.name=='respawn_ready' then
+             self.anim:Stop(nil,0)
+             self.clip,self.handle=nil,nil
+@@ -522,7 +562,7 @@
+                 if pending then self:Action(pending) else self.state.SetBusy(false) end
+                 if pending=='hold' then self.hold=heldTime end
+                 if released and self.clip=='bow_draw' then self.pendingReleased=true end
+-            elseif finished=='bow_draw' then self:Play('bow_hold'); if self.pendingReleased then self:Release() end
++            elseif finished=='bow_draw' then self:Play('bow_hold')
+             elseif finished=='knockdown' then self:Play('getup')
+             elseif finished=='getup' then self.state.SetBusy(false)
+             else self.charge,self.autoFire=0,false; self.state.SetBusy(false) end
+@@ -547,6 +587,8 @@
+ ---@param dt number
+ ---@param controls table attack/heavy held, attackTap/dodge edges, axis world-space, allowed
+ function C:Update(dt,controls)
++    local inputStart=Perf.Begin()
++    Perf.Context(self.swingSerial,self.combo,self.clip)
+     self.inputAxis=controls.axis
+     self.age=self.age+dt; self.invuln=math.max(0,self.invuln-dt)
+     if self.state.InCombat() and self:WeaponInHand() then
+@@ -594,11 +636,20 @@
+             self.charge=self.fullCharged and 1 or math.min(.999,self.hold/math.max(.1,self.rig:GetStats().chargeMultiplier or 1))
+         end
+         if self.clip=='bow_hold' or self.clip=='bow_draw' then
+-            self.charge=math.min(1,self.charge+animDt/(self.rig:GetStats().draw or .7)); self.anim:SetParam('p',self.charge)
++            self.drawElapsed=self.drawElapsed+dt
++            self.charge=math.min(1,self.drawElapsed/(self.rig:GetStats().draw or 1))
++            self.power=(self.charge*self.charge+2*self.charge)/3
++            self.anim:SetParam('p',self.charge)
++            if self.charge>=1 and not self.drawFullReached then
++                self.drawFullReached=true;self.bowFullAt=self.age;self:Sound('bow_full')
++            end
+         end
+         if self.autoFire and self.drawFullReached and self.clip=='bow_hold' and self.charge>=1 then self:Release() end
+         if self.lastAttack and not attack and not self.autoFire then self:Release() end
+     end
++    Perf.Context(self.swingSerial,self.combo,self.clip)
++    Perf.Finish('input',inputStart)
++    local motionStart=Perf.Begin()
+     self.lastAttack,self.lastHeavy=attack,heavy
+     self.hitstop=math.max(0,self.hitstop-dt)
+     local sliding=self.clip=='dodge_slide'
+@@ -630,16 +681,24 @@
+         metres=math.min(metres,math.max(0,.35-self.followDistance))
+         self.followDistance=self.followDistance+metres
+     end
++    local attacking=self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
++    if not sliding and (attacking or not self.clip) and animDt>0 then
++        metres=metres+(self.motionDebt or 0);self.motionDebt=0
++    end
+     self.motion=moveDir*metres
+     if sliding and self.o.slideMotion and metres>0 then
+         self.motion,self.slideStopped=self.o.slideMotion(self.motion)
+-    elseif self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
+-        and self.o.attackMotion and metres>0 then
+-        self.motion=self.o.attackMotion(self.motion)
++    elseif (attacking or not self.clip) and self.o.attackMotion and metres>0 then
++        local stopped,debt
++        self.motion,stopped,debt=self.o.attackMotion(self.motion)
++        self.motionDebt=not stopped and (debt or 0) or 0
+         self.slideMotionFrame=true -- already footprint/wall checked, do not re-run endpoint guard
+     end
++    Perf.Finish('motion',motionStart)
+     if self.fovAge then self.fovAge=self.fovAge+dt end
++    local recoveryStart=Perf.Begin()
+     self:Events()
++    Perf.Finish('recovery',recoveryStart)
+     if not sliding and not self.clip and canInput then self:ConsumeBuffer(controls.axis) end
+     if sliding then
+         self.iframe=self.clip=='dodge_slide' and self.slideElapsed<.20-1e-8
+@@ -734,8 +793,15 @@
+ -- Still called after the physical actor/base animation update. hitPending covers
+ -- a low-FPS frame which contains both hit_on and hit_off exactly once.
+ function C:AfterPose()
++    if self.settlingContact then return end -- hit/feedback callbacks may reenter
+     if self.pendingFire~=nil then
+-        if not self.dead and self.o.fire then self.o.fire(self.pendingFire,self.rig:GetStats(),self.fireCrystal) end
++        local shot=self.pendingFire
++        if not self.dead and self.o.fire then
++            local fired=self.o.fire(shot.u,shot.stats,self.fireCrystal,shot)
++            if fired then
++                if self.rig.ReleaseBow then self.rig:ReleaseBow() end
++            else self.bowFailedUntil=self.age+.10 end
++        end
+         self.pendingFire=nil
+     end
+     if not (self.hitOpen or self.hitPending) or self.dead then self.previousHit=nil; return end
+@@ -746,15 +812,19 @@
+     local position=self.o.position()
+     local direction=self.hitForward or Flat(self.o.forward(),Vector3.FORWARD)
+     local enemies=self.o.enemies and self.o.enemies() or {}
+-    local contacts=Hit.QueryZone(enemies,zone)
++    local queryStart=Perf.Begin()
++    for enemy in pairs(self.queryShapes) do self.queryShapes[enemy]=nil end
++    local contacts=Hit.QueryZone(enemies,zone,self.queryHits,self.queryPool,self.damaged,self.queryShapes)
+     if slam then
+-        for _,contact in ipairs(Hit.QueryZone(enemies,slam)) do contacts[#contacts+1]=contact end
+-        table.sort(contacts,function(a,b)return a.distance2<b.distance2 end)
+-    end
++        for _,contact in ipairs(Hit.QueryZone(enemies,slam,self.slamHits,self.slamPool,self.damaged,self.queryShapes)) do contacts[#contacts+1]=contact end
++        table.sort(contacts,Hit.DistanceLess)
++    end
++    Perf.Finish('QueryZone',queryStart)
++    local hitStart=Perf.Begin()
+     for _,contact in ipairs(contacts) do
+         local enemy,part=contact.enemy,contact.shape.id
+         -- Stone projectiles are distinct targets; a deflection cannot consume the body hit.
+-        local key=(part and part:find('stone_',1,true)==1) and (tostring(enemy)..part) or enemy
++        local key=Hit.TargetKey(enemy,part)
+         if not self.damaged[key] and Hit.Visible(position+Vector3(0,.9,0),contact.pos,self.o.cast) then
+             local heavy=self.hitClip=='sword_heavy_release'
+             local perfect=self.strikePerfect
+@@ -763,11 +833,21 @@
+                 armorBreak=(stats.armorBreak or 1)*(heavy and self.releaseFull and 1.5 or 1),knockback=self.combo==3 and .55 or .1,
+                 part=part,material=contact.shape.material or 'soft',normal=contact.normal,
+                 swingId='sword:'..self.swingSerial,tier=heavy and 'heavy' or (self.combo==3 and 'third' or 'light'),kind='sword',clip=self.hitClip,pos=contact.pos,dir=direction,source='player',heavy=heavy,combo=self.combo}
+-            local result=Hit.Apply(enemy,info)
+-            if result.hit then
+-                self.damaged[key]=true; self:Feedback(enemy,info,result,contact.shape.weak,false)
+-            end
+-        end
++            self.settlingContact=true
++            local ok,message=pcall(C.SettleContact,self,enemy,info,key,contact.shape.weak,self.swingSerial)
++            self.settlingContact=false
++            if not ok then error(message,0) end
++        end
++    end
++    Perf.Finish('HitEvent',hitStart)
++end
++-- Keep info/result as independent snapshots: enemy/FX callbacks may retain
++-- them. The borrowed QueryZone contacts are never exposed to those callbacks.
++function C:SettleContact(enemy,info,key,weak,swing)
++    local result=Hit.Apply(enemy,info)
++    if result.hit then
++        if self.swingSerial==swing then self.damaged[key]=true end
++        self:Feedback(enemy,info,result,weak,false)
+     end
+ end
+ function C:ShakeOffset()
+@@ -801,7 +881,7 @@
+     function dummy:ApplyHit(info)
+         self.hp=math.max(0,self.hp-info.dmg)
+         local weapon=info.kind=='sword' and 'sword' or 'bow'
+-        print(string.format('Dummy hit: %s %s dmg=%.2f part=%s',weapon,info.tier or info.clip or 'unknown',info.dmg,info.part or 'body'))
++        if self.debugHits then print(string.format('Dummy hit: %s %s dmg=%.2f part=%s',weapon,info.tier or info.clip or 'unknown',info.dmg,info.part or 'body')) end
+         return {hit=true,killed=false}
+     end
+     function dummy:Update() self.hp=9999 end
+@@ -876,7 +956,7 @@
+     for _,slot in ipairs(pool.slots) do
+         if slot.active and slot.owner==owner and slot.serial>first then
+             local i=slot.serial-first
+-            local at=pos-dir*((i-1)*.18)
++            local at=pos-dir*((i-1)*.18) --[[@as Vector3]]
+             local y=i<=4 and ground(at) or nil
+             if not y then pool:Hide(slot)
+             else
+--- validation/combat/sword-hitch/before/Hit.lua.txt
++++ scripts/combat/Hit.lua
+@@ -1,5 +1,16 @@
+ -- Analytic combat queries only. Never calls TimeObject or voxel destruction.
++local Perf=require('combat.SwingPerf')
+ local H={}
++local function ByT(a,b) return a.t<b.t end
++function H.DistanceLess(a,b) return a.distance2<b.distance2 end
++function H.ContactLess(a,b)
++    if math.abs(a.distance2-b.distance2)>1e-9 then return a.distance2<b.distance2 end
++    return tostring(a.shape.id)<tostring(b.shape.id)
++end
++function H.TargetKey(enemy,part)
++    return (part and part:find('stone_',1,true)==1) and (tostring(enemy)..part) or enemy
++end
++local function Clear(out) for i=#out,1,-1 do out[i]=nil end end
+ local function Finite(n) return type(n)=='number' and n==n and math.abs(n)<math.huge end
+ ---@param a Vector3
+ ---@param b Vector3
+@@ -29,7 +40,9 @@
+     -- Enemy owns weak/down/armor multipliers. Applying them here doubles damage.
+     local before=target.hp
+     local priorHitStop=target.hitStop or 0
++    Perf.Invalidate() -- callbacks may rebuild grids or move/remove volumes
+     local result=target:ApplyHit(info) or {}
++    Perf.Invalidate()
+     return {hit=result.hit==true,killed=result.killed==true,partBroken=result.partBroken,
+         damage=result.damage or (before and target.hp and math.max(0,before-target.hp) or nil),
+         priorHitStop=priorHitStop,part=result.part or info.part,material=result.material or info.material or 'soft',
+@@ -41,26 +54,36 @@
+ ---@param radius number
+ ---@param skip table|nil
+ ---@return table[] ordered by contact distance; disabled/hidden parts excluded
+-function H.Query(enemies,a,b,radius,skip)
+-    local hits={}
++function H.Query(enemies,a,b,radius,skip,out,pool)
++    local hits=out or {}
++    Clear(hits)
+     for _,enemy in ipairs(enemies) do
+         if not enemy.dead and enemy.active~=false and not (skip and skip[enemy]) then
+             for _,shape in ipairs(enemy:GetHurtShapes()) do
+                 if shape.enabled~=false and (shape.radius or 0)>0 then
+                     local t=H.SegmentSphere(a,b,shape.center,shape.radius+(radius or 0))
+-                    if t then hits[#hits+1]={enemy=enemy,shape=shape,t=t,pos=a+(b-a)*t} end
++                    if t then
++                        local index=#hits+1
++                        local contact=pool and pool[index] or {}
++                        if pool then pool[index]=contact end
++                        contact.enemy,contact.shape,contact.t,contact.pos=enemy,shape,t,a+(b-a)*t
++                        hits[index]=contact
++                    end
+                 end
+             end
+         end
+     end
+-    table.sort(hits,function(a0,b0) return a0.t<b0.t end)
++    table.sort(hits,ByT)
+     return hits
+ end
+ -- Finite upright sector prism. Angles are FULL degrees; convex <=180 or
+ -- a 360-degree disc. This is gameplay geometry, independent of blade bones.
+ -- Return the nearest point in the zone to a point (in world metres).
++---@param zone table
++---@param p Vector3
++---@return Vector3
+ local function ZonePoint(zone,p)
+-    local d=p-zone.origin
++    local d=p-zone.origin --[[@as Vector3]]
+     local f=zone.forward
+     local x,z=d.x*f.z-d.z*f.x,d.x*f.x+d.z*f.z
+     local radius=zone.radius
+@@ -82,65 +105,89 @@
+ -- shape: sphere {center,radius} or capsule {a,b,radius}; endpoints are world
+ -- positions. Existing enemies are spheres. Capsule minimization uses convex
+ -- distance, not discrete samples that could miss a thin crossing capsule.
++local function ZoneSquare(zone,a,delta,t)
++    local c=a+delta*t --[[@as Vector3]]
++    return ((ZonePoint(zone,c)-c) --[[@as Vector3]]):LengthSquared()
++end
+ local function ZoneShape(zone,shape)
+     local r=shape.radius or 0
+     if r<=0 or not Finite(r) then return nil end
+-    local center=shape.center
++    local center=shape.center --[[@as Vector3|nil]]
+     if shape.a and shape.b then
+-        local a,b=shape.a,shape.b
+-        local delta=b-a
++        local a,b=shape.a,shape.b --[[@as Vector3, Vector3]]
++        local delta=b-a --[[@as Vector3]]
+         local lo,hi=0,1
+-        local function Square(t)
+-            local c=a+delta*t
+-            return (ZonePoint(zone,c)-c):LengthSquared()
+-        end
+         for _=1,36 do
+             local l,h=lo+(hi-lo)/3,hi-(hi-lo)/3
+-            if Square(l)<Square(h) then hi=h else lo=l end
++            if ZoneSquare(zone,a,delta,l)<ZoneSquare(zone,a,delta,h) then hi=h else lo=l end
+         end
+         local t=(lo+hi)*.5
+-        if Square(0)<=Square(t) then t=0 end
+-        if Square(1)<Square(t) then t=1 end
++        if ZoneSquare(zone,a,delta,0)<=ZoneSquare(zone,a,delta,t) then t=0 end
++        if ZoneSquare(zone,a,delta,1)<ZoneSquare(zone,a,delta,t) then t=1 end
+         local source=zone.source or zone.origin+Vector3(0,.9,0)
+         local length2=delta:LengthSquared()
+-        local near=length2>1e-12 and math.max(0,math.min(1,(source-a):DotProduct(delta)/length2)) or 0
+-        if Square(near)<=r*r+1e-9 then t=near end
++        local near=length2>1e-12 and math.max(0,math.min(1,((source-a) --[[@as Vector3]]):DotProduct(delta)/length2)) or 0
++        if ZoneSquare(zone,a,delta,near)<=r*r+1e-9 then t=near end
+         center=a+delta*t
+     end
+     if not center then return nil end
+     local q=ZonePoint(zone,center)
+-    if (q-center):LengthSquared()>r*r+1e-9 then return nil end
++    if ((q-center) --[[@as Vector3]]):LengthSquared()>r*r+1e-9 then return nil end
+     -- Prefer the near surface of the hurt shape, not its centre, for contact FX.
+     -- At a grazing zone edge keep the actual overlap point instead of pulling
+     -- a surface point outside the attack region.
+     local source=zone.source or zone.origin+Vector3(0,.9,0)
+-    local toward=source-center
++    local toward=source-center --[[@as Vector3]]
+     local length=toward:Length()
+-    local contact=length>r and center+toward*(r/length) or source
+-    if (ZonePoint(zone,contact)-contact):LengthSquared()>1e-9 then contact=q end
+-    local normal=contact-center
+-    if normal:LengthSquared()<1e-10 then normal=-zone.forward else normal=normal:Normalized() end
+-    return contact,normal,(contact-source):LengthSquared()
++    local contact=length>r and center+toward*(r/length) or source --[[@as Vector3]]
++    if ((ZonePoint(zone,contact)-contact) --[[@as Vector3]]):LengthSquared()>1e-9 then contact=q end
++    local normal=contact-center --[[@as Vector3]]
++    if normal:LengthSquared()<1e-10 then normal=-zone.forward --[[@as Vector3]] else normal=normal:Normalized() end
++    return contact,normal,((contact-source) --[[@as Vector3]]):LengthSquared()
+ end
+ -- Return all shape contacts sorted nearest first. Caller applies wall visibility
+ -- and per-swing target deduplication, so a hidden near part does not hide another
+ -- visible part, and multiple parts/overlapping zones cannot multiply damage.
+-function H.QueryZone(enemies,zone)
+-    local hits={}
++-- Optional out/contact pool are borrowed until the next query. Only the owner
++-- may retain them. Shapes can be shared across zones within ONE read-only query
++-- batch; never across hit callbacks or frames (enemy shapes have no revision API).
++function H.QueryZone(enemies,zone,out,pool,skip,shapesByEnemy)
++    local hits=out or {}
++    Clear(hits)
+     for _,enemy in ipairs(enemies) do
+         if not enemy.dead and enemy.active~=false then
+-            for _,shape in ipairs(enemy:GetHurtShapes()) do
+-                if shape.enabled~=false then
+-                    local pos,normal,d2=ZoneShape(zone,shape)
+-                    if pos then hits[#hits+1]={enemy=enemy,shape=shape,pos=pos,normal=normal,distance2=d2} end
++            local shapes=shapesByEnemy and shapesByEnemy[enemy] or nil
++            if not shapes then
++                shapes=enemy:GetHurtShapes()
++                if shapesByEnemy then shapesByEnemy[enemy]=shapes end
++            end
++            for _,shape in ipairs(shapes) do
++                if shape.enabled~=false and not (skip and skip[H.TargetKey(enemy,shape.id)]) then
++                    -- Cheap sphere/capsule AABB versus the enclosing sector prism.
++                    -- Rejection only; the exact sphere/capsule solver still owns hits.
++                    local a,b=shape.a or shape.center,shape.b or shape.center
++                    local r=shape.radius or 0
++                    local o=zone.origin
++                    if a and b and math.max(a.x,b.x)+r>=o.x-zone.radius-1e-8
++                        and math.min(a.x,b.x)-r<=o.x+zone.radius+1e-8
++                        and math.max(a.z,b.z)+r>=o.z-zone.radius-1e-8
++                        and math.min(a.z,b.z)-r<=o.z+zone.radius+1e-8
++                        and math.max(a.y,b.y)+r>=o.y+zone.low-1e-8
++                        and math.min(a.y,b.y)-r<=o.y+zone.high+1e-8 then
++                        local pos,normal,d2=ZoneShape(zone,shape)
++                        if pos then
++                            local index=#hits+1
++                            local contact=pool and pool[index] or {}
++                            if pool then pool[index]=contact end
++                            contact.enemy,contact.shape,contact.pos,contact.normal,contact.distance2=enemy,shape,pos,normal,d2
++                            hits[index]=contact
++                        end
++                    end
+                 end
+             end
+         end
+     end
+-    table.sort(hits,function(a,b)
+-        if math.abs(a.distance2-b.distance2)>1e-9 then return a.distance2<b.distance2 end
+-        return tostring(a.shape.id)<tostring(b.shape.id)
+-    end)
++    table.sort(hits,H.ContactLess)
+     return hits
+ end
+ -- Cast adapter returns a segment fraction or nil, using actual voxel/terrain grid.
+--- validation/combat/sword-hitch/before/NomiController.lua.txt
++++ scripts/ruins/NomiController.lua
+@@ -13,6 +13,7 @@
+ local TimeObject = require("ruins.TimeObject")
+ local DebugLog = require("ruins.DebugLog")
+ local Terrain = require("ruins.RuinsTerrain")
++local Perf=require("combat.SwingPerf")
+ 
+ local M = {}
+ 
+@@ -102,6 +103,7 @@
+     self.camTarget.position = spawn
+     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
+     print(string.format("NomiController: spawn %.1f %.1f %.1f", spawn.x, spawn.y, spawn.z))
++    self:InitSlideProbes()
+     return self
+ end
+ 
+@@ -181,7 +183,8 @@
+ 
+ -- Probe actual collision surfaces (including rebuilt bridge), not the aim
+ -- resolver's expensive per-volume repair path. Both sides' masks match the CC.
+-function N:SlideRay(ray,distance)
++function N:SlideRay(ray,distance,purpose)
++    if purpose=='range' then Perf.rangeRays=Perf.rangeRays+1 else Perf.motionRays=Perf.motionRays+1 end
+     local nearest=nil ---@type VoxelRaycastResult|nil
+     for _,hit in ipairs(self.world:Raycast(ray,distance,self.cc.collisionMask)) do
+         local volume=hit.volume
+@@ -191,34 +194,91 @@
+     end
+     return nearest
+ end
++-- Closures and fixed query records are created once per controller, not per move.
++function N:InitSlideProbes()
++    if self.slideGroundPort then return end
++    self.groundPool={};self.sweepPool={}
++    for i=1,256 do self.groundPool[i]={} end
++    for i=1,24 do self.sweepPool[i]={} end
++    self.slideGroundPort=function(p) return self:SlideGround(p) end
++    self.slideClearPort=function(a,b,margin) return self:SlideClear(a,b,margin) end
++end
+ function N:SlideGround(p)
++    local pool=self.groundScope and self.groundPool or nil
++    for i=1,pool and (self.groundCount or 0) or 0 do
++        local c=pool[i]
++        if c.x==p.x and c.y==p.y and c.z==p.z then return c.h,c.n end
++    end
+     local hit=self:SlideRay(Ray(p+Vector3(0,.35,0),Vector3(0,-1,0)),.75)
+-    if hit then return hit.position.y,hit.normal.y end
++    local h,n=hit and hit.position.y,hit and hit.normal.y
++    local index=(self.groundCount or 0)+1
++    if pool and pool[index] then
++        local c=pool[index];c.x,c.y,c.z,c.h,c.n=p.x,p.y,p.z,h,n
++        self.groundCount=index
++    end
++    return h,n
+ end
+ function N:CanSlide()
+     if not self.cc.onGround then return false end
++    self:InitSlideProbes();self.groundCount=0;self.groundScope=true
+     local C=require('combat.CombatMoves')
+-    return C.SlideFootprint(self.node.worldPosition,self.cc.radius,function(p) return self:SlideGround(p) end)~=nil
+-end
+-function N:ClipSlideMotion(motion)
++    local supported=C.SlideFootprint(self.node.worldPosition,self.cc.radius,self.slideGroundPort)~=nil
++    self.groundCount=0;self.groundScope=false
++    return supported
++end
++---@param a Vector3
++---@param b Vector3
++---@param margin number
++function N:SlideClear(a,b,margin)
++    local delta=b-a --[[@as Vector3]]
++    local length=delta:Length()
++    if length<1e-8 then return true end
++    local direction=delta/length
++    local start=self.sweepStart
++    local along=(a-start):DotProduct(self.sweepDirection)
++    -- Only straight, level subsegments can share the longer ray. Steps/slopes
++    -- use the original 24 probes at their actual height/direction.
++    local flat=a.y==b.y and direction:DotProduct(self.sweepDirection)>1-1e-10
++    for i=0,7 do
++        local angle=i*math.pi/4
++        local offset=Vector3(math.sin(angle)*margin,0,math.cos(angle)*margin)
++        for level=1,3 do
++            local h=level==1 and .25 or (level==2 and self.cc.height*.5 or self.cc.height-.10)
++            local origin=a+offset+Vector3(0,h,0)
++            local c=self.sweepPool[i*3+level]
++            local distance
++            -- Scope is a single synchronous ClipSlidePath, with no world edits
++            -- or callbacks other than these probes; never cache across frames.
++            if flat and c.y==origin.y and c.from and along>=c.from and along+length<=c.to+1e-7
++                and (not c.hit or c.hit>=along-1e-7) then
++                distance=c.hit and c.hit-along
++            else
++                local reach=flat and math.max(length,self.sweepLength-along) or length
++                local hit=self:SlideRay(Ray(origin,direction),reach)
++                distance=hit and hit.distance
++                if flat then
++                    c.y,c.from,c.to,c.hit=origin.y,along,along+reach,distance and along+distance
++                else c.from=nil end
++            end
++            if distance and distance<=length then return false end
++        end
++    end
++    return true
++end
++function N:ClipSlideMotion(motion,maxSteps)
++    maxSteps=maxSteps or 24 -- full authored 2.2m slide fits; melee uses eight
+     local C=require('combat.CombatMoves')
+-    return C.ClipSlidePath(self.node.worldPosition,motion,self.cc.radius,
+-        function(p) return self:SlideGround(p) end,
+-        function(a,b,margin)
+-            -- Expanded footprint rays at ankle, torso and head; the existing
+-            -- VoxelCharacterController then performs the real capsule sweep.
+-            for i=0,7 do
+-                local angle=i*math.pi/4
+-                local offset=Vector3(math.sin(angle)*margin,0,math.cos(angle)*margin)
+-                for _,h in ipairs({.25,self.cc.height*.5,self.cc.height-.10}) do
+-                    local origin=a+offset+Vector3(0,h,0)
+-                    local delta=b-a --[[@as Vector3]]
+-                    local length=delta:Length()
+-                    if length>1e-8 and self:SlideRay(Ray(origin,delta/length),length) then return false end
+-                end
+-            end
+-            return true
+-        end)
++    self:InitSlideProbes()
++    self.groundScope=true;self.groundCount=0
++    for _,c in ipairs(self.sweepPool) do c.from=nil end
++    self.sweepStart=self.node.worldPosition
++    local flat=Vector3(motion.x,0,motion.z)
++    self.sweepLength=math.min(flat:Length(),(maxSteps or math.huge)*.10)
++    self.sweepDirection=flat:LengthSquared()>1e-16 and flat:Normalized() or Vector3.FORWARD
++    local moved,blocked,debt=C.ClipSlidePath(self.sweepStart,motion,self.cc.radius,
++        self.slideGroundPort,self.slideClearPort,maxSteps)
++    self.groundScope=false;self.groundCount=0 -- external probes never observe this call's snapshots
++    return moved,blocked,debt
+ end
+ 
+ -- Snap before hit_on; camera yaw stays untouched even for a full body turn.
+@@ -314,8 +374,7 @@
+     if not self.cc.onGround then return Vector3.ZERO end
+     -- Rebuilt bridges are real collision ground even inside Terrain's void mask.
+     -- Use the same <=.10m footprint/slope/wall sweep as the accepted slide.
+-    local clipped=self:ClipSlideMotion(motion)
+-    return clipped
++    return self:ClipSlideMotion(motion,8)
+ end
+ function N:ApplyCombatOffset(offset)
+     local cn=self:CameraNode()
+@@ -372,61 +431,63 @@
+ -- 相机 -> [空气 | 实心格]；高坐标面负向进入时属于 n-1，不属于网格外的 n。
+ -- 入口/步进用 Lua 标量保留精度；不靠微小世界位移选格，也不把越界格强行夹回网格。
+ -- 整数边界按方向归属，棱角同时跨轴；空洞及旋转体积仍按当前 Grid。
++local function GridSlab(o,d,n,axis,enter,exit,entryAxis,entrySign)
++    if math.abs(d)<1e-8 then return enter,exit,entryAxis,entrySign,o>=0 and o<n end
++    local a,b=-o/d,(n-o)/d
++    local sign=-1
++    if a>b then a,b=b,a;sign=1 end
++    if a>enter then enter,entryAxis,entrySign=a,axis,sign end
++    exit=math.min(exit,b)
++    return enter,exit,entryAxis,entrySign,enter<=exit
++end
++local function GridFirstCell(o,d,n,axis,entryAxis,enter)
++    local boundary=d>0 and -o or n-o
++    if axis==entryAxis or (math.abs(d)>=1e-8 and boundary/d==enter) then return d>0 and 0 or n-1 end
++    local p=o+d*enter
++    return d<0 and math.ceil(p)-1 or math.floor(p)
++end
++local function GridNext(o,d,i,step)
++    if math.abs(d)<1e-8 then return math.huge end
++    return (i+(step>0 and 1 or 0)-o)/d
++end
+ ---@param volume VoxelVolume
+ ---@param ray Ray
+ ---@param maxDist number
+----@return VoxelRaycastResult
+-local function TraceVolume(volume, ray, maxDist)
+-    local result=VoxelRaycastResult:new()
++---@param cellLimit number|nil
++---@return VoxelRaycastResult|nil, boolean|nil exhausted
++local function TraceVolume(volume, ray, maxDist, cellLimit)
+     local node,grid=volume:GetNode(),volume:GetGrid()
+-    if node==nil or grid==nil then return result end
++    if node==nil or grid==nil then return nil end
+     local size=volume.voxelSize
+-    if size<=0 then return result end
++    if size<=0 then return nil end
+     local localOrigin=node:WorldToLocal(ray.origin)
+     -- 方向用逆旋转/缩放，不对两个世界坐标作差；远离原点时会丢失微小斜率。
+     local rotated=node.worldRotation:Inverse()*ray.direction
+     local scale=node.worldScale
+-    if math.abs(scale.x)<1e-8 or math.abs(scale.y)<1e-8 or math.abs(scale.z)<1e-8 then return result end
++    if math.abs(scale.x)<1e-8 or math.abs(scale.y)<1e-8 or math.abs(scale.z)<1e-8 then return nil end
+     local ox,oy,oz=localOrigin.x/size,localOrigin.y/size,localOrigin.z/size
+     local vx,vy,vz=rotated.x/scale.x/size,rotated.y/scale.y/size,rotated.z/scale.z/size
+     local dims=grid:GetDimensions()
+     local enter,exit=0,maxDist
+-    local normal=Vector3.ZERO
+-    local entryAxis=""
+-    local function Slab(o,d,n,axis)
+-        if math.abs(d)<1e-8 then return o>=0 and o<n end
+-        local a,b=-o/d,(n-o)/d
+-        local sign=-1
+-        if a>b then a,b=b,a; sign=1 end
+-        if a>enter then
+-            enter=a
+-            entryAxis=axis
+-            normal=Vector3(axis=="x" and sign or 0,axis=="y" and sign or 0,axis=="z" and sign or 0)
+-        end
+-        exit=math.min(exit,b)
+-        return enter<=exit
+-    end
+-    if not Slab(ox,vx,dims.x,"x") or not Slab(oy,vy,dims.y,"y") or not Slab(oz,vz,dims.z,"z") then return result end
+-    local function FirstCell(o,d,n,axis)
+-        -- 并列入射的每个轴都直接归属边界格，避免 o+d*enter 的抵消残差。
+-        local boundary=d>0 and -o or n-o
+-        if axis==entryAxis or (math.abs(d)>=1e-8 and boundary/d==enter) then return d>0 and 0 or n-1 end
+-        local p=o+d*enter
+-        -- 负向经过整数格面时从前一格开始；不推进 1e-5 再经 Vector3 舍入。
+-        return d<0 and math.ceil(p)-1 or math.floor(p)
+-    end
+-    local x,y,z=FirstCell(ox,vx,dims.x,"x"),FirstCell(oy,vy,dims.y,"y"),FirstCell(oz,vz,dims.z,"z")
++    local entryAxis,sign,valid=0,0,true
++    enter,exit,entryAxis,sign,valid=GridSlab(ox,vx,dims.x,1,enter,exit,entryAxis,sign)
++    if not valid then return nil end
++    enter,exit,entryAxis,sign,valid=GridSlab(oy,vy,dims.y,2,enter,exit,entryAxis,sign)
++    if not valid then return nil end
++    enter,exit,entryAxis,sign,valid=GridSlab(oz,vz,dims.z,3,enter,exit,entryAxis,sign)
++    if not valid then return nil end
++    local normal=Vector3(entryAxis==1 and sign or 0,entryAxis==2 and sign or 0,entryAxis==3 and sign or 0)
++    local x,y,z=GridFirstCell(ox,vx,dims.x,1,entryAxis,enter),GridFirstCell(oy,vy,dims.y,2,entryAxis,enter),GridFirstCell(oz,vz,dims.z,3,entryAxis,enter)
+     local sx,sy,sz=vx>0 and 1 or -1,vy>0 and 1 or -1,vz>0 and 1 or -1
+-    local function Next(o,d,i,step)
+-        if math.abs(d)<1e-8 then return math.huge end
+-        return (i+(step>0 and 1 or 0)-o)/d
+-    end
+-    local tx,ty,tz=Next(ox,vx,x,sx),Next(oy,vy,y,sy),Next(oz,vz,z,sz)
++    local tx,ty,tz=GridNext(ox,vx,x,sx),GridNext(oy,vy,y,sy),GridNext(oz,vz,z,sz)
+     local dx,dy,dz=math.abs(1/vx),math.abs(1/vy),math.abs(1/vz)
+     local distance=enter
+     for i=1,dims.x+dims.y+dims.z+3 do
+         if x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or distance>exit then break end
++        if cellLimit and Perf.cells>=cellLimit then return nil,true end
++        Perf.cells=Perf.cells+1
+         if grid:IsSolid(x,y,z) then
++            local result=VoxelRaycastResult:new()
+             result.hit,result.volume,result.volumeId=true,volume,volume.volumeId
+             result.distance,result.position=distance,ray.origin+ray.direction*distance
+             result.normal=node.worldRotation*normal
+@@ -442,7 +503,7 @@
+         if ty<=nextDistance+1e-6 then y=y+sy; ty=ty+dy; normal=Vector3(0,-sy,0) end
+         if tz<=nextDistance+1e-6 then z=z+sz; tz=tz+dz; normal=Vector3(0,0,-sz) end
+     end
+-    return result
++    return nil
+ end
+ 
+ ---@param hit VoxelRaycastResult
+@@ -460,35 +521,83 @@
+     return x<0 or y<0 or z<0 or x>=dims.x or y>=dims.y or z>=dims.z or not grid:IsSolid(x,y,z)
+ end
+ 
++-- Cache is opt-in for synchronous read-only batches. World mutation has no
++-- exposed engine revision, so callers must end the scope before hit callbacks,
++-- physics, rebuilding terrain, or spawning/removing volumes. Default: uncached.
++function N:BeginQueryScope()
++    self.queryScope=true;self.queryCount=0;self.queryRevision=Perf.revision
++    if not self.queryPool then
++        self.queryPool={}
++        for i=1,32 do self.queryPool[i]={} end
++    end
++end
++function N:EndQueryScope() self.queryScope=false;self.queryCount=0 end
+ ---@param ray Ray
+ ---@param maxDist number
++---@param decorative boolean|nil Budget rejection is opaque/blocked, never clear.
+ ---@return VoxelRaycastResult
+-function N:GridHit(ray,maxDist)
++function N:GridHit(ray,maxDist,decorative)
++    local start=Perf.Begin()
+     local mask=self.aimMask or 0xffffffff
++    local o,d=ray.origin,ray.direction
++    if self.queryRevision~=Perf.revision then self.queryCount=0;self.queryRevision=Perf.revision end
++    if self.queryScope then
++        for i=1,self.queryCount do
++            local c=self.queryPool[i]
++            if c.ox==o.x and c.oy==o.y and c.oz==o.z and c.dx==d.x and c.dy==d.y and c.dz==d.z
++                and c.distance==maxDist and c.mask==mask and c.world==self.world
++                and c.filter==self.ignoreAimVolume then
++                Perf.Finish('GridHit',start);return c.result
++            end
++        end
++    end
++    Perf.gridCalls=Perf.gridCalls+1
+     local first=self.world:RaycastGridSingle(ray,maxDist,mask)
+     local ignored=first.hit and self.ignoreAimVolume and self.ignoreAimVolume(first.volume)
+     local emptyOrigin=not ignored and EmptyOriginHit(first,ray)
+     local timeTarget=not ignored and first.hit and TimeObject.FindByVolume(first.volume)~=nil
+-    if not ignored and not emptyOrigin and not timeTarget then return first end
+-    -- 原生列表也可能漏掉前景体积：不能用同一条查询的返回列表证明无遮挡。
+-    -- 零距离异常或选到时之物件时，从当前世界逐体积核对真实 Grid，取最近实心。
+-    -- 截断到原生候选距离即可：后方体积绝不可能成为更近的遮挡物。
+-    local reach=not ignored and not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
+-    local nearest=VoxelRaycastResult:new()
+-    for i=0,self.world:GetVolumeCount()-1 do
+-        local volume=self.world:GetVolume(i)
+-        if volume~=nil and (volume.collisionLayer & mask)~=0
+-            and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
+-            local limit=nearest.hit and math.min(reach,nearest.distance) or reach
+-            local actual=TraceVolume(volume,ray,limit)
+-            if actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
+-        end
+-    end
+-    if DebugLog.enabled and emptyOrigin and not self.emptyOriginLogged then
+-        self.emptyOriginLogged=true
+-        print(string.format("RuinsAim: repaired empty-origin volume=%d falseDistance=%.4f actualDistance=%.4f",
+-            first.volumeId,first.distance,nearest.hit and nearest.distance or -1))
+-    end
++    local nearest=first
++    if ignored or emptyOrigin or timeTarget then
++        Perf.fallbackReason=ignored and 'ignored' or (emptyOrigin and 'emptyOrigin' or 'timeTarget')
++        -- Gameplay LOS remains exact. Only optional HUD queries can be denied;
++        -- reporting the overrun is preferable to silently missing a real hit.
++        local denied=decorative and (Perf.fallbacks>=4 or Perf.cells>=4096)
++        if denied then
++            nearest=VoxelRaycastResult:new();nearest.hit=true;nearest.distance=0
++            Perf.gridBudgetExceeded=Perf.gridBudgetExceeded+1
++            Perf.Finish('GridHit',start);return nearest -- never cache a budget denial
++        end
++        Perf.fallbacks=Perf.fallbacks+1
++        local reach=not ignored and not emptyOrigin and math.min(maxDist,first.distance+.001) or maxDist
++        nearest=VoxelRaycastResult:new()
++        for i=0,self.world:GetVolumeCount()-1 do
++            local volume=self.world:GetVolume(i)
++            if volume~=nil and (volume.collisionLayer & mask)~=0
++                and not (self.ignoreAimVolume and self.ignoreAimVolume(volume)) then
++                if decorative and Perf.volumes>=128 then
++                    nearest.hit,nearest.distance=true,0
++                    Perf.gridBudgetExceeded=Perf.gridBudgetExceeded+1
++                    Perf.Finish('GridHit',start);return nearest
++                end
++                Perf.volumes=Perf.volumes+1
++                local limit=nearest.hit and math.min(reach,nearest.distance) or reach
++                local actual,exhausted=TraceVolume(volume,ray,limit,decorative and 4096 or nil)
++                if decorative and exhausted then
++                    nearest.hit,nearest.distance=true,0
++                    Perf.gridBudgetExceeded=Perf.gridBudgetExceeded+1
++                    Perf.Finish('GridHit',start);return nearest
++                end
++                if actual and actual.hit and (not nearest.hit or actual.distance<nearest.distance) then nearest=actual end
++            end
++        end
++    end
++    if self.queryScope and self.queryCount<32 then
++        self.queryCount=self.queryCount+1
++        local c=self.queryPool[self.queryCount]
++        c.ox,c.oy,c.oz,c.dx,c.dy,c.dz=o.x,o.y,o.z,d.x,d.y,d.z
++        c.distance,c.mask,c.world,c.filter,c.result=maxDist,mask,self.world,self.ignoreAimVolume,nearest
++    end
++    Perf.Finish('GridHit',start)
+     return nearest
+ end
+ 
+--- validation/combat/sword-hitch/before/RuinsScene.lua.txt
++++ scripts/ruins/RuinsScene.lua
+@@ -32,6 +32,8 @@
+ local CombatState = require("combat.CombatState")
+ local Safe=CombatState.Isolated
+ local CombatMoves = require('combat.CombatMoves')
++local SwingPerf=require('combat.SwingPerf')
++local combatControls,combatMoveOptions={},{}
+ local CombatAnim = require('combat.CombatAnim')
+ local WeaponSelectGesture=require('combat.WeaponSelectGesture')
+ local WeaponWheel=require('ui.WeaponWheel')
+@@ -58,7 +60,7 @@
+             Safe('Audio.Preload',CombatAudio.Preload)
+         end
+     end
+-    CombatAudio.Update(realDt, CombatState.Get()==CombatState.EXPLORE)
++    CombatAudio.Update(realDt)
+ end
+ local CombatSettings = require('ruins.GameSettings')
+ local combatLowQuality_=false
+@@ -134,6 +136,7 @@
+     M.SetGCEnabled(M.gcEnabled)
+ end
+ function Ruins_HandleGCBeginFrame()
++    SwingPerf.BeginFrame(CombatState)
+     if gcState.running then gcState.frameStart=Time:GetSystemTime() end
+ end
+ local function StepSceneGC()
+@@ -167,6 +170,7 @@
+ function Ruins_HandleGCEndFrame()
+     Safe('GC.Step',StepSceneGC)
+     Safe('Perf.Flush',CombatState.FlushSwapPerf)
++    SwingPerf.EndFrame()
+ end
+ local function StopSceneGC()
+     local enabled=M.gcEnabled
+@@ -483,11 +487,11 @@
+ -- combat rays but is never damaged by them.
+ ---@param a Vector3
+ ---@param b Vector3
+-local function CombatCast(a,b)
++local function CombatCast(a,b,decorative)
+     local delta=b-a
+     local length=delta:Length()
+     if length<.0001 then return nil end
+-    local hit=nomi_:GridHit(Ray(a,delta/length),length)
++    local hit=nomi_:GridHit(Ray(a,delta/length),length,decorative)
+     return hit.hit and Clamp(hit.distance/length,0,1) or nil
+ end
+ local function CombatFeedback(event)
+@@ -530,7 +534,7 @@
+     for _,event in ipairs(require('combat.AnimClips').Clips.dodge_slide.events) do
+         if event[1]=='dust_streak' then hasDustStreak=true; break end
+     end
+-    combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node)
++    combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node,{bowRig=combatRig_})
+     combatMoves_=CombatMoves.New({anim=combatAnim_,rig=combatRig_,state=CombatState,
+         clear=function(reason) if weaponGesture_ then weaponGesture_:Interrupt(reason) end end,
+         position=function() return nomi_:Position() end,forward=function() return nomi_.node.worldDirection end,
+@@ -558,26 +562,28 @@
+             return nomi_:AssistMelee(CombatEnemies(),CombatCast,intent,selectTarget and CombatState.GetSetting('aimAssist'))
+         end,
+         protected=function() return M.ride.mode~='free' or voidInputBlocked or animPreview_.index>0 end,
+-        fire=function(charge,stats,forceCrystal)
++        fire=function(charge,stats,forceCrystal,snapshot)
+             local hit=combatRig_:GetHit()
+             local cn=nomi_:CameraNode()
+             local a=cn.worldPosition
+-            local b=a+cn.worldDirection*(stats.range or 36)
++            local b=a+cn.worldDirection*(stats.range or 64)
+             local wall=CombatCast(a,b)
+             local contacts=CombatHit.Query(CombatEnemies(),a,b,0)
+             local reach=wall or 1
+             if contacts[1] and contacts[1].t<reach then reach=contacts[1].t end
+             local target=a+(b-a)*reach
+             local shotStats=stats
+-            if forceCrystal then
++            if forceCrystal and not snapshot then
+                 shotStats={}; for key,value in pairs(stats) do shotStats[key]=value end
+                 shotStats.crystalRadius=.8; shotStats.crystalDamageMultiplier=.25
+             end
+             if combatTest_ and combatTest_.active and trainingDummy_ then
+                 target=trainingDummy_:GetHurtShapes()[1].center -- synthetic aim, real swept projectile collision
+             end
+-            local fired,shot=combatArrows_:Fire(hit.origin,(target-hit.origin):Normalized(),charge,shotStats)
++            local tip=combatRig_:GetBowArrowTip()
++            local fired,shot=combatArrows_:Fire(hit.origin,(target-tip):Normalized(),charge,shotStats,tip)
+             if fired and combatTest_ and combatTest_.active then combatTest_:Arrow(shot) end
++            return fired
+         end,
+         respawn=function()
+             -- Use the established safe-point/fallback and camera snap; puzzle
+@@ -608,27 +614,19 @@
+             pointer:SetBlocked(M.debugOn==true or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or voidInputBlocked)
+             if input.focus and not input.minimized then pointer:Resume() end
+         end})
+-    local arrowMaterial=Material:new()
+-    arrowMaterial:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTexture.xml'))
+-    arrowMaterial:SetShaderParameter('MatDiffColor',Variant(Color(.76,.65,.4,1)))
+-    arrowMaterial:SetShaderParameter('Roughness',Variant(.85))
+     local tailMaterial=Material:new()
+     tailMaterial:SetTechnique(0,cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'))
+     tailMaterial:SetShaderParameter('MatDiffColor',Variant(Color(.65,.70,.65,1)))
+     for i=1,12 do
+         local node=scene_:CreateChild('CombatArrow_'..i)
+         node.enabled=false
+-        local body=node:CreateChild('shaft')
+-        local model=body:CreateComponent('StaticModel')
+-        model:SetModel(cache:GetResource('Model','Models/Box.mdl')); model:SetMaterial(arrowMaterial)
+-        body.scale=Vector3(.03,.03,.42)
+         local tails={}
+         for j=1,4 do
+             local tail=node:CreateChild('tail_'..j)
+             local mesh=tail:CreateComponent('StaticModel')
+             mesh:SetModel(cache:GetResource('Model','Models/Box.mdl')); mesh:SetMaterial(tailMaterial)
+             tail.scale=Vector3(.022-(j-1)*.004,.022-(j-1)*.004,.09)
+-            tail.position=Vector3(0,0,-.26-(j-1)*.11); tails[j]=tail
++            tails[j]=tail
+         end
+         arrowNodes_[i]={node=node,tails=tails}
+     end
+@@ -637,9 +635,26 @@
+         draw=function(p,visible)
+             local entry=arrowNodes_[p.index]
+             entry.node.enabled=visible
++            combatRig_:DrawArrow(p,visible)
+             if visible then
+-                entry.node.position=p.pos; entry.node:SetDirection(p.vel:Normalized())
+-                for _,tail in ipairs(entry.tails) do tail.enabled=not p.embedded end
++                entry.node.position=Vector3.ZERO
++                local current=p.renderPos or p.pos
++                for j,tail in ipairs(entry.tails) do
++                    tail.enabled=not p.embedded and j<=p.historyCount
++                    if tail.enabled then
++                        local previous=p.history[(p.historyWrite-j)%4+1]
++                        local delta=current-previous
++                        local distance=math.min(.15,delta:Length())
++                        if distance<.001 then tail.enabled=false
++                        else
++                            tail.position=current-delta:Normalized()*(distance*.5)
++                            tail:SetDirection(delta:Normalized())
++                            local width=(p.critical and .014 or .007)*(1-(j-1)*.18)
++                            tail.scale=Vector3(width,width,distance)
++                        end
++                        current=previous
++                    end
++                end
+             end
+         end})
+     combatEnemies_=EnemySpawner.New(scene_,world_,Terrain,{
+@@ -1238,10 +1253,11 @@
+         local angle=math.rad(nomi_.camYaw)
+         local axis=Vector3(math.sin(angle)*f+math.cos(angle)*r,0,math.cos(angle)*f-math.sin(angle)*r)
+         if animPreview_.index==0 then
+-            local controls={allowed=allowed and not combatInputBlocked,selecting=weaponGesture_ and weaponGesture_:IsOpen(),attack=attack,heavy=heavy,
+-                attackTap=TouchInput.Press('attack') and not attack,
+-                heavyTap=TouchInput.Press('heavy') and not heavy,
+-                dodge=CombatState.InCombat() and (Press(KEY_SHIFT) or TouchInput.Press('dodge')),axis=axis}
++            local controls=combatControls
++            controls.allowed,controls.selecting=allowed and not combatInputBlocked,weaponGesture_ and weaponGesture_:IsOpen()
++            controls.attack,controls.heavy=attack,heavy
++            controls.attackTap,controls.heavyTap=TouchInput.Press('attack') and not attack,TouchInput.Press('heavy') and not heavy
++            controls.dodge,controls.axis=CombatState.InCombat() and (Press(KEY_SHIFT) or TouchInput.Press('dodge')),axis
+             if combatTest_ and combatTest_.active then
+                 local testOK,synthetic=Safe('Debug.F11Input',combatTest_.Input,combatTest_,dt,allowed and not CombatState.HasAggro() and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked())
+                 if synthetic then controls=synthetic; f,r=0,0 end
+@@ -1257,11 +1273,13 @@
+             end
+         end
+         if CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
++            local options=combatMoveOptions
++            options.scale=allowed and not combatMoves_.slideMotionFrame and combatMoves_:MoveScale() or 0
++            options.motion=allowed and combatMoves_.motion or Vector3.ZERO
++            options.facing,options.slideChecked=combatMoves_:Facing(),combatMoves_.slideMotionFrame
+             nomi_:Move(dt,allowed and f or 0,allowed and r or 0,false,
+                 allowed and not combatInputBlocked and Press(KEY_SPACE),
+-                combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold',
+-                {scale=allowed and not combatMoves_.slideMotionFrame and combatMoves_:MoveScale() or 0,motion=allowed and combatMoves_.motion or Vector3.ZERO,
+-                    facing=combatMoves_:Facing(),slideChecked=combatMoves_.slideMotionFrame})
++                combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold',options)
+             return
+         end
+     end
+@@ -1402,6 +1420,7 @@
+     if combatRig_ then
+         if combatRig_.SetBowDraw then
+             local p=(combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold') and combatMoves_.charge or 0
++            if combatMoves_.pendingFire then p=combatMoves_.pendingFire.u end
+             if animPreview_.index>0 then
+                 local id=CombatAnim.DebugList()[animPreview_.index].id
+                 p=(id=='bow_hold' or id=='bow_draw') and animPreview_.params.p or 0
+@@ -1540,7 +1559,11 @@
+     if weaponGesture_ then Safe('WeaponSelect.Pose',weaponGesture_.Apply,weaponGesture_,dt) end
+     Safe('Debug.F7HUD',UpdateCombatPreviewText)
+     Safe('Rig.Visuals',UpdateCombatRig,dt)
+-    if animPreview_.index==0 then Safe('Combat.AfterPose',combatMoves_.AfterPose,combatMoves_) end
++    if animPreview_.index==0 then
++        nomi_:BeginQueryScope()
++        Safe('Combat.AfterPose',combatMoves_.AfterPose,combatMoves_)
++        nomi_:EndQueryScope()
++    end
+     -- 法阵只更新一次，在 PostUpdate 中使用本帧最终相机与施法方向。
+     Safe('Puzzles.Update',Puzzles.Update,dt)
+     Safe('Puzzles.Gate',Puzzles.CheckGate)
+@@ -1658,12 +1681,32 @@
+ end
+ 
+ -- Hide obstructed boundary samples; never paint a promise through a wall or void.
++local rangeRayPool={}
++for i=1,16 do rangeRayPool[i]={} end
++local rangeRayCount,rangeRevision=0,-1
++---@param source Vector3
++---@param point Vector3
+ local function CombatRangeClear(source,point)
+-    local delta=point-source
++    local delta=point-source --[[@as Vector3]]
+     local length=delta:Length()
+     if length<.001 then return true end
+-    local hit=nomi_:SlideRay(Ray(source,delta/length),length)
+-    return not hit or hit.distance>=length-.02
++    if rangeRevision~=SwingPerf.revision then rangeRayCount=0;rangeRevision=SwingPerf.revision end
++    local mask,layer=nomi_.cc.collisionMask,nomi_.cc.collisionLayer
++    for i=1,rangeRayCount do
++        local c=rangeRayPool[i]
++        if c.sx==source.x and c.sy==source.y and c.sz==source.z and c.x==point.x and c.y==point.y and c.z==point.z
++            and c.mask==mask and c.layer==layer and c.filter==nomi_.ignoreAimVolume then return c.clear end
++    end
++    if SwingPerf.rangeRays>=16 then return false end
++    local hit=nomi_:SlideRay(Ray(source,delta/length),length,'range')
++    local clear=not hit or hit.distance>=length-.02
++    if rangeRayCount<16 then
++        rangeRayCount=rangeRayCount+1
++        local c=rangeRayPool[rangeRayCount]
++        c.sx,c.sy,c.sz,c.x,c.y,c.z=source.x,source.y,source.z,point.x,point.y,point.z
++        c.mask,c.layer,c.filter,c.clear=mask,layer,nomi_.ignoreAimVolume,clear
++    end
++    return clear
+ end
+ local function CombatRangeVisible(source,point)
+     if not Terrain.HasGround(point.x,point.z,.05) then return false end
+@@ -1673,26 +1716,53 @@
+     return CombatRangeClear(source,point) and CombatRangeClear(p,point)
+ end
+ 
+-local function UpdateCombatHUD(cn)
++local hudAimHits,hudAimPool,hudNearHits,hudNearPool={},{},{},{}
++local bowPrediction=Projectile.NewPrediction()
++local bowAssistScale,bowAssistTarget=1,nil
++---@param cn Node
++local function UpdateCombatHUD(cn,dt)
+         local enemies=CombatEnemies()
+         local a,b=cn.worldPosition,cn.worldPosition+cn.worldDirection*60
+-        local hits=CombatHit.Query(enemies,a,b,.03)
+-        local wall=CombatCast(a,b)
++        local hits=CombatHit.Query(enemies,a,b,.03,nil,hudAimHits,hudAimPool)
++        local wall=CombatCast(a,b,true)
+         local aimed=hits[1] and (not wall or hits[1].t<wall) and hits[1].enemy or nil
+         M.combat.aimed=aimed
+         combatLookScale_=CombatState.InCombat() and combatCameraFrame_ and combatCameraFrame_.look or 1
+-        if CombatState.InCombat() and (combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold') and CombatState.GetSetting('aimAssist') and CombatState.GetSetting('cameraFov') then
+-            local near=CombatHit.Query(enemies,a,b,.6)
++        local drawing=CombatState.InCombat() and (combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold')
++        local assisted=false
++        local budget=math.max(0,16-SwingPerf.rangeUsed*2)
++        local launch=drawing and combatRig_:GetHit().origin or nil
++        if drawing and CombatState.GetSetting('aimAssist') then
++            local near=CombatHit.Query(enemies,a,b,2,nil,hudNearHits,hudNearPool)
+             for _,candidate in ipairs(near) do
+-                if CombatHit.Visible(a,candidate.shape.center,CombatCast) then combatLookScale_=math.min(combatLookScale_,.65); break end
++                local ray=candidate.shape.center-a
++                local distance=ray:Length()
++                local limit=candidate.enemy==bowAssistTarget and 3.5 or 2.5
++                if distance>=8 and distance<=32 and ray:Normalized():DotProduct(cn.worldDirection)>=math.cos(math.rad(limit)) and budget>=2 then
++                    budget=budget-2;SwingPerf.rangeUsed=SwingPerf.rangeUsed+1
++                    if CombatHit.Visible(a,candidate.shape.center,CombatCast) and CombatHit.Visible(launch,candidate.shape.center,CombatCast) then
++                        assisted=true;bowAssistTarget=candidate.enemy;break
++                    end
++                end
+             end
+         end
++        if not assisted then bowAssistTarget=nil end
++        bowAssistScale=bowAssistScale+((assisted and .8 or 1)-bowAssistScale)*(1-math.exp(-(dt or 0)/(assisted and .08 or .14)))
++        combatLookScale_=combatLookScale_*bowAssistScale
++        if drawing and CombatHUD.BOW_PREDICTION then
++            local target=a+(b-a)*(hits[1] and (not wall or hits[1].t<wall) and hits[1].t or wall or 1)
++            local tip=combatRig_:GetBowArrowTip()
++            local used=Projectile.Predict(bowPrediction,tip,(target-tip):Normalized(),combatMoves_.charge,
++                combatRig_:GetStats(),time_,combatLowQuality_,math.min(budget,combatLowQuality_ and 8 or 16),CombatCast,enemies)
++            SwingPerf.rangeUsed=SwingPerf.rangeUsed+math.ceil(used/2)
++        else bowPrediction.valid,bowPrediction.working=false,false end
+         local hud=combatHUDData
+         hud.rangeVisible=CombatRangeVisible
+         hud.moves,hud.combat,hud.mounted=combatMoves_,CombatState.InCombat(),M.ride.mode~='free'
+         hud.weapon,hud.charge=CombatState.GetWeapon(),combatMoves_.charge
+         hud.aimed,hud.enemies,hud.camera,hud.cameraNode=aimed,enemies,nomi_:Camera(),cn
+         hud.bowCameraCharge=combatCameraFrame_ and combatCameraFrame_.cross or 0
++        hud.bowPrediction=bowPrediction
+         hud.debug=animPreview_.text or (time_<combatDebugUntil_ and combatDebugText_ or nil)
+         hud.preview=animPreview_.index>0
+         CombatHUD.Set(hud)
+@@ -1700,13 +1770,18 @@
+ 
+ function Ruins_HandlePostUpdate(eventType, eventData)
+     local dt = eventData["TimeStep"]:GetFloat()
++    nomi_:BeginQueryScope()
+     Safe('Camera.Base',UpdateBaseCamera,dt)
++    nomi_:EndQueryScope()
+     local aim = M.aim or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
+     Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime())
+     if combatMoves_ then
+         local cn=nomi_:CameraNode()
++        SwingPerf.Invalidate()
++        nomi_:BeginQueryScope()
+         Safe('Camera.Combat',UpdateCombatCamera,dt,cn)
+-        Safe('HUD.Update',UpdateCombatHUD,cn)
++        Safe('HUD.Update',UpdateCombatHUD,cn,dt)
++        nomi_:EndQueryScope()
+         if weaponGesture_ then Safe('WeaponSelect.Anchor',weaponGesture_.Update,weaponGesture_,dt,nomi_:Camera()) end
+     end
+     Safe('FX.MotesB',fx_.motesB.Draw,fx_.motesB); Safe('FX.MotesG',fx_.motesG.Draw,fx_.motesG)
+--- validation/combat/sword-hitch/before/CombatHUD.lua.txt
++++ scripts/ui/CombatHUD.lua
+@@ -1,7 +1,10 @@
+ -- Rendered by RuinsHUD's pointer-transparent UI.Panel, in the same DPR space.
+ local Draw=require('ui.PixelDraw')
+ local H={}
++H.BOW_PREDICTION=true -- independently switchable; never changes actual shot direction
++local bowPoint={visible=false,x=0,y=0}
+ local Moves=require('combat.CombatMoves')
++local Perf=require('combat.SwingPerf')
+ local EMPTY={}
+ local rangePoints={}
+ for i=1,50 do rangePoints[i]={world=Vector3(0,0,0),visible=false,x=0,y=0} end
+@@ -14,21 +17,41 @@
+     local zone,slam,active=moves:StrikeZones()
+     rangeActive=active==true
+     if not zone then return end
++    local start=Perf.Begin()
++    local total=(zone.angle==360 and 17 or 25)+(slam and (slam.angle==360 and 17 or 25) or 0)
++    local budget=active and 8 or 4 -- two LOS rays per verified point, <=16/frame
++    local phase=Perf.frame%total
+     for pass=1,slam and 2 or 1 do
+         local z=pass==1 and zone or slam
+         local last=z.angle==360 and 16 or 24
+         for i=0,last do
+             rangeCount=rangeCount+1
+             local point=rangePoints[rangeCount]
+-            point.world=Moves.ZoneBoundary(z,i,16,point.world)
+-            point.visible=false
+-            if (active or i%2==0) and value.rangeVisible(z.source,point.world) then
+-                local sp=value.camera:WorldToScreenPoint(point.world)
+-                point.x,point.y=sp.x,sp.y
+-                point.visible=sp.x>=0 and sp.x<=1 and sp.y>=0 and sp.y<=1
++            if point.angle~=z.angle or point.radius~=z.radius or point.index~=i then
++                local half=math.rad(z.angle*.5)
++                local angle,radius
++                if i<=16 then angle=-half+2*half*i/16;radius=z.radius
++                else angle=i<=20 and -half or half;radius=z.radius*((i-17)%4)/4 end
++                point.lx,point.lz=math.sin(angle)*radius,math.cos(angle)*radius
++                point.angle,point.radius,point.index=z.angle,z.radius,i
+             end
+-        end
+-    end
++            local f=z.forward
++            local w=point.world
++            w.x,w.y,w.z=z.origin.x+point.lx*f.z+point.lz*f.x,z.origin.y+.04,z.origin.z+point.lz*f.z-point.lx*f.x
++            point.world=w -- native value type: assign back
++            point.visible=false -- never retain a prior frame's unverified point
++            local slot=(rangeCount-1+phase)%total
++            if math.floor(slot*budget/total)~=math.floor((slot+1)*budget/total) and Perf.rangeUsed<8 then
++                Perf.rangeUsed=Perf.rangeUsed+1
++                if value.rangeVisible(z.source,point.world) then
++                    local sp=value.camera:WorldToScreenPoint(point.world)
++                    point.x,point.y=sp.x,sp.y
++                    point.visible=sp.x>=0 and sp.x<=1 and sp.y>=0 and sp.y<=1
++                end
++            end
++        end
++    end
++    Perf.Finish('range',start)
+ end
+ local data=EMPTY
+ local debugLines={}
+@@ -72,6 +95,14 @@
+     end
+     local moves=data.moves
+     if not moves then return end
++    bowPoint.visible=false
++    local predicted=data.bowPrediction
++    if H.BOW_PREDICTION and predicted and predicted.valid and data.camera
++        and (predicted.contact-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
++        local sp=data.camera:WorldToScreenPoint(predicted.contact)
++        bowPoint.x,bowPoint.y=sp.x,sp.y
++        bowPoint.visible=sp.x>0 and sp.x<1 and sp.y>0 and sp.y<1
++    end
+     local enemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
+     enemyScreen.visible=false
+     if enemy and not enemy.boss and not enemy.dead and enemy.active and data.camera then
+@@ -128,8 +159,10 @@
+ -- Only RuinsHUD renders this text: combat and pointer hints share one slot.
+ function H.Hint()
+     local moves=data.moves
++    if moves and moves.bowFailedUntil and moves.age<moves.bowFailedUntil then return '未发出' end
+     if moves and (moves.clip=='bow_draw' or moves.clip=='bow_hold') then
+-        return BOW_HINT[moves.charge>=.8 and 3 or (moves.charge>=.3 and 2 or 1)]
++        if moves.autoFire then return '自动蓄力中' end
++        return BOW_HINT[moves.charge>=1 and 3 or (moves.charge>=.65 and 2 or 1)]
+     end
+     if moves and moves.cancelUntil and moves.age<moves.cancelUntil then return '已取消拉弓' end
+     return noticeUntil>GetTime():GetElapsedTime() and notice or nil
+@@ -170,6 +203,12 @@
+     if moves.bowFullAt and moves.age-moves.bowFullAt>=0 and moves.age-moves.bowFullAt<.18
+         and (moves.clip=='bow_hold' or moves.clip=='bow_draw') then
+         Draw.Text(vg,'满蓄',Draw.Snap(w/2),Draw.Snap(h/2-34),12,C.gold,NVG_ALIGN_CENTER)
++    end
++    if bowPoint.visible then
++        local px,py=Draw.Snap(bowPoint.x*w),Draw.Snap(bowPoint.y*h)
++        -- Hollow 4dp contact marker, separate from the straight-ray reticle.
++        Draw.Rect(vg,px-4,py-4,8,2,C.gold);Draw.Rect(vg,px-4,py+2,8,2,C.gold)
++        Draw.Rect(vg,px-4,py-2,2,4,C.gold);Draw.Rect(vg,px+2,py-2,2,4,C.gold)
+     end
+     if enemyScreen.visible then
+         local enemy=enemyScreen.enemy

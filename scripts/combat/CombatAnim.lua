@@ -34,16 +34,13 @@ local BONE_NAMES = {"body","arm_left","arm_right","head","leg_right","leg_left"}
 ---@field nextEvent number
 ---@field complete boolean
 ---@field hitOpen boolean
----@field iframeOpen boolean
 ---@field cancelOpen boolean
 ---@field protectOpen boolean
----@field dustOpen boolean
----@field afterimageOpen boolean
----@field mixLayer number|nil Temporary layer used for a dodge-to-attack crossfade.
+---@field mixLayer number|nil Optional blend layer.
 ---@field sample number
 ---@field motion number
 ---@field ik table<string, CombatIKResult>
----@field handWeight number Smoothed weaponInHand value for slide arms.
+---@field handWeight number Smoothed weaponInHand value for running arms.
 ---@class CombatArm
 ---@field shoulder Vector3
 ---@field grip Vector3
@@ -122,7 +119,6 @@ local BONE_NAMES = {"body","arm_left","arm_right","head","leg_right","leg_left"}
 local A = {}
 A.__index = A
 A.Layer = Data.Layer
-A.DefaultDodge = Data.DefaultDodge
 
 local function clamp(v,lo,hi) return math.max(lo,math.min(hi,v)) end
 local function finite(v) return type(v)=="number" and v==v and math.abs(v)<math.huge end
@@ -295,51 +291,8 @@ local function boneSample(c,name,p,params,handWeight)
         local heldPitch=params.bow==1 and (side==1 and -20 or -58) or (side==1 and -40 or x*.7)
         return x+(heldPitch-x)*held,y,z
     end
-    local tracks=(params.legacyPose==1 and c.legacyKeys) or (params.sprintPending==1 and c.runKeys) or c.keys
-    local track=(params.bow==1 and c.bowKeys and c.bowKeys[name]) or tracks[name]
-    local x,y,z=vectorSample(track,p)
-    if c.directional then
-        local dx,dz=params.moveX or 0,params.moveZ
-        if dz==nil then dz=-1 end
-        local length=math.sqrt(dx*dx+dz*dz)
-        if length>EPS then dx,dz=dx/length,dz/length else dx,dz=0,-1 end
-        local bodyPitch=vectorSample(tracks.body,p)
-        if c.finalDirectional then bodyPitch=bodyPitch-4 end
-        if name=="body" then
-            x=math.max(-14,4+(c.finalDirectional and x-4 or x)*dz)
-            y=y*(c.finalDirectional and dz or dx)
-            -- Upper torso extends +Y: negative roll tips it toward +X.
-            z=clamp(-bodyPitch*(c.finalDirectional and .65 or .5)*dx,-12,12)
-        elseif name=="head" then
-            x=-1+(c.finalDirectional and x+1 or x)*dz
-            y=y*(c.finalDirectional and dz or dx)
-            z=-clamp(-bodyPitch*.65*dx,-12,12)*.7
-        elseif name=="leg_right" or name=="leg_left" then
-            -- Hip rotations only: side-leading leg swaps with direction. Both
-            -- hips override gait, but no nonexistent knee or extra displacement.
-            local other=name=="leg_right" and "leg_left" or "leg_right"
-            local sidePitch=dx>0 and vectorSample(tracks[other],p) or x
-            z=clamp(-sidePitch*dx*.65,-12,12)
-            x=x*dz
-        elseif c.balanceKeys and c.balanceKeys[name] then
-            local neutral=track[1][2][1]
-            z=z-(x-neutral)*dx*.35
-            x=neutral+(x-neutral)*dz
-            local balance=params.sprintPending==1 and c.runBalanceKeys or c.balanceKeys
-            local bx,by,bz=vectorSample(balance[name],p)
-            bz=bz-bx*dx*.6
-            bx=bx*dz
-            local held=handWeight or clamp(params.weaponInHand==nil and 1 or params.weaponInHand,0,1)
-            x,y,z=bx+(x-bx)*held,by+(y-by)*held,bz+(z-bz)*held
-        end
-    end
-    return x,y,z
-end
----@param s CombatAnimTrack
----@param c CombatClip
-local function slideToAttack(s,c)
-    return s.clip.cancelAt~=nil and s.realAge+EPS>=s.clip.cancelAt
-        and (c.layer==Data.Layer.ATTACK or c.id=="bow_draw")
+    local tracks=(params.legacyPose==1 and c.legacyKeys) or c.keys
+    return vectorSample(tracks[name],p)
 end
 ---@param c CombatClip
 local function normalized(c,t)
@@ -356,7 +309,7 @@ local function weight(s)
     end
     local w=s.fadeIn<=0 and 1 or clamp(s.age/s.fadeIn,0,1)
     if s.clip.smoothBlend then w=ease("smoothStep",w) end
-    if not s.clip.loop and not s.clip.hold and s.fadeOut>0 and not (s.clip.directional and s.params.sprintPending==1) then
+    if not s.clip.loop and not s.clip.hold and s.fadeOut>0 then
         -- fadeOut is wall/animation-clock seconds, not normalized time.
         local remaining=(s.clip.dur-s.t)/math.max(s.speed,EPS)
         local out=clamp(remaining/s.fadeOut,0,1)
@@ -442,8 +395,8 @@ function A:init(character,node,opts)
     for i=1,MAX_TRACKS do
         self.tracks[i]={clip=Data.Clips.stance_combat,handle=0,live=false,stopping=false,
             t=0,age=0,realAge=0,previousT=0,speed=1,fadeIn=.08,fadeOut=.08,stopAge=0,stopWeight=0,weight=0,
-            params={},nextEvent=1,complete=false,hitOpen=false,iframeOpen=false,cancelOpen=false,protectOpen=false,
-            dustOpen=false,afterimageOpen=false,sample=0,motion=0,handWeight=1,
+            params={},nextEvent=1,complete=false,hitOpen=false,cancelOpen=false,protectOpen=false,
+            sample=0,motion=0,handWeight=1,
             ik={arm_right=ikBuffer(),arm_left=ikBuffer()}}
     end
     for i=1,MAX_EVENTS do
@@ -461,21 +414,13 @@ function A:emit(s,name,t)
     local e=self.queue[self.queueCount]
     e.name,e.clip,e.handle,e.t=name,s.clip.id,s.handle,t
     if name=="hit_on" then s.hitOpen=true elseif name=="hit_off" then s.hitOpen=false end
-    if name=="iframe_on" then s.iframeOpen=true elseif name=="iframe_off" then s.iframeOpen=false end
     if name=="cancel_open" then s.cancelOpen=true elseif name=="cancel_close" then s.cancelOpen=false end
     if name=="protect_on" then s.protectOpen=true elseif name=="protect_off" then s.protectOpen=false end
-    if name=="dust_start" then s.dustOpen=true elseif name=="dust_stop" then s.dustOpen=false end
-    if name=="afterimage_on" then s.afterimageOpen=true elseif name=="afterimage_off" then s.afterimageOpen=false end
 end
 
 ---@param clipId string
 ---@param opts table|nil {speed=1, stats=..., fadeIn=.08, fadeOut=.08, params={p=0}}
----dodge_slide snapshots params={moveX,moveZ,bow=1} in character-local axes;
----weaponInHand: unitless 0=back/stowed, 1=in hand (default); values clamp to
----[0,1]. Pass at Play for the starting pose, SetParam before Update to change;
----slide arms smooth subsequent changes with a .05s real-clock time constant.
----defaults to a backstep. It ignores speed/timeScale and uses realDt, with an
----immediate t=0 event pair. A new attack/bow_draw may replace it from .22s.
+---weaponInHand is a [0,1] run-arm blend; default 1.
 ---@return number|nil handle Numeric generation id; stale handles never stop a replacement.
 ---@return string|nil reason
 function A:Play(clipId,opts)
@@ -490,10 +435,9 @@ function A:Play(clipId,opts)
     if not finite(fadeIn) or not finite(fadeOut) or fadeIn<0 or fadeOut<0 then return nil,"invalid_fade" end
     for _,s in ipairs(self.ordered) do
         if s.live and not s.stopping and (not s.complete or s.clip.hold) and s.clip.layer>c.layer
-            and c.layer~=Data.Layer.STANCE and not c.locomotion and not slideToAttack(s,c) then
+            and c.layer~=Data.Layer.STANCE and not c.locomotion then
             return nil,"higher_priority"
         end
-        if s.live and slideToAttack(s,c) then fadeIn=s.clip.cancelBlend or .04 end
     end
     ---@type CombatAnimTrack|nil
     local slot=nil
@@ -502,15 +446,7 @@ function A:Play(clipId,opts)
     -- Remove dead references before reusing a slot; ordered retains blend order.
     for i=#self.ordered,1,-1 do if not self.ordered[i].live then table.remove(self.ordered,i) end end
     for _,s in ipairs(self.ordered) do
-        if s.live and s.stopping and s.clip.id=="dodge_slide" and c.locomotion then
-            s.mixLayer=c.layer
-        elseif s.live and slideToAttack(s,c) then
-            if not s.stopping then self:Stop(s.handle,fadeIn) end
-            s.fadeOut=s.clip.cancelBlend or .04
-            -- Blend on the incoming layer so .5 old + .5 new does not expose
-            -- .25 idle underneath as two independent override layers would.
-            s.mixLayer=c.layer
-        elseif s.live and not s.stopping and s.clip.layer<=c.layer and s.clip.layer~=Data.Layer.STANCE then
+        if s.live and not s.stopping and s.clip.layer<=c.layer and s.clip.layer~=Data.Layer.STANCE then
             self:Stop(s.handle,fadeIn)
         elseif s.live and s.clip.layer==c.layer and not s.stopping then self:Stop(s.handle,fadeIn) end
     end
@@ -522,24 +458,16 @@ function A:Play(clipId,opts)
     slot.ik.arm_right.enabled,slot.ik.arm_left.enabled=false,false
     slot.speed,slot.fadeIn,slot.fadeOut=speed,fadeIn,fadeOut
     slot.nextEvent,slot.complete=1,false
-    slot.hitOpen,slot.iframeOpen,slot.cancelOpen,slot.protectOpen=false,false,false,false
-    slot.dustOpen,slot.afterimageOpen=false,false
+    slot.hitOpen,slot.cancelOpen,slot.protectOpen=false,false,false
     for name in pairs(slot.params) do slot.params[name]=nil end
     for name,value in pairs(opts.params or EMPTY) do if finite(value) then slot.params[name]=value end end
     slot.handWeight=clamp(slot.params.weaponInHand==nil and 1 or slot.params.weaponInHand,0,1)
-    if c.directional then
-        local x,z=slot.params.moveX or 0,slot.params.moveZ
-        if z==nil then z=-1 end
-        local length=math.sqrt(x*x+z*z)
-        if length>EPS then x,z=x/length,z/length else x,z=0,-1 end
-        slot.params.moveX,slot.params.moveZ=x,z
-    end
     slot.weight=weight(slot)
     local at=#self.ordered+1
     for i,s in ipairs(self.ordered) do if s.clip.layer>c.layer then at=i;break end end
     table.insert(self.ordered,at,slot)
     if c.realTime then
-        -- Input acceptance opens invulnerability immediately, without waiting
+        -- Real-time clips emit their zero-time events immediately, without waiting
         -- for Update; t=0 events are consumed by the same monotonic cursor.
         while slot.nextEvent<=#c.events and c.events[slot.nextEvent].t==0 do
             self:emit(slot,c.events[slot.nextEvent][1],0)
@@ -554,7 +482,7 @@ end
 function A:SetParam(name,value)
     if not finite(value) then return end
     for _,s in ipairs(self.ordered) do
-        if s.live and not s.stopping and not (s.clip.directional and (name=="moveX" or name=="moveZ")) then
+        if s.live and not s.stopping then
             s.params[name]=value
             if s.clip.locomotion then s.weight=weight(s) end
         end
@@ -567,12 +495,12 @@ function A:Stop(handle,fadeOut)
     for _,s in ipairs(self.ordered) do
         if s.live and (not handle or s.handle==handle) and not s.stopping then
             -- Suppress unconsumed offensive/opening events. Keep close events so
-            -- an already consumed hit_on/iframe_on cannot remain stuck open.
+            -- an already consumed hit_on cannot remain stuck open.
             local n=0
             for i=1,self.queueCount do
                 local e=self.queue[i]
-                if e.handle~=s.handle or e.name=="hit_off" or e.name=="iframe_off" or e.name=="cancel_close"
-                    or e.name=="protect_off" or e.name=="dust_stop" or e.name=="afterimage_off" then
+                if e.handle~=s.handle or e.name=="hit_off" or e.name=="cancel_close"
+                    or e.name=="protect_off" then
                     n=n+1
                     if n~=i then
                         local dst=self.queue[n]
@@ -582,11 +510,8 @@ function A:Stop(handle,fadeOut)
             end
             self.queueCount=n
             if s.hitOpen then self:emit(s,"hit_off",normalized(s.clip,s.t)) end
-            if s.iframeOpen then self:emit(s,"iframe_off",normalized(s.clip,s.t)) end
             if s.cancelOpen then self:emit(s,"cancel_close",normalized(s.clip,s.t)) end
             if s.protectOpen then self:emit(s,"protect_off",s.realAge/s.clip.dur) end
-            if s.dustOpen then self:emit(s,"dust_stop",s.realAge/s.clip.dur) end
-            if s.afterimageOpen then self:emit(s,"afterimage_off",s.realAge/s.clip.dur) end
             for _,snapshot in ipairs(self.afterimagePool) do
                 if snapshot.handle==s.handle then snapshot.time=-math.huge end
             end
@@ -624,7 +549,7 @@ function A:Update(dt,realDt)
                 s.weight=weight(s)
                 if s.weight<=0 then s.live=false end
             else
-                if s.clip.balanceKeys or s.clip.locomotion then
+                if s.clip.locomotion then
                     local held=clamp(s.params.weaponInHand==nil and 1 or s.params.weaponInHand,0,1)
                     s.handWeight=s.handWeight+(held-s.handWeight)*(1-math.exp(-realDt/.05))
                 end
@@ -685,7 +610,6 @@ end
 ---@param realDt number|nil
 ---@return number forwardMeters
 ---Distance is integrated over every overlapping motion interval, not velocity.
----For dodge_slide it is positive along W2's accepted direction, not facing +Z.
 ---Stop drops the pending/current cached motion and all future intervals; callers
 ---keep displacement already applied. Split a frame at .22s if an attack was
 ---buffered there and exact 1.92m cancellation is required; no retroactive rewind.
@@ -795,6 +719,9 @@ function A:Apply()
                             local aim=math.rad(clamp(s.params.aimPitch or 0,-35,35))
                             direction=Vector3(0,math.cos(aim),math.sin(aim))
                             self.aimPitch=clamp(s.params.aimPitch or 0,-35,35)
+                        elseif c.bladePath.mode=="fixed" then
+                            local d=c.bladePath.direction
+                            direction=unit(Vector3(d[1],d[2],d[3]),Vector3(0,-1,0))
                         else
                             local origin=c.bladePath.origin
                             direction=unit(Vector3(solved.target.x-origin[1],solved.target.y+self.bodyHeight-origin[2],
@@ -819,7 +746,8 @@ function A:Apply()
     if self.bladeWeight>0 then
         local arm=self.character.bones[self.bladeSide]
         local desired=self.bladeMode=="bow_upright" and inverse(self.character.bones.body.rotation)*Quaternion(self.aimPitch,0,0)
-            or align(Vector3(0,1,0),self.bladeDirection)
+            or (self.bladeMode=="fixed" and inverse(self.character.bones.body.rotation)*align(Vector3(0,1,0),self.bladeDirection)
+                or align(Vector3(0,1,0),self.bladeDirection))
         -- Rig composes arm * gripRest * swing. Cancel current arm orientation
         -- only inside swing, keeping the desired blade/bow direction in body space.
         local extra=inverse(self.gripRotation)*inverse(arm.rotation)*desired

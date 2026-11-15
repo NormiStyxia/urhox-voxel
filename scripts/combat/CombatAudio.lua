@@ -41,8 +41,6 @@ local EVENTS = {
     blade_sheath = { files = { 'audio/sfx/cmb_blade_sheath.mp3' }, db = -8, interval = 0.10 },
     enemy_windup = { files = { 'audio/sfx/cmb_windup_beetle.mp3', 'audio/sfx/cmb_windup_sentry.mp3', 'audio/sfx/cmb_windup_beast.mp3' }, db = -5, priority = 4 },
     player_hurt = { files = { 'audio/sfx/cmb_player_hurt_1.mp3', 'audio/sfx/cmb_player_hurt_2.mp3' }, db = 0, priority = 3, interval = 0.06 },
-    dodge = { files = { 'audio/sfx/cmb_dodge_slide_1.mp3', 'audio/sfx/cmb_dodge_slide_2.mp3' }, db = -10, interval = 0.06 },
-    dodge_land = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -10, interval = 0.06 },
     run_step = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -14, interval = 0.12 },
     stagger_land = { files = { 'audio/sfx/cmb_stagger_land.mp3' }, db = 0, interval = 0.10 },
     enemy_die = { files = { 'audio/sfx/cmb_enemy_die_1.mp3', 'audio/sfx/cmb_enemy_die_2.mp3' }, db = 0, gains = {0, -6} },
@@ -53,7 +51,7 @@ local EVENTS = {
 local ASSETS, ASSET_LOOPS, ASSET_CUES = {}, {}, {}
 local WARM_ORDER = {'sword_whoosh','hit_heavy','hit_soft','hit_armor','hit_core',
     'armor_break','deflect_stone','bow_draw','bow_fire','arrow_hit','bow_full',
-    'blade_draw','blade_sheath','enemy_windup','player_hurt','dodge','dodge_land',
+    'blade_draw','blade_sheath','enemy_windup','player_hurt','run_step',
     'stagger_land','enemy_die','boss_roar','victory'}
 for _, cue in ipairs(WARM_ORDER) do
     local definition = EVENTS[cue]

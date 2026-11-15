@@ -1,0 +1,418 @@
+diff --git a/assets/Shaders/BLGL/RuinsCloud.shader b/assets/Shaders/BLGL/RuinsCloud.shader
+index e259466..1c7b561 100644
+--- a/assets/Shaders/BLGL/RuinsCloud.shader
++++ b/assets/Shaders/BLGL/RuinsCloud.shader
+@@ -7,7 +7,8 @@ uniform float cloud_enabled = 0.0;
+ uniform float day = 1.0;
+ uniform float dusk = 0.0;
+ uniform float drift_time = 0.0;
+-uniform float motion_detail = 1.0; // Reserved for unchanged Lua binding; no fragment deformation.
++uniform float motion_detail = 0.0; // Vertex breathing only; low tier stays static.
++uniform vec4 cloud_wind = vec4(0.0); // displacement XZ metres / velocity XZ m/s
+ uniform vec4 sky_top = vec4(0.05,0.16,0.46,1.0);
+ uniform vec4 sky_horizon = vec4(0.45,0.60,0.83,1.0);
+ uniform vec4 sky_bottom = vec4(0.07,0.10,0.15,1.0);
+@@ -22,16 +23,33 @@ void vertex() {
+     vec3 world_offset=VERTEX-model_origin;
+     float radius=length(world_offset);
+     vec3 direction=world_offset/max(radius,0.0001);
+-    // World wind: layers respond differently, reversing gently over ~65 minutes.
+-    // All frequencies share the Lua clock's 10000*pi wrap period.
+-    float angle=sin(drift_time*0.0008)*0.30*(0.5+COLOR.r)
+-        +0.012*(sin(drift_time*0.002+COLOR.r*3.0)-sin(COLOR.r*3.0));
+-    float cs=cos(angle);float sn=sin(angle);
+-    cloud_direction=vec3(cs*direction.x+sn*direction.z,direction.y,-sn*direction.x+cs*direction.z);
+     vec3 right=vec3(NORMAL.z,0.0,-NORMAL.x);
+     right=right/max(length(right),0.0001);
+-    cloud_right=vec3(cs*right.x+sn*right.z,0.0,-sn*right.x+cs*right.z);
+-    cloud_data=COLOR;
++    vec3 up=cross(NORMAL,right);
++    float denominator=max(dot(direction,NORMAL),0.0001);
++    vec2 local_patch=vec2(dot(direction,right),dot(direction,up))/denominator;
++    // UNORM vertex colours: horizon=.25, lower=.45, upper=.65.
++    float layer_speed=0.5+step(0.35,COLOR.r)-0.5*step(0.55,COLOR.r);
++    vec3 centre=NORMAL*radius;
++    // Independent local wrap windows retain the approved all-around layout.
++    // A global translated ring would accumulate clouds on the downwind horizon.
++    vec2 start_phase=(vec2(COLOR.g,fract(COLOR.g*5.37))-vec2(0.5))*180.0;
++    vec2 moved=cloud_wind.xy*layer_speed+start_phase;
++    vec2 wrapped=fract((moved+vec2(180.0))/360.0)*360.0-vec2(180.0);
++    vec2 centre_xz=centre.xz+wrapped-start_phase;
++    float phase=COLOR.g*6.28318530718;
++    float breathe_x=1.0+motion_detail*0.02*(sin(drift_time*0.012+phase)-sin(phase));
++    float breathe_y=1.0+motion_detail*0.03*(sin(drift_time*0.008+phase*1.7)-sin(phase*1.7));
++    float heave=motion_detail*1.5*(sin(drift_time*0.006+phase)-sin(phase));
++    vec3 axis=normalize(vec3(centre_xz.x,centre.y+heave,centre_xz.y));
++    // Stable tangent even when a cloud passes directly over/under the camera.
++    vec3 tangent=vec3(axis.z,0.0,-axis.x);
++    float tangent_length=length(tangent);
++    cloud_right=mix(right,tangent/max(tangent_length,0.0001),step(0.0001,tangent_length));
++    vec3 vertical=cross(axis,cloud_right);
++    cloud_direction=normalize(axis+cloud_right*local_patch.x*breathe_x+vertical*local_patch.y*breathe_y);
++    float wrap_fade=1.0-smoothstep(120.0,170.0,max(abs(wrapped.x),abs(wrapped.y)));
++    cloud_data=vec4(COLOR.rgb,COLOR.a*wrap_fade);
+     // Recenter by translation ONLY. Return world space, leaving the single
+     // view/projection to the engine; never recover it through INV_VIEW_MATRIX.
+     // Real 522..548m depth; current camera farClip=600m.
+diff --git a/assets/Shaders/BLGL/RuinsGrassTuft.shader b/assets/Shaders/BLGL/RuinsGrassTuft.shader
+index beb6260..8b1566c 100644
+--- a/assets/Shaders/BLGL/RuinsGrassTuft.shader
++++ b/assets/Shaders/BLGL/RuinsGrassTuft.shader
+@@ -10,6 +10,41 @@ uniform vec3 daynight_tint = vec3(1.0);
+ uniform vec2 wind_dir = vec2(1.0, 0.35);
+ uniform float wind_strength = 0.18;
+ 
++// Shared celestial wind / artistic ground projection; disabled until atlas ready.
++uniform sampler2D cloud_shadow_atlas : filter_linear_mipmap, repeat_disable, hint_default_black;
++uniform float cloud_shadow_strength = 0.0;
++uniform vec4 cloud_wind = vec4(0.0);
++// sun X/Y, Z/Y; virtual cloud altitude metres; high-tier second tap
++uniform vec4 cloud_shadow_projection = vec4(0.0,0.0,120.0,0.0);
++
++// CLOUD_SHADOW_SHARED_BEGIN
++float cloud_mask(vec2 point) {
++    vec2 grid=point/150.0;
++    vec2 cell=fract(grid);
++    vec2 slope=cloud_shadow_projection.xy;
++    float slant=length(slope);
++    vec2 along=slope/max(slant,0.0001);
++    vec2 local_shape=cell-vec2(0.5);
++    // Keep atlas gutters fixed even when stretching near a low sun.
++    float stretch_envelope=16.0*cell.x*(1.0-cell.x)*cell.y*(1.0-cell.y);
++    local_shape-=along*dot(local_shape,along)*(1.0-1.0/(1.0+0.18*slant))*stretch_envelope;
++    // 4x2 original cloud atlas; transparent gutters survive LOD2/3.
++    vec2 tiles=vec2(4.0,2.0);
++    vec2 uv=(mod(floor(grid),tiles)+vec2(0.004)+(local_shape+vec2(0.5))*0.992)/tiles;
++    return textureLod(cloud_shadow_atlas,uv,3.0-cloud_shadow_projection.w).a;
++}
++vec3 cloud_illumination(vec3 position) {
++    vec2 point=position.xz+cloud_shadow_projection.xy*clamp(cloud_shadow_projection.z-position.y,0.0,160.0)-cloud_wind.xy;
++    float mask=cloud_mask(point);
++    if (cloud_shadow_projection.w>0.5) {
++        mask=0.5*(mask+cloud_mask(point+vec2(3.0,-2.0)));
++    }
++    float shade=smoothstep(0.05,0.92,mask);
++    // Subtle artistic ALBEDO modulation, not a new light or physical GI.
++    return vec3(1.0)+cloud_shadow_strength*((1.0-shade)*vec3(0.06,0.03,0.0)-shade*vec3(1.0,0.96,0.86));
++}
++// CLOUD_SHADOW_SHARED_END
++
+ void vertex() {
+     float h = UV.y;
+     vec2 w = normalize(wind_dir);
+@@ -29,6 +64,7 @@ void fragment() {
+     float h = UV.y;
+     vec3 col = mix(root_color, tip_color, pow(h, 0.8)) * COLOR.rgb;
+     ALBEDO = srgb_to_linear(col) * daynight_tint;
++    if (cloud_shadow_strength>0.0) { ALBEDO*=cloud_illumination(VERTEX); }
+     ROUGHNESS = 0.8;
+     METALLIC = 0.0;
+     SPECULAR = 0.2;
+diff --git a/assets/Shaders/BLGL/RuinsGround.shader b/assets/Shaders/BLGL/RuinsGround.shader
+index 349b592..4a6ef49 100644
+--- a/assets/Shaders/BLGL/RuinsGround.shader
++++ b/assets/Shaders/BLGL/RuinsGround.shader
+@@ -11,12 +11,41 @@ render_mode shading_model_pbr, cull_back;
+ 
+ uniform sampler2D splat_map : filter_linear, repeat_disable;
+ uniform vec3 daynight_tint = vec3(1.0);
+-// 同一扁平云图集的 A 遮罩投影；默认关，由 SkyAtmosphere 绑定。不影响岛底。
+-uniform sampler2D cloud_shadow_atlas : filter_linear, repeat_disable;
+-uniform float cloud_shadow_use_atlas = 0.0;
++// Shared celestial wind / artistic ground projection; disabled until atlas ready.
++uniform sampler2D cloud_shadow_atlas : filter_linear_mipmap, repeat_disable, hint_default_black;
+ uniform float cloud_shadow_strength = 0.0;
+-uniform float cloud_shadow_day = 1.0;
+-uniform float cloud_shadow_time = 0.0;
++uniform vec4 cloud_wind = vec4(0.0);
++// sun X/Y, Z/Y; virtual cloud altitude metres; high-tier second tap
++uniform vec4 cloud_shadow_projection = vec4(0.0,0.0,120.0,0.0);
++
++// CLOUD_SHADOW_SHARED_BEGIN
++float cloud_mask(vec2 point) {
++    vec2 grid=point/150.0;
++    vec2 cell=fract(grid);
++    vec2 slope=cloud_shadow_projection.xy;
++    float slant=length(slope);
++    vec2 along=slope/max(slant,0.0001);
++    vec2 local_shape=cell-vec2(0.5);
++    // Keep atlas gutters fixed even when stretching near a low sun.
++    float stretch_envelope=16.0*cell.x*(1.0-cell.x)*cell.y*(1.0-cell.y);
++    local_shape-=along*dot(local_shape,along)*(1.0-1.0/(1.0+0.18*slant))*stretch_envelope;
++    // 4x2 original cloud atlas; transparent gutters survive LOD2/3.
++    vec2 tiles=vec2(4.0,2.0);
++    vec2 uv=(mod(floor(grid),tiles)+vec2(0.004)+(local_shape+vec2(0.5))*0.992)/tiles;
++    return textureLod(cloud_shadow_atlas,uv,3.0-cloud_shadow_projection.w).a;
++}
++vec3 cloud_illumination(vec3 position) {
++    vec2 point=position.xz+cloud_shadow_projection.xy*clamp(cloud_shadow_projection.z-position.y,0.0,160.0)-cloud_wind.xy;
++    float mask=cloud_mask(point);
++    if (cloud_shadow_projection.w>0.5) {
++        mask=0.5*(mask+cloud_mask(point+vec2(3.0,-2.0)));
++    }
++    float shade=smoothstep(0.05,0.92,mask);
++    // Subtle artistic ALBEDO modulation, not a new light or physical GI.
++    return vec3(1.0)+cloud_shadow_strength*((1.0-shade)*vec3(0.06,0.03,0.0)-shade*vec3(1.0,0.96,0.86));
++}
++// CLOUD_SHADOW_SHARED_END
++
+ uniform vec3 grass_dark = vec3(0.16, 0.30, 0.10);
+ uniform vec3 grass_light = vec3(0.36, 0.52, 0.20);
+ uniform vec3 grass_dry = vec3(0.55, 0.52, 0.28);
+@@ -211,21 +240,8 @@ void fragment() {
+         ROUGHNESS = mix(ROUGHNESS, 0.19 + iceVeins*0.14, ice);
+         SPECULAR = mix(SPECULAR, 0.7, ice);
+     }
+-    // 放在全部导数/霜之后；关闭/夜间/岩底不采样，LOD0 不在分支内求隐式导数。
+-    if (cloud_shadow_strength > 0.0 && cloud_shadow_day > 0.0 && n.y > 0.35) {
+-        vec2 cloudUV = (wp.xz - vec2(0.45, 0.18) * cloud_shadow_time) / 64.0;
+-        vec2 localUV = fract(cloudUV);
+-        // 每个64m格轮换四朵，图集内缩1px；不是随相机旋转的真实投影。
+-        vec2 atlasUV = fract(floor(cloudUV) * 0.5) + (vec2(1.0) + localUV * 510.0) / 1024.0;
+-        float cloud;
+-        if (cloud_shadow_use_atlas > 0.5) {
+-            cloud = smoothstep(0.45, 0.55, textureLod(cloud_shadow_atlas, atlasUV, 0.0).a);
+-        } else {
+-            // 与缺图卡片相同的圆形轮廓；内部纯色，无噪声渐变或方块。
+-            float edge = 0.78 - length(localUV * 2.0 - 1.0);
+-            float aa = max(footprint / 32.0, 0.002);
+-            cloud = smoothstep(-aa * 0.5, aa * 0.5, edge);
+-        }
+-        ALBEDO *= 1.0 - cloud * cloud_shadow_strength * cloud_shadow_day * smoothstep(0.35, 0.75, n.y);
++    // Explicit LOD only, after unrelated ground derivatives/frost.
++    if (cloud_shadow_strength>0.0 && n.y>0.35) {
++        ALBEDO*=mix(vec3(1.0),cloud_illumination(wp),smoothstep(0.35,0.75,n.y));
+     }
+ }
+diff --git a/scripts/ruins/SkyAtmosphere.lua b/scripts/ruins/SkyAtmosphere.lua
+index deac6d8..8efaa9b 100644
+--- a/scripts/ruins/SkyAtmosphere.lua
++++ b/scripts/ruins/SkyAtmosphere.lua
+@@ -3,6 +3,7 @@ local Clouds = require("ruins.SkyClouds")
+ local Shafts = require("ruins.LightShafts")
+ local Motes = require("ruins.FloatingMotes")
+ local Braziers = require("ruins.NightBraziers")
++local Fireflies = require("ruins.Fireflies")
+ local Quality = require("ruins.LightQuality")
+ local settingsOK,GameSettings = pcall(require,"ruins.GameSettings")
+ if not settingsOK then GameSettings=nil end
+@@ -33,6 +34,8 @@ function M:Init(scene,dn)
+     self.motes = nil
+     ---@type RuinsNightBraziers|nil
+     self.braziers=nil
++    ---@type RuinsFireflies|nil
++    self.fireflies=nil
+     ---@type Vector3[]
+     self.pillarAnchors={}
+     self.active,self.stopped,self.realFog,self.shadowActive = false,false,false,false
+@@ -46,6 +49,14 @@ function M:Init(scene,dn)
+     self.ground = nil
+     ---@type Material|nil 本次开启已绑定（或已尝试失败）的地表，避免每帧重试/查资源
+     self.shadowGround = nil
++    ---@type Material|nil Only the documented fallback tuft shader, not native GrassField.
++    self.shadowGrass=nil
++    ---@type Texture2D|nil
++    self.shadowTexture=nil
++    ---@type Texture2D|nil
++    self.grassShadowTexture=nil
++    self.shadowBound,self.grassShadowBound=false,false
++    self.shadowProjection=Vector4(0,0,120,0)
+     self.profile = Quality.PROFILES[Quality.Default()]
+     Quality.ConfigureScene(dn.zone,dn.sun)
+     if GameSettings then
+@@ -133,10 +144,13 @@ function M:ApplySwitches()
+     if self.clouds then self.clouds:SetMotion(f.cloudMotion,p.cloudMotionDetail or 0) end
+     local fires=f.nightBraziers and math.min(#self.pillarAnchors,p.braziers or 0) or 0
+     local lamps=math.min(fires,p.brazierLights or 0)
+-    if self.braziers and (fires~=self.braziers.count or lamps~=self.braziers.lightCount) then
++    if self.braziers and (fires~=self.braziers.count or lamps~=self.braziers.lightCount or (p.flameDetail or 1)~=self.braziers.detail) then
+         self.braziers:Dispose();self.braziers=nil
+     end
+-    if fires>0 and not self.braziers then self.braziers=Braziers.New(self.scene,self.pillarAnchors,fires,lamps) end
++    if fires>0 and not self.braziers then self.braziers=Braziers.New(self.scene,self.pillarAnchors,fires,lamps,p.flameDetail) end
++    local flies=f.motes and math.max(0,math.min(60,math.floor(p.fireflies or 0))) or 0
++    if self.fireflies and flies~=self.fireflies.count then self.fireflies:Dispose();self.fireflies=nil end
++    if flies>0 and not self.fireflies then self.fireflies=Fireflies.New(self.scene,flies) end
+     self:ApplyFog()
+     local shafts = f.shafts and math.max(0,math.min(8,math.floor(p.lightShafts or 0))) or 0
+     if self.shafts and shafts~=self.shafts.count then self.shafts:Dispose(); self.shafts=nil end
+@@ -146,8 +160,8 @@ function M:ApplySwitches()
+     if motes>0 and not self.motes then self.motes=Motes.New(self.scene,motes) end
+     self.realFog=Quality.ApplyVolume(self.dayNight.zone,self.dayNight.sun,p.volumetric or "off",f.volumetric and p.shadowOn~=false)
+     if not self.settingsManaged then Quality.ApplyStandaloneScene(self.dayNight.zone,self.dayNight.sun,p,f.bloom) end
+-    self.shadowActive=count>0 and f.cloudShadow==true
+-    self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive or self.braziers~=nil
++    self.shadowActive=count>4 and upper and f.cloudShadow==true
++    self.active=self.clouds~=nil or self.shafts~=nil or self.motes~=nil or self.shadowActive or self.braziers~=nil or self.fireflies~=nil
+     if self.clouds then self.clouds:Update(0,self.dayNight.day or 1,self.dayNight.dusk or 0,self.dayNight) end
+     if self.shafts then self.shafts:Update(self.dayNight,true,self.realFog) end
+     if self.braziers then self.braziers:Update(self.dayNight.nightK or 0,self.clock,self.realFog) end
+@@ -156,20 +170,53 @@ function M:ApplySwitches()
+ end
+ 
+ function M:ApplyCloudShadow()
+-    local ground = self.ground
+-    if not ground then return end
+-    ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowActive and 0.16 or 0))
+-    if not self.shadowActive then
+-        ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))
+-        self.shadowGround=nil
+-        return
+-    end
+-    if self.shadowGround==ground then return end
+-    local texture = cache:GetResource("Texture2D","Textures/Sky/cloud_flat_atlas.png")
+-    local bound = texture~=nil and ground:SetSurfaceTexture("cloud_shadow_atlas",texture)
+-    ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(bound and 1 or 0))
+-    self.shadowGround=ground
+-    if not bound and DebugLog and DebugLog.enabled then DebugLog.Log("SkyFx","cloud shadow atlas unavailable; analytic round mask") end
++    -- No require/circular terrain dependency, no native GrassField override.
++    local terrain=package.loaded["ruins.RuinsTerrain"]
++    ---@type Material|nil
++    local grass=terrain and terrain.tufts and terrain.tufts.material or nil
++    if grass~=self.shadowGrass then
++        if self.shadowGrass then self.shadowGrass:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
++        self.shadowGrass,self.grassShadowTexture,self.grassShadowBound=grass,nil,false
++    end
++    local clouds,dn=self.clouds,self.dayNight
++    local texture=self.shadowActive and clouds and clouds.ready and clouds.texture or nil
++    if self.shadowGround~=self.ground or self.shadowTexture~=texture then
++        self.shadowGround,self.shadowTexture=self.ground,texture
++        self.shadowBound=self.ground~=nil and texture~=nil and self.ground:SetSurfaceTexture("cloud_shadow_atlas",texture)
++    end
++    if self.grassShadowTexture~=texture then
++        self.grassShadowTexture=texture
++        self.grassShadowBound=grass~=nil and texture~=nil and grass:SetSurfaceTexture("cloud_shadow_atlas",texture)
++    end
++    -- DayNight's light points toward the surface; negate to point at the sun.
++    -- The same node becomes a moon at night, so actual solar elevation gates it.
++    local direction=dn.sunNode and dn.sunNode.direction
++    local elevation=math.max(0,math.min(1,((dn.elev or 0)-0.04)/0.26))
++    local strength=texture and (dn.day or 0)*elevation*elevation*(3-2*elevation)*0.16*math.min(1,(clouds.budget or 0)/24) or 0
++    local projection=self.shadowProjection
++    if direction and direction.y<0 then
++        local denominator=math.max(-direction.y,0.15)
++        projection.x=math.max(-4,math.min(4,-direction.x/denominator))
++        projection.y=math.max(-4,math.min(4,-direction.z/denominator))
++    else
++        projection.x,projection.y=0,0
++        strength=0
++    end
++    projection.w=clouds and clouds.budget>12 and 1 or 0
++    if self.ground then
++        self.ground:SetShaderParameter("cloud_shadow_strength",Variant(self.shadowBound and strength or 0))
++        if texture then
++            self.ground:SetShaderParameter("cloud_wind",Variant(clouds.wind))
++            self.ground:SetShaderParameter("cloud_shadow_projection",Variant(projection))
++        end
++    end
++    if grass then
++        grass:SetShaderParameter("cloud_shadow_strength",Variant(self.grassShadowBound and strength or 0))
++        if texture then
++            grass:SetShaderParameter("cloud_wind",Variant(clouds.wind))
++            grass:SetShaderParameter("cloud_shadow_projection",Variant(projection))
++        end
++    end
+ end
+ 
+ ---@param position Vector3 玩家/骑乘位置，不跟随拉远的观察相机
+@@ -178,6 +225,9 @@ function M:Update(dt,position,ground)
+     if not self.active or self.stopped then return end
+     if self.clouds then self.clouds:Follow(position) end
+     self.clock,self.elapsed = self.clock+math.max(0,dt),self.elapsed+math.max(0,dt)
++    -- Fire/light and firefly clocks run every frame, outside the 5Hz sky tint gate.
++    if self.braziers then self.braziers:Update(self.dayNight.nightK or 0,self.clock,self.realFog) end
++    if self.fireflies then self.fireflies:Update(dt,position,self.dayNight.nightK or 0,self.clock) end
+     if ground~=self.ground then
+         if self.ground then self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
+         self.ground=ground
+@@ -189,15 +239,10 @@ function M:Update(dt,position,ground)
+     self.elapsed = 0
+     local dn = self.dayNight
+     self:ApplyFog()
+-    if self.braziers then self.braziers:Update(dn.nightK or 0,self.clock,self.realFog) end
+     if self.clouds then self.clouds:Update(step,dn.day or 1,dn.dusk or 0,dn) end
+     if self.shafts then self.shafts:Update(dn,true,self.realFog) end
+     if self.motes then self.motes:Update(position,true,dn.day or 1) end
+-    if self.ground and self.shadowActive then
+-        -- 独立实时时钟：快进昼夜不会让云影狂奔，也不触碰原 daynight_tint 接口。
+-        self.ground:SetShaderParameter("cloud_shadow_time",Variant(self.clock))
+-        self.ground:SetShaderParameter("cloud_shadow_day",Variant(dn.day or 1))
+-    end
++    if self.shadowActive then self:ApplyCloudShadow() end
+ end
+ 
+ -- 只被DebugLog的开启态probe调用；关闭日志时不构造统计表，不遍历粒子。
+@@ -210,9 +255,13 @@ function M:Probe()
+         cloudTextureReads=self.clouds and self.clouds.textureReads or 0,
+         braziers=self.braziers and self.braziers.count or 0,pointLights=self.braziers and self.braziers.lightCount or 0,
+         fireReady=self.braziers and self.braziers.available or false,
++        fireFallback=self.braziers and self.braziers.fallback or false,
++        fireflies=self.fireflies and self.fireflies.liveCount or 0,
++        firefliesBudget=self.fireflies and self.fireflies.count or 0,
++        firefliesReady=self.fireflies and self.fireflies.ready or false,
+         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
+         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,
+-        batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)+(self.braziers and self.braziers.batchCount or 0)}
++        batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)+(self.braziers and self.braziers.batchCount or 0)+(self.fireflies and self.fireflies.batchCount or 0)}
+ end
+ 
+ function M:Stop()
+@@ -222,12 +271,14 @@ function M:Stop()
+     if self.clouds then self.clouds:Dispose(); self.clouds=nil end
+     if self.shafts then self.shafts:Dispose(); self.shafts=nil end
+     if self.motes then self.motes:Dispose(); self.motes=nil end
++    if self.fireflies then self.fireflies:Dispose();self.fireflies=nil end
+     if self.braziers then self.braziers:Dispose();self.braziers=nil end
+     self.pillarAnchors={}
+     if self.ground then
+         self.ground:SetShaderParameter("cloud_shadow_strength",Variant(0))
+-        self.ground:SetShaderParameter("cloud_shadow_use_atlas",Variant(0))
+     end
++    if self.shadowGrass then self.shadowGrass:SetShaderParameter("cloud_shadow_strength",Variant(0)) end
++    self.shadowGrass,self.shadowTexture,self.grassShadowTexture=nil,nil,nil
+     Quality.ApplyVolume(self.dayNight.zone,self.dayNight.sun,"off",false)
+     self.scene,self.ground,self.shadowGround=nil,nil,nil -- 不让已停止的大气模块继续持有场景/地表资源。
+     self.active,self.stopped,self.realFog,self.shadowActive=false,true,false,false
+diff --git a/scripts/ruins/SkyClouds.lua b/scripts/ruins/SkyClouds.lua
+index e81245b..91a2d42 100644
+--- a/scripts/ruins/SkyClouds.lua
++++ b/scripts/ruins/SkyClouds.lua
+@@ -25,7 +25,7 @@ local function AddPatch(g,yaw,elevation,width,radius,tile,speed,haze)
+     local cx,cz=sy*ce,cy*ce
+     local tangent=math.tan(width*0.5)
+     local normal=Vector3(cx,se,cz)
+-    local color=Color(speed,0,haze,1)
++    local color=Color(speed,(yaw*0.173+tile*0.137)%1,haze,1)
+     local function vertex(u,v)
+         local x=cx+cy*u*tangent-sy*se*v*tangent
+         local y=se+ce*v*tangent
+@@ -67,6 +67,8 @@ function M:Init(scene,count,upper,lower)
+     self.geometry={}
+     ---@type number
+     self.elapsed=0
++    -- Shared with ground/grass: XZ displacement (m), XZ velocity (m/s).
++    self.wind=Vector4(0,0,0,0)
+     self.motionEnabled,self.motionDetail=true,self.budget>12 and 1 or (self.budget>4 and 0.5 or 0)
+     self.fallback,self.unavailable=false,false
+     self.loading=false
+@@ -201,9 +203,17 @@ function M:Update(dt,day,dusk,dn)
+         if self.loading then self.pendingDay,self.pendingDusk,self.pendingDN=day,dusk,dn end
+         return
+     end
+-    -- 四个漂移频率的共同周期，重置时相位连续且uniform长期有界。
+-    if self.motionEnabled then self.elapsed = (self.elapsed+Finite(dt,0,0,1))%(10000*math.pi) end
+-    self.material:SetShaderParameter("drift_time",Variant(self.elapsed))
++    -- Keep the double clock; wrap only the upload. 3600m is a common period
++    -- for the three sky layers and the 600x300m ground pattern.
++    local moving=self.motionEnabled and not self.horizonOnly
++    if moving then self.elapsed=self.elapsed+Finite(dt,0,0,1) end
++    local t=self.horizonOnly and 0 or self.elapsed
++    self.wind.x=(0.24*t+75*(1-math.cos(t*0.0008)))%3600
++    self.wind.y=(0.10*t+(0.04/0.0006)*(math.cos(0.7)-math.cos(t*0.0006+0.7)))%3600
++    self.wind.z=moving and (0.24+0.06*math.sin(t*0.0008)) or 0
++    self.wind.w=moving and (0.10+0.04*math.sin(t*0.0006+0.7)) or 0
++    self.material:SetShaderParameter("cloud_wind",Variant(self.wind))
++    self.material:SetShaderParameter("drift_time",Variant(t%(10000*math.pi)))
+     self.material:SetShaderParameter("motion_detail",Variant(self.motionDetail))
+     -- 转头/重新启用时也必须显示当前时段。
+     self.material:SetShaderParameter("day",Variant(Finite(day,1,0,1)))

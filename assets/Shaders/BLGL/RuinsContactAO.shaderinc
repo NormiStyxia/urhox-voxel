@@ -1,0 +1,55 @@
+// Local static-layout contact AO, not screen-space AO or a projected shadow.
+// Four small uniforms; no sampler, derivatives, ray march or column loop.
+uniform float contact_ao_strength = 0.0;
+uniform vec4 contact_columns = vec4(23.6,6.0,1.2,5.45);
+uniform vec4 contact_stairs = vec4(20.75,3.5,32.75,33.5);
+uniform vec2 contact_ao_distance = vec2(18.0,42.0);
+
+vec2 ruins_contact_column(float index) {
+    float angle=(index+0.5)*0.261799388;
+    vec2 center=vec2(cos(angle),sin(angle))*contact_columns.x;
+    // Same stair-clearance displacement as RuinsBuild.ColAngle.
+    if (abs(center.x)<contact_columns.w && abs(center.y)>contact_columns.x*0.9) {
+        center=vec2(sign(center.x)*contact_columns.w,
+            sign(center.y)*sqrt(max(0.0,contact_columns.x*contact_columns.x-contact_columns.w*contact_columns.w)));
+    }
+    return center;
+}
+float ruins_column_contact(vec2 point,float index) {
+    vec2 outside=max(abs(point-ruins_contact_column(index))-vec2(contact_columns.z),vec2(0.0));
+    return 1.0-smoothstep(0.015,0.45,length(outside));
+}
+float ruins_contact_ao(vec3 point,vec3 normal,float joint) {
+    if (contact_ao_strength<=0.0) { return 1.0; }
+    float distanceFade=1.0-smoothstep(contact_ao_distance.x,contact_ao_distance.y,length(point-CAMERA_POSITION_WORLD));
+    if (distanceFade<=0.0) { return 1.0; }
+    float localContact=0.0;
+    float up=smoothstep(0.55,0.85,normal.y);
+    float baseY=contact_columns.y;
+    // Strict height + radial gate: no contact projected onto the court, caps,
+    // underground rock, floating debris, or the far side of the island.
+    if (point.y>=baseY-0.08 && point.y<baseY+0.4 && abs(length(point.xz)-contact_columns.x)<2.2) {
+        float index=floor(atan(point.z,point.x)/0.261799388);
+        float closest=max(ruins_column_contact(point.xz,index),
+            max(ruins_column_contact(point.xz,index-1.0),ruins_column_contact(point.xz,index+1.0)));
+        float groundBand=1.0-smoothstep(0.025,0.12,abs(point.y-baseY));
+        float footBand=(1.0-smoothstep(0.04,0.32,point.y-baseY))*(1.0-up);
+        localContact=closest*max(up*groundBand,footBand);
+    }
+    float z=abs(point.z);
+    if (z>=contact_stairs.x && z<contact_stairs.w && abs(point.x)<contact_stairs.y+0.08) {
+        float d=z-contact_stairs.x;
+        float top=min(baseY,0.5*floor(d+1.0));
+        float surfaceBand=1.0-smoothstep(0.025,0.10,abs(point.y-top));
+        float back=top<baseY ? 1.0-smoothstep(0.02,0.32,1.0-fract(d)) : 0.0;
+        float wall=z<contact_stairs.z ? 1.0-smoothstep(0.02,0.30,contact_stairs.y-abs(point.x)) : 0.0;
+        float tread=max(back,wall*0.7)*up*surfaceBand;
+        float riserBand=1.0-smoothstep(0.02,0.22,abs(point.y-(top-0.5)));
+        float riser=(1.0-smoothstep(0.01,0.06,fract(d)))*riserBand;
+        riser*=smoothstep(0.65,0.9,-normal.z*sign(point.z))*(1.0-up);
+        localContact=max(localContact,max(tread,riser*0.7));
+    }
+    // AO affects IBL only (AO_LIGHT_AFFECT retains its documented default 0).
+    // Reuse the voxel shader's already filtered stone-joint mask, never albedo.
+    return 1.0-clamp(contact_ao_strength,0.0,0.32)*distanceFade*max(localContact,clamp(joint,0.0,1.0)*0.65);
+}

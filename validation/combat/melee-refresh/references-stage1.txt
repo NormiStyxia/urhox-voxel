@@ -1,0 +1,204 @@
+tests/combat/locomotion_input.lua:13:assert(out.evadePressed and out.evadeHeld,'exploration 64dp button starts on down')
+tests/combat/locomotion_input.lua:15:assert(not out.evadePressed and out.evadeHeld,'drag outside remains captured')
+tests/combat/locomotion_input.lua:17:assert(out.evadePressed and out.evadeHeld)
+tests/combat/locomotion_input.lua:18:T.EndTouch(102);I.SampleEvade(out,false,true);assert(out.evadeHeld,'touch release does not release keyboard')
+tests/combat/locomotion_input.lua:19:I.SampleEvade(out,false,false);assert(out.evadeHeld,'keyboard release does not release pad')
+tests/combat/locomotion_input.lua:20:I.SetGamepadEvade(false);I.SampleEvade(out,false,false);assert(not out.evadeHeld and not out.evadePressed)
+tests/combat/locomotion_input.lua:22:I.Set('evadeRun',true);I.Set('evadeRun',false);I.Set('dodge',true);I.Set('dodge',false)
+tests/combat/locomotion_input.lua:23:I.SampleEvade(out,true,false);assert(out.evadePressed and not out.evadeHeld)
+tests/combat/locomotion_input.lua:24:I.SampleEvade(out,false,false);assert(not out.evadePressed)
+tests/combat/locomotion_input.lua:26:T.BeginTouch(103,676,338);I.SampleEvade(out,false,false);assert(out.evadePressed and out.evadeHeld)
+tests/combat/locomotion_input.lua:29:assert(out.inputRevision>revision and not out.evadeHeld and not out.evadePressed and cancels>0)
+tests/combat/locomotion_input.lua:32:I.SampleEvade(out,false,false);assert(not out.evadePressed and not out.evadeHeld,'dragon button is never foot dodge')
+tests/combat/core_state.lua:20:eq(State.Activity(true),true) -- dodge is the explicit cancellation exception
+tests/combat/core_state.lua:58:print('PASS core_state: visibility, draw/dodge gate, 0.4s recovery grace/back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation')
+tests/combat/core_touch.lua:33:assert(Input.Press('dodge') and Input.Down('dodge'),'independent dodge executes on down before release')
+tests/combat/core_touch.lua:34:assert(not Input.Press('dodge'),'held dodge cannot autorepeat')
+tests/combat/core_touch.lua:35:Controls.EndTouch(8);assert(not Input.Press('dodge'),'release cannot dodge a second time')
+tests/combat/core_touch.lua:86:assert(helpCombat:find('Shift 闪避',1,true) and not helpCombat:find('碎时',1,true) and not helpCombat:find('滑翔',1,true))
+scripts/combat/enemies/StoneSentry.lua:89:            -- Swept sphere vs player torso; an ordinary dodge's invulnerability is handled by Combat.
+tests/combat/locomotion_support.lua:16:    m.dodgeCount=0
+tests/combat/locomotion_support.lua:17:    m.observe=function(kind,e)if kind=='start' and e.clip=='dodge_slide' then m.dodgeCount=m.dodgeCount+1 end end
+scripts/combat/CombatAudio.lua:44:    run_step = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -14, interval = 0.12 },
+tests/combat/core_moves.lua:30:m=New(); Tick(.01,{dodge=true,axis=Vector3(1,0,0)}); assert(m.iframe)
+tests/combat/core_moves.lua:68:Tick(.01,{dodge=true,axis=Vector3(1,0,0)})
+tests/combat/core_moves.lua:70:assert(shots==before and not m.autoFire,'dodge discards automatic shot')
+tests/combat/core_moves.lua:72:Tick(.18); assert(not m:Action('dodge',Vector3(1,0,0)),'swap first .2 is not cancellable')
+tests/combat/core_moves.lua:73:Tick(.03); assert(m:Action('dodge',Vector3(1,0,0)),'swap cancel follows animation event')
+tests/combat/core_moves.lua:86:assert(m:Action('dodge',Vector3(1,0,0)))
+tests/combat/core_moves.lua:89:m=New(); Tick(.01,{dodge=true}); assert(m.iframe)
+tests/combat/core_moves.lua:92:print('PASS real animation events: sword dedupe, cancel no cast, dodge iframe, invuln, death respawn, bow fire')
+tests/combat/core_moves.lua:165:local function Slide() m=New(); assert(m:Action('dodge',Vector3(1,0,0))); return m end
+tests/combat/core_moves.lua:182:m=New();assert(m:Action('dodge',Vector3(.05,0,.05)));S.near(m.moveDir.z,-1)
+tests/combat/core_moves.lua:183:Slide();Tick(.49);assert(not m:Action('dodge'))
+tests/combat/core_moves.lua:184:Tick(.01);assert(m:Action('dodge'),'cooldown .50 runs in real time')
+tests/combat/core_moves.lua:186:assert(not m:Action('dodge') and m.dodgeCool==0 and not m.iframe,'unsafe start consumes nothing')
+tests/combat/core_moves.lua:188:Tick(.01);assert(m.slideStopped and m.iframe and m.dodgeCool>0)
+tests/combat/core_moves.lua:193: assert(not m:Action('dodge'),'cannot cancel early '..entry[1])
+tests/combat/core_moves.lua:194: Tick(.001);assert(m:Action('dodge'),'cancel event must open '..entry[1])
+tests/combat/core_moves.lua:198:while m.clip=='dodge_slide' do Tick(1/30);travel=travel+m.motion:Length() end
+tests/combat/core_moves.lua:206:m=New();m.combo=1;assert(m:Action('dodge'));Tick(.04);Tick(.01,{attackTap=true});Tick(.18)
+tests/combat/core_moves.lua:208:m=New();m.combo=2;assert(m:Action('dodge'));Tick(.61);assert(m:Action('light'));assert(m.clip=='sword_light_1')
+tests/combat/core_moves.lua:213:Slide();Tick(.11);assert(not m:ApplyHit{dmg=10}.hit and not m.perfectUntil,'late iframe is not precise dodge')
+tests/combat/core_moves.lua:217:Tick(.01,{dodge=true,attack=true});assert(m.clip=='dodge_slide' and m.charge==0)
+tests/combat/core_moves.lua:221:Bow();assert(m:Action('dodge'));Tick(.05);Tick(.01,{attackTap=true});Tick(.17)
+tests/combat/core_moves.lua:222:assert(m.clip=='dodge_slide' and not m.buffer,'bow early tap is not latched')
+tests/combat/core_moves.lua:236:assert(State.GetSetting('dodgeFov')==false,'dodge FOV is opt-in')
+tests/combat/core_moves.lua:239:-- A rejected dodge must not clear the current strike; an accepted one clears
+tests/combat/core_moves.lua:244:        assert(enabled==false and m.clip=='dodge_slide')
+tests/combat/core_moves.lua:248:    assert(not m:Action('dodge') and trailResets==0)
+tests/combat/core_moves.lua:250:    assert(not m:Action('dodge') and trailResets==0)
+tests/combat/core_moves.lua:251:    m=New();assert(m:Action('dodge') and trailResets==1)
+tests/combat/core_moves.lua:252:    assert(not m:Action('dodge') and trailResets==1)
+tests/combat/core_motion.lua:17:assert(n.cc.desiredVelocity.x*.1<1,'dodge must stop before gap even when endpoint is solid')
+tests/combat/core_stow.lua:35:tick(.01,{allowed=true,dodge=true,axis=Vector3.RIGHT})
+tests/combat/core_stow.lua:36:assert(m.clip=='dodge_slide' and rig.pose=='back' and not m:WeaponInHand())
+tests/combat/core_stow.lua:37:for _,t in ipairs(m.anim.ordered) do if t.clip.id=='dodge_slide' then assert(t.params.weaponInHand==0)end end
+tests/combat/core_stow.lua:53:tick(.01,{allowed=true,dodge=true,axis=Vector3.RIGHT})
+tests/combat/core_stow.lua:54:assert(rig.pose=='hand' and m.clip=='dodge_slide','attack slide retains hand only temporarily')
+tests/combat/core_stow.lua:64:assert(m:Swap());frames(21);assert(m:Action('dodge',Vector3.RIGHT))
+tests/combat/core_stow.lua:95:New();assert(m:Action('dodge',Vector3.RIGHT))
+tests/combat/core_stow.lua:98: for _,track in ipairs(self.ordered)do if track.clip.id=='dodge_slide' and track.live then
+tests/combat/core_stow.lua:104:for _,track in ipairs(m.anim.ordered)do if track.clip.id=='dodge_slide' and track.live then
+tests/combat/core_stow.lua:119:New();m:Action('dodge',Vector3.RIGHT);local distance=0
+tests/combat/audio_spec.lua:27:    blade_draw=1, blade_sheath=1, enemy_windup=3, player_hurt=2, dodge=2, dodge_land=1, run_step=1,
+tests/combat/audio_spec.lua:372:check(stepSource.sound.path=='audio/sfx/cmb_dodge_land.mp3','run step reuses landing asset')
+scripts/combat/WeaponRig.lua:603:        if shot and shot.clip=='dodge_slide' then return false end
+scripts/combat/WeaponRig.lua:1066:        local clipOK=shot and type(shot.clip)=='string' and (slide and shot.clip=='dodge_slide'
+scripts/combat/WeaponRig.lua:1195:        if shot and shot.clip=='dodge_slide' then slide=true;break end
+tests/combat/core_selftest.lua:9:C.SeekPreview(anim,'dodge_slide',.12,0,{moveX=-1,moveZ=0,bow=1,p=.4})
+tests/combat/core_selftest.lua:35:            State.SetWeapon(step.weapon);State.FinishTransition();State.Activity(true);m.dodgeCool=0;return true
+tests/combat/weapon_select_gesture.lua:90:-- The first open cannot bypass the authored lock on a strike/dodge.
+tests/combat/weapon_select_gesture.lua:92:moves:Cancel('test');moves:Play('dodge_slide');assert(not gesture:Open(false))
+tests/combat/core_free_facing.lua:60:for _,reason in ipairs({'menu','focus','touchcancel','dodge','swap','exit','death','mount'}) do
+tests/combat/core_free_facing.lua:121:assert(m:Action('dodge',Vector3.RIGHT));assert(not m.anim:IsPlaying('bow_cancel'),'slide interrupts cosmetic cancel even with protection preservation')
+tests/combat/locomotion_pose.lua:5:local clip=require('combat.AnimClips').Clips.dodge_slide
+tests/combat/locomotion_pose.lua:12: local p=A.DebugSample('dodge_slide',t,{moveZ=1,weaponInHand=0})
+tests/combat/locomotion_pose.lua:57:    local p=A.DebugSample('dodge_slide',frame*.01,{moveX=dx,moveZ=dz,weaponInHand=0})
+tests/combat/locomotion_pose.lua:77:-- Crossfade consumes the stopped dodge at the locomotion layer, with no base gait leak.
+tests/combat/locomotion_pose.lua:79:local h=a:Play('dodge_slide',{fadeIn=0,params={moveZ=1,sprintPending=1,weaponInHand=0}})
+tests/combat/locomotion_pose.lua:93:local _,count=src:gsub('id="dodge_slide"','');assert(count==1)
+tests/combat/core_camera.lua:89:assert(not controller:Action('dodge',Vector3.RIGHT) and not cc.slideAt)
+tests/combat/core_camera.lua:90:safe=true;assert(controller:Action('dodge',Vector3.RIGHT));assert(cc.slideDir.x==1)
+tests/combat/locomotion_camera_motion.lua:36:local moves,foot=S.New(false);moves.dodgeCool=.10
+tests/combat/locomotion_camera_motion.lua:37:S.Tick(moves,.01,{evadePressed=true,evadeHeld=true});assert(moves.buffer=='dodge')
+tests/combat/locomotion_camera_motion.lua:38:S.Tick(moves,.10,{evadeHeld=true});assert(moves.clip=='dodge_slide' and moves.dodgeCount==1)
+tests/combat/locomotion_camera_motion.lua:49: S.Tick(moves,.52,{evadePressed=true,evadeHeld=true})
+tests/combat/anim_spec.lua:40:            assert(#track==(c.id=="dodge_slide" and 8 or 6) and track[1][1]==0 and track[#track][1]==1)
+tests/combat/anim_spec.lua:60:    local a=new();a:Play("dodge_roll")
+tests/combat/anim_spec.lua:104:    assert(not a:IsPlaying("sword_light_1"));assert(not a:Play("dodge_roll"))
+tests/combat/anim_spec.lua:122:    local a=new();local h=a:Play("dodge_roll");a:Update(.05);a:Poll();a:Stop(h,.1)
+tests/combat/anim_spec.lua:165:            local a=new();a:Play("dodge_roll",{speed=speed})
+tests/combat/anim_spec.lua:175:    local a=new();local h=a:Play("dodge_roll");near(a:GetMotion(.315),2.6*.85)
+tests/combat/anim_spec.lua:192:    near(A.DebugSample("dodge_roll",.25).body[1],330)
+tests/combat/anim_spec.lua:242:test("dodge is front-loaded 85 percent in 70 percent time",function()
+tests/combat/anim_spec.lua:243:    local a=new();a:Play("dodge_roll")
+tests/combat/anim_spec.lua:272:    local a=new();local h=a:Play("dodge_roll");a:Update(.1);a:Poll()
+tests/combat/anim_spec.lua:338:test("swap stows at .18, opens dodge at .20, readies at .40",function()
+tests/combat/anim_spec.lua:354:        assert(a:Play("dodge_roll"));a:Update(.25)
+tests/combat/anim_spec.lua:374:    assert(A.DefaultDodge=="dodge_slide" and D.DefaultDodge=="dodge_slide")
+tests/combat/anim_spec.lua:377:    assert(found.dodge_roll.deprecated and found.dodge_roll.replacement=="dodge_slide")
+tests/combat/anim_spec.lua:378:    assert(not found.dodge_slide.deprecated);near(found.dodge_slide.dur,.32)
+tests/combat/anim_spec.lua:381:    local clip=D.Clips.dodge_slide
+tests/combat/anim_spec.lua:387:    local a,c=new();a:Play("dodge_slide",{fadeIn=0,params={moveZ=1}})
+tests/combat/anim_spec.lua:389:    local pose=A.DebugSample("dodge_slide",.1,{moveZ=1})
+tests/combat/anim_spec.lua:394:    local forward=A.DebugSample("dodge_slide",.1,{moveX=0,moveZ=1})
+tests/combat/anim_spec.lua:395:    local rear=A.DebugSample("dodge_slide",.1)
+tests/combat/anim_spec.lua:396:    local right=A.DebugSample("dodge_slide",.1,{moveX=1,moveZ=0})
+tests/combat/anim_spec.lua:397:    local left=A.DebugSample("dodge_slide",.1,{moveX=-1,moveZ=0})
+tests/combat/anim_spec.lua:401:    local bow=A.DebugSample("dodge_slide",.1,{moveX=1,moveZ=0,bow=1})
+tests/combat/anim_spec.lua:403:    local a=new();local h=a:Play("dodge_slide",{params={moveX=3,moveZ=4}})
+tests/combat/anim_spec.lua:409:    local h=a:Play("dodge_slide",{speed=3,stats={speed=8}})
+tests/combat/anim_spec.lua:417:    local a=new();a:Play("dodge_slide")
+tests/combat/anim_spec.lua:420:    a=new();a:Play("dodge_slide");near(a:GetMotion(.32),2.20)
+tests/combat/anim_spec.lua:421:    a=new();a:Play("dodge_slide");near(a:GetMotion(.01),.12);near(a:GetMotion(.16),1.55)
+tests/combat/anim_spec.lua:424:    local a=new();local h=a:Play("dodge_slide")
+tests/combat/anim_spec.lua:427:    assert(not a:IsPlaying("dodge_slide"))
+tests/combat/anim_spec.lua:432:        local a=new();a:Play("dodge_slide");local total=0
+tests/combat/anim_spec.lua:435:        a=new();local h=a:Play("dodge_slide");local elapsed=0;total=0
+tests/combat/anim_spec.lua:446:    local a=new();a:Play("dodge_slide")
+tests/combat/anim_spec.lua:454:    local a=new();local h=a:Play("dodge_slide");a:Poll();a:Update(.08);a:Poll()
+tests/combat/anim_spec.lua:460:    local a,c=new();local h=a:Play("dodge_slide",{params={moveZ=1}})
+tests/combat/anim_spec.lua:463:    local oldPose=A.DebugSample("dodge_slide",.22,{moveZ=1}).body
+tests/combat/anim_spec.lua:473:    local a=new();local h=a:Play("dodge_slide",{params={bow=1}})
+tests/combat/anim_spec.lua:572:    local a=new();a:Play("dodge_slide");assert(names(a:Poll())=="iframe_on,dust_start,dust_streak,")
+tests/combat/anim_spec.lua:574:    local pose=A.DebugSample("dodge_slide",.10,{moveZ=1})
+tests/combat/anim_spec.lua:668:        local stowed=A.DebugSample("dodge_slide",t,{weaponInHand=0,moveZ=1})
+tests/combat/anim_spec.lua:669:        local bowBack=A.DebugSample("dodge_slide",t,{weaponInHand=0,bow=1,moveZ=1})
+tests/combat/anim_spec.lua:670:        local held=A.DebugSample("dodge_slide",t,{weaponInHand=1,moveZ=1})
+tests/combat/anim_spec.lua:671:        local default=A.DebugSample("dodge_slide",t,{moveZ=1})
+tests/combat/anim_spec.lua:675:            local middle=A.DebugSample("dodge_slide",t,{weaponInHand=.5,moveZ=1})
+tests/combat/anim_spec.lua:679:    near(A.DebugSample("dodge_slide",.135,{weaponInHand=-2,moveZ=1}).arm_right[1],24)
+tests/combat/anim_spec.lua:680:    near(A.DebugSample("dodge_slide",.135,{weaponInHand=3,moveZ=1}).arm_right[1],-28)
+tests/combat/anim_spec.lua:686:        local a,c=new();local h=a:Play("dodge_slide",{params=params})
+tests/combat/anim_spec.lua:688:            local pose=A.DebugSample("dodge_slide",i*.01,params)
+tests/combat/anim_spec.lua:693:        local glide=A.DebugSample("dodge_slide",.10,params)
+tests/combat/anim_spec.lua:706:    local clip=D.Clips.dodge_slide
+tests/combat/anim_spec.lua:713:            local before,at,after=A.DebugSample("dodge_slide",t-eps,params),A.DebugSample("dodge_slide",t,params),A.DebugSample("dodge_slide",t+eps,params)
+tests/combat/anim_spec.lua:721:    assert(A.DebugSample("dodge_slide",.02,{moveZ=1}).body[1]==14)
+tests/combat/anim_spec.lua:722:    assert(A.DebugSample("dodge_slide",.10,{moveZ=1}).body[1]>4)
+tests/combat/anim_spec.lua:723:    assert(A.DebugSample("dodge_slide",.26,{moveZ=1}).body[1]==10)
+tests/combat/anim_spec.lua:727:        local a,c=new();local h=a:Play("dodge_slide",{params={moveX=.6,moveZ=.8,weaponInHand=0}})
+tests/combat/anim_spec.lua:748:        local a,c=new();local h=a:Play("dodge_slide",{params={weaponInHand=1,moveZ=1}})
+tests/combat/anim_spec.lua:763:    local a,c=new();local h=a:Play("dodge_slide",{params={moveX=1,moveZ=0,weaponInHand=0}})
+tests/combat/anim_spec.lua:775:    local a,c=new();a:Play("dodge_slide",{params={weaponInHand=0,moveZ=1}})
+tests/combat/anim_spec.lua:779:    a:Update(.04);Mock.reset(c);a:Apply();assert(not a:IsPlaying("dodge_slide"));near(a:GetMotion(),0)
+scripts/combat/CombatTest.lua:43:        if e.clip=='dodge_slide' then
+scripts/combat/CombatTest.lua:44:            self.slideAt=e.age; self.slideOrigin=self.o.position(); self.cdInitial=m.dodgeCool
+scripts/combat/CombatTest.lua:111:            string.format('shots=%d charge=%.3f cancel_via_dodge=%s',#self.shots,m.charge,tostring(self.starts.dodge_slide~=nil)))
+scripts/combat/CombatTest.lua:139:        if not self.cdMeasured and m.dodgeCool<=0 then self.cdMeasured=m.age-self.slideAt end
+scripts/combat/CombatTest.lua:140:        if not self.slideDistance and m.clip~='dodge_slide' and not s.cancel then self.slideDistance=distance(self.o.position(),self.slideOrigin) end
+scripts/combat/CombatTest.lua:158:            neutral.dodge=true; neutral.axis=self.o.direction(s.axis); self.sent=true
+scripts/combat/CombatTest.lua:163:        elseif self.phase==1 then neutral.dodge=true; self.phase=2
+tests/combat/locomotion_state.lua:5:    local total=S.Tick(m,.001,{evadePressed=true,evadeHeld=held>0})
+tests/combat/locomotion_state.lua:6:    assert(m.clip=='dodge_slide' and m.iframe and not S.State.InCombat())
+tests/combat/locomotion_state.lua:8:        total=total+S.Tick(m,.01,{evadeHeld=f.time<held})
+tests/combat/locomotion_state.lua:15:    for i=1,math.floor(.52*fps) do distance=distance+S.Tick(m,1/fps,{evadePressed=i==1,evadeHeld=true}) end
+tests/combat/locomotion_state.lua:16:    local tail=.52-f.time;if tail>1e-8 then distance=distance+S.Tick(m,tail,{evadeHeld=true}) end
+tests/combat/locomotion_state.lua:18:    assert(m.dodgeCount==1,'held does not replay dodge')
+tests/combat/locomotion_state.lua:21:local total=S.Tick(m,.52,{evadePressed=true,evadeHeld=true})
+tests/combat/locomotion_state.lua:22:S.near(total,3.212);S.near(f.speed,7.2);S.near(m.dodgeCool,0)
+tests/combat/locomotion_state.lua:25:S.Tick(m,.239,{evadePressed=true,evadeHeld=true});assert(not f.pending)
+tests/combat/locomotion_state.lua:26:S.Tick(m,.001,{evadeHeld=true});assert(f.pending and not f:IsRunning())
+tests/combat/locomotion_state.lua:27:S.Tick(m,.06,{evadeHeld=true});assert(f:IsRunning());S.near(f.speed,2)
+tests/combat/locomotion_state.lua:28:S.Tick(m,.22,{evadeHeld=true});S.near(f.speed,7.2)
+tests/combat/locomotion_state.lua:29:S.Tick(m,.12,{evadeHeld=false});S.near(f.speed,4.2);assert(not f:IsRunning())
+tests/combat/locomotion_state.lua:31:m,f=S.New(true);S.Tick(m,.04,{evadePressed=true,evadeHeld=true})
+tests/combat/locomotion_state.lua:32:local d=S.Tick(m,.01,{evadeHeld=true,attackTap=true})+.48
+tests/combat/locomotion_state.lua:33:d=d+S.Tick(m,.40,{evadeHeld=true});S.near(d,1.92)
+tests/combat/locomotion_state.lua:39: S.Tick(m,.1,{evadePressed=true,evadeHeld=true,onGround=reason~='air'})
+tests/combat/locomotion_state.lua:40: for i=1,10 do S.Tick(m,.1,{evadeHeld=true}) end
+tests/combat/locomotion_state.lua:41: assert(m.dodgeCool==0 and not m.iframe and not f:IsRunning())
+tests/combat/locomotion_state.lua:43:m,f=S.New(false);m.dodgeCool=.5
+tests/combat/locomotion_state.lua:44:S.Tick(m,.1,{evadePressed=true,evadeHeld=true});S.Tick(m,.14,{evadeHeld=true})
+tests/combat/locomotion_state.lua:45:assert(f:IsRunning() and not m.iframe);S.near(m.dodgeCool,.26)
+tests/combat/locomotion_state.lua:48:S.Tick(m,.25,{evadePressed=true,evadeHeld=true});assert(not f.pending and not f:IsRunning())
+tests/combat/locomotion_state.lua:49:S.near(f.distance,0);assert(m.dodgeCool>0 and not m.iframe)
+tests/combat/locomotion_state.lua:51: m,f=S.New(false);S.Tick(m,.31,{evadePressed=true,evadeHeld=true});m:Cancel(reason)
+tests/combat/locomotion_state.lua:52: for i=1,5 do S.Tick(m,.1,{evadeHeld=true}) end
+tests/combat/locomotion_state.lua:54: S.Tick(m,.01,{evadeHeld=false});assert(f.state==F.State.LOCOMOTION)
+tests/combat/locomotion_state.lua:55: S.Tick(m,.01,{evadePressed=true,evadeHeld=true});assert(m.clip=='dodge_slide')
+tests/combat/locomotion_state.lua:57:m,f=S.New(false);S.Tick(m,.52,{evadePressed=true,evadeHeld=true})
+tests/combat/locomotion_state.lua:58:S.Tick(m,.04,{evadeHeld=true,actualForwardSpeed=0});assert(f:IsRunning())
+tests/combat/locomotion_state.lua:59:S.Tick(m,.04,{evadeHeld=true,actualForwardSpeed=0});assert(f.state==F.State.WAIT_RELEASE)
+tests/combat/locomotion_state.lua:60:m,f=S.New(false);S.Tick(m,.52,{evadePressed=true,evadeHeld=true})
+tests/combat/locomotion_state.lua:61:S.Tick(m,.01,{evadeHeld=true,jump=true});assert(not f:IsRunning() and not f.pending)
+tests/combat/locomotion_state.lua:62:m,f=S.New(false);S.Tick(m,.1,{runIntent=true});assert(f:IsRunning() and not m.clip and not m.iframe and m.dodgeCool==0)
+tests/combat/locomotion_state.lua:65:m,f=S.New(false);m.dodgeCool=.10
+tests/combat/locomotion_state.lua:66:local metres=S.Tick(m,.20,{evadePressed=true,evadeHeld=false})
+tests/combat/locomotion_state.lua:67:S.near(metres,1.08);S.near(m.slideElapsed,.10);S.near(m.dodgeAt,.10);S.near(m.dodgeCool,.40)
+tests/combat/locomotion_state.lua:68:m,f=S.New(false);m.dodgeCool=.30
+tests/combat/locomotion_state.lua:69:S.Tick(m,.40,{evadePressed=true,evadeHeld=false})
+tests/combat/locomotion_state.lua:70:assert(m.dodgeCount==0 and not m.iframe and not m.buffer,'.16 buffer expires before late cooldown')
+tests/combat/locomotion_state.lua:71:m,f=S.New(false);m.dodgeCool=.10
+tests/combat/locomotion_state.lua:72:metres=S.Tick(m,.50,{evadePressed=true,evadeHeld=true})
+tests/combat/locomotion_state.lua:77:local controls={allowed=true,evadeHeld=true,onGround=true,axis=Vector3.FORWARD,actualForwardSpeed=7.2,travel=.12}
+tests/combat/locomotion_state.lua:85:m,f=S.New(false);S.Tick(m,.52,{evadePressed=true,evadeHeld=true})
+tests/combat/locomotion_state.lua:86:S.Tick(m,.3,{evadeHeld=true,actualForwardSpeed=0,motionSampleDt=1/60})
+tests/combat/weapon_rig.lua:199:        {clip='dodge_slide',time=.08,age=0,alpha=1,life=.08,position=currentPosition,rotation=currentRotation},
+tests/combat/weapon_rig.lua:200:        {clip='dodge_slide',time=.04,age=.04,alpha=.5,life=.08,position=position,rotation=rotation},
+tests/combat/weapon_rig.lua:201:        {clip='dodge_slide',time=0,age=.06,alpha=.2,life=.08,position=position,rotation=rotation},
+tests/combat/weapon_rig.lua:212:        -- W2's accepted-dodge hook clears the prior attack before the first
+tests/combat/weapon_rig.lua:413:    r:SetAfterimages({{clip='dodge_slide',age=0,life=.08,position=mid,rotation=entry.pivot.worldRotation}})
+tests/combat/weapon_rig.lua:580:    local stale={{clip='dodge_slide',age=0,position=interrupted,rotation=Quaternion(),life=.08}}
+tests/combat/weapon_rig.lua:591:    -- .40s lock; .20s dodge cancellation may explicitly request target back.

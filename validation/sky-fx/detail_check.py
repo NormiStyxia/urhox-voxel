@@ -6,8 +6,10 @@ from PIL import Image
 ROOT=Path(__file__).resolve().parents[2]
 ref=runpy.run_path(str(ROOT/'validation/sky-fx/skycards_check.py'))
 shader=(ROOT/'assets/Shaders/BLGL/RuinsCloud.shader').read_text()
-before=(ROOT/'validation/sky-fx/detail-before/RuinsCloud.shader.txt').read_text()
-assert shader.split('void vertex()',1)[1].split('void fragment()',1)[0]==before.split('void vertex()',1)[1].split('void fragment()',1)[0]
+before=(ROOT/'validation/sky-fx/atmosphere-baseline/RuinsCloud.shader.txt').read_text()
+# Motion is now intentional. rotation_check executes the actual world transform;
+# this test retains the authored palette and atlas scalar-channel contract.
+assert shader.split('    vec4 data=texture',1)[1]==before.split('    vec4 data=texture',1)[1]
 assert shader.count('texture(')==before.count('texture(')==1
 assert 'vec2 uv=UV;' in shader
 stats=[]
@@ -34,4 +36,4 @@ for low in (False,True):
                 assert np.isfinite(color).all() and 0<=color.min() and color.max()<=1.15
                 assert np.isfinite(alpha).all() and 0<=alpha.min() and alpha.max()<=1
 print(json.dumps(stats))
-print('PASS world vertex unchanged, one sampler, all tiers same memory, scalar channel bounds, mip0..4 gutters, 289 times x 12 sun directions x 2 textures finite')
+print('PASS colour path unchanged, one sampler, all tiers same memory, scalar channel bounds, mip0..4 gutters, 289 times x 12 sun directions x 2 textures finite')

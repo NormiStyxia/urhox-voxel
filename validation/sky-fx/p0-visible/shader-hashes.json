@@ -1,0 +1,14 @@
+{
+  "before": {
+    "md5": "8a36e4acfe31c0fcde3f746540b27d93",
+    "sha256": "17c3743e5ec0cf924de8271bedbb33ed5c7b10f43ceaa3fcfc725699faebcc7a"
+  },
+  "after": {
+    "md5": "a54276c85dac033827e8e9bf402eeb2a",
+    "sha256": "405f2fd2fd208047420f8f215a840ff39ff99def9d39c330dc66674d5f948e93"
+  },
+  "reference-1a78a3d": {
+    "md5": "ebb38a73f7a42949ccfa10258132b68f",
+    "sha256": "9ddeb32127193db89ed8f87e49de1de0de549fe1bb6844b3768ae7eadbf3ba16"
+  }
+}

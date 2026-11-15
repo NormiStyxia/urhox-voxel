@@ -29,6 +29,9 @@ if not logOK then DebugLog=nil end
 ---@field nightK number|nil
 ---@field captureElapsed number
 ---@field capturePending boolean
+---@field nightMoon number
+---@field nightIBL number
+---@field contactAO RuinsContactAO|nil
 local M = {}
 M.__index = M
 
@@ -39,12 +42,12 @@ local function SmoothStep(e0, e1, x)
 end
 
 -- sRGB 调色（拾色器里取的值）
-local TOP_DAY, TOP_DUSK, TOP_NIGHT = Color(0.24, 0.44, 0.82), Color(0.30, 0.34, 0.62), Color(0.05, 0.08, 0.20)
-local HOR_DAY, HOR_DUSK, HOR_NIGHT = Color(0.70, 0.80, 0.93), Color(1.00, 0.56, 0.30), Color(0.14, 0.18, 0.32)
+local TOP_DAY, TOP_DUSK, TOP_NIGHT = Color(0.24, 0.44, 0.82), Color(0.30, 0.34, 0.62), Color(0.17, 0.22, 0.32)
+local HOR_DAY, HOR_DUSK, HOR_NIGHT = Color(0.70, 0.80, 0.93), Color(1.00, 0.56, 0.30), Color(0.24, 0.29, 0.39)
 -- 空岛下方仍是天空：低饱和蓝灰，底色亮度不高于旧土色，避免岩底被 IBL 照蓝。
-local GND_DAY, GND_NIGHT = Color(0.30, 0.35, 0.42), Color(0.07, 0.09, 0.13)
+local GND_DAY, GND_NIGHT = Color(0.30, 0.35, 0.42), Color(0.13, 0.17, 0.24)
 local SUN_DAY, SUN_GOLD, SUN_RED = Color(1.0, 0.95, 0.86), Color(1.0, 0.72, 0.42), Color(1.0, 0.42, 0.22)
-local MOON = Color(0.55, 0.68, 1.0)
+local MOON = Color(0.72, 0.80, 1.0)
 
 ---@param o table { scene, zone, zoneNode, sun(Light), sunNode, hour }
 ---@return DayNight
@@ -57,6 +60,8 @@ function M.New(o)
     self.speed = 1.0 / 120.0 -- 游戏小时 / 秒
     self.fast = false
     self.captureElapsed, self.capturePending = 0, true
+    self.nightMoon,self.nightIBL=0.82,1.08
+    self.contactAO=nil
     -- 直射光逐帧移动；环境光捕获独立节流，不能让阴影跟着捕获间隔跳动。
     self.capture = o.zoneNode:CreateComponent("SkyLightCapture")
     self.capture.updateMode = SKY_CAPTURE_MANUAL
@@ -148,19 +153,20 @@ function M:Apply()
     sky.sunEnergy = 1.0 * (1 - nightK) + 0.15 * nightK
 
     local sun = self.sun
-    if elev > -0.06 then
-        -- 白天 / 晨昏：暖色太阳，地平线附近转金→橙红
-        self.sunNode.direction = sunDir
-        local warm = SUN_RED:Lerp(SUN_GOLD, SmoothStep(-0.02, 0.18, elev)):Lerp(SUN_DAY, SmoothStep(0.18, 0.55, elev))
-        sun.color = warm
-        sun.brightness = 2.04 * SmoothStep(-0.06, 0.16, elev) + 0.16
-    else
-        -- 夜：同一盏灯做月光（从西南高处照下）
-        local m = (h + 12.0 - 6.0) / 12.0 * math.pi
-        self.sunNode.direction = Vector3(-math.cos(m) * 0.7, -0.75, -0.45):Normalized()
-        sun.color = MOON
-        sun.brightness = 0.38 * SmoothStep(-0.06, -0.25, elev) + 0.16
+    local m = (h + 12.0 - 6.0) / 12.0 * math.pi
+    local moonDir=Vector3(-math.cos(m)*0.7,-0.75,-0.45):Normalized()
+    -- One continuous dusk handover: no colour/direction jump at elev=-.06.
+    self.sunNode.direction=sunDir:Lerp(moonDir,nightK):Normalized()
+    local warm=SUN_RED:Lerp(SUN_GOLD,SmoothStep(-0.02,0.18,elev)):Lerp(SUN_DAY,SmoothStep(0.18,0.55,elev))
+    sun.color=warm:Lerp(MOON,nightK)
+    sun.brightness=(2.04*SmoothStep(-0.06,0.16,elev)+0.16)*(1-nightK)+self.nightMoon*nightK
+    -- Captured sky is linear radiance, not an additive flat ambient colour.
+    -- Lift the night hemisphere and its diffuse IBL together; leave day intact.
+    if self.capture.supported then
+        self.zone.envTextureDiffIntensity=0.68+(self.nightIBL-0.68)*nightK
+        self.zone.envTextureSpecIntensity=0.38+0.06*nightK
     end
+    if self.contactAO then self.contactAO:Apply(day) end
     -- 雾：颜色跟地平线；夜里雾更近一点，压住远山
     local zone = self.zone
     zone.fogColor = horizon

@@ -12,13 +12,13 @@ local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,
     Terrain={HasGround=function(x,z,margin) return x<1 or x>2 end}}, {__index=_G})
 assert(load(body,'actual Nomi Move','t',env))()
 local n=setmetatable({vel=Vector3.ZERO,node={worldPosition=Vector3.ZERO},camYaw=0,yaw=0,
-    cc={onGround=true,Jump=function() error('must not jump during roll') end},UpdateSafety=function() return false end},{__index=N})
+    cc={onGround=true,Jump=function() error('must not jump during attack') end},UpdateSafety=function() return false end},{__index=N})
 n:Move(.1,0,0,false,true,true,{scale=0,motion=Vector3(3,0,0)})
-assert(n.cc.desiredVelocity.x*.1<1,'dodge must stop before gap even when endpoint is solid')
+assert(n.cc.desiredVelocity.x*.1<1,'attack motion must stop before gap even when endpoint is solid')
 n:Move(.1,1,0,true,false,false,{scale=1,motion=Vector3.ZERO})
-S.near(n.cc.desiredVelocity.z,5)
+S.near(n.cc.desiredVelocity.z,7.2*(1-math.exp(-1.2)))
 n:Move(.1,1,0,true,false,false,{scale=.5,motion=Vector3.ZERO})
-S.near(n.cc.desiredVelocity.z,2.5)
+S.near(n.cc.desiredVelocity.z,7.2*(1-math.exp(-1.2))*math.exp(-1.2)+2.5*(1-math.exp(-1.2)))
 n.Position=function() return Vector3.ZERO end
 local function Target(angle,dist)
     local rad=math.rad(angle)
@@ -37,7 +37,7 @@ for _,v in ipairs({{1,0,0},{0,1,90},{-1,0,180},{0,-1,-90}}) do
 end
 n.yaw=45;n.camYaw=170
 n:Move(.1,0,0,false,false,false,{scale=1,motion=Vector3.ZERO});S.near(n.yaw,45)
-print('PASS actual Nomi Move: gap sweep/no teleport, jump blocked during roll, combat 5m/s/no sprint, bow slow walk')
+print('PASS actual Nomi Move: gap sweep/no teleport, jump blocked during attack, ordinary run 7.2m/s with attack scaling, bow slow walk')
 local debugBody=assert(source:match('(function N:TeleportForCombatDebug.-)\nend'))..'\nend'
 env.Terrain.IsSafeGround=function(x) return x<10 end
 assert(load(debugBody,'actual safe debug teleport','t',env))()

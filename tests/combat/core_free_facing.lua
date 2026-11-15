@@ -57,7 +57,7 @@ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_heavy
  end
 end
 -- Real Moves cancellation drives the same camera output for PC/touch callers.
-for _,reason in ipairs({'menu','focus','touchcancel','dodge','swap','exit','death','mount'}) do
+for _,reason in ipairs({'menu','focus','touchcancel','swap','exit','death','mount'}) do
  m=new();State.SetBusy(false);State.SetWeapon('bow');State.FinishTransition();State.Activity(true)
  m:Cancel('setup');m.blocked=false;m:Action('hold')
  m.clip='bow_hold';m.charge=.01
@@ -118,5 +118,5 @@ print('PASS actual Scene FOV composition: one charge-squared envelope, no double
 m=new();State.SetBusy(false);State.SetWeapon('bow');State.FinishTransition();State.Activity(true)
 m:Cancel('setup');m.blocked=false;m:Action('hold');m:Play('bow_hold');m.charge=.8
 m:Cancel('focus');assert(m.anim:IsPlaying('bow_cancel'))
-assert(m:Action('dodge',Vector3.RIGHT));assert(not m.anim:IsPlaying('bow_cancel'),'slide interrupts cosmetic cancel even with protection preservation')
+m:Cancel('hit');assert(not m.anim:IsPlaying('bow_cancel'),'hit interrupts cosmetic cancel')
 print('PASS hard action removes cosmetic bow cancel before slide')

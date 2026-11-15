@@ -1,0 +1,4 @@
+tests/combat/weapon_wheel.lua PASS
+tests/combat/weapon_select_gesture.lua PASS
+tests/combat/core_state.lua PASS
+tests/combat/core_stow.lua PASS

@@ -1,0 +1,56 @@
+[
+  {
+    "time": 0,
+    "baseline": true,
+    "sampler_calls_mean": 0.7173394097222222,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.1997974537037037,
+    "mean_mip": 2.019148311587033
+  },
+  {
+    "time": 0,
+    "baseline": false,
+    "sampler_calls_mean": 0.7173394097222222,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.1997974537037037,
+    "mean_mip": 2.019148311587033
+  },
+  {
+    "time": 600,
+    "baseline": true,
+    "sampler_calls_mean": 0.7345558449074074,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.22434413580246915,
+    "mean_mip": 2.00881171457068
+  },
+  {
+    "time": 600,
+    "baseline": false,
+    "sampler_calls_mean": 0.9154248649691358,
+    "p95": 2.0,
+    "max": 2,
+    "cloud_fraction": 0.19501109182098766,
+    "mean_mip": 2.0232389919282703
+  },
+  {
+    "time": 1800,
+    "baseline": true,
+    "sampler_calls_mean": 0.6943238811728395,
+    "p95": 1.0,
+    "max": 2,
+    "cloud_fraction": 0.2134934413580247,
+    "mean_mip": 2.0130599813680266
+  },
+  {
+    "time": 1800,
+    "baseline": false,
+    "sampler_calls_mean": 0.6749855324074074,
+    "p95": 1.0,
+    "max": 3,
+    "cloud_fraction": 0.1404200424382716,
+    "mean_mip": 2.0728694187516754
+  }
+]

@@ -1,3 +1,5 @@
+> 2026-11-15 当前合同：徒步 Shift / 手机「跑」按住即普通加速跑（7.2m/s），松开恢复；探索与战斗共用移动路径。旧闪避、长按门槛、免伤窗口、冷却、滑步镜头与接招窗口全部废止。历史调研中的对应段落只作记录，不得接回运行代码。
+
 # 移动端 UI 设计规范（像素冒险卷轴风）
 
 日期：2026-11-13。分工：**美术/版式由 Claude 负责（本文 + `assets/ui/touch/`），程序实现全部交给 Astra**。
@@ -54,7 +56,7 @@ PC 端 HUD 也换成同一套视觉（底部三个法术槽用 `btn32` + `_s` �
 
 **左下：浮动摇杆**
 - 触摸区：屏幕左 45% × 下 70%。首次按下处出现 `joy_base`，帽 `joy_thumb` 跟手（限制在半径 40dp 内，视觉位置整数化）。松手后摇杆淡出，原位置留一个 0.35 不透明度的“幽灵底座”提示区（固定在安全区内左下，中心约 (安全左+84, 屏高−84)）。
-- 外推到 ≥ 90% 半径 = **探索便捷跑**（runIntent平滑至7.2m/s，不触发闪避、不等0.24s；战斗外推仅方向）：底座换 `joy_base_run`。
+- 外推到 ≥ 90% 半径 = **便捷跑**（探索/战斗同为 runIntent 平滑至7.2m/s）：底座换 `joy_base_run`。
 - 输出等价于 WASD：上=W 下=S 左=A 右=D（模拟量，可用 `Move(dt, f, r, ...)` 的 f/r 直接送连续值，死区 0.15）。
 
 **右下按钮群**（以屏幕右下角为原点 O=(屏宽−安全右−20, 屏高−安全下−20)；下表是**按钮中心**相对 O 的偏移，向左为负 x，向上为负 y）：
@@ -63,7 +65,7 @@ PC 端 HUD 也换成同一套视觉（底部三个法术槽用 `btn32` + `_s` �
 |---|---|---|---|
 | 碎时（主） | `btn40_main` + `shatter` | (−48, −48) | **按住蓄力，松开施放**（= 左键）。蓄力时外圈出现金色逐格充能弧（§6），按钮本体不动，外围加 1 美术像素的金色像素描边环阶梯扩张一格再收回 |
 | 跳跃 | `btn32` + `jump_s` | (−48, −148) | 点按 = Space |
-| 闪避/跑 | btn32 + sprint_s，64dp，12px标签“闪避/跑” | (−292, −32) | 按下立即闪避；按住0.24s登记，0.30s接续跑。CD不禁用按钮 |
+| 跑 | btn32 + sprint_s，64dp，12px标签“跑” | (−292, −32) | 按住加速到7.2m/s，松开恢复，无短按动作或CD |
 | 冻结 | `btn32` + `freeze_s` | (−148, −32) | 点按 = E |
 | 回溯 | `btn32` + `rewind_s` | (−124, −124) | 点按 = Q |
 | 上龙（情景） | `btn32_main` + `mount_s` | (−212, −72)，外加每 0.5s 一次外围像素环阶梯扩张脉冲（不缩放按钮） + 下方 12px 标签“上龙” | 仅当龙已苏醒且人在 3.6m 内出现；点按 = F |
@@ -138,9 +140,6 @@ PC 端保留现有键位文案。判断依据：`GetPlatform()` 为 Android/iOS�
 
 ## 7. 输入层（Astra 的程序部分，供参考；实现细节由 Astra 决定）
 
-- R9三路分离：徒步按钮evadeRun（战斗旧dodge同合同），探索摇杆runIntent，骑龙dash；只有dash映射通用Shift。键盘Shift直接采样pressed/held，手柄逻辑端口SetGamepadEvade；硬件键位待验证。
-- 每帧SampleEvade完整读取所有来源再合并，不能短路丢触屏edge；同帧短tap仍闪避，任一来源仍held就保持。TouchCancel/菜单/失焦/切模式清取消revision和gesture，旧手指退休直到抬起；不会补闪避/松手施法。手指滑出按钮仍捕获，摇杆/看向/闪避可三指并行。
-- 战斗按钮仍O+(−148,−32)，图标sprint_s、标签“闪避/跑”；held≥.24或正在跑显示2dp外围环，不缩放位图。闪避CD=.50s只画遮罩，允许CD内按住接跑；不绘体力池。844×390探索新按钮中心(532,338)，915×412及窄横屏/安全区须真机确认。
 
 - 新建 `scripts/ui/TouchInput.lua`：虚拟输入单例，提供 `Down(name)` / `Press(name)` / `MoveAxis()` / `ConsumeLook()`，name 同 §3~§4 的动作：`jump runIntent evadeRun shatter freeze rewind mount ascend descend glide land breath breathSpecial dash farview fastTime menu`（`breath` 为 held 语义）。
 - 以最小改动接入：`RuinsScene.lua` 的 `Down/Press`（键盘 OR 虚拟输入）、`HandleSpells` 的左键蓄力、`DragonRide.lua` 的 `Down/Press`。**不改这些文件里与本任务无关的任何内容**（另一个会话正在改 RuinsScene/RuinsBuild/RuinsTrees/着色器）。
@@ -163,3 +162,5 @@ PC 端保留现有键位文案。判断依据：`GetPlatform()` 为 Android/iOS�
 - 按钮/摇杆/备用面板：`gen_frames.py` 程序化绘制。
 - 字体：ArkPixel 12px（`assets/Fonts/ArkPixel-OFL.txt` 许可），来自参考项目 `接龙`。
 - 运行：`python3 -I <script>` 需要 Pillow + NumPy；本机用的是 `/tmp/pxvenv`（可随时重建）。
+
+- 当前输入：SampleRun 合并键盘 held、手机 run/runIntent 与 SetGamepadRun；骑龙 dash 独立。取消触摸/失焦/菜单会清空虚拟输入。跑按钮探索中心 O+(-292,-32)、战斗 O+(-148,-32)，64dp；真机安全区待验收。

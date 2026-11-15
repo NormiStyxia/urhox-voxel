@@ -598,10 +598,6 @@ end
 function Rig:Flash(kind)
     if self.disposed or self.pose=='hidden' or self.retiring.weapon
         or (kind=='full_charge' and (self.active~='sword' or self.visualState~='hand')) then return false end
-    for i=1,2 do
-        local shot=self.afterimages and self.afterimages[i]
-        if shot and shot.clip=='dodge_slide' then return false end
-    end
     if kind~='full_charge' and kind~='draw' and kind~='sheath' then return false end
     if kind=='full_charge' and self.chargeFlashed then return false end
     if self.flashLeft>0 and self.flashKind==kind then return false end
@@ -1049,11 +1045,10 @@ end
 
 ---@param entry WeaponRigEntry
 ---@param dt number
----@param slide boolean?
-function Rig:UpdateImages(entry,dt,slide)
+function Rig:UpdateImages(entry,dt)
     -- Event flash + one silhouette, or up to two silhouettes without the flash.
     -- Also retain only one silhouette over the band for a clean swing outline.
-    local limit=slide and 2 or ((self.sampleCount>=2 or self.flashLeft>0) and 1 or 2)
+    local limit=((self.sampleCount>=2 or self.flashLeft>0) and 1 or 2)
     local pool=self.active=='sword' and self.images or self.bowImages
     local other=self.active=='sword' and self.bowImages or self.images
     local minimum=self.active=='sword' and self.imageMin or self.bowImageMin
@@ -1062,15 +1057,14 @@ function Rig:UpdateImages(entry,dt,slide)
         local image=pool[i]
         other[i].node.enabled=false
         local age=shot and (shot.age or 0)+self.imageElapsed or 1
-        local life=slide and math.min(.08,math.max(0,shot and shot.life or .08)) or .10
-        local clipOK=shot and type(shot.clip)=='string' and (slide and shot.clip=='dodge_slide'
-            or not slide and self.active=='sword' and shot.clip:sub(1,6)=='sword_')
+        local life=.10
+        local clipOK=shot and type(shot.clip)=='string' and (self.active=='sword' and shot.clip:sub(1,6)=='sword_')
         local valid=i<=limit and clipOK and age>=0 and age<life-1e-8 and Distance(entry.pivot.worldPosition,shot.position)<2
         image.node.enabled=not not valid
         if valid then
             image.node.worldPosition=shot.position+shot.rotation*minimum
             image.node.worldRotation=shot.rotation
-            local tail=(slide or self.visualActive) and 1 or Clamp(self.tailLeft/TRAIL_TAIL,0,1)
+            local tail=self.visualActive and 1 or Clamp(self.tailLeft/TRAIL_TAIL,0,1)
             Alpha(self,image,Clamp(math.min(shot.alpha or 1,1-age/life),0,1)*.25*tail)
         end
     end
@@ -1189,20 +1183,9 @@ function Rig:Update(dt)
     self.tailLeft=self.visualActive and TRAIL_TAIL or math.max(0,self.tailLeft-dt)
     if self.tailLeft<1e-8 then self.tailLeft=0 end
     if self.afterimagesFresh then self.afterimagesFresh=false else self.imageElapsed=self.imageElapsed+dt end
-    local slide=false
-    for i=1,2 do
-        local shot=self.afterimages and self.afterimages[i]
-        if shot and shot.clip=='dodge_slide' then slide=true;break end
-    end
-    if slide then
-        self:ClearTrail();self.tailLeft=0;self.visualActive=false;self.visualCharge=nil;self.chargeFlashed=false
-        self.flashLeft=0;self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
-    end
     self:UpdateFlash(self.arrivalFresh and 0 or dt);self.arrivalFresh=false
-    if slide then self.hitAt=-math.huge end
     self:UpdateHitImpulse()
     if self.contactArc then self:ClearTrail() end -- one presented contact frame
-    if slide and self.visualState~='hand' then return end -- interrupted flights cannot emit slide knife/particles
     if self.visualState~='hand' then
         if self.visualState=='fly_to_hand' and self.active=='sword' and entry.mesh.alpha>0 then
             self:SampleBlade(entry);self:DrawBands()
@@ -1212,7 +1195,6 @@ function Rig:Update(dt)
         self.tailLeft=0;return
     end
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
-    if slide then if self.trailEnabled then self:UpdateImages(entry,dt,true) end;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end

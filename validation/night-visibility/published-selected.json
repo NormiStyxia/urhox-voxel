@@ -1,0 +1,67 @@
+{
+  "project_id": "m_hi4f",
+  "entry": "ruins_main.lua",
+  "files": [
+    {
+      "uuid": "B0I8mc8VboKksncTRor4W0Z2",
+      "ext": ".json",
+      "hash": "90788a73",
+      "size": 301,
+      "groups": [
+        "#config",
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "BgCviebFkuFhKjMsq6Cjz4K1"
+      ],
+      "fs_path": "settings.json"
+    },
+    {
+      "uuid": "B4rXEXFtLEnsiL_Pxg1a1gTJ",
+      "ext": ".lua",
+      "hash": "a1cc3168",
+      "size": 2747,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/SceneQuality.lua"
+    },
+    {
+      "uuid": "DJMX4WhGoyLwMC1SByKMroU_",
+      "ext": ".shader",
+      "hash": "3ab95d97",
+      "size": 12018,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsGround.shader"
+    },
+    {
+      "uuid": "FowROf-FdU1jhudrEwrkZxb5",
+      "ext": ".shader",
+      "hash": "c187790e",
+      "size": 8437,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsVoxel.shader"
+    },
+    {
+      "uuid": "GHVd0VIxuowmsGlfvLDsKw4w",
+      "ext": ".lua",
+      "hash": "4b5b0ca7",
+      "size": 7553,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/DayNight.lua"
+    }
+  ]
+}

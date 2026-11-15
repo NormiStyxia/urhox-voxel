@@ -1,0 +1,129 @@
+{
+  "clouds": [
+    {
+      "view": "DAY horizon",
+      "time": 300,
+      "baseline": true,
+      "sampler_calls_mean": 0.6000554591049383,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.15047501929012347,
+      "mean_mip": 2.040727094685623
+    },
+    {
+      "view": "DAY horizon",
+      "time": 120,
+      "baseline": false,
+      "sampler_calls_mean": 0.5982349537037037,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.14759355709876543,
+      "mean_mip": 2.0429272373525125
+    },
+    {
+      "view": "DAY horizon",
+      "time": 300,
+      "baseline": false,
+      "sampler_calls_mean": 0.6008150077160493,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.14623119212962962,
+      "mean_mip": 2.0487241105018796
+    },
+    {
+      "view": "MORNING upper",
+      "time": 300,
+      "baseline": true,
+      "sampler_calls_mean": 0.5627531828703703,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.18684895833333334,
+      "mean_mip": 2.0066433273832986
+    },
+    {
+      "view": "MORNING upper",
+      "time": 120,
+      "baseline": false,
+      "sampler_calls_mean": 0.5560980902777778,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.17785493827160495,
+      "mean_mip": 2.0086271211772533
+    },
+    {
+      "view": "MORNING upper",
+      "time": 300,
+      "baseline": false,
+      "sampler_calls_mean": 0.5402319637345679,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.15883005401234568,
+      "mean_mip": 2.0167278195323757
+    },
+    {
+      "view": "DUSK sun-facing",
+      "time": 300,
+      "baseline": true,
+      "sampler_calls_mean": 0.7946445794753086,
+      "p95": 2.0,
+      "max": 2,
+      "cloud_fraction": 0.16137393904320987,
+      "mean_mip": 2.013348331543367
+    },
+    {
+      "view": "DUSK sun-facing",
+      "time": 120,
+      "baseline": false,
+      "sampler_calls_mean": 0.7931978202160493,
+      "p95": 2.0,
+      "max": 2,
+      "cloud_fraction": 0.15653935185185186,
+      "mean_mip": 2.0124170242387733
+    },
+    {
+      "view": "DUSK sun-facing",
+      "time": 300,
+      "baseline": false,
+      "sampler_calls_mean": 0.7837456597222222,
+      "p95": 2.0,
+      "max": 2,
+      "cloud_fraction": 0.14453125,
+      "mean_mip": 2.0105330300030024
+    },
+    {
+      "view": "NIGHT / high down",
+      "time": 300,
+      "baseline": true,
+      "sampler_calls_mean": 0.5748939043209876,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.15964988425925927,
+      "mean_mip": 1.7764999635670022
+    },
+    {
+      "view": "NIGHT / high down",
+      "time": 120,
+      "baseline": false,
+      "sampler_calls_mean": 0.5757378472222222,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.15851658950617284,
+      "mean_mip": 1.7765254553849297
+    },
+    {
+      "view": "NIGHT / high down",
+      "time": 300,
+      "baseline": false,
+      "sampler_calls_mean": 0.5767264660493827,
+      "p95": 1.0,
+      "max": 2,
+      "cloud_fraction": 0.15691309799382716,
+      "mean_mip": 1.776322340496326
+    }
+  ],
+  "shader_hashes": {
+    "RuinsCloud.shader": "17c3743e5ec0cf924de8271bedbb33ed5c7b10f43ceaa3fcfc725699faebcc7a",
+    "RuinsPillarFlame.shader": "e7fb24471222431441215b68911d9c6b7ff20b62c42a291ac1a794610e043496",
+    "RuinsLightShaft.shader": "5f2c8b8f9f1d1496b1911c798b21279fe9a325e6c45882b87847b8ed421f5996"
+  }
+}

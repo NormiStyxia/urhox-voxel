@@ -165,91 +165,6 @@ frames(6);assert(not rig.flashes.socket.node.enabled)
 rig:Dispose();rig:Dispose()
 assert(world.created==world.removed and not nomi.castSocket.removed and not rig.sockets.hand_left.removed)
 
-local function SlideCase(weapon)
-    local root=Mock.Node('slide_test') --[[@as any]]
-    local w=Mock.World(root) --[[@as any]]
-    local controller=Mock.Nomi(root) --[[@as any]]
-    local r=Rig.New(root,w,controller)
-    r:SetActive(weapon);r:SetPose('hand');for _=1,30 do r:Update(1/60) end
-    controller.nomi.bones.body.rotation=Quaternion(8,25,11)
-    controller.nomi.bones.arm_left.rotation=Quaternion(-75,15,5)
-    controller.nomi.bones.arm_right.rotation=Quaternion(-85,-8,-6)
-    local entry=r.entries[weapon]
-    local oldLocal=entry.pivot.position
-    r:SetSwing(Vector3(.04,.02,-.03),Vector3(10,20,35))
-    local position,rotation=r:GetAfterimagePose()
-    assert(position and rotation)
-    Mock.VectorNear(entry.pivot.position,oldLocal)
-    local oldDirection=entry.pivot.rotation*Vector3.UP
-    r:GetAfterimagePose();Mock.VectorNear(entry.pivot.rotation*Vector3.UP,oldDirection)
-    r:Update(0)
-    Mock.VectorNear(position,entry.pivot.worldPosition)
-    Mock.VectorNear(rotation*Vector3.UP,entry.pivot.worldRotation*Vector3.UP)
-    Mock.VectorNear(rotation*Vector3.FORWARD,entry.pivot.worldRotation*Vector3.FORWARD)
-    local savedPosition=Vector3(position.x,position.y,position.z)
-    local savedDirection=rotation*Vector3.FORWARD
-    controller.node.position=Vector3(.1,0,.15)
-    r:SetSwing(Vector3(-.03,.06,0),Vector3(25,5,-10))
-    local currentPosition,currentRotation=r:GetAfterimagePose()
-    r:Update(0)
-    Mock.VectorNear(currentPosition,entry.pivot.worldPosition)
-    Mock.VectorNear(currentRotation*Vector3.UP,entry.pivot.worldRotation*Vector3.UP)
-    Mock.VectorNear(position,savedPosition);Mock.VectorNear(rotation*Vector3.FORWARD,savedDirection)
-    local shots={
-        {clip='dodge_slide',time=.08,age=0,alpha=1,life=.08,position=currentPosition,rotation=currentRotation},
-        {clip='dodge_slide',time=.04,age=.04,alpha=.5,life=.08,position=position,rotation=rotation},
-        {clip='dodge_slide',time=0,age=.06,alpha=.2,life=.08,position=position,rotation=rotation},
-    }
-    local created,rebuilds,writes=w.created,w.rebuilds,w.writes
-    local pool=weapon=='sword' and r.images or r.bowImages
-    local other=weapon=='sword' and r.bowImages or r.images
-    local minimum=weapon=='sword' and r.imageMin or r.bowImageMin
-    if weapon=='sword' then
-        r:SetCombatVisual(true,nil);r:Update(0)
-        controller.node.position=controller.node.position+Vector3(.7,0,0)
-        r:SetCombatVisual(true,nil);r:Update(.016)
-        assert(r.trails[1].node.enabled)
-        -- W2's accepted-dodge hook clears the prior attack before the first
-        -- .04s slide sample. Its normal per-frame quality gate restores effects.
-        r:StopCombatVisual()
-        r:SetAfterimages({{clip='sword_attack_1',age=0,position=currentPosition,rotation=currentRotation}})
-        r:SetCombatVisual(false,nil);r:Update(.02)
-        assert(r.tailLeft==0)
-        for _,band in ipairs(r.trails) do assert(not band.node.enabled) end
-        for _,image in ipairs(r.images) do assert(not image.node.enabled) end
-        assert(r:Flash('draw'))
-    end
-    r:SetAfterimages(shots);r:SetCombatVisual(true,.5);r:Update(0)
-    assert(r.afterimages==shots and #shots==3 and pool[1].node.enabled and pool[2].node.enabled)
-    for _,image in ipairs(other) do assert(not image.node.enabled) end
-    for _,band in ipairs(r.trails) do assert(not band.node.enabled) end
-    for _,particle in ipairs(r.particles) do assert(not particle.node.enabled) end
-    for _,flash in pairs(r.flashes) do assert(not flash.node.enabled) end
-    assert(not r:Flash('draw') and not r:Flash('full_charge'),'slide is silhouettes only, including between Update calls')
-    assert(r.tailLeft==0 and r.sampleCount==0,'slide must cancel sword trail/charge/flash, even if owner flags lag')
-    Mock.VectorNear(pool[1].node.worldPosition,currentPosition+currentRotation*minimum)
-    local voxels=0
-    local imageGrid=pool[1].volume.grid --[[@as any]]
-    for _,index in pairs(imageGrid.materials) do voxels=voxels+1;assert(index==175) end
-    assert(voxels==#entry.mesh.blueprint.geometry.cells,'silhouette must match the actual sword/bow')
-    r:Update(.039);assert(pool[1].node.enabled and pool[2].node.enabled)
-    r:Update(.001);assert(pool[1].node.enabled and not pool[2].node.enabled)
-    r:Update(.04);assert(not pool[1].node.enabled and not pool[2].node.enabled)
-    shots[1].age=.08;shots[1].life=1
-    r:SetAfterimages(shots);r:Update(0);assert(not pool[1].node.enabled,'slide lifetime caps at .08 even for a longer input life')
-    shots[1].age=0;shots[1].life=.08
-    r:SetAfterimages(shots);r:Update(0);r:SetTrail(false)
-    for _,image in ipairs(pool) do assert(not image.node.enabled) end
-    r:SetTrail(true);r:SetAfterimages({});r:Update(.1)
-    for _,image in ipairs(pool) do assert(not image.node.enabled) end
-    assert(w.created==created and w.rebuilds==rebuilds and w.writes==writes,'slide cannot allocate or rebuild native visuals')
-    for _,volume in ipairs(w.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
-    r:SetPose('back');for _=1,8 do r:Update(1/60) end
-    assert(r:GetAfterimagePose()==nil)
-    r:Dispose();assert(r:GetAfterimagePose()==nil and w.created==w.removed)
-end
-SlideCase('sword');SlideCase('bow')
-
 -- Same physical path and duration at 30/60 FPS: exact translational spacing,
 -- small chord approximation tolerance for a rotating blade.
 local function Track(fps,rotation)
@@ -410,10 +325,6 @@ local function LivelyCase(fps,weapon)
     -- Interrupt a flight without teleporting to the back socket.
     r:SetPose('hand');assert(r.motion.duration==.08);r:Update(.04)
     local mid=entry.pivot.worldPosition
-    r:SetAfterimages({{clip='dodge_slide',age=0,life=.08,position=mid,rotation=entry.pivot.worldRotation}})
-    r:Update(0)
-    assert(count(r.trails)==0 and count(r.particles)==0,'flight interrupted by slide cannot make knife light or grains')
-    r:SetAfterimages(nil)
     r:SetPose('hidden');r:Update(0)
     Mock.VectorNear(entry.pivot.worldPosition,mid)
     r:SetPose('hand');r:Update(.12);assert(r.visualState=='hand')
@@ -577,7 +488,7 @@ local function BackAndSwapCase(fps)
     r:SetActive('bow');CheckSingle();assert(not Visible('sword') and not Visible('bow'))
     r:SetPose('hand');Step(.02);local interrupted=r.entries.bow.pivot.worldPosition
     r:SetPose('hidden');Step(0);Mock.VectorNear(r.entries.bow.pivot.worldPosition,interrupted)
-    local stale={{clip='dodge_slide',age=0,position=interrupted,rotation=Quaternion(),life=.08}}
+    local stale={{clip='sword_light_1',age=0,position=interrupted,rotation=Quaternion(),life=.08}}
     for _=1,fps do
         r:SetAfterimages(stale);r:SetCombatVisual(true,.7);r:SetBowDraw(1)
         assert(not r:Flash('draw') and not r:Flash('sheath') and not r:Flash('full_charge'))
@@ -588,7 +499,7 @@ local function BackAndSwapCase(fps)
     end
     assert(not Visible('bow') and not Visible('sword'))
     -- W2 Q contract: hidden before selection, no autonomous reveal during the
-    -- .40s lock; .20s dodge cancellation may explicitly request target back.
+    -- .40s lock; .20s action cancellation may explicitly request target back.
     for _,cancelAt in ipairs({.20,.40}) do
         r:SetActive('sword');r:SetPose('hand');Step(.4)
         r:SetPose('hidden');assert(#r:PopEvents()==0,'old arrival event survived hidden')

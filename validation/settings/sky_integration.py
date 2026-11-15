@@ -17,7 +17,7 @@ lua.execute(s+chr(10)+'end'+chr(10)+'CheckLighting()')
 print('PASS existing DayNightTest offline fixtures (native minCaptureInterval=.5 supplied to old mock)')
 # No edits to the tested capture protocol or bottom-hemisphere palette.
 dn=Path('scripts/ruins/DayNight.lua').read_text()
-assert 'Color(0.30, 0.35, 0.42), Color(0.07, 0.09, 0.13)' in dn
+assert 'Color(0.30, 0.35, 0.42), Color(0.13, 0.17, 0.24)' in dn # approved night visibility palette
 assert 'self.sky.groundCurve = 0.28' in dn
 scene=Path('scripts/ruins/RuinsScene.lua').read_text()
 assert 'M.START_HOUR = 12.0' in scene

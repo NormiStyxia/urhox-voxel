@@ -1,0 +1,140 @@
+form.antibot * :not(.antibot-message) { display: none !important; }
+div#sliding-popup, div#sliding-popup .eu-cookie-withdraw-banner, .eu-cookie-withdraw-tab {background: #00357a} div#sliding-popup.eu-cookie-withdraw-wrapper { background: transparent; } #sliding-popup h1, #sliding-popup h2, #sliding-popup h3, #sliding-popup p, #sliding-popup label, #sliding-popup div, .eu-cookie-compliance-more-button, .eu-cookie-compliance-secondary-button, .eu-cookie-withdraw-tab { color: #ffffff;} .eu-cookie-withdraw-tab { border-color: #ffffff;}
+Clouds and How They Form | Center for Science Education
+Clouds and How They Form | Center for Science Education
+{"path":{"baseUrl":"\/","pathPrefix":"","currentPath":"node\/6382","currentPathIsAdmin":false,"isFront":false,"currentLanguage":"en"},"pluralDelimiter":"\u0003","suppressDeprecationErrors":true,"gtag":{"tagId":"","consentMode":false,"otherIds":[],"events":[],"additionalConfigInfo":[]},"ajaxPageState":{"libraries":"eJyFUttyhCAM_SFGP4mJEDWKxCWhW_v1xdu0bt3pC-GcHEJuEJUa1hp2W7WcJgMiqJbigE451U6kchwVnNomsBttm0OwT_La32nFEXqbI-liwQ9ZdMKor8rhFDpStNqT2Bk6fCsT8thAsoHiKFZJAxrHCWuKiilCqIZHxrTsJWyeWG4Q6AsNZuuYR8JipjkQRIf1HWk9tpCDGvzU9afapzyX2Ac0HXMXSrrQ1V05XnEFA3xeycnMkKBLMPdyRvthqhzn3ASSHr351bi6hUcpVfRCdoEbCBtz4Udcym8jwhMWuXjWpC2V6ZkdNyB4XplVtGRx4AlFygDkgJH9qdxO88RmbW192L3UV3LtJEuZ6B8PBlzXoPKoQKFMFT7-Fyl3pZNvZUfKb_3i4Ob1tiB3ZCW5mUgtl0X4Bgm_N28","theme":"scied_unity","theme_token":null},"ajaxTrustedUrl":{"form_action_p_pvdeGsVG5zNF_XLGPTvYSKCf43t8qZYSwcfZl2uzM":true,"\/learning-zone\/clouds\/how-clouds-form?ajax_form=1":true},"gtm":{"tagId":null,"settings":{"data_layer":"dataLayer","include_classes":false,"allowlist_classes":"google\nnonGooglePixels\nnonGoogleScripts\nnonGoogleIframes","blocklist_classes":"customScripts\ncustomPixels","include_environment":false,"environment_id":"","environment_token":""},"tagIds":["GTM-WKXPJKLT"]},"data":{"extlink":{"extTarget":false,"extTargetAppendNewWindowDisplay":true,"extTargetAppendNewWindowLabel":"(opens in a new window)","extTargetNoOverride":true,"extNofollow":true,"extTitleNoOverride":false,"extNoreferrer":true,"extFollowNoOverride":false,"extClass":"ext","extLabel":"(link is external)","extImgClass":false,"extSubdomains":true,"extExclude":"(drive\\.google\\.com)|(docs\\.google\\.com)|(\\.pdf)|(\\.doc)","extInclude":"","extCssExclude":".org-footer, .legal-footer, .nsf-footer, .sidebar_table, .menu--main","extCssInclude":"","extCssExplicit":"","extAlert":false,"extAlertText":"This link will take you to an external web site. We are not responsible for their content.","extHideIcons":true,"mailtoClass":"mailto","telClass":"0","mailtoLabel":"(link sends email)","telLabel":"(link is a phone number)","extUseFontAwesome":true,"extIconPlacement":"prepend","extPreventOrphan":false,"extPreventOrphanTextLike":true,"extFaLinkClasses":"fa fa-arrow-up-right-from-square","extFaMailtoClasses":"fa fa-envelope","extUseIcon":false,"extLinkIcon":"","extMailIcon":"","extTelIcon":"","extAdditionalLinkClasses":"","extAdditionalMailtoClasses":"","extAdditionalTelClasses":"","extFaTelClasses":"fa fa-phone","allowedDomains":[],"extExcludeNoreferrer":""}},"eu_cookie_compliance":{"cookie_policy_version":"1.0.0","popup_enabled":true,"popup_agreed_enabled":false,"popup_hide_agreed":false,"popup_clicking_confirmation":false,"popup_scrolling_confirmation":false,"popup_html_info":"\u003Cdiv aria-labelledby=\u0022popup-text\u0022  class=\u0022eu-cookie-compliance-banner eu-cookie-compliance-banner-info eu-cookie-compliance-banner--default\u0022\u003E\n  \u003Cdiv class=\u0022popup-content info eu-cookie-compliance-content\u0022\u003E\n        \u003Cdiv id=\u0022popup-text\u0022 class=\u0022eu-cookie-compliance-message\u0022 role=\u0022document\u0022\u003E\n      \u003Cp\u003EUCAR uses cookies to make our website function; however, UCAR cookies do not collect personal information about you. When using our website, you may encounter embedded content, such as YouTube videos and other social media links, that use their own cookies. To learn more about third-party cookies on this website, and to set your cookie preferences, click\u003C\/p\u003E\n\n              \u003Cbutton type=\u0022button\u0022 class=\u0022find-more-button eu-cookie-compliance-more-button\u0022\u003Ehere.\u003C\/button\u003E\n          \u003C\/div\u003E\n\n    \n    \u003Cdiv id=\u0022popup-buttons\u0022 class=\u0022eu-cookie-compliance-buttons\u0022\u003E\n            \u003Cbutton type=\u0022button\u0022 class=\u0022agree-button eu-cookie-compliance-default-button\u0022\u003EAcknowledge\u003C\/button\u003E\n          \u003C\/div\u003E\n  \u003C\/div\u003E\n\u003C\/div\u003E","use_mobile_message":false,"mobile_popup_html_info":"\u003Cdiv aria-labelledby=\u0022popup-text\u0022  class=\u0022eu-cookie-compliance-banner eu-cookie-compliance-banner-info eu-cookie-compliance-banner--default\u0022\u003E\n  \u003Cdiv class=\u0022popup-content info eu-cookie-compliance-content\u0022\u003E\n        \u003Cdiv id=\u0022popup-text\u0022 class=\u0022eu-cookie-compliance-message\u0022 role=\u0022document\u0022\u003E\n      \n              \u003Cbutton type=\u0022button\u0022 class=\u0022find-more-button eu-cookie-compliance-more-button\u0022\u003Ehere.\u003C\/button\u003E\n          \u003C\/div\u003E\n\n    \n    \u003Cdiv id=\u0022popup-buttons\u0022 class=\u0022eu-cookie-compliance-buttons\u0022\u003E\n            \u003Cbutton type=\u0022button\u0022 class=\u0022agree-button eu-cookie-compliance-default-button\u0022\u003EAcknowledge\u003C\/button\u003E\n          \u003C\/div\u003E\n  \u003C\/div\u003E\n\u003C\/div\u003E","mobile_breakpoint":768,"popup_html_agreed":false,"popup_use_bare_css":false,"popup_height":"auto","popup_width":"100%","popup_delay":1000,"popup_link":"https:\/\/www.ucar.edu\/cookie-other-tracking-technologies-notice","popup_link_new_window":true,"popup_position":false,"fixed_top_position":true,"popup_language":"en","store_consent":false,"better_support_for_screen_readers":true,"cookie_name":"gdpr_acknowledged_1","reload_page":false,"domain":"","domain_all_sites":false,"popup_eu_only":false,"popup_eu_only_js":false,"cookie_lifetime":365,"cookie_session":0,"set_cookie_session_zero_on_disagree":0,"disagree_do_not_show_popup":false,"method":"default","automatic_cookies_removal":true,"allowed_cookies":"","withdraw_markup":"\u003Cbutton type=\u0022button\u0022 class=\u0022eu-cookie-withdraw-tab\u0022\u003EPrivacy settings\u003C\/button\u003E\n\u003Cdiv aria-labelledby=\u0022popup-text\u0022 class=\u0022eu-cookie-withdraw-banner\u0022\u003E\n  \u003Cdiv class=\u0022popup-content info eu-cookie-compliance-content\u0022\u003E\n    \u003Cdiv id=\u0022popup-text\u0022 class=\u0022eu-cookie-compliance-message\u0022 role=\u0022document\u0022\u003E\n      \u003Ch2\u003EWe use cookies on this site to enhance your user experience\u003C\/h2\u003E\n\u003Cp\u003EYou have given your consent for us to set cookies.\u003C\/p\u003E\n\n    \u003C\/div\u003E\n    \u003Cdiv id=\u0022popup-buttons\u0022 class=\u0022eu-cookie-compliance-buttons\u0022\u003E\n      \u003Cbutton type=\u0022button\u0022 class=\u0022eu-cookie-withdraw-button \u0022\u003EWithdraw consent\u003C\/button\u003E\n    \u003C\/div\u003E\n  \u003C\/div\u003E\n\u003C\/div\u003E","withdraw_enabled":false,"reload_options":0,"reload_routes_list":"","withdraw_button_on_info_popup":false,"cookie_categories":[],"cookie_categories_details":[],"enable_save_preferences_button":true,"cookie_value_disagreed":"0","cookie_value_agreed_show_thank_you":"1","cookie_value_agreed":"2","containing_element":"body","settings_tab_enabled":false,"olivero_primary_button_classes":"","olivero_secondary_button_classes":"","close_button_action":"close_banner","open_by_default":true,"modules_allow_popup":true,"hide_the_banner":false,"geoip_match":true,"unverified_scripts":[]},"webform":{"xss":{"allowedTags":["a","abbr","acronym","address","article","aside","b","bdi","bdo","big","blockquote","br","caption","cite","code","col","colgroup","command","dd","del","details","dfn","div","dl","dt","em","figcaption","figure","footer","h1","h2","h3","h4","h5","h6","header","hgroup","hr","i","img","ins","kbd","li","mark","menu","meter","nav","ol","output","p","pre","progress","q","rp","rt","ruby","s","samp","section","small","span","strong","sub","summary","sup","table","tbody","td","tfoot","th","thead","time","tr","tt","u","ul","var","wbr","label","fieldset","legend","font"]}},"antibot":{"forms":{"webform-submission-etc-user-satisfaction-node-6382-add-form":{"id":"webform-submission-etc-user-satisfaction-node-6382-add-form","key":"w2dJyWVMA5Bx5X3WfDJugKQ69ldusqZqYUO-omU08Tr"}}},"ajax":{"edit-submit":{"callback":"::submitAjaxForm","event":"click","effect":"fade","speed":500,"progress":{"type":"throbber","message":""},"disable-refocus":true,"url":"\/learning-zone\/clouds\/how-clouds-form?ajax_form=1","httpMethod":"POST","dialogType":"ajax","submit":{"_triggering_element_name":"op","_triggering_element_value":"Submit"}}},"user":{"uid":0,"permissionsHash":"5a0d502fe016eb87ae775a44edf474e41db99091c2827d7bee2f7232951cdedd"}}
+Skip to main content
+Main navigation
+Center for Science Education
+Contact Us
+Search SciEd
+Home
+About
+Collaborate with Us
+Affiliations and Partnerships
+Supporters
+UCAR Center for Science Education Logo
+Educators
+Teaching Resources
+School Field Trips to NSF NCAR
+Join Us Virtually
+Teacher Professional Development
+Explore
+Learning Zone
+SkySci for Kids
+Explore Virtually
+Careers in STEM
+STEM at Home
+Visit
+Visit NSF NCAR
+Join Us Virtually
+Exhibits
+Visitor Accessibility
+Events
+Support Our Mission
+Search SciEd
+Contact Us
+Breadcrumb
+Home
+Explore
+Learning Zone
+Clouds
+Clouds And How They Form
+Clouds and How They Form
+As air rises it cools and decreases pressure, spreading out. Clouds form when the air cools below the dewpoint, and water vapor condenses to liquid water.
+NOAA
+Clouds are made of water droplets or ice crystals that are so small and light they are able to stay up in the air. But how does the water and ice that makes up clouds get into the sky? And why do different types of clouds form?
+Water Vapor Evaporates Into the Air
+The water and ice that make up clouds travels into the sky within air as water vapor, the gas form of water. Water vapor gets into air mainly by
+evaporation
+– some of the liquid water from the ocean, lakes, and rivers turns into water vapor and travels in the air. When air rises in the atmosphere it gets cooler and is under less pressure. When air cools, some of the water vapor condenses. As air pressure drops, some water vapor condenses too. The vapor becomes small water droplets and a cloud is formed.
+Water Vapor Condenses to Form a Cloud
+It’s easier for water vapor to
+condense
+into water droplets when it has a
+particle
+to condense upon. These particles, such as dust and pollen, are called condensation nuclei. Eventually, enough water vapor condenses on pieces of dust, pollen, and other condensation nuclei to form a cloud.
+Clouds Form in Different Ways
+Some
+clouds form as air warms up near the Earth's surface and rises
+. Heated by sunshine, the ground heats the air just above it. That warmed air starts to rise because, when warm, it is lighter and less dense than the air around it. As it rises, its pressure and temperature drop causing water vapor to condense. Eventually, enough moisture will condense out of the air to form a cloud. Several types of clouds form in this way including cumulus, cumulonimbus, mammatus, and stratocumulus clouds.
+Some
+clouds, such as lenticular and stratus clouds, form when wind blows into the side of a mountain range
+or other terrain and is forced upward, higher in the atmosphere. This process can also happen without a dramatic mountain range, just when air travels over land that slopes upward and is forced to rise. The air cools as it rises, and eventually clouds form. Other types of clouds, such as cumulus clouds, can also form above mountains too as air is warmed at the ground and rises.
+Clouds also form when air is forced upward at areas of low pressure
+. Winds meet at the center of a low-pressure system and have nowhere to go but up. All types of clouds are formed by these processes, especially altocumulus, altostratus, cirrocumulus, stratocumulus, and stratus clouds.
+Weather fronts, where two large masses of air collide at the Earth’s surface, also form clouds
+by causing air to rise.
+At a warm front, where a warm air mass slides over a cold air mass, the warm air is pushed upward forming many different types of clouds, from low stratus clouds to midlevel altocumulus and altostratus clouds, to high cirrus, cirrocumulus and cirrostratus clouds. Clouds that produce rain like nimbostratus and cumulonimbus are also common at warm fronts.
+At a cold front, where heavy a cold air mass pushes a warm air mass upward, cumulous clouds are common. They often grow into cumulonimbus clouds, which produce thunderstorms. Nimbostratus, stratocumulus, and stratus clouds can also form at a cold front.
+© 2019 UCAR with portions adapted from Windows to the Universe (© 2009 NESTA)
+Clouds
+Clouds And How They Form
+Cloud Types
+Related Links
+Clouds Form Due to Surface Heating
+Clouds Form Due to Mountains
+Clouds Form When Air is Forced to Rise
+Clouds Form Due to Weather Fronts
+Making Clouds (Animated Atmosphere video)
+Resource Links
+Cloud Image Gallery
+Clouds Memory Game
+Cloud Sorting Game
+Clouds, A Teaching Box
+You must have JavaScript enabled to use this form.
+How likely are you to recommend this page to a friend?
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Not likely at all
+Extremely likely
+Leave this field blank
+NSF NCAR
+NSF NCAR Homepage
+ACOM | Atmospheric Chemistry Observations & Modeling
+CGD Laboratory
+CISL | Computational & Information Systems
+EdEC | Education, Engagement & Early-Career Development
+EOL | Earth Observing Laboratory
+HAO | High Altitude Observatory
+MMM | Mesoscale & Microscale Meteorology
+RAL | Research Applications Laboratory
+UCAR
+UCAR Homepage
+Community Programs
+Education & Training
+For Staff
+Government Relations & External Engagement
+Member Institutions
+Tech Transfer & Engagement
+University Collaboration
+Subscribe to Monthly K-12 News
+Sign Up
+Learn more
+about our monthly newsletters
+Follow Us on Social Media!
+© 2026 UCAR
+Privacy
+Cookies
+Web Accessibility
+Terms of Use
+Copyright Issues
+Sponsored by U.S. NSF
+Report Ethics Concern
+Staff Login
+Postal Address:
+P.O. Box 3000, Boulder, CO 80307-3000
+•
+Shipping Address:
+3090 Center Green Drive, Boulder, CO 80301
+This material is based upon work supported by the NSF National Center for Atmospheric Research, a major facility sponsored by the U.S. National Science Foundation and managed by the University Corporation for Atmospheric Research. Any opinions, findings and conclusions or recommendations expressed in this material do not necessarily reflect the views of the
+U.S. National Science Foundation.

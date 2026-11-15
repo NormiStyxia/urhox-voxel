@@ -32,10 +32,8 @@ end
 local function count(id)local n=0;for _,s in ipairs(starts)do if s==id then n=n+1 end end;return n end
 New();assert(rig.pose=='back' and State.GetPose()=='back')
 frames(20,{allowed=true,axis=Vector3.RIGHT});assert(rig.pose=='back' and not m.anim:IsPlaying('stance_combat'))
-tick(.01,{allowed=true,dodge=true,axis=Vector3.RIGHT})
-assert(m.clip=='dodge_slide' and rig.pose=='back' and not m:WeaponInHand())
-for _,t in ipairs(m.anim.ordered) do if t.clip.id=='dodge_slide' then assert(t.params.weaponInHand==0)end end
-frames(60);assert(rig.pose=='back' and count('sword_draw')==0,'idle slide never draws')
+tick(.01,{allowed=true,runIntent=true,axis=Vector3.RIGHT});frames(60)
+assert(rig.pose=='back' and count('sword_draw')==0,'run never draws')
 New();tick(.01,{allowed=true,attackTap=true})
 untilTrue(function()return m.clip=='sword_light_1' and m.cancelOpen end)
 tick(.01,{allowed=true,attackTap=true});assert(m.clip=='sword_light_2')
@@ -50,8 +48,6 @@ tick(.01,{allowed=true,attackTap=true});assert(m.clip=='sword_draw')
 untilTrue(function()return m.clip=='sword_light_1' end)
 assert(count('sword_draw')==2 and count('sword_light_1')==2 and count('sword_sheath')==0)
 untilTrue(function()return m.cancelOpen end)
-tick(.01,{allowed=true,dodge=true,axis=Vector3.RIGHT})
-assert(rig.pose=='hand' and m.clip=='dodge_slide','attack slide retains hand only temporarily')
 untilTrue(function()return not m.clip end);frames(42);assert(rig.pose=='back')
 -- A late input at the final recovery boundary consumes once (not dropped by stow).
 New();State.Activity(true);assert(m:Action('light'));frames(29)
@@ -61,7 +57,7 @@ assert(count('sword_light_2')==1 and count('sword_draw')==0)
 New();assert(m:Swap());assert(rig.active=='bow' and rig.pose=='hidden')
 frames(18);assert(rig.pose=='hidden');frames(23)
 assert(State.GetWeapon()=='bow' and rig.pose=='back' and not m.clip)
-assert(m:Swap());frames(21);assert(m:Action('dodge',Vector3.RIGHT))
+assert(m:Swap());frames(41)
 assert(rig.active=='sword' and rig.pose=='back','swap cancel never resurrects old hand weapon')
 -- Late buffered attack after swap selects target weapon once, then bow_draw.
 New();assert(m:Swap());frames(30);tick(.01,{allowed=true,attack=true});frames(58,{allowed=true,attack=true})
@@ -85,26 +81,7 @@ local f=assert(io.open('scripts/ruins/RuinsScene.lua'));local src=f:read('*a');f
 assert(not src:find("pose=function(p,previous)",1,true),'no Scene back callback that resurrects hand')
 assert(src:find("'weaponInHand',combatMoves_:WeaponInHand() and 1 or 0",1,true))
 assert(src:find("params.weaponInHand=params.weaponInHand==1 and 0 or 1",1,true),'F7 explicit hand/back preview control')
-local cam=Camera.New();cam:Slide(Vector3.RIGHT)
-S.near(cam:Update(0,{},true,true).focus:Length(),0)
-for _=1,60 do local out=cam:Update(.01,{},true,true);assert(out.focus:Length()<=.121 and out.distance<=.12 and out.fov<=.8)end
-S.near(cam.output.distance,0);S.near(cam.output.fov,0)
-print('PASS stow: back idle/run/slide, single draw combo, .4s grace, mid-stow restart, late input, Q hidden/target-back/cancel, form exit no resurrection, bow discard/snapshot, F7 pose port, softer camera')
-
--- The actual advancement port observes the new value, not last frame's Apply.
-New();assert(m:Action('dodge',Vector3.RIGHT))
-local advance=m.anim.GetMotion
-m.anim.GetMotion=function(self,dt,realDt)
- for _,track in ipairs(self.ordered)do if track.clip.id=='dodge_slide' and track.live then
-  assert(track.params.weaponInHand==(m:WeaponInHand() and 1 or 0),'ownership must update BEFORE GetMotion')
- end end
- return advance(self,dt,realDt)
-end
-tick(.05);rig.pose='hand';tick(.02)
-for _,track in ipairs(m.anim.ordered)do if track.clip.id=='dodge_slide' and track.live then
- assert(track.handWeight>0 and track.handWeight<1,'W4 smooths changed arm ownership in real seconds')
-end end
-rig.pose='back';tick(.02)
+local cam=Camera.New();S.near(cam:Update(.1,{},true,true).focus:Length(),0)
 local base
 for line in src:gmatch('[^\n]+')do if line:find("Safe('Animation.Base'",1,true)then base=line;break end end
 assert(base)
@@ -115,10 +92,4 @@ local env=setmetatable({M={ride={mode='free'}},dt=.016,nomi_={Animate=function()
 assert(load(base,'actual Scene base armed routing','t',env))();assert(armed==false)
 env.combatMoves_.WeaponInHand=function()return true end
 assert(load(base,'actual Scene base armed routing','t',env))();assert(armed==true)
--- Gameplay motion extends after afterimage_off (.16); do not confuse the two.
-New();m:Action('dodge',Vector3.RIGHT);local distance=0
-for _=1,16 do tick(.01);distance=distance+m.motion:Length()end
-assert(not m.slideImages and distance>1.61 and distance<1.63)
-for _=1,14 do tick(.01);distance=distance+m.motion:Length()end
-S.near(distance,2.20)
-print('PASS pre-GetMotion weaponInHand, unarmed base exit, independent .04-.16 images and 0-.30 motion')
+print('PASS stow/run ownership, grace, combo, swap, bow cancellation, base armed routing')

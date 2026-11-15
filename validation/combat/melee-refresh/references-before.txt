@@ -1,0 +1,265 @@
+scripts/combat/CombatAnim.lua:37:---@field iframeOpen boolean
+scripts/combat/CombatAnim.lua:42:---@field mixLayer number|nil Temporary layer used for a dodge-to-attack crossfade.
+scripts/combat/CombatAnim.lua:46:---@field handWeight number Smoothed weaponInHand value for slide arms.
+scripts/combat/CombatAnim.lua:125:A.DefaultDodge = Data.DefaultDodge
+scripts/combat/CombatAnim.lua:340:local function slideToAttack(s,c)
+scripts/combat/CombatAnim.lua:445:            params={},nextEvent=1,complete=false,hitOpen=false,iframeOpen=false,cancelOpen=false,protectOpen=false,
+scripts/combat/CombatAnim.lua:464:    if name=="iframe_on" then s.iframeOpen=true elseif name=="iframe_off" then s.iframeOpen=false end
+scripts/combat/CombatAnim.lua:473:---dodge_slide snapshots params={moveX,moveZ,bow=1} in character-local axes;
+scripts/combat/CombatAnim.lua:476:---slide arms smooth subsequent changes with a .05s real-clock time constant.
+scripts/combat/CombatAnim.lua:493:            and c.layer~=Data.Layer.STANCE and not c.locomotion and not slideToAttack(s,c) then
+scripts/combat/CombatAnim.lua:496:        if s.live and slideToAttack(s,c) then fadeIn=s.clip.cancelBlend or .04 end
+scripts/combat/CombatAnim.lua:505:        if s.live and s.stopping and s.clip.id=="dodge_slide" and c.locomotion then
+scripts/combat/CombatAnim.lua:507:        elseif s.live and slideToAttack(s,c) then
+scripts/combat/CombatAnim.lua:525:    slot.hitOpen,slot.iframeOpen,slot.cancelOpen,slot.protectOpen=false,false,false,false
+scripts/combat/CombatAnim.lua:570:            -- an already consumed hit_on/iframe_on cannot remain stuck open.
+scripts/combat/CombatAnim.lua:574:                if e.handle~=s.handle or e.name=="hit_off" or e.name=="iframe_off" or e.name=="cancel_close"
+scripts/combat/CombatAnim.lua:585:            if s.iframeOpen then self:emit(s,"iframe_off",normalized(s.clip,s.t)) end
+scripts/combat/CombatAnim.lua:688:---For dodge_slide it is positive along W2's accepted direction, not facing +Z.
+scripts/combat/CombatAudio.lua:44:    dodge = { files = { 'audio/sfx/cmb_dodge_slide_1.mp3', 'audio/sfx/cmb_dodge_slide_2.mp3' }, db = -10, interval = 0.06 },
+scripts/combat/CombatAudio.lua:45:    dodge_land = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -10, interval = 0.06 },
+scripts/combat/CombatAudio.lua:46:    run_step = { files = { 'audio/sfx/cmb_dodge_land.mp3' }, db = -14, interval = 0.12 },
+scripts/combat/CombatAudio.lua:56:    'blade_draw','blade_sheath','enemy_windup','player_hurt','dodge','dodge_land',
+scripts/combat/CombatState.lua:10:local settings={aimAssist=true,damageNumbers=false,dodgeFov=false,cameraShake=true,cameraFov=true,bowZoom=false}
+scripts/combat/CombatState.lua:181:---@param cancelTransition boolean|nil Dodge can interrupt draw/sheath.
+scripts/combat/CombatState.lua:188:        if lastPose=='hand' then SetState(M.ACTIVE,'dodge') end
+scripts/combat/CombatTest.lua:11:        {id='slide_forward',weapon='sword',axis=Vector3(0,0,1)},
+scripts/combat/CombatTest.lua:12:        {id='slide_back',weapon='sword',axis=Vector3(0,0,-1)},
+scripts/combat/CombatTest.lua:13:        {id='slide_left',weapon='sword',axis=Vector3(-1,0,0)},
+scripts/combat/CombatTest.lua:14:        {id='slide_right',weapon='sword',axis=Vector3(1,0,0)},
+scripts/combat/CombatTest.lua:15:        {id='slide_cancel',weapon='sword',axis=Vector3(0,0,-1),cancel=true},
+scripts/combat/CombatTest.lua:16:        {id='attack_slide_attack',weapon='sword',axis=Vector3(0,0,-1),cancel=true},
+scripts/combat/CombatTest.lua:43:        if e.clip=='dodge_slide' then
+scripts/combat/CombatTest.lua:44:            self.slideAt=e.age; self.slideOrigin=self.o.position(); self.cdInitial=m.dodgeCool
+scripts/combat/CombatTest.lua:45:        elseif self.slideAt and e.clip:find('sword_light_',1,true) then
+scripts/combat/CombatTest.lua:46:            self.followAt=m.slideElapsed; self.followSampled=e.age-self.slideAt
+scripts/combat/CombatTest.lua:58:        elseif e.name=='iframe_on' then self.iframeOn=e.age
+scripts/combat/CombatTest.lua:59:        elseif e.name=='iframe_off' then self.iframeDuration=m.slideElapsed end
+scripts/combat/CombatTest.lua:74:    self.slideAt,self.slideOrigin,self.slideDistance,self.cdMeasured=nil,nil,nil,nil
+scripts/combat/CombatTest.lua:75:    self.iframeOn,self.iframeDuration,self.followAt,self.captureDistance=nil,nil,nil,false
+scripts/combat/CombatTest.lua:97:        local d=self.slideDistance or (self.slideOrigin and distance(self.o.position(),self.slideOrigin)) or -1
+scripts/combat/CombatTest.lua:99:        local inv=self.iframeDuration or -1
+scripts/combat/CombatTest.lua:101:        self:Result(s.id,self.slideAt~=nil and math.abs(d-target)<=.08 and inv>=.19 and inv<=.20+self.maxDt*2
+scripts/combat/CombatTest.lua:103:            string.format('controller_distance=%.4f expected=%.2f iframe_observed=%.4f cd_observed=%.4f max_dt=%.4f',d,target,inv,cd,self.maxDt))
+scripts/combat/CombatTest.lua:106:                and (s.id~='attack_slide_attack' or (self.starts.sword_light_2 or 0)==1),
+scripts/combat/CombatTest.lua:107:                string.format('attack_after_slide=%.4f next_clip2=%d',self.followAt or -1,self.starts.sword_light_2 or 0))
+scripts/combat/CombatTest.lua:111:            string.format('shots=%d charge=%.3f cancel_via_dodge=%s',#self.shots,m.charge,tostring(self.starts.dodge_slide~=nil)))
+scripts/combat/CombatTest.lua:136:        self.slideDistance=distance(self.o.position(),self.slideOrigin); self.captureDistance=false
+scripts/combat/CombatTest.lua:138:    if self.slideAt then
+scripts/combat/CombatTest.lua:139:        if not self.cdMeasured and m.dodgeCool<=0 then self.cdMeasured=m.age-self.slideAt end
+scripts/combat/CombatTest.lua:140:        if not self.slideDistance and m.clip~='dodge_slide' and not s.cancel then self.slideDistance=distance(self.o.position(),self.slideOrigin) end
+scripts/combat/CombatTest.lua:156:        if s.id=='attack_slide_attack' and self.phase==0 then neutral.attackTap=true; self.phase=1
+scripts/combat/CombatTest.lua:157:        elseif not self.sent and (s.id~='attack_slide_attack' or m.cancelOpen) then
+scripts/combat/CombatTest.lua:158:            neutral.dodge=true; neutral.axis=self.o.direction(s.axis); self.sent=true
+scripts/combat/CombatTest.lua:159:        elseif s.cancel and self.slideAt and self.phase<2 then neutral.attackTap=true; self.phase=2 end
+scripts/combat/CombatTest.lua:163:        elseif self.phase==1 then neutral.dodge=true; self.phase=2
+scripts/combat/CombatMoves.lua:1:-- Player combat. Animation events are the only hit/cancel/iframe/fire clock.
+scripts/combat/CombatMoves.lua:20:---@field slideShotPool table[]
+scripts/combat/CombatMoves.lua:82:function C.SlideFootprint(p,radius,ground)
+scripts/combat/CombatMoves.lua:94:local function SlideSafe(base,dir,distance,height,radius,ground,clear)
+scripts/combat/CombatMoves.lua:96:    local h=C.SlideFootprint(q,radius,ground)
+scripts/combat/CombatMoves.lua:101:function C.ClipSlidePath(p,motion,radius,ground,clear,maxSteps)
+scripts/combat/CombatMoves.lua:102:    local height=C.SlideFootprint(p,radius,ground)
+scripts/combat/CombatMoves.lua:112:        local nextHeight=SlideSafe(base,dir,amount,height,radius,ground,clear)
+scripts/combat/CombatMoves.lua:120:                if SlideSafe(base,dir,mid,height,radius,ground,clear) then lo=mid else hi=mid end
+scripts/combat/CombatMoves.lua:132:        age=0,invuln=0,hitstop=0,dodgeCool=0,charge=0,hold=0,combo=0,drawElapsed=0,power=0,fireSnapshot={stats={}},
+scripts/combat/CombatMoves.lua:134:        iframe=false,cancelOpen=false,damaged={},dead=false,blocked=false,
+scripts/combat/CombatMoves.lua:140:        slideShots={},slideShotPool={{},{}},slideShotWrite=0,slideShotAt=-1},C)
+scripts/combat/CombatMoves.lua:182:    if id=='dodge_slide' then
+scripts/combat/CombatMoves.lua:183:        local f=self.slideFacing or self.o.forward()
+scripts/combat/CombatMoves.lua:202:    self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
+scripts/combat/CombatMoves.lua:211:    if self.o.locomotion and reason~='dodge' then self.o.locomotion:Cancel(reason) end
+scripts/combat/CombatMoves.lua:224:    self:BrakeSlide()
+scripts/combat/CombatMoves.lua:225:    self.slideFacing,self.slideStopped,self.slideImages=nil,false,false
+scripts/combat/CombatMoves.lua:226:    self.slideMotionFrame=false
+scripts/combat/CombatMoves.lua:227:    self.slideShots={}
+scripts/combat/CombatMoves.lua:228:    for _,shot in ipairs(self.slideShotPool) do shot.time=nil end
+scripts/combat/CombatMoves.lua:229:    self.slideFovAge=nil
+scripts/combat/CombatMoves.lua:230:    self.combo,self.comboUntil,self.slideFollowUntil,self.followDistance=0,nil,nil,nil
+scripts/combat/CombatMoves.lua:245:    self.hitOpen,self.hitPending,self.cancelOpen,self.iframe=false,false,false,false
+scripts/combat/CombatMoves.lua:257:    -- Dodge/hit/swap/death/exit replace the pose immediately as before.
+scripts/combat/CombatMoves.lua:277:function C:CanDodge()
+scripts/combat/CombatMoves.lua:278:    return self.clip~='dodge_slide' and self:CanCancel()
+scripts/combat/CombatMoves.lua:280:function C:EndSlide(continuing)
+scripts/combat/CombatMoves.lua:281:    self:BrakeSlide(continuing)
+scripts/combat/CombatMoves.lua:283:    self.clip,self.handle,self.iframe,self.cancelOpen=nil,nil,false,false
+scripts/combat/CombatMoves.lua:284:    self.slideFacing,self.slideImages=nil,false
+scripts/combat/CombatMoves.lua:287:function C:BrakeSlide(continuing)
+scripts/combat/CombatMoves.lua:288:    if not self.slideDustOpen then return end
+scripts/combat/CombatMoves.lua:289:    self.slideDustOpen=false
+scripts/combat/CombatMoves.lua:290:    if not continuing and not (self.o.locomotion and self.o.locomotion.pending) then self:Sound('dodge_land') end
+scripts/combat/CombatMoves.lua:292:    if self.state.Log then self.state.Log('dodge-land','Combat: sfx dodge_land') end
+scripts/combat/CombatMoves.lua:296:    if self.clip=='dodge_slide' then return self.slideFacing end
+scripts/combat/CombatMoves.lua:302:function C:SlideAfterimages(position,rotation)
+scripts/combat/CombatMoves.lua:303:    if self.slideImages and self.clip=='dodge_slide' and position and rotation
+scripts/combat/CombatMoves.lua:304:        and self.age-self.slideShotAt>=.04-1e-8 then
+scripts/combat/CombatMoves.lua:305:        self.slideShotAt=self.age
+scripts/combat/CombatMoves.lua:306:        self.slideShotWrite=self.slideShotWrite%2+1
+scripts/combat/CombatMoves.lua:307:        local shot=self.slideShotPool[self.slideShotWrite]
+scripts/combat/CombatMoves.lua:308:        shot.clip,shot.time,shot.position,shot.rotation='dodge_slide',self.age,position,rotation
+scripts/combat/CombatMoves.lua:311:    self.slideShots[1],self.slideShots[2]=nil,nil
+scripts/combat/CombatMoves.lua:313:        local shot=self.slideShotPool[(self.slideShotWrite-i-1)%2+1]
+scripts/combat/CombatMoves.lua:317:            self.slideShots[#self.slideShots+1]=shot
+scripts/combat/CombatMoves.lua:320:    return self.slideShots
+scripts/combat/CombatMoves.lua:324:    if kind=='dodge' then
+scripts/combat/CombatMoves.lua:325:        if self.dodgeCool>1e-8 then return false,'cooldown' end
+scripts/combat/CombatMoves.lua:326:        if not self:CanDodge() then return false,'locked' end
+scripts/combat/CombatMoves.lua:327:        if self.o.slideStart and not self.o.slideStart() then return false,'unsafe' end
+scripts/combat/CombatMoves.lua:329:        local queued=self.buffer~='dodge' and self.buffer or nil
+scripts/combat/CombatMoves.lua:334:        self:Cancel('dodge',true) -- discard shot; retain independent getup tail
+scripts/combat/CombatMoves.lua:336:        self.moveDir,self.slideFacing=dir,facing
+scripts/combat/CombatMoves.lua:338:        if not self:Play('dodge_slide',.04) then return false end
+scripts/combat/CombatMoves.lua:339:        -- Clear the previous strike before the first slide snapshot at .04s.
+scripts/combat/CombatMoves.lua:342:        if self.o.camera then self.o.camera:Slide(self.moveDir) end
+scripts/combat/CombatMoves.lua:343:        self.dodgeCool,self.dodgeAt,self.slideElapsed=.50,self.age,0
+scripts/combat/CombatMoves.lua:344:        if self._dodgeFrameAt then
+scripts/combat/CombatMoves.lua:345:            self._dodgeDelay=math.min(self._dodgeFrameDt,self._dodgeFrameCool)
+scripts/combat/CombatMoves.lua:346:            self._dodgeStep=self._dodgeFrameDt-self._dodgeDelay
+scripts/combat/CombatMoves.lua:347:            self.dodgeAt=self._dodgeFrameAt+self._dodgeDelay
+scripts/combat/CombatMoves.lua:348:            self.dodgeCool=math.max(0,.50-self._dodgeStep)
+scripts/combat/CombatMoves.lua:350:        self.combo,self.comboUntil,self.slideFollowUntil=combo,self.age+.60,self.age+.60
+scripts/combat/CombatMoves.lua:351:        self.perfectUsed,self.slideStopped,self.pending=false,false,nil
+scripts/combat/CombatMoves.lua:352:        self.slidePathClipped=false
+scripts/combat/CombatMoves.lua:354:        self.iframe=true
+scripts/combat/CombatMoves.lua:355:        if self.state.GetSetting('dodgeFov') then self.slideFovAge=0 end
+scripts/combat/CombatMoves.lua:363:    local follow=self.slideFollowUntil and self.age<=self.slideFollowUntil
+scripts/combat/CombatMoves.lua:364:    if self.clip=='dodge_slide' then
+scripts/combat/CombatMoves.lua:366:        self:EndSlide()
+scripts/combat/CombatMoves.lua:398:        self.followDistance=0; self.slideFollowUntil=nil
+scripts/combat/CombatMoves.lua:546:    if self.iframe and self.clip=='dodge_slide' and not self.perfectUsed and (self.slideElapsed or 0)<.10 then
+scripts/combat/CombatMoves.lua:549:    if self.dead or self.iframe or self.invuln>0 or (self.protection and next(self.protection)) or (self.o.protected and self.o.protected()) then return {hit=false} end
+scripts/combat/CombatMoves.lua:591:                self.slideDustOpen=true
+scripts/combat/CombatMoves.lua:592:                self:Sound('dodge')
+scripts/combat/CombatMoves.lua:594:                if self.state.Log then self.state.Log('dodge-start','Combat: sfx dodge_start') end
+scripts/combat/CombatMoves.lua:595:            else self:BrakeSlide() end
+scripts/combat/CombatMoves.lua:596:        elseif e.name=='afterimage_on' then self.slideImages=true
+scripts/combat/CombatMoves.lua:597:        elseif e.name=='afterimage_off' then self.slideImages=false
+scripts/combat/CombatMoves.lua:598:        elseif e.name=='move_end' then self.slideStopped=true
+scripts/combat/CombatMoves.lua:599:        elseif e.name=='iframe_on' then self.iframe=true
+scripts/combat/CombatMoves.lua:600:        elseif e.name=='iframe_off' then self.iframe=false
+scripts/combat/CombatMoves.lua:640:            self.clip,self.handle,self.iframe=nil,nil,false
+scripts/combat/CombatMoves.lua:641:            if finished=='dodge_slide' then self.slideFacing,self.slideImages=nil,false end
+scripts/combat/CombatMoves.lua:661:    local latch=self.clip=='dodge_slide' and self.buffer~='dodge'
+scripts/combat/CombatMoves.lua:662:        and self.bufferUntil>=self.dodgeAt+.22-1e-8
+scripts/combat/CombatMoves.lua:663:    local retryAt=self._dodgeFrameAt and self._dodgeFrameAt+self._dodgeFrameCool
+scripts/combat/CombatMoves.lua:664:    local cooldownCross=self.buffer=='dodge' and not self.clip and retryAt and retryAt<=self.age+1e-8 and retryAt<=self.bufferUntil+1e-8
+scripts/combat/CombatMoves.lua:667:        if latch and not self.cancelOpen and (self.slideElapsed or 0)<.22 then return end
+scripts/combat/CombatMoves.lua:674:---@param controls table attack/heavy held, attackTap/dodge edges, axis world-space, allowed
+scripts/combat/CombatMoves.lua:681:        self._dodgeFrameAt,self._dodgeFrameDt,self._dodgeFrameCool=self.age,dt,self.dodgeCool
+scripts/combat/CombatMoves.lua:682:        self._dodgeStep,self._dodgeDelay=nil,0
+scripts/combat/CombatMoves.lua:689:    self.dodgeCool=math.max(0,self.dodgeCool-dt); self.shakeAge=self.shakeAge+dt
+scripts/combat/CombatMoves.lua:702:    if controls.allowed and not self.dead and controls.dodge then
+scripts/combat/CombatMoves.lua:704:        if foot and self._dodgeFrameCool>1e-8 then accepted,reason=false,'cooldown'
+scripts/combat/CombatMoves.lua:705:        else accepted,reason=self:Action('dodge',controls.axis) end
+scripts/combat/CombatMoves.lua:709:                local edgeAt=foot and self._dodgeFrameAt or self.age
+scripts/combat/CombatMoves.lua:710:                self.buffer,self.bufferAt,self.bufferUntil='dodge',edgeAt,edgeAt+BUFFER
+scripts/combat/CombatMoves.lua:713:        canInput=false -- old held attack cannot be inherited by the new slide
+scripts/combat/CombatMoves.lua:715:    if foot and controls.allowed and not self.dead and self.buffer=='dodge' then
+scripts/combat/CombatMoves.lua:717:        if self._dodgeStep then canInput=false end
+scripts/combat/CombatMoves.lua:720:        if ((heavy and not self.lastHeavy) or controls.heavyTap) and self.buffer~='dodge' then
+scripts/combat/CombatMoves.lua:724:            if self.buffer~='dodge' then
+scripts/combat/CombatMoves.lua:725:                local sliding=self.clip=='dodge_slide'
+scripts/combat/CombatMoves.lua:730:                    if sliding and self.state.GetWeapon()=='sword' and (self.slideElapsed or 0)<=.06 then
+scripts/combat/CombatMoves.lua:731:                        self.bufferUntil=math.max(self.bufferUntil,self.dodgeAt+.22)
+scripts/combat/CombatMoves.lua:760:    local sliding=self.clip=='dodge_slide'
+scripts/combat/CombatMoves.lua:761:    self.slideMotionFrame=sliding
+scripts/combat/CombatMoves.lua:762:    local stepDt=sliding and (self._dodgeStep or dt) or animDt
+scripts/combat/CombatMoves.lua:763:    if sliding and self.buffer and self.buffer~='dodge' and (self.slideElapsed or 0)<.22
+scripts/combat/CombatMoves.lua:765:        stepDt=math.min(stepDt,.22-self.slideElapsed)
+scripts/combat/CombatMoves.lua:768:        stepDt=math.min(stepDt,math.max(0,.30-self.slideElapsed))
+scripts/combat/CombatMoves.lua:770:        and self.slideElapsed<.26 then stepDt=math.min(stepDt,.26-self.slideElapsed) end
+scripts/combat/CombatMoves.lua:786:        self.slideElapsed=(self.slideElapsed or 0)+stepDt
+scripts/combat/CombatMoves.lua:787:        if self.slideStopped then metres=0 end
+scripts/combat/CombatMoves.lua:797:    if sliding and self.o.slideMotion and metres>0 then
+scripts/combat/CombatMoves.lua:798:        self.motion,self.slideStopped=self.o.slideMotion(self.motion)
+scripts/combat/CombatMoves.lua:799:        if self.slideStopped then self.slidePathClipped=true end
+scripts/combat/CombatMoves.lua:804:        self.slideMotionFrame=true -- already footprint/wall checked, do not re-run endpoint guard
+scripts/combat/CombatMoves.lua:813:        self.iframe=self.clip=='dodge_slide' and self.slideElapsed<.20-1e-8
+scripts/combat/CombatMoves.lua:816:            if self.clip=='dodge_slide' and not (foot and foot.pending) and self.slideElapsed>=.26 and controls.axis
+scripts/combat/CombatMoves.lua:817:                and controls.axis:LengthSquared()>=.18*.18 then self:EndSlide() end
+scripts/combat/CombatMoves.lua:819:        if foot then foot:Finish(dt,stepDt+(self._dodgeDelay or 0),controls,self) end
+scripts/combat/CombatMoves.lua:820:        if stepDt+(self._dodgeDelay or 0)<dt then
+scripts/combat/CombatMoves.lua:821:            local remaining=dt-stepDt-(self._dodgeDelay or 0)
+scripts/combat/CombatMoves.lua:829:    if self.slideFovAge then self.slideFovAge=self.slideFovAge+dt end
+scripts/combat/CombatMoves.lua:835:    self._dodgeFrameAt,self._dodgeStep,self._dodgeDelay=nil,nil,nil
+scripts/combat/CombatMoves.lua:856:    if self.dead or self.suspended or self.clip=='getup' or self.clip=='dodge_slide' or self.clip=='death' then return 0 end
+scripts/combat/AnimClips.lua:1:-- Keys/events: normalized time. Phases/motion: seconds. §18 owns dodge_slide;
+scripts/combat/AnimClips.lua:34:---@field cancelAt number|nil Real seconds before this dodge can yield to attack.
+scripts/combat/AnimClips.lua:45:---@field balanceKeys table<string, table[]>|nil Unarmed slide balance (weaponInHand=0).
+scripts/combat/AnimClips.lua:47:---@field runKeys table<string, table[]>|nil Pending-run slide tail; same event/motion clocks.
+scripts/combat/AnimClips.lua:56:---@field DefaultDodge string
+scripts/combat/AnimClips.lua:59:C.DefaultDodge="dodge_slide"
+scripts/combat/AnimClips.lua:233:local slideTimes={0,.02,.06,.12,.22,.26,.30,.32}
+scripts/combat/AnimClips.lua:234:local function slideTrack(poses,arms)
+scripts/combat/AnimClips.lua:236:    for i,base in ipairs(slideTimes) do
+scripts/combat/AnimClips.lua:238:        if arms and i>1 and i<#slideTimes then at=math.min(.32,base+.015) end
+scripts/combat/AnimClips.lua:243:local slideBody={{4,0,0},{14,0,0},{24,2,0},{24,1,0},{18,0,0},{10,0,0},{6,0,0},{4,0,0}}
+scripts/combat/AnimClips.lua:244:local slideHead={{-1,0,0},{-10,0,0},{-18,-1,0},{-18,-.5,0},{-13,0,0},{-7,0,0},{-3,0,0},{-1,0,0}}
+scripts/combat/AnimClips.lua:245:local slideRight={{0,0,0},{10,0,0},{18,0,0},{16,0,0},{8,0,0},{-10,0,0},{-4,0,0},{0,0,0}}
+scripts/combat/AnimClips.lua:246:local slideLeft={{0,0,0},{-14,0,0},{-22,0,0},{-20,0,0},{-12,0,0},{10,0,0},{4,0,0},{0,0,0}}
+scripts/combat/AnimClips.lua:250:    id="dodge_slide",dur=.32,layer=L.DODGE,realTime=true,continuous=true,directional=true,finalDirectional=true,
+scripts/combat/AnimClips.lua:253:    keys={body=slideTrack(slideBody),head=slideTrack(slideHead),
+scripts/combat/AnimClips.lua:254:        leg_right=slideTrack(slideRight),leg_left=slideTrack(slideLeft),
+scripts/combat/AnimClips.lua:255:        arm_right=slideTrack({{-40,0,8},{-40,0,10},{-32,0,12},{-28,0,12},{-32,0,10},{-36,0,10},{-40,0,8},{-40,0,8}},true),
+scripts/combat/AnimClips.lua:256:        arm_left=slideTrack({{0,0,-8},{-5.6,0,-10},{-14,0,-12},{-12.6,0,-12},{-8.4,0,-10},{4.2,0,-8},{0,0,-8},{0,0,-8}},true)},
+scripts/combat/AnimClips.lua:257:    balanceKeys={arm_right=slideTrack(balanceR,true),arm_left=slideTrack(balanceL,true)},
+scripts/combat/AnimClips.lua:258:    bowKeys={arm_left=slideTrack({{-55,0,-8},{-55,0,-10},{-60,0,-12},{-60,0,-12},{-58,0,-10},{-55,0,-8},{-55,0,-8},{-55,0,-8}},true),
+scripts/combat/AnimClips.lua:259:        arm_right=slideTrack({{-15,0,8},{-18,0,10},{-25,0,12},{-25,0,12},{-20,0,10},{-18,0,8},{-15,0,8},{-15,0,8}},true)},
+scripts/combat/AnimClips.lua:263:    events={{t=0,"iframe_on",clock="real"},{t=0,"dust_start",clock="real"},{t=0,"dust_streak",clock="real"},
+scripts/combat/AnimClips.lua:265:        {t=.20/.32,"iframe_off",clock="real"},{t=.22/.32,"cancel_open",clock="real"},
+scripts/combat/AnimClips.lua:268:local slide=C.Clips.dodge_slide
+scripts/combat/AnimClips.lua:269:slide.runKeys={}
+scripts/combat/AnimClips.lua:270:for name,track in pairs(slide.keys) do
+scripts/combat/AnimClips.lua:272:    slide.runKeys[name]=copy
+scripts/combat/AnimClips.lua:275:    local track=slide.runKeys[name]
+scripts/combat/AnimClips.lua:280:slide.runBalanceKeys={arm_right=slideTrack({balanceR[1],balanceR[2],balanceR[3],balanceR[4],balanceR[5],{16,0,10},{20,0,10},{20,0,10}},true),
+scripts/combat/AnimClips.lua:281:    arm_left=slideTrack({balanceL[1],balanceL[2],balanceL[3],balanceL[4],balanceL[5],{-14,0,-10},{-20,0,-10},{-20,0,-10}},true)}
+scripts/combat/AnimClips.lua:289:    id="dodge_roll",dur=.45,layer=L.DODGE,phases=phases(.45,0,.25),deprecated=true,replacement="dodge_slide",
+scripts/combat/AnimClips.lua:296:    events={{t=0,"iframe_on",clock="real"},{t=.25/.45,"iframe_off",clock="real"}},
+scripts/ruins/RuinsScene.lua:549:    for _,event in ipairs(require('combat.AnimClips').Clips.dodge_slide.events) do
+scripts/ruins/RuinsScene.lua:559:        slideStart=function() return nomi_:CanSlide() end,
+scripts/ruins/RuinsScene.lua:560:        slideMotion=function(motion) return nomi_:ClipSlideMotion(motion) end,
+scripts/ruins/RuinsScene.lua:565:                function(at) return nomi_:SlideGround(at) end)
+scripts/ruins/RuinsScene.lua:633:                    foot_.direction or nomi_.node.worldDirection,nomi_.slideGroundPort,1)
+scripts/ruins/RuinsScene.lua:741:        touchState.dodgeCool=combatMoves_ and combatMoves_.dodgeCool or 0
+scripts/ruins/RuinsScene.lua:1128:    if animPreview_.index>0 or CombatState.HasAggro() or not nomi_:CanSlide() then
+scripts/ruins/RuinsScene.lua:1152:            combatMoves_.dodgeCool,combatMoves_.hitstop=0,0
+scripts/ruins/RuinsScene.lua:1261:    if combatMoves_ and combatMoves_.clip=='dodge_slide' or (foot_ and foot_:IsRunning()) then
+scripts/ruins/RuinsScene.lua:1337:                    synthetic.evadePressed,synthetic.evadeHeld=synthetic.dodge==true,false
+scripts/ruins/RuinsScene.lua:1350:                combatMoves_.hitOpen,combatMoves_.hitPending,combatMoves_.iframe=false,false,false
+scripts/ruins/RuinsScene.lua:1355:            options.scale=allowed and not combatMoves_.slideMotionFrame and combatMoves_:MoveScale() or 0
+scripts/ruins/RuinsScene.lua:1366:            options.facing,options.slideChecked=combatMoves_:Facing(),combatMoves_.slideMotionFrame
+scripts/ruins/RuinsScene.lua:1423:        if previewAllowed and clip.id=='dodge_slide' then
+scripts/ruins/RuinsScene.lua:1495:        if foot_ and (clip.id=='dodge_slide' or clip.id=='sprint_loop') and foot_.soles then
+scripts/ruins/RuinsScene.lua:1544:        local slidePosition,slideRotation
+scripts/ruins/RuinsScene.lua:1545:        if combatRig_.GetAfterimagePose then slidePosition,slideRotation=combatRig_:GetAfterimagePose() end
+scripts/ruins/RuinsScene.lua:1546:        local slideImages=combatMoves_:SlideAfterimages(slidePosition,slideRotation)
+scripts/ruins/RuinsScene.lua:1552:        combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or (#slideImages>0 and slideImages or combatAnim_:GetAfterimages()))
+scripts/ruins/RuinsScene.lua:1671:    if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or combatMoves_.clip=='dodge_slide' or (foot_ and foot_.weight>0) or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
+scripts/ruins/RuinsScene.lua:1675:            combatMoves_.clip=='dodge_slide' or foot_.weight>0 or preview=='dodge_slide' or preview=='sprint_loop')
+scripts/ruins/RuinsScene.lua:1793:                and (combatMoves_.clip=='dodge_slide' or (foot_ and foot_.weight>0) or (combatCamera_.sprint or 0)>0))
+scripts/ruins/RuinsScene.lua:1823:    local hit=nomi_:SlideRay(Ray(source,delta/length),length,'range')
+scripts/combat/CombatCamera.lua:23:function A:Slide(direction)
+scripts/combat/CombatCamera.lua:24:    self.slideAt,self.slideDir,self.followAt=self.time,direction,nil
+scripts/combat/CombatCamera.lua:27:    self.slideAt=nil;self.followAt=self.time
+scripts/combat/CombatCamera.lua:32:    self.slideAt,self.followAt,self.landAt,self.fullAt=nil,nil,nil,nil
+scripts/combat/CombatCamera.lua:58:    if self.slideAt then
+scripts/combat/CombatCamera.lua:59:        local t=self.time-self.slideAt
+scripts/combat/CombatCamera.lua:61:        out.focus=-(self.slideDir or Vector3.FORWARD)*(.12*ease(t/.06)*A.Spring(math.max(0,t-.06)))
+scripts/ui/TouchInput.lua:73:    local touchPress=M.Press('evadeRun')
+scripts/ui/TouchInput.lua:74:    local legacyPress=M.Press('dodge') -- existing combat button/callers
+scripts/ui/TouchInput.lua:75:    out.evadePressed=keyPressed or touchPress or legacyPress or padPressed
+scripts/ui/TouchInput.lua:76:    out.evadeHeld=keyHeld or M.Down('evadeRun') or M.Down('dodge') or padHeld
+scripts/ui/TouchInput.lua:83:    if key == KEY_SHIFT then return 'dash' end -- foot runIntent/evadeRun are not keyboard Shift
+scripts/ui/TouchControls.lua:44:        {name='jump',x=-48,y=-148}, {name='dodge',icon='sprint',label='闪避/跑',x=-148,y=-32},
+scripts/ui/TouchControls.lua:51:        {name='evadeRun',icon='sprint',label='闪避/跑',size=64,x=-292,y=-32},
+scripts/ui/TouchControls.lua:65:local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','点【闪避/跑】闪避 · 按住续跑','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
+scripts/ui/TouchControls.lua:92:    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 点按闪避 · 按住加速跑' or '点按挥剑 · 长按重击 · 点按闪避 · 按住加速跑' end
+scripts/ui/TouchControls.lua:249:        local evade=b.name=='evadeRun' or b.name=='dodge'
+scripts/ui/TouchControls.lua:250:        local cd=evade and (state.dodgeCool or 0) or (state.cool and state.cool[b.name] or 0)
+scripts/ui/TouchControls.lua:251:        local total=evade and .50 or (state.cooldown and state.cooldown[b.name] or 1)
+scripts/ui/TouchControls.lua:252:        if evade and (state.sprintPending or state.sprinting) then Draw.Arc(vg,x,y,36,34,1,24,Draw.colors.bright,alpha) end
+scripts/ui/CombatHUD.lua:77:local BOW_HINT={'弱蓄 · 松手射击 · 闪避取消','中蓄 · 松手射击 · 闪避取消','满蓄 · 松手射击 · 闪避取消'}
+scripts/ruins/RuinsHUD.lua:27:local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='dodge',key='Shift'},{name='swap',key='按住 Q'}}
+scripts/ruins/RuinsHUD.lua:283:    combat= {'WASD 移动 · Space 跳跃','左键攻击/蓄力 · 右键重击','Shift 闪避 / 按住续跑 · C 收刃','按住 Q 选武器 · 松开确认','Esc / 右键取消选武器','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
+scripts/ruins/RuinsHUD.lua:285:    explore= {'WASD 移动 · Space 跳跃','Shift 点按闪避 · 按住续跑','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}

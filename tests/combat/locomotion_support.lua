@@ -12,9 +12,7 @@ local function New(combat)
     local character=S.anim.character()
     local m=Moves.New{anim=A.New(character,nil),state=State,rig=rig,locomotion=foot,
         forward=function()return Vector3.FORWARD end,position=function()return Vector3.ZERO end,
-        slideStart=function()return true end,enemies=function()return {} end}
-    m.dodgeCount=0
-    m.observe=function(kind,e)if kind=='start' and e.clip=='dodge_slide' then m.dodgeCount=m.dodgeCount+1 end end
+        enemies=function()return {} end}
     return m,foot,character
 end
 local function Tick(m,dt,c)
@@ -22,6 +20,6 @@ local function Tick(m,dt,c)
     if c.onGround==nil then c.onGround=true end
     if c.axis==nil then c.axis=Vector3.FORWARD end
     m:Update(dt,c)
-    return m.motion:Length()+m.o.locomotion.distance
+    return m.motion:Length()
 end
 return {New=New,Tick=Tick,F=F,near=S.near,State=State,Anim=A,Mock=S.anim}

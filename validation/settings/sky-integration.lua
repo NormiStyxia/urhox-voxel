@@ -1,9 +1,12 @@
 package.path='scripts/?.lua;'..package.path
 local vm={}
+function vm:Lerp(b,t)return Vector3(self.x+(b.x-self.x)*t,self.y+(b.y-self.y)*t,self.z+(b.z-self.z)*t)end
 function vm:Normalized() local n=math.sqrt(self.x*self.x+self.y*self.y+self.z*self.z);return Vector3(self.x/n,self.y/n,self.z/n) end
 Vector3=setmetatable({},{__call=function(_,x,y,z)return setmetatable({x=x or 0,y=y or 0,z=z or 0},{__index=vm})end})
 Vector3.ZERO=Vector3(0,0,0);Vector3.UP=Vector3(0,1,0)
-function Vector2(x,y)return{x=x,y=y}end
+Vector2=setmetatable({},{__call=function(_,x,y)return{x=x,y=y}end})
+Vector2.ZERO=Vector2(0,0)
+function Vector4(x,y,z,w)return{x=x,y=y,z=z,w=w}end
 local cm={}
 function cm:Lerp(b,t)return Color(self.r+(b.r-self.r)*t,self.g+(b.g-self.g)*t,self.b+(b.b-self.b)*t)end
 function Color(r,g,b,a)return setmetatable({r=r,g=g,b=b,a=a or 1},{__index=cm})end
@@ -129,8 +132,9 @@ assert(atmosphere.realFog and dn.zone.volumetricFogViewDistance==60)
 print('PASS medium budgets and high instances explicitly disposed, not just hidden')
 local ground=Material:new()
 atmosphere:Update(.2,Vector3(0,6,0),ground)
-assert(ground.params.cloud_shadow_strength==.16)
-assert(ground.params.cloud_shadow_use_atlas==1 and ground.textureName=='cloud_shadow_atlas' and ground.textureBinds==1)
+assert(ground.params.cloud_shadow_strength==.08,'medium uses half the high cloud coverage')
+assert(atmosphere.shadowBound and ground.textureName=='cloud_shadow_atlas' and ground.textureBinds==1)
+assert(ground.params.cloud_wind==atmosphere.clouds.wind)
 local keep=atmosphere.clouds
 settings.Apply()
 assert(atmosphere.clouds==keep,'unchanged quality must not rebuild clouds')
@@ -187,16 +191,18 @@ assert(dn.zone.volumetricFogScatteringColor==oldScatter and dn.sun.volumetricFog
 print('PASS seven managed feature routes: master cloud / lower cloud / shadow persist in settings; no hidden override')
 
 -- Exercise actual SceneQuality callbacks with only Terrain mocked, since no geometry is needed.
-package.loaded['ruins.RuinsTerrain']={}
+local contactTerrain=require('ruins.RuinsTerrain')
+contactTerrain.groundMaterial=ground
 require('ruins.SceneQuality').Attach({sun=dn.sun,zone=dn.zone,dayNight=dn})
+assert(dn.contactAO.layoutSupported and ground.params.contact_columns.x==require('ruins.RuinsBuild').COLONNADE_R)
 assert(registrations[1]=='skyfx')
-for _,name in ipairs({'scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
+for _,name in ipairs({'scene-night-contact','scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
  local found=false
  for i,k in ipairs(registrations)do if k==name then assert(i>1);found=true end end
  assert(found,'scene callback missing: '..name)
 end
 executions={};settings.Apply();assert(executions[1]=='skyfx')
-for _,name in ipairs({'scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
+for _,name in ipairs({'scene-night-contact','scene-shadows','scene-postfx','scene-grass','scene-skycapture'})do
  local found=false
  for i,k in ipairs(executions)do if k==name then assert(i>1);found=true end end
  assert(found)
@@ -207,7 +213,7 @@ settings.Set('shadows','off');settings.Set('postFx','off')
 order={}
 atmosphere:SetQuality('medium')
 assert(settings.Get('quality')=='medium' and atmosphere.quality=='medium')
-assert(order[1]=='skyfx' and order[2]=='scene-skycapture' and order[3]=='scene-shadows' and order[4]=='scene-postfx')
+assert(order[1]=='skyfx' and order[2]=='scene-night-contact' and order[3]=='scene-skycapture' and order[4]=='scene-shadows' and order[5]=='scene-postfx')
 assert(not dn.sun.castShadows and dn.zone.bloomWeight==0)
 atmosphere:SetFeature('bloom',true);assert(settings.Get('postFx')=='full' and dn.zone.bloomUEIntensity>0)
 atmosphere:SetFeature('bloom',false);assert(settings.Get('postFx')=='off' and dn.zone.bloomUEIntensity==0)

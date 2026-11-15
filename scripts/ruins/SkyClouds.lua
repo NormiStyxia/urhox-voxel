@@ -199,19 +199,21 @@ end
 -- 宿主5Hz；少量uniform缓慢漂移，不更新顶点/图集，不创建日志字符串。
 function M:Update(dt,day,dusk,dn)
     if self.disposed or self.unavailable then return end
+    -- All tiers advect. Low disables breathing, not world-space movement.
+    -- Keep real elapsed time during a cold download; no one-second truncation.
+    local moving=self.motionEnabled
+    if moving and self.budget>0 then self.elapsed=self.elapsed+Finite(dt,0,0,math.huge) end
     if not self.material then
         if self.loading then self.pendingDay,self.pendingDusk,self.pendingDN=day,dusk,dn end
         return
     end
     -- Keep the double clock; wrap only the upload. 3600m is a common period
     -- for the three sky layers and the 600x300m ground pattern.
-    local moving=self.motionEnabled and not self.horizonOnly
-    if moving then self.elapsed=self.elapsed+Finite(dt,0,0,1) end
-    local t=self.horizonOnly and 0 or self.elapsed
-    self.wind.x=(0.24*t+75*(1-math.cos(t*0.0008)))%3600
-    self.wind.y=(0.10*t+(0.04/0.0006)*(math.cos(0.7)-math.cos(t*0.0006+0.7)))%3600
-    self.wind.z=moving and (0.24+0.06*math.sin(t*0.0008)) or 0
-    self.wind.w=moving and (0.10+0.04*math.sin(t*0.0006+0.7)) or 0
+    local t=self.elapsed
+    self.wind.x=(1.20*t+150*(1-math.cos(t*0.0008)))%3600
+    self.wind.y=(0.36*t+(0.06/0.0006)*(math.cos(0.7)-math.cos(t*0.0006+0.7)))%3600
+    self.wind.z=moving and (1.20+0.12*math.sin(t*0.0008)) or 0
+    self.wind.w=moving and (0.36+0.06*math.sin(t*0.0006+0.7)) or 0
     self.material:SetShaderParameter("cloud_wind",Variant(self.wind))
     self.material:SetShaderParameter("drift_time",Variant(t%(10000*math.pi)))
     self.material:SetShaderParameter("motion_detail",Variant(self.motionDetail))

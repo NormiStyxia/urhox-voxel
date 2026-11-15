@@ -27,10 +27,7 @@ assert(count==1,'one hit per enemy per swing')
 m=New(); Tick(.01,{attack=true}); Tick(.1,{attack=true}); m:Cancel('touchcancel')
 for i=1,50 do Tick(.02) end
 assert(count==1 and shots==0,'cancel must not become release')
-m=New(); Tick(.01,{dodge=true,axis=Vector3(1,0,0)}); assert(m.iframe)
-assert(not m:ApplyHit{dmg=10}.hit)
-for i=1,15 do Tick(.02) end
-assert(not m.iframe); assert(m:ApplyHit{dmg=10,dir=Vector3(1,0,0)}.hit)
+m=New();assert(m:ApplyHit{dmg=10,dir=Vector3.RIGHT}.hit)
 assert(not m:ApplyHit{dmg=10}.hit and m.hp==90)
 for i=1,50 do Tick(.02) end
 assert(m:ApplyHit{dmg=100}.killed)
@@ -65,12 +62,12 @@ for i=1,5 do Tick(.02) end
 assert(shots==before,'weak tap never queues a later shot')
 Bow(); before=shots
 Tick(.01,{heavy=true}); for i=1,10 do Tick(.02) end
-Tick(.01,{dodge=true,axis=Vector3(1,0,0)})
+m:Cancel('menu')
 for i=1,50 do Tick(.02) end
-assert(shots==before and not m.autoFire,'dodge discards automatic shot')
+assert(shots==before and not m.autoFire,'menu discards automatic shot')
 m=New(); assert(m:Swap()); assert(m.clip=='weapon_swap_sword_to_bow')
-Tick(.18); assert(not m:Action('dodge',Vector3(1,0,0)),'swap first .2 is not cancellable')
-Tick(.03); assert(m:Action('dodge',Vector3(1,0,0)),'swap cancel follows animation event')
+Tick(.18); assert(not m:CanCancel(),'swap first .2 is not cancellable')
+Tick(.03); assert(m:CanCancel(),'swap cancel follows animation event')
 m=New(); assert(m:Swap()); Tick(.41)
 assert(State.GetWeapon()=='bow' and State.TransitionRemaining()==0 and not m.clip,'weapon_ready completes swap')
 local getStats=rig.GetStats
@@ -83,13 +80,10 @@ assert(m.fullCharged,'crystal pommel advances charge clip by its multiplier')
 rig.GetStats=getStats
 m=New(); m:Play('getup'); Tick(.46)
 assert(not m.clip and next(m.protection),'getup finishes pose at .45 but keeps real-time protection')
-assert(m:Action('dodge',Vector3(1,0,0)))
+assert(m:Action('light'))
 Tick(.10); assert(next(m.protection),'new action must not cancel independent getup tail')
 Tick(.05); assert(not next(m.protection),'protection ends at .60 real seconds')
-m=New(); Tick(.01,{dodge=true}); assert(m.iframe)
-m.hitstop=1; m.invuln=.8; Tick(.30)
-assert(not m.iframe and math.abs(m.invuln-.5)<.000001,'hitstop never pauses iframe or damage immunity clocks')
-print('PASS real animation events: sword dedupe, cancel no cast, dodge iframe, invuln, death respawn, bow fire')
+m=New();m.invuln=.8;m.hitstop=1;Tick(.30);S.near(m.invuln,.5)
 
 -- F7 seek follows authored events without sending them through gameplay handlers.
 local preview=A.New(S.anim.character(),nil)
@@ -160,101 +154,6 @@ S.near(pausedAnim.tracks[1].t,.1)
 pe.combatAllowed=true;pe.animPreview_.t=.74
 frame();S.near(pe.animPreview_.t,0);S.near(pausedAnim.tracks[1].t,0)
 print('PASS actual Scene F7 pause/focus frames suppress Apply fallback; loop display clock matches pose')
-
--- §18: actual W4 clip + player input loop, no Runtime/engine emulation claim.
-local function Slide() m=New(); assert(m:Action('dodge',Vector3(1,0,0))); return m end
-local function Travel(fps,stop)
-    Slide();m.hitstop=1
-    local distance=0
-    for i=1,math.ceil(.34*fps) do
-        Tick(1/fps)
-        distance=distance+m.motion:Length()
-    end
-    return distance
-end
-S.near(Travel(30),2.2);S.near(Travel(60),2.2)
-Slide();local walked=0
-for i=1,8 do Tick(1/30,{axis=Vector3(1,0,0)});walked=walked+m.motion:Length() end
-S.near(walked,2.12);assert(not m.clip,'walk input ends slide exactly at .26, dropping remaining .08m')
-Slide();S.near(m:Facing().z,1);Tick(.04,{axis=Vector3(0,0,-1)})
-assert(m.motion.x>0 and m.motion.z==0,'accepted movement cannot follow a later stick direction')
-S.near(m:Facing().z,1)
-m=New();assert(m:Action('dodge',Vector3(.05,0,.05)));S.near(m.moveDir.z,-1)
-Slide();Tick(.49);assert(not m:Action('dodge'))
-Tick(.01);assert(m:Action('dodge'),'cooldown .50 runs in real time')
-m=New();m.o.slideStart=function() return false end
-assert(not m:Action('dodge') and m.dodgeCool==0 and not m.iframe,'unsafe start consumes nothing')
-Slide();m.o.slideMotion=function() return Vector3.ZERO,true end
-Tick(.01);assert(m.slideStopped and m.iframe and m.dodgeCool>0)
-Tick(.19);assert(not m.iframe,'clipped displacement retains original immunity expiry')
-
-for _,entry in ipairs({{'sword_light_1',.18},{'sword_light_2',.18},{'sword_light_3',.30},{'sword_heavy_release',.48}}) do
- m=New();m.o.enemies=function() return {} end;m:Play(entry[1]);Tick(entry[2]-.001)
- assert(not m:Action('dodge'),'cannot cancel early '..entry[1])
- Tick(.001);assert(m:Action('dodge'),'cancel event must open '..entry[1])
-end
-Slide();Tick(.05);Tick(.01,{attackTap=true})
-local travel=m.motion:Length()+.6 -- .05s initial movement
-while m.clip=='dodge_slide' do Tick(1/30);travel=travel+m.motion:Length() end
-assert(m.clip=='sword_light_1' and not m.iframe and m.buffer==nil,'same-frame single attack at .22')
-S.near(travel,1.92)
-local lunge=0
-for i=1,30 do Tick(.02);lunge=lunge+m.motion:Length() end
-assert(lunge<=.350001,'post-slide first attack lunge capped, no leftover slide impulse')
-Slide();for i=1,20 do Tick(.02) end
-assert(not m.clip and m.combo==0,'without a new edge slide never auto attacks')
-m=New();m.combo=1;assert(m:Action('dodge'));Tick(.04);Tick(.01,{attackTap=true});Tick(.18)
-assert(m.clip=='sword_light_2','slide preserves next combo stage')
-m=New();m.combo=2;assert(m:Action('dodge'));Tick(.61);assert(m:Action('light'));assert(m.clip=='sword_light_1')
-Slide();Tick(.04);assert(not m:ApplyHit{dmg=10}.hit);local reward=m.perfectUntil
-Tick(.01);assert(not m:ApplyHit{dmg=10}.hit and m.perfectUntil==reward,'one precise reward per slide')
-Tick(.18);assert(m:Action('light'));Tick(.11)
-assert(m.strikePerfect and not m.perfectUntil,'next sword consumes poise-only reward')
-Slide();Tick(.11);assert(not m:ApplyHit{dmg=10}.hit and not m.perfectUntil,'late iframe is not precise dodge')
-Slide();Tick(.04);m:ApplyHit{dmg=10};Tick(.81);assert(m:Action('light'));Tick(.11)
-assert(not m.strikePerfect,'precise reward expires .8 after intercept')
-Bow();Tick(.1,{attack=true});Tick(.1,{attack=true});before=shots
-Tick(.01,{dodge=true,attack=true});assert(m.clip=='dodge_slide' and m.charge==0)
-for i=1,16 do Tick(.02,{attack=true}) end
-assert(shots==before and not m.clip,'old held bow cannot charge or shoot after sliding')
-Tick(.01);Tick(.01,{attack=true});assert(m.clip=='bow_draw' and m.charge<.1)
-Bow();assert(m:Action('dodge'));Tick(.05);Tick(.01,{attackTap=true});Tick(.17)
-assert(m.clip=='dodge_slide' and not m.buffer,'bow early tap is not latched')
-Tick(.01,{attack=true});assert(m.clip=='bow_draw','new post-.22 press draws without waiting for .32')
-print('PASS slide cancel matrix, same-frame latch, combo expiry, direction snapshot, CD, reward, no ghost bow, 30/60FPS')
-Slide();local dust={};m.o.dust=function(count) dust[#dust+1]=count end
-Tick(.04);local shotsOut=m:SlideAfterimages(Vector3.ZERO,{})
-assert(#shotsOut==1 and shotsOut[1].life==.08)
-Tick(.02);assert(#m:SlideAfterimages(Vector3.ZERO,{})==1,'no snapshot faster than .04')
-Tick(.02);assert(#m:SlideAfterimages(Vector3.ZERO,{})==2)
-Tick(.08);assert(not m.slideImages)
-Tick(.08);assert(#m:SlideAfterimages(Vector3.ZERO,{})==0,'snapshots expire on real time')
-Tick(.02);assert(dust[1]==3 and dust[2]==2 and #dust==2)
-Slide();dust={};m.o.dust=function(count) dust[#dust+1]=count end
-Tick(.04);m:Cancel('menu');assert(dust[1]==3 and dust[2]==2)
-Tick(.3);assert(#dust==2,'interrupt emits exactly one brake, no stale extra dust event')
-assert(State.GetSetting('dodgeFov')==false,'dodge FOV is opt-in')
-print('PASS dust start/brake/interrupt once, <=2 snapshots/.04 cadence/.08 expiry, default FOV off')
-
--- A rejected dodge must not clear the current strike; an accepted one clears
--- immediately, once, before its delayed afterimage window.
-do
-    local trailResets=0
-    rig.SetTrail=function(_,enabled)
-        assert(enabled==false and m.clip=='dodge_slide')
-        trailResets=trailResets+1
-    end
-    m=New();m.o.slideStart=function() return false end
-    assert(not m:Action('dodge') and trailResets==0)
-    m=New();m.anim.Play=function() return nil end
-    assert(not m:Action('dodge') and trailResets==0)
-    m=New();assert(m:Action('dodge') and trailResets==1)
-    assert(not m:Action('dodge') and trailResets==1)
-    Tick(.02);assert(trailResets==1 and #m:SlideAfterimages(Vector3.ZERO,{})==0)
-    Tick(.02);assert(trailResets==1 and #m:SlideAfterimages(Vector3.ZERO,{})==1)
-    rig.SetTrail=nil
-end
-print('PASS accepted slide clears previous trail once before .04s; rejected slide leaves it intact')
 
 -- §19: one immutable-in-consumption event and max-only group envelopes.
 m=New()
@@ -428,3 +327,88 @@ do
     beetle:Destroy()
 end
 print('PASS R8 actual Hit.Apply -> Moves.Feedback -> EnemyBase.OnHitEvent, one kernel on kill, copied profile contract and no double presentation')
+
+-- Five independent clips/zones/profiles, any stage branches to heavy at its gate.
+do
+ local D=require('combat.AnimClips')
+ assert(C.COMBO_LENGTH==5 and #D.Combo==5)
+ for stage,row in ipairs(D.Combo) do
+  m=New();m.combo=stage-1;assert(m:Action('light'));assert(m.clip==row.id)
+  local clip=D.Clips[row.id]
+  local damage,counted,event=0,0,nil
+  local target={active=true,GetHurtShapes=function()return {{id='body',center=Vector3(0,1,1),radius=.3}}end,
+   ApplyHit=function(_,info)damage=info.dmg;counted=counted+1;return {hit=true}end}
+  m.o.enemies=function()return {target}end
+  m.o.feedback=function(e)event={profile=e.profileId,stop=e.stop,poise=e.poise}end
+  Tick(clip.phases.active[1]+.01);m:AfterPose();m:AfterPose()
+  assert(counted==1 and event.profile==row.profile);S.near(damage,10*row.damage)
+  S.near(event.poise,6*row.poise);S.near(event.stop,stage==5 and .09 or (stage==4 and .06 or .04))
+  local zone=C.MeleeZone(row.id,Vector3.ZERO,Vector3.FORWARD,1,false)
+  S.near(zone.radius,row.radius);S.near(zone.angle,row.angle)
+  for _=1,100 do Tick(.01) end
+  assert(counted==1,'one settlement per target for the entire swing')
+  m=New();m.combo=stage-1;assert(m:Action('light'))
+  for _=1,100 do
+   Tick(.01)
+   if (m.cancelOpen or not m.clip) and m.age>=(m.comboCooldownUntil or 0) then break end
+  end
+  assert(m:Action('heavy') and m.clip=='sword_heavy_release')
+ end
+ m=New();m.combo=4;assert(m:Action('light'));Tick(.35)
+ local untilTime=m.comboCooldownUntil;assert(untilTime and not m:Action('light'))
+ for _=1,33 do Tick(.01);assert(not m:Action('light')) end
+ while m.age<untilTime+1e-6 or m.clip do Tick(.01) end
+ assert(m:Action('light') and m.combo==1)
+ m=New();m.combo=2;m.comboUntil=0;Tick(.8);assert(m:Action('light') and m.combo==1)
+end
+print('PASS five-stage data, exact damage/poise/stop/zones/dedupe, heavy branches, finisher .35s lock, timeout reset')
+-- Air eligibility, interruption, real landing signal, height damage cap and dedupe.
+do
+ local air={onGround=false,height=.6,y=3,vx=2,vz=1}
+ local function setup()
+  m=New();m.o.airState=function(out)for k,v in pairs(air)do out[k]=v end;return out end
+  return m
+ end
+ for _,height in ipairs({0,.59,.6,4})do
+  air.height,air.y,air.onGround,air.invalid=height,height,false,false
+  setup();assert(m:Action('light'))
+  assert(m.plunging==(height>=.6))
+ end
+ for _,reason in ipairs({'hit','void','rewind','mount','menu'}) do
+  air.height,air.y,air.onGround,air.invalid=2,2,false,false
+  setup();assert(m:Action('light'));Tick(.13)
+  assert(m.clip=='plunge_loop' and not m.hitOpen and m:MoveScale()==0)
+  m:Cancel(reason);air.onGround=true;air.y=0;Tick(.3)
+  assert(not m.plunging and not m.hitPending and not m.plungeLanded)
+ end
+ air.height,air.y,air.onGround,air.invalid=2,2,false,false
+ setup();assert(m:Action('light'));assert(m:ApplyHit{dmg=5,dir=Vector3.RIGHT}.hit)
+ assert(not m.plunging and m.clip=='hit_light','air attacker remains vulnerable')
+ for _,height in ipairs({.6,4,20}) do
+  air.height,air.y,air.onGround,air.invalid=height,height,false,false
+  setup();local damage,calls,rings,sound=0,0,0,{}
+  local target={active=true,GetHurtShapes=function()return {{id='body',center=Vector3(0,.5,-2),radius=.25}}end,
+   ApplyHit=function(_,info)damage=info.dmg;calls=calls+1;assert(info.plunge and info.poise==18 and info.armorBreak==2);return {hit=true}end}
+  m.o.enemies=function()return {target}end
+  m.o.impactRing=function()rings=rings+1 end
+  m.o.audio={Play=function(name)sound[name]=(sound[name]or 0)+1 end}
+  assert(m:Action('light'));S.near(m.plungeVelocity.x,2);S.near(m.plungeVelocity.z,1)
+  Tick(.13);assert(calls==0)
+  air.onGround,air.y=true,0;Tick(.01)
+  assert(m.clip=='plunge_land' and calls==1 and rings==1 and sound.arrow_hit==1)
+  S.near(damage,16*math.min(2.2,1.4+height*.1));S.near(m.lastStop,.10)
+  local zone=m:StrikeZones();S.near(zone.radius,2.4);S.near(zone.angle,360)
+  local landed=m.landedAt
+  for _=1,24 do Tick(.01);assert(not m:CanCancel()) end
+  Tick(.01);assert(m:CanCancel() and m.age-landed>=.25-1e-8)
+  assert(m:Action('light') and m.clip=='sword_light_1')
+  assert(calls==1 and rings==1,'repeated contact/poll cannot replay impact')
+ end
+ air.height,air.y,air.onGround,air.invalid=2,2,false,false
+ setup();assert(m:Action('light'));air.invalid=true;Tick(.05)
+ assert(not m.plunging and not m.hitPending)
+end
+print('PASS plunge .6m eligibility, preserved inertia, interrupt/void, one 2.4m disc, damage 1.4..2.2 heavy factor, .10 stop and .25 real recovery')
+
+Bow();m.o.airState=function(out)out.onGround,out.height,out.y=false,2,2;return out end
+assert(m:Action('hold') and m.clip=='bow_draw','sword air move cannot consume existing bow input')

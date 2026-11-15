@@ -1,0 +1,11 @@
+{
+  "scripts/ruins/SkyClouds.lua": "eca8024a6aa8ae9f82929df52bdaa60f0c56410c3f032c944c3b73d73e2c527d",
+  "scripts/ruins/SkyAtmosphere.lua": "3a321654dde0e62246b9b5a5cf3dd5dd0a69ae382d90f816f0eeabb00f8e5085",
+  "scripts/ruins/DayNight.lua": "6c30bc3d3e020053257d71d4e5e21fda2267598340eb21754a99d80483b274f1",
+  "scripts/ruins/LightShafts.lua": "b867f3aa0d59565eef3a1743086687cab5f6680e4ce3a237a390724a18c5ea8d",
+  "scripts/ruins/LightQuality.lua": "807745484fa9c7a09040180f19443f18042cb008c724b88a3e3e1ba833cb7fe1",
+  "scripts/ruins/GameSettings.lua": "42cda1d342dd741095c5fc2aca7158d9d9c9cb5978b4ef1d78332c00d9997683",
+  "scripts/ruins/RuinsScene.lua": "f5ad80c0651162defdbb507ef0459f9bd21dcf3356eea812307ae3cf06e9697f",
+  "assets/Shaders/BLGL/RuinsCloud.shader": "9ddeb32127193db89ed8f87e49de1de0de549fe1bb6844b3768ae7eadbf3ba16",
+  "assets/Shaders/BLGL/RuinsLightShaft.shader": "b49ebc7f351f503f696fb7d31073cabd8b0405c9ce5584499cf3a99dae40afc6"
+}

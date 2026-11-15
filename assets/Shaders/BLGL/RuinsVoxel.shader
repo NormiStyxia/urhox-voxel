@@ -6,6 +6,7 @@
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
 #include "res://Shaders/BLGL/RuinsFrost.shaderinc"
+#include "res://Shaders/BLGL/RuinsContactAO.shaderinc"
 
 uniform sampler2D palette_tex : filter_nearest, repeat_disable;
 #include "res://Shaders/BLGL/Voxel/VoxelPalette.shaderinc"
@@ -177,4 +178,5 @@ void fragment() {
         ALBEDO = mix(ALBEDO, ALBEDO * 0.75 + hover_color.rgb * 0.25, hover);
         EMISSION += hover_color.rgb * (0.35 + fres * 2.4) * hover;
     }
+    AO=ruins_contact_ao(VERTEX,n,jointK);
 }

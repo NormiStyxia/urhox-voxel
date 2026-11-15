@@ -74,7 +74,7 @@ local feedbackDebug,feedbackMetrics='',{}
 local enemyScreen={visible=false}
 local headOffset=Vector3(0,0,0)
 local PART_TEXT={}
-local BOW_HINT={'弱蓄 · 松手射击 · 闪避取消','中蓄 · 松手射击 · 闪避取消','满蓄 · 松手射击 · 闪避取消'}
+local BOW_HINT={'弱蓄 · 松手射击 · 切换取消','中蓄 · 松手射击 · 切换取消','满蓄 · 松手射击 · 切换取消'}
 local C=Draw.colors
 local RED={240,91,76}
 local HISTORY={103,62,66}

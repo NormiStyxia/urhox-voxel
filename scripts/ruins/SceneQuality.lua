@@ -1,6 +1,7 @@
 -- One-time registration only; no Update subscription or per-frame traversal.
 local Settings=require('ruins.GameSettings')
 local Terrain=require('ruins.RuinsTerrain')
+local ContactAO=require('ruins.ContactAO')
 local M={}
 ---@class SettingsGrass: Component
 ---@field density number
@@ -10,6 +11,15 @@ function M.Attach(host)
     local sun=host.sun --[[@as Light]]
     local zone=host.zone --[[@as Zone]]
     local originalBloom={mode=zone.bloomMode,weight=zone.bloomWeight,plus=zone.bloomPlusIntensity,ue=zone.bloomUEIntensity}
+    local dayNight=host.dayNight --[[@as DayNight]]
+    if dayNight.contactAO then dayNight.contactAO:Dispose() end
+    dayNight.contactAO=ContactAO.New(host.surfaceMaterials or {},Terrain.groundMaterial)
+    Settings.RegisterQuality('scene-night-contact',function(p)
+        dayNight.nightMoon=math.max(0.5,math.min(1,p.nightMoon or .82))
+        dayNight.nightIBL=math.max(.68,math.min(1.3,p.nightIBL or 1.08))
+        dayNight.contactAO:SetQuality(p,dayNight.day or 0)
+        dayNight:Apply()
+    end)
     Settings.RegisterQuality('scene-skycapture',function(p)
         local dn=host.dayNight --[[@as DayNight]]
         if dn.capture.resolution~=p.skyCaptureResolution then

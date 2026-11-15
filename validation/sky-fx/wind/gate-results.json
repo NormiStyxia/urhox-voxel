@@ -1,0 +1,27 @@
+[
+  {
+    "command": "python3 validation/sky-fx/wind/check.py",
+    "result": "PASS",
+    "log": "validation/sky-fx/wind/contract.log"
+  },
+  {
+    "command": "python3 validation/sky-fx/check.py",
+    "result": "PASS",
+    "log": "validation/sky-fx/wind/lua-check.log"
+  },
+  {
+    "command": "python3 validation/sky-fx/missing_dwp_check.py",
+    "result": "PASS",
+    "log": "validation/sky-fx/wind/cold-cache.log"
+  },
+  {
+    "command": "python3 validation/sky-fx/lsp_check.py",
+    "result": "PASS",
+    "log": "validation/sky-fx/wind/lsp-check.log"
+  },
+  {
+    "command": "python3 validation/sky-fx/wind/preview.py",
+    "result": "PASS",
+    "log": "validation/sky-fx/wind/preview.log"
+  }
+]

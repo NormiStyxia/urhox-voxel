@@ -8,18 +8,18 @@ ROOT=Path(__file__).resolve().parents[2]
 reference=runpy.run_path(str(ROOT/'validation/sky-fx/skycards_check.py'))
 
 class Value:
-    def __init__(self,value): self.a=np.asarray(value,float)
-    def __add__(self,b): return Value(self.a+raw(b))
+    def __init__(self,value): self._value=np.asarray(value,float)
+    def __add__(self,b): return Value(self._value+raw(b))
     __radd__=__add__
-    def __sub__(self,b): return Value(self.a-raw(b))
-    def __rsub__(self,b): return Value(raw(b)-self.a)
-    def __mul__(self,b): return Value(self.a@raw(b) if self.a.ndim==2 else self.a*raw(b))
-    def __rmul__(self,b): return Value(raw(b)*self.a)
-    def __truediv__(self,b): return Value(self.a/raw(b))
+    def __sub__(self,b): return Value(self._value-raw(b))
+    def __rsub__(self,b): return Value(raw(b)-self._value)
+    def __mul__(self,b): return Value(self._value@raw(b) if self._value.ndim==2 else self._value*raw(b))
+    def __rmul__(self,b): return Value(raw(b)*self._value)
+    def __truediv__(self,b): return Value(self._value/raw(b))
     def __getattr__(self,key):
         ids=[{'x':0,'y':1,'z':2,'w':3,'r':0,'g':1,'b':2,'a':3}[c] for c in key]
-        return float(self.a[ids[0]]) if len(ids)==1 else Value(self.a[ids])
-def raw(v): return v.a if isinstance(v,Value) else v
+        return float(self._value[ids[0]]) if len(ids)==1 else Value(self._value[ids])
+def raw(v): return v._value if isinstance(v,Value) else v
 def vec(*args): return Value(np.concatenate([np.atleast_1d(raw(v)) for v in args]))
 def body(source):
     code=source.split('void vertex() {',1)[1].split('}',1)[0]
@@ -35,7 +35,12 @@ def camera(yaw=0,pitch=0,roll=0,position=(0,0,0)):
     inverse=np.eye(4);inverse[:3,:3]=ry@rx@rz;inverse[:3,3]=position
     return np.linalg.inv(inverse),inverse
 
-def evaluate(source,vertex,normal,color,model,view,inv_view,time=0,author_view=None):
+def wind(time):
+    return vec((1.20*time+150*(1-math.cos(time*.0008)))%3600,
+               (.36*time+(.06/.0006)*(math.cos(.7)-math.cos(time*.0006+.7)))%3600,
+               1.20+.12*math.sin(time*.0008),.36+.06*math.sin(time*.0006+.7))
+
+def evaluate(source,vertex,normal,color,model,view,inv_view,time=0,author_view=None,capture=None,detail=1,wind_value=None):
     world_mode='world_vertex_coords' in source.split(';')[1]
     skip='skip_vertex_transform' in source.split(';')[1]
     input_vertex=(model@np.r_[vertex,1])[:3] if world_mode else vertex
@@ -43,10 +48,16 @@ def evaluate(source,vertex,normal,color,model,view,inv_view,time=0,author_view=N
     env=dict(VERTEX=Value(input_vertex),NORMAL=Value(input_normal),COLOR=Value(color),
              MODEL_MATRIX=Value(model),VIEW_MATRIX=Value(view if author_view is None else author_view),
              INV_VIEW_MATRIX=Value(inv_view),CAMERA_POSITION_WORLD=Value(inv_view[:3,3]),
-             drift_time=time,vec3=vec,vec4=vec,length=lambda v:float(np.linalg.norm(raw(v))),
-             max=max,sin=math.sin,cos=math.cos)
+             drift_time=time%(10000*math.pi),cloud_wind=wind(time) if wind_value is None else Value(wind_value),motion_detail=detail,
+             vec2=vec,vec3=vec,vec4=vec,length=lambda v:float(np.linalg.norm(raw(v))),
+             dot=lambda a,b:float(np.dot(raw(a),raw(b))),cross=lambda a,b:Value(np.cross(raw(a),raw(b))),
+             normalize=lambda v:Value(raw(v)/np.linalg.norm(raw(v))),
+             fract=lambda v:Value(raw(v)-np.floor(raw(v))),
+             mix=lambda a,b,t:a*(1-t)+b*t,step=lambda edge,x:float(x>=edge),
+             smoothstep=reference['smooth'],abs=abs,max=max,sin=math.sin,cos=math.cos)
     for line in body(source):
-        lhs,rhs=line.split('=',1);env[lhs.strip()]=eval(rhs,{'__builtins__':{}},env)
+        lhs,rhs=line.split('=',1);env[lhs.strip()]=eval(' '.join(rhs.split()),{'__builtins__':{}},env)
+    if capture is not None: capture.update(env)
     output=np.r_[raw(env['VERTEX']),1]
     # Cached SurfaceUnlit: skip recovers world via cViewInv; world mode skips model.
     world=inv_view@output if skip else output if world_mode else model@output
@@ -85,7 +96,7 @@ def main():
                         assert abs(result[2]@palette['sun']-expected[2]@palette['sun'])<1e-10
                         assert abs(result[3]@palette['sun']-expected[3]@palette['sun'])<1e-10
                         old=evaluate(previous,vertex[:3],vertex[9:12],vertex[5:9],model,view,inv,time)
-                        assert np.allclose(old[1],result[1],atol=1e-8), 'prior ideal matrix path also correct'
+                        if time==0: assert np.allclose(old[1],result[1],atol=1e-8), 'initial layout unchanged; later drift intentionally differs'
                         assert np.all(np.abs(result[0][:3]-origin)<2048), 'followed CPU bounds'
                         if yaw==360: assert np.allclose(result[1],expected[1],atol=1e-8)
                         checks+=1

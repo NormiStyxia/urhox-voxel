@@ -45,6 +45,7 @@ function M:Init(scene,dn)
     self.features.cloudMotion,self.features.atmosphereFog,self.features.nightBraziers=true,true,true
     self.elapsed,self.clock = 0.2,0
     self.cloudElapsed=0 -- preserve wind phase across quality rebuilds and off/on
+    self.cloudStep=0 -- real motion dt; tint's forced initial .2s is not elapsed time
     ---@type Material|nil
     self.ground = nil
     ---@type Material|nil 本次开启已绑定（或已尝试失败）的地表，避免每帧重试/查资源
@@ -224,6 +225,7 @@ end
 function M:Update(dt,position,ground)
     if not self.active or self.stopped then return end
     if self.clouds then self.clouds:Follow(position) end
+    if self.clouds and self.clouds.motionEnabled then self.cloudStep=self.cloudStep+math.max(0,dt) end
     self.clock,self.elapsed = self.clock+math.max(0,dt),self.elapsed+math.max(0,dt)
     -- Fire/light and firefly clocks run every frame, outside the 5Hz sky tint gate.
     if self.braziers then self.braziers:Update(self.dayNight.nightK or 0,self.clock,self.realFog) end
@@ -235,11 +237,11 @@ function M:Update(dt,position,ground)
         self:ApplyCloudShadow()
     end
     if self.elapsed<0.2 then return end
-    local step = self.elapsed
     self.elapsed = 0
     local dn = self.dayNight
     self:ApplyFog()
-    if self.clouds then self.clouds:Update(step,dn.day or 1,dn.dusk or 0,dn) end
+    if self.clouds then self.clouds:Update(self.cloudStep,dn.day or 1,dn.dusk or 0,dn) end
+    self.cloudStep=0
     if self.shafts then self.shafts:Update(dn,true,self.realFog) end
     if self.motes then self.motes:Update(position,true,dn.day or 1) end
     if self.shadowActive then self:ApplyCloudShadow() end

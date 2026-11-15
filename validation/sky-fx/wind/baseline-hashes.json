@@ -1,0 +1,8 @@
+{
+  "scripts/ruins/SkyClouds.lua": "ef9f9a6b7edb355b0c9beafb94cdce0f2d4b0e83be94b4996d005f0f69ba761a",
+  "scripts/ruins/SkyAtmosphere.lua": "6f254419109d7cc55d8023693c69c499df13def7bb1c851d2bdcedbefc534b81",
+  "scripts/ruins/GameSettings.lua": "04d2a11d5cddbb61cec220e733ddc67a6c9025a58985bc6a7bddfe47c0ab1066",
+  "assets/Shaders/BLGL/RuinsCloud.shader": "405f2fd2fd208047420f8f215a840ff39ff99def9d39c330dc66674d5f948e93",
+  "assets/Shaders/BLGL/RuinsGround.shader": "f5d099196923d7568bcd0e3a48174fb2292f6ca8008bf93b2f712f1c1952917d",
+  "assets/Shaders/BLGL/RuinsGrassTuft.shader": "98150b0c09b67fcde3bec9e66f15fbe482c81b336b676a6fbc69a2ea51e7611d"
+}

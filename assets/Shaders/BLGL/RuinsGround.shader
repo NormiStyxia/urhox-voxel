@@ -8,6 +8,7 @@
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
 #include "res://Shaders/BLGL/RuinsFrost.shaderinc"
+#include "res://Shaders/BLGL/RuinsContactAO.shaderinc"
 
 uniform sampler2D splat_map : filter_linear, repeat_disable;
 uniform vec3 daynight_tint = vec3(1.0);
@@ -244,4 +245,5 @@ void fragment() {
     if (cloud_shadow_strength>0.0 && n.y>0.35) {
         ALBEDO*=mix(vec3(1.0),cloud_illumination(wp),smoothstep(0.35,0.75,n.y));
     }
+    AO=ruins_contact_ao(VERTEX,n,0.0);
 }

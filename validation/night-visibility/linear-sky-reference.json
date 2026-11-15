@@ -1,0 +1,53 @@
+{
+  "warning": "CPU input-radiance reference, not SH integral, exposure output, pixel readability or Web evidence",
+  "rows": [
+    {
+      "hemisphere_sample": "zenith",
+      "old_srgb": [
+        0.05,
+        0.08,
+        0.2
+      ],
+      "new_srgb": [
+        0.17,
+        0.22,
+        0.32
+      ],
+      "old_linear_luma_times_diffuse": 0.005693222758779417,
+      "new_linear_luma_times_diffuse": 0.042793520154358604,
+      "ratio": 7.516572241682882
+    },
+    {
+      "hemisphere_sample": "horizon",
+      "old_srgb": [
+        0.14,
+        0.18,
+        0.32
+      ],
+      "new_srgb": [
+        0.24,
+        0.29,
+        0.39
+      ],
+      "old_linear_luma_times_diffuse": 0.01984921706807599,
+      "new_linear_luma_times_diffuse": 0.07342734472774684,
+      "ratio": 3.699256473236012
+    },
+    {
+      "hemisphere_sample": "nadir",
+      "old_srgb": [
+        0.07,
+        0.09,
+        0.13
+      ],
+      "new_srgb": [
+        0.13,
+        0.17,
+        0.24
+      ],
+      "old_linear_luma_times_diffuse": 0.0057705712774021685,
+      "new_linear_luma_times_diffuse": 0.026116658621799686,
+      "ratio": 4.525835894978676
+    }
+  ]
+}

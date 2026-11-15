@@ -1,0 +1,13 @@
+{
+  "scripts/ruins/SkyClouds.lua": "ef9f9a6b7edb355b0c9beafb94cdce0f2d4b0e83be94b4996d005f0f69ba761a",
+  "scripts/ruins/SkyAtmosphere.lua": "6f254419109d7cc55d8023693c69c499df13def7bb1c851d2bdcedbefc534b81",
+  "scripts/ruins/GameSettings.lua": "04d2a11d5cddbb61cec220e733ddc67a6c9025a58985bc6a7bddfe47c0ab1066",
+  "scripts/ruins/NightBraziers.lua": "ee6e60622eb1873a32c89caa41a93c2a23e0313ded3db2b9d9965634baa258f7",
+  "scripts/ruins/RuinsScene.lua": "8f6e9480a2833cd9fd40c18a6b47daec335260d3d448d171f11a0a5ee547aaba",
+  "assets/Shaders/BLGL/RuinsPillarFlame.shader": "e7fb24471222431441215b68911d9c6b7ff20b62c42a291ac1a794610e043496",
+  "assets/Shaders/BLGL/RuinsLightShaft.shader": "5f2c8b8f9f1d1496b1911c798b21279fe9a325e6c45882b87847b8ed421f5996",
+  "assets/Materials/RuinsCloud.xml": "5a14036ad8596b5dcc775d922a4b6375195979719dbe0578dae6d7192f26d085",
+  "assets/Textures/Sky/cloud_sculpted_atlas.png": "4a945619e1f529b16f37e508a2d95276922c7b6104f6d0ea9b14922671d7a26f",
+  "assets/Textures/Sky/cloud_sculpted_atlas_low.png": "7f68a65bc5cb3464f61b1cbee1ec603c3e1865d3bcf389fac4c8e3360ce73726",
+  "assets/Shaders/BLGL/RuinsCloud.shader.meta": "73c88fadf1dcbee09ca85d32d5073d8692eb79a8c1d4a7f4c39968c7f149b32b"
+}

@@ -1,5 +1,6 @@
 import json,pathlib,urllib.request,os
-paths=['SkyClouds','SkyAtmosphere','GameSettings']
+paths=['SkyClouds','SkyAtmosphere','GameSettings','NightBraziers']
+if os.environ.get('SKY_LSP_INCLUDE_SCENE')=='1': paths.append('RuinsScene')
 port=os.environ.get('SKY_LSP_PORT','19552')
 errors=0
 for name in paths:

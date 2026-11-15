@@ -1,0 +1,42 @@
+{
+  "scripts/ruins/SkyClouds.lua": {
+    "sha256": "71308108b91f69672af0040c463cff7e0e4ccc89be2c05b76915f8628513ce11",
+    "md5": "9caab44b5e07e5c08b3ab07f0d5dd188",
+    "bytes": 10213
+  },
+  "scripts/ruins/SkyAtmosphere.lua": {
+    "sha256": "4c8e071c6a253d7248c7238784ce77f063749bb01e87bfceec7a91b9b6b9d84a",
+    "md5": "70094679f083e604b071df0a2e320281",
+    "bytes": 15076
+  },
+  "assets/Shaders/BLGL/RuinsCloud.shader": {
+    "sha256": "0fc41a798d423918b4132697cf3fba107e94213d06d8d68891103d7353957bd8",
+    "md5": "c5d59405e7289380547c9bb3aedaa15e",
+    "bytes": 4945
+  },
+  "assets/Shaders/BLGL/RuinsGround.shader": {
+    "sha256": "0685c81421af4143a78a751f4843b4bc1e0ca024201634ff05eebd52a88c270d",
+    "md5": "1a8ff457240a13a621fb39e7d8678331",
+    "bytes": 12018
+  },
+  "assets/Shaders/BLGL/RuinsGrassTuft.shader": {
+    "sha256": "6df7d8c9c61ca2f4f64090ba45d71d60178e9fad3d9bc6576f02f6da2e0b41ed",
+    "md5": "2ca5200f8d0069852daf48fe9dd8ed3c",
+    "bytes": 3075
+  },
+  "assets/Materials/RuinsCloud.xml": {
+    "sha256": "5a14036ad8596b5dcc775d922a4b6375195979719dbe0578dae6d7192f26d085",
+    "md5": "88da6599a4fc69a0166a3be01d79dd40",
+    "bytes": 299
+  },
+  "assets/Textures/Sky/cloud_sculpted_atlas.png": {
+    "sha256": "4a945619e1f529b16f37e508a2d95276922c7b6104f6d0ea9b14922671d7a26f",
+    "md5": "724896d32b743442834cc942b5bc51ae",
+    "bytes": 1388660
+  },
+  "assets/Textures/Sky/cloud_sculpted_atlas_low.png": {
+    "sha256": "7f68a65bc5cb3464f61b1cbee1ec603c3e1865d3bcf389fac4c8e3360ce73726",
+    "md5": "772f3f4df9f73b93c582caa891400c55",
+    "bytes": 511344
+  }
+}

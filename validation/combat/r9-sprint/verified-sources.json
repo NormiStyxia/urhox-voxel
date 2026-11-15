@@ -1,0 +1,17 @@
+{
+  "head": "494b8b6c3a37871486d1a7bfad981544d311863d",
+  "sha256": {
+    "scripts/ruins/FootLocomotion.lua": "7cbcbc6622728096dc44d514996943c71a7e96db843f80442a6ff885477d649e",
+    "scripts/ruins/NomiController.lua": "5e7d558856004a0b2b12e11ff670aa5bb4e6cd80ecb9c5971358991b6a33c9cb",
+    "scripts/ruins/RuinsScene.lua": "f6cb8573728a0cb12d4972c1098da2e14ce6496e66f9bbe1ed50ae180fe784cb",
+    "scripts/ruins/RuinsHUD.lua": "7d4a08f7f42be727632839eac1fbf17b5fb45b9ec6e2611347e5908c83af3868",
+    "scripts/combat/CombatMoves.lua": "41c91a81f78a5b291b847d6488f2e7f9d666cc9584aa47e9ef73aa6d134f9968",
+    "scripts/combat/CombatAnim.lua": "a42364d47f97cc37cca00f290fe1c102c54005cf0f7d23ec19fd736a22abedd1",
+    "scripts/combat/AnimClips.lua": "fac198c3ccb35b0aeb3c0a1a45f8f86596b4cab9e6544b5a49fccae008063faa",
+    "scripts/combat/CombatCamera.lua": "dc9b656050db174af3ed838c47b069d050c34204b78f01106867c891ef8fea38",
+    "scripts/combat/CombatAudio.lua": "698fd41297a3cee4cc60fc5e4da84a09736adad00e7de5798981ef02f6d8ab5d",
+    "scripts/combat/CombatState.lua": "cfbda010ac524ad29595e160b98533eb8747eda9d1cc9e204a05a2ed0f58e68d",
+    "scripts/ui/TouchInput.lua": "85ddae12ac2a2d36b6699449997183c5f95a9d5395897df350cacfe8de6842ab",
+    "scripts/ui/TouchControls.lua": "33ba22740da1fd53907de84d7457b63b4721ffeae6e2184ed0557e34e67a4335"
+  }
+}

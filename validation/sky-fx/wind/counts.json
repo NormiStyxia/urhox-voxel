@@ -1,0 +1,30 @@
+{
+  "vertex_cases": 168,
+  "wrap_fade_cases": 18,
+  "max_sampled_5Hz_direction_step": 0.0009373682490514143,
+  "cloud_fragment_sha256": "7a93111aa948cf1b19328e504c3aa0124dff7015ba957ef53beb533dbbed35b7",
+  "high": {
+    "clouds": 24,
+    "triangles": 194,
+    "draws": 1,
+    "sky_texture_reads": 1,
+    "shadow_texture_reads": 2
+  },
+  "medium": {
+    "clouds": 12,
+    "triangles": 98,
+    "draws": 1,
+    "sky_texture_reads": 1,
+    "shadow_texture_reads": 1
+  },
+  "low": {
+    "clouds": 4,
+    "triangles": 34,
+    "draws": 1,
+    "sky_texture_reads": 1,
+    "shadow_texture_reads": 0
+  },
+  "gpu_compiled": false,
+  "web_validated": false,
+  "native_grass_shadow": false
+}

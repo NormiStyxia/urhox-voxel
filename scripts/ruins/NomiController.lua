@@ -83,6 +83,7 @@ function M.New(scene, world, spawn, spawnYaw)
     self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
     self.safePos = Vector3(spawn.x,spawn.y,spawn.z)
     self.safeT = 0
+    self.supportY,self.supportX,self.supportZ=spawn.y,spawn.x,spawn.z
     self.cam = ThirdPersonCamera.Create(scene, {
         modes = {
             normal = { distance = 4.6, offset = Vector3(0.55, 1.65, 0), fov = 55.0 },
@@ -146,6 +147,24 @@ function N:MeasureMotion(dt)
     self.actualSpeed=Vector3(self.actualVelocity.x,0,self.actualVelocity.z):Length()
     self.frameTravel=Vector3(delta.x,0,delta.z):Length()
     self.measuredPosition,self.measuredDt=p,dt
+    -- Reuse grounded physical feet, and the terrain's existing analytic height
+    -- cache. No Aim/GridHit/physics ray is issued for air-attack eligibility.
+    if self.cc.onGround then self.supportY,self.supportX,self.supportZ=p.y,p.x,p.z end
+    local y=Terrain.GroundHeight(p.x,p.z)
+    if self.cc.onGround then y=p.y
+    elseif self.supportY and (p.x-self.supportX)^2+(p.z-self.supportZ)^2<.4^2 then y=math.max(y or -math.huge,self.supportY) end
+    self.groundHeight=y
+end
+
+---@param out table Borrowed record, overwritten on every read.
+function N:CombatAirState(out)
+    local p=self.node.worldPosition
+    local velocity=self.cc:GetLinearVelocity()
+    out.onGround,out.y=self.cc.onGround,p.y
+    out.height=self.groundHeight and math.max(0,p.y-self.groundHeight) or 0
+    out.invalid=self.voidReturning or self.groundHeight==nil
+    out.vx,out.vz=velocity.x,velocity.z
+    return out
 end
 
 -- 移动输入（f, r ∈ [-1,1]）
@@ -160,15 +179,13 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     local moving = dir:LengthSquared() > 0.01
     if moving then dir = dir:Normalized() end
     local target = moving and ((run and not aiming) and RUN or (aiming and WALK * 0.6 or WALK)) or 0
-    if combat then target=moving and (combat.baseSpeed or 5)*(combat.scale or 1) or 0 end
+    if combat then target=moving and ((run and not aiming and (combat.scale or 1)==1) and RUN or (combat.baseSpeed or 5))*(combat.scale or 1) or 0 end
     local onGround = cc.onGround
     local want = dir * target * moveAmount
-    if combat and combat.runDistance~=nil then
-        want=(combat.runDirection or dir)*(combat.runDistance/math.max(.001,dt))
-    end
-    if jump and onGround and combat and combat.sprintJump then
-        local carry=self.actualVelocity or self.vel
-        want=Vector3(carry.x,0,carry.z) -- preserve takeoff; subsequent air frames use AIR_CONTROL
+    if combat and combat.plungeVelocity and not onGround then
+        want=combat.plungeVelocity
+        self.vel=want
+        cc:SetLinearVelocity(Vector3(want.x,-18,want.z))
     end
     local k = onGround and (1 - math.exp(-12 * dt)) or (1 - math.exp(-12 * AIR_CONTROL * dt))
     self.vel = self.vel:Lerp(want, k)
@@ -176,12 +193,12 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     if combat then
         -- Animation supplies metres, never teleports the actor. The controller
         -- still resolves walls/steps. Sample the entire path, not only its end.
-        self.vel=onGround and (not combat.explore or combat.runDistance~=nil or combat.scale==0 or combat.sprintJump) and want or self.vel
+        self.vel=onGround and combat.scale==0 and want or self.vel
         local motion=combat.motion or Vector3.ZERO
         local length=motion:Length()
         local p=self.node.worldPosition
         local fraction=1
-        local steps=combat.slideChecked and 0 or math.max(1,math.ceil(length/.12))
+        local steps=combat.motionChecked and 0 or math.max(1,math.ceil(length/.12))
         for i=1,steps do
             local q=p+motion*(i/steps)
             if not Terrain.HasGround(q.x,q.z,.4) then fraction=(i-1)/steps; break end

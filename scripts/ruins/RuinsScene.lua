@@ -545,10 +545,6 @@ local function StartCombat()
     CombatAudio.New(scene_)
     combatAudioWarmup_ = 0
     combatCamera_=CombatCamera.New()
-    local hasDustStreak=false
-    for _,event in ipairs(require('combat.AnimClips').Clips.dodge_slide.events) do
-        if event[1]=='dust_streak' then hasDustStreak=true; break end
-    end
     combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node,{bowRig=combatRig_})
     local bowFireHits,bowFirePool={},{}
     for i=1,64 do bowFirePool[i]={} end
@@ -556,23 +552,12 @@ local function StartCombat()
         clear=function(reason) if weaponGesture_ then weaponGesture_:Interrupt(reason) end end,
         position=function() return nomi_:Position() end,forward=function() return nomi_.node.worldDirection end,
         enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=combatAudioPort,camera=combatCamera_,
-        slideStart=function() return nomi_:CanSlide() end,
-        slideMotion=function(motion) return nomi_:ClipSlideMotion(motion) end,
-        attackMotion=function(motion) return nomi_:ClipAttackMotion(motion) end,
-        dustStreak=function(direction)
+        impactRing=function(pos,dir)
             if not nomi_.cc.onGround then return end
-            CombatMoves.EmitDustStreak(combatParticles_,hitParticleOwner_,nomi_:Position(),direction,
-                function(at) return nomi_:SlideGround(at) end)
+            CombatMoves.EmitImpactRing(combatParticles_,hitParticleOwner_,pos,dir)
         end,
-        dust=function(count,direction)
-            if hasDustStreak or not nomi_.cc.onGround then return end -- §20 shared-pool streak replaces old motes
-            local pos=nomi_:Position()+Vector3(0,.04,0)
-            for i=1,count do
-                local side=Vector3(direction.z,0,-direction.x)*((i-(count+1)*.5)*.06)
-                fx_.motesB:Spawn{pos=pos+side,vel=-direction*.35+side+Vector3(0,.18,0),
-                    life=.12+.04*(i%3),size=.025+.01*(i%3),colors={Color(.48,.46,.40)}}
-            end
-        end,
+        airState=function(out)return nomi_:CombatAirState(out) end,
+        attackMotion=function(motion) return nomi_:ClipAttackMotion(motion) end,
         aimPitch=function()return nomi_.camPitch end,
         intent=function() local a=math.rad(nomi_.camYaw);return Vector3(math.sin(a),0,math.cos(a)) end,
         assist=function(intent,selectTarget)
@@ -623,7 +608,7 @@ local function StartCombat()
             local params=foot_.animOpts.params
             params.weaponInHand=combatMoves_:WeaponInHand() and 1 or 0
             params.sprintWeight,params.gaitPhase=foot_.weight,foot_.phase
-            params.sprintAccel,params.bow=0,CombatState.GetWeapon()=='bow' and 1 or 0
+            params.sprintAccel,params.bow=1,CombatState.GetWeapon()=='bow' and 1 or 0
             foot_.animHandle=combatAnim_:Play('sprint_loop',foot_.animOpts)
         end,
         step=function()
@@ -737,8 +722,7 @@ local function AttachTouchControls()
         touchState.readyFlash,touchState.aggro=CombatState.ReadyFlash(),CombatHasAggro()
         touchState.combat,touchState.weapon=CombatState.InCombat(),CombatState.GetWeapon()
         touchState.combatCharge=combatMoves_ and combatMoves_.charge or 0
-        touchState.sprinting,touchState.sprintPending=foot_ and foot_:IsRunning(),foot_ and foot_.pending
-        touchState.dodgeCool=combatMoves_ and combatMoves_.dodgeCool or 0
+        touchState.sprinting=foot_ and foot_:IsRunning()
         touchState.canMount=M.dragonAwake and not ride.locked and ride.mode=="free" and ride.onGround and ride:NearDragon()<3.6
         touchState.cool,touchState.cooldown,touchState.charging=caster_.cool,cooldown,caster_.charging
         touchState.charge=caster_.charging and caster_.charge or 0
@@ -1149,7 +1133,7 @@ local function StartCombatTest()
             CombatState.Enter('selftest'); CombatState.SetBusy(false); CombatState.FinishTransition()
             CombatState.SetWeapon(step.weapon); CombatState.FinishTransition(); CombatState.Activity(true)
             combatRig_:SetActive(step.weapon); combatRig_:SetPose('hand')
-            combatMoves_.dodgeCool,combatMoves_.hitstop=0,0
+            combatMoves_.hitstop=0
             combatInputBlocked=false
             return true
         end,
@@ -1258,7 +1242,7 @@ local function UpdateAim(presentation)
 end
 
 local function HandleSpells(dt, aim)
-    if combatMoves_ and combatMoves_.clip=='dodge_slide' or (foot_ and foot_:IsRunning()) then
+    if foot_ and foot_:IsRunning() then
         caster_.charging,caster_.charge,caster_.castAnim=false,0,0
         TouchInput.CancelAction('shatter')
         return
@@ -1322,10 +1306,9 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             if keyHeld==nil then keyHeld=input:GetKeyDown(KEY_SHIFT) end
             local keyPress=input:GetKeyPress(KEY_SHIFT)
             if M.fakePress and M.fakePress[KEY_SHIFT] then keyPress=true;M.fakePress[KEY_SHIFT]=nil end
-            TouchInput.SampleEvade(controls,keyPress,keyHeld)
+            TouchInput.SampleRun(controls,keyHeld)
             controls.cancelled=(keyHeld or keyPress) and input:GetKeyDown(KEY_F9) -- debug chord consumes gesture first
             controls.axis=axis
-            controls.runIntent=not CombatState.InCombat() and TouchInput.Down('runIntent')
             controls.jump=allowed and not combatInputBlocked and Press(KEY_SPACE)
             controls.onGround,controls.actualSpeed=nomi_.cc.onGround,nomi_.actualSpeed
             controls.travel,controls.motionSampleDt=nomi_.frameTravel,nomi_.actualDt
@@ -1334,7 +1317,6 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             if combatTest_ and combatTest_.active then
                 local testOK,synthetic=Safe('Debug.F11Input',combatTest_.Input,combatTest_,dt,allowed and not CombatState.HasAggro() and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked())
                 if synthetic then
-                    synthetic.evadePressed,synthetic.evadeHeld=synthetic.dodge==true,false
                     synthetic.inputRevision,synthetic.onGround=controls.inputRevision,controls.onGround
                     synthetic.normalSpeed=controls.normalSpeed
                     controls=synthetic; f,r=0,0
@@ -1347,24 +1329,21 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             if not Safe('Combat.Moves',combatMoves_.Update,combatMoves_,dt,controls) then
                 -- Do not repeat a stale lunge/hit window while moves are disabled.
                 combatMoves_.motion=Vector3.ZERO
-                combatMoves_.hitOpen,combatMoves_.hitPending,combatMoves_.iframe=false,false,false
+                combatMoves_.hitOpen,combatMoves_.hitPending=false,false
             end
         end
         if foot_ or CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
             local options=combatMoveOptions
-            options.scale=allowed and not combatMoves_.slideMotionFrame and combatMoves_:MoveScale() or 0
+            options.scale=allowed and not combatMoves_.motionChecked and combatMoves_:MoveScale() or 0
             options.motion=allowed and combatMoves_.motion or Vector3.ZERO
             options.explore=not CombatState.InCombat()
             local aiming=combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold'
                 or (options.explore and (caster_.charging or caster_.castAnim>0))
             options.baseSpeed=options.explore and (aiming and 4.2*.6 or 4.2) or 5
-            options.runDistance=foot_ and foot_.ownsFrame and foot_.distance or nil
-            if foot_ and foot_.moving then foot_.direction=axis:Normalized() end
-            options.runDirection=foot_ and foot_.direction
             options.sprinting=foot_ and foot_:IsRunning()
-            options.sprintJump=foot_ and foot_.reason=='jump' and combatControls.jump
-            options.facing,options.slideChecked=combatMoves_:Facing(),combatMoves_.slideMotionFrame
-            nomi_:Move(dt,allowed and f or 0,allowed and r or 0,false,
+            options.plungeVelocity=combatMoves_.plunging and combatMoves_.plungeVelocity or nil
+            options.facing,options.motionChecked=combatMoves_:Facing(),combatMoves_.motionChecked
+            nomi_:Move(dt,allowed and f or 0,allowed and r or 0,allowed and not combatInputBlocked and combatControls.runIntent==true,
                 combatControls.jump,
                 aiming,options)
             return
@@ -1420,14 +1399,7 @@ local function UpdateCombatPreview(dt,combatAllowed)
         if previewAllowed and Press(KEY_P) then
             params.legacyPose=params.legacyPose==1 and 0 or 1; changed=true
         end
-        if previewAllowed and clip.id=='dodge_slide' then
-            if Press(KEY_I) then params.moveX,params.moveZ,animPreview_.direction=0,1,'前'; changed=true end
-            if Press(KEY_K) then params.moveX,params.moveZ,animPreview_.direction=0,-1,'后'; changed=true end
-            if Press(KEY_J) then params.moveX,params.moveZ,animPreview_.direction=-1,0,'左'; changed=true end
-            if Press(KEY_L) then params.moveX,params.moveZ,animPreview_.direction=1,0,'右'; changed=true end
-            if Press(KEY_B) then params.bow=params.bow==1 and 0 or 1; changed=true end
-            combatRig_:SetActive(params.bow==1 and 'bow' or 'sword'); combatRig_:SetPose(params.weaponInHand==1 and 'hand' or 'back')
-        elseif previewAllowed and clip.id=='bow_hold' then
+        if previewAllowed and clip.id=='bow_hold' then
             if Press(KEY_EQUALS) or Press(KEY_PLUS) or Press(KEY_KP_PLUS) then params.p=math.min(1,params.p+.1); changed=true end
             if Press(KEY_MINUS) or Press(KEY_KP_MINUS) then params.p=math.max(0,params.p-.1); changed=true end
         end
@@ -1492,7 +1464,7 @@ local function UpdateCombatPreviewText()
         local audioLoaded,audioTotal=CombatAudio.PreloadProgress()
         lines[#lines+1]=string.format('音频预加载 %d/%d',audioLoaded,audioTotal)
         AppendHandDebug(lines,nomi_.nomi,sample,legacy)
-        if foot_ and (clip.id=='dodge_slide' or clip.id=='sprint_loop') and foot_.soles then
+        if foot_ and clip.id=='sprint_loop' and foot_.soles then
             local hip=nomi_.nomi.bones.body.worldPosition
             lines[#lines+1]=string.format('髋Y %.3f · root修正 %+.3fm · 支撑 %s',hip.y,foot_.groundDelta or 0,foot_.phase<.5 and '右' or '左')
             for i,sole in ipairs(foot_.soles) do
@@ -1513,13 +1485,13 @@ local function UpdateCombatAnimationParams()
             local params=foot_.animOpts.params
             params.weaponInHand=combatMoves_:WeaponInHand() and 1 or 0
             params.sprintWeight,params.gaitPhase=foot_.weight,foot_.phase
-            params.sprintAccel,params.bow=math.min(1,foot_.runAge/.22),CombatState.GetWeapon()=='bow' and 1 or 0
+            params.sprintAccel,params.bow=1,CombatState.GetWeapon()=='bow' and 1 or 0
             foot_.animHandle=combatAnim_:Play('sprint_loop',foot_.animOpts)
         end
         if foot_.weight<=0 and combatAnim_:IsPlaying('sprint_loop') then combatAnim_:Stop(foot_.animHandle,.04);foot_.animHandle=nil end
         combatAnim_:SetParam('sprintWeight',foot_.weight)
         combatAnim_:SetParam('gaitPhase',foot_.phase)
-        combatAnim_:SetParam('sprintAccel',math.min(1,foot_.runAge/.22))
+        combatAnim_:SetParam('sprintAccel',1)
         combatAnim_:SetParam('bow',CombatState.GetWeapon()=='bow' and 1 or 0)
     elseif animPreview_.index>0 then
         combatAnim_:SetParam('sprintWeight',1)
@@ -1541,15 +1513,12 @@ local function UpdateCombatRig(dt)
         end
         local offset,euler=combatAnim_:GetWeaponPose()
         combatRig_:SetSwing(offset,euler)
-        local slidePosition,slideRotation
-        if combatRig_.GetAfterimagePose then slidePosition,slideRotation=combatRig_:GetAfterimagePose() end
-        local slideImages=combatMoves_:SlideAfterimages(slidePosition,slideRotation)
         if combatRig_.SetTrail then combatRig_:SetTrail(not combatLowQuality_ and (CombatState.InCombat() or animPreview_.index>0)) end
         if combatRig_.SetCombatVisual then
             combatRig_:SetCombatVisual(CombatState.GetWeapon()=='sword' and (combatMoves_.hitOpen or combatMoves_.hitPending),
                 combatMoves_.clip=='sword_heavy_charge' and combatMoves_.charge or nil)
         end
-        combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or (#slideImages>0 and slideImages or combatAnim_:GetAfterimages()))
+        combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or combatAnim_:GetAfterimages())
         Safe('Rig.Update',combatRig_.Update,combatRig_,dt)
         if combatRig_.PopEvents then
             for _,event in ipairs(combatRig_:PopEvents() or {}) do
@@ -1668,11 +1637,11 @@ function Ruins_HandleUpdate(eventType, eventData)
     if combatAnim_ and animPreview_.index==0 then
         Safe('Animation.BowParameters',UpdateCombatAnimationParams)
     end
-    if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or combatMoves_.clip=='dodge_slide' or (foot_ and foot_.weight>0) or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
+    if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or (foot_ and foot_.weight>0) or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
     if foot_ and M.ride.mode=='free' then
         local preview=animPreview_.index>0 and CombatAnim.DebugList()[animPreview_.index].id
         Safe('Locomotion.Ground',nomi_.GroundFeet,nomi_,foot_,dt,
-            combatMoves_.clip=='dodge_slide' or foot_.weight>0 or preview=='dodge_slide' or preview=='sprint_loop')
+            foot_.weight>0 or combatMoves_.clip=='plunge_land' or preview=='sprint_loop' or preview=='plunge_land')
     end
     if weaponGesture_ then Safe('WeaponSelect.Pose',weaponGesture_.Apply,weaponGesture_,dt) end
     Safe('Debug.F7HUD',UpdateCombatPreviewText)
@@ -1790,7 +1759,7 @@ local function UpdateCombatCamera(dt,cn)
             local impactLength=offset:Length()
             if impactLength>.03 then offset=offset*(.03/impactLength) end
             local footCamera=CombatState.InCombat() or (not Down(KEY_TAB) and not caster_.charging
-                and (combatMoves_.clip=='dodge_slide' or (foot_ and foot_.weight>0) or (combatCamera_.sprint or 0)>0))
+                and ((foot_ and foot_.weight>0) or (combatCamera_.sprint or 0)>0))
             if footCamera then offset=offset+action.focus-cn.worldDirection*action.distance end
             if footCamera or offset:LengthSquared()>0 then nomi_:ApplyCombatOffset(offset) end
             if footCamera then

@@ -7,7 +7,7 @@ local mounted, dead, busy = false, false, false
 local options = {}
 local lastPose = 'hidden'
 local readyFlash=0
-local settings={aimAssist=true,damageNumbers=false,dodgeFov=false,cameraShake=true,cameraFov=true,bowZoom=false}
+local settings={aimAssist=true,damageNumbers=false,cameraShake=true,cameraFov=true,bowZoom=false}
 local logTime,logWindow,logCount=0,0,0
 local logLast={}
 -- Event-only diagnostics: no Update spam, bounded even during a damage burst.
@@ -178,18 +178,13 @@ function M.OnPlayerHit()
     M.Enter('hit'); quiet = 0
 end
 -- Called by accepted combat moves, not by ordinary exploration LMB/1.
----@param cancelTransition boolean|nil Dodge can interrupt draw/sheath.
-function M.Activity(cancelTransition,keepPose)
+---@param cancelTransition boolean|nil Accepted attacks can interrupt draw/sheath.
+function M.Activity(cancelTransition)
     if not M.Enter('attack') then return false end
     if transition > 0 and not cancelTransition then return false end
     idle, quiet, transition = 0, 0, 0
-    if keepPose then
-        if lastPose=='hidden' then Pose('back') end
-        if lastPose=='hand' then SetState(M.ACTIVE,'dodge') end
-    else
-        SetState(M.ACTIVE,'attack')
-        Pose('hand')
-    end
+    SetState(M.ACTIVE,'attack')
+    Pose('hand')
     return true
 end
 function M.SetMounted(value)

@@ -66,11 +66,26 @@ def shade(data,d,right,p,haze):
  color+=rim*(data[:,1]*toward*(.22+.40*dusk))[:,None]
  air=background(d,p);hor=1-smooth(.015,.24,np.abs(d[:,1]));fog=np.clip(haze*.32+hor*.40,0,.68)
  return np.clip(color*(1-fog[:,None])+air*fog[:,None],0,1.15),np.clip(data[:,3]*(1-hor*.22),0,1)
-def render(yaw,pitch,hour,count=24,w=640,h=360):
+def render(yaw,pitch,hour,count=24,w=640,h=360,time=0,baseline=False,wind_value=None,fov=53.13010235415598):
  tris,p=geometry(count,hour);mips=mipmaps(count<=12)
+ detail=1 if count>12 else .5 if count>4 else 0
+ # Execute the real vertex shader rather than a stale independent wind/UV model.
+ import runpy
+ evaluator=runpy.run_path(str(ROOT/'validation/sky-fx/rotation_check.py'))
+ source=(ROOT/('validation/sky-fx/wind/RuinsCloud.shader.before.txt' if baseline else 'assets/Shaders/BLGL/RuinsCloud.shader')).read_text()
+ identity=np.eye(4)
+ for tri in tris:
+  for vertex in tri:
+   captured={}
+   result=evaluator['evaluate'](source,vertex[:3],vertex[9:12],vertex[5:9],identity,identity,identity,
+       time,capture=captured,detail=detail,wind_value=wind_value)
+   vertex[:3]=result[0][:3]
+   vertex[9:12]=result[3] # actual cloud_right varying (constant per patch)
+   vertex[8]=evaluator['raw'](captured['cloud_data'])[3]
  fwd=np.array([math.sin(yaw)*math.cos(pitch),math.sin(pitch),math.cos(yaw)*math.cos(pitch)])
  right=np.array([math.cos(yaw),0,-math.sin(yaw)]);up=np.cross(fwd,right)
- y,x=np.mgrid[:h,:w];rays=(fwd+right*((x+.5-w/2)/h)[...,None]+up*((h/2-y-.5)/h)[...,None]).reshape(-1,3)
+ y,x=np.mgrid[:h,:w];scale=2*math.tan(math.radians(fov)/2)
+ rays=(fwd+right*((x+.5-w/2)/h*scale)[...,None]+up*((h/2-y-.5)/h*scale)[...,None]).reshape(-1,3)
  direction=rays/np.linalg.norm(rays,axis=1)[:,None];color=background(direction,p)
  counts=np.zeros(len(rays),int);alphas=np.zeros(len(rays));lods=[]
  for tri in tris:
@@ -92,8 +107,8 @@ def render(yaw,pitch,hour,count=24,w=640,h=360):
   dims=np.array(mips[0].shape[:2])[::-1]
   lod=np.log2(np.maximum(1,np.maximum(np.linalg.norm(deriv[0]*dims,axis=1),np.linalg.norm(deriv[1]*dims,axis=1))))
   data=sample(mips,uv,lod);lods.extend(lod.tolist())
-  localRight=np.array([tri[0,11],0,-tri[0,9]]);localRight/=max(np.linalg.norm(localRight),.0001)
-  out,alpha=shade(data,direction[ids],localRight,p,tri[0,7]);alpha=np.where(data[:,3]<.003,0,alpha)
+  localRight=tri[0,9:12]
+  out,alpha=shade(data,direction[ids],localRight,p,tri[0,7]);alpha=np.where(data[:,3]<.003,0,alpha)*tri[0,8]
   color[ids]=out*alpha[:,None]+color[ids]*(1-alpha[:,None]);alphas[ids]=alpha+alphas[ids]*(1-alpha)
  assert np.isfinite(color).all() and color.min()>=0 and color.max()<=1.15
  return Image.fromarray(np.rint(srgb(color.reshape(h,w,3))*255).astype(np.uint8)),dict(sampler_calls_mean=float(counts.mean()),p95=float(np.percentile(counts,95)),max=int(counts.max()),cloud_fraction=float(np.mean(alphas>.05)),mean_mip=float(np.mean(lods)) if lods else 0)

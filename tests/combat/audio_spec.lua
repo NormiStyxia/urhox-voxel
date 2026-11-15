@@ -24,7 +24,7 @@ math.randomseed(731)
 
 local expected = {sword_whoosh=3, sword_full=1, hit_soft=3, hit_armor=3, hit_heavy=2, hit_core=1,
     armor_break=2, deflect_stone=2, bow_draw=1, bow_full=1, bow_fire=2, arrow_hit=3,
-    blade_draw=1, blade_sheath=1, enemy_windup=3, player_hurt=2, dodge=2, dodge_land=1, run_step=1,
+    blade_draw=1, blade_sheath=1, enemy_windup=3, player_hurt=2, run_step=1,
     stagger_land=1, enemy_die=2, boss_roar=1, victory=1}
 local manifest, total, names = Audio.Events(), 0, 0
 for name, row in pairs(manifest) do
@@ -41,31 +41,31 @@ for name, row in pairs(manifest) do
         total = total + 1
     end
 end
-check(total == 40 and names == 23, '40 references / 23 events, sword_full/run_step reuse existing assets (38 unique assets)')
+check(total == 37 and names == 21, '37 references / 21 events, sword_full/run_step reuse existing assets (36 unique assets)')
 manifest.hit_soft.files[1] = 'corrupted'
 check(Audio.Events().hit_soft.files[1] ~= 'corrupted', 'manifest isolated')
 
 check(not Audio.IsReady(), 'no manager is not ready')
 local initialLoaded, initialTotal = Audio.PreloadProgress()
-check(initialLoaded == 0 and initialTotal == 38, 'no manager progress')
+check(initialLoaded == 0 and initialTotal == 36, 'no manager progress')
 local manager, mock = fresh(nil, true)
 local loaded, assetTotal = Audio.Preload()
-check(loaded == 0 and assetTotal == 38 and mock.readCount == 0, 'Preload only queues, no synchronous I/O')
+check(loaded == 0 and assetTotal == 36 and mock.readCount == 0, 'Preload only queues, no synchronous I/O')
 check(not Audio.IsReady(), 'queued but not ready')
 for frame = 1, 80 do
     local readsBefore = mock.readCount
     Audio.Preload(); Audio.Update(1/60)
     loaded, assetTotal = Audio.PreloadProgress()
-    check(loaded == math.min(math.floor(frame/2),38) and assetTotal == 38, 'async monotonic progress')
+    check(loaded == math.min(math.floor(frame/2),36) and assetTotal == 36, 'async monotonic progress')
     check(mock.readCount-readsBefore <= 1, 'at most one file request each frame')
-    check(Audio.IsReady() == (frame >= 76), 'ready only after all async resources completed')
+    check(Audio.IsReady() == (frame >= 72), 'ready only after all async resources completed')
 end
-check(mock.readCount == 38 and mock.syncReads == 0, 'async preload without GetResource')
+check(mock.readCount == 36 and mock.syncReads == 0, 'async preload without GetResource')
 check(manager:IsFirstStrikeReady() and manager.readySources==12, 'idle prebuilt first-strike readiness')
 check(mock.order[1]:find('sword_whoosh_1') and mock.order[2]:find('sword_whoosh_2') and mock.order[3]:find('sword_whoosh_3'), 'all three swings are first')
 check(mock.order[4]:find('hit_heavy_1') and mock.order[6]:find('hit_soft_1'), 'heavy then materials')
 Audio.Preload(); Audio.Update(1/60)
-check(mock.readCount == 38, 'completed Preload is idempotent')
+check(mock.readCount == 36, 'completed Preload is idempotent')
 for _, count in pairs(mock.reads) do check(count == 1, 'cache preloaded once') end
 check(mock.sounds['audio/sfx/cmb_bow_draw.mp3'].looped, 'bow looping resource')
 for name, variants in pairs(expected) do
@@ -252,7 +252,7 @@ for _ = 1, 40 do
 end
 check(mock.readCount==readsBefore and #mock.nodes==nodesBefore and #mock.sources==sourcesBefore, 'combat neither expands partial pool nor loads cold materials')
 for _=1,100 do manager:Update(1/60,true) end
-check(manager:IsReady() and mock.readCount==38 and #mock.nodes==12, 'idle resumes complete warmup without duplicate requests')
+check(manager:IsReady() and mock.readCount==36 and #mock.nodes==12, 'idle resumes complete warmup without duplicate requests')
 for _,count in pairs(mock.reads) do check(count==1,'requests deduplicated') end
 
 -- Quality changes during combat cannot allocate; saturated warnings reject decor.
@@ -316,11 +316,11 @@ manager,mock=fresh({missing=true},true);logs={}
 _G.print=function(message) logs[#logs+1]=message end
 for _=1,100 do manager:Preload();manager:Update(1/60,true) end
 loaded,assetTotal=manager:PreloadProgress()
-check(loaded==0 and assetTotal==38 and not manager:IsReady(),'failed resources are not ready')
-check(mock.readCount==38 and #logs==1,'terminal failures log once, no repeated loads')
+check(loaded==0 and assetTotal==36 and not manager:IsReady(),'failed resources are not ready')
+check(mock.readCount==36 and #logs==1,'terminal failures log once, no repeated loads')
 _G.print=savedPrint
 manager:Dispose();manager:Preload();manager:Update(1,true)
-check(not manager:IsReady() and mock.readCount==38,'dispose cancels queued work')
+check(not manager:IsReady() and mock.readCount==36,'dispose cancels queued work')
 
 -- Async pending work is not finalized by Lua in combat and never replays a cue.
 manager,mock=fresh({asyncDelay=4},true)
