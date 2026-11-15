@@ -19,9 +19,10 @@ float ruins_column_contact(vec2 point,float index) {
     vec2 outside=max(abs(point-ruins_contact_column(index))-vec2(contact_columns.z),vec2(0.0));
     return 1.0-smoothstep(0.015,0.45,length(outside));
 }
-float ruins_contact_ao(vec3 point,vec3 normal,float joint) {
+// cameraPos: pass CAMERA_POSITION_WORLD (stage built-ins are not visible in helpers).
+float ruins_contact_ao(vec3 point,vec3 normal,float joint,vec3 cameraPos) {
     if (contact_ao_strength<=0.0) { return 1.0; }
-    float distanceFade=1.0-smoothstep(contact_ao_distance.x,contact_ao_distance.y,length(point-CAMERA_POSITION_WORLD));
+    float distanceFade=1.0-smoothstep(contact_ao_distance.x,contact_ao_distance.y,length(point-cameraPos));
     if (distanceFade<=0.0) { return 1.0; }
     float localContact=0.0;
     float up=smoothstep(0.55,0.85,normal.y);

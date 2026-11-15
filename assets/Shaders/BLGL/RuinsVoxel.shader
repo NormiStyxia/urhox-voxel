@@ -178,5 +178,5 @@ void fragment() {
         ALBEDO = mix(ALBEDO, ALBEDO * 0.75 + hover_color.rgb * 0.25, hover);
         EMISSION += hover_color.rgb * (0.35 + fres * 2.4) * hover;
     }
-    AO=ruins_contact_ao(VERTEX,n,jointK);
+    AO=ruins_contact_ao(VERTEX,n,jointK,CAMERA_POSITION_WORLD);
 }

@@ -24,7 +24,7 @@ end
 local ready=false
 local EMPTY={}
 local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}
-local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='run',key='Shift'},{name='swap',key='按住 Q'}}
+local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='run',icon='sprint',key='Shift'},{name='swap',key='按住 Q'}}
 local MESSAGE_STEPS={-4,0,4,0}
 local MESSAGE_ALPHA={.34,.67,1,1}
 local combatObjective={x=0,y=0,h=0}
