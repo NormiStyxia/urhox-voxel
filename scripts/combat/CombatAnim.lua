@@ -13,7 +13,9 @@ local Data = require("combat.AnimClips")
 local MAX_TRACKS, MAX_EVENTS = 32, 512
 local EPS = 1e-10
 local EMPTY = {}
-local BONE_NAMES = {"body","arm_left","arm_right","head","leg_right","leg_left"}
+-- Forearms follow their arm: the elbow bend is solved together with the shoulder.
+local BONE_NAMES = {"body","arm_left","arm_right","head","leg_right","leg_left","forearm_right","forearm_left"}
+local FOREARM_ARM = {forearm_right="arm_right",forearm_left="arm_left"}
 
 ---@class CombatAnimTrack
 ---@field clip CombatClip
@@ -128,6 +130,7 @@ local function ease(name,x)
     if name=="outQuad" then return 1-(1-x)*(1-x) end
     if name=="inOutQuad" then return x<.5 and 2*x*x or 1-(-2*x+2)^2/2 end
     if name=="inCubic" then return x*x*x end
+    if name=="inOutCubic" then return x<.5 and 4*x*x*x or 1-(-2*x+2)^3/2 end
     if name=="outCubic" then return 1-(1-x)^3 end
     if name=="outExpo" then return x>=1 and 1 or 1-2^(-10*x) end
     if name=="outBack" then return 1+2.70158*(x-1)^3+1.70158*(x-1)^2 end
@@ -186,27 +189,57 @@ local function project(v,axis)
     local n=dot(v,axis)
     return Vector3(v.x-axis.x*n,v.y-axis.y*n,v.z-axis.z*n)
 end
-local function makeArm(shoulder,grip)
-    return {shoulder=shoulder,grip=grip,length=vectorLength(grip)}
+---@param elbow Vector3|nil Forearm pivot in the arm frame (two-segment rig).
+---@param hand Vector3|nil Palm in the forearm frame.
+local function makeArm(shoulder,grip,elbow,hand)
+    return {shoulder=shoulder,grip=grip,length=vectorLength(grip),elbow=elbow,hand=hand}
+end
+-- Shoulder-frame grip after bending the forearm by `pitch` degrees about its
+-- local X hinge (negative = flex, palm moves forward). Scalar math only.
+local function bentGrip(arm,pitch)
+    local e,h=arm.elbow,arm.hand
+    local r=math.rad(pitch)
+    local c,s=math.cos(r),math.sin(r)
+    return e.x+h.x,e.y+h.y*c-h.z*s,e.z+h.y*s+h.z*c
 end
 local function ikBuffer()
     return {target=Vector3(0,0,0),clamped=Vector3(0,0,0),actual=Vector3(0,0,0),applied=Vector3(0,0,0),
-        rotation=Quaternion(0,0,0),requestedDistance=0,reachError=0,degenerate=false,enabled=false}
+        rotation=Quaternion(0,0,0),requestedDistance=0,reachError=0,degenerate=false,enabled=false,bend=0}
 end
 ---@param arm CombatArm
 ---@param result CombatIKResult
-local function solveArm(arm,target,authored,result,pole)
+---@param bend number|nil Authored minimum elbow flex (forearm pitch, degrees).
+local function solveArm(arm,target,authored,result,pole,bend)
     local d=Vector3(target.x-arm.shoulder.x,target.y-arm.shoulder.y,target.z-arm.shoulder.z)
     local distance=vectorLength(d)
-    local reference=authored*arm.grip
-    local degenerate=distance<1e-7 or arm.length<1e-7
+    local grip,length=arm.grip,arm.length
+    bend=arm.elbow and (bend or 0) or 0
+    if arm.elbow then
+        local x,y,z=bentGrip(arm,bend)
+        local reach=math.sqrt(x*x+y*y+z*z)
+        if distance>1e-7 and distance<reach then
+            -- Target inside the authored reach: flex further until the palm lands on it.
+            local lo,hi=bend,-160
+            for _=1,14 do
+                local mid=(lo+hi)*.5
+                x,y,z=bentGrip(arm,mid)
+                if x*x+y*y+z*z>distance*distance then lo=mid else hi=mid end
+            end
+            bend=(lo+hi)*.5
+            x,y,z=bentGrip(arm,bend)
+        end
+        grip=Vector3(x,y,z);length=vectorLength(grip)
+    end
+    local reference=authored*grip
+    local degenerate=distance<1e-7 or length<1e-7
     local dir=unit(d,unit(reference,Vector3(0,-1,0)))
     local rotated=authored
     if not degenerate then
         -- A fixed plane pole removes the swing-only antipodal twist singularity.
         -- Horizontal cuts use +Y, vertical cuts / bow use +X. Project the pole
-        -- onto the plane perpendicular to the aim ray; no elbow translation.
-        local swing=align(arm.grip,dir)
+        -- onto the plane perpendicular to the aim ray. The elbow hinge rides
+        -- with the shoulder, so the pole also decides which way the elbow points.
+        local swing=align(grip,dir)
         local fromPole=unit(project(swing*Vector3(0,0,1),dir),unit(vectorCross(dir,Vector3(1,0,0)),Vector3(0,1,0)))
         local toPole=unit(project(pole or Vector3(0,1,0),dir),fromPole)
         local angle=math.atan(dot(dir,vectorCross(fromPole,toPole)),clamp(dot(fromPole,toPole),-1,1))*.5
@@ -214,12 +247,18 @@ local function solveArm(arm,target,authored,result,pole)
         rotated=Quaternion(math.cos(angle),dir.x*sn,dir.y*sn,dir.z*sn)*swing
     end
     result.target=target
-    result.clamped=Vector3(arm.shoulder.x+dir.x*arm.length,arm.shoulder.y+dir.y*arm.length,arm.shoulder.z+dir.z*arm.length)
-    result.actual=arm.shoulder+rotated*arm.grip
+    result.clamped=Vector3(arm.shoulder.x+dir.x*length,arm.shoulder.y+dir.y*length,arm.shoulder.z+dir.z*length)
+    result.actual=arm.shoulder+rotated*grip
     result.rotation=rotated
-    result.requestedDistance,result.reachError,result.degenerate=distance,math.abs(distance-arm.length),degenerate
+    result.requestedDistance,result.reachError,result.degenerate=distance,math.abs(distance-length),degenerate
+    result.bend=bend
     result.enabled=true
     return rotated
+end
+---@param c CombatClip
+local function elbowBend(c,name,p)
+    local track=c.elbow and c.elbow[name]
+    return track and scalarSample(track,p) or 0
 end
 local function pathPoint(path,p)
     local list=path.segments
@@ -274,6 +313,7 @@ local function handTarget(c,name,p,params,arm,bodyHeight,bodyRotation)
     return Vector3(target.x,target.y-bodyHeight,target.z)
 end
 local function pathPole(path)
+    if path.pole then return Vector3(path.pole[1],path.pole[2],path.pole[3]) end
     if path.mode or (path.segments and path.segments[2] and path.segments[2].plane=="yz") then return Vector3(1,0,0) end
     return Vector3(0,1,0)
 end
@@ -376,21 +416,35 @@ function A:init(character,node,opts)
     self.target=Quaternion(0,0,0)
     self.weaponOffset,self.weaponEuler=Vector3(0,0,0),Vector3(0,0,0)
     local arm=character.bones.arm_right
-    self.handSocket=opts.handSocket or (arm and arm:GetChild("SpellPalm",false))
+    local forearmR,forearmL=character.bones.forearm_right,character.bones.forearm_left
+    -- Two-segment rigs own their palm on the forearm; ask the character, never guess.
+    local function palm(side,bone,name)
+        if character.HandSocket and character.bones["forearm_"..side] then return character:HandSocket(side) end
+        return bone and bone:GetChild(name,false)
+    end
+    self.handSocket=opts.handSocket or palm("right",arm,"SpellPalm")
     self.gripRotation=opts.gripRotation or Quaternion(90,0,0)
     local reference=Data.RigReference
     local left=character.bones.arm_left
-    local leftSocket=opts.leftHandSocket or (left and left:GetChild("hand_left",false))
+    local leftSocket=opts.leftHandSocket or palm("left",left,"hand_left")
     local body=character.bones.body
     local rootBase=character.basePos and character.basePos.root
     self.footBaseY=rootBase and rootBase.y or 0
     self.bodyHeight=opts.bodyHeight or (body and rootBase and body.position.y+rootBase.y) or reference.bodyHeight
     self.pathIK=opts.pathIK~=false
+    local function build(shoulder,fallbackShoulder,socket,fallbackGrip,forearm)
+        local s=shoulder and shoulder.position or vec(fallbackShoulder)
+        if forearm and socket then
+            -- Straight-elbow grip = forearm pivot + palm offset (forearm identity).
+            local e,h=forearm.position,socket.position
+            return makeArm(s,Vector3(e.x+h.x,e.y+h.y,e.z+h.z),Vector3(e.x,e.y,e.z),Vector3(h.x,h.y,h.z))
+        end
+        return makeArm(s,socket and socket.position or vec(fallbackGrip))
+    end
+    self.forearms={arm_right=forearmR,arm_left=forearmL}
     self.arms={
-        arm_right=makeArm(arm and arm.position or vec(reference.rightShoulder),
-            self.handSocket and self.handSocket.position or vec(reference.rightGrip)),
-        arm_left=makeArm(left and left.position or vec(reference.leftShoulder),
-            leftSocket and leftSocket.position or vec(reference.leftGrip))}
+        arm_right=build(arm,reference.rightShoulder,self.handSocket,reference.rightGrip,forearmR),
+        arm_left=build(left,reference.leftShoulder,leftSocket,reference.leftGrip,forearmL)}
     self.bladeDirection,self.bladeWeight,self.bladeSide,self.bladeMode,self.aimPitch=Vector3(0,1,0),0,"arm_right","radial",0
     self.realTime,self.afterimageWrite,self.trailHandle=0,0,0
     self.lastImageTime,self.lastImageClipTime=-math.huge,-math.huge
@@ -658,9 +712,22 @@ function A:Apply()
                 local base=bone.rotation
                 local mixed=base
                 local total=0
+                local armName=FOREARM_ARM[name]
                 for _,s in ipairs(self.ordered) do
                     local c=s.clip
-                    local track=((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
+                    if armName then
+                        -- Elbow flex: solved together with this layer's arm IK, else authored.
+                        local solved=s.ik[armName]
+                        local ik=solved and solved.enabled and c.handPath and c.handPath[armName]
+                        local authored=c.elbow and c.elbow[armName]
+                        if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and (ik or authored) then
+                            local bend=ik and solved.bend or elbowBend(c,armName,s.sample)
+                            self.target:FromEulerAngles(bend,0,0)
+                            total=total+s.weight
+                            mixed=mixed:Slerp(self.target,s.weight/total)
+                        end
+                    end
+                    local track=not armName and ((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
                     if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and track then
                         local x,y,z=boneSample(c,name,s.sample,s.params,s.handWeight)
                         if c.param=="p" and s.sample>.8 and name=="body" then
@@ -704,7 +771,7 @@ function A:Apply()
                                     end
                                 end
                             end
-                            target=solveArm(arm,point,target,s.ik[name],pathPole(path))
+                            target=solveArm(arm,point,target,s.ik[name],pathPole(path),elbowBend(c,name,s.sample))
                         elseif s.ik[name] then s.ik[name].enabled=false end
                         total=total+s.weight
                         mixed=mixed:Slerp(target,s.weight/total)
@@ -770,7 +837,9 @@ function A:Apply()
                 or align(Vector3(0,1,0),self.bladeDirection))
         -- Rig composes arm * gripRest * swing. Cancel current arm orientation
         -- only inside swing, keeping the desired blade/bow direction in body space.
-        local extra=inverse(self.gripRotation)*inverse(arm.rotation)*desired
+        local forearm=self.forearms[self.bladeSide]
+        local limb=forearm and arm.rotation*forearm.rotation or arm.rotation
+        local extra=inverse(self.gripRotation)*inverse(limb)*desired
         self.target:FromEulerAngles(ex,ey,ez)
         local result=self.target:Slerp(extra,math.min(1,self.bladeWeight)):EulerAngles()
         ex,ey,ez=result.x,result.y,result.z
@@ -782,7 +851,10 @@ function A:Apply()
             for name,solved in pairs(s.ik) do
                 if solved.enabled then
                     local arm=self.arms[name]
-                    solved.applied=arm.shoulder+self.character.bones[name].rotation*arm.grip
+                    local forearm=self.forearms[name]
+                    local q=self.character.bones[name].rotation
+                    solved.applied=forearm and arm.shoulder+q*(arm.elbow+forearm.rotation*arm.hand)
+                        or arm.shoulder+q*arm.grip
                 end
             end
         end
