@@ -1,0 +1,17 @@
+{
+  "triangles": 870,
+  "gold_guard_iou": 0.7456637100571385,
+  "blade_iou": 0.8780505969431014,
+  "side_blade": {
+    "reference_m": 0.07008816120906801,
+    "model_m": 0.06743415617128463,
+    "relative_error": 0.037866666666666604
+  },
+  "side_guard": {
+    "reference_m": 0.12989672544080605,
+    "model_m": 0.13047999999999998,
+    "relative_error": 0.004490294556807273
+  },
+  "method": "Fixed tip=50, bottom=2035, center=949, 1.855m total. Front visible colour masks (no navy ink), exported quantized triangles with z-buffer. Side maximum alpha-envelope width, not per-row profile accuracy.",
+  "blender_front_available": true
+}

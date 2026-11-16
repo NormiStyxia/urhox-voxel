@@ -12,7 +12,7 @@ data = json.load(open(src))
 def lin(c):  # sRGB -> linear
     return tuple((v/12.92 if v <= .04045 else ((v+.055)/1.055)**2.4) for v in c)
 
-PAL = {'blade': (.89, .915, .94), 'metal': (.878, .698, .325), 'accent': (.236, .538, .855), 'grip': (.08, .15, .36)}
+PAL = {'blade': (.96, .99, 1.0), 'metal': (1.0, .84, .43), 'accent': (.02, .79, 1.0), 'grip': (.08, .15, .36)}
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 verts, faces, cols = [], [], []
@@ -40,12 +40,12 @@ for p in mesh.polygons: p.use_smooth = False
 sc = bpy.context.scene
 sc.render.engine = 'BLENDER_WORKBENCH'
 sh = sc.display.shading
-sh.light = 'STUDIO'; sh.color_type = 'VERTEX'; sh.show_cavity = False
+sh.light = 'FLAT'; sh.color_type = 'VERTEX'; sh.show_cavity = False
 sh.show_object_outline = True; sh.object_outline_color = (.05, .09, .25)
 sc.display.render_aa = '16'
 sc.view_settings.view_transform = 'Standard'
 sc.world = bpy.data.worlds.new('w'); sc.world.color = (.8, .8, .82)
-sc.render.film_transparent = False
+sc.render.film_transparent = True
 sc.render.resolution_x, sc.render.resolution_y = 520, 1100
 
 cam = bpy.data.cameras.new('c'); cam.type = 'ORTHO'

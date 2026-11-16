@@ -11,7 +11,10 @@ Outputs:
   art/weapon_gen/out/wingsword.json   full data for Blender preview
 Run:  python3 -I art/weapon_gen/wingsword.py
 """
-import json, math, os, sys
+import json, math, os, runpy
+
+TRACE = runpy.run_path(os.path.join(os.path.dirname(__file__), 'trace_wingsword.py'))
+xy = TRACE['xy']
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 OUT_LUA = os.path.join(ROOT, 'scripts', 'combat', 'models', 'WingSword.lua')
@@ -114,52 +117,117 @@ BLADE_BASE = GUARD_Y + .07
 TIP_Y = 1.62
 POMMEL_BOTTOM = -.235
 
-# 1) Blade: flat hex section with a flat glowing core strip on each face
+# 1) Twelve-edge cross section: white edge / pale cyan / luminous cyan core.
 def blade():
-    # (y, half width, half thickness)
-    stations = [(BLADE_BASE, .064, .014), (BLADE_BASE+.10, .054, .0135), (1.25, .054, .0125),
-                (1.31, .0605, .0125), (TIP_Y-.0, 0, 0)]
     rings = []
-    for y, w, d in stations[:-1]:
-        c = .36*w
-        rings.append([(-w, y, 0), (-c, y, -d), (c, y, -d), (w, y, 0), (c, y, d), (-c, y, d)])
-    rings.append([(0, stations[-1][0], 0)])
-    cols = [BLADE_SHADOW, CORE, BLADE, BLADE, CORE, BLADE_SHADOW]   # P0P1,P1P2,P2P3,P3P4,P4P5,P5P0
-    shd = [.88, .95, 1.0, 1.0, .95, .88]
-    glo = [0, .35, 0, 0, .35, 0]
-    ring_loft(rings, lambda i: cols[i], lambda i: shd[i], lambda i: glo[i])
+    for py, lx, rx, core_ratio, dp in TRACE['BLADE']:
+        y = xy((949, py))[1]
+        w = (rx-lx)*.5*TRACE['SCALE']
+        d = dp*TRACE['SCALE']*1.10
+        c = w*core_ratio
+        a = w*(.10 if py==180 else .65)
+        rings.append([(-w,y,0),(-a,y,-d*.72),(-c,y,-d),(0,y,-d*1.025),
+                      (c,y,-d),(a,y,-d*.72),(w,y,0),(a,y,d*.72),
+                      (c,y,d),(0,y,d*1.025),(-c,y,d),(-a,y,d*.72)])
 
-# 2) Collar over the blade root + small gem
+    cols = [BLADE,(.60,0,.40),CORE,CORE,(.60,0,.40),BLADE,
+            BLADE,(.60,0,.40),CORE,CORE,(.60,0,.40),BLADE]
+    shades = [1,1,.94,1,1,1,1,1,1,.94,1,1]
+    ring_loft(rings,lambda i:cols[i],lambda i:shades[i],
+              lambda i:.35 if i in (2,3,8,9) else 0,close_bottom=(BLADE,.8))
+    for i in range(12):
+        a,b=rings[-1][i],rings[-1][(i+1)%12]
+        face([a,b,(0,TIP_Y,0)],BLADE,1,0,((a[0]+b[0])/2,0,(a[2]+b[2])/2))
+
+def signed_area(poly):
+    return sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(poly,poly[1:]+poly[:1]))*.5
+
+def turn(a,b,c):
+    return (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])
+
+def ears(poly):
+    """Ear clipping for concave traced outlines; returned indices are CCW."""
+    idx=list(range(len(poly)))
+    if signed_area(poly)<0: idx.reverse()
+    out=[]
+    while len(idx)>3:
+        for j in range(len(idx)):
+            a,b,c=idx[j-1],idx[j],idx[(j+1)%len(idx)]
+            if turn(poly[a],poly[b],poly[c])<=1e-12: continue
+            if any(min(turn(poly[a],poly[b],poly[k]),turn(poly[b],poly[c],poly[k]),
+                       turn(poly[c],poly[a],poly[k]))>=-1e-12
+                   for k in idx if k not in (a,b,c)): continue
+            out.append((a,b,c));idx.pop(j);break
+        else: raise ValueError('Non-simple trace polygon')
+    out.append(tuple(idx))
+    return out
+
+def traced_plate(pixels, layer=0, ridge=None):
+    """Closed, outward-wound thin gold plate. The depth field sweeps forward
+    toward the feather tips (side-view arc); each layer has its own depth.
+    No coplanar overlay; rear uses the same physical polygon, naturally mirrored.
+    """
+    poly=[xy(p) for p in pixels]
+    if signed_area(poly)<0: poly.reverse()
+    def depth(p):
+        py=50+(1.62-p[1])/TRACE['SCALE']
+        center=-max(0,1475-py)*.00024
+        half=.011+layer*.002
+        return center,half
+    front=[];back=[]
+    for p in poly:
+        z,h=depth(p);front.append((*p,z-h));back.append((*p,z+h))
+    for i in range(len(poly)):
+        k=(i+1)%len(poly)
+        dx,dy=poly[k][0]-poly[i][0],poly[k][1]-poly[i][1]
+        face([front[i],front[k],back[k],back[i]],METAL,.66,0,(dy,-dx,0))
+    if ridge is not None:
+        r=xy(ridge)
+        assert all(turn(poly[i],poly[(i+1)%len(poly)],r)>1e-9 for i in range(len(poly))), 'ridge outside polygon kernel'
+        z,h=depth(r)
+        for sign,edge in ((-1,front),(1,back)):
+            peak=(*r,z+sign*(h+.009))
+            # A narrow physical accent-metal rim separates overlapping feathers.
+            cap=[]
+            for point in edge:
+                dx,dy=r[0]-point[0],r[1]-point[1]
+                length=math.hypot(dx,dy)
+                ratio=min(.12,.0020/length)
+                cap.append((point[0]+dx*ratio,point[1]+dy*ratio,point[2]+sign*.001))
+            for i in range(len(poly)):
+                k=(i+1)%len(poly)
+                face([edge[i],edge[k],cap[k],cap[i]],CORE,.20,0,(0,0,sign))
+            for i in range(len(poly)):
+                k=(i+1)%len(poly)
+                tone=1.0 if poly[k][0]-poly[i][0]<0 else .82
+                face([cap[i],cap[k],peak],METAL,tone,0,(0,0,sign))
+    else:
+        for ids in ears(poly):
+            for sign,edge in ((-1,front),(1,back)):
+                tone=1.0 if sum(poly[i][0] for i in ids)<0 else .84
+                face([edge[i] for i in ids],METAL,tone,0,(0,0,sign))
+
+# 2) Diamond collar, replacing the wide rectangular band across the blade.
 def collar():
-    y0 = GUARD_Y+.035
-    poly = [(-.070, y0), (.070, y0), (.062, y0+.075), (-.062, y0+.075)]
-    prism(poly, -.018, .018, METAL, 1.0, 0, bevel=.004, inset=.12)
-    for s in (-1, 1):
-        gem(0, y0+.052, s*(.018+.004), s, .017, .021, .016)
+    cx,cy=xy((949,1368))
+    poly=[xy(p) for p in [(949,1316),(979,1368),(949,1423),(919,1368)]]
+    prism(poly,-.032,.032,METAL,1,0,bevel=.004,inset=.16)
+    for sign in (-1,1):
+        gem(cx,cy,sign*.036,sign,.015,.030,.013)
 
-# 3) Centre plate with a long downward spike + gem
+# 3) Concave central gold breastplate and long down-pointing keel.
 def guard_core():
-    g = GUARD_Y
-    poly = [(0, g+.07), (.042, g+.012), (.034, g-.085), (0, g-.17), (-.034, g-.085), (-.042, g+.012)]
-    prism(poly, -.034, .034, METAL, 1.0, 0, bevel=.006, inset=.14)
-    for s in (-1, 1):
-        gem(0, g-.045, s*.040, s, .019, .032, .024)
+    traced_plate(TRACE['CORE'],layer=7)
+    cx,cy=xy((946,1572))
+    for sign in (-1,1):
+        gem(cx,cy,sign*.025,sign,.022,.043,.027)
+    poly=[xy(p) for p in [(949,1420),(983,1476),(948,1510),(914,1476)]]
+    prism(poly,-.030,.030,METAL,1,0,bevel=.010,inset=.15)
 
-# 4) Asymmetric feather wings: tall swept-up left, short flat right
-WING_L = [((-.022, .030), (-.172, .310), .036, 1.00),
-          ((-.022, .012), (-.272, .158), .040, .93),
-          ((-.022, -.008), (-.262, -.030), .036, .87),
-          ((-.020, -.030), (-.168, -.128), .028, .81)]
-WING_R = [((.022, .026), (.212, .118), .032, 1.00),
-          ((.022, .000), (.252, -.034), .034, .92),
-          ((.020, -.024), (.138, -.138), .028, .84)]
-
+# 4) Individually traced sharp feathers, no generic leaf/star primitive.
 def wings():
-    for k, (root, tip, w, sh) in enumerate(WING_L + WING_R):
-        poly = [(p[0], GUARD_Y+p[1]) for p in feather(root, tip, w, .42)]
-        # unique depth per feather: overlapping layers never share a plane
-        zc = ((k % 4)-1.5)*.0042
-        prism(poly, -.017+zc, .017+zc, METAL, sh, 0, bevel=.005, inset=.20)
+    for k,(name,pixels,ridge) in enumerate(TRACE['FEATHERS']):
+        traced_plate(pixels,layer=k if k<5 else k-5,ridge=ridge)
 
 # 5) Grip: dark 8-gon wrap with banded shading + gold collars
 def octagon(y, r, rot=math.pi/8):
@@ -184,8 +252,10 @@ def pommel():
         gem(0, -.152, s*.025, s, .014, .022, .014)
 
 
-for part in (blade, collar, guard_core, wings, grip, pommel):
+for part in (blade, collar, wings, guard_core, grip, pommel):
+    start = len(tris)
     part()
+    for tri in tris[start:]: tri['part'] = part.__name__
 
 # ------------------------------------------------------------------ export
 lo = [min(q[a] for t in tris for q in t['p']) for a in range(3)]
@@ -194,7 +264,7 @@ meta = {
     'height': hi[1]-lo[1],
     'bounds': {'min': lo, 'max': hi},
     # sockets (metres, model space): grip centre = origin, blade tip, blade base
-    'sockets': {'grip': [0, 0, 0], 'tip': [0, TIP_Y, 0], 'bladeBase': [0, GUARD_Y+.11, 0], 'pommel': [0, POMMEL_BOTTOM, 0]},
+    'sockets': {'grip': [0, 0, 0], 'tip': [0, TIP_Y, 0], 'bladeBase': [0, xy((949,1443))[1], 0], 'pommel': [0, POMMEL_BOTTOM, 0]},
 }
 
 os.makedirs(os.path.dirname(OUT_JSON), exist_ok=True)

@@ -1,10 +1,10 @@
--- Offline checks for the generated whole-weapon anime sword (tools/weapon_gen/wingsword.py).
+-- Offline checks for the generated whole-weapon anime sword (art/weapon_gen/wingsword.py).
 -- Shader compilation/pixels/lighting still require Web preview.
 package.path='scripts/?.lua;'..package.path
 local Blades=require('combat.ForgeShowroomBlades')
 local Parts=require('combat.WeaponParts')
 local d=Blades.Data('W')
-assert(d.route=='W' and d.triangles>200 and d.triangles<700 and #d.vertices==d.triangles*3)
+assert(d.route=='W' and d.triangles>200 and d.triangles<=900 and #d.vertices==d.triangles*3)
 assert(Blades.Data('W')==d,'expanded model is cached read-only')
 -- model space: origin = grip centre, tip +Y
 assert(math.abs(d.displayHeight-1.855)<2e-3)
@@ -16,7 +16,7 @@ local function Cross(a,b,c)
     return {u[2]*v[3]-u[3]*v[2],u[3]*v[1]-u[1]*v[3],u[1]*v[2]-u[2]*v[1]}
 end
 local seen,gripTris,metalTris,coreTris,gemTris,bladeTris={},0,0,0,0,0
-local leftReach,rightReach=0,0
+local leftReach,rightReach,leftTop,rightTop=0,0,0,0
 for i=1,#d.vertices,3 do
     local a,b,c=d.vertices[i],d.vertices[i+1],d.vertices[i+2]
     local x=Cross(a,b,c)
@@ -45,9 +45,11 @@ for i=1,#d.vertices,3 do
     end
     if w[2]>.9 then metalTris=metalTris+1;assert(a.glow==0)
         for _,v in ipairs({a,b,c}) do
-            if v.p[2]>.215-.17 and v.p[2]<.215+.32 then
+            if v.p[2]>.045 and v.p[2]<.60 then
                 if v.p[1]<leftReach then leftReach=v.p[1] end
                 if v.p[1]>rightReach then rightReach=v.p[1] end
+                if v.p[1]<-.12 then leftTop=math.max(leftTop,v.p[2]) end
+                if v.p[1]>.12 then rightTop=math.max(rightTop,v.p[2]) end
             end
         end
     end
@@ -61,8 +63,9 @@ for i=1,#d.vertices,3 do
     end
 end
 assert(gripTris>=40 and metalTris>150 and coreTris>=8 and gemTris>=16 and bladeTris>=24)
--- design brief: asymmetric wings (left taller/wider than right)
-assert(-leftReach>rightReach+.015,'wing guard must stay asymmetric')
+-- Three-view: similar reaches, but the left upper feather is 90px taller.
+assert(-leftReach>.20 and rightReach>.20,'wing guard spread is preserved')
+assert(leftTop>rightTop+.06,'wing guard must stay asymmetric (left taller)')
 -- UV mask values the shader relies on
 local masks={}
 for _,v in ipairs(d.vertices) do masks[v.glow]=true end
