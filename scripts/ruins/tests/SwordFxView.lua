@@ -4,7 +4,7 @@
 local V = _G["V"]
 local frame = 0
 local ATTACKS = { [40] = true, [64] = true, [88] = true, [112] = true }
-local SHOTS = { [71] = true, [73] = true, [75] = true, [77] = true, [96] = true, [98] = true, [100] = true, [120] = true, [123] = true, [126] = true }
+local SHOTS = { [66] = true, [68] = true, [69] = true, [71] = true, [73] = true, [75] = true, [77] = true, [96] = true, [98] = true, [100] = true, [120] = true, [123] = true, [126] = true }
 local pending = nil
 V.atFrame(8, function()
     local game = _G["RUINS"]
@@ -38,7 +38,17 @@ V.atFrame(8, function()
             controls.attackTap = ATTACKS[frame] == true
         end
         if ATTACKS[frame] or SHOTS[frame] then
-            print(string.format("SwordFxView: frame %d dt=%.3f clip=%s", frame, dt, tostring(self.clip)))
+            local rig = self.rig
+            local fx = rig and rig.combatFx
+            local arcs, edges, ghosts = 0, 0, 0
+            if fx then
+                for _, a in ipairs(fx.arcs) do if a.active then arcs = arcs + 1 end end
+                for _, a in ipairs(fx.edges or {}) do if a.active then edges = edges + 1 end end
+                for _, a in ipairs(fx.ghosts or {}) do if a.active then ghosts = ghosts + 1 end end
+            end
+            print(string.format("SwordFxView: frame %d dt=%.3f clip=%s trail=%s visual=%s slash=%s arcs=%d edges=%d ghosts=%d glow=%.2f hitOpen=%s",
+                frame, dt, tostring(self.clip), tostring(rig and rig.trailEnabled), tostring(rig and rig.visualActive),
+                tostring(fx and fx.slash), arcs, edges, ghosts, rig and rig.wingGlow or -1, tostring(self.hitOpen)))
         end
         if SHOTS[frame - 1] then pending = frame - 1 end
         return update(self, dt, controls)

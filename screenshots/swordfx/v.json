@@ -2,8 +2,8 @@
     "version": 2,
     "script": "ruins_main.lua",
     "result": "TIMEOUT",
-    "duration_ms": 115107,
-    "frames_completed": 93,
+    "duration_ms": 115613,
+    "frames_completed": 95,
     "phases": {
         "load": {
             "result": "PASS",
@@ -14,32 +14,32 @@
             "errors": [
                 {
                     "category": "engine",
-                    "message": "[2026-11-16 16_37_14_301][86] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
+                    "message": "[2026-11-16 16_40_26_365][65] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
                     "frame": 1
                 },
                 {
                     "category": "engine",
-                    "message": "[2026-11-16 16_37_14_301][86] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
+                    "message": "[2026-11-16 16_40_26_365][65] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
                     "frame": 1
                 },
                 {
                     "category": "engine",
-                    "message": "[2026-11-16 16_37_14_301][86] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "message": "[2026-11-16 16_40_26_365][65] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
                     "frame": 1
                 },
                 {
                     "category": "engine",
-                    "message": "[2026-11-16 16_37_14_301][86] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "message": "[2026-11-16 16_40_26_365][65] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
                     "frame": 1
                 },
                 {
                     "category": "engine",
-                    "message": "[2026-11-16 16_37_14_301][86] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "message": "[2026-11-16 16_40_26_365][65] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
                     "frame": 1
                 },
                 {
                     "category": "engine",
-                    "message": "[2026-11-16 16_37_14_301][86] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "message": "[2026-11-16 16_40_26_366][65] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
                     "frame": 1
                 }
             ]
@@ -49,8 +49,28 @@
             "errors": [
                 {
                     "category": "engine",
+                    "message": "[2026-11-16 16_41_21_027][132] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 68
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-16 16_41_21_027][132] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 68
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-16 16_41_21_027][132] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 68
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-16 16_41_21_028][132] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5555 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 68
+                },
+                {
+                    "category": "engine",
                     "message": "Validation timed out",
-                    "frame": 93
+                    "frame": 95
                 }
             ]
         },
@@ -69,7 +89,7 @@
             "nodes": 23,
             "components": 48,
             "hash": 440110682,
-            "frame_time_ms": 38586.3984375
+            "frame_time_ms": 37523.296875
         },
         {
             "frame": 10,
@@ -77,19 +97,19 @@
             "nodes": 23,
             "components": 48,
             "hash": 872182970,
-            "frame_time_ms": 780.7000122070313
+            "frame_time_ms": 782.6209716796875
         },
         {
-            "frame": 65,
+            "frame": 70,
             "phase": "run",
             "nodes": 23,
             "components": 48,
             "hash": 1950589115,
-            "frame_time_ms": 820.89501953125
+            "frame_time_ms": 675.2680053710938
         }
     ],
     "scene_stalled": false,
-    "max_frame_time_ms": 1636.779052734375,
+    "max_frame_time_ms": 1454.968994140625,
     "update_defined": false,
     "component_census": {
         "Octree": 1,
@@ -125,7 +145,7 @@
     "summary": {
         "lua_errors": 0,
         "resource_errors": 0,
-        "engine_errors": 7,
-        "total_errors": 7
+        "engine_errors": 11,
+        "total_errors": 11
     }
 }
