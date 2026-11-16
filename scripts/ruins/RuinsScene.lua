@@ -539,7 +539,18 @@ local function CanOpenForge()
 end
 local function OpenForge()
     if weaponGesture_ then weaponGesture_:ForceClose('forge') end
-    if not CanOpenForge() then caster_:Say('请在安全地面、脱离警戒后锻造',1.2); return end
+    if CombatState.InCombat() then
+        -- Weapon selection never auto-sheaths (explicitSelection), so with a weapon drawn the
+        -- old guard dropped G silently. Stow it like picking the time loadout when it is safe.
+        if CombatHasAggro() then print('Forge: refused reason=aggro'); caster_:Say('敌人警戒中，无法锻造',1.2); return end
+        if not combatMoves_:SelectLoadout('time') then print('Forge: refused reason=busy'); caster_:Say('动作结束后再按 G',1.2); return end
+    end
+    if not CanOpenForge() then
+        print(('Forge: refused reason=blocked mode=%s onGround=%s combat=%s aggro=%s dead=%s'):format(
+            tostring(M.ride and M.ride.mode),tostring(nomi_ and nomi_.cc.onGround),tostring(CombatState.InCombat()),
+            tostring(CombatHasAggro()),tostring(combatMoves_.dead)))
+        caster_:Say('请在安全地面、脱离警戒后锻造',1.2); return
+    end
     -- Bind the exact live module's read-only getter; no package.loaded key or
     -- separately maintained HUD state is required for the primary route.
     HUD.SetForgeVisibility(ForgePanel.HudHidden); CombatHUD.SetForgeVisibility(ForgePanel.HudHidden)
@@ -1466,7 +1477,7 @@ local function UpdateCombatActions(combatAllowed)
         return
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
-        if not CombatState.InCombat() and (Press(KEY_G) or TouchInput.Press('forge')) then OpenForge() end
+        if Press(KEY_G) or TouchInput.Press('forge') then OpenForge() end
         if not combatInputBlocked and Press(KEY_C) then
             combatMoves_:SelectLoadout(CombatState.InCombat() and 'time' or CombatState.GetWeapon())
         end
