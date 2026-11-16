@@ -188,16 +188,13 @@ function M.Begin(parent,route,colors,mask,low,strength)
     local job={bladeRoute=route,index=1}
     local ok,err=pcall(function()
         job.data=M.Data(route);job.blueprint=job.data
-        local source=assert(cache:GetResource('Material','model/forge-blades/BladeStudy.xml'),'blade material unavailable')
+        local path=route=='W' and 'model/forge-blades/WingSword.xml' or 'model/forge-blades/BladeStudy.xml'
+        local source=assert(cache:GetResource('Material',path),'blade material unavailable')
         job.material=assert(source:Clone('ForgeBlade'..route),'blade material clone failed')
         for key,c in pairs(M.Palette(colors)) do
             job.material:SetShaderParameter(key..'_color',Variant(Color(c[1],c[2],c[3],1)))
         end
         job.material:SetShaderParameter('flow_strength',Variant(route~='A' and strength or 0))
-        if route=='W' then -- anime trim: softer gold, always-lit core/gems
-            job.material:SetShaderParameter('gold_metal',Variant(.55))
-            job.material:SetShaderParameter('core_glow',Variant(.7))
-        end
         job.node=parent:CreateChild('BladeRoute'..route)
         job.geometry=assert(job.node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
         local g=job.geometry
