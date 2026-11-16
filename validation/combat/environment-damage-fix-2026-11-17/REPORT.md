@@ -21,6 +21,8 @@
 
 ## 实测边界与下一步
 
+诊断提交76c4729首次推送遇到远端新提交7c4aad8。检查后确认仅改CombatAnim前臂/肘部IK；已正常合并为5911558，没有强推，没有修改该云端实现。合并后重新跑全量：tests-merged.log仍为63 PASS / 1原有FAIL；lsp-merged.log仍仅1处原有Error。三个原有天空未提交文件在合并前后SHA256一致。
+
 Maker 构建后日志 watcher 恢复工作，当前收到的时间段主要为 SwingPerf，无实际剑弓命中错误，不能将“没错误”当作功能通过。专用 Chrome 游戏页要求 TapTap 登录，未重试用户已取消的登录接管、未绕过登录。
 
 原 Windows「启动本地Runtime」会话已收到继续验证任务：使用官方 Maker 非交互原生 Runtime 检测真实体素删除，避免依赖桌面按键；待回报。该任务是已有跨设备普通会话交接，不是 Orca Worker 或原生子代理。
