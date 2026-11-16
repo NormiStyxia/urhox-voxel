@@ -27,7 +27,7 @@ V.atFrame(8, function()
             pending = nil
         end
         if controls then
-            if ATTACKS[frame] then controls.allowed = true end
+            controls.allowed = true
             controls.attack = ATTACKS[frame] == true
             controls.attackTap = ATTACKS[frame] == true
         end
