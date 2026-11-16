@@ -161,42 +161,62 @@ local function attack(c,times,body,right,left,legs,weapon)
     c.trail={c.phases.active[1],c.phases.active[2]+.06}
     add(c)
 end
-attack({ -- 符号待 Web 校准
-    id="sword_light_1",dur=.40,layer=L.ATTACK,weaponType="sword",speedStat="speed",
-    phases=phases(.40,.10,.18),events=hits(.10/.40,.18/.40,.18/.40),
-    root={{0,-.04},{.07/.4,-.08},{.10/.4,-.06},{.14/.4,-.04},{.22/.4,-.02},{1,0}},
-    motion={{t0=.10,t1=.24,forward=.9}},
-}, {0,.07,.10,.14,.22,.40},
-    {{6,0,0},{-6,22,0},{0,15,0},{14,-25,0},{12,-41,0},{6,0,0}},
-    {{-65,0,12},{-50,40,55},{-65,28,60},{-80,-35,20},{-75,-58,12},{-65,0,12}},
-    {{0,0,-8},{10,-10,-20},{5,-8,-25},{-20,12,-30},{-10,18,-20},{0,0,-8}},
-    {{0,0,0},{-8,0,-3},{-12,0,0},{-18,0,0},{-10,0,0},{0,0,0}},
-    {{{0,0,0},{0,0,0}},{{0,0,-.03},{-20,10,18}},{{0,0,0},{-10,5,20}},
-     {{0,0,.05},{25,-10,-20}},{{0,0,.03},{36,-18,-30}},{{0,0,0},{0,0,0}}})
-attack({ -- 符号待 Web 校准
-    id="sword_light_2",dur=.40,layer=L.ATTACK,weaponType="sword",speedStat="speed",
-    phases=phases(.40,.10,.18),events=hits(.10/.40,.18/.40,.18/.40),
-    root={{0,-.04},{.07/.4,-.07},{.10/.4,-.06},{.14/.4,-.03},{.22/.4,-.02},{1,0}},
-    motion={{t0=.10,t1=.24,forward=.7}},
-}, {0,.07,.10,.14,.22,.40},
-    {{6,0,0},{8,-22,0},{8,-15,0},{6,25,0},{8,36,0},{6,0,0}},
-    {{-65,0,12},{-40,-55,10},{-60,-40,15},{-95,25,50},{-98,42,65},{-65,0,12}},
-    {{0,0,-8},{-15,10,-20},{-10,10,-25},{5,-15,-28},{8,-20,-22},{0,0,-8}},
-    {{0,0,0},{8,0,0},{10,0,0},{15,0,0},{8,0,0},{0,0,0}},
-    {{{0,0,0},{0,0,0}},{{0,-.02,0},{25,-20,-35}},{{0,0,0},{18,-10,-20}},
-     {{0,.03,.04},{-15,12,25}},{{0,.02,.02},{-25,18,35}},{{0,0,0},{0,0,0}}})
-attack({ -- 符号待 Web 校准
-    id="sword_light_3",dur=.52,layer=L.ATTACK,weaponType="sword",speedStat="speed",
-    phases=phases(.52,.14,.22),events=hits(.14/.52,.22/.52,.30/.52),
-    root={{0,-.04},{.11/.52,.05},{.14/.52,.02},{.18/.52,-.10},{.26/.52,-.12},{1,0}},
-    motion={{t0=.14,t1=.26,forward=1}},
-}, {0,.11,.14,.18,.26,.52},
-    {{6,0,0},{-12,15,0},{-4,8,0},{22,0,0},{28,-6,0},{6,0,0}},
-    {{-65,0,12},{-170,0,15},{-150,0,12},{-38,0,14},{-20,0,16},{-65,0,12}},
-    {{0,0,-8},{-150,15,-10},{-130,12,-10},{-35,12,-12},{-20,10,-15},{0,0,-8}},
-    {{0,0,0},{8,0,0},{-5,0,0},{-25,0,0},{-30,0,0},{0,0,0}},
-    {{{0,0,0},{0,0,0}},{{0,.03,0},{-25,0,0}},{{0,.02,0},{-15,0,0}},
-     {{0,-.05,.03},{35,0,0}},{{0,-.06,.02},{45,0,0}},{{0,0,0},{0,0,0}}})
+-- Five-stage light chain: 斜劈 → 上挑 → 突进横斩 → 腾空回旋 → 跃起半月斩.
+-- Each row: dur, hit_on, contact, hit_off, cancel_open (seconds); body yaw per
+-- landmark; free-hand pose; lead-leg pitch; root height (metres, optional ease).
+-- Landmarks: ready, windup, release(hit_on), contact, follow-through, settle.
+local LIGHT={
+    {id="sword_light_1",dur=.54,on=.16,contact=.22,off=.26,cancel=.32,
+        yaw={0,35,22,-30,-45,0},
+        left={{0,0,-8},{-35,-10,-25},{-20,-5,-28},{-10,15,-35},{-5,18,-25},{0,0,-8}},
+        legs={0,-10,-16,-22,-14,0},
+        root={{0,-.04},{.10,-.08},{.16,-.06},{.22,-.11},{.32,-.10},{.54,0}}},
+    {id="sword_light_2",dur=.56,on=.17,contact=.23,off=.27,cancel=.33,
+        yaw={0,-35,-25,22,40,0},
+        left={{0,0,-8},{-10,15,-30},{-15,10,-25},{-40,-10,-20},{-30,-12,-18},{0,0,-8}},
+        legs={0,-18,-22,-10,-6,0},
+        -- Crouch into the low guard, then rise up onto the toes with the blade.
+        root={{0,-.04},{.10,-.15},{.17,-.11},{.23,.05,"outQuad"},{.33,.03},{.56,0}}},
+    {id="sword_light_3",dur=.62,on=.18,contact=.24,off=.30,cancel=.38,
+        yaw={0,45,30,-35,-55,0},
+        left={{0,0,-8},{-60,-20,-35},{-45,-15,-40},{-15,20,-55},{-10,25,-45},{0,0,-8}},
+        legs={0,-24,-34,-30,-22,0},
+        root={{0,-.04},{.08,-.13},{.18,-.09},{.24,-.13},{.36,-.12},{.62,0}}},
+    {id="sword_light_4",dur=.70,on=.22,contact=.32,off=.40,cancel=.46,
+        yaw={0,45,20,-30,-50,0},
+        left={{0,0,-8},{-20,0,-30},{-30,0,-55},{-25,0,-70},{-15,0,-50},{0,0,-8}},
+        legs={0,-12,-30,-36,-20,0},
+        -- Visible hop: knees load, body leaves the ground through the whole turn.
+        root={{0,-.04},{.13,-.15},{.22,.20,"outQuad"},{.32,.36,"outQuad"},{.46,.08,"inQuad"},{.70,0}}},
+    {id="sword_light_5",dur=.90,on=.34,contact=.40,off=.46,cancel=.90,
+        yaw={0,15,8,0,-8,0},
+        left={{0,0,-8},{-60,0,-30},{-150,10,-20},{-60,15,-25},{-30,10,-30},{0,0,-8}},
+        legs={0,-20,-45,-30,-26,0},
+        -- Leap: crouch, rise to ~.7m while the blade circles overhead, slam down.
+        root={{0,-.04},{.13,-.17},{.30,.70,"outQuad"},{.40,.30,"inQuad"},{.46,-.15,"inQuad"},{.90,0}}},
+}
+for _,row in ipairs(LIGHT) do
+    local d=row.dur
+    local times={0,row.on*.6,row.on,row.contact,row.off+.06,d}
+    local body,right,legs,weapon={},{},{},{}
+    for i=1,6 do
+        body[i]={6,row.yaw[i],0}
+        right[i]={-65,0,12} -- replaced by the hand-path IK
+        legs[i]={row.legs[i],0,0}
+        weapon[i]={{0,0,0},{0,0,0}}
+    end
+    local root={}
+    for i,key in ipairs(row.root) do root[i]={key[1]/d,key[2],key[3]} end
+    attack({id=row.id,dur=d,layer=L.ATTACK,weaponType="sword",speedStat="speed",
+        phases=phases(d,row.on,row.off),events=hits(row.on/d,row.off/d,row.cancel/d),root=root},
+        times,body,right,row.left,legs,weapon)
+    -- Elbow (forearm pitch, negative = flex). Cocked in the windup, whips
+    -- straight at contact, relaxes through follow-through: never a rigid stick.
+    C.Clips[row.id].elbow={
+        arm_right={{0,-35},{times[2]/d,-95,"outQuad"},{times[3]/d,-70,"inQuad"},
+            {times[4]/d,-4,"outCubic"},{times[5]/d,-22,"outQuad"},{1,-35,"smoothStep"}},
+        arm_left={{0,-25},{times[2]/d,-70,"outQuad"},{times[4]/d,-45},{1,-25,"smoothStep"}}}
+end
 add { -- 符号待 Web 校准
     id="sword_heavy_charge",dur=1,layer=L.ATTACK,weaponType="sword",loop=true,loopFrom=.8,
     keys={body=k({6,0,0},{-6,30,0},{-10,40,0},{-10,40,0},.45,.8),
@@ -228,23 +248,6 @@ C.Combo={
     {id="sword_light_5",damage=1.9,poise=2.3,radius=2.2,angle=150,offset=.4,profile="finisher",tier="heavy",knockback=.7,pitch=.82,cooldown=.35,impactRing=true},
 }
 C.ComboLength=#C.Combo
-for stage=4,C.ComboLength do
-    local finish=stage==C.ComboLength
-    local dur=finish and .69 or .58
-    local on,off=finish and .22 or .16,finish and .34 or .30
-    -- 符号待 Web 校准；controller heading is never animated by the torso track.
-    attack({id=C.Combo[stage].id,dur=dur,layer=L.ATTACK,weaponType="sword",speedStat="speed",
-        phases=phases(dur,on,off),events=hits(on/dur,off/dur,finish and 1 or .34/dur),
-        root={{0,0},{on*.6/dur,-.04},{on/dur,.02},{off/dur,-.10},{(off+.05)/dur,-.10},{1,0}}},
-        {0,on*.6,on,(on+off)*.5,off+.05,dur},
-        finish and {{6,0,0},{-8,24,0},{10,10,0},{28,-12,0},{24,-18,0},{6,0,0}}
-            or {{6,0,0},{2,45,0},{10,25,0},{12,-35,0},{8,-48,0},{6,0,0}},
-        {{-65,0,12},{-145,25,45},{-110,15,40},{-45,-20,35},{-20,-30,25},{-65,0,12}},
-        {{0,0,-8},{-20,0,-15},{-40,0,-22},{-25,0,-30},{-10,0,-15},{0,0,-8}},
-        {{0,0,0},{18,0,0},{-25,0,0},{-30,0,0},{-15,0,0},{0,0,0}},
-        {{{0,0,0},{0,0,0}},{{0,0,0},{-20,0,15}},{{0,0,0},{-10,0,20}},
-         {{0,0,0},{20,0,-10}},{{0,0,0},{25,0,-15}},{{0,0,0},{0,0,0}}})
-end
 -- 符号待 Web 校准；air clips supply pose only, physical descent belongs to CC.
 add {id="plunge_start",dur=.12,layer=L.ATTACK,weaponType="sword",continuous=true,
     keys={body=k({6,0,0},{18,0,0},{30,0,0},{30,0,0}),head=k({3,0,0},{-3,0,0},{-10,0,0},{-10,0,0}),
@@ -390,7 +393,7 @@ local function arcPart(spec,t0,t1,u0,u1,easing)
     return {kind="arc",plane=spec.plane,cx=spec.cx,cy=spec.cy,radius=spec.radius,
         angle=spec.angle,sweep=spec.sweep,a=spec.a,b=spec.b,t0=t0,t1=t1,u0=u0,u1=u1,ease=easing}
 end
-local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge)
+local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge,pole)
     local c=C.Clips[id]
     local on=c.phases.active[1]/c.dur
     local spec=arc(a,b,degrees,plane)
@@ -404,7 +407,7 @@ local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge)
         arcPart(spec,contact/c.dur,ending/c.dur,.70,1,"outCubic"),
         arcPart(spec,ending/c.dur,(ending+.04)/c.dur,1,1.08,"outQuad"),
         bez((ending+.04)/c.dur,1,overshoot,ready,{.15,1.30,.55},"outQuad")},
-        amplitude=degrees,windup=.12,overshoot=.08,space="body_feet"}}
+        amplitude=degrees,windup=.12,overshoot=.08,space="body_feet",pole=pole}}
     c.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
     c.motion={{t0=c.phases.active[1],t1=ending,forward=lunge}}
     -- IK and blade direction update at render cadence; hitstop freezes s.t.
@@ -422,26 +425,24 @@ end
 for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release","sword_heavy_charge"}) do
     preservePose(C.Clips[id])
 end
-pathAttack("sword_light_1",{.55,1.35,-.25},{-.55,1.15,.55},170,"xz",.14,.18,.50)
-pathAttack("sword_light_2",{-.55,1,-.25},{.55,1.40,.55},-150,"xz",.14,.18,.45)
-pathAttack("sword_light_3",{.58,1.9,-.15},{.48,.45,.7},190,"yz",.18,.22,.70)
-pathAttack("sword_light_4",{.65,1.2,.05},{.62,1.18,-.12},340,"xz",.23,.30,.55)
-pathAttack("sword_light_5",{.62,2.0,-.18},{.50,.35,.75},200,"yz",.28,.34,1.0)
--- Route reverse-slash entry around the chest while its arm/weapon fade in.
--- The active arc and all event/motion times remain unchanged.
-C.Clips.sword_light_2.handPath.arm_right.segments[1].control={.55,1.25,.65}
-C.Clips.sword_light_1.keys.body[4][2][2]=-45
-C.Clips.sword_light_1.keys.body[5][2][2]=-49
-C.Clips.sword_light_2.keys.body[4][2][2]=40
-C.Clips.sword_light_2.keys.body[5][2][2]=43
-C.Clips.sword_light_3.keys.body[5][2][1]=22
-C.Clips.sword_light_3.root={{0,-.04},{.11/.52,.05},{.14/.52,.02},
-    {.22/.52,-.12},{.27/.52,-.12},{1,0}}
--- Downward contact lands at hit_off; hold the grip/root for .05s, then overshoot.
-local slamPath=C.Clips.sword_light_3.handPath.arm_right.segments
-slamPath[5].t0,slamPath[5].t1=.27/.52,.31/.52
-slamPath[6].t0=.31/.52
-table.insert(slamPath,5,bez(.22/.52,.27/.52,{.48,.45,.7},{.48,.45,.7},{.48,.45,.7}))
+-- Arc paths (body-aligned metres, feet at y=0). Contact/ending are seconds.
+-- pole: elbow hinge direction (+X = elbow out to the side, -Y = elbow down).
+pathAttack("sword_light_1",{.60,1.75,-.05},{-.55,.55,.55},150,"xz",.22,.26,.55,{1,.2,-.4})
+pathAttack("sword_light_2",{-.50,.50,.45},{.55,1.85,.25},-140,"xz",.23,.27,.45,{1,-.5,-.3})
+pathAttack("sword_light_3",{.70,1.20,-.20},{-.70,1.10,.35},200,"xz",.24,.30,1.6,{.2,1,-.3})
+pathAttack("sword_light_4",{.65,1.25,.05},{.62,1.20,-.12},340,"xz",.32,.40,.75,{0,1,0})
+pathAttack("sword_light_5",{.45,1.10,-.55},{.40,.30,.80},230,"yz",.40,.46,1.3,{1,0,0})
+-- Stage 3 dashes: most of the step happens before the blade arrives.
+C.Clips.sword_light_3.motion={{t0=.06,t1=.30,forward=1.6}}
+-- Stage 4 hops forward through the spin; stage 5 travels with the leap.
+C.Clips.sword_light_4.motion={{t0=.18,t1=.46,forward=.75}}
+C.Clips.sword_light_5.motion={{t0=.14,t1=.46,forward=1.3}}
+-- Half-moon finisher: blade lands at the end of the arc and stays planted .06s.
+local moonPath=C.Clips.sword_light_5.handPath.arm_right.segments
+local moonEnd=moonPath[4].t1
+table.insert(moonPath,5,bez(moonEnd,moonEnd+.06/.90,{.40,.30,.80},{.40,.30,.80},{.40,.30,.80}))
+moonPath[6].t0,moonPath[6].t1=moonEnd+.06/.90,moonEnd+.10/.90
+moonPath[7].t0=moonEnd+.10/.90
 
 local heavy=C.Clips.sword_heavy_release
 local circle={kind="arc",plane="xz",cx=0,cy=0,radius=.75,angle=0,sweep=math.pi*2,
@@ -482,10 +483,11 @@ end
 -- Forward-leaning strikes with weight: lean back slightly in anticipation,
 -- drive the chest over the lead foot at contact, carry it through, then settle.
 -- Only torso pitch / root dip change; yaw, hand paths, events and hits are untouched.
-local LEAN={sword_light_1={6,-8,6,24,22,6},sword_light_2={6,-6,8,22,20,6},
-    sword_light_3={6,-14,-4,32,30,6},sword_light_4={6,-2,12,20,16,6},
-    sword_light_5={6,-12,10,34,32,6},sword_heavy_release={-10,-10,8,26,22,6}}
-local DIP={sword_light_1=-.08,sword_light_2=-.08,sword_light_3=-.12,sword_light_4=-.10,sword_light_5=-.14,sword_heavy_release=-.18}
+-- Light rows author their own crouch/hop root; lean pitch is shared here.
+local LEAN={sword_light_1={6,-6,4,26,22,6},sword_light_2={6,14,10,-6,-8,6},
+    sword_light_3={6,-4,18,30,26,6},sword_light_4={6,10,4,12,10,6},
+    sword_light_5={6,18,-10,8,34,6},sword_heavy_release={-10,-10,8,26,22,6}}
+local DIP={sword_heavy_release=-.18}
 for id,lean in pairs(LEAN) do
     local c=C.Clips[id]
     for i,pitch in ipairs(lean) do
@@ -495,8 +497,10 @@ for id,lean in pairs(LEAN) do
     end
     -- Contact/follow-through sink lower: the hips drop into the strike.
     local n=#c.root
-    c.root[n-2][2]=math.min(c.root[n-2][2],DIP[id])
-    c.root[n-1][2]=math.min(c.root[n-1][2],DIP[id]*.8)
+    if DIP[id] then
+        c.root[n-2][2]=math.min(c.root[n-2][2],DIP[id])
+        c.root[n-1][2]=math.min(c.root[n-1][2],DIP[id]*.8)
+    end
     -- Torso drives into contact quickly (outCubic) instead of a symmetric ease.
     c.keys.body[4][3]="outCubic"
 end
