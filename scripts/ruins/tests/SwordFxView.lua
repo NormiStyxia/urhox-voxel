@@ -46,9 +46,10 @@ V.atFrame(8, function()
                 for _, a in ipairs(fx.edges or {}) do if a.active then edges = edges + 1 end end
                 for _, a in ipairs(fx.ghosts or {}) do if a.active then ghosts = ghosts + 1 end end
             end
-            print(string.format("SwordFxView: frame %d dt=%.3f clip=%s trail=%s visual=%s slash=%s arcs=%d edges=%d ghosts=%d glow=%.2f hitOpen=%s",
+            print(string.format("SwordFxView: frame %d dt=%.3f clip=%s trail=%s visual=%s slash=%s arcs=%d edges=%d ghosts=%d glow=%.2f hitOpen=%s pose=%s att=%s alpha=%s state=%s samples=%s valid=%s",
                 frame, dt, tostring(self.clip), tostring(rig and rig.trailEnabled), tostring(rig and rig.visualActive),
-                tostring(fx and fx.slash), arcs, edges, ghosts, rig and rig.wingGlow or -1, tostring(self.hitOpen)))
+                tostring(fx and fx.slash), arcs, edges, ghosts, rig and rig.wingGlow or -1, tostring(self.hitOpen), tostring(rig.pose), tostring(rig.attached),
+                tostring(rig.entries.sword.mesh.alpha), tostring(rig.visualState), tostring(rig.sampleCount), tostring(fx.valid)))
         end
         if SHOTS[frame - 1] then pending = frame - 1 end
         return update(self, dt, controls)
