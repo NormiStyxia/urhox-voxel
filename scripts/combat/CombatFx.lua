@@ -10,6 +10,7 @@
 ---@field plunging boolean
 local F={};F.__index=F
 F.LANDING_COUNT=30;F.ARC_COUNT=24;F.GHOST_COUNT=12
+-- Vector3 is a value type in the engine: callers MUST assign the result back.
 local function set(v,x,y,z) v.x,v.y,v.z=x,y,z;return v end
 local function clamp(x,a,b)return math.max(a,math.min(b,x))end
 local function vertex(g,x,y,z,a)
@@ -156,14 +157,14 @@ function F:Segment(root,tip)
         local distance=math.sqrt(dx*dx+dy*dy+dz*dz)
         if distance>.015 and distance<3 then
             self.head=self.head%F.ARC_COUNT+1;local s=self.arcs[self.head]
-            set(s.x,dx/distance,dy/distance,dz/distance)
+            s.x=set(s.x,dx/distance,dy/distance,dz/distance)
             local ax,ay,az=tip.x-root.x,tip.y-root.y,tip.z-root.z
             local dot=ax*s.x.x+ay*s.x.y+az*s.x.z
             ax,ay,az=ax-dot*s.x.x,ay-dot*s.x.y,az-dot*s.x.z
             local length=math.sqrt(ax*ax+ay*ay+az*az)
             if length>1e-5 then
-                set(s.y,ax/length,ay/length,az/length)
-                set(s.z,s.x.y*s.y.z-s.x.z*s.y.y,s.x.z*s.y.x-s.x.x*s.y.z,s.x.x*s.y.y-s.x.y*s.y.x)
+                s.y=set(s.y,ax/length,ay/length,az/length)
+                s.z=set(s.z,s.x.y*s.y.z-s.x.z*s.y.y,s.x.z*s.y.x-s.x.x*s.y.z,s.x.x*s.y.y-s.x.y*s.y.x)
                 s.rot:FromAxes(s.x,s.y,s.z);s.node.rotation=s.rot
                 local cx,cy,cz=(tip.x+self.tip.x)*.5,(tip.y+self.tip.y)*.5,(tip.z+self.tip.z)*.5
                 s.peak=.62
@@ -184,7 +185,7 @@ function F:Segment(root,tip)
             end
         end
     end
-    set(self.tip,tip.x,tip.y,tip.z);set(self.root,root.x,root.y,root.z);self.valid=true
+    self.tip=set(self.tip,tip.x,tip.y,tip.z);self.root=set(self.root,root.x,root.y,root.z);self.valid=true
 end
 -- Subdivide the measured blade rotation, not the gameplay strike sector.
 -- Bounded work even for low FPS; interpolated roots preserve actor translation.
@@ -208,8 +209,8 @@ function F:Blade(root,tip)
         local u=i/count;local a,b=1-u,u
         if math.abs(sine)>.001 then a=math.sin((1-u)*angle)/sine;b=math.sin(u*angle)/sine end
         local x,y,z=rx+(root.x-rx)*u,ry+(root.y-ry)*u,rz+(root.z-rz)*u
-        set(self.sampleRoot,x,y,z)
-        set(self.sampleTip,x+ax*a+bx*b,y+ay*a+by*b,z+az*a+bz*b)
+        self.sampleRoot=set(self.sampleRoot,x,y,z)
+        self.sampleTip=set(self.sampleTip,x+ax*a+bx*b,y+ay*a+by*b,z+az*a+bz*b)
         self:Segment(self.sampleRoot,self.sampleTip)
     end
 end
@@ -240,11 +241,11 @@ function F:Update(dt)
         if s.active then
             if i==1 then
                 local u=1-(1-s.age/s.ttl)^3;local radius=.3+(s.radius-.3)*u
-                set(s.scale,radius*s.narrow,1,radius);s.node.scale=s.scale
-                set(s.pos,s.centerX+s.forwardX*u*.65,s.pos.y,s.centerZ+s.forwardZ*u*.65);s.node.position=s.pos
+                s.scale=set(s.scale,radius*s.narrow,1,radius);s.node.scale=s.scale
+                s.pos=set(s.pos,s.centerX+s.forwardX*u*.65,s.pos.y,s.centerZ+s.forwardZ*u*.65);s.node.position=s.pos
             elseif i>=2 and i<=15 or i>=22 and i<=29 then
                 local dy=s.vy*dt-6*dt*dt
-                set(s.pos,s.pos.x+s.vx*dt,math.max(s.ground,s.pos.y+dy),s.pos.z+s.vz*dt)
+                s.pos=set(s.pos,s.pos.x+s.vx*dt,math.max(s.ground,s.pos.y+dy),s.pos.z+s.vz*dt)
                 s.vy=s.vy-12*dt
                 if s.pos.y<=s.ground then s.vx,s.vy,s.vz=0,0,0 end
                 s.node.position=s.pos
@@ -253,7 +254,7 @@ function F:Update(dt)
                 s.color=s.frames<=2 and 1 or 2
                 s.mat:SetShaderParameter('MatDiffColor',self.colors[s.color][math.floor((1-s.age/s.ttl)*16)+1])
                 local u=1-s.age/s.ttl
-                set(s.scale,.55*u,.055,.55*u);s.node.scale=s.scale
+                s.scale=set(s.scale,.55*u,.055,.55*u);s.node.scale=s.scale
             end
         end
     end
