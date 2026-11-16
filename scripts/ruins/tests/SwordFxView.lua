@@ -14,39 +14,6 @@ V.atFrame(8, function()
     if state.GetWeapon() ~= "sword" then state.SetWeapon("sword"); state.FinishTransition() end
     state.Enter("sword-fx-view")
     state.Activity(true)
-    local fx = moves.rig.combatFx
-    local segment, calls = fx.Segment, 0
-    fx.Segment = function(self, root, tip)
-        calls = calls + 1
-        if calls <= 12 then
-            local d = self.valid and math.sqrt((tip.x - self.tip.x) ^ 2 + (tip.y - self.tip.y) ^ 2 + (tip.z - self.tip.z) ^ 2) or -1
-            local ok, err = pcall(segment, self, root, tip)
-            local active = 0
-            for _, a in ipairs(self.arcs) do if a.active then active = active + 1 end end
-            print(string.format("SwordFxView: seg valid=%s d=%.4f head=%d active=%d ok=%s %s", tostring(self.valid), d, self.head, active, tostring(ok), tostring(err)))
-            return
-        end
-        return segment(self, root, tip)
-    end
-    local blade, bladeCalls = fx.Blade, 0
-    fx.Blade = function(self, root, tip)
-        bladeCalls = bladeCalls + 1
-        if bladeCalls <= 20 then
-            local rx, ry, rz = self.root.x, self.root.y, self.root.z
-            print(string.format("SwordFxView: blade#%d valid=%s slash=%s root=(%.2f,%.2f,%.2f) tip=(%.2f,%.2f,%.2f) prevRoot=(%.2f,%.2f,%.2f) prevTip=(%.2f,%.2f,%.2f)",
-                bladeCalls, tostring(self.valid), tostring(self.slash), root.x, root.y, root.z, tip.x, tip.y, tip.z, rx, ry, rz, self.tip.x, self.tip.y, self.tip.z))
-        end
-        return blade(self, root, tip)
-    end
-    local fxUpdate = fx.Update
-    fx.Update = function(self, dt)
-        local before = 0
-        for _, a in ipairs(self.arcs) do if a.active then before = before + 1 end end
-        fxUpdate(self, dt)
-        local after = 0
-        for _, a in ipairs(self.arcs) do if a.active then after = after + 1 end end
-        if before > 0 and calls <= 30 then print(string.format("SwordFxView: fx.Update dt=%.4f active %d -> %d", dt, before, after)) end
-    end
     local update = moves.Update
     moves.Update = function(self, dt, controls)
         frame = frame + 1
