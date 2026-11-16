@@ -225,19 +225,27 @@ def mat_flower():
 
 
 def mat_crystal():
-    # Clear violet gem: raytraced refraction, low roughness, faint internal glow from the core object.
-    m, nt, b = principled('Crystal_Gem', Roughness=0.03, IOR=1.62,
-                          **{'Base Color': (0.36, 0.12, 0.92, 1), 'Transmission Weight': 0.9, 'Specular IOR Level': 0.9,
-                             'Coat Weight': 0.5, 'Coat Roughness': 0.02,
-                             'Emission Color': (0.32, 0.08, 0.90, 1), 'Emission Strength': 0.35})
-    lw = node(nt, 'ShaderNodeLayerWeight', (-500, -300), Blend=0.35)
-    pw = node(nt, 'ShaderNodeMath', (-300, -300)); pw.operation = 'POWER'; pw.inputs[1].default_value = 2.0
+    # Clear amethyst: near-fully transmissive, very low roughness; colour deepens through a soft low-frequency
+    # cloud (inclusions) rather than hard cell lines, and brightens at grazing angles like a polished gem.
+    m, nt, b = principled('Crystal_Gem', Roughness=0.05, IOR=1.56,
+                          **{'Transmission Weight': 0.96, 'Coat Weight': 0.0, 'Specular IOR Level': 0.75})
+    tc = node(nt, 'ShaderNodeTexCoord', (-1100, 0))
+    nz = node(nt, 'ShaderNodeTexNoise', (-800, 80), Scale=9.0, Detail=3.0, Roughness=0.5)
+    nt.links.new(tc.outputs['Object'], nz.inputs['Vector'])
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.location = (-520, 120)
+    e = ramp.color_ramp.elements
+    e[0].position = 0.30; e[0].color = (0.16, 0.03, 0.62, 1)
+    e[1].position = 0.75; e[1].color = (0.52, 0.22, 0.96, 1)
+    nt.links.new(nz.outputs['Fac'], ramp.inputs['Fac'])
+    nt.links.new(ramp.outputs['Color'], b.inputs['Base Color'])
+    lw = node(nt, 'ShaderNodeLayerWeight', (-500, -380), Blend=0.35)
+    pw = node(nt, 'ShaderNodeMath', (-300, -380)); pw.operation = 'POWER'; pw.inputs[1].default_value = 2.4
     nt.links.new(lw.outputs['Facing'], pw.inputs[0])
-    ma = node(nt, 'ShaderNodeMath', (-120, -300)); ma.operation = 'MULTIPLY_ADD'
-    ma.inputs[1].default_value = 2.2; ma.inputs[2].default_value = 0.22
+    ma = node(nt, 'ShaderNodeMath', (-120, -380)); ma.operation = 'MULTIPLY_ADD'
+    ma.inputs[1].default_value = 1.1; ma.inputs[2].default_value = 0.10
     nt.links.new(pw.outputs['Value'], ma.inputs[0])
     nt.links.new(ma.outputs['Value'], b.inputs['Emission Strength'])
-    b.inputs['Emission Color'].default_value = (0.55, 0.30, 1.0, 1)
+    nt.links.new(ramp.outputs['Color'], b.inputs['Emission Color'])
     if hasattr(m, 'use_raytrace_refraction'):
         m.use_raytrace_refraction = True
     if hasattr(m, 'thickness_mode'):
@@ -309,9 +317,128 @@ def nearest_index(pts, target):
     return bi
 
 
+
+TRACE = None
+try:
+    import json
+    _tp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', 'thornbow_trace.json')
+    TRACE = json.load(open(_tp))
+except Exception as exc:
+    print('no trace json', exc)
+
+BR_SCALE = float(os.environ.get('TB_RAD_SCALE', 1.22))     # branch thickness vs the traced silhouette
+FL_SCALE = float(os.environ.get('TB_FLOWER_SCALE', 1.9)) # lotus petal length vs the traced blob radius
+
+
+def np_median(a):
+    a = sorted(a)
+    return a[len(a) // 2] if a else 0.0
+
+
+def build_wood_from_trace(wb, flowers, seg_main, seg_thin):
+    """Branches = tubes along the traced skeleton, radius from the silhouette (1:1 with the side view);
+    depth from the front view; free ends taper to points; flowers sit on stems at the traced blobs."""
+    B = TRACE['branches']
+    grip_band = 0.069
+
+    def zfun(x, y):
+        # depth budget grows away from the grip, tapers at the tips; deterministic weave
+        amp = 0.030 * min(1.0, max(0.0, (abs(y - YC) - 0.05) / 0.18)) * min(1.0, (0.50 - abs(y - YC)) / 0.18 + 0.35)
+        return amp * math.sin(9.1 * x + 6.7 * y + 1.3 * math.sin(13.0 * y))
+
+    # junction clustering (endpoints closer than 0.012 L share one depth + a hub sphere)
+    ends = []
+    for bi, br in enumerate(B):
+        ends.append((bi, 0, br['pts'][0])); ends.append((bi, 1, br['pts'][-1]))
+    hubs = []
+    for bi, k, pt in ends:
+        for h in hubs:
+            if math.dist(h['p'], pt) < 0.022:
+                h['m'].append((bi, k)); h['r'] = max(h['r'], float(np_median(B[bi]['rad'][1:4] if k == 0 else B[bi]['rad'][-4:-1]))); break
+        else:
+            hubs.append(dict(p=pt, m=[(bi, k)], r=float(np_median(B[bi]['rad'][1:4] if k == 0 else B[bi]['rad'][-4:-1]))))
+    hub_of = {}
+    for hi, h in enumerate(hubs):
+        for m in h['m']:
+            hub_of[m] = hi
+    free = {}
+    for hi, h in enumerate(hubs):
+        for bi, k in h['m']:
+            free[(bi, k)] = len(h['m']) == 1
+    for bi, br in enumerate(B):
+        pts, rad = br['pts'], br['rad']
+        n = len(pts)
+        if n < 3:
+            continue
+        zs = []
+        z0 = zfun(*hubs[hub_of[(bi, 0)]]['p'])
+        z1 = zfun(*hubs[hub_of[(bi, 1)]]['p'])
+        for i, (x, y) in enumerate(pts):
+            t = i / (n - 1)
+            zs.append(z0 + (z1 - z0) * (t * t * (3 - 2 * t)) + 0.35 * zfun(x + 0.5, y))
+        P3 = [P(x, y, z) for (x, y), z in zip(pts, zs)]
+        for end, idx_ in ((0, 0), (1, n - 1)):          # snap ends onto their hub so tubes connect
+            hb_ = hubs[hub_of[(bi, end)]]
+            if len(hb_['m']) > 1:
+                P3[idx_] = P(hb_['p'][0], hb_['p'][1], zfun(*hb_['p']))
+        P3 = curve(P3, max(n * 2, 12))
+        m = len(P3)
+        def lin(i):
+            f = i * (n - 1) / (m - 1)
+            j = min(n - 2, int(f))
+            return rad[j] + (rad[j + 1] - rad[j]) * (f - j)
+        rr = [max(0.0022, lin(i)) * L * BR_SCALE for i in range(m)]
+        # light smoothing so the silhouette radius never ribs the tube
+        for _ in range(3):
+            rr = [rr[0]] + [(rr[i - 1] + 2 * rr[i] + rr[i + 1]) / 4 for i in range(1, m - 1)] + [rr[-1]]
+        # taper free tips to a point over the last 30 %
+        for k, end in ((0, 0), (1, 1)):
+            if free.get((bi, end)):
+                for i in range(m):
+                    t = i / (m - 1) if end == 1 else 1 - i / (m - 1)
+                    if t > 0.70:
+                        rr[i] *= max(0.0, 1 - (t - 0.70) / 0.30) ** 0.9
+        if free.get((bi, 1)):
+            rr[-1] = 0.0
+        if free.get((bi, 0)):
+            rr[0] = 0.0
+        wb.tube(P3, rr, seg_main if max(rr) > 0.007 * L else seg_thin,
+                lambda t, bi=bi: (0.0, 0, 0), cap=False, jitter=0.015)
+        br['_p3'] = P3; br['_rr'] = rr
+    # hub spheres hide the seams between tubes
+    for h in hubs:
+        if len(h['m']) < 3:
+            continue
+        x, y = h['p']
+        c = P(x, y, zfun(x, y))
+        res = bmesh.ops.create_icosphere(wb.bm, subdivisions=2, radius=h['r'] * L * BR_SCALE * 1.0, matrix=Matrix.Translation(c))
+        for v in res['verts']:
+            v[wb.tint] = (0.0, 0.0, 0.0, 1.0)
+    # flowers on stems: nearest branch point -> traced flower centre
+    allp = []
+    for br in B:
+        for q, r_ in zip(br.get('_p3', []), br.get('_rr', [])):
+            allp.append((q, r_))
+    for f in TRACE['flowers']:
+        fc = P(f['x'], f['y'], f['z'])
+        best = min(allp, key=lambda qr: (qr[0] - fc).length)
+        q0, r0 = best
+        d = fc - q0
+        if d.length > 0.012 * L:
+            nrm = Vector((-d.z, 0, d.x)).normalized() * (0.18 * d.length)
+            if nrm.x * (fc.x - XC * 0) < 0:
+                nrm = -nrm
+            S = curve([q0, q0 + d * 0.33 + nrm, q0 + d * 0.72 + nrm * 0.55, fc - d.normalized() * 0.010 * L], 14)
+            wb.tube(S, taper(len(S), max(r0 * 0.85, 0.0055 * L), 0.0036 * L, 1.0), seg_thin, lambda t: (t * 0.5, 0, 0))
+        inplane = d.normalized() if d.length > 1e-6 else Vector((0, 0, 1))
+        facing = Vector((0, -1.0 if len(flowers) % 3 else 1.0, 0))      # blooms open toward the side camera (mostly)
+        axis = (inplane * 0.45 + facing * 0.90).normalized()
+        flowers.append((fc, axis, f['radius'] * L * FL_SCALE))
+
+
 def build_bow():
     wood, flower_m, crystal_m = mat_wood(), mat_flower(), mat_crystal()
-    core_m = mat_emit('Crystal_Core', (0.48, 0.22, 1.0, 1), 4.0)
+    core_m = mat_emit('Crystal_Core', (0.34, 0.10, 0.95, 1), 2.4)
     string_m = mat_emit('Bow_String', (1.0, 0.36, 0.90, 1), 1.6)
     stamen_m = mat_emit('Flower_Heart', (1.0, 0.80, 1.0, 1), 2.2)
     cloth_m = mat_cloth()
@@ -325,105 +452,11 @@ def build_bow():
         return abs(p.z) > grip_zone + 0.012 * L
 
     flowers = []          # (position, outward axis, size)
-    tips = {}
-    seg_main = max(5, int(9 * DETAIL))
-    seg_thin = max(4, int(6 * DETAIL))
-    for sign in (1, -1):
-        ctrl = [P(x, y) for x, y in limb_ctrl(sign)]
-        A = curve(ctrl, int(46 * DETAIL) + 8)
-        n = len(A)
-        tips[sign] = A[-1]
-        fade = lambda t: (max(0.0, (t - 0.72) / 0.28) ** 1.5, 0, 0)
-        wood_b.tube(A, taper(n, 0.0135 * L, 0.0046 * L, 0.9), seg_main, fade, cap=False, jitter=0.12)
-        # top lotus: the main branch continues a little past the nock
-        top_flower = P(0.259, 0.022 if sign > 0 else mirror_y(0.022))
-        ext = curve([A[-2], A[-1], A[-1].lerp(top_flower, 0.55) + Vector((-0.004 * L, 0, 0)), top_flower], 10)
-        wood_b.tube(ext, taper(len(ext), 0.0048 * L, 0.0018 * L), seg_thin, lambda t: (max(0.0, (t - 0.6) / 0.4), 0, 0))
-        flowers.append((top_flower, (top_flower - ext[-3]).normalized(), 0.044 * L))
-
-        # two strands braided around the main branch, each peeling off into a flower branch
-        strands = [
-            dict(phase=0.0, turns=1.15, leave=0.42, flower=(0.079, 0.259, -0.018), via=(0.100, 0.300, -0.012)),
-            dict(phase=2 * math.pi / 3, turns=1.0, leave=0.56, flower=(0.292, 0.214, 0.022), via=(0.240, 0.243, 0.016)),
-            dict(phase=4 * math.pi / 3, turns=0.9, leave=0.70, flower=None, via=(0.215, 0.180, -0.010)),
-        ]
-        for sd in strands:
-            fx, fy, fz = sd['flower'] or (0.262, 0.150, -0.014)
-            vx, vy, vz = sd['via']
-            if sign < 0:
-                fy, vy = mirror_y(fy), mirror_y(vy)
-                fz, vz = -fz, -vz
-            leave_i = int(sd['leave'] * (n - 1))
-            pts = []
-            for i in range(0, leave_i + 1, 1):
-                t = i / (n - 1)
-                a = sd['phase'] + 2 * math.pi * sd['turns'] * t * sign
-                tng = (A[min(n - 1, i + 1)] - A[max(0, i - 1)]).normalized()
-                side = tng.cross(Vector((0, 1, 0))).normalized()
-                gz = min(1.0, max(0.0, (abs(A[i].z) - grip_zone) / (0.05 * L)))
-                amp = (0.40 + 0.60 * gz * gz * (3 - 2 * gz)) * (1 - 0.40 * t)
-                off = (side * math.cos(a) * 0.030 + Vector((0, 1, 0)) * math.sin(a) * 0.014) * L * amp
-                pts.append(A[i] + off)
-            pts += [P(vx, vy, vz), P(fx, fy, fz)]
-            S = curve(pts, int(30 * DETAIL) + 6)
-            ns = len(S)
-            wood_b.tube(S, taper(ns, 0.0100 * L, 0.0022 * L if sd['flower'] else 0.0, 1.1), seg_thin,
-                        lambda t: (max(0.0, (t - 0.82) / 0.18) ** 1.2, 0, 0), cap=True, jitter=0.1)
-            if sd['flower']:
-                flowers.append((S[-1], (S[-1] - S[-4]).normalized(), 0.042 * L))
-
-        # flower twigs off the upper main branch
-        for (fx, fy, fz), t0, bend in (((0.232, 0.112, -0.028), 0.80, (-0.010, 0.0)), ((0.307, 0.094, 0.026), 0.86, (0.012, 0.0))):
-            if sign < 0:
-                fy, fz = mirror_y(fy), -fz
-            i0 = int(t0 * (n - 1))
-            end = P(fx, fy, fz)
-            mid = A[i0].lerp(end, 0.5) + Vector((bend[0] * L, 0, 0.006 * L * sign))
-            T = curve([A[i0], mid, end], 12)
-            wood_b.tube(T, taper(len(T), 0.0050 * L, 0.0018 * L), seg_thin, lambda t: (max(0.0, (t - 0.8) / 0.2), 0, 0))
-            flowers.append((end, (end - T[-3]).normalized(), 0.038 * L))
-
-        # bare thorny twigs (decoration), never inside the grip zone
-        for t0, dx, dy, dz, length in ((0.30, -1.0, 0.55, 0.20, 0.070), (0.40, 0.95, 0.85, -0.25, 0.060),
-                                       (0.52, -0.9, 0.9, 0.15, 0.058), (0.66, 0.75, 1.0, 0.30, 0.048),
-                                       (0.36, -0.7, -0.35, -0.3, 0.042), (0.74, -0.85, 0.6, -0.2, 0.045),
-                                       (0.26, 0.8, 0.2, 0.35, 0.045), (0.46, -1.0, 0.1, -0.35, 0.050),
-                                       (0.58, 0.95, 0.4, -0.1, 0.040), (0.84, -0.7, 0.9, 0.25, 0.035)):
-            i0 = int(t0 * (n - 1))
-            if not grip_safe(A[i0]):
-                continue
-            d = Vector((dx, dz, dy * sign)).normalized()
-            curl = Vector((0, 0, 0.35 * sign))
-            T = curve([A[i0], A[i0] + d * length * 0.5 * L, A[i0] + (d + curl).normalized() * length * L], 10)
-            wood_b.tube(T, taper(len(T), 0.0052 * L, 0.0, 0.9), seg_thin, lambda t: (0.15 * t, 0, 0))
-            if length >= 0.05:   # small fork near the twig's middle
-                fk = T[len(T) // 2]
-                fd = (d + Vector((0, 0, 0.9 * sign)) + Vector((0, rng.uniform(-0.4, 0.4), 0))).normalized()
-                F = curve([fk, fk + fd * 0.012 * L, fk + (fd + curl).normalized() * 0.026 * L], 7)
-                wood_b.tube(F, taper(len(F), 0.0028 * L, 0.0, 0.9), 4, lambda t: (0.2 * t, 0, 0))
-        # small thorns
-        for _ in range(int(14 * DETAIL)):
-            t0 = rng.uniform(0.18, 0.92)
-            i0 = int(t0 * (n - 1))
-            if not grip_safe(A[i0]):
-                continue
-            tng = (A[min(n - 1, i0 + 1)] - A[max(0, i0 - 1)]).normalized()
-            a = rng.uniform(0, 2 * math.pi)
-            side = tng.cross(Vector((0, 1, 0))).normalized()
-            out = (side * math.cos(a) + Vector((0, 1, 0)) * math.sin(a)).normalized()
-            r = 0.0165 * L * (1 - 0.7 * t0)
-            base = A[i0] + out * r * 0.8
-            tip = base + (out * 0.85 + tng * 0.5).normalized() * 0.014 * L
-            wood_b.tube([base, base.lerp(tip, 0.5), tip], [0.0024 * L, 0.0012 * L, 0.0], 4, lambda t: (0, 0, 0))
-
-    # crystal claws: four branch fingers holding the gem in front of the grip
+    seg_main = max(6, int(10 * DETAIL))
+    seg_thin = max(4, int(7 * DETAIL))
     gem_base_x, gem_tip_x = 0.120, 0.004
-    for ry_, zz, reach in ((0.400, 0.010, 0.060), (0.578, -0.010, 0.060), (0.410, -0.022, 0.085), (0.568, 0.022, 0.085)):
-        root = P(0.128, ry_, zz * 0.5)
-        mid = P(0.090, YC + (ry_ - YC) * 0.62, zz * 1.4)
-        hold = P(0.120 - reach, YC + (ry_ - YC) * 0.30, zz * 1.2)
-        T = curve([root, root.lerp(mid, 0.5) + Vector((-0.004 * L, 0, 0)), mid, hold], 16)
-        wood_b.tube(T, taper(len(T), 0.0068 * L, 0.0, 0.85), seg_thin, lambda t: (0.25 * t, 0, 0))
+    tips = {1: P(0.2736, 0.013), -1: P(0.2736, 0.992)}          # string nocks (measured on the sheet)
+    build_wood_from_trace(wood_b, flowers, seg_main, seg_thin)
 
     wood_ob = wood_b.finish(wood)
 
@@ -470,8 +503,8 @@ def lotus(fb, hb, pos, axis, size):
     ref = Vector((0, 1, 0)) if abs(axis.y) < 0.85 else Vector((1, 0, 0))
     n1 = axis.cross(ref).normalized()
     n2 = axis.cross(n1).normalized()
-    layers = ((5, size, math.radians(42), 0.0), (5, size * 0.88, math.radians(23), math.pi / 5),
-              (3, size * 0.64, math.radians(7), 0.3))
+    layers = ((7, size, math.radians(46), 0.0), (6, size * 0.88, math.radians(28), math.pi / 6),
+              (4, size * 0.66, math.radians(10), 0.3))
     nu, nv = max(4, int(7 * DETAIL)), max(3, int(5 * DETAIL))
     for count, ln, tilt, rot in layers:
         for k in range(count):
@@ -487,7 +520,7 @@ def lotus(fb, hb, pos, axis, size):
                 out = s.cross(tang).normalized()
                 if out.dot(e) < 0:
                     out = -out
-                w = ln * 0.36 * (math.sin(math.pi * min(u, 0.999) ** 0.8) ** 0.9)
+                w = ln * 0.52 * math.sqrt(max(0.0, 1 - ((u - 0.5) / 0.5) ** 2)) ** 0.8
                 row = []
                 for iv in range(nv + 1):
                     v = -1 + 2 * iv / nv
@@ -689,6 +722,25 @@ if MODE == 'stills':
     render(bpy.data.objects['Hero'], f'{OUT}/hero_dark.png', 1100, 1500)
     render(bpy.data.objects['Gem'], f'{OUT}/crystal_closeup_dark.png', 1200, 900)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath('art/weapon_gen/out/thornbow.blend'))
+elif MODE == 'measure':
+    # Pixel-registered side view against the 2560x1440 three-view sheet: 1 L = 1334 px, sheet x0=328, y0=65.
+    setup_scene(dark=False)
+    sc = bpy.context.scene
+    sc.render.film_transparent = True
+    try:
+        sc.compositing_node_group = None
+    except Exception:
+        pass
+    PXL = 1334.0
+    cam = camera('Meas', (P((1280 - 328) / PXL, (720 - 65) / PXL).x, -4, P((1280 - 328) / PXL, (720 - 65) / PXL).z),
+                 (P((1280 - 328) / PXL, (720 - 65) / PXL).x, 0, P((1280 - 328) / PXL, (720 - 65) / PXL).z), 1440 / PXL * L)
+    groups = {'wood': ['Wood'], 'flowers': ['Flowers', 'FlowerHearts'], 'crystal': ['Crystal', 'CrystalCore'],
+              'grip': ['GripWrap'], 'string': ['String']}
+    for gname, names in groups.items():
+        for ob in bpy.data.objects:
+            if ob.type == 'MESH':
+                ob.hide_render = ob.name not in names
+        render(cam, f'{OUT}/meas_{gname}.png', 2560, 1440)
 elif MODE == 'anim':
     setup_scene(dark=True)
     cam = camera('Gem', (-0.42, -0.42, 0.10), (P(0.07, YC).x, 0, 0), lens=60)
