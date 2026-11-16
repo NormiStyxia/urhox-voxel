@@ -17,24 +17,25 @@ V.atFrame(8, function()
     local update = moves.Update
     moves.Update = function(self, dt, controls)
         frame = frame + 1
+        if pending ~= nil then
+            -- 上一帧已呈现：此时读回的后备缓冲就是攻击后的那一帧
+            local image = Image()
+            if graphics:TakeScreenShot(image) then
+                local name = "swordfx_" .. pending .. ".png"
+                print("SwordFxView: saved " .. name .. " " .. tostring(image:SavePNG(name)))
+            end
+            pending = nil
+        end
         if controls then
+            if ATTACKS[frame] then controls.allowed = true end
             controls.attack = ATTACKS[frame] == true
             controls.attackTap = ATTACKS[frame] == true
         end
         if ATTACKS[frame] or SHOTS[frame] then
             print(string.format("SwordFxView: frame %d dt=%.3f clip=%s", frame, dt, tostring(self.clip)))
         end
-        if SHOTS[frame] then pending = frame end
+        if SHOTS[frame - 1] then pending = frame - 1 end
         return update(self, dt, controls)
     end
-    SubscribeToEvent("EndFrame", function()
-        if pending == nil then return end
-        local image = Image()
-        if graphics:TakeScreenShot(image) then
-            local name = "swordfx_" .. pending .. ".png"
-            print("SwordFxView: saved " .. name .. " " .. tostring(image:SavePNG(name)))
-        end
-        pending = nil
-    end)
     print("SwordFxView: armed")
 end)
