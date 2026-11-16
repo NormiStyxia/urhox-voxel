@@ -736,6 +736,28 @@ function C:Update(dt,controls)
     end
     self.state.SetBusy(self.clip~=nil or controls.selecting==true)
 end
+-- Unified selection entry. Preserve authored sword/bow swaps and draw events;
+-- time is the existing casting mode, not a third WeaponRig mesh.
+function C:SelectLoadout(target)
+    if target~='time' and target~='sword' and target~='bow' then return false end
+    if self.dead or not self:CanCancel() then return false end
+    local selected=self.state.GetSelection()
+    if selected==target then return true end
+    if self.state.TransitionRemaining()>0 then return false end
+    if target=='time' then
+        self:Cancel('loadout') -- discard pending charge/fire/hit before mode change
+        self.state.SetBusy(false)
+        self.state.Exit('loadout')
+        return true
+    end
+    if selected~='time' then return self:Swap(target) end
+    self:Cancel('loadout')
+    self.state.SetBusy(false)
+    if not self.state.SetWeapon(target) or not self.state.Enter('loadout') then return false end
+    -- Match ordinary swap completion: selected weapon rests on the back;
+    -- its next attack owns the existing draw animation and hand-state change.
+    return true
+end
 function C:Swap(targetWeapon)
     if targetWeapon~=nil and targetWeapon~='sword' and targetWeapon~='bow' then return false end
     if self.dead then return false end

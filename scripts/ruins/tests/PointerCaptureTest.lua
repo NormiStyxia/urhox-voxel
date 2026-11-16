@@ -114,14 +114,14 @@ V.atFrame(5, function()
         end
         Key(KEY_ESCAPE)
         mock.requests = 0
-        -- 尚无浏览器锁定，直接按 E、Q 也必须进入真实 Cast。
+        -- 尚无浏览器锁定，直接按 E、R 也必须进入真实 Cast。
         scene.caster.cool.freeze, scene.caster.cool.rewind = 0, 0
         Key(KEY_E)
         Tick()
         V.assert(scene.caster.lastCast == "freeze", "真实输入 E 在未锁定时施放冻结")
-        Key(KEY_Q)
+        Key(KEY_R)
         Tick()
-        V.assert(scene.caster.lastCast == "rewind", "真实输入 Q 在未锁定时施放回溯")
+        V.assert(scene.caster.lastCast == "rewind", "真实输入 R 在未锁定时施放回溯")
         V.assert(mock.requests == 0, "键盘施法无需浏览器锁定")
         scene.caster.cool.shatter = 0
         mock.left = true

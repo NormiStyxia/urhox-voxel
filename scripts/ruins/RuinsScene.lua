@@ -247,9 +247,9 @@ local function Smooth(t) t = Clamp(t, 0, 1) return t * t * (3 - 2 * t) end
 -- ---------------------------------------------------------------- 目标文本
 local OBJECTIVES = {
     gate = { "打通被封的城门", "南门被碎石堵住了。准星对准碎石，按左键施放「碎时」把它打碎。" },
-    bridge = { "修复断桥", "桥体残片悬在裂隙中。站在岸边，瞄准带金色符脉的悬空桥片，按 Q 施放「回溯」。" },
+    bridge = { "修复断桥", "桥体残片悬在裂隙中。站在岸边，瞄准带金色符脉的悬空桥片，按 R 施放「回溯」。" },
     key = { "取得时之钥", "时之碑被封印了。西侧塔台顶上有「时之钥」：打碎悬石，趁碎块下落时按 E「冻结」，踩着碎块爬上塔台。" },
-    steles = { "复原四座时之碑", "带着时之钥回到内环，对倒塌的时之碑按 Q 施放「回溯」。（%d / 4）" },
+    steles = { "复原四座时之碑", "带着时之钥回到内环，对倒塌的时之碑按 R 施放「回溯」。（%d / 4）" },
     awake = { "遗迹看守者已苏醒", "巨龙认可了你。走近它按 F 骑乘，Space 起飞。时之物件仍可以随意碎时 / 冻结 / 回溯。" },
 }
 
@@ -642,9 +642,14 @@ local function StartCombat()
     M.foot=foot_
     weaponGesture_=WeaponSelectGesture.New({character=nomi_.nomi,root=nomi_.node,
         wheel=WeaponWheel,moves=combatMoves_,rig=combatRig_,state=CombatState,
+        items={{id='sword',name='长剑',tag='近距离 / 削切'},
+            {id='bow',name='长弓',tag='远距离 / 单点'},
+            {id='time',name='时间法器',tag='中距离 / 碎时 · 冻结 · 回溯'}},
+        selection=CombatState.GetSelection,
+        select=function(id) return combatMoves_:SelectLoadout(id) end,
         canOpen=function()
             local clip=combatMoves_.clip
-            return M.ride.mode=='free' and CombatState.InCombat() and not combatMoves_.dead
+            return M.ride.mode=='free' and not combatMoves_.dead
                 and not voidInputBlocked and not M.debugOn and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked()
                 and input.focus and not input.minimized and animPreview_.index==0
                 and clip~='getup' and clip~='knockdown' and clip~='death'
@@ -740,6 +745,7 @@ local function AttachTouchControls()
         touchState.breathActive=M.stream and M.stream.active
         touchState.noSpells=not CombatState.CanUseTime()
         touchState.readyFlash,touchState.aggro=CombatState.ReadyFlash(),CombatHasAggro()
+        touchState.unifiedSelection=true
         touchState.combat,touchState.weapon=CombatState.InCombat(),CombatState.GetWeapon()
         touchState.combatCharge=combatMoves_ and combatMoves_.charge or 0
         touchState.sprinting=foot_ and foot_:IsRunning()
@@ -827,10 +833,10 @@ function M.Start()
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
     nomi_.ignoreAimVolume=IsCombatVisualVolume
-    CombatState.Configure({rig=combatRig_,weapon=combatRig_.active,aggro=CombatHasAggro,
+    CombatState.Configure({rig=combatRig_,weapon=combatRig_.active,aggro=CombatHasAggro,explicitSelection=true,
         cancel=function(reason)
             if weaponGesture_ and reason~='weapon' and reason~='attack' then weaponGesture_:Interrupt(reason) end
-            if reason=='manual' or reason=='aggro' or reason=='quiet' or reason=='weapon' or reason=='attack' then
+            if reason=='manual' or reason=='aggro' or reason=='quiet' or reason=='weapon' or reason=='attack' or reason=='loadout' then
                 TouchControls.CancelActions()
             else TouchControls.Cancel() end
             combatInputBlocked=true
@@ -1016,7 +1022,7 @@ function Ruins_HandleKeyDown(eventType, eventData)
     local key = eventData:GetInt("Key")
     if key == KEY_ESCAPE then
         pointer:Release("escape")
-    elseif key == KEY_E or key == KEY_Q or key == KEY_W or key == KEY_A or key == KEY_S or key == KEY_D then
+    elseif key == KEY_E or key == KEY_R or key == KEY_Q or key == KEY_W or key == KEY_A or key == KEY_S or key == KEY_D then
         pointer:Resume()
     end
 end
@@ -1125,7 +1131,7 @@ local function ToggleTrainingDummy()
     material:SetShaderParameter('Roughness',Variant(.95))
     model:SetMaterial(material); model.castShadows=true
     trainingDummy_=CombatMoves.NewTrainingDummy(pos,node)
-    CombatHUD.Say('训练木桩 · C 拔刃后攻击')
+    CombatHUD.Say('训练木桩 · 按住 Q 选择剑或弓')
 end
 local function StartCombatTest()
     if combatTest_ and combatTest_.active then return end
@@ -1249,7 +1255,7 @@ local function UpdateAim(presentation)
             c.object,c.state,c.label,c.rubble,c.shatter,c.rewind=obj,obj.state,label,obj.rubble,obj.canShatter,obj.canRewind
             local st=AIM_STATE_NAMES[obj.state] or ""
             if obj.state=="FROZEN" and not obj.rubble then st="冻结" end
-            local actions=(obj.canShatter and "  [左键 碎时]" or "")..(obj.canRewind and "  [Q 回溯]" or "")
+            local actions=(obj.canShatter and "  [左键 碎时]" or "")..(obj.canRewind and "  [R 回溯]" or "")
             c.text=string.format("◆ %s · %s%s",label,st,actions)
         end
         HUD.SetTarget(c.text,obj)
@@ -1271,9 +1277,9 @@ local function HandleSpells(dt, aim)
     if animPreview_.index>0 or M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
     if not CombatState.CanUseTime() then
         caster_.charging,caster_.charge=false,0
-        -- Q is reserved for weapon swap in combat; E/1/2/3 remain rejected spells.
-        if time_>=combatNoticeAt and (Press(KEY_E) or Press(KEY_1) or Press(KEY_2) or Press(KEY_3)) then
-            caster_:Say(CombatState.InCombat() and '战斗中无法使用时间之力' or '时间之力恢复中',1.2)
+        -- Q always selects a loadout; time inputs belong only to its time slot.
+        if time_>=combatNoticeAt and (Press(KEY_E) or Press(KEY_R) or Press(KEY_1) or Press(KEY_2) or Press(KEY_3)) then
+            caster_:Say(CombatState.InCombat() and '按住 Q 选择时间法器' or '当前动作结束后可施法',1.2)
             combatNoticeAt=time_+1.2
         end
         return
@@ -1287,9 +1293,9 @@ local function HandleSpells(dt, aim)
     -- A begin/end delivered together must still fire a zero-charge tap once.
     if TouchInput.Press("shatter") and not lmb then caster_:HandleCharge(true,aim,true) end
     caster_:HandleCharge(lmb,aim,true)
-    -- 冻结 E、回溯 Q（不用鼠标右键）；数字键 2 / 3 保留给测试脚本
+    -- Q 统一选装备；冻结 E、回溯 R；数字键 2 / 3 保留。
     if Press(KEY_E) or Press(KEY_2) then caster_:Cast("freeze", aim) end
-    if Press(KEY_Q) or Press(KEY_3) then caster_:Cast("rewind", aim) end
+    if Press(KEY_R) or Press(KEY_3) then caster_:Cast("rewind", aim) end
 end
 
 function Ruins_HandleSceneUpdate(eventType, eventData)
@@ -1461,11 +1467,11 @@ local function UpdateCombatActions(combatAllowed)
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
         if not CombatState.InCombat() and (Press(KEY_G) or TouchInput.Press('forge')) then OpenForge() end
-        if Press(KEY_C) or TouchInput.Press('sheath') then
-            if CombatState.InCombat() then CombatState.Exit('manual') else CombatState.Enter('manual') end
+        if not combatInputBlocked and Press(KEY_C) then
+            combatMoves_:SelectLoadout(CombatState.InCombat() and 'time' or CombatState.GetWeapon())
         end
-        if CombatState.InCombat() and not combatInputBlocked then
-            local touchSwap=TouchInput.Press('swap')
+        if not combatInputBlocked then
+            local touchSwap=TouchInput.Press('swap') or TouchInput.Press('sheath')
             if Press(KEY_Q) or touchSwap then weaponGesture_:Open(touchSwap) end
         end
     end
@@ -1563,13 +1569,13 @@ function Ruins_HandleUpdate(eventType, eventData)
     if combatInputBlocked then
         local held=input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT)
             or TouchInput.Down('shatter') or TouchInput.Down('attack') or TouchInput.Down('heavy')
-        for _,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_E,KEY_Q,KEY_SHIFT}) do held=held or Down(key) end
+        for _,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_SHIFT}) do held=held or Down(key) end
         if not held then combatInputBlocked=false end
     end
     if VoidRewind.IsActive() then Safe('FX.VoidRewind',VoidRewind.Update,dt) end
     if voidInputBlocked and not VoidRewind.IsActive() then
         local held=input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT) or input:GetMouseButtonDown(MOUSEB_MIDDLE)
-        for _,key in ipairs({KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_F10}) do
+        for _,key in ipairs({KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_F10}) do
             held=held or Down(key)
         end
         if not held then voidInputBlocked=false end
@@ -1584,7 +1590,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     if TouchInput.IsEnabled() and not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked() then nomi_:Look(tx*.14,ty*.12,combatLookScale_) end
     if M.DEBUG_PANEL and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_F10) then M.ToggleDebugPanel() end
     if not WeaponWheel.IsBlocked() and not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_TAB) then farView = not farView end
-    if not WeaponWheel.IsBlocked() and not (CombatState.InCombat() and Down(KEY_Q))
+    if not WeaponWheel.IsBlocked() and not Down(KEY_Q)
         and not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
         local mm = input.mouseMove
         if animPreview_.index>0 then
@@ -1657,7 +1663,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     if combatAnim_ and animPreview_.index==0 then
         Safe('Animation.BowParameters',UpdateCombatAnimationParams)
     end
-    if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' or (foot_ and foot_.weight>0) or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
+    if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip~=nil or (foot_ and foot_.weight>0) or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
     if foot_ and M.ride.mode=='free' then
         local preview=animPreview_.index>0 and CombatAnim.DebugList()[animPreview_.index].id
         Safe('Locomotion.Ground',nomi_.GroundFeet,nomi_,foot_,dt,

@@ -65,8 +65,8 @@ local SETS = {
 local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','按住【跑】加速 · 松开恢复','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
-local FOOT_TOP={{name='menu',icon='menu'},{name='sheath'},{name='forge'},{name='farview'},{name='fastTime',icon='clock'}}
-local COMBAT_TOP={{name='menu',icon='menu'},{name='sheath'},{name='farview'}}
+local FOOT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='forge'},{name='farview'},{name='fastTime',icon='clock'}}
+local COMBAT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='farview'}}
 local function TopButtons()
     if current=='combat' then return COMBAT_TOP end
     if current=='foot' then return FOOT_TOP end
@@ -118,7 +118,7 @@ local function Visible(b)
     return b.name~='mount' or state.canMount==true
 end
 local function Disabled(b)
-    if b.name=='sheath' then return state.combat and state.aggro end
+    if b.name=='sheath' then return not state.unifiedSelection and state.combat and state.aggro end
     if b.name=='shatter' or b.name=='freeze' or b.name=='rewind' then return (state.cool and (state.cool[b.name] or 0)>0) or state.noSpells end
     return state.mounting==true or (state.disabled and state.disabled[b.name])
 end

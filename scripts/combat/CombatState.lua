@@ -120,17 +120,23 @@ end
 function M.Get() return state end
 function M.InCombat() return state ~= M.EXPLORE end
 function M.GetWeapon() return weapon end
+-- The physical rig still owns only sword/bow. Time uses the existing hand
+-- casting presentation, so never send a synthetic third model id to the rig.
+function M.GetSelection() return state==M.EXPLORE and 'time' or weapon end
 function M.GetPose() return lastPose end
 function M.TransitionRemaining() return transition end
 function M.FinishTransition()
     transition=0
     if M.InCombat() and not mounted and not dead and lastPose=='hidden' then Pose('back') end
 end
-function M.CanUseTime() return state == M.EXPLORE and spellDelay <= 0 and not mounted and not dead end
+function M.CanUseTime()
+    return state==M.EXPLORE and spellDelay<=0 and not mounted and not dead
+        and (not options.explicitSelection or not busy)
+end
 function M.Glow() return (mounted or dead) and 0 or glow end
 function M.ReadyFlash() return readyFlash>0 end
 function M.HasAggro() return options.aggro and options.aggro()==true or false end
-function M.CanSheath() return not M.HasAggro() end
+function M.CanSheath() return options.explicitSelection==true or not M.HasAggro() end
 -- R9: locomotion/sprint is not busy and must not refresh Activity; ordinary
 -- .40s hand-to-back grace and automatic exploration continue while running.
 function M.SetBusy(value)
@@ -151,7 +157,7 @@ function M.Enter(reason)
     quiet, idle, glow, transition = 0, 0, 0, .3
     Pose('back')
     Changed(reason or 'manual')
-    if options.say then options.say('拔刃 · 时间之力暂息') end
+    if options.say then options.say(options.explicitSelection and '武器就绪 · 按住 Q 切换' or '拔刃 · 时间之力暂息') end
     return true
 end
 ---@param reason string|nil
@@ -163,19 +169,23 @@ function M.Exit(reason)
     local wasCombat = state ~= M.EXPLORE
     SetState(M.EXPLORE,reason or 'manual')
     quiet, idle, transition, busy = 0, 0, 0, false
-    if wasCombat then spellDelay, glow = 1, 0 end
+    if wasCombat then spellDelay,glow=options.explicitSelection and 0 or 1,0 end
     Pose('hidden')
     -- Force paths also clear held input when already exploring.
     if wasCombat or reason == 'mount' or reason == 'death' or reason == 'stop' then Changed(reason or 'manual') end
-    if wasCombat and options.say and reason ~= 'stop' then options.say('收刃 · 时间之力恢复中') end
+    if wasCombat and options.say and reason ~= 'stop' then
+        options.say(options.explicitSelection and '时间法器 · 左键碎时 / E 冻结 / R 回溯' or '收刃 · 时间之力恢复中')
+    end
 end
 function M.OnEnemyAggro(enemyId)
     if enemyId == nil or mounted or dead then return end
-    M.Enter('aggro'); quiet = 0
+    if not options.explicitSelection then M.Enter('aggro') end
+    quiet = 0
 end
 function M.OnPlayerHit()
     if mounted or dead then return end
-    M.Enter('hit'); quiet = 0
+    if not options.explicitSelection then M.Enter('hit') end
+    quiet = 0
 end
 -- Called by accepted combat moves, not by ordinary exploration LMB/1.
 ---@param cancelTransition boolean|nil Accepted attacks can interrupt draw/sheath.
@@ -226,7 +236,7 @@ function M.Update(dt)
     glow = 0
     quiet = quiet + dt
     if not busy then idle = idle + dt else idle = 0 end
-    if quiet >= 6 and not busy then M.Exit('quiet'); return end
+    if quiet >= 6 and not busy and not options.explicitSelection then M.Exit('quiet'); return end
     if lastPose=='hand' and not busy and idle >= .40 then
         SetState(M.IDLE,'idle')
         Pose('back')

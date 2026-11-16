@@ -76,7 +76,7 @@ local function Actions(key)
     if key == KEY_SHIFT then return 'dash' end -- foot runIntent/run are not keyboard Shift
     if key == KEY_F then return 'mount', 'dismount' end
     if key == KEY_E then return 'freeze' end
-    if key == KEY_Q then return 'rewind' end
+    if key == KEY_R then return 'rewind' end
     if key == KEY_C then return 'descend' end
     if key == KEY_G then return 'glide' end
     if key == KEY_L then return 'land' end

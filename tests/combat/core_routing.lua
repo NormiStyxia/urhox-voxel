@@ -11,7 +11,7 @@ function caster:Cast(id) casts[#casts+1]=id end
 function caster:Say(text) self.message=text end
 local env=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,M={mounted=false,debugOn=false,ride={mode='free'},ctrl={state='IDLE'}},
     caster_=caster,animPreview_={index=0},voidInputBlocked=false,combatInputBlocked=false,combatNoticeAt=0,time_=10,
-    KEY_1=1,KEY_2=2,KEY_3=3,KEY_E=4,KEY_Q=5,MOUSEB_LEFT=1,
+    KEY_1=1,KEY_2=2,KEY_3=3,KEY_E=4,KEY_Q=5,KEY_R=6,MOUSEB_LEFT=1,
     CombatState={CanUseTime=function() return state.allowed end,InCombat=function() return state.combat end},
     TouchControls={IsBlocked=function() return false end},
     TouchInput={IsEnabled=function() return touch end,Down=function(k) return touchDown[k] or false end,
@@ -25,9 +25,10 @@ local body=source:match('(local function HandleSpells.-)'..string.char(10)..'fun
 local handle=assert(load(body..string.char(10)..'return HandleSpells','Scene.HandleSpells','t',env))()
 keys.mouse=true;handle(.1,{});assert(caster.charging and #charges==1)
 keys.mouse=false;handle(.1,{});assert(not caster.charging and #charges==2)
-press[4],press[5]=true,true;handle(.1,{});assert(casts[1]=='freeze' and casts[2]=='rewind')
+press[5]=true;handle(.1,{});assert(#casts==0,'Q never casts rewind')
+press[4],press[6]=true,true;handle(.1,{});assert(casts[1]=='freeze' and casts[2]=='rewind')
 state.allowed,state.combat=false,true;caster.charging=true;keys.mouse=true;press[4]=true
-handle(.1,{});assert(not caster.charging and caster.message=='战斗中无法使用时间之力' and #casts==2)
+handle(.1,{});assert(not caster.charging and caster.message=='按住 Q 选择时间法器' and #casts==2)
 local count=#charges
 state.combat=false;handle(.1,{});assert(#charges==count)
 state.allowed=true;env.combatInputBlocked=true;handle(.1,{});assert(#charges==count)

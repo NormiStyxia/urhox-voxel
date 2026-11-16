@@ -23,7 +23,7 @@ local function ForgeHidden()
 end
 local ready=false
 local EMPTY={}
-local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='Q'}}
+local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='R'}}
 local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='run',icon='sprint',key='Shift'},{name='swap',key='按住 Q'}}
 local MESSAGE_STEPS={-4,0,4,0}
 local MESSAGE_ALPHA={.34,.67,1,1}
@@ -36,15 +36,15 @@ local cool,cd={},{}
 local charge,crossVisible,targetGold=0,true,false
 local help=false
 local C=Draw.colors
--- 三个法术的按键色：左键碎时红、E 冻结蓝、Q 回溯黄
+-- 三个法术的按键色：左键碎时红、E 冻结蓝、R 回溯黄
 local SPELL_COLORS={shatter={255,92,76},freeze={96,160,255},rewind={255,206,96}}
 local Layer=UI.Panel:Extend('RuinsPixelHUD')
 local function MobileText(text)
     if not Touch.IsEnabled() then return text end
     if mobileLast==text then return mobileResult end
-    local t=text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 Q 施放','点【回溯】施放')
+    local t=text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 R 施放','点【回溯】施放')
         :gsub('按 E','点【冻结】'):gsub('按 F 骑乘，Space 起飞','点【上龙】骑乘，再点【起飞】')
-        :gsub('%[Q 回溯%]','【回溯】'):gsub('按 Q','点【回溯】')
+        :gsub('%[R 回溯%]','【回溯】'):gsub('按 R','点【回溯】')
         :gsub('%[左键 碎时%]','【碎时】'):gsub('左键碎时','【碎时】')
     mobileLast,mobileResult=text,t
     return t
@@ -280,9 +280,9 @@ end
 function M.HelpLines(mode)
     if M.helpLines then return M.helpLines[mode] or M.helpLines.explore end
     M.helpLines={
-    combat= {'WASD 移动 · Space 跳跃','左键五连/蓄力 · 空中下落攻击','右键重击 · Shift 加速跑 · C 收刃','按住 Q 选武器 · 松开确认','Esc / 右键取消选武器','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
+    combat= {'WASD 移动 · Space 跳跃','左键五连/蓄力 · 空中下落攻击','右键重击 · Shift 加速跑','按住 Q 选剑 / 弓 / 法器','Esc / 右键取消选武器','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
     mounted= {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Tab 远景 · Esc 释放鼠标','H 隐藏说明'},
-    explore= {'WASD 移动 · Space 跳跃','Shift 按住加速跑','左键蓄力碎时 · E 冻结 · Q 回溯','C 拔刃 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+    explore= {'WASD 移动 · Space 跳跃','Shift 按住加速跑','左键蓄力碎时 · E 冻结 · R 回溯','按住 Q 选装备 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
     }
     return M.helpLines[mode] or M.helpLines.explore
 end

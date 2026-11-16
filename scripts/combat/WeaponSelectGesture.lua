@@ -41,18 +41,20 @@ function G:Open(touch)
     self.active,self.committing,self.accepted,self.weight=true,false,false,0
     self.touch=touch==true
     self.savedPose=self.o.rig.pose or self.o.state.GetPose()
-    self.openWeapon=self.o.state.GetWeapon()
+    self.openWeapon=self.o.selection and self.o.selection() or self.o.state.GetWeapon()
     self.o.moves:Cancel('weapon-select')
     self.o.moves.suspended=true -- blocker takeover must not cancel the new pose/swap
     self.o.state.SetBusy(true)
     self.o.takeInput()
-    self.o.rig:SetPose('back')
-    local opened=self.o.wheel.Open({weapon=self.o.state.GetWeapon(),touch=self.touch,
+    self.o.rig:SetPose(self.openWeapon=='time' and 'hidden' or 'back')
+    local opened=self.o.wheel.Open({weapon=self.openWeapon,items=self.o.items,touch=self.touch,
         anchorX=self.anchor.anchorX,anchorY=self.anchor.anchorY,
         onSelect=function(id)
             if not self.active or not self.o.canOpen() then return false end
             self.committing=true
-            local ok,accepted=pcall(self.o.moves.Swap,self.o.moves,id)
+            local ok,accepted
+            if self.o.select then ok,accepted=pcall(self.o.select,id)
+            else ok,accepted=pcall(self.o.moves.Swap,self.o.moves,id) end
             self.committing=false
             if not ok then error(accepted,0) end
             self.accepted=accepted==true and id~=self.openWeapon

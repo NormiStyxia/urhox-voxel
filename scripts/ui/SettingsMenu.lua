@@ -28,7 +28,7 @@ local DESCRIPTIONS={high='完整草地、远景阴影与天空特效',medium='�
 local ADVANCED={{'clouds','云层'},{'lowClouds','低空云'},{'cloudShadow','地面云影'},{'lightShafts','光柱'},{'floatingMotes','浮光'},{'volumetric','体积光'},{'grass','草地'},{'shadows','阴影'},{'postFx','后效'}}
 local ENUMS={grass={'follow','full','half','off'},shadows={'follow','high','low','off'},postFx={'follow','full','lite','off'}}
 local VALUE_NAMES={follow='跟随画质',full='完整',half='半量',off='关闭',high='高',low='低',lite='精简'}
-local RELEASE_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L}
+local RELEASE_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L}
 function M.IsOpen() return M.open end
 function M.IsBlocked() return M.open or releaseLatch end
 local function Add(label,x,y,w,h,action,active)

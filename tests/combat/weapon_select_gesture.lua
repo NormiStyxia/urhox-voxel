@@ -143,9 +143,46 @@ State.SetMounted(true)
 assert(not gesture:IsOpen() and rig.pose=='hidden' and gesture.weight==0,'mount must not restore a saved hand weapon')
 State.SetMounted(false)
 print('PASS actual WeaponWheel + Scene callback integration: pointer tap, deferred fade/onClose, blocker takeover, swap ready, mounted hidden pose')
+-- New Scene opts use three items without changing the wheel renderer. Exercise
+-- the real delayed close in both directions across the old mode boundary.
+live.reset();moves:Cancel('test')
+State.Configure{rig=rig,explicitSelection=true,aggro=function()return true end,
+ cancel=function(reason)
+  if env.weaponGesture_ and reason~='weapon' then env.weaponGesture_:Interrupt(reason)end
+  if TC.cancel then TC.CancelActions()end
+ end}
+env.combatInputBlocked=false
+env.KEY_Q,env.KEY_C,env.KEY_G='Q','C','G'
+local qEdge=true
+env.Press=function(key)if key=='Q' and qEdge then qEdge=false;return true end;return false end
+env.Down=function(key)return key=='Q' end
+actions(true)
+assert(gesture:IsOpen() and live.wheel.DebugState().selected=='time' and #live.wheel.DebugLayout().slots==3,
+ 'Q opens the actual three-slot wheel from time mode')
+State.OnEnemyAggro('guard');assert(gesture:IsOpen() and State.GetSelection()=='time')
+live.wheel.Cancel()
+local function drain()
+ for _=1,50 do moves:Update(.01,{allowed=false,selecting=gesture:IsOpen()});State.Update(.01);gesture:Update(.01,camera)end
+end
+drain();assert(State.GetSelection()=='time' and rig.pose=='hidden' and not live.wheel.IsBlocked())
+for _,slot in ipairs({1,2,3}) do
+ assert(gesture:Open(true))
+ local overlay=live.ui.GetTopOverlay()
+ local event=live.slot(slot,40+slot,true)
+ overlay.props.onPointerDown(event);overlay.props.onPointerUp(event)
+ assert(live.wheel.DebugState().closing and gesture:IsOpen(),'selection preserves the visible close')
+ drain()
+ local expected=({'sword','bow','time'})[slot]
+ assert(State.GetSelection()==expected and not gesture:IsOpen() and not live.wheel.IsBlocked())
+ assert(not moves.pendingFire and not env.caster_.charging,'selection never inherits a held attack/spell')
+ State.Update(20);State.OnEnemyAggro('guard')
+ assert(State.GetSelection()==expected,'idle and aggro retain player selection')
+end
+assert(State.CanUseTime() and rig.pose=='hidden' and pointer:IsEnabled())
+print('PASS real Scene + three-slot wheel: explore Q, cancel, sword/bow/time, deferred close, aggro/idle, input restoration')
 -- Execute the actual relative-camera routing, including the first Q-down frame
 -- before the wheel is constructed, and the invisible release-guard frame.
-local cameraBlock=assert(source:match('(    if not WeaponWheel.IsBlocked%(%) and not %(CombatState.InCombat%(%) and Down%(KEY_Q%)%).-)\n    %-%- 龙'))
+local cameraBlock=assert(source:match('(    if not WeaponWheel.IsBlocked%(%) and not Down%(KEY_Q%).-)\n    %-%- 龙'))
 local lookCalls,held,blocked,combat=0,false,false,true
 local ce=setmetatable({WeaponWheel={IsBlocked=function()return blocked end},
  CombatState={InCombat=function()return combat end},Down=function()return held end,
@@ -156,5 +193,6 @@ local route=assert(load(cameraBlock,'actual wheel camera gate','t',ce))
 held=true;route();assert(lookCalls==0,'first Q-down cannot rotate camera')
 held=false;blocked=true;route();assert(lookCalls==0,'selection/closing/release guard freeze camera')
 blocked=false;route();assert(lookCalls==1,'normal camera resumes')
-held=true;combat=false;route();assert(lookCalls==2,'exploration Q retains normal camera')
+held=true;combat=false;route();assert(lookCalls==1,'exploration Q also owns the first camera frame')
+held=false;route();assert(lookCalls==2,'exploration camera resumes on release')
 print('PASS actual camera gate: first Q frame, selection/fade/release latch, normal and exploration restoration')

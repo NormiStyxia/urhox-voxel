@@ -53,7 +53,7 @@ function Draw.Text(vg,text,x,y,size,color,align,alpha)
 end
 local function MobileText(text)
     if not Touch.IsEnabled() then return text end
-    return text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 Q 施放','点【回溯】施放')
+    return text:gsub('按左键施放','按住【碎时】蓄力，松手施放'):gsub('按 R 施放','点【回溯】施放')
         :gsub('按 E','点【冻结】'):gsub('按 F 骑乘，Space 起飞','点【上龙】骑乘，再点【起飞】')
 end
 local function Flat(text) return MobileText(text):gsub('[\r\n]','') end
