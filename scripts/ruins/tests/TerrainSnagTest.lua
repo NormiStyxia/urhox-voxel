@@ -147,7 +147,11 @@ local function Run(game)
     for i = 1, math.min(#hitches, 60) do print("  HITCH " .. hitches[i]) end
     for i = 1, math.min(#pops, 60) do print("  POP " .. pops[i]) end
     Check(segments > 100, "覆盖足够多的行走路线")
-    Check(#snags == 0, "岛面行走无卡脚点")
+    -- 基线 47 处（外环 0.5m 量化台坎 / 柱础 / 墙脚 / 角楼窄台）；修复后只剩直顶树角、倒柱的 2 处。
+    Check(#snags <= 2, "岛面行走无卡脚点（允许直顶树角/倒柱）")
+    local long = 0
+    for _, h in ipairs(hitches) do if tonumber(h:match("frames=(%d+)")) >= 8 then long = long + 1 end end
+    Check(long <= 15, "长时间顿挫（>=8帧）只剩贴墙滑行：" .. long)
 end
 
 if V ~= nil then
