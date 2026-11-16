@@ -13,6 +13,15 @@ local COMBO=Data.Combo
 ---@field motion Vector3
 ---@field playParams table
 ---@field playOpts table
+---@field airState table
+---@field plungeVelocity Vector3
+---@field soundOpts table
+---@field fireSnapshot table
+---@field pendingFire table|nil
+---@field feedbackPool table[]
+---@field partNoticePool {part:string,untilTime:number}
+---@field numberPool table[]
+---@field numbers table[]
 ---@field damaged table
 ---@field queryHits table[]
 ---@field queryPool table[]
@@ -314,7 +323,9 @@ function C:UpdatePlunge(dt)
         local old=self.plungeAge or 0
         self.plungeAge=old+math.max(0,dt or 0)
         self.plungeSpeed=dt and dt>0 and (C.PlungeDistance(self.plungeAge)-C.PlungeDistance(old))/dt or 0
-        self.plungeVelocity.y=-self.plungeSpeed
+        -- Vector3 是值类型：整体写回速度，分量赋值只会修改副本。
+        local velocity=self.plungeVelocity
+        self.plungeVelocity=Vector3(velocity.x,-self.plungeSpeed,velocity.z)
         if self.rig.SetPlunging then self.rig:SetPlunging(self.plungeSpeed>0) end
         if self.anim.SetParam and self.handle then
             self.anim:SetParam('plungeSpeed',self.plungeSpeed/C.PLUNGE.terminalSpeed)

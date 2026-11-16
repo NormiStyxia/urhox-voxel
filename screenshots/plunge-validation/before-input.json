@@ -1,0 +1,110 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 41692,
+    "frames_completed": 16,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-16 12_17_32_654][83] ERROR: Execute Lua string failed: [string \"ruins/tests/PlungeTest\"]:143: [string \"ruins/tests/PlungeTest\"]:19: 起手后持久保存的向量包含真实负向下落速度",
+                    "frame": 8
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2100,
+            "component_count": 3449,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 49,
+            "hash": 2102606641,
+            "frame_time_ms": 36921.046875
+        },
+        {
+            "frame": 8,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 293934028,
+            "frame_time_ms": 19.6200008392334
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 3099314089,
+            "frame_time_ms": 18.233999252319337
+        },
+        {
+            "frame": 16,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 511385347,
+            "frame_time_ms": 17.97800064086914
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 73.19999694824219,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 9,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "CustomGeometry": 2124,
+        "VoxelVolume": 648,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 167,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 8,
+        "VoxelChunkDrawable": 29,
+        "SoundSource": 5
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 5,
+        "passed": 4,
+        "failed": 1
+    },
+    "test_issues": [
+        "起手后持久保存的向量包含真实负向下落速度"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 1,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 1
+    }
+}
