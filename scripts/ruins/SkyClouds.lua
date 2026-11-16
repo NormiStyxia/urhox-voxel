@@ -4,7 +4,7 @@ if not logOK then DebugLog=nil end
 ---@class RuinsSkyClouds
 local M = {}
 M.__index = M
-local WIND_SPEED_SCALE = 3.0 -- All tiers/shadows; does not accelerate breathing or wind turns.
+local WIND_SPEED_SCALE = 8.0 -- All tiers/shadows; does not accelerate breathing or wind turns.
 
 -- 图集在 validation/sky-fx/bake_sky_atlas.py 离线烘焙；游戏不运行体积积分。
 local function Finite(v,default,lo,hi)

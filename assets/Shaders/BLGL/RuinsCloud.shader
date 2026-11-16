@@ -84,12 +84,13 @@ void fragment() {
     float height=1.0-fract(uv.y*2.0);
     // Afterglow: higher clouds keep catching the sun a little after sunset.
     float sun_alive=smoothstep(-0.20,0.02,elev+max(dir.y,0.0)*0.20);
-    float fire=clamp(dusk*1.2,0.0,1.0)*sun_alive;
+    // sqrt widens the dusk window so the fire clouds last longer and saturate fully.
+    float fire=clamp(sqrt(dusk)*1.45-0.10,0.0,1.0)*sun_alive;
     float lateral=dot(sun,cloud_right);
     float shape_light=clamp(data.r+(data.b-0.5)*lateral*0.16,0.0,1.0);
     // Low sun lights the cloud from below/side; base glows, tops on the far side go shaded.
     float low_sun=1.0-smoothstep(0.02,0.30,elev);
-    shape_light=clamp(shape_light+fire*low_sun*(0.42-height)*(0.25+0.45*facing),0.0,1.0);
+    shape_light=clamp(shape_light+fire*low_sun*(0.50-height)*(0.35+0.55*facing)+fire*0.12,0.0,1.0);
     // Retain fine shoulder values instead of flattening the brightest lobes.
     float lit=mix(shape_light,smoothstep(0.28,0.98,shape_light),0.70);
 
@@ -97,34 +98,34 @@ void fragment() {
     vec3 sky_amb=mix(sky_horizon.rgb,sky_top.rgb,0.6);
     vec3 dark=mix(vec3(0.009,0.018,0.042),vec3(0.26,0.38,0.58),day);
     dark=mix(dark,sky_amb*0.80,0.30*day);
-    vec3 dusk_dark=mix(vec3(0.24,0.12,0.26),sky_amb*0.75,0.30);
-    dusk_dark=mix(dusk_dark,vec3(0.42,0.17,0.24),facing*0.45);
+    vec3 dusk_dark=mix(vec3(0.34,0.12,0.34),sky_amb*0.75,0.20);
+    dusk_dark=mix(dusk_dark,vec3(0.62,0.18,0.22),facing*0.60);
     dark=mix(dark,dusk_dark,max(dusk*0.75,fire));
 
     vec3 light=mix(vec3(0.055,0.085,0.15),vec3(0.98,0.96,0.91),day);
     light=mix(light,light*mix(vec3(1.0),sun_tint.rgb,0.35),day*(1.0-day));
     // Fire clouds: gold right at the sun, orange around it, pink/rose on the opposite sky.
-    vec3 fire_lit=mix(vec3(0.96,0.50,0.58),vec3(1.0,0.44,0.16),smoothstep(0.25,0.80,facing));
-    fire_lit=mix(fire_lit,vec3(1.0,0.78,0.44),toward);
-    fire_lit=mix(fire_lit,fire_lit*sun_tint.rgb*1.15,0.35);
+    vec3 fire_lit=mix(vec3(1.0,0.42,0.56),vec3(1.0,0.34,0.08),smoothstep(0.20,0.80,facing));
+    fire_lit=mix(fire_lit,vec3(1.0,0.72,0.30),toward);
+    fire_lit=mix(fire_lit,fire_lit*sun_tint.rgb*1.25,0.30)*1.15;
     light=mix(light,fire_lit,fire);
     vec3 color=mix(dark,light,lit);
     // Hot base on the sunset side: the classic burning underside.
     float belly=fire*low_sun*(1.0-smoothstep(0.0,0.55,height))*smoothstep(0.30,0.95,facing);
-    color+=vec3(1.0,0.36,0.12)*belly*data.a*0.38;
+    color+=vec3(1.0,0.30,0.06)*belly*data.a*0.75;
 
     // Silver/gold lining: thin edges forward-scatter the sun.
     float edge=clamp(data.a*(1.0-data.a)*4.0,0.0,1.0);
     float mie=pow(max(cos_sun,0.0),6.0);
     vec3 rim=mix(vec3(0.08,0.13,0.22),vec3(1.0,0.96,0.85),day);
     rim=mix(rim,vec3(1.0,0.70,0.32),fire);
-    color+=rim*data.g*toward*(0.22+0.50*fire);
-    color+=rim*(edge*0.6+data.g*0.4)*mie*(0.25*day+0.85*fire);
+    color+=rim*data.g*toward*(0.22+0.80*fire);
+    color+=rim*(edge*0.6+data.g*0.4)*mie*(0.30*day+1.30*fire);
     vec3 air=dir.y>=0.0 ? mix(sky_horizon.rgb,sky_top.rgb,pow(max(dir.y,0.0),0.18))
         : mix(sky_horizon.rgb,sky_bottom.rgb,pow(max(-dir.y,0.0),0.28));
     float horizon=1.0-smoothstep(0.015,0.24,abs(dir.y));
-    float haze=clamp(cloud_data.b*0.32+horizon*0.40,0.0,0.68)*(1.0-0.40*fire);
-    ALBEDO=clamp(mix(color,air,haze),vec3(0.0),vec3(1.25));
+    float haze=clamp(cloud_data.b*0.32+horizon*0.40,0.0,0.68)*(1.0-0.70*fire);
+    ALBEDO=clamp(mix(color,air,haze),vec3(0.0),vec3(1.60));
     // Body stays opaque, only the far horizon/AA boundary dissolves into the sky.
     ALPHA=clamp(data.a*(1.0-horizon*0.22)*cloud_data.a,0.0,1.0);
 }
