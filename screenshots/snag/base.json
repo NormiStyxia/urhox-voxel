@@ -2,7 +2,7 @@
     "version": 2,
     "script": "ruins_main.lua",
     "result": "FAIL",
-    "duration_ms": 40807,
+    "duration_ms": 49002,
     "frames_completed": 40,
     "phases": {
         "load": {
@@ -10,19 +10,8 @@
             "errors": []
         },
         "init": {
-            "result": "FAIL",
-            "errors": [
-                {
-                    "category": "resource",
-                    "message": "[2026-11-16 15_41_06_930][67] ERROR: Could not find resource ruins/tests/TerrainSnagTest.lua",
-                    "frame": 1
-                },
-                {
-                    "category": "lua",
-                    "message": "Failed to load test script: ruins/tests/TerrainSnagTest.lua",
-                    "frame": 1
-                }
-            ]
+            "result": "PASS",
+            "errors": []
         },
         "run": {
             "result": "PASS",
@@ -43,7 +32,7 @@
             "nodes": 23,
             "components": 49,
             "hash": 874461181,
-            "frame_time_ms": 37419.4140625
+            "frame_time_ms": 35836.3359375
         },
         {
             "frame": 10,
@@ -51,7 +40,7 @@
             "nodes": 23,
             "components": 49,
             "hash": 3047762304,
-            "frame_time_ms": 20.70400047302246
+            "frame_time_ms": 26.7450008392334
         },
         {
             "frame": 20,
@@ -59,7 +48,7 @@
             "nodes": 23,
             "components": 49,
             "hash": 1284554404,
-            "frame_time_ms": 18.618000030517579
+            "frame_time_ms": 19.229999542236329
         },
         {
             "frame": 40,
@@ -67,11 +56,11 @@
             "nodes": 23,
             "components": 49,
             "hash": 3583807717,
-            "frame_time_ms": 17.72599983215332
+            "frame_time_ms": 19.235000610351564
         }
     ],
     "scene_stalled": false,
-    "max_frame_time_ms": 53.07899856567383,
+    "max_frame_time_ms": 9488.8466796875,
     "update_defined": false,
     "component_census": {
         "Octree": 1,
@@ -97,21 +86,19 @@
     },
     "test_result": "FAILED",
     "test_assertions": {
-        "total": 0,
-        "passed": 0,
-        "failed": 0
+        "total": 2,
+        "passed": 1,
+        "failed": 1
     },
     "test_issues": [
-        "Test script failed to load: ruins/tests/TerrainSnagTest.lua"
+        "岛面行走无卡脚点"
     ],
-    "missing_resources": [
-        "ruins/tests/TerrainSnagTest.lua"
-    ],
+    "missing_resources": [],
     "missing_engine_resources": [],
     "summary": {
-        "lua_errors": 1,
-        "resource_errors": 1,
+        "lua_errors": 0,
+        "resource_errors": 0,
         "engine_errors": 0,
-        "total_errors": 2
+        "total_errors": 0
     }
 }

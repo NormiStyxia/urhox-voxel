@@ -7,14 +7,35 @@ local function Check(ok, message)
     if V ~= nil then V.assert(ok, message) else assert(ok, message) end
 end
 
--- 前方 0.6m 内静态地形抬升（解析碰撞高度）；> 步高视为真实墙
-local function Rise(x, z, dx, dz, y)
-    local top = -1e9
-    for _, d in ipairs({ .25, .45, .65 }) do
-        local h = Terrain.CollideHeight(x + dx * d, z + dz * d)
-        if h > top then top = h end
+---@param volume VoxelVolume
+local function SolidAt(volume, p)
+    local q = volume:GetNode():WorldToLocal(p) / volume.voxelSize
+    local grid = volume:GetGrid()
+    local dims = grid:GetDimensions()
+    local x, y, z = math.floor(q.x), math.floor(q.y), math.floor(q.z)
+    return x >= 0 and y >= 0 and z >= 0 and x < dims.x and y < dims.y and z < dims.z
+        and grid:IsSolid(x, y, z)
+end
+-- 前方真实体素：返回 0.6~1.6m 高度处是否有实体（=真实墙/柱/建筑），以及描述
+local function Probe(world, x, y, z, dx, dz)
+    local tall, low, names = false, -1, {}
+    for _, d in ipairs({ .36, .5, .7 }) do
+        for h = .03, 1.6, .0625 do
+            local p = Vector3(x + dx * d, y + h, z + dz * d)
+            for i = 0, world:GetVolumeCount() - 1 do
+                local vol = world:GetVolume(i)
+                if vol ~= nil and vol.collisionMask ~= 0 and SolidAt(vol, p) then
+                    if h > .6 then tall = true else low = math.max(low, h) end
+                    local o = vol:GetNode().worldPosition
+                    names[string.format("v%d[%.2f|%.1f,%.1f,%.1f]", i, vol.voxelSize, o.x, o.y, o.z)] = true
+                end
+            end
+        end
     end
-    return top - y
+    local list = {}
+    for k in pairs(names) do list[#list + 1] = k end
+    table.sort(list)
+    return tall, low, table.concat(list, ",")
 end
 
 local function Run(game)
@@ -28,7 +49,7 @@ local function Run(game)
     walker.stepHeight, walker.maxSlopeAngle = cc.stepHeight, cc.maxSlopeAngle
     walker.enhancedInternalEdgeRemoval = cc.enhancedInternalEdgeRemoval
     walker.collisionLayer, walker.collisionMask = cc.collisionLayer, cc.collisionMask
-    local snags, segments, walls = {}, 0, 0
+    local snags, segments, walls, wallList = {}, 0, 0, {}
     local function Settle(x, z)
         local h = Terrain.Height(x, z)
         walker:Teleport(Vector3(x, h + .15, z))
@@ -53,11 +74,12 @@ local function Run(game)
             local moved = math.sqrt((q.x - last.x) ^ 2 + (q.z - last.z) ^ 2)
             if moved < speed / 60 * .15 then still = still + 1 else still, last = 0, q end
             if still >= 20 then
-                local rise = Rise(q.x, q.z, dx, dz, q.y)
-                if rise > cc.stepHeight + .05 then
+                local tall, low, names = Probe(world, q.x, q.y, q.z, dx, dz)
+                if tall then
                     walls = walls + 1
+                    if #wallList < 30 then wallList[#wallList + 1] = string.format("%s (%.2f,%.2f,%.2f) %s", label, q.x, q.y, q.z, names) end
                 else
-                    snags[#snags + 1] = string.format("%s (%.2f,%.2f,%.2f) rise=%.2f", label, q.x, q.y, q.z, rise)
+                    snags[#snags + 1] = string.format("%s (%.2f,%.2f,%.2f) low=%.2f %s", label, q.x, q.y, q.z, low, names)
                 end
                 break
             end
@@ -101,7 +123,8 @@ local function Run(game)
     cc.enabled, world.updateEnabled = wasEnabled, auto
     if not ok then error(err) end
     print(string.format("TerrainSnagTest: %d segments, %d real walls, %d snags", segments, walls, #snags))
-    for i = 1, math.min(#snags, 40) do print("  SNAG " .. snags[i]) end
+    for i = 1, math.min(#snags, 60) do print("  SNAG " .. snags[i]) end
+    for i = 1, #wallList do print("  WALL " .. wallList[i]) end
     Check(segments > 100, "覆盖足够多的行走路线")
     Check(#snags == 0, "岛面行走无卡脚点")
 end
