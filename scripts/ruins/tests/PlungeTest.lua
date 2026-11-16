@@ -38,9 +38,20 @@ local function Run(game)
     -- headless 没有窗口焦点，因此测试直接驱动已有战斗输入端口，不伪造操作系统焦点。
     local function Tick(dt, attack, blocked)
         controller:MeasureMotion(dt)
+        local wasGrounded, wasLanded = controller.cc.onGround, moves.plungeLanded
         moves:Update(dt, { allowed = not blocked, axis = Vector3.ZERO, attack = attack == true,
             onGround = controller.cc.onGround, actualSpeed = controller.actualSpeed,
             travel = controller.frameTravel, motionSampleDt = controller.actualDt, normalSpeed = 5 })
+        if moves.plungeLanded and not wasLanded then
+            Check(wasGrounded, "物理步前的落地切换必须依据已完成的真实地面接触")
+        end
+        if moves.plunging then
+            Check(math.abs(moves.plungeVelocity.y + moves.plungeSpeed) < 1e-6,
+                "每个空中步都整体写回下落速度向量")
+            if moves.plungeAge <= Moves.PLUNGE.hover then
+                Check(math.abs(moves.plungeVelocity.y) < 1e-6, "保留起手0.10秒短暂悬停")
+            end
+        end
         controller:Move(dt, 0, 0, false, false, false, { scale = moves:MoveScale(), motion = moves.motion,
             baseSpeed = 5, facing = moves:Facing(), motionChecked = moves.motionChecked,
             plungeVelocity = moves.plunging and moves.plungeVelocity or nil })
@@ -107,14 +118,28 @@ local function Run(game)
         Check(descentChecked and minVelocity < -5, "实际物理速度向下，未悬停或异常缓降")
         Check(landed and recovered and not moves.plunging, "有限时间内落地并完成恢复")
         Check((starts.plunge_land or 0) == 1, "一次下落只播放一次落地片段")
-        Check(math.abs(controller:Position().y - start.y) < .15, "落地后脚底不悬空或陷地")
+        Check(math.abs(controller:Position().y - start.y) < .15, "落地后物理角色位置贴地，不悬空或陷地")
         Check(moves:MoveScale() == 1 and moves:CanCancel(), "落地结束后解除移动和动作锁")
     end
 
-    local function Cancel(dt)
+    local function Cancel(dt, descending)
         Prepare(2, dt)
+        if descending then
+            for _ = 1, math.ceil(.3 / dt) do
+                Tick(dt)
+                if moves.plungeVelocity.y < -5 then break end
+            end
+            Check(moves.plunging and moves.plungeVelocity.y < -5 and not controller.cc.onGround,
+                "取消用例确实已经进入非零速度俯冲")
+        end
+        local velocityBefore = controller.cc:GetLinearVelocity().y
         Tick(dt, false, true)
         Check(not moves.plunging and moves.clip == nil, "输入中断取消下落攻击")
+        if descending then
+            local velocityAfter = controller.cc:GetLinearVelocity().y
+            Check(math.abs(velocityAfter - velocityBefore - world.gravity.y * dt) < .05,
+                "俯冲取消后速度只受正常重力影响，不再被下落攻击覆盖")
+        end
         local cancelledY = controller:Position().y
         for _ = 1, math.ceil(1.5 / dt) do Tick(dt) end
         Check(controller.cc.onGround and controller:Position().y < cancelledY - .5,
@@ -127,8 +152,9 @@ local function Run(game)
     local ok, err = pcall(function()
         for _, fps in ipairs({ 30, 60, 120 }) do
             for _, height in ipairs({ .8, 2, 8 }) do Landing(height, 1 / fps) end
+            Cancel(1 / fps, false)
+            Cancel(1 / fps, true)
         end
-        Cancel(1 / 60)
     end)
     moves:Cancel("plunge-test-cleanup")
     moves.observe = saved.observer
