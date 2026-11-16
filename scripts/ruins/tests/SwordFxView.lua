@@ -14,6 +14,29 @@ V.atFrame(8, function()
     if state.GetWeapon() ~= "sword" then state.SetWeapon("sword"); state.FinishTransition() end
     state.Enter("sword-fx-view")
     state.Activity(true)
+    local fx = moves.rig.combatFx
+    local segment, calls = fx.Segment, 0
+    fx.Segment = function(self, root, tip)
+        calls = calls + 1
+        if calls <= 12 then
+            local d = self.valid and math.sqrt((tip.x - self.tip.x) ^ 2 + (tip.y - self.tip.y) ^ 2 + (tip.z - self.tip.z) ^ 2) or -1
+            local ok, err = pcall(segment, self, root, tip)
+            local active = 0
+            for _, a in ipairs(self.arcs) do if a.active then active = active + 1 end end
+            print(string.format("SwordFxView: seg valid=%s d=%.4f head=%d active=%d ok=%s %s", tostring(self.valid), d, self.head, active, tostring(ok), tostring(err)))
+            return
+        end
+        return segment(self, root, tip)
+    end
+    local fxUpdate = fx.Update
+    fx.Update = function(self, dt)
+        local before = 0
+        for _, a in ipairs(self.arcs) do if a.active then before = before + 1 end end
+        fxUpdate(self, dt)
+        local after = 0
+        for _, a in ipairs(self.arcs) do if a.active then after = after + 1 end end
+        if before > 0 and calls <= 30 then print(string.format("SwordFxView: fx.Update dt=%.4f active %d -> %d", dt, before, after)) end
+    end
     local update = moves.Update
     moves.Update = function(self, dt, controls)
         frame = frame + 1
