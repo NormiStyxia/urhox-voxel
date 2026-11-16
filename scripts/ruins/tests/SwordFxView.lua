@@ -28,6 +28,16 @@ V.atFrame(8, function()
         end
         return segment(self, root, tip)
     end
+    local blade, bladeCalls = fx.Blade, 0
+    fx.Blade = function(self, root, tip)
+        bladeCalls = bladeCalls + 1
+        if bladeCalls <= 20 then
+            local rx, ry, rz = self.root.x, self.root.y, self.root.z
+            print(string.format("SwordFxView: blade#%d valid=%s slash=%s root=(%.2f,%.2f,%.2f) tip=(%.2f,%.2f,%.2f) prevRoot=(%.2f,%.2f,%.2f) prevTip=(%.2f,%.2f,%.2f)",
+                bladeCalls, tostring(self.valid), tostring(self.slash), root.x, root.y, root.z, tip.x, tip.y, tip.z, rx, ry, rz, self.tip.x, self.tip.y, self.tip.z))
+        end
+        return blade(self, root, tip)
+    end
     local fxUpdate = fx.Update
     fx.Update = function(self, dt)
         local before = 0
