@@ -49,7 +49,7 @@ local function Run(game)
     walker.stepHeight, walker.maxSlopeAngle = cc.stepHeight, cc.maxSlopeAngle
     walker.enhancedInternalEdgeRemoval = cc.enhancedInternalEdgeRemoval
     walker.collisionLayer, walker.collisionMask = cc.collisionLayer, cc.collisionMask
-    local snags, segments, walls, wallList = {}, 0, 0, {}
+    local snags, segments, walls, wallList, hitches, pops = {}, 0, 0, {}, {}, {}
     local function Settle(x, z)
         local h = Terrain.Height(x, z)
         walker:Teleport(Vector3(x, h + .15, z))
@@ -60,7 +60,7 @@ local function Run(game)
     local function Walk(ax, az, bx, bz, speed, label)
         Settle(ax, az)
         segments = segments + 1
-        local still, last = 0, node.worldPosition
+        local still, last, slow = 0, node.worldPosition, 0
         for _ = 1, 600 do
             local p = node.worldPosition
             local dx, dz = bx - p.x, bz - p.z
@@ -71,6 +71,14 @@ local function Run(game)
             world:Update(1 / 60, 1)
             local q = node.worldPosition
             if p.y < 2 and Terrain.Height(ax, az) > 4 then break end -- 掉下去了，交给其它测试
+            local step = math.sqrt((q.x - p.x) ^ 2 + (q.z - p.z) ^ 2)
+            if step < speed / 60 * .5 then slow = slow + 1 else
+                if slow >= 3 and slow < 20 then
+                    hitches[#hitches + 1] = string.format("%s (%.2f,%.2f,%.2f) frames=%d", label, p.x, p.y, p.z, slow)
+                end
+                slow = 0
+            end
+            if q.y - p.y > .12 then pops[#pops + 1] = string.format("%s (%.2f,%.2f,%.2f) dy=%.2f", label, q.x, q.y, q.z, q.y - p.y) end
             local moved = math.sqrt((q.x - last.x) ^ 2 + (q.z - last.z) ^ 2)
             if moved < speed / 60 * .15 then still = still + 1 else still, last = 0, q end
             if still >= 20 then
@@ -125,6 +133,9 @@ local function Run(game)
     print(string.format("TerrainSnagTest: %d segments, %d real walls, %d snags", segments, walls, #snags))
     for i = 1, math.min(#snags, 60) do print("  SNAG " .. snags[i]) end
     for i = 1, #wallList do print("  WALL " .. wallList[i]) end
+    print(string.format("TerrainSnagTest: %d hitches, %d pops", #hitches, #pops))
+    for i = 1, math.min(#hitches, 60) do print("  HITCH " .. hitches[i]) end
+    for i = 1, math.min(#pops, 60) do print("  POP " .. pops[i]) end
     Check(segments > 100, "覆盖足够多的行走路线")
     Check(#snags == 0, "岛面行走无卡脚点")
 end

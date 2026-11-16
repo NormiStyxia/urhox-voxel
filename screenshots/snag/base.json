@@ -2,7 +2,7 @@
     "version": 2,
     "script": "ruins_main.lua",
     "result": "FAIL",
-    "duration_ms": 49002,
+    "duration_ms": 54190,
     "frames_completed": 40,
     "phases": {
         "load": {
@@ -32,7 +32,7 @@
             "nodes": 23,
             "components": 49,
             "hash": 874461181,
-            "frame_time_ms": 35836.3359375
+            "frame_time_ms": 35735.5859375
         },
         {
             "frame": 10,
@@ -40,7 +40,7 @@
             "nodes": 23,
             "components": 49,
             "hash": 3047762304,
-            "frame_time_ms": 26.7450008392334
+            "frame_time_ms": 21.094999313354493
         },
         {
             "frame": 20,
@@ -48,7 +48,7 @@
             "nodes": 23,
             "components": 49,
             "hash": 1284554404,
-            "frame_time_ms": 19.229999542236329
+            "frame_time_ms": 17.84600067138672
         },
         {
             "frame": 40,
@@ -56,11 +56,11 @@
             "nodes": 23,
             "components": 49,
             "hash": 3583807717,
-            "frame_time_ms": 19.235000610351564
+            "frame_time_ms": 18.582000732421876
         }
     ],
     "scene_stalled": false,
-    "max_frame_time_ms": 9488.8466796875,
+    "max_frame_time_ms": 15230.4130859375,
     "update_defined": false,
     "component_census": {
         "Octree": 1,
