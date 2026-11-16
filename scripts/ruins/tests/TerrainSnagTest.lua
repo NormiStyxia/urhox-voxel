@@ -19,7 +19,7 @@ end
 -- 前方真实体素：返回 0.6~1.6m 高度处是否有实体（=真实墙/柱/建筑），以及描述
 local function Probe(world, x, y, z, dx, dz)
     local tall, low, names = false, -1, {}
-    for _, d in ipairs({ .36, .5, .7 }) do
+    for _, d in ipairs({ .36, .5, .7, .9, 1.1 }) do
         for h = .03, 1.6, .0625 do
             local p = Vector3(x + dx * d, y + h, z + dz * d)
             for i = 0, world:GetVolumeCount() - 1 do

@@ -170,13 +170,14 @@ end
 -- 带柱础 / 凹槽 / 柱头的圆柱；broken = 断裂高度（nil = 完整）
 local function Column(b, cx, cz, baseY, height, r, broken, gold)
     local top = broken or height
-    -- 柱础
+    -- 柱础：0.6m 整块座 + 0.15m 收分线脚。底座高于步高 0.55，角色贴边滑过；
+    -- 旧的三级 0.25m 窄踏面（0.15m 深 < 胶囊直径）会被踏上又滑落，形成卡脚。
     b:Shape(cx - r - 0.5, baseY, cz - r - 0.5, cx + r + 0.5, baseY + 0.75, cz + r + 0.5, function(x, y, z)
         local dx, dz = abs(x - cx), abs(z - cz)
         local ly = y - baseY
-        local e = ly < 0.25 and (r + 0.45) or (ly < 0.50 and (r + 0.30) or (r + 0.16))
+        local e = ly < 0.60 and (r + 0.45) or (r + 0.28)
         if dx <= e and dz <= e then
-            if ly > 0.25 and ly < 0.375 and max(dx, dz) > e - 0.13 then return P.STONE_C end
+            if ly > 0.4375 and ly < 0.5625 and max(dx, dz) > e - 0.13 then return P.STONE_C end
             return Marble(x, y, z)
         end
     end)

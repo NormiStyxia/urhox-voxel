@@ -141,9 +141,22 @@ local function SurfaceHeight(x,z)
     if r<M.COURT_R then return 0 end
     local h = M.RING_Y
     if r > M.ISLAND.ringInner + 3 and abs(x) > 4 then
-        h = h + Smooth(.55,.75,Noise.Fbm2(x*.08,z*.08,2,11)) * .6
+        -- 起伏在区域边界渐入，不在 r=51.5 / |x|=4 处硬切出半米台坎。
+        local fade = Smooth(M.ISLAND.ringInner + 3, M.ISLAND.ringInner + 6, r) * Smooth(4, 7, abs(x))
+        h = h + Smooth(.55,.75,Noise.Fbm2(x*.08,z*.08,2,11)) * .6 * fade
     end
     return h
+end
+-- 外环起伏区：粗网格只到 RING_Y，上面由 0.25m 细盖层贴合可见起伏。
+M.CAP = 0.25
+---@return boolean
+function M.InBumpy(x, z)
+    return x*x + z*z > (M.ISLAND.ringInner + 3)^2 and abs(x) > 4
+end
+-- 细盖层顶面：0.25m 量化、略偏下取（误差 -0.15~+0.1），台坎 ≤ 0.25 远低于步高。
+---@return number
+function M.CapHeight(h)
+    return M.RING_Y + max(0, floor((h - M.RING_Y) * 4 + .4)) * M.CAP
 end
 ---@return number
 function M.Height(x,z)
@@ -198,7 +211,10 @@ function M.CollideHeight(x, z, height)
         and d >= floor(M.STAIR_START / M.CELL) * M.CELL and d < M.STAIR_JOIN then return -1.0 end
     local r2 = x * x + z * z
     if r2 < (M.COURT_R - 0.25) ^ 2 then return -1.0 end -- 龙庭地砖体积自带碰撞
-    return floor((height or M.Height(x, z)) * 2.0 + 0.3) * 0.5
+    local h = height or M.Height(x, z)
+    -- 0.5m 量化会把平缓起伏切成单格宽的半米台坎（窄于胶囊直径，反复踏上又滑落 = 卡脚）。
+    if M.InBumpy(x, z) then return M.CapHeight(h) end
+    return floor(h * 2.0 + 0.3) * 0.5
 end
 
 -- 显示层高度（藏在龙庭地砖 / 石阶下面）
@@ -261,6 +277,7 @@ local function BuildCollision(world)
             local h=M.Height(x,z)
             H[i][k]=h
             C[i][k]=M.CollideHeight(x,z,h)
+            if C[i][k]~=M.VOID_Y and M.InBumpy(x,z) then C[i][k]=M.RING_Y end
             B[i][k]=M.HasGround(x,z) and math.floor(M.BottomHeight(x,z)/c)*c or M.VOID_Y
         end
     end
@@ -294,6 +311,35 @@ local function BuildCollision(world)
             if hidden then vol.material=hidden end
             world:FinalizeVolume(vol); vol:RebuildGeometry()
             vols[#vols+1]=vol; allocated=allocated+nx*ny*nz
+        end
+    end end
+    -- 细盖层：每 16m 一块，0.25m 体素，只铺在外环起伏区的粗网格顶面上。
+    local q=c/M.CAP
+    for ci=0,N-1,CH do for ck=0,N-1,CH do
+        local i1,k1=min(N-1,ci+CH-1),min(N-1,ck+CH-1)
+        local nx,nz=(i1-ci+1)*q,(k1-ck+1)*q
+        local tops,top={},0
+        for a=0,nx-1 do for b=0,nz-1 do
+            local i,k=ci+a//q,ck+b//q
+            local x,z=x0+ci*c+(a+.5)*M.CAP,x0+ck*c+(b+.5)*M.CAP
+            if C[i][k]==M.RING_Y and M.InBumpy(x,z) then
+                local layers=math.floor((M.CapHeight(M.Height(x,z))-M.RING_Y)/M.CAP+.5)
+                if layers>0 then tops[a*nz+b]=layers;top=max(top,layers) end
+            end
+        end end
+        if top>0 then
+            local vol=world:CreateVolume(nx,top,nz,M.CAP,Vector3(x0+ci*c,M.RING_Y,x0+ck*c))
+            local g=vol:GetGrid()
+            for key,layers in pairs(tops) do
+                local a,b=key//nz,key%nz
+                g:FillBox(a,0,b,a,layers-1,b,true)
+                solid=solid+layers
+            end
+            g:PaintBox(0,0,0,nx-1,top-1,nz-1,P.CLIFF_B)
+            vol.destructible,vol.evictable=false,false
+            if hidden then vol.material=hidden end
+            world:FinalizeVolume(vol); vol:RebuildGeometry()
+            vols[#vols+1]=vol; allocated=allocated+nx*top*nz
         end
     end end
     M.collisionStats={chunks=#vols,allocated=allocated,solid=solid}
