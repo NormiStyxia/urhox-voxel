@@ -226,7 +226,7 @@ Layout=function(s)
         local rx=math.max(26,safe.left+14)
         local ry=h-safe.bottom-78
         local rw=math.max(40,math.min(70,((w-pw)-rx-12-18)/4))
-        for i,r in ipairs({{'original','体素'},{'A','A硬边'},{'B','B方块'},{'flow','流光'}}) do
+        for i,r in ipairs({{'original','体素'},{'A','A硬边'},{'W','翼剑'},{'flow','流光'}}) do
             Add(s,'route_'..r[1],r[2],Box(rx+(i-1)*(rw+6),ry,rw,34),function()
                 local room=Room()
                 if not (s.room and room) then return end

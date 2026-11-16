@@ -420,16 +420,17 @@ function M.SetModelOverride(resPath)
 end
 
 --- Showroom study only; does not write the inventory, rig or selected blade ID.
----@param route string original | A | B | imported
+---@param route string original | A | B | W | imported (W = whole anime wing sword)
 function M.SetModelRoute(route)
-    assert(route=='original' or route=='A' or route=='B' or route=='imported','invalid blade route')
+    assert(route=='original' or route=='A' or route=='B' or route=='W' or route=='imported','invalid blade route')
     modelRoute=route;modelOverride=route=='imported' and MODEL_TEST or nil
     if session and session.selection then M.SetWeapon(session.selection) end
     print('ForgeShowroom: blade route='..route)
 end
 function M.GetModelRoute() return modelRoute end
 function M.CycleModelRoute()
-    M.SetModelRoute(modelRoute=='original' and 'A' or (modelRoute=='A' and 'B' or 'original'))
+    local nextRoute={original='A',A='B',B='W',W='original'}
+    M.SetModelRoute(nextRoute[modelRoute] or 'original')
 end
 ---@param strength number 0 disables, 0.7 default, 2 maximum
 function M.SetFlowStrength(strength)
@@ -501,7 +502,7 @@ local function BuildStep(s,dt)
     if s.pending then
         local single=s.pending;s.pending=nil
         s.pendingRoot=Call(s,'geometry',s.spin,'CreateChild','Node:CreateChild','PendingWeapon');s.pendingRoot.enabled=false
-        if single.weapon=='sword' and (modelRoute=='A' or modelRoute=='B') then
+        if single.weapon=='sword' and (modelRoute=='A' or modelRoute=='B' or modelRoute=='W') then
             s.stage,s.api,s.apiType='blade_route','ForgeShowroomBlades.Begin','function'
             local job,err=Blades.Begin(s.pendingRoot,modelRoute,single.colors,MASK,s.low,flowStrength)
             if job then s.bladeJob=job;return end

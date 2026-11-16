@@ -734,16 +734,16 @@ print('forge_showroom model pending rollback PASS')
 
 -- Route studies share the same camera/masks and cannot affect inventory/rig.
 local Blades=require('combat.ForgeShowroomBlades')
-for _,route in ipairs({'A','B'}) do
+for _,route in ipairs({'A','B','W'}) do
     Boot();nodes,components=Live();Showroom.SetModelRoute(route);Showroom.SetFlowStrength(.7)
     assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
     local g=Shape():GetComponent('CustomGeometry',true)
     local expected=Blades.Data(route)
     assert(#g.vertices==#expected.vertices and g.commits==1)
     assert(g.viewMask==MASK and g.lightMask==MASK and g.zoneMask==MASK)
-    Mock.Near(Spin().scale.y,1);assert(g.material.flow_strength==(route=='B' and .7 or 0))
+    Mock.Near(Spin().scale.y,1);assert(g.material.flow_strength==(route~='A' and .7 or 0))
     for _,v in ipairs(g.vertices) do assert(v.uv and v.uv.y>=0 and v.uv.y<=1) end
-    local same=g.material;Showroom.SetFlowStrength(99);assert(same.flow_strength==(route=='B' and 2 or 0))
+    local same=g.material;Showroom.SetFlowStrength(99);assert(same.flow_strength==(route~='A' and 2 or 0))
     Showroom.SetFlowStrength(0);assert(same.flow_strength==0)
     Showroom.SetFlowStrength(.7);Showroom.SetFlowStrength(0/0);Mock.Near(Showroom.GetFlowStrength(),.7)
     for _=1,120 do Showroom.Update(1/60) end
@@ -786,6 +786,7 @@ Boot();nodes,components=Live();assert(Showroom.GetModelRoute()=='original')
 assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
 Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='A')
 Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='B')
+Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='W')
 Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='original')
 Showroom.Exit();Restored(nodes,components)
 Boot();nodes,components=Live();assert(Showroom.Enter(e.scene,{quality='low'}))
@@ -808,4 +809,4 @@ Showroom.SetWeapon(Config('bow'));Finish();press=6;Showroom.Update(0)
 assert(Showroom.GetModelRoute()=='B','bow must not consume route hotkey')
 rawset(_G,'input',oldInput);rawset(_G,'KEY_F6',oldF6);rawset(_G,'KEY_F7',oldF7)
 Showroom.Exit();Restored(nodes,components)
-print('forge_showroom blade routes PASS: A/B masks, 1.7m, three colors, strengths, no reupload, bow exclusion, cancel/fallback/cleanup; MOCK ONLY')
+print('forge_showroom blade routes PASS: A/B/W masks, 1.7m, three colors, strengths, no reupload, bow exclusion, cancel/fallback/cleanup; MOCK ONLY')
