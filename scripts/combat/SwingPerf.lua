@@ -3,7 +3,7 @@
 local P={frame=0,revision=0,enabled=true,attackId=0,combo=0,clip='none',
     motionRays=0,rangeRays=0,gridCalls=0,volumes=0,cells=0,substeps=0,
     fallbackReason='none',fallbacks=0,gridBudgetExceeded=0,rangeUsed=0}
-local names={'input','motion','QueryZone','HitEvent','recovery','GridHit','range'}
+local names={'input','motion','QueryZone','HitEvent','recovery','GridHit','range','VoxelSlash','VoxelArrow'}
 local stages={}
 for _,name in ipairs(names) do stages[name]={ms=0,calls=0} end
 P.stages=stages

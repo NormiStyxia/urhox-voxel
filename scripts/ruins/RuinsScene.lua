@@ -67,6 +67,8 @@ end
 local CombatSettings = require('ruins.GameSettings')
 local combatLowQuality_=false
 local Projectile = require('combat.Projectile')
+local EnvironmentDamage = require('combat.EnvironmentDamage')
+local combatEnvironment_
 local WeaponRig = require('combat.WeaponRig')
 local EnemySpawner = require('combat.enemies.Spawner')
 local CombatHUD = require('ui.CombatHUD')
@@ -490,8 +492,8 @@ function Ruins_HandleEnemyAttackCue(_,data)
     end
     DebugLog.Log('combat-cue','%s / %s / %s',cue.enemyId,cue.attack,cue.phase)
 end
--- Reuse Nomi's exact grid-query repair. Geometry, including terrain, blocks
--- combat rays but is never damaged by them.
+-- Read-only queries. The optional second result identifies the exact world cell
+-- for real weapon impacts; aiming/LOS/prediction never damage geometry.
 ---@param a Vector3
 ---@param b Vector3
 local function CombatCast(a,b,decorative)
@@ -499,7 +501,7 @@ local function CombatCast(a,b,decorative)
     local length=delta:Length()
     if length<.0001 then return nil end
     local hit=nomi_:GridHit(Ray(a,delta/length),length,decorative)
-    return hit.hit and Clamp(hit.distance/length,0,1) or nil
+    return hit.hit and Clamp(hit.distance/length,0,1) or nil,hit
 end
 local function CombatFeedback(event)
     if not combatParticles_ or event.presentationConsumed then return end
@@ -508,6 +510,22 @@ local function CombatFeedback(event)
     if not event.player and event.enemy and (event.enemy.OnHitEvent or event.enemy.particles) then return end
     hitParticleOwner_.position,hitParticleOwner_.age=event.pos,time_
     combatParticles_:Emit(hitParticleOwner_,event)
+end
+local function CombatMeleeEnvironment(moves,active)
+    if not combatEnvironment_ then return end
+    local root,tip
+    if not moves.dead and combatRig_.active=='sword' and combatRig_.visualState=='hand' and combatRig_.pose=='hand' then
+        local pivot=combatRig_.entries.sword.pivot
+        root=pivot:LocalToWorld(combatRig_.bladeRoot)
+        tip=pivot:LocalToWorld(combatRig_.bladeTip)
+    end
+    Safe('Environment.Melee',combatEnvironment_.Melee,combatEnvironment_,root,tip,nomi_:Position(),
+        moves.swingSerial,moves.hitClip,active,moves.age)
+end
+local function CombatArrowEnvironment(event)
+    local ok,removed=Safe('Environment.Arrow',combatEnvironment_.Arrow,combatEnvironment_,event)
+    CombatFeedback(event)
+    return ok and removed>0
 end
 local function CombatHasAggro()
     for _,enemy in ipairs(CombatEnemies()) do if enemy.active and enemy.aggro and not enemy.dead then return true end end
@@ -552,6 +570,7 @@ local function StartCombat()
         clear=function(reason) if weaponGesture_ then weaponGesture_:Interrupt(reason) end end,
         position=function() return nomi_:Position() end,forward=function() return nomi_.node.worldDirection end,
         enemies=CombatEnemies,cast=CombatCast,feedback=CombatFeedback,audio=combatAudioPort,camera=combatCamera_,
+        environmentMelee=CombatMeleeEnvironment,
         impactRing=function(pos,dir)
             if not nomi_.cc.onGround then return end
             CombatMoves.EmitImpactRing(combatParticles_,hitParticleOwner_,pos,dir)
@@ -662,8 +681,9 @@ local function StartCombat()
         end
         arrowNodes_[i]={node=node,tails=tails}
     end
+    combatEnvironment_=EnvironmentDamage.New({world=world_,cast=CombatCast,timeObject=Puzzles.FindByVolume,feedback=CombatFeedback})
     combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,audio=combatAudioPort,
-        hit=function(...) combatMoves_:Feedback(...) end,wallHit=CombatFeedback,
+        hit=function(...) combatMoves_:Feedback(...) end,wallHit=CombatArrowEnvironment,
         draw=function(p,visible)
             local entry=arrowNodes_[p.index]
             entry.node.enabled=visible
@@ -1928,6 +1948,7 @@ function M.Stop()
     if foot_ then foot_:Cancel('scene-stop') end
     foot_,M.foot=nil,nil
     combatMoves_,combatAnim_,combatArrows_,combatEnemies_=nil,nil,nil,nil
+    combatEnvironment_=nil
     for _,entry in pairs(arrowNodes_) do entry.node:Remove() end
     if arrowTailMaterial_ then arrowTailMaterial_:Dispose();arrowTailMaterial_=nil end
     arrowNodes_={}; animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5,weaponInHand=1},direction='后'}; CombatHUD.Set(nil)

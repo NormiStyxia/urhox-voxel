@@ -72,7 +72,7 @@ function P:Fire(origin,dir,charge,stats,tip)
     p.sound.pos,p.sound.tier,p.sound.material,p.sound.hitId=origin,p.tier,nil,nil
     if self.opts.audio then self.opts.audio.Play('bow_fire',p.sound) end
     if self.opts.log then self.opts.log('arrow-fire','Combat: arrow fire tier=%s speed=%.2f',p.tier,speed) end
-    if self.opts.draw then self.opts.draw(p,true) end
+    if self.opts.draw then self.opts.draw(p,p.active) end
     return true,p -- optional observer reads the actual initialized shot
 end
 function P:Retire(p)
@@ -99,7 +99,8 @@ function P:Step(p,dt)
     local length=segment:Length()
     local fraction=length>0 and math.min(1,(p.range-p.distance)/length) or 1
     nextPos=p.pos+segment*fraction
-    local wall=self.opts.cast and self.opts.cast(p.pos,nextPos) or nil
+    local wall,worldHit
+    if self.opts.cast then wall,worldHit=self.opts.cast(p.pos,nextPos) end
     local hits=Hit.Query(self.opts.enemies and self.opts.enemies() or EMPTY,p.pos,nextPos,0,p.hit,p.hits,p.hitPool)
     for _,contact in ipairs(hits) do
         local enemy=contact.enemy
@@ -149,13 +150,16 @@ function P:Step(p,dt)
         p.vel=impactVel
         p.pos=p.pos+(nextPos-p.pos)*wall
         p.embedded,p.age=true,0
+        local destroyed=false
         if self.opts.wallHit then
             local impact=p.wallImpact
             impact.pos,impact.dir,impact.tier=p.pos,p.vel:Normalized(),'arrow_'..p.tier
-            self.opts.wallHit(impact)
+            impact.worldHit,impact.swingId=worldHit,p.swingId
+            destroyed=self.opts.wallHit(impact)==true
         end
         p.sound.pos,p.sound.material,p.sound.hitId=p.pos,'stone',p.swingId
         if self.opts.audio then self.opts.audio.Play('arrow_hit',p.sound) end
+        if destroyed then self:Retire(p) end -- no arrow hanging in the newly empty cell
     else
         p.distance=p.distance+length*fraction
         p.pos=nextPos

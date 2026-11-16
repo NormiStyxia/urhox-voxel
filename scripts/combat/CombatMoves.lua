@@ -829,7 +829,12 @@ function C:AfterPose()
         end
         self.pendingFire=nil
     end
-    if not (self.hitOpen or self.hitPending) or self.dead then self.previousHit=nil; return end
+    if not (self.hitOpen or self.hitPending) or self.dead then
+        self.previousHit=nil
+        if self.o.environmentMelee then self.o.environmentMelee(self,false) end
+        return
+    end
+    local environmentSwing,environmentHandle=self.swingSerial,self.handle
     local zone,slam=self:StrikeZones()
     -- R8 conservative P0 path: keep the proven gameplay sector/reach and draw
     -- its actual one-frame slash sample, including a hitch across hit_on/off.
@@ -872,6 +877,12 @@ function C:AfterPose()
         end
     end
     Perf.Finish('HitEvent',hitStart)
+    if self.o.environmentMelee then
+        -- Enemy callbacks may cancel, kill or replace this attack before the
+        -- environment pass. Never excavate with that stale contact pose.
+        self.o.environmentMelee(self,not self.dead and not self.blocked
+            and self.swingSerial==environmentSwing and self.handle==environmentHandle)
+    end
 end
 -- Keep info/result as independent snapshots: enemy/FX callbacks may retain
 -- them. The borrowed QueryZone contacts are never exposed to those callbacks.
