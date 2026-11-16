@@ -479,6 +479,27 @@ for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light
         c.keys.head[i][2]={3-torso[1]*.35,-math.max(-30,math.min(30,torso[2]*.65)),0}
     end
 end
+-- Forward-leaning strikes with weight: lean back slightly in anticipation,
+-- drive the chest over the lead foot at contact, carry it through, then settle.
+-- Only torso pitch / root dip change; yaw, hand paths, events and hits are untouched.
+local LEAN={sword_light_1={6,-8,6,24,22,6},sword_light_2={6,-6,8,22,20,6},
+    sword_light_3={6,-14,-4,32,30,6},sword_light_4={6,-2,12,20,16,6},
+    sword_light_5={6,-12,10,34,32,6},sword_heavy_release={-10,-10,8,26,22,6}}
+local DIP={sword_light_1=-.08,sword_light_2=-.08,sword_light_3=-.12,sword_light_4=-.10,sword_light_5=-.14,sword_heavy_release=-.18}
+for id,lean in pairs(LEAN) do
+    local c=C.Clips[id]
+    for i,pitch in ipairs(lean) do
+        c.keys.body[i][2][1]=pitch
+        local torso=c.keys.body[i][2]
+        c.keys.head[i][2]={3-torso[1]*.35,-math.max(-30,math.min(30,torso[2]*.65)),0}
+    end
+    -- Contact/follow-through sink lower: the hips drop into the strike.
+    local n=#c.root
+    c.root[n-2][2]=math.min(c.root[n-2][2],DIP[id])
+    c.root[n-1][2]=math.min(c.root[n-1][2],DIP[id]*.8)
+    -- Torso drives into contact quickly (outCubic) instead of a symmetric ease.
+    c.keys.body[4][3]="outCubic"
+end
 C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
     bez(0,1,{.35,1.05,.30},{.65,1.55,-.20},{.70,1.45,-.35},"inQuad")}}}
 

@@ -34,6 +34,7 @@ local Safe=CombatState.Isolated
 local CombatMoves = require('combat.CombatMoves')
 local SwingPerf=require('combat.SwingPerf')
 local FootLocomotion=require('ruins.FootLocomotion')
+local ClothInertia=require('combat.ClothInertia')
 local foot_
 local combatControls,combatMoveOptions={},{}
 local CombatAnim = require('combat.CombatAnim')
@@ -75,6 +76,8 @@ local CombatHUD = require('ui.CombatHUD')
 local ForgePanel = require('ui.ForgePanel')
 local ForgeShowroom = require('combat.ForgeShowroom')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
+---@type ClothInertia?
+local clothInertia_
 local combatParticles_
 local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
 local combatLookScale_=1
@@ -575,6 +578,7 @@ local function StartCombat()
     combatAudioWarmup_ = 0
     combatCamera_=CombatCamera.New()
     combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node,{bowRig=combatRig_})
+    clothInertia_=ClothInertia.New(nomi_.nomi)
     local bowFireHits,bowFirePool={},{}
     for i=1,64 do bowFirePool[i]={} end
     combatMoves_=CombatMoves.New({anim=combatAnim_,rig=combatRig_,state=CombatState,
@@ -1681,6 +1685,7 @@ function Ruins_HandleUpdate(eventType, eventData)
             foot_.weight>0 or combatMoves_.clip=='plunge_land' or preview=='sprint_loop' or preview=='plunge_land')
     end
     if weaponGesture_ then Safe('WeaponSelect.Pose',weaponGesture_.Apply,weaponGesture_,dt) end
+    if clothInertia_ and M.ride.mode=='free' then Safe('Animation.Cloth',clothInertia_.Apply,clothInertia_,dt) end
     Safe('Debug.F7HUD',UpdateCombatPreviewText)
     Safe('Rig.Visuals',UpdateCombatRig,dt)
     if animPreview_.index==0 then

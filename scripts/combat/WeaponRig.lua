@@ -8,6 +8,8 @@ local Store=require("combat.WeaponStore")
 ---@class WeaponRigEntry
 ---@field pivot Node
 ---@field mesh WeaponMesh
+---@field wing table?
+---@field wingTip number?
 
 ---@class WeaponTrail
 ---@field volume VoxelVolume

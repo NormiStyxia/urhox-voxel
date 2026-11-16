@@ -585,9 +585,12 @@ function A:Update(dt,realDt)
                 end
                 -- Exact integrated displacement: independent of dt, quantization
                 -- and visual fade weight. Never directly write the physics Node.
+                -- Half outQuad: burst on the step, then glide to a stop (inertia).
                 for _,m in ipairs(c.motion) do
-                    local overlap=math.max(0,math.min(s.t,m.t1)-math.max(previous,m.t0))
-                    s.motion=s.motion+m.forward*overlap/(m.t1-m.t0)
+                    local span=m.t1-m.t0
+                    local u0=clamp((math.max(previous,m.t0)-m.t0)/span,0,1)
+                    local u1=clamp((math.min(s.t,m.t1)-m.t0)/span,0,1)
+                    if u1>u0 then s.motion=s.motion+m.forward*(u1*(1.5-.5*u1)-u0*(1.5-.5*u0)) end
                 end
                 self.motion=self.motion+s.motion
                 s.sample=sampleTime(self,s)
