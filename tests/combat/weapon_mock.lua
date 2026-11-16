@@ -62,6 +62,7 @@ rawset(_G,"Quaternion",euler)
 rawset(_G,"Vector3",setmetatable({ZERO=v(),UP=v(0,1,0),FORWARD=v(0,0,1)}, {__call=function(_,...) return v(...) end}))
 rawset(_G,"Color",function(r,g,b,a) return {r=r,g=g,b=b,a=a or 1} end)
 rawset(_G,"Variant",function(value) return value end)
+rawset(_G,"Vector2",function(x,y) return {x=x,y=y} end)
 rawset(_G,"BLEND_ALPHA",3)
 rawset(_G,"BLEND_ADDALPHA",4)
 rawset(_G,"CMP_LESSEQUAL",4)
@@ -133,6 +134,7 @@ function M.CustomGeometry(node,options)
     function geom:DefineVertex(position) self.vertices[#self.vertices+1]={position=position} end
     function geom:DefineNormal(normal) self.vertices[#self.vertices].normal=normal end
     function geom:DefineColor(color) self.vertices[#self.vertices].color=color end
+    function geom:DefineTexCoord(uv) self.vertices[#self.vertices].uv=uv end
     function geom:SetMaterial(index,material)
         assert(index==0 and material and self.commits>0,'match BlockCharacter: Commit before SetMaterial')
         if options.materialThrow then error('SetMaterial binding failure') end
@@ -184,7 +186,12 @@ local function Material()
     return result
 end
 rawset(_G,'Material',{new=Material})
-rawset(_G,'cache',{GetResource=function(_,kind,path) assert(kind=='Technique' and path=='Techniques/NoTextureUnlit.xml');return Technique() end})
+-- Existing suites verify the voxel sword path; the wing visual suite flips this off.
+rawset(_G,'WING_MATERIAL_MISSING',true)
+rawset(_G,'cache',{GetResource=function(_,kind,path)
+    if kind=='Material' and path=='model/forge-blades/WingSword.xml' and not rawget(_G,'WING_MATERIAL_MISSING') then return Material() end
+    assert(kind=='Technique' and path=='Techniques/NoTextureUnlit.xml');return Technique()
+end})
 function M.World(scene)
     local world={created=0,rebuilds=0,writes=0,removed=0,paletteWrites=0,palette={},volumes={},base=Material()}
     world.GetPaletteMaterial=function(self) return self.base end

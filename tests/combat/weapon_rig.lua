@@ -616,3 +616,49 @@ do
     r:Dispose();assert(w.created==w.removed)
 end
 print('PASS R8 essentialHit at low quality, 40/60ms white, .8/1.5 degree mesh-only impulse, stop+50ms reset, 4-band contact sample, 100-hit pool stability, hidden clears')
+
+-- Wing sword visual: replaces the voxel sword mesh visually only; hit/sockets stay voxel-driven.
+do
+    local WingVisual=require("combat.WingSwordVisual")
+    rawset(_G,'WING_MATERIAL_MISSING',nil)
+    local sc=Mock.Node("scene") --[[@as any]]
+    local w=Mock.World(sc) --[[@as any]]
+    local n=Mock.Nomi(sc) --[[@as any]]
+    local r=Rig.New(sc,w,n)
+    local entry=r.entries.sword
+    assert(entry.wing and entry.wing.node and entry.wing.material,'wing visual created')
+    assert(entry.wing.node.parent==entry.pivot,'wing follows the weapon pivot (hand/back)')
+    assert(entry.mesh.node.scale.x<.01 and entry.mesh.node.scale.y<.01,'voxel main mesh hidden by scale')
+    assert(not entry.wing.node.enabled,'hidden pose hides the wing visual')
+    -- state follows pose
+    r:SetPose('hand');for _=1,12 do r:Update(1/60) end
+    assert(entry.wing.node.enabled,'hand pose shows the wing visual')
+    r:SetPose('hidden');for _=1,20 do r:Update(1/60) end
+    assert(not entry.wing.node.enabled,'hidden again')
+    -- bow active: sword visual stays hidden
+    r:SetActive('bow');r:SetPose('hand');for _=1,12 do r:Update(1/60) end
+    assert(not entry.wing.node.enabled,'bow selected hides the sword visual')
+    r:SetActive('sword');r:SetPose('hand');for _=1,12 do r:Update(1/60) end
+    assert(entry.wing.node.enabled)
+    -- Apply recolours the same material; changed blade length rebuilds the visual
+    local mat=entry.wing.material
+    local config={weapon='sword',parts={blade='blade_broad',guard='guard_cross',grip='sword_grip_leather',pommel='pommel_round'},colors={primary=5,secondary=6,accent=4}}
+    assert(r:Apply(config))
+    assert(entry.wing and entry.wing.node.parent==entry.pivot and entry.mesh.node.scale.x<.01)
+    assert(entry.wing.material.parameters.accent_color~=nil)
+    r:Dispose()
+    assert(entry.wing==nil,'dispose releases the wing visual')
+    -- failure falls back to the voxel sword without error
+    rawset(_G,'WING_MATERIAL_MISSING',true)
+    local r2=Rig.New(sc,w,n)
+    assert(r2.entries.sword.wing==nil and r2.entries.sword.mesh.node.scale.x>.5,'fallback keeps the voxel sword visible')
+    r2:Dispose()
+    rawset(_G,'WING_MATERIAL_MISSING',nil)
+    WingVisual.ENABLED=false
+    local r3=Rig.New(sc,w,n)
+    assert(r3.entries.sword.wing==nil and r3.entries.sword.mesh.node.scale.x>.5,'kill switch keeps the voxel sword')
+    r3:Dispose()
+    WingVisual.ENABLED=true
+    rawset(_G,'WING_MATERIAL_MISSING',true)
+end
+print('PASS wing sword visual: pivot-attached, pose/active gating, voxel mesh hidden, recolour/rebuild on Apply, dispose, fallback + kill switch')

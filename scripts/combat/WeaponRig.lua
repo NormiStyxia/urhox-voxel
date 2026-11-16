@@ -1,6 +1,7 @@
 -- Nomi's weapon sockets and visual motion. CombatAnim owns attack timing/poses.
 -- All volumes are visual-only. No Finalize, collision or gameplay damage calls.
 local Builder=require("combat.WeaponBuilder")
+local WingVisual=require("combat.WingSwordVisual")
 local Parts=require("combat.WeaponParts")
 local Store=require("combat.WeaponStore")
 
@@ -222,6 +223,7 @@ function Rig:Init(scene,world,controller)
         self.entries[weapon]={pivot=pivot,mesh=mesh}
         if weapon=='sword' then ScaleSword(mesh.node,Vec(mesh.blueprint.bounds.min)) end
         Builder.SetOpacity(mesh,0)
+        if weapon=='sword' then self:AttachWing(self.entries.sword) end
     end
     self.combatFx=require("combat.CombatFx").New(scene,world)
     self:CreateTrail()
@@ -834,7 +836,7 @@ function Rig:Apply(config)
     local mesh=Builder.Build(self.world,entry.pivot,blueprint.config,entry.mesh)
     if not mesh then return false end
     entry.mesh=mesh
-    if weapon=='sword' then ScaleSword(mesh.node,Vec(blueprint.bounds.min)) end
+    if weapon=='sword' then ScaleSword(mesh.node,Vec(blueprint.bounds.min));self:AttachWing(entry,blueprint) end
     -- Persist independent mutable tables, never cached blueprint references.
     local value={parts={},colors={}}
     for k,v in pairs(blueprint.config.parts) do value.parts[k]=v end
@@ -1171,7 +1173,7 @@ function Rig:UpdateGlow()
 end
 
 ---@param dt number
-function Rig:Update(dt)
+function Rig:UpdateCore(dt)
     if self.disposed then return end
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
@@ -1222,6 +1224,42 @@ function Rig:Update(dt)
     if self.trailEnabled then self:UpdateCharge(entry) end
 end
 
+--- Wing sword visual (WingSwordVisual): shown instead of the voxel sword mesh when it loads.
+--- Hit geometry, sockets, trails and afterimages keep using the voxel blueprint.
+---@param entry table sword entry
+---@param blueprint table? freshly compiled blueprint (Apply) else entry.mesh.blueprint
+function Rig:AttachWing(entry,blueprint)
+    blueprint=blueprint or entry.mesh.blueprint
+    local tip=-math.huge
+    for _,cell in ipairs(blueprint.geometry.cells) do
+        if cell.slot=='blade' then tip=math.max(tip,cell.y) end
+    end
+    if tip==-math.huge then return end
+    local tipY=(tip+.5)*Parts.VOXEL_SIZE*SWORD_LENGTH
+    local colors=blueprint.config and blueprint.config.colors
+    if entry.wing and math.abs((entry.wingTip or 0)-tipY)>1e-6 then
+        WingVisual.Dispose(entry.wing);entry.wing=nil
+    end
+    if entry.wing then WingVisual.Recolor(entry.wing,colors)
+    else
+        local wing,err=WingVisual.New(entry.pivot,tipY,colors)
+        if not wing then
+            if not Rig.wingWarned then Rig.wingWarned=true;print('WeaponRig: wing sword unavailable, voxel sword kept: '..tostring(err)) end
+            return
+        end
+        entry.wing,entry.wingTip=wing,tipY
+    end
+    entry.mesh.node.scale=Vector3(1e-4,1e-4,1e-4) -- keep the voxel mesh alive for opacity/pools, just invisible
+end
+function Rig:SyncWing()
+    local entry=self.entries.sword
+    if entry and entry.wing then WingVisual.SetVisible(entry.wing,self.active=='sword' and entry.mesh.alpha>=.5) end
+end
+function Rig:Update(dt)
+    self:UpdateCore(dt)
+    self:SyncWing()
+end
+
 function Rig:Dispose()
     if self.disposed then return end
     self.disposed=true
@@ -1236,7 +1274,7 @@ function Rig:Dispose()
     for _,image in ipairs(self.bowImages) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,particle in ipairs(self.particles) do self.world:RemoveVolume(particle.volume);particle.material:Dispose() end
     for _,flash in pairs(self.flashes) do self.world:RemoveVolume(flash.volume);flash.material:Dispose() end
-    for _,entry in pairs(self.entries) do Builder.Dispose(entry.mesh); entry.pivot:Remove() end
+    for _,entry in pairs(self.entries) do WingVisual.Dispose(entry.wing);entry.wing=nil;Builder.Dispose(entry.mesh); entry.pivot:Remove() end
     self.sockets.back_sword:Remove()
     self.sockets.back_bow:Remove()
     -- Both palms are shared character-owned nodes: never delete, move or reset
