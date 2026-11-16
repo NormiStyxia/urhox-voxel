@@ -4,6 +4,7 @@ if not logOK then DebugLog=nil end
 ---@class RuinsSkyClouds
 local M = {}
 M.__index = M
+local WIND_SPEED_SCALE = 3.0 -- All tiers/shadows; does not accelerate breathing or wind turns.
 
 -- 图集在 validation/sky-fx/bake_sky_atlas.py 离线烘焙；游戏不运行体积积分。
 local function Finite(v,default,lo,hi)
@@ -210,10 +211,10 @@ function M:Update(dt,day,dusk,dn)
     -- Keep the double clock; wrap only the upload. 3600m is a common period
     -- for the three sky layers and the 600x300m ground pattern.
     local t=self.elapsed
-    self.wind.x=(1.20*t+150*(1-math.cos(t*0.0008)))%3600
-    self.wind.y=(0.36*t+(0.06/0.0006)*(math.cos(0.7)-math.cos(t*0.0006+0.7)))%3600
-    self.wind.z=moving and (1.20+0.12*math.sin(t*0.0008)) or 0
-    self.wind.w=moving and (0.36+0.06*math.sin(t*0.0006+0.7)) or 0
+    self.wind.x=(WIND_SPEED_SCALE*(1.20*t+150*(1-math.cos(t*0.0008))))%3600
+    self.wind.y=(WIND_SPEED_SCALE*(0.36*t+(0.06/0.0006)*(math.cos(0.7)-math.cos(t*0.0006+0.7))))%3600
+    self.wind.z=moving and WIND_SPEED_SCALE*(1.20+0.12*math.sin(t*0.0008)) or 0
+    self.wind.w=moving and WIND_SPEED_SCALE*(0.36+0.06*math.sin(t*0.0006+0.7)) or 0
     self.material:SetShaderParameter("cloud_wind",Variant(self.wind))
     self.material:SetShaderParameter("drift_time",Variant(t%(10000*math.pi)))
     self.material:SetShaderParameter("motion_detail",Variant(self.motionDetail))
