@@ -1,0 +1,110 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 43455,
+    "frames_completed": 16,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-16 12_14_04_739][99] ERROR: Execute Lua string failed: [string \"ruins/tests/PlungeTest\"]:157: [string \"ruins/tests/PlungeTest\"]:20: 空中攻击输入进入下落攻击",
+                    "frame": 8
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2100,
+            "component_count": 3449,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 49,
+            "hash": 2102606641,
+            "frame_time_ms": 38065.57421875
+        },
+        {
+            "frame": 8,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 293934028,
+            "frame_time_ms": 19.98699951171875
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 3099314089,
+            "frame_time_ms": 19.89699935913086
+        },
+        {
+            "frame": 16,
+            "phase": "run",
+            "nodes": 23,
+            "components": 49,
+            "hash": 511385347,
+            "frame_time_ms": 25.89299964904785
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 73.91500091552735,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 9,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "CustomGeometry": 2124,
+        "VoxelVolume": 648,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 167,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 8,
+        "VoxelChunkDrawable": 29,
+        "SoundSource": 5
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 4,
+        "passed": 3,
+        "failed": 1
+    },
+    "test_issues": [
+        "空中攻击输入进入下落攻击"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 1,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 1
+    }
+}
