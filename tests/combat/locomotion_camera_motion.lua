@@ -13,9 +13,9 @@ m.clip=nil;cam:Cancel();cam:Update(.2,m,false,false,false);S.near(cam.output.fov
 cam:Update(.3,m,true,true,false);S.near(cam.output.fov,0)
 -- Execute actual Nomi movement body with documented engine ports only.
 local file=assert(io.open('scripts/ruins/NomiController.lua'));local source=file:read('*a');file:close()
-local code=assert(source:match('(function N:Move%(.+)\n%-%- Probe actual'))
+local code=assert(source:match('(function N:ResetJump%(.+)\n%-%- Probe actual'))
 local N={}
-local env=setmetatable({N=N,WALK=4.2,RUN=7.2,JUMP=6.4,AIR_CONTROL=.35,
+local env=setmetatable({N=N,WALK=4.2,RUN=7.2,JUMP=6.4,AIR_CONTROL=.35,COYOTE_TIME=.12,JUMP_BUFFER=.12,
  Clamp=function(v,a,b)return math.max(a,math.min(b,v))end,
  WrapDeg=function(a)return (a+180)%360-180 end,Terrain={HasGround=function()return true end}}, {__index=_G})
 -- N:Move uses Quaternion(angle, axis); this mock stores only the resulting yaw.

@@ -4,9 +4,9 @@ local file=assert(io.open('scripts/ruins/NomiController.lua')); local source=fil
 local function method(name)
     return assert(source:match('(function N:'..name..'%b().-)\nend'))..'\nend'
 end
-local body=method('Move')..'\n'..method('AssistMelee')
+local body=method('ResetJump')..'\n'..method('UpdateJump')..'\n'..method('Move')..'\n'..method('AssistMelee')
 local N={}
-local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,
+local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,COYOTE_TIME=.12,JUMP_BUFFER=.12,
     WrapDeg=function(a) return a end,Quaternion=function() return {} end,
     Clamp=function(v,a,b) return math.max(a,math.min(b,v)) end,
     Terrain={HasGround=function(x,z,margin) return x<1 or x>2 end}}, {__index=_G})

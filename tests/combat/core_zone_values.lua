@@ -19,7 +19,7 @@ local N={}
 local terrain={IsSafeGround=function()return true end,GroundHeight=function()return 6 end}
 local function yawRotation(yaw)return Quaternion(0,yaw,0)end
 local env=setmetatable({N=N,Terrain=terrain,Quaternion=yawRotation},{__index=_G})
-for _,name in ipairs({'TeleportForCombatDebug','AssistMelee'})do
+for _,name in ipairs({'ResetJump','TeleportForCombatDebug','AssistMelee'})do
  assert(load(assert(ns:match('(function N:'..name..'.-)\nend'))..'\nend',name,'t',env))()
 end
 local startCode=assert(scene:match('(local function StartCombatTest%(%).-)\nlocal function HandleCombatDebugKeys'))

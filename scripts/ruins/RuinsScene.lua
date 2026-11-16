@@ -357,12 +357,14 @@ local function SetupDragon()
         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil) end
     ride.onNotice = function(text) caster_:Say(text) end
     ride.onMount = function()
+        nomi_:ResetJump()
         CombatState.SetMounted(true)
         caster_.charging,caster_.charge=false,0
         nomi_.cc.enabled = false
         M.mounted = true
     end
     ride.onDismount = function(pos)
+        nomi_:ResetJump()
         nomi_.cc.enabled = true
         nomi_.cc:Teleport(pos + Vector3(0, 0.2, 0))
         nomi_.node.rotation = Quaternion(nomi_.yaw, Vector3.UP)
@@ -1311,6 +1313,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
     local dt = eventData["TimeStep"]:GetFloat()
     if nomi_ == nil or M.mounted or (M.ride ~= nil and M.ride.mode ~= "free") then
+        if nomi_ then nomi_:ResetJump() end
         if foot_ then foot_:Cancel('mounted') end
         return
     end
@@ -1369,6 +1372,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         end
         if foot_ or CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
             local options=combatMoveOptions
+            options.jumpAllowed=allowed and not combatInputBlocked and not combatMoves_.dead
             options.scale=allowed and not combatMoves_.motionChecked and combatMoves_:MoveScale() or 0
             options.motion=allowed and combatMoves_.motion or Vector3.ZERO
             options.explore=not CombatState.InCombat()
@@ -1384,7 +1388,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             return
         end
     end
-    if not allowed or animPreview_.index>0 then nomi_:Move(dt,0,0,false,false,false); return end
+    if not allowed or animPreview_.index>0 then nomi_:Move(dt,0,0,false,false,false,{scale=0}); return end
     nomi_:Move(dt, f, r, false, Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0)
 end
 

@@ -1,0 +1,8 @@
+{
+  "scripts/ruins/NomiController.lua": "fa0b731a771c3d2c6bc2f211da54f3a25f563f4fd3c177388b5a9eaa00e85659",
+  "scripts/ruins/RuinsScene.lua": "c790c1c62ad437e3ead2dabc41590cbe3b7b55272fd044f51e5a3f711b65c9ec",
+  "tests/combat/core_motion.lua": "7d7ec75689bfd444701728ee25cca34c313182450383178b0e78e3030f1fd8bc",
+  "tests/combat/core_zone_values.lua": "27a19cf43f21349de307ccb883d871e12dc2f783d2cdc5587ebe7d9e932311ab",
+  "tests/combat/locomotion_camera_motion.lua": "7d4c2fc10f9eb427e495fab80d7ff83a0ebccb2495a771c3dcd82750da4470ad",
+  "tests/combat/jump_grace.lua": "3ebe61ff8f62b04a2bf8f8e2bd161f6c237d1dcca1488439af6309320b5d013b"
+}

@@ -19,6 +19,7 @@ local M = {}
 
 local WALK, RUN = 4.2, 7.2
 local JUMP = 6.4
+local COYOTE_TIME, JUMP_BUFFER = .12, .12
 local AIR_CONTROL = 0.35
 
 local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
@@ -80,6 +81,7 @@ function M.New(scene, world, spawn, spawnYaw)
     self.speed = 0
     self.vel = Vector3(0, 0, 0)
     self.enabled = true
+    self:ResetJump()
     self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
     self.safePos = Vector3(spawn.x,spawn.y,spawn.z)
     self.safeT = 0
@@ -167,9 +169,50 @@ function N:CombatAirState(out)
     return out
 end
 
+function N:ResetJump()
+    self.jumpCoyote,self.jumpBuffer=0,0
+    self.jumpSpent,self.jumpAirborne=false,false
+    self.jumpLaunchAge=0
+end
+
+-- Input is a press edge, not a held key. Consume once; stale onGround after a
+-- queued native jump must not re-arm until we have observed air then landing.
+function N:UpdateJump(dt,pressed,allowed)
+    local grounded=self.cc.onGround
+    self.jumpLaunchAge=(self.jumpLaunchAge or 0)+dt
+    if not grounded then self.jumpAirborne=true
+    elseif self.jumpAirborne then
+        self.jumpSpent,self.jumpAirborne=false,false
+    elseif self.jumpSpent and self.jumpLaunchAge>=COYOTE_TIME and self.cc:GetLinearVelocity().y<=0 then
+        -- A low ceiling/blocked native launch may never report air. Once the
+        -- grounded solver has settled, allow a fresh press instead of locking.
+        self.jumpSpent=false
+    end
+    if not allowed then
+        self.jumpCoyote,self.jumpBuffer=0,0
+        return false
+    end
+    self.jumpCoyote=grounded and not self.jumpSpent and COYOTE_TIME
+        or math.max(0,(self.jumpCoyote or 0)-dt)
+    self.jumpBuffer=pressed and JUMP_BUFFER or math.max(0,(self.jumpBuffer or 0)-dt)
+    if self.jumpSpent or self.jumpCoyote<=0 or self.jumpBuffer<=0 then return false end
+    if grounded then
+        self.cc:Jump(JUMP)
+    else
+        -- No support remains for the native ground jump. Give exactly one
+        -- vertical launch via the documented velocity port, retaining X/Z.
+        local velocity=self.cc:GetLinearVelocity()
+        self.cc:SetLinearVelocity(Vector3(velocity.x,JUMP,velocity.z))
+    end
+    self.jumpCoyote,self.jumpBuffer=0,0
+    self.jumpSpent,self.jumpAirborne=true,false
+    self.jumpLaunchAge=0
+    return true
+end
+
 -- 移动输入（f, r ∈ [-1,1]）
 function N:Move(dt, f, r, run, jump, aiming, combat)
-    if self:UpdateSafety(dt) then return end
+    if self:UpdateSafety(dt) then self:ResetJump(); return end
     local cc = self.cc
     local rad = math.rad(self.camYaw)
     local fwd = Vector3(math.sin(rad), 0, math.cos(rad))
@@ -206,7 +249,8 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
         end
         cc.desiredVelocity=self.vel+motion*(fraction/math.max(dt,.001))
     end
-    if jump and onGround and (not combat or combat.scale>0) then cc:Jump(JUMP) end
+    local jumped=self:UpdateJump(dt,jump,not combat or
+        (combat.jumpAllowed~=false and (combat.scale or 1)>0 and not combat.plungeVelocity))
     -- 朝向：瞄准时面朝相机方向；否则面朝移动方向
     local wantYaw = self.yaw
     if aiming then wantYaw = self.camYaw
@@ -217,7 +261,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     else self.yaw = self.yaw + WrapDeg(wantYaw - self.yaw) * (1 - math.exp(-14 * dt)) end
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
     self.speed = Vector3(self.vel.x, 0, self.vel.z):Length()
-    self.onGround = onGround
+    self.onGround = onGround and not jumped
 end
 
 -- Probe actual collision surfaces (including rebuilt bridge), not the aim
@@ -359,6 +403,7 @@ end
 
 -- Original safety result, shared by immediate fallback and the black-screen callback.
 function N:ReturnFromVoid()
+    self:ResetJump()
     local safe=self.safePos
     if not safe or not Terrain.IsSafeGround(safe.x,safe.y,safe.z) then safe=self.fallbackPos end
     self.cc.desiredVelocity=Vector3.ZERO
@@ -374,6 +419,7 @@ end
 -- Debug-only caller supplies a terrain- and building-validated permanent point.
 function N:TeleportForCombatDebug(pos,yaw)
     if not Terrain.IsSafeGround(pos.x,pos.y,pos.z) then return false end
+    self:ResetJump()
     self.cc.desiredVelocity=Vector3.ZERO
     self.cc:SetLinearVelocity(Vector3.ZERO)
     self.cc:Teleport(pos)
