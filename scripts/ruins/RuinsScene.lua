@@ -656,7 +656,7 @@ local function StartCombat()
             end
         end})
     combatMoves_.o.locomotion=foot_
-    foot_:Soles(nomi_.nomi,require('game.NomiVoxelData'),require('game.BlockCharacter').SLENDER)
+    foot_:Soles(nomi_.nomi,require('game.NomiVoxelDataElbow'),require('game.BlockCharacter').SLENDER)
     M.foot=foot_
     weaponGesture_=WeaponSelectGesture.New({character=nomi_.nomi,root=nomi_.node,
         wheel=WeaponWheel,moves=combatMoves_,rig=combatRig_,state=CombatState,

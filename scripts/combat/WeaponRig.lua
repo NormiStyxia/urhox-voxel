@@ -229,6 +229,7 @@ function Rig:Init(scene,world,controller)
         if weapon=='sword' then self:AttachWing(self.entries.sword) end
     end
     self.combatFx=require("combat.CombatFx").New(scene,world)
+    self.slashRibbon=require("combat.SlashRibbon").New(scene)
     self:CreateTrail()
     self:BuildSwordImages()
     self:BuildBowImages()
@@ -518,6 +519,7 @@ function Rig:SetTrail(on)
     self.trailEnabled=on==true
     if not self.trailEnabled then
         self.combatFx:ClearSword()
+        self.slashRibbon:Clear()
         -- Decorative silhouettes/charge grains can be disabled independently
         -- of arrival flashes and essential hit confirmation.
         for _,image in ipairs(self.images) do image.node.enabled=false end
@@ -528,7 +530,10 @@ end
 
 --- Borrowed synchronous HitEvent; only scalar state is retained.
 function Rig:BeginSlash(combo,heavy)
-    if self.trailEnabled then self.combatFx:Begin(combo,heavy) end
+    if self.trailEnabled then
+        self.combatFx:Begin(combo,heavy)
+        self.slashRibbon:Begin((heavy or combo==5) and "moon" or (combo==4 and "heavy" or "light"))
+    end
     self.wingGlow=math.max(self.wingGlow or 0,heavy and 1 or .8)
 end
 function Rig:ImpactFx(position,forward,plunge)
@@ -658,6 +663,7 @@ end
 
 function Rig:StopCombatVisual()
     self.combatFx:Clear()
+    self.slashRibbon:Clear()
     self:ClearTrail()
     self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
     self.hitGroup,self.contactArc=nil,false
@@ -1005,7 +1011,7 @@ end
 function Rig:SampleBlade(entry)
     local root=entry.pivot:LocalToWorld(self.bladeRoot)
     local tip=entry.pivot:LocalToWorld(self.bladeTip)
-    if self.visualActive and self.trailEnabled then self.combatFx:Blade(root,tip) end
+    if self.visualActive and self.trailEnabled then self.combatFx:Blade(root,tip);self.slashRibbon:Sample(root,tip) end
     local previousRoot,previousTip=self.previousRoot,self.previousTip
     local distance=self.sampleValid and math.max(Distance(root,previousRoot),Distance(tip,previousTip)) or 0
     local bend=(tip.x-root.x)*(previousTip.x-previousRoot.x)
@@ -1183,6 +1189,8 @@ function Rig:UpdateCore(dt)
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
     self.combatFx:Update(dt)
+    if not self.visualActive then self.slashRibbon:End() end
+    self.slashRibbon:Update(dt)
     self:UpdateHang(dt)
     -- W2 submits the real hit_on state before Update and performs AfterPose
     -- sweeps afterwards. Never leave its first hit using a mid-flight pivot.
@@ -1277,6 +1285,7 @@ function Rig:Dispose()
     if self.disposed then return end
     self.disposed=true
     self.combatFx:Dispose()
+    self.slashRibbon:Dispose()
     for _,layers in pairs(self.layers) do for _,layer in ipairs(layers) do DisposeEffect(self,layer) end end
     for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
     DisposeEffect(self,self.bowArrow)

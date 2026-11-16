@@ -9,7 +9,8 @@
 
 require "urhox-libs.Camera.ThirdPersonCamera"
 local BlockCharacter = require("game.BlockCharacter")
-local NomiVoxelData = require("game.NomiVoxelData")
+-- Two-segment arms: CombatAnim solves shoulder + elbow so swings bend naturally.
+local NomiVoxelData = require("game.NomiVoxelDataElbow")
 local TimeObject = require("ruins.TimeObject")
 local DebugLog = require("ruins.DebugLog")
 local Terrain = require("ruins.RuinsTerrain")

@@ -67,6 +67,7 @@ rawset(_G,"BLEND_ALPHA",3)
 rawset(_G,"BLEND_ADDALPHA",4)
 rawset(_G,"CMP_LESSEQUAL",4)
 rawset(_G,"TRIANGLE_LIST",0)
+rawset(_G,"CULL_NONE",0)
 
 local N={}
 local function worldRotation(n)
@@ -132,6 +133,7 @@ function M.CustomGeometry(node,options)
     local geom={node=node,vertices={},commits=0,queries=0}
     geom.numGeometries=1;geom.materials={}
     function geom:SetNumGeometries(n) self.numGeometries=n end
+    function geom:SetDynamic(on) self.dynamic=on end
     function geom:BeginGeometry(index,kind) assert(index>=0 and index<self.numGeometries and kind==TRIANGLE_LIST) end
     function geom:DefineVertex(position) self.vertices[#self.vertices+1]={position=position} end
     function geom:DefineNormal(normal) self.vertices[#self.vertices].normal=normal end
@@ -197,7 +199,7 @@ rawset(_G,'cache',{GetResource=function(_,kind,path)
         if rawget(_G,'WING_MATERIAL_MISSING') then return nil end
         return Material()
     end
-    assert(kind=='Technique' and path=='Techniques/NoTextureUnlit.xml');return Technique()
+    assert(kind=='Technique' and (path=='Techniques/NoTextureUnlit.xml' or path=='Techniques/NoTextureVColAddAlpha.xml'));return Technique()
 end})
 function M.World(scene)
     local world={created=0,rebuilds=0,writes=0,removed=0,paletteWrites=0,palette={},volumes={},base=Material()}

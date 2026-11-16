@@ -427,8 +427,8 @@ for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light
 end
 -- Arc paths (body-aligned metres, feet at y=0). Contact/ending are seconds.
 -- pole: elbow hinge direction (+X = elbow out to the side, -Y = elbow down).
-pathAttack("sword_light_1",{.60,1.75,-.05},{-.55,.55,.55},150,"xz",.22,.26,.55,{1,.2,-.4})
-pathAttack("sword_light_2",{-.50,.50,.45},{.55,1.85,.25},-140,"xz",.23,.27,.45,{1,-.5,-.3})
+pathAttack("sword_light_1",{.62,1.55,.05},{-.40,.85,.70},150,"xz",.22,.26,.55,{1,.2,-.4})
+pathAttack("sword_light_2",{-.40,.80,.65},{.62,1.60,.30},-140,"xz",.23,.27,.45,{1,-.5,-.3})
 pathAttack("sword_light_3",{.70,1.20,-.20},{-.70,1.10,.35},200,"xz",.24,.30,1.6,{.2,1,-.3})
 pathAttack("sword_light_4",{.65,1.25,.05},{.62,1.20,-.12},340,"xz",.32,.40,.75,{0,1,0})
 pathAttack("sword_light_5",{.45,1.10,-.55},{.40,.30,.80},230,"yz",.40,.46,1.3,{1,0,0})

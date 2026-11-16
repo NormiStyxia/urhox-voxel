@@ -93,7 +93,7 @@ local rig={SetActive=function()end,SetPose=function()end,GetStats=function()retu
 State.Configure{rig=rig};State.Enter();State.FinishTransition();State.Activity(true)
 local m=C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,
  position=function()return pos end,forward=function()return yaw end,enemies=function()return {target}end}
-m:Update(.01,{allowed=true,attackTap=true});m:Update(.09,{allowed=true});m:AfterPose();assert(count==0)
+m:Update(.01,{allowed=true,attackTap=true});m:Update(.15,{allowed=true});m:AfterPose();assert(count==0)
 pos=Vector3(0,0,1.5);yaw=Vector3(0,0,-1);m:AfterPose();assert(count==1,'zone translates while facing stays hit_on snapshot')
 m:Cancel('menu');m:AfterPose();assert(count==1,'cancel closes zone immediately')
 print('PASS core_melee_zone: real F9 geometry vs missing blade, all light/heavy hits at 10/30/60FPS, walls/dedup/weakpart/contact, sector/height/range/capsule/translation')
@@ -109,7 +109,7 @@ end
 State.Configure{rig=rig};State.Enter();State.FinishTransition();State.Activity(true)
 local player=C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,
  position=function()return Vector3.ZERO end,forward=function()return Vector3.FORWARD end,enemies=function()return {parts}end}
-player:Update(.01,{allowed=true,attackTap=true});player:Update(.10,{allowed=true});player:AfterPose()
+player:Update(.01,{allowed=true,attackTap=true});player:Update(.16,{allowed=true});player:AfterPose()
 player:AfterPose();assert(settlements==1 and which[1]=='core' and player.lastHitWeak and dirs[1].z==1)
 player:Cancel('test');State.SetBusy(false);State.FinishTransition();State.Activity(true)
 player.releaseFull=false;assert(player:Action('heavy'))

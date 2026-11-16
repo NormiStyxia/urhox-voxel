@@ -94,7 +94,7 @@ test("fade weights and slerp match base-to-pose interpolation",function()
 end)
 test("automatic recovery fade reaches zero",function()
     local a=new();local h=a:Play("sword_light_1",{fadeIn=0,fadeOut=.1})
-    a:Update(.35);near(state(a,h).weight,.5)
+    a:Update(.49);near(state(a,h).weight,.5)
     a:Update(.05);assert(not a:IsPlaying("sword_light_1"));near(state(a,h).weight,0)
 end)
 test("priority covers stance and cancels offensive tracks",function()
@@ -119,17 +119,17 @@ test("same-layer crossfade does not leak the base pose",function()
     sameRotation(c.bones.body.rotation,Quaternion(6,0,0));near(c.bones.root.position.y,.96)
 end)
 test("stop closes active windows and never emits future fire",function()
-    local a=new();local h=a:Play("sword_light_1");a:Update(.12);a:Poll();a:Stop(h,.1)
+    local a=new();local h=a:Play("sword_light_1");a:Update(.18);a:Poll();a:Stop(h,.1)
     assert(names(a:Poll())=="hit_off,clip_cancelled,")
     a:Update(1);assert(#a:Poll()==0)
     h=a:Play("bow_release");a:Stop(h,0);a:Update(.5)
     assert(names(a:Poll())=="clip_cancelled,")
 end)
 test("stop removes unconsumed hit_on without losing pending hit_off",function()
-    local a=new();local h=a:Play("sword_light_1");a:Update(.12);a:Poll()
-    a:Update(.065);a:Stop(h,0)
+    local a=new();local h=a:Play("sword_light_1");a:Update(.18);a:Poll()
+    a:Update(.15);a:Stop(h,0)
     assert(names(a:Poll())=="hit_off,cancel_close,clip_cancelled,")
-    h=a:Play("sword_light_1");a:Update(.12);a:Stop(h,0)
+    h=a:Play("sword_light_1");a:Update(.18);a:Stop(h,0)
     assert(names(a:Poll())=="hit_off,clip_cancelled,")
 end)
 test("replay and stale handles",function()
@@ -155,24 +155,24 @@ test("bow parameter drives arm, clamps, and full fires once per play",function()
 end)
 test("quantized anticipation but continuous active and monotonic recovery",function()
     local a=new({quantize=true});local h=a:Play("sword_light_1",{fadeIn=0})
-    a:Update(.06);near(state(a,h).sample*.40,.06)
-    a:Update(.05);near(state(a,h).sample*.40,.11);assert(a:Phase()=="active")
-    a:Update(.12);assert(state(a,h).sample*.40>=.18);assert(a:Phase()=="recovery")
+    a:Update(.10);near(state(a,h).sample*.54,.10)
+    a:Update(.07);near(state(a,h).sample*.54,.17);assert(a:Phase()=="active")
+    a:Update(.12);assert(state(a,h).sample*.54>=.26);assert(a:Phase()=="recovery")
 end)
 test("motion totals independent of speed, fades and timestep",function()
     for _,speed in ipairs({.5,1,3}) do
         for _,dt in ipairs({1/144,1/30,.6}) do
             local a=new();a:Play("sword_light_1",{speed=speed})
             local total=0
-            for _=1,math.ceil(.5/speed/dt) do total=total+a:GetMotion(dt);a:Poll() end
-            near(total,.50)
+            for _=1,math.ceil(.6/speed/dt) do total=total+a:GetMotion(dt);a:Poll() end
+            near(total,.55)
         end
     end
     local a=new();a:Play("hit_heavy");near(a:GetMotion(1),-.8)
-    a=new();a:Play("sword_light_1");near(a:GetMotion(1),.50)
+    a=new();a:Play("sword_light_1");near(a:GetMotion(1),.55)
 end)
 test("cancel stops subsequent motion",function()
-    local a=new();local h=a:Play("sword_light_1");assert(a:GetMotion(.14)>0)
+    local a=new();local h=a:Play("sword_light_1");assert(a:GetMotion(.20)>0)
     a:Stop(h,.1);near(a:GetMotion(.225),0)
 end)
 test("Apply fallback, explicit dt avoids double advancement",function()
@@ -216,8 +216,9 @@ test("invalid inputs do not mutate live animation",function()
     assert(not pcall(function() a:Update(-.1) end))
 end)
 test("R1 move timings and cancel windows are authored once",function()
-    local expected={sword_light_1={.40,.10,.18,.18},sword_light_2={.40,.10,.18,.18},
-        sword_light_3={.52,.14,.22,.30},sword_heavy_release={.72,.22,.32,.48}}
+    local expected={sword_light_1={.54,.16,.26,.32},sword_light_2={.56,.17,.27,.33},
+        sword_light_3={.62,.18,.30,.38},sword_light_4={.70,.22,.40,.46},sword_light_5={.90,.34,.46,.90},
+        sword_heavy_release={.72,.22,.32,.48}}
     for id,v in pairs(expected) do
         local c=D.Clips[id];near(c.dur,v[1]);near(c.phases.active[1],v[2]);near(c.phases.active[2],v[3])
         near(c.events[1].t*c.dur,v[2]);near(c.events[2].t*c.dur,v[3]);near(c.events[3].t*c.dur,v[4])
@@ -227,7 +228,7 @@ test("R1 move timings and cancel windows are authored once",function()
     near(D.Clips.knockdown.dur,.55);near(D.Clips.getup.dur,.45)
 end)
 test("six attack landmarks, torso .02s ahead and head compensates",function()
-    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
+    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_heavy_release"}) do
         local c=D.Clips[id]
         for i=2,5 do
             near((c.keys.arm_right[i][1]-c.keys.body[i][1])*c.dur,.02)
@@ -236,7 +237,7 @@ test("six attack landmarks, torso .02s ahead and head compensates",function()
         assert(c.keys.head[2][2][2]*c.keys.body[2][2][2]<0)
     end
     local c=D.Clips.sword_light_1
-    for i,t in ipairs({0,.07,.10,.14,.22,.40}) do near(c.keys.arm_right[i][1]*c.dur,t) end
+    for i,t in ipairs({0,.096,.16,.22,.32,.54}) do near(c.keys.arm_right[i][1]*c.dur,t) end
 end)
 test("20Hz option and continuous root position",function()
     local a,c=new({quantize=true});local b,d=new({quantize=false})
@@ -282,7 +283,7 @@ test("afterimages maintain .04s deadlines at 30 and 60fps",function()
         local a,c=new();a:Play("sword_light_1",{fadeIn=0})
         local output=a:GetAfterimages();local first,second=a.afterimagePool[1],a.afterimagePool[2]
         local last=-math.huge;local count=0
-        for _=1,math.ceil(.4*fps) do
+        for _=1,math.ceil(.54*fps) do
             a:Update(1/fps);Mock.reset(c);a:Apply();a:Poll()
             local shots=A.GetAfterimages(a);assert(shots==output and #shots<=2)
             for _,shot in ipairs(shots) do
@@ -294,15 +295,15 @@ test("afterimages maintain .04s deadlines at 30 and 60fps",function()
                 last=shots[1].time;count=count+1
             end
         end
-        assert(count==4);assert(#a:GetAfterimages()==0)
+        assert(count==5);assert(#a:GetAfterimages()==0)
     end
 end)
 test("afterimages are sword-only, expire during hitstop, cancel clears",function()
-    local a,c=new();a:Play("sword_light_1",{fadeIn=0});a:Update(.1);a:Apply()
+    local a,c=new();a:Play("sword_light_1",{fadeIn=0});a:Update(.17);a:Apply()
     assert(#a:GetAfterimages()==1)
     a.timeScale=0;a:Update(.11);Mock.reset(c);a:Apply();assert(#a:GetAfterimages()==0)
     a:Stop(nil,0);a:Poll();a.timeScale=1
-    local h=a:Play("sword_light_1",{fadeIn=0});a:Update(.1);Mock.reset(c);a:Apply()
+    local h=a:Play("sword_light_1",{fadeIn=0});a:Update(.17);Mock.reset(c);a:Apply()
     assert(#a:GetAfterimages()==1);a:Stop(h,0);assert(#a:GetAfterimages()==0)
     a:Play("bow_release");a:Update(.1);Mock.reset(c);a:Apply();assert(#a:GetAfterimages()==0)
 end)
@@ -368,9 +369,9 @@ local function distance(a,b)
 end
 test("path endpoints, explicit arc sweep, windup and overshoot",function()
     local cases={
-        {"sword_light_1",.10,.18,{.55,1.35,-.25},{-.55,1.15,.55},170,.5},
-        {"sword_light_2",.10,.18,{-.55,1,-.25},{.55,1.40,.55},-150,.45},
-        {"sword_light_3",.14,.22,{.58,1.9,-.15},{.48,.45,.7},190,.7}}
+        {"sword_light_1",.16,.26,{.62,1.55,.05},{-.40,.85,.70},150,.55},
+        {"sword_light_2",.17,.27,{-.40,.80,.65},{.62,1.60,.30},-140,.45},
+        {"sword_light_3",.18,.30,{.70,1.20,-.20},{-.70,1.10,.35},200,1.6}}
     for _,v in ipairs(cases) do
         local c=D.Clips[v[1]];local path=c.handPath.arm_right
         near(path.amplitude,v[6]);near(path.windup,.12);near(path.overshoot,.08)
@@ -470,12 +471,10 @@ test("path rotations stay continuous across shoulder and behind-back crossings",
         end
     end
 end)
-test("downward slash holds landed grip and root for .05 seconds",function()
-    local landed=A.DebugSample("sword_light_3",.22)._ik.arm_right.actual
-    for _,t in ipairs({.23,.25,.27}) do
-        near(distance(A.DebugSample("sword_light_3",t)._ik.arm_right.actual,landed),0)
-        local a,c=new();a:Play("sword_light_3",{fadeIn=0,fadeOut=0});a:Update(t);a:Apply()
-        near(c.bones.root.position.y,.88)
+test("half-moon finisher plants the landed grip for .06 seconds",function()
+    local landed=A.DebugSample("sword_light_5",.46)._ik.arm_right.actual
+    for _,t in ipairs({.48,.50,.52}) do
+        near(distance(A.DebugSample("sword_light_5",t)._ik.arm_right.actual,landed),0)
     end
 end)
 test("legacy fallback supports clips without separate legacy keys",function()
@@ -544,7 +543,7 @@ test("bow release holds left aim for .08s then relaxes; cancel does not twist to
 end)
 
 test("new spin/finisher IK and motion remain independent of frame rate",function()
- for _,entry in ipairs({{"sword_light_4",.55,340},{"sword_light_5",1.0,200}}) do
+ for _,entry in ipairs({{"sword_light_4",.75,340},{"sword_light_5",1.3,230}}) do
   local clip=D.Clips[entry[1]]
   near(clip.handPath.arm_right.amplitude,entry[3])
   for _,fps in ipairs({30,60}) do

@@ -17,9 +17,9 @@ local function bow(fps)
     near(c.output.fov,0);near(c.output.look,1);return c
 end
 bow(30);bow(60)
-cam=Camera.New();m={clip='sword_light_1',whooshTime=.07}
+cam=Camera.New();m={clip='sword_light_1',whooshTime=.13}
 out=cam:Update(0,m,true,true);near(out.distance,.08)
-m.whooshTime=.10;out=cam:Update(0,m,true,true);near(out.distance,0)
+m.whooshTime=.16;out=cam:Update(0,m,true,true);near(out.distance,0)
 cam:Land();out=cam:Update(.02,m,true,true);near(out.impact.y,-.03)
 out=cam:Update(.02,m,true,true);assert(out.impact.y>-.03 and out.impact.y<-.02);near(out.focus.y,0)
 cam=Camera.New();cam:Full();out=cam:Update(.02,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)

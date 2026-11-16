@@ -87,9 +87,9 @@ m=New();m.invuln=.8;m.hitstop=1;Tick(.30);S.near(m.invuln,.5)
 
 -- F7 seek follows authored events without sending them through gameplay handlers.
 local preview=A.New(S.anim.character(),nil)
-local t,events=C.SeekPreview(preview,'sword_light_1',.1,2/30)
-S.near(t,.1); assert(C.PreviewPhase('sword_light_1',t)=='active' and events:find('hit_on',1,true))
-t,events=C.SeekPreview(preview,'sword_light_1',2/30,.1)
+local t,events=C.SeekPreview(preview,'sword_light_1',.18,4/30)
+S.near(t,.18); assert(C.PreviewPhase('sword_light_1',t)=='active' and events:find('hit_on',1,true))
+t,events=C.SeekPreview(preview,'sword_light_1',.10,.18)
 assert(C.PreviewPhase('sword_light_1',t)=='anticipation' and not events:find('hit_on',1,true))
 t,events=C.SeekPreview(preview,'sword_heavy_release',7/30,.2)
 assert(C.PreviewPhase('sword_heavy_release',t)=='active' and events:find('hit_on',1,true))
@@ -279,7 +279,7 @@ end
 do
     m=New();local arcCalls=0
     rig.ShowContactArc=function(_,zone)arcCalls=arcCalls+1;S.near(zone.radius,1.8);assert(zone.angle==120)end
-    m:Play('sword_light_1');m.anim:Update(.25);m:Events()
+    m:Play('sword_light_1');m.anim:Update(.28);m:Events()
     assert(m.hitPending and not m.hitOpen,'hitch crosses on/off')
     local before=count;m:AfterPose();m:AfterPose()
     assert(arcCalls==1 and count==before+1,'one visible arc and one hit, unchanged broadphase/reach/dedupe')
@@ -354,7 +354,7 @@ do
   end
   assert(m:Action('heavy') and m.clip=='sword_heavy_release')
  end
- m=New();m.combo=4;assert(m:Action('light'));Tick(.35)
+ m=New();m.combo=4;assert(m:Action('light'));Tick(.47)
  local untilTime=m.comboCooldownUntil;assert(untilTime and not m:Action('light'))
  for _=1,33 do Tick(.01);assert(not m:Action('light')) end
  while m.age<untilTime+1e-6 or m.clip do Tick(.01) end

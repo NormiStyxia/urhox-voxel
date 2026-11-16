@@ -274,6 +274,22 @@ function C:Cancel(reason,keepProtection)
         self.bowCancelHandle=self.anim:Play('bow_cancel',{params={p=charge,aimPitch=pitch}})
     end
 end
+-- Jump interrupts any light-combo stage at any time. Soft: the attack pose
+-- blends out over .10s instead of snapping, and the next press in the air
+-- becomes a plunge. Heavy, charge, plunge and bow keep their own commitments.
+function C:JumpCancel()
+    local clip=self.clip
+    if not clip or not clip:find('sword_light_',1,true) then return false end
+    if self.state.Log then self.state.Log('jump-cancel','Combat: jump cancels %s',clip) end
+    self.anim:Stop(self.handle,.10)
+    self.clip,self.handle=nil,nil
+    self.hitOpen,self.hitPending,self.cancelOpen=false,false,false
+    self.motion,self.motionDebt,self.motionScale=Vector3.ZERO,0,1
+    self.buffer,self.pending=nil,nil
+    self.combo,self.comboUntil=0,nil
+    self.state.SetBusy(false)
+    return true
+end
 function C:BowParameters(pitch)
     if self.clip=='bow_release' or self.clip=='bow_cancel'
         or (self.bowCancelHandle and self.anim:IsPlaying('bow_cancel')) then
@@ -396,14 +412,36 @@ function C:Action(kind,axis)
         self.drawElapsed,self.power=0,0
         self.drawFullReached,self.fireCrystal,self.fireCharge=false,false,nil
         return self:Play('bow_draw')
-    elseif kind=='heavy' then self.autoFire=false; self.combo=0; return self:Play('sword_heavy_release')
+    elseif kind=='heavy' then
+        self.autoFire=false; self.combo=0
+        return self:Play('sword_heavy_release') and self:LimitLunge('sword_heavy_release')
     elseif kind=='hold' then self.hold,self.charge,self.fullCharged=0,0,false; return self:Play('sword_heavy_charge')
     else
         if self.comboUntil and self.age>self.comboUntil then self.combo=0 end
         self.comboUntil=nil
         self.combo=self.combo%C.COMBO_LENGTH+1
-        return self:Play(COMBO[self.combo].id)
+        return self:Play(COMBO[self.combo].id) and self:LimitLunge(COMBO[self.combo].id)
     end
+end
+-- Dashes and leaps stop STOP_GAP short of the nearest target in front instead
+-- of carrying the player through it; with no target the full authored step plays.
+local STOP_GAP=1.0
+function C:LimitLunge(id)
+    self.motionScale=1
+    local total=0
+    for _,m in ipairs(Data.Clips[id].motion) do total=total+m.forward end
+    if total<=0 then return true end
+    local target=self.strikeTarget
+    if not target and self.o.enemies then
+        local _,nearest=C.SelectMeleeTarget(self.o.position(),self.moveDir or self.o.forward(),self.o.enemies(),self.o.cast)
+        target=nearest
+    end
+    if target and target.position then
+        local p=self.o.position()
+        local dx,dz=target.position.x-p.x,target.position.z-p.z
+        self.motionScale=math.max(0,math.min(1,(math.sqrt(dx*dx+dz*dz)-STOP_GAP)/total))
+    end
+    return true
 end
 function C:Release()
     if self.clip=='sword_heavy_charge' then
@@ -669,6 +707,7 @@ function C:Update(dt,controls)
     else self.suspended=false end
     if self.blocked and not controls.attack and not controls.heavy then self.blocked=false end
     local canInput=controls.allowed and not self.blocked and not self.dead and self.state.InCombat()
+    if canInput and controls.jump and controls.onGround~=false then self:JumpCancel() end
     if controls.allowed and not self.dead then self:UpdatePlunge(dt) end
     local animDt=math.max(0,dt-self.hitstop)
     if canInput and not self.plunging then
@@ -724,6 +763,7 @@ function C:Update(dt,controls)
     self.anim:SetParam('weaponInHand',self:WeaponInHand() and 1 or 0)
     local metres=self.anim:GetMotion(stepDt,dt)
     local attacking=self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release')
+    if attacking then metres=metres*(self.motionScale or 1) end
     if (attacking or not self.clip) and animDt>0 then
         metres=metres+(self.motionDebt or 0);self.motionDebt=0
     end
