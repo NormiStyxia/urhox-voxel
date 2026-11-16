@@ -16,7 +16,7 @@ uniform float blade_glint = 0.7;     // sun glint streak on the blade
 uniform float blade_emit = 0.2;      // faint self-light so white stays luminous
 uniform float core_glow = 0.6;       // constant emission on core strip / gems
 uniform float crystal_amt = 1.0;     // faceted crystal look on the accent (b) channel: strip, cyan band, gems
-uniform float crystal_glow = 0.6;    // self-light of the crystal facets
+uniform float crystal_glow = 1.15;    // self-light of the crystal facets
 uniform float flow_strength : hint_range(0.0, 2.0) = 0.7;
 uniform float flow_speed = 0.28;
 varying vec3 obj_pos;
@@ -26,7 +26,7 @@ void vertex() {
 void fragment() {
     float grip_w = clamp(1.0 - COLOR.r - COLOR.g - COLOR.b, 0.0, 1.0);
     vec3 base = primary_color.rgb * COLOR.r + secondary_color.rgb * COLOR.g + accent_color.rgb * COLOR.b + grip_color.rgb * grip_w;
-    float cw = clamp(COLOR.b, 0.0, 1.0) * crystal_amt;
+    float cw = smoothstep(0.32, 0.45, COLOR.b) * crystal_amt;
     base = mix(base, accent_color.rgb * 0.35, cw * 0.7);
     base = base * (1.0 - metal_dark * COLOR.g);
     ALBEDO = base * COLOR.a;
@@ -52,19 +52,20 @@ void fragment() {
     vec3 metal_light = COLOR.g * env * metal_env;
 
 
-    // Crystal: object-space slanted prism cells, three tones (deep / accent / frosty),
-    // bright cut lines, frosty grazing rim and sharp glints. Static on the sword, lit by the camera angle.
-    vec2 q = vec2(obj_pos.x * 46.0 + obj_pos.y * 9.0, obj_pos.y * 7.0 - obj_pos.x * 14.0 + obj_pos.z * 40.0);
-    vec2 cell = floor(q);
-    float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
-    float tone = floor(h * 3.0) / 2.0;
-    vec2 fq = fract(q);
-    float edge = 1.0 - smoothstep(0.0, 0.10, min(min(fq.x, 1.0 - fq.x), min(fq.y, 1.0 - fq.y)));
-    vec3 deep_c = accent_color.rgb * 0.45;
-    vec3 lite_c = mix(accent_color.rgb, vec3(1.0), 0.65);
-    vec3 ccol = mix(deep_c, accent_color.rgb, clamp(tone * 2.0, 0.0, 1.0));
-    ccol = mix(ccol, lite_c, clamp(tone * 2.0 - 1.0, 0.0, 1.0));
-    ccol = ccol + lite_c * fres * 0.7 + vec3(1.0) * edge * 0.45 + vec3(1.0) * glint_tight * 1.2;
+    // Crystal: one solid translucent azure slab. Colour ramps from a white-cyan hot centre line through
+    // the accent hue to a deep saturated edge (distance from the blade axis, object space), lit from
+    // within (emission) with a slow internal light pulse; thin glints on top. Hue follows accent_color.
+    float amax = max(max(accent_color.r, accent_color.g), accent_color.b);
+    vec3 hue = accent_color.rgb / max(amax, 0.001);
+    float gem_m = step(0.75, UV.x);
+    float t = mix(clamp(abs(obj_pos.x) / 0.022, 0.0, 1.0), 0.55, gem_m);
+    vec3 c_hot = mix(hue, vec3(1.0), 0.8);
+    vec3 c_edge = hue * hue;
+    vec3 ccol = mix(c_hot, hue, smoothstep(0.0, 0.45, t));
+    ccol = mix(ccol, c_edge, smoothstep(0.45, 1.0, t));
+    float pulse_in = 0.86 + 0.14 * sin(UV.y * 26.0 - TIME * 1.8) + 0.10 * sin(UV.y * 9.0 - TIME * 0.7);
+    float thru = 0.75 + 0.25 * ndv;
+    ccol = ccol * pulse_in * thru + hue * fres * 0.25 + vec3(1.0) * glint_tight * 0.6;
     vec3 crystal_light = cw * ccol * crystal_glow;
 
     // Blade: accent rim + glint, and a little self-light so the white band glows.
@@ -75,10 +76,10 @@ void fragment() {
     float head = fract(TIME * flow_speed) * 1.30 - 0.15;
     float band = 1.0 - smoothstep(0.025, 0.085, abs(UV.y - head));
     float pulse = 0.18 + 0.12 * (0.5 + 0.5 * sin(TIME * 2.4));
-    float gem = step(0.75, UV.x);
+    float gem = gem_m;
     float spine = step(0.15, UV.x);
     float core = spine * (1.0 - gem);
     EMISSION = metal_light + blade_light + crystal_light
              + flow_strength * accent_color.rgb * (spine * band * 1.9 + gem * pulse)
-             + core_glow * accent_color.rgb * (core * 0.35 + gem * 0.9);
+             + core_glow * accent_color.rgb * (core * 0.12 + gem * 0.6);
 }
