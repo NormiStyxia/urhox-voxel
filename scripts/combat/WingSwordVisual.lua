@@ -6,7 +6,13 @@ local V={}
 V.ENABLED=true            -- kill switch: false = always show the voxel sword
 V.WIDTH,V.DEPTH=1.3,1.25  -- visual-only thickening; length is fitted to the voxel blade tip
 local MATERIAL='model/forge-blades/WingSword.xml'
+local CRYSTAL='model/forge-blades/WingSwordCrystal.xml'
 local MASK=0xFFFFFFFF
+-- Same masks as WingSword.shader cw: core/gem glow bands and the .6r/.4b shoulder.
+local function IsCrystal(v)
+    return v.glow>=.30 or (v.c[3]>=.32 and v.c[3]<.80 and v.c[1]>=.5)
+end
+V.IsCrystal=IsCrystal
 ---@param material Material
 ---@param colors table?
 local function Tint(material,colors)
@@ -28,6 +34,10 @@ function V.New(pivot,tipY,colors)
         visual.material=assert(source:Clone('WingSwordHand'),'wing material clone failed')
         Tint(visual.material,colors)
         visual.material:SetShaderParameter('flow_strength',Variant(.7))
+        -- Translucent sapphire inset; missing material keeps the opaque look.
+        local crystal=cache:GetResource('Material',CRYSTAL)
+        visual.crystal=crystal and crystal:Clone('WingSwordCrystalHand') or nil
+        if visual.crystal then Tint(visual.crystal,colors) end
         local node=pivot:CreateChild('wing_sword_visual')
         node.temporary=true
         visual.node=node
@@ -35,16 +45,27 @@ function V.New(pivot,tipY,colors)
         node.scale=Vector3(s*V.WIDTH,s,s*V.DEPTH)
         local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
         g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
-        g:BeginGeometry(0,TRIANGLE_LIST)
         local span=data.uvHeight
-        for _,v in ipairs(data.vertices) do
-            g:DefineVertex(Vector3(v.p[1],v.p[2],v.p[3]))
-            g:DefineNormal(Vector3(v.n[1],v.n[2],v.n[3]))
-            g:DefineColor(Color(v.c[1],v.c[2],v.c[3],v.shade))
-            g:DefineTexCoord(Vector2(v.glow,(v.p[2]-data.uvBase)/span))
+        local vertices=data.vertices
+        -- Geometry 0 = opaque metal/edges/grip, 1 = translucent crystal triangles.
+        g:SetNumGeometries(visual.crystal and 2 or 1)
+        for index=0,visual.crystal and 1 or 0 do
+            g:BeginGeometry(index,TRIANGLE_LIST)
+            for i=1,#vertices,3 do
+                if not visual.crystal or IsCrystal(vertices[i])==(index==1) then
+                    for j=i,i+2 do
+                        local v=vertices[j]
+                        g:DefineVertex(Vector3(v.p[1],v.p[2],v.p[3]))
+                        g:DefineNormal(Vector3(v.n[1],v.n[2],v.n[3]))
+                        g:DefineColor(Color(v.c[1],v.c[2],v.c[3],v.shade))
+                        g:DefineTexCoord(Vector2(v.glow,(v.p[2]-data.uvBase)/span))
+                    end
+                end
+            end
         end
         g:Commit()
         assert(g:SetMaterial(0,visual.material)~=false,'wing material binding failed')
+        if visual.crystal then assert(g:SetMaterial(1,visual.crystal)~=false,'crystal material binding failed') end
         node.enabled=false
     end)
     if not ok then
@@ -57,6 +78,20 @@ end
 ---@param colors table?
 function V.Recolor(visual,colors)
     if visual and visual.material then pcall(Tint,visual.material,colors) end
+    if visual and visual.crystal then pcall(Tint,visual.crystal,colors) end
+end
+--- Swing charge 0..1 brightens the crystal interior (cached to avoid per-frame Variants).
+---@param visual table?
+---@param k number
+function V.SetCharge(visual,k)
+    if not visual or not visual.crystal then return end
+    local q=math.floor(math.max(0,math.min(1,k))*16+.5)
+    if visual.chargeStep==q then return end
+    visual.chargeStep=q
+    V.chargeValues=V.chargeValues or {}
+    local value=V.chargeValues[q]
+    if not value then value=Variant(q/16);V.chargeValues[q]=value end
+    visual.crystal:SetShaderParameter('charge',value)
 end
 ---@param visual table?
 ---@param visible boolean
@@ -68,5 +103,6 @@ function V.Dispose(visual)
     if not visual then return end
     if visual.node then pcall(visual.node.Remove,visual.node);visual.node=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end
+    if visual.crystal then pcall(visual.crystal.Dispose,visual.crystal);visual.crystal=nil end
 end
 return V

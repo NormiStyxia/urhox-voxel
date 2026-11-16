@@ -627,6 +627,10 @@ do
     local r=Rig.New(sc,w,n)
     local entry=r.entries.sword
     assert(entry.wing and entry.wing.node and entry.wing.material,'wing visual created')
+    assert(entry.wing.crystal,'translucent crystal material created')
+    WingVisual.SetCharge(entry.wing,1);assert(entry.wing.chargeStep==16)
+    WingVisual.SetCharge(entry.wing,-1);assert(entry.wing.chargeStep==0)
+    r:BeginSlash(1,false);assert(r.wingGlow>=.8,'swing lights the crystal')
     assert(entry.wing.node.parent==entry.pivot,'wing follows the weapon pivot (hand/back)')
     assert(entry.mesh.node.scale.x<.01 and entry.mesh.node.scale.y<.01,'voxel main mesh hidden by scale')
     assert(not entry.wing.node.enabled,'hidden pose hides the wing visual')

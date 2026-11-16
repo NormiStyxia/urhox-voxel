@@ -51,6 +51,7 @@ local Store=require("combat.WeaponStore")
 ---@field visualActive boolean
 ---@field visualFresh boolean
 ---@field visualCharge number?
+---@field wingGlow number?
 ---@field tailLeft number
 ---@field chargeFlashed boolean
 ---@field bladeRoot Vector3
@@ -526,6 +527,7 @@ end
 --- Borrowed synchronous HitEvent; only scalar state is retained.
 function Rig:BeginSlash(combo,heavy)
     if self.trailEnabled then self.combatFx:Begin(combo,heavy) end
+    self.wingGlow=math.max(self.wingGlow or 0,heavy and 1 or .8)
 end
 function Rig:ImpactFx(position,forward,plunge)
     if self.pose=='hand' then self.combatFx:Impact(position,forward,plunge) end
@@ -544,6 +546,7 @@ function Rig:HitImpulse(event)
     self.hitWhite=math.max(self.hitWhite,(strong or event.critical or event.killed) and .06 or .04)
     self.hitAngle=math.max(self.hitAngle,strong and 1.5 or .8)
     self.hitSign=event.combo==2 and 1 or -1
+    self.wingGlow=1
     if self.trailEnabled then self.combatFx:Contact(event.pos) end
     self:UpdateHitImpulse() -- AfterPose runs after Rig.Update; show on contact frame.
     return true
@@ -1081,7 +1084,7 @@ function Rig:UpdateImages(entry,dt)
             image.node.worldPosition=shot.position+shot.rotation*minimum
             image.node.worldRotation=shot.rotation
             local tail=self.visualActive and 1 or Clamp(self.tailLeft/TRAIL_TAIL,0,1)
-            Alpha(self,image,Clamp(math.min(shot.alpha or 1,1-age/life),0,1)*.25*tail)
+            Alpha(self,image,Clamp(math.min(shot.alpha or 1,1-age/life),0,1)*.5*tail)
         end
     end
 end
@@ -1251,13 +1254,21 @@ function Rig:AttachWing(entry,blueprint)
     end
     entry.mesh.node.scale=Vector3(1e-4,1e-4,1e-4) -- keep the voxel mesh alive for opacity/pools, just invisible
 end
-function Rig:SyncWing()
+---@param dt number?
+function Rig:SyncWing(dt)
     local entry=self.entries.sword
-    if entry and entry.wing then WingVisual.SetVisible(entry.wing,self.active=='sword' and entry.mesh.alpha>=.5) end
+    if not (entry and entry.wing) then return end
+    WingVisual.SetVisible(entry.wing,self.active=='sword' and entry.mesh.alpha>=.5)
+    -- Crystal glow: swings/hits spike it, heavy charge holds it, then ~0.3s decay.
+    local glow=math.max(0,(self.wingGlow or 0)-(dt or 0)*3.2)
+    if self.visualActive then glow=math.max(glow,.55) end
+    if self.visualCharge then glow=math.max(glow,.25+.75*self.visualCharge) end
+    self.wingGlow=glow
+    WingVisual.SetCharge(entry.wing,glow)
 end
 function Rig:Update(dt)
     self:UpdateCore(dt)
-    self:SyncWing()
+    self:SyncWing(dt)
 end
 
 function Rig:Dispose()

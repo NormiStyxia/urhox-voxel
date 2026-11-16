@@ -1,12 +1,15 @@
--- Presentation only. Fixed 30 landing slots + 24 slash wedges + 3 descent ribbons.
+-- Presentation only. Fixed 30 landing slots + 24 slash wedges (+24 additive edges,
+-- 12 blue blade ghosts) + 3 descent ribbons.
 -- No emit/update creates a node, mesh, material, table, Color or Variant.
 ---@class CombatFx
 ---@field land table[] Fixed landing slots (30).
 ---@field arcs table[] Fixed slash wedges (24).
+---@field edges table[] Additive bright tip edges (24).
+---@field ghosts table[] Additive blue blade afterimages (12).
 ---@field ribbons table[] Fixed descent strips (3).
 ---@field plunging boolean
 local F={};F.__index=F
-F.LANDING_COUNT=30;F.ARC_COUNT=24
+F.LANDING_COUNT=30;F.ARC_COUNT=24;F.GHOST_COUNT=12
 local function set(v,x,y,z) v.x,v.y,v.z=x,y,z;return v end
 local function clamp(x,a,b)return math.max(a,math.min(b,x))end
 local function vertex(g,x,y,z,a)
@@ -52,31 +55,38 @@ local function geometry(node,kind,material)
     g.castShadows=false
     return g
 end
-local function slot(self,kind,i)
-    local node=self.scene:CreateChild('CombatFx_'..kind..i);node.temporary=true;node.enabled=false
+local function slot(self,kind,i,additive)
+    local node=self.scene:CreateChild('CombatFx_'..kind..i..(additive and 'a' or ''));node.temporary=true;node.enabled=false
     local mat=Material:new() -- do not inherit voxel/surface-shader state from terrain
-    mat:SetTechnique(0,self.technique)
+    mat:SetTechnique(0,additive and self.additive or self.technique)
     geometry(node,kind,mat)
     return {node=node,mat=mat,pos=Vector3(),scale=Vector3(),rot=Quaternion(),
-        x=Vector3(),y=Vector3(),z=Vector3(),age=1,ttl=0,active=false,color=1,vx=0,vy=0,vz=0,size=0,ground=0,arc=kind=='arc'}
+        x=Vector3(),y=Vector3(),z=Vector3(),age=1,ttl=0,active=false,color=1,peak=1,vx=0,vy=0,vz=0,size=0,ground=0,arc=kind=='arc'}
 end
 ---@param scene Scene
 ---@param world VoxelPhysicsWorld
 ---@return CombatFx
 function F.New(scene,world)
-    local self=setmetatable({scene=scene,land={},arcs={},ribbons={},
-        colors={},head=0,width=.55,ttl=.16,tip=Vector3(),root=Vector3(),sampleTip=Vector3(),sampleRoot=Vector3(),valid=false,plunging=false},F)
+    local self=setmetatable({scene=scene,land={},arcs={},edges={},ghosts={},ribbons={},
+        colors={},head=0,ghostHead=0,ghostStep=0,width=.55,ttl=.16,tip=Vector3(),root=Vector3(),sampleTip=Vector3(),sampleRoot=Vector3(),valid=false,plunging=false},F)
     self.technique=cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'):Clone('CombatFxAlpha')
     local pass=self.technique:GetPass('base')
     pass:SetBlendMode(BLEND_ALPHA);pass:SetDepthWrite(false);pass:SetDepthTestMode(CMP_LESSEQUAL)
-    -- RuinsPalette: marble105, gold109, rune111, stone103, dark147.
-    local palette={{1,.96,.83},{.95,.74,.32},{.35,.55,1},{.66,.67,.68},{.32,.33,.38}}
+    -- Light-like layers (edge, ghosts) add onto the scene so overlaps glow.
+    self.additive=cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'):Clone('CombatFxAdd')
+    pass=self.additive:GetPass('base')
+    pass:SetBlendMode(BLEND_ADDALPHA);pass:SetDepthWrite(false);pass:SetDepthTestMode(CMP_LESSEQUAL)
+    -- RuinsPalette: marble105, gold109, rune111, stone103, dark147;
+    -- 6 crystal blue body, 7 ice-white edge, 8 deep sapphire (combo finisher).
+    local palette={{1,.96,.83},{.95,.74,.32},{.35,.55,1},{.66,.67,.68},{.32,.33,.38},
+        {.22,.58,1},{.80,.94,1},{.16,.34,1}}
     for i,c in ipairs(palette) do
         self.colors[i]={}
         for j=0,16 do self.colors[i][j+1]=Variant(Color(c[1],c[2],c[3],j/16)) end
     end
     for i=1,F.LANDING_COUNT do self.land[i]=slot(self,i==1 and 'ring' or (i==30 and 'star' or 'cube'),i) end
-    for i=1,F.ARC_COUNT do self.arcs[i]=slot(self,'arc',i) end
+    for i=1,F.ARC_COUNT do self.arcs[i]=slot(self,'arc',i);self.edges[i]=slot(self,'arc',i,true) end
+    for i=1,F.GHOST_COUNT do self.ghosts[i]=slot(self,'arc',i+F.ARC_COUNT,true) end
     for i=1,3 do self.ribbons[i]=slot(self,'cube',i+30) end
     return self
 end
@@ -85,7 +95,7 @@ local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
     s.node.position=s.pos;s.node.scale=s.scale;s.node.enabled=true
     s.color,s.ttl,s.age,s.active=color,ttl,0,true
     s.vx,s.vy,s.vz=0,0,0
-    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 1 or color][17])
+    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 7 or color][math.floor((s.peak or 1)*16)+1])
 end
 function F:Impact(pos,forward,plunge)
     self.plunging=false
@@ -120,19 +130,25 @@ function F:Impact(pos,forward,plunge)
 end
 function F:Contact(pos)
     if not pos then return end
-    for i=22,25 do
-        local s=self.land[i];local a=(i-22)*math.pi*.5
-        show(self,s,pos.x,pos.y,pos.z,.035,.035,.035,1,.12)
-        s.vx,s.vy,s.vz=math.cos(a)*1.6,1,math.sin(a)*1.6;s.ground=pos.y-.4;s.size=.035
+    -- Eight ice-blue crystal shards burst from the contact point.
+    for i=22,29 do
+        local s=self.land[i];local a=(i-22)*math.pi*.25+.2
+        local size=i%2==0 and .05 or .035
+        show(self,s,pos.x,pos.y,pos.z,size,size,size,i%2==0 and 7 or 6,.18+(i%3)*.03)
+        local speed=2.2+(i%3)*.6
+        s.vx,s.vy,s.vz=math.cos(a)*speed,1.2+(i%4)*.5,math.sin(a)*speed;s.ground=pos.y-.6;s.size=size
     end
 end
 function F:Begin(combo,heavy)
     self.valid=false
     self.slash=heavy or (combo and combo>=1 and combo<=5)
     self.spin=heavy or combo==4
-    self.width=heavy and .8 or (combo==5 and .85 or (combo==4 and .7 or (combo==3 and .65 or .55)))
-    self.ttl=combo==4 and .20 or .16
-    self.color=combo==5 and 3 or 2
+    -- Exaggerated crystal slash: wide translucent blue body, longer linger.
+    local base=heavy and .8 or (combo==5 and .85 or (combo==4 and .7 or (combo==3 and .65 or .55)))
+    self.width=base*1.35
+    self.ttl=(heavy or combo==4 or combo==5) and .30 or .24
+    self.color=(heavy or combo==5) and 8 or 6
+    self.ghostStep=0
 end
 function F:Segment(root,tip)
     if self.valid then
@@ -149,7 +165,22 @@ function F:Segment(root,tip)
                 set(s.y,ax/length,ay/length,az/length)
                 set(s.z,s.x.y*s.y.z-s.x.z*s.y.y,s.x.z*s.y.x-s.x.x*s.y.z,s.x.x*s.y.y-s.x.y*s.y.x)
                 s.rot:FromAxes(s.x,s.y,s.z);s.node.rotation=s.rot
-                show(self,s,(tip.x+self.tip.x)*.5,(tip.y+self.tip.y)*.5,(tip.z+self.tip.z)*.5,distance*1.15,self.width,1,(self.color==3 and self.head%3~=0) and 2 or (self.color or 2),self.ttl)
+                local cx,cy,cz=(tip.x+self.tip.x)*.5,(tip.y+self.tip.y)*.5,(tip.z+self.tip.z)*.5
+                s.peak=.62
+                show(self,s,cx,cy,cz,distance*1.2,self.width,1,self.color or 6,self.ttl)
+                -- Thin additive edge hugging the tip path: the bright 刀光 line.
+                local e=self.edges[self.head]
+                e.peak=.9;e.rot:FromAxes(s.x,s.y,s.z);e.node.rotation=e.rot
+                show(self,e,cx,cy,cz,distance*1.25,.07+self.width*.08,1,7,self.ttl*.55)
+                -- Every third segment leaves a full-blade blue ghost.
+                self.ghostStep=self.ghostStep+1
+                if self.ghostStep%3==1 then
+                    self.ghostHead=self.ghostHead%F.GHOST_COUNT+1
+                    local g=self.ghosts[self.ghostHead]
+                    local blade=math.sqrt((tip.x-root.x)^2+(tip.y-root.y)^2+(tip.z-root.z)^2)
+                    g.peak=.55;g.rot:FromAxes(s.x,s.y,s.z);g.node.rotation=g.rot
+                    show(self,g,tip.x,tip.y,tip.z,.16,blade,1,6,self.ttl*.9)
+                end
             end
         end
     end
@@ -196,7 +227,8 @@ local function ageSlot(self,s,dt)
     s.age=s.age+dt
     if s.age>=s.ttl then s.active=false;s.node.enabled=false;return end
     local alpha=clamp(1-s.age/s.ttl,0,1)
-    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and s.age<.025 and 1 or s.color][math.floor(alpha*16)+1])
+    alpha=alpha*alpha*(3-2*alpha)*(s.peak or 1) -- hold the head, then fade fast
+    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and s.age<.03 and 7 or s.color][math.floor(alpha*16)+1])
 end
 function F:Update(dt)
     for i,s in ipairs(self.land) do
@@ -226,6 +258,8 @@ function F:Update(dt)
         end
     end
     for _,s in ipairs(self.arcs) do ageSlot(self,s,dt) end
+    for _,s in ipairs(self.edges) do ageSlot(self,s,dt) end
+    for _,s in ipairs(self.ghosts) do ageSlot(self,s,dt) end
     if not self.plunging then for _,s in ipairs(self.ribbons) do s.node.enabled=false end end
 end
 local function clearPool(pool)
@@ -233,13 +267,13 @@ local function clearPool(pool)
 end
 function F:ClearSword()
     self.valid,self.plunging,self.slash=false,false,false
-    clearPool(self.arcs);clearPool(self.ribbons)
+    clearPool(self.arcs);clearPool(self.edges);clearPool(self.ghosts);clearPool(self.ribbons)
 end
 function F:Clear()
     self:ClearSword();clearPool(self.land)
 end
 function F:Dispose()
-    for _,pool in ipairs({self.land,self.arcs,self.ribbons}) do
+    for _,pool in ipairs({self.land,self.arcs,self.edges,self.ghosts,self.ribbons}) do
         for _,s in ipairs(pool) do s.node:Remove();s.mat:Dispose() end
     end
 end

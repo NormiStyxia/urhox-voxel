@@ -221,6 +221,11 @@ function M:Update(dt,day,dusk,dn)
     -- 转头/重新启用时也必须显示当前时段。
     self.material:SetShaderParameter("day",Variant(Finite(day,1,0,1)))
     self.material:SetShaderParameter("dusk",Variant(Finite(dusk,0,0,1)))
+    if dn and dn.sunToward and dn.sunWarm then
+        local s,w=dn.sunToward,dn.sunWarm
+        self.material:SetShaderParameter("sun_dir",Variant(Vector4(s.x,s.y,s.z,Finite(dn.elev,0,-1,1))))
+        self.material:SetShaderParameter("sun_tint",Variant(Vector4(w.r,w.g,w.b,1)))
+    end
     if dn and dn.sky then
         self.material:SetShaderParameter("sky_top",Variant(dn.sky.skyTopColor))
         self.material:SetShaderParameter("sky_horizon",Variant(dn.sky.skyHorizonColor))

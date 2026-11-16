@@ -159,6 +159,9 @@ function M:Apply()
     self.sunNode.direction=sunDir:Lerp(moonDir,nightK):Normalized()
     local warm=SUN_RED:Lerp(SUN_GOLD,SmoothStep(-0.02,0.18,elev)):Lerp(SUN_DAY,SmoothStep(0.18,0.55,elev))
     sun.color=warm:Lerp(MOON,nightK)
+    -- True solar direction/tint for sky clouds; the light node turns into the moon at night.
+    self.sunToward=Vector3(-sunDir.x,-sunDir.y,-sunDir.z)
+    self.sunWarm=warm
     sun.brightness=(2.04*SmoothStep(-0.06,0.16,elev)+0.16)*(1-nightK)+self.nightMoon*nightK
     -- Captured sky is linear radiance, not an additive flat ambient colour.
     -- Lift the night hemisphere and its diffuse IBL together; leave day intact.

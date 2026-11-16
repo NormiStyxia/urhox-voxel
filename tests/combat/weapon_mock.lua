@@ -130,16 +130,20 @@ function N:Remove() assert(not self.removed,"double node removal"); self.removed
 function M.CustomGeometry(node,options)
     options=options or {}
     local geom={node=node,vertices={},commits=0,queries=0}
-    function geom:BeginGeometry(index,kind) assert(index==0 and kind==TRIANGLE_LIST) end
+    geom.numGeometries=1;geom.materials={}
+    function geom:SetNumGeometries(n) self.numGeometries=n end
+    function geom:BeginGeometry(index,kind) assert(index>=0 and index<self.numGeometries and kind==TRIANGLE_LIST) end
     function geom:DefineVertex(position) self.vertices[#self.vertices+1]={position=position} end
     function geom:DefineNormal(normal) self.vertices[#self.vertices].normal=normal end
     function geom:DefineColor(color) self.vertices[#self.vertices].color=color end
     function geom:DefineTexCoord(uv) self.vertices[#self.vertices].uv=uv end
     function geom:SetMaterial(index,material)
-        assert(index==0 and material and self.commits>0,'match BlockCharacter: Commit before SetMaterial')
+        assert(index>=0 and index<self.numGeometries and material and self.commits>0,'match BlockCharacter: Commit before SetMaterial')
         if options.materialThrow then error('SetMaterial binding failure') end
         if options.materialFalse then return false end
-        self.material=material;return true
+        self.materials[index]=material
+        if index==0 then self.material=material end
+        return true
     end
     function geom:GetMaterial(index) assert(index==0);return self.material end
     function geom:Commit()
@@ -189,7 +193,10 @@ rawset(_G,'Material',{new=Material})
 -- Existing suites verify the voxel sword path; the wing visual suite flips this off.
 rawset(_G,'WING_MATERIAL_MISSING',true)
 rawset(_G,'cache',{GetResource=function(_,kind,path)
-    if kind=='Material' and path=='model/forge-blades/WingSword.xml' and not rawget(_G,'WING_MATERIAL_MISSING') then return Material() end
+    if kind=='Material' and (path=='model/forge-blades/WingSword.xml' or path=='model/forge-blades/WingSwordCrystal.xml') then
+        if rawget(_G,'WING_MATERIAL_MISSING') then return nil end
+        return Material()
+    end
     assert(kind=='Technique' and path=='Techniques/NoTextureUnlit.xml');return Technique()
 end})
 function M.World(scene)
