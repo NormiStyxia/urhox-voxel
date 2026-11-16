@@ -34,6 +34,7 @@
 ---@field lean table[]|nil Directional blend envelope, normalized time.
 ---@field deprecated boolean|nil
 ---@field replacement string|nil
+---@field elbow table<string, table[]>|nil Forearm pitch tracks (degrees) for two-segment arms.
 ---@field handPath table<string, table>|nil Paths in body-aligned, feet-height authoring space.
 ---@field bladePath table|nil Desired +Y blade direction in body space.
 ---@field legacyKeys table<string, table[]>|nil Pre-path poses for params.legacyPose=1.

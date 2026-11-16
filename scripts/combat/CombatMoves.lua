@@ -32,6 +32,8 @@ local COMBO=Data.Combo
 ---@field eventPool table[]
 ---@field observe fun(kind:string, data:table)|nil
 ---@field partNotice {part:string,untilTime:number}|nil
+---@field strikeTarget table|nil Assist-selected melee target for the current swing.
+---@field motionScale number|nil Lunge scale so a dash stops short of its target.
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
 -- Real seconds; frame-average velocity integrates across hover/terminal boundaries.

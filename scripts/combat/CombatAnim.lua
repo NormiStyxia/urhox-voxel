@@ -47,6 +47,8 @@ local FOREARM_ARM = {forearm_right="arm_right",forearm_left="arm_left"}
 ---@field shoulder Vector3
 ---@field grip Vector3
 ---@field length number
+---@field elbow Vector3|nil Forearm pivot in shoulder space (two-segment arms only).
+---@field hand Vector3|nil Palm relative to the forearm pivot.
 ---@class CombatIKResult
 ---@field target Vector3 Requested body-local grip point, BEFORE reach projection.
 ---@field clamped Vector3 Closest reachable point on the rigid arm sphere.
@@ -255,7 +257,7 @@ local function solveArm(arm,target,authored,result,pole,bend)
     result.enabled=true
     return rotated
 end
----@param c CombatClip
+---@param c table Clip; `elbow` holds forearm pitch tracks.
 local function elbowBend(c,name,p)
     local track=c.elbow and c.elbow[name]
     return track and scalarSample(track,p) or 0
