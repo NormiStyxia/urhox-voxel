@@ -3,8 +3,8 @@
 -- 供检查水晶剑刃、刀光、蓝色残影和前倾动作。headless 无输入焦点，故在固定帧注入攻击。
 local V = _G["V"]
 local frame = 0
-local ATTACKS = { [40] = true, [64] = true, [84] = true, [104] = true }
-local SHOTS = { [70] = true, [72] = true, [75] = true, [90] = true, [93] = true, [110] = true, [113] = true, [117] = true }
+local ATTACKS = { [40] = true, [64] = true, [88] = true, [112] = true }
+local SHOTS = { [71] = true, [73] = true, [75] = true, [77] = true, [96] = true, [98] = true, [100] = true, [120] = true, [123] = true, [126] = true }
 local pending = nil
 V.atFrame(8, function()
     local game = _G["RUINS"]
@@ -20,7 +20,7 @@ V.atFrame(8, function()
         if frame == 60 then
             -- 侧后方机位，拉近看剑刃与刀光
             local nomi = game.nomiCtl
-            nomi.camYaw = nomi.yaw - 70
+            nomi.camYaw = nomi.yaw + 35
             print("SwordFxView: camera yaw " .. nomi.camYaw .. " body yaw " .. nomi.yaw)
         end
         if pending ~= nil then
