@@ -1,6 +1,7 @@
 -- Weapon/environment contact only. Enemy damage and TimeObject ownership stay
 -- with their existing systems. Never broadcast a carve to neighbouring volumes.
 local Perf=require('combat.SwingPerf')
+local VoxelDamage=require('ruins.VoxelDamage')
 ---@class CombatEnvironmentDamage
 ---@field o table
 ---@field marks table[]
@@ -19,12 +20,12 @@ end
 
 -- Bounded evidence, not a gameplay fallback. Each stage reports once per scene;
 -- no formatting/getters when the host has not supplied the diagnostic sink.
-function E:Report(kind,reason,hit,center,radius,removed)
+function E:Report(kind,reason,hit,center,radius,removed,nativeReturn)
     if not self.o.trace or self.reportCount>=24 then return end
     local key=kind..':'..reason
     if self.reported[key] then return end
     self.reported[key]=true;self.reportCount=self.reportCount+1
-    pcall(self.o.trace,kind,reason,hit,center,radius,removed)
+    pcall(self.o.trace,kind,reason,hit,center,radius,removed,nativeReturn)
 end
 
 ---@param hit VoxelRaycastResult|nil
@@ -66,9 +67,10 @@ end
 function E:Carve(hit,center,radius,kind)
     self:Report(kind,'carve-start',hit,center,radius)
     Perf.Invalidate() -- synchronous damage callbacks may split/remove volumes
-    local removed=self.o.world:ApplyDamage(hit.volume,center,radius,E.POWER)
+    local removed,nativeReturn=VoxelDamage.Volume(self.o.world,hit.volume,center,radius,E.POWER)
     Perf.Invalidate()
-    self:Report(kind,removed>0 and 'removed' or 'removed-zero',hit,center,radius,removed)
+    self:Report(kind,removed>0 and 'removed' or 'removed-zero',hit,center,radius,removed,nativeReturn)
+    if removed~=nativeReturn then self:Report(kind,'native-return',hit,center,radius,nativeReturn) end
     return removed
 end
 

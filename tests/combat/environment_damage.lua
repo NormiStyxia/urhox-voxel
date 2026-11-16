@@ -4,6 +4,7 @@ local F=dofile('tests/combat/perf_support.lua')
 local N=F.LoadNomi()
 local E=require('combat.EnvironmentDamage')
 local P=require('combat.Projectile')
+local Damage=require('ruins.VoxelDamage')
 -- The base animation mock omits Inverse and returns its tiny vector stub.
 -- GridHit needs the full arithmetic value type for transformed ray normals.
 local qm=getmetatable(Quaternion(0,0,0))
@@ -57,7 +58,11 @@ function world:ApplyDamage(v,center,radius,power)
             grid:Remove(x,y,z);call.removed=call.removed+1
         end
     end end end
-    return call.removed
+    if call.removed>0 then
+        Damage.Observe(self,{GetPtr=function()return v end,GetInt=function()return call.removed end})
+    end
+    -- Reproduce the native engine defect while keeping real grid mutation.
+    return self.misreports and 0 or call.removed
 end
 local actor=setmetatable({world=world,aimMask=1},{__index=N})
 local castCount=0
@@ -237,3 +242,17 @@ assert(reports[3].removed==1 and reports[3].radius==.05)
 damage.o.trace=function()error('diagnostic sink failed')end
 assert(damage:Arrow({worldHit=hit(v,1,4,1)})==0,'diagnostics cannot break gameplay')
 print('PASS bounded stage diagnostics: deduplication, real return value, no mutation on rejects, failing sink isolation')
+
+world.misreports=true
+arrowCase(false,false,false);arrowCase(false,true,false);arrowCase(false,false,true)
+reset();v=volume(Vector3.ZERO,.25,{x=4,y=12,z=8});damage=new()
+damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),2,'sword_light_1',true,0)
+assert(effects==1 and calls[1].removed>0,'real deletion still produces sword feedback when native returns zero')
+local native
+damage.o.trace=function(_,stage,_,_,_,removed,raw)
+    if stage=='removed' then assert(removed==1);native=raw end
+end
+damage:Arrow({worldHit=hit(v,1,9,1)})
+assert(native==0,'diagnostics distinguish verified deletion from native return')
+world.misreports=false
+print('PASS native-zero compatibility: arrow retires, sword feedback, protected wall still embeds, diagnostic keeps raw value')

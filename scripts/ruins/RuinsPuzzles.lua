@@ -23,6 +23,7 @@ local Pal = require("ruins.RuinsPalette")
 local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
 local TimeObject = require("ruins.TimeObject")
+local VoxelDamage = require("ruins.VoxelDamage")
 local P = Pal.P
 
 local M = {}
@@ -609,6 +610,7 @@ end
 ---@param eventType string
 ---@param eventData VoxelDamagedEventData
 local function GateDamaged(eventType, eventData)
+    VoxelDamage.Observe(M.world, eventData)
     InvalidateGate(eventData:GetPtr("Volume"), eventData:GetVector3("Position"))
 end
 

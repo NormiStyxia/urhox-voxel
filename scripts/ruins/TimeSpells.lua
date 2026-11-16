@@ -16,6 +16,7 @@
 -- ====================================================================
 
 local VoxelFX = require("dragon.VoxelFX")
+local VoxelDamage = require("ruins.VoxelDamage")
 
 local M = {}
 M.CHARGE_SECONDS = 1.4
@@ -72,7 +73,7 @@ M.SPELLS = {
             local vol = aim.volume
             if vol ~= nil and vol.destructible then
                 local r = M.ShatterRadius(charge)
-                local removed = ctx.world:ApplyDamageAtWorldPoint(aim.pos, r, 3.0)
+                local removed = VoxelDamage.AtWorldPoint(ctx.world, aim.pos, r, 3.0)
                 ctx.world:ApplyRadialImpulse(aim.pos, r * 1.8, 1200.0 * (1 + charge))
                 ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge)
                 if removed > 0 then return true, nil end

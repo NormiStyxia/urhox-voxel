@@ -24,6 +24,20 @@ Sphere=function(c,r)return {center=c,radius=r}end
 package.loaded['dragon.VoxelFX']={}
 package.loaded['urhox-libs.Platform.PlatformUtils']={IsWebPlatform=function()return true end,IsMobilePlatform=function()return false end}
 local Spells=require('ruins.TimeSpells')
+local Damage=require('ruins.VoxelDamage')
+local spellTarget={destructible=true}
+local spellWorld={}
+function spellWorld:ApplyDamageAtWorldPoint()
+    if not self.hard then Damage.Observe(self,{GetPtr=function()return spellTarget end,GetInt=function()return 112 end}) end
+    return 0
+end
+function spellWorld:ApplyRadialImpulse()end
+local spellCtx={world=spellWorld,fx={Burst=function()end}}
+local spellAim={hit=true,volume=spellTarget,pos=Vector3.ZERO}
+assert(Spells.SPELLS[1].cast(spellCtx,spellAim,0)==true,'real damage with zero native return is a successful shatter')
+spellWorld.hard=true
+local success,reason=Spells.SPELLS[1].cast(spellCtx,spellAim,0)
+assert(not success and reason=='太坚硬了','no deletion still fails')
 local count=0
 local caster=Spells.NewCaster({})
 caster.Cast=function(_,id,aim)count=count+1 end
