@@ -11,20 +11,33 @@ E.HEAVY_RADIUS=.32
 E.MAX_RAYS=36 -- per swing, including visibility; no delayed destruction queue
 
 function E.New(opts)
-    local self=setmetatable({o=opts or {},marks={},count=0,rays=0,serial=-1,active=false},E)
+    local self=setmetatable({o=opts or {},marks={},count=0,rays=0,serial=-1,active=false,
+        reported={},reportCount=0},E)
     for i=1,6 do self.marks[i]={} end
     return self
 end
 
+-- Bounded evidence, not a gameplay fallback. Each stage reports once per scene;
+-- no formatting/getters when the host has not supplied the diagnostic sink.
+function E:Report(kind,reason,hit,center,radius,removed)
+    if not self.o.trace or self.reportCount>=24 then return end
+    local key=kind..':'..reason
+    if self.reported[key] then return end
+    self.reported[key]=true;self.reportCount=self.reportCount+1
+    pcall(self.o.trace,kind,reason,hit,center,radius,removed)
+end
+
 ---@param hit VoxelRaycastResult|nil
 function E:Eligible(hit)
-    if not hit or not hit.hit or not hit.volume then return false end
+    if not hit or not hit.hit or not hit.volume then return false,'no-hit' end
     local v=hit.volume
-    if not v.destructible or not v:IsEnabledEffective() or (v.collisionLayer & 1)==0 then return false end
+    if not v.destructible then return false,'protected' end
+    if not v:IsEnabledEffective() then return false,'disabled-volume' end
+    if (v.collisionLayer & 1)==0 then return false,'non-world-layer' end
     local node=v:GetNode()
-    if not node or not node:IsEnabled() then return false end
+    if not node or not node:IsEnabled() then return false,'disabled-node' end
     -- Includes intact objects, frozen platforms and visual rewind fragments.
-    if self.o.timeObject and self.o.timeObject(v) then return false end
+    if self.o.timeObject and self.o.timeObject(v) then return false,'time-object' end
     return true
 end
 
@@ -50,10 +63,12 @@ end
 ---@param hit VoxelRaycastResult
 ---@param center Vector3
 ---@param radius number
-function E:Carve(hit,center,radius)
+function E:Carve(hit,center,radius,kind)
+    self:Report(kind,'carve-start',hit,center,radius)
     Perf.Invalidate() -- synchronous damage callbacks may split/remove volumes
     local removed=self.o.world:ApplyDamage(hit.volume,center,radius,E.POWER)
     Perf.Invalidate()
+    self:Report(kind,removed>0 and 'removed' or 'removed-zero',hit,center,radius,removed)
     return removed
 end
 
@@ -62,11 +77,12 @@ end
 -- even with maximum boundary noise. Native connectivity may detach supports.
 function E:Arrow(event)
     local hit=event.worldHit
-    if not self:Eligible(hit) then return 0 end
+    local eligible,reason=self:Eligible(hit)
+    if not eligible then self:Report('arrow',reason,hit);return 0 end
     local center,edge=E.Cell(hit)
-    if not center or not edge then return 0 end
+    if not center or not edge then self:Report('arrow','invalid-cell',hit);return 0 end
     local start=Perf.Begin()
-    local removed=self:Carve(hit,center,edge*.2)
+    local removed=self:Carve(hit,center,edge*.2,'arrow')
     Perf.Finish('VoxelArrow',start)
     return removed
 end
@@ -86,13 +102,16 @@ end
 function E:Slice(a,b,feet,radius,limit)
     if self.count>=limit or self.frameCuts>=2 then return end
     local _,hit=self:Cast(a,b)
-    if not self:Eligible(hit) then return end
+    local eligible,reason=self:Eligible(hit)
+    if not eligible then self:Report('sword',reason,hit);return end
     local center=E.Cell(hit)
-    if not center then return end
+    if not center then self:Report('sword','invalid-cell',hit);return end
     -- Never cut an upward-facing support surface, nor the band below the feet.
     -- Extra clearance covers the engine's ragged damage boundary. Plunge/landing
     -- is excluded altogether by Melee; its impact ring remains cosmetic.
-    if hit.normal.y>.55 or center.y-radius*2<feet.y+.15 then return end
+    if hit.normal.y>.55 or center.y-radius*2<feet.y+.15 then
+        self:Report('sword','floor-guard',hit,center,radius);return
+    end
     for i=1,self.count do
         if (self.marks[i].position-center):LengthSquared()<(radius*1.4)^2 then return end
     end
@@ -100,11 +119,11 @@ function E:Slice(a,b,feet,radius,limit)
     if self.rays>=E.MAX_RAYS then return end
     local target=hit.position+hit.normal*.02
     local wall=self:Cast(feet+Vector3(0,.9,0),target)
-    if wall and wall<1-1e-5 then return end
+    if wall and wall<1-1e-5 then self:Report('sword','occluded',hit,center,radius);return end
     self.count=self.count+1 -- reserve before native callbacks; failed hard hits do not drill
     self.marks[self.count].position=center
     self.frameCuts=self.frameCuts+1
-    local removed=self:Carve(hit,center,radius)
+    local removed=self:Carve(hit,center,radius,'sword')
     if removed>0 and self.o.feedback then
         self.o.feedback({kind='hit',material='stone',tier='environment',
             pos=hit.position,normal=hit.normal,dir=(b-a):Normalized(),removed=removed})
@@ -118,6 +137,7 @@ end
 ---@param feet Vector3
 function E:Melee(root,tip,feet,serial,clip,active,clock)
     local sword=clip and (clip:match('^sword_light_[1-5]$') or clip=='sword_heavy_release')
+    if sword and active and (not root or not tip) then self:Report('sword','no-held-blade') end
     if not root or not tip or not sword then self.active=false;self.root,self.tip=nil,nil;return end
     if self.serial~=serial then
         self.serial,self.count,self.rays=serial,0,0

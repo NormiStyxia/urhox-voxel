@@ -532,6 +532,13 @@ local function CombatArrowEnvironment(event)
     CombatFeedback(event)
     return ok and removed>0
 end
+local function CombatEnvironmentTrace(kind,reason,hit,center,radius,removed)
+    local volume=hit and hit.volume
+    print(string.format('WeaponVoxel kind=%s stage=%s volume=%s destructible=%s layer=%s voxel=%s material=%s hit=%s normal=%s center=%s radius=%s removed=%s',
+        kind,reason,tostring(volume and volume.volumeId),tostring(volume and volume.destructible),
+        tostring(volume and volume.collisionLayer),tostring(hit and hit.voxel),tostring(hit and hit.material),
+        tostring(hit and hit.position),tostring(hit and hit.normal),tostring(center),tostring(radius),tostring(removed)))
+end
 local function CombatHasAggro()
     for _,enemy in ipairs(CombatEnemies()) do if enemy.active and enemy.aggro and not enemy.dead then return true end end
     return false
@@ -697,7 +704,8 @@ local function StartCombat()
         end
         arrowNodes_[i]={node=node,tails=tails}
     end
-    combatEnvironment_=EnvironmentDamage.New({world=world_,cast=CombatCast,timeObject=Puzzles.FindByVolume,feedback=CombatFeedback})
+    combatEnvironment_=EnvironmentDamage.New({world=world_,cast=CombatCast,timeObject=Puzzles.FindByVolume,
+        feedback=CombatFeedback,trace=CombatEnvironmentTrace})
     combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,audio=combatAudioPort,
         hit=function(...) combatMoves_:Feedback(...) end,wallHit=CombatArrowEnvironment,
         draw=function(p,visible)

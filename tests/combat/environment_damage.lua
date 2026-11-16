@@ -220,3 +220,20 @@ moves:Update(.4,{allowed=true});moves:AfterPose()
 assert(#calls==1,'hitch over hit_on/off preserves one pending contact')
 moves:AfterPose();assert(#calls==1,'pending contact is consumed once')
 print('PASS real attack events: five stages/heavy/windup/recovery/cancel/reentrant cancellation/low FPS')
+
+-- Diagnostics identify the failing stage without changing the carve contract.
+reset();v=volume(Vector3.ZERO,.25,{x=4,y=8,z=4});damage=new()
+local reports={}
+damage.o.trace=function(kind,reason,_,center,radius,removed)
+    reports[#reports+1]={kind=kind,reason=reason,center=center,radius=radius,removed=removed}
+end
+v.destructible=false
+for _=1,100 do assert(damage:Arrow({worldHit=hit(v,1,4,1)})==0) end
+assert(#reports==1 and reports[1].reason=='protected' and #calls==0)
+v.destructible=true
+assert(damage:Arrow({worldHit=hit(v,1,4,1)})==1)
+assert(#reports==3 and reports[2].reason=='carve-start' and reports[3].reason=='removed')
+assert(reports[3].removed==1 and reports[3].radius==.05)
+damage.o.trace=function()error('diagnostic sink failed')end
+assert(damage:Arrow({worldHit=hit(v,1,4,1)})==0,'diagnostics cannot break gameplay')
+print('PASS bounded stage diagnostics: deduplication, real return value, no mutation on rejects, failing sink isolation')
