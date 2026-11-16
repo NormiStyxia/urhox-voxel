@@ -323,13 +323,14 @@ local function BuildFallenColumns(world)
                     local flute = (math.atan(dz, dy) / (2 * pi) * 12) % 1
                     local rr = 0.75 - ((flute > 0.30 and flute < 0.70) and 0.125 or 0)
                     if (x + len / 2) % 1.25 < 0.0625 then rr = rr - 0.0625 end
-                    -- 下半圆弧会被自动跨步踩上半截再卡住：0.6m 以下补成竖直的碎石垫（高于步高）。
-                    local skirt = y < 0.6 and abs(dz) <= 0.72
-                    if d > rr and not skirt then return nil end
+                    -- 下半圆弧和参差断口都会被自动跨步踩上半截再卡住：
+                    -- 0.6m 以下补成整段竖直的碎石垫（高于步高 0.55），断口只在垫上方参差。
+                    local skirt = y < 0.6 and abs(dz) <= 0.72 and abs(x) <= len / 2 - 0.2
+                    if skirt and (d > rr or abs(x) > len / 2 - 0.45) then return P.STONE_MOSS end
+                    if d > rr then return nil end
                     -- 断口两端不平
-                    if abs(x) > len / 2 - 0.4 * Noise.Value2(dy * 3, dz * 3, i) then return nil end
+                    if abs(x) > len / 2 - 0.4 * Noise.Value2(dy * 3, dz * 3, i) and not skirt then return nil end
                     if abs(x) > len / 2 - 0.45 then return Stone(x, y, z) end
-                    if skirt and d > rr then return P.STONE_MOSS end
                     if y < 0.3 and Noise.Value2(x * 2, z * 2, i) > 0.65 then return P.STONE_MOSS end
                     return Marble(x, y, z)
                 end)

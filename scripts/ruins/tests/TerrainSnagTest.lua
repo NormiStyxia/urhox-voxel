@@ -17,8 +17,12 @@ local function SolidAt(volume, p)
         and grid:IsSolid(x, y, z)
 end
 -- 前方真实体素：返回 0.6~1.6m 高度处是否有实体（=真实墙/柱/建筑），以及描述
-local function Probe(world, x, y, z, dx, dz)
+local function Probe(world, x, y, z, fx, fz)
     local tall, low, names = false, -1, {}
+    -- 正前方及左右 50°：侧面擦到树/墙角也算真实障碍
+    for _, turn in ipairs({ 0, .87, -.87 }) do
+    local c, s = math.cos(turn), math.sin(turn)
+    local dx, dz = fx * c - fz * s, fx * s + fz * c
     for _, d in ipairs({ .36, .5, .7, .9, 1.1 }) do
         for h = .03, 1.6, .0625 do
             local p = Vector3(x + dx * d, y + h, z + dz * d)
@@ -31,6 +35,7 @@ local function Probe(world, x, y, z, dx, dz)
                 end
             end
         end
+    end
     end
     local list = {}
     for k in pairs(names) do list[#list + 1] = k end
