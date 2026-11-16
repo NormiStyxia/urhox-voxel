@@ -325,7 +325,7 @@ local function BuildFallenColumns(world)
                     if (x + len / 2) % 1.25 < 0.0625 then rr = rr - 0.0625 end
                     -- 下半圆弧和参差断口都会被自动跨步踩上半截再卡住：
                     -- 0.6m 以下补成整段竖直的碎石垫（高于步高 0.55），断口只在垫上方参差。
-                    local skirt = y < 0.6 and abs(dz) <= 0.72 and abs(x) <= len / 2 - 0.2
+                    local skirt = y < 0.6 and abs(dz) <= 0.72
                     if skirt and (d > rr or abs(x) > len / 2 - 0.45) then return P.STONE_MOSS end
                     if d > rr then return nil end
                     -- 断口两端不平

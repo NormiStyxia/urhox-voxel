@@ -143,9 +143,12 @@ local function Run(game)
     print(string.format("TerrainSnagTest: %d segments, %d real walls, %d snags", segments, walls, #snags))
     for i = 1, math.min(#snags, 60) do print("  SNAG " .. snags[i]) end
     for i = 1, #wallList do print("  WALL " .. wallList[i]) end
-    print(string.format("TerrainSnagTest: %d hitches, %d pops", #hitches, #pops))
-    for i = 1, math.min(#hitches, 60) do print("  HITCH " .. hitches[i]) end
-    for i = 1, math.min(#pops, 60) do print("  POP " .. pops[i]) end
+    local longCount = 0
+    for _, h in ipairs(hitches) do if tonumber(h:match("frames=(%d+)")) >= 8 then longCount = longCount + 1 end end
+    print(string.format("TerrainSnagTest: %d hitches (%d long >=8f), %d pops", #hitches, longCount, #pops))
+    for i = 1, #hitches do
+        if tonumber(hitches[i]:match("frames=(%d+)")) >= 8 then print("  HITCH " .. hitches[i]) end
+    end
     Check(segments > 100, "覆盖足够多的行走路线")
     -- 基线 47 处（外环 0.5m 量化台坎 / 柱础 / 墙脚 / 角楼窄台）；修复后只剩直顶树角、倒柱的 2 处。
     Check(#snags <= 2, "岛面行走无卡脚点（允许直顶树角/倒柱）")
