@@ -535,24 +535,18 @@ local function CombatHasAggro()
     return false
 end
 local function CanOpenForge()
-    if not nomi_ or not M.ride or M.ride.mode~='free' or CombatState.InCombat() or CombatHasAggro()
+    if not nomi_ or not M.ride or M.ride.mode~='free' or CombatState.Engaged() or CombatHasAggro()
         or combatMoves_.dead or voidInputBlocked or SettingsMenu.IsBlocked() or animPreview_.index>0 then return false end
     local p=nomi_:Position()
     return nomi_.cc.onGround and Terrain.IsSafeGround(p.x,p.y,p.z)
 end
 local function OpenForge()
     if weaponGesture_ then weaponGesture_:ForceClose('forge') end
-    if CombatState.InCombat() then
-        -- Weapon selection never auto-sheaths (explicitSelection), so with a weapon drawn the
-        -- old guard dropped G silently. Stow it like picking the time loadout when it is safe.
-        if CombatHasAggro() then print('Forge: refused reason=aggro'); caster_:Say('敌人警戒中，无法锻造',1.2); return end
-        if not combatMoves_:SelectLoadout('time') then print('Forge: refused reason=busy'); caster_:Say('动作结束后再按 G',1.2); return end
-    end
     if not CanOpenForge() then
         print(('Forge: refused reason=blocked mode=%s onGround=%s combat=%s aggro=%s dead=%s'):format(
-            tostring(M.ride and M.ride.mode),tostring(nomi_ and nomi_.cc.onGround),tostring(CombatState.InCombat()),
+            tostring(M.ride and M.ride.mode),tostring(nomi_ and nomi_.cc.onGround),tostring(CombatState.Engaged()),
             tostring(CombatHasAggro()),tostring(combatMoves_.dead)))
-        caster_:Say('请在安全地面、脱离警戒后锻造',1.2); return
+        caster_:Say(CombatState.Engaged() and '战斗中无法锻造' or '请在安全地面、脱离警戒后锻造',1.2); return
     end
     -- Bind the exact live module's read-only getter; no package.loaded key or
     -- separately maintained HUD state is required for the primary route.
@@ -1354,7 +1348,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             controls.onGround,controls.actualSpeed=nomi_.cc.onGround,nomi_.actualSpeed
             controls.travel,controls.motionSampleDt=nomi_.frameTravel,nomi_.actualDt
             controls.actualForwardSpeed=foot_ and foot_.direction and nomi_.actualVelocity:DotProduct(foot_.direction) or nil
-            controls.normalSpeed=CombatState.InCombat() and 5 or 4.2
+            controls.normalSpeed=CombatState.Engaged() and 5 or 4.2
             if combatTest_ and combatTest_.active then
                 local testOK,synthetic=Safe('Debug.F11Input',combatTest_.Input,combatTest_,dt,allowed and not CombatState.HasAggro() and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked())
                 if synthetic then
@@ -1776,7 +1770,7 @@ local function UpdateBaseCamera(dt)
         nomi_:UpdateCamera(dt, "mounted", M.rig.bones.chest)
     else
         local mode = farView and "far" or ((caster_.charging or caster_.castAnim > 0) and "aim" or "normal")
-        if CombatState.InCombat() and not farView then
+        if CombatState.Engaged() and not farView then
             local target=M.combat.aimed or combatMoves_.target
             if target and (target.dead or target.active==false) then target=nil end
             local boss=false
@@ -1800,7 +1794,7 @@ local function UpdateCombatCamera(dt,cn)
             local offset=combatMoves_:ShakeOffset(cn.worldRight,cn.worldUp)+(action.impact or Vector3.ZERO)
             local impactLength=offset:Length()
             if impactLength>.03 then offset=offset*(.03/impactLength) end
-            local footCamera=CombatState.InCombat() or (not Down(KEY_TAB) and not caster_.charging
+            local footCamera=CombatState.Engaged() or (not Down(KEY_TAB) and not caster_.charging
                 and ((foot_ and foot_.weight>0) or (combatCamera_.sprint or 0)>0))
             if footCamera then offset=offset+action.focus-cn.worldDirection*action.distance end
             if footCamera or offset:LengthSquared()>0 then nomi_:ApplyCombatOffset(offset) end
@@ -1872,7 +1866,7 @@ local function UpdateCombatHUD(cn,dt)
         if drawing then wall=CombatBowCast(a,b) else wall=CombatCast(a,b,true) end
         local aimed=hits[1] and (not wall or hits[1].t<wall) and hits[1].enemy or nil
         M.combat.aimed=aimed
-        combatLookScale_=CombatState.InCombat() and combatCameraFrame_ and combatCameraFrame_.look or 1
+        combatLookScale_=CombatState.Engaged() and combatCameraFrame_ and combatCameraFrame_.look or 1
         local assisted=false
         local budget=math.max(0,16-SwingPerf.rangeRays)
         local launch=drawing and combatRig_:GetHit().origin or nil

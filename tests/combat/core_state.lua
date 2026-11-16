@@ -66,3 +66,26 @@ for i=1,100 do State.Log('burst'..i,'burst') end
 eq(#logs,48)
 State.Update(1);State.Log('same','same');eq(#logs,49)
 print('PASS bounded event logs: actual state changes only, duplicate guard and 48 lines/sec ceiling')
+
+-- Armed (weapon selected) is not Engaged (fight): exploration systems follow Engaged.
+do
+    local aggro=false
+    State.Configure({rig=rig,cancel=function() end,explicitSelection=true,aggro=function() return aggro end})
+    eq(State.Armed(),false);eq(State.Engaged(),false)
+    eq(State.Enter('loadout'),true)
+    eq(State.Armed(),true);eq(State.InCombat(),true);eq(State.Engaged(),false)
+    State.Update(60);eq(State.Armed(),true);eq(State.Engaged(),false) -- explicit selection never auto-sheaths, never engages
+    aggro=true;eq(State.Engaged(),true);aggro=false;eq(State.Engaged(),false)
+    eq(State.Activity(true),true);eq(State.Engaged(),true) -- accepted attack engages
+    State.SetBusy(false)
+    State.Update(5.9);eq(State.Engaged(),true)
+    State.Update(.2);eq(State.Engaged(),false);eq(State.Armed(),true)
+    State.OnPlayerHit();eq(State.Engaged(),true)
+    State.Update(6.1);eq(State.Engaged(),false)
+    State.OnEnemyAggro('x');eq(State.Engaged(),true)
+    State.Exit('loadout');eq(State.Armed(),false);eq(State.Engaged(),false)
+    State.OnEnemyAggro('x');eq(State.Engaged(),false,'unarmed aggro does not engage a weapon state')
+    State.MarkEngaged();eq(State.Engaged(),false,'engagement requires an armed state')
+    State.Stop()
+end
+print('PASS armed vs engaged: explicit selection stays armed without engagement; attack/hit/aggro engage for 6s; unarmed never engaged')

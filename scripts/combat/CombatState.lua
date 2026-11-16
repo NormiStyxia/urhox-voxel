@@ -4,6 +4,11 @@ local M = { EXPLORE='EXPLORE', IDLE='COMBAT_IDLE', ACTIVE='COMBAT_ACTIVE' }
 local state, weapon = M.EXPLORE, 'sword'
 local quiet, idle, transition, spellDelay, glow = 0, 0, 0, 0, 1
 local mounted, dead, busy = false, false, false
+-- "Armed" (weapon selected/drawn, state~=EXPLORE) is NOT "engaged". Engaged = armed and an enemy is
+-- alert, or the player attacked/was hit within ENGAGE_TIME. Exploration systems (forge, camera,
+-- run speed) follow Engaged; attack input/weapon visuals follow Armed.
+local ENGAGE_TIME = 6
+local engageLeft = 0
 local options = {}
 local lastPose = 'hidden'
 local readyFlash=0
@@ -113,12 +118,21 @@ function M.Configure(opts)
     state, weapon = M.EXPLORE, options.weapon=='bow' and 'bow' or 'sword'
     quiet, idle, transition, spellDelay, glow = 0, 0, 0, 0, 1
     mounted, dead, busy = false, false, false
+    engageLeft = 0
     readyFlash=0
     lastPose = 'hidden'
     if options.rig then options.rig:SetActive(weapon); options.rig:SetPose('hidden') end
 end
 function M.Get() return state end
+--- Weapon selected/drawn (legacy name). Gates weapon input/visuals, not exploration systems.
 function M.InCombat() return state ~= M.EXPLORE end
+function M.Armed() return state ~= M.EXPLORE end
+--- Armed AND (enemy alert OR attacked/hit within ENGAGE_TIME).
+function M.Engaged()
+    if state == M.EXPLORE then return false end
+    return engageLeft > 0 or (options.aggro and options.aggro() == true) or false
+end
+function M.MarkEngaged() engageLeft = ENGAGE_TIME end
 function M.GetWeapon() return weapon end
 -- The physical rig still owns only sword/bow. Time uses the existing hand
 -- casting presentation, so never send a synthetic third model id to the rig.
@@ -181,9 +195,11 @@ function M.OnEnemyAggro(enemyId)
     if enemyId == nil or mounted or dead then return end
     if not options.explicitSelection then M.Enter('aggro') end
     quiet = 0
+    if state ~= M.EXPLORE then engageLeft = ENGAGE_TIME end
 end
 function M.OnPlayerHit()
     if mounted or dead then return end
+    engageLeft = ENGAGE_TIME
     if not options.explicitSelection then M.Enter('hit') end
     quiet = 0
 end
@@ -193,6 +209,7 @@ function M.Activity(cancelTransition)
     if not M.Enter('attack') then return false end
     if transition > 0 and not cancelTransition then return false end
     idle, quiet, transition = 0, 0, 0
+    engageLeft = ENGAGE_TIME
     SetState(M.ACTIVE,'attack')
     Pose('hand')
     return true
@@ -221,6 +238,7 @@ end
 function M.Update(dt)
     dt = math.max(0, dt)
     logTime=logTime+dt
+    engageLeft = math.max(0, engageLeft - dt)
     local wasTransition=transition
     transition = math.max(0, transition - dt)
     if wasTransition>0 and transition==0 then M.FinishTransition() end

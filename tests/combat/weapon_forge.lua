@@ -89,7 +89,7 @@ local equipOK=true
 package.loaded['urhox-libs/UI']=UI
 package.loaded['ui.PixelDraw']=Draw
 package.loaded['ui.TouchInput']={Clear=function() cleared=cleared+1 end}
-package.loaded['combat.CombatState']={EXPLORE='EXPLORE',Get=function() return combat end,GetPose=function() return combat=='EXPLORE' and 'hidden' or 'back' end,
+package.loaded['combat.CombatState']={EXPLORE='EXPLORE',Get=function() return combat end,Engaged=function() return combat~='EXPLORE' end,GetPose=function() return combat=='EXPLORE' and 'hidden' or 'back' end,
     GetWeapon=function() return currentWeapon end,SetWeapon=function(weapon) if not equipOK then return false end;currentWeapon=weapon;return true end}
 -- Fake showroom: records the whole contract the panel relies on.
 local room={enterOK=true,ready=true,state='ready',entered=0,exited=0,weapons={},drag={begin=0,by={},finish={}},homes=0,focus=nil,sceneSeen=nil,updates=0,enterThrows=false}

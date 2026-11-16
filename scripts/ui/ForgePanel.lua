@@ -61,7 +61,8 @@ local function Copy(t)
     return result
 end
 local function Safe(callbacks)
-    if CombatState.Get()~=CombatState.EXPLORE or (CombatState.HasAggro and CombatState.HasAggro()) then return false end
+    -- Holding a weapon is not combat: only an engaged fight (alert enemy / recent attack or hit) blocks the forge.
+    if CombatState.Engaged() or (CombatState.HasAggro and CombatState.HasAggro()) then return false end
     if callbacks.canOpen then return callbacks.canOpen()==true end
     local controller=callbacks.rig and callbacks.rig.controller
     if not controller or not controller.cc or not controller.cc.onGround or not controller.Position then return false end

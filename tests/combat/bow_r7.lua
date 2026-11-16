@@ -118,7 +118,7 @@ local hud
 local env=setmetatable({Projectile=P,SwingPerf=perf,CombatHit=require('combat.Hit'),
  CombatEnemies=function()return {foe} end,
  CombatCast=function(a,b,decorative)assert(decorative==true);return blocked and a.z>0 and 0 or nil end,
- CombatState={InCombat=function()return true end,GetWeapon=function()return 'bow' end,GetSetting=function(key)return key=='aimAssist' and assist end},
+ CombatState={InCombat=function()return true end,Engaged=function()return true end,GetWeapon=function()return 'bow' end,GetSetting=function(key)return key=='aimAssist' and assist end},
  combatRig_={GetStats=function()return {range=64} end,GetHit=function()return {origin=Vector3(0,2,.1)} end,GetBowArrowTip=function()return Vector3(0,2,.6) end},
  combatCameraFrame_={look=1,cross=1},combatMoves_={clip='bow_hold',charge=1},
  CombatHUD={BOW_PREDICTION=true,Set=function(value)hud=value end},combatHUDData={},
