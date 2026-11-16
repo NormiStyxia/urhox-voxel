@@ -126,6 +126,11 @@ local function Run(game)
         end
         -- 南北主路
         Walk(0, -66, 0, -50, 5.0, "south road");Walk(0, -50, 0, -66, 5.0, "south road back")
+        -- 北殿台基三级台阶：必须能直接走上去
+        for _, x in ipairs({ -6, 0, 6 }) do
+            Walk(x, 52.0, x, 57.5, 5.0, "north hall up")
+            Check(node.worldPosition.y > Terrain.RING_Y + 1.3, "北殿台阶能走上台基 x=" .. x)
+        end
     end)
     node:Dispose()
     cc.enabled, world.updateEnabled = wasEnabled, auto

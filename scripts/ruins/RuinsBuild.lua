@@ -323,10 +323,13 @@ local function BuildFallenColumns(world)
                     local flute = (math.atan(dz, dy) / (2 * pi) * 12) % 1
                     local rr = 0.75 - ((flute > 0.30 and flute < 0.70) and 0.125 or 0)
                     if (x + len / 2) % 1.25 < 0.0625 then rr = rr - 0.0625 end
-                    if d > rr then return nil end
+                    -- 下半圆弧会被自动跨步踩上半截再卡住：0.6m 以下补成竖直的碎石垫（高于步高）。
+                    local skirt = y < 0.6 and abs(dz) <= 0.72
+                    if d > rr and not skirt then return nil end
                     -- 断口两端不平
                     if abs(x) > len / 2 - 0.4 * Noise.Value2(dy * 3, dz * 3, i) then return nil end
                     if abs(x) > len / 2 - 0.45 then return Stone(x, y, z) end
+                    if skirt and d > rr then return P.STONE_MOSS end
                     if y < 0.3 and Noise.Value2(x * 2, z * 2, i) > 0.65 then return P.STONE_MOSS end
                     return Marble(x, y, z)
                 end)
@@ -561,10 +564,9 @@ local function BuildOuterWall(world)
             local top = columnTop
             -- 石缝只在材质里画：半格深的径向刻缝会在弧墙上跳成密集凸条。
             local half = T * 0.5
-            -- 墙脚三层退台；断墙顶盖板保留石材色，不涂满金色。
-            if ly < 0.25 then half = 1.30
-            elseif ly < 0.50 then half = 1.15
-            elseif ly < 0.875 then half = 1.0 end
+            -- 墙脚两层退台；首层 0.625m 高于步高，不再留 0.15m 窄踏面让角色踩半截卡住。
+            if ly < 0.625 then half = 1.30
+            elseif ly < 0.875 then half = 1.15 end
             if ly > top - 0.375 and ly < top - 0.125 then half = max(half, 0.925) end
             if pier and not isGate and ly < min(top - 0.5, 4.75) then
                 half = max(half, ly < 1.25 and 1.25 or 1.0)
@@ -632,7 +634,8 @@ local function BuildOuterWall(world)
             local ly = y - baseY
             if y < ground - 0.5 then return nil end
             local belt = ly > 1.0 and ly < h and (ly % 4.0 > 1.5 and ly % 4.0 < 1.75)
-            local rr = (ly < 0.5) and 3.6 or ((ly < 1.0 or belt) and 3.375 or 3.2)
+            -- 底座首层 0.625m 高于步高：不留可半踩的窄台（卡脚）。
+            local rr = (ly < 0.625) and 3.6 or ((ly < 1.0 or belt) and 3.375 or 3.2)
             local topY = h
             if collapsed then topY = h - 4 * Noise.Value2(dx * 0.8, dz * 0.8, 61) end
             if ly < topY then
@@ -671,13 +674,13 @@ end
 local function BuildNorthHall(world)
     local cz = 60.0
     local baseY = Terrain.RING_Y
-    -- 台基 20×10，三级台阶
-    local b = Brush.New(world, { min = { -12, baseY - 1, cz - 7 }, max = { 12, baseY + 2, cz + 8 }, size = M.DETAIL.structure })
-    b:Shape(-12, baseY - 1, cz - 7, 12, baseY + 2, cz + 8, function(x, y, z)
+    -- 台基 20×10，三级台阶；踏面 0.75m 深 > 胶囊直径 0.64m，0.5m 级高 < 步高。
+    local b = Brush.New(world, { min = { -12, baseY - 1, cz - 7.5 }, max = { 12, baseY + 2, cz + 8 }, size = M.DETAIL.structure })
+    b:Shape(-12, baseY - 1, cz - 7.5, 12, baseY + 2, cz + 8, function(x, y, z)
         local ly = y - baseY
         local dz = z - cz
-        if ly < 0.5 and abs(x) < 11 and dz > -6.5 and dz < 7.5 then return Stone(x, y, z) end
-        if ly < 1.0 and abs(x) < 10.5 and dz > -6.0 and dz < 7.5 then return Marble(x, y, z) end
+        if ly < 0.5 and abs(x) < 11.5 and dz > -7.0 and dz < 7.5 then return Stone(x, y, z) end
+        if ly < 1.0 and abs(x) < 10.75 and dz > -6.25 and dz < 7.5 then return Marble(x, y, z) end
         if ly < 1.5 and abs(x) < 10 and dz > -5.5 and dz < 7.5 then return Marble(x, y, z) end
     end)
     Keep(b:Finish({ masonry = "ashlar" }))

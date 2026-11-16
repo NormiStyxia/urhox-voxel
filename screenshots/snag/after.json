@@ -1,0 +1,104 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 66371,
+    "frames_completed": 40,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "PASS",
+            "errors": []
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2184,
+            "component_count": 3694,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 48,
+            "hash": 440110682,
+            "frame_time_ms": 37816.609375
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 48,
+            "hash": 45578851,
+            "frame_time_ms": 22.673999786376954
+        },
+        {
+            "frame": 20,
+            "phase": "run",
+            "nodes": 23,
+            "components": 48,
+            "hash": 3552684935,
+            "frame_time_ms": 46.685001373291019
+        },
+        {
+            "frame": 40,
+            "phase": "run",
+            "nodes": 23,
+            "components": 48,
+            "hash": 3713590066,
+            "frame_time_ms": 19.891000747680665
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 24275.220703125,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 9,
+        "ProceduralSky": 1,
+        "Skybox": 1,
+        "CustomGeometry": 2315,
+        "VoxelVolume": 688,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 167,
+        "VoxelCharacterController": 1,
+        "ParticleEmitter": 4,
+        "BillboardSet": 3,
+        "SoundSource3D": 15,
+        "VoxelChunkDrawable": 29,
+        "SoundSource": 12
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 2,
+        "passed": 1,
+        "failed": 1
+    },
+    "test_issues": [
+        "岛面行走无卡脚点"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 0,
+        "total_errors": 0
+    }
+}
