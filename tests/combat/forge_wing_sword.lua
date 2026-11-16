@@ -4,7 +4,7 @@ package.path='scripts/?.lua;'..package.path
 local Blades=require('combat.ForgeShowroomBlades')
 local Parts=require('combat.WeaponParts')
 local d=Blades.Data('W')
-assert(d.route=='W' and d.triangles>200 and d.triangles<=900 and #d.vertices==d.triangles*3)
+assert(d.route=='W' and d.triangles>200 and d.triangles<=1100 and #d.vertices==d.triangles*3)
 assert(Blades.Data('W')==d,'expanded model is cached read-only')
 -- model space: origin = grip centre, tip +Y
 assert(math.abs(d.displayHeight-1.855)<2e-3)
@@ -17,6 +17,7 @@ local function Cross(a,b,c)
 end
 local seen,gripTris,metalTris,coreTris,gemTris,bladeTris={},0,0,0,0,0
 local leftReach,rightReach,leftTop,rightTop=0,0,0,0
+local coreMinNX,coreMaxNX,coreCuts=1,-1,{}
 for i=1,#d.vertices,3 do
     local a,b,c=d.vertices[i],d.vertices[i+1],d.vertices[i+2]
     local x=Cross(a,b,c)
@@ -53,7 +54,14 @@ for i=1,#d.vertices,3 do
             end
         end
     end
-    if w[3]>.9 and a.glow>.3 and a.glow<.4 then coreTris=coreTris+1 end
+    if w[3]>.9 and a.glow>.3 and a.glow<.4 then
+        coreTris=coreTris+1
+        local cy=(a.p[2]+b.p[2]+c.p[2])/3
+        if a.n[3]<-.3 and cy>.60 and cy<1.49 then
+            coreMinNX=math.min(coreMinNX,a.n[1]);coreMaxNX=math.max(coreMaxNX,a.n[1])
+            coreCuts[('%.1f,%.1f,%.1f'):format(a.n[1],a.n[2],a.n[3])]=true
+        end
+    end
     if w[3]>.9 and a.glow==1 then gemTris=gemTris+1 end
     if w[1]>.5 then
         bladeTris=bladeTris+1
@@ -62,6 +70,13 @@ for i=1,#d.vertices,3 do
         assert(a.n[1]*cx+a.n[3]*cz>=-1e-9,'blade normal points inward')
     end
 end
+-- Sapphire is real cut geometry: the front normals split left/right and
+-- vary across the long sections, rather than one nearly flat emissive strip.
+local distinctCuts=0
+for _ in pairs(coreCuts) do distinctCuts=distinctCuts+1 end
+assert(coreMinNX<-.18 and coreMaxNX>.18,'sapphire crown must have two sloping faces')
+assert(distinctCuts>=6,'sapphire needs distinct large cut normals')
+assert(math.abs(d.sockets.bladeBase[2]-.3182)<1e-5,'blade base socket is unchanged')
 assert(gripTris>=40 and metalTris>150 and coreTris>=8 and gemTris>=16 and bladeTris>=24)
 -- Three-view: similar reaches, but the left upper feather is 90px taller.
 assert(-leftReach>.20 and rightReach>.20,'wing guard spread is preserved')

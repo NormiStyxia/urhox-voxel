@@ -1,0 +1,35 @@
+{
+  "triangles": 918,
+  "height": 1.855,
+  "sockets": {
+    "grip": [
+      0,
+      0,
+      0
+    ],
+    "tip": [
+      0,
+      1.62,
+      0
+    ],
+    "bladeBase": [
+      0,
+      0.31822921914357694,
+      0
+    ],
+    "pommel": [
+      0,
+      -0.235,
+      0
+    ]
+  },
+  "front_core_normal_x_range": [
+    -0.8250852145764364,
+    0.7374521884022692
+  ],
+  "front_core_normal_directions_rounded_0_1": 15,
+  "baseline_regression": "PASS: metadata, non-blade triangles, silhouette",
+  "shader_source_gate": "PASS; actual shader compilation remains Web-only",
+  "shader_sha256": "5202ea83ae7c89e508e654a3dd71451756a2dfbe8b864b079a37ec55fb0abdcd",
+  "model_sha256": "d07fc2886faafd4524dc4b0d7dfb004ae972634193d3bbc0441d48c9db6113ce"
+}

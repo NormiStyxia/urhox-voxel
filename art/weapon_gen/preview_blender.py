@@ -1,6 +1,6 @@
 """Blender headless preview of a generated weapon JSON (not used by the game).
 blender -b -P art/weapon_gen/preview_blender.py -- in.json out_prefix
-Palette mirrors the in-game defaults. Urho (x,y,z)->Blender (x,z,y), winding reversed.
+Sapphire colours are a schematic of the real facets, NOT a shader preview. Urho (x,y,z)->Blender (x,z,y), winding reversed.
 """
 import bpy, json, sys, math
 from mathutils import Vector
@@ -12,7 +12,7 @@ data = json.load(open(src))
 def lin(c):  # sRGB -> linear
     return tuple((v/12.92 if v <= .04045 else ((v+.055)/1.055)**2.4) for v in c)
 
-PAL = {'blade': (.96, .99, 1.0), 'metal': (1.0, .84, .43), 'accent': (.02, .79, 1.0), 'grip': (.08, .15, .36)}
+PAL = {'blade': (.96, .99, 1.0), 'metal': (1.0, .84, .43), 'accent': (.015, .46, .98), 'grip': (.08, .15, .36)}
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 verts, faces, cols = [], [], []
@@ -25,8 +25,16 @@ for t in data['tris']:
     rgb = [r*PAL['blade'][i]+g*PAL['metal'][i]+b*PAL['accent'][i]+k*PAL['grip'][i] for i in range(3)]
     sh = t['shade']
     rgb = [min(1, v*sh) for v in rgb]
-    if t['glow'] > 0:   # emissive look
-        rgb = [min(1, v*0.55+0.45*PAL['accent'][i]+0.25*t['glow']) for i, v in enumerate(rgb)]
+    if t['glow'] > 0 or (b > .32 and r > .5):
+        # Illustrative deep/mid/bright blue cut faces. The Web material adds
+        # absorption, view-dependent returns and specular; Workbench cannot.
+        p0,p1,p2=[Vector(q) for q in t['p']]
+        normal=(p1-p0).cross(p2-p0).normalized()
+        response=max(0,min(1,.5+normal.x*.7+normal.y*.22))
+        tone=max(0,min(1,.18+.55*response+(sh-.82)*1.2))
+        deep=(.012,.10,.38);middle=(.015,.46,.94);bright=(.025,.72,1.0)
+        rgb=[deep[i]*(1-tone)+middle[i]*tone for i in range(3)]
+        rgb=[rgb[i]*.88+bright[i]*response*.12 for i in range(3)]
     cols.append(lin(rgb))
 
 mesh = bpy.data.meshes.new('m'); mesh.from_pydata(verts, [], faces); mesh.update()

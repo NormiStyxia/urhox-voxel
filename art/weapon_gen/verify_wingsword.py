@@ -6,7 +6,7 @@ d=json.loads((ROOT/'art/weapon_gen/out/wingsword.json').read_text())
 def cross(a,b):return (a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])
 def sub(a,b):return tuple(x-y for x,y in zip(a,b))
 def dot(a,b):return sum(x*y for x,y in zip(a,b))
-assert len(d['tris'])<=900
+assert len(d['tris'])<=1100
 seen=set();by_part=collections.defaultdict(list)
 for t in d['tris']:
     p=[tuple(round(v*10000) for v in q) for q in t['p']]

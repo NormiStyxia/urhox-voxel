@@ -117,24 +117,65 @@ BLADE_BASE = GUARD_Y + .07
 TIP_Y = 1.62
 POMMEL_BOTTOM = -.235
 
-# 1) Twelve-edge cross section: white edge / pale cyan / luminous cyan core.
+# 1) Sapphire slab: five long cuts, a shallow wandering Lambda ridge and
+# four blue facets per face (two crown faces + two narrow shoulder bevels).
+# White boundary vertices and the original front silhouette remain identical.
+SAPPHIRE_CUTS = [
+    # image y, extra crown height (m), lateral ridge / core half-width
+    (1150, .004, -.22), (1000, .013, .26), (800, .005, -.25),
+    (575, .014, .24), (350, .005, -.18), (180, .000, .00),
+]
+
 def blade():
-    rings = []
+    original = []
     for py, lx, rx, core_ratio, dp in TRACE['BLADE']:
         y = xy((949, py))[1]
         w = (rx-lx)*.5*TRACE['SCALE']
         d = dp*TRACE['SCALE']*1.10
         c = w*core_ratio
         a = w*(.10 if py==180 else .65)
-        rings.append([(-w,y,0),(-a,y,-d*.72),(-c,y,-d),(0,y,-d*1.025),
-                      (c,y,-d),(a,y,-d*.72),(w,y,0),(a,y,d*.72),
-                      (c,y,d),(0,y,d*1.025),(-c,y,d),(-a,y,d*.72)])
-
-    cols = [BLADE,(.60,0,.40),CORE,CORE,(.60,0,.40),BLADE,
-            BLADE,(.60,0,.40),CORE,CORE,(.60,0,.40),BLADE]
-    shades = [1,1,.94,1,1,1,1,1,1,.94,1,1]
-    ring_loft(rings,lambda i:cols[i],lambda i:shades[i],
-              lambda i:.35 if i in (2,3,8,9) else 0,close_bottom=(BLADE,.8))
+        ring=[(-w,y,0),(-a,y,-d*.72),(-c,y,-d),(0,y,-d*1.025),
+              (c,y,-d),(a,y,-d*.72),(w,y,0),(a,y,d*.72),
+              (c,y,d),(0,y,d*1.025),(-c,y,d),(-a,y,d*.72)]
+        original.append((py,ring))
+    stations=sorted(set([p[0] for p in original]+[p[0] for p in SAPPHIRE_CUTS]),reverse=True)
+    rings=[]
+    for py in stations:
+        # Interpolate the existing WHITE geometry, not a fresh width estimate.
+        ring=None
+        for sample,points in original:
+            if py==sample: ring=list(points)
+        if ring is None:
+            for (pa,ra),(pb,rb) in zip(original,original[1:]):
+                if pa>py>pb:
+                    t=(pa-py)/(pa-pb)
+                    ring=[tuple(u+(v-u)*t for u,v in zip(a,b)) for a,b in zip(ra,rb)]
+                    break
+        assert ring is not None
+        if py<=1150:
+            lift,shift=next((p[1],p[2]) for p in SAPPHIRE_CUTS if p[0]==py)
+            d=abs(ring[2][2]);c=ring[4][0];y=ring[3][1]
+            # The shoulders stay inside the old blue/white join. Crown height
+            # varies by 4-14mm; the off-axis ridge prevents a straight hot seam.
+            ring[2]=(-c,y,-d*.90);ring[4]=(c,y,-d*.93)
+            ring[3]=(c*shift,y,-d-lift)
+            ring[8]=(c,y,d*.90);ring[10]=(-c,y,d*.93)
+            ring[9]=(-c*shift,y,d+lift)
+        rings.append(ring)
+    cols=[BLADE,(.60,0,.40),CORE,CORE,(.60,0,.40),BLADE,
+          BLADE,(.60,0,.40),CORE,CORE,(.60,0,.40),BLADE]
+    tones=[(.84,.97),(.96,.83),(.82,.94),(.98,.85),(.86,.96)]
+    for j,(ra,rb) in enumerate(zip(rings,rings[1:])):
+        mid=(stations[j]+stations[j+1])*.5
+        left,right=.94,.96
+        for cut in range(len(SAPPHIRE_CUTS)-1):
+            if SAPPHIRE_CUTS[cut][0]>=mid>=SAPPHIRE_CUTS[cut+1][0]:
+                left,right=tones[cut]
+        # These are ordinary shade values, NOT a new UV/material-ID encoding.
+        shades=[1,left,left,right,right,1,1,right,right,left,left,1]
+        ring_loft([ra,rb],lambda i:cols[i],lambda i:shades[i],
+                  lambda i:.35 if i in (2,3,8,9) else 0)
+    face(rings[0],BLADE,.8,0,(0,-1,0))
     for i in range(12):
         a,b=rings[-1][i],rings[-1][(i+1)%12]
         face([a,b,(0,TIP_Y,0)],BLADE,1,0,((a[0]+b[0])/2,0,(a[2]+b[2])/2))
