@@ -564,6 +564,7 @@ C.Clips.sword_heavy_charge.bladePath={mode="radial",origin={0,1.05,0},side="arm_
 
 -- 攻击层淡出后仍保持低位握剑，不能交回基础层的前举持械姿势。
 local swordStance=C.Clips.stance_combat_sword
+swordStance.smoothBlend=true
 swordStance.handPath={arm_right={space="body_feet",segments={bez(0,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
 swordStance.bladePath={mode="radial",origin={0,1.05,0},settle={-1,0,SETTLE_DIR},side="arm_right"}
 swordStance.elbow={arm_right={{0,-22},{1,-22}}}

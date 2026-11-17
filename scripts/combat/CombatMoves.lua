@@ -192,6 +192,10 @@ end
 function C:WeaponInHand()
     return (self.rig.pose or self.state.GetPose())=='hand'
 end
+-- 剑由低位 IK 管手臂，基础层保持空手姿态，收剑时才不会露出旧前举。
+function C:BaseArmed()
+    return self:WeaponInHand() and self.state.GetWeapon()=='bow'
+end
 function C:Play(id,fadeIn,entryFrom)
     if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
@@ -736,7 +740,13 @@ function C:Update(dt,controls)
             if self.stanceHandle then self.anim:Stop(self.stanceHandle,.15) end
             self.stanceHandle=self.anim:Play(stance,{fadeIn=.15})
         end
-    elseif self.stanceHandle then self.anim:Stop(self.stanceHandle,.08);self.stanceHandle=nil end
+    elseif self.stanceHandle then
+        local idleStow=self.state.InCombat() and self.state.GetWeapon()=='sword'
+            and self.state.GetPose()=='back' and not self.clip
+        -- 原地全息收剑：低位手臂缓缓回到空手站姿，不加动作锁或重播起手。
+        self.anim:Stop(self.stanceHandle,idleStow and .45 or .08)
+        self.stanceHandle=nil
+    end
     self.shakeAge=self.shakeAge+dt
     local inCombat=self.state.InCombat()
     self.stamina:Update(dt,inCombat,foot~=nil and foot:IsRunning())

@@ -1646,7 +1646,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Safe('Spells.Input',HandleSpells,dt,aim)
     Safe('Spells.Update',caster_.Update,caster_,dt)
     -- 法阵、手光读取本帧骨骼；不再先画特效再更新手臂。
-    if M.ride.mode == "free" then Safe('Animation.Base',nomi_.Animate,nomi_,combatMoves_.hitstop>0 and 0 or dt,caster_.charging or caster_.castAnim > 0 or combatMoves_:WeaponInHand()) end
+    if M.ride.mode == "free" then Safe('Animation.Base',nomi_.Animate,nomi_,combatMoves_.hitstop>0 and 0 or dt,caster_.charging or caster_.castAnim > 0 or combatMoves_:BaseArmed()) end
     if combatAnim_ and animPreview_.index==0 then
         Safe('Animation.BowParameters',UpdateCombatAnimationParams)
     end

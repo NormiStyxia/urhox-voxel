@@ -381,7 +381,8 @@ end
 ---@param s CombatAnimTrack
 local function weight(s)
     if s.stopping then
-        return s.fadeOut<=0 and 0 or s.stopWeight*clamp(1-s.stopAge/s.fadeOut,0,1)
+        local remaining=s.fadeOut<=0 and 0 or clamp(1-s.stopAge/s.fadeOut,0,1)
+        return s.stopWeight*(s.clip.smoothBlend and ease("smoothStep",remaining) or remaining)
     end
     local w=s.fadeIn<=0 and 1 or clamp(s.age/s.fadeIn,0,1)
     if s.clip.smoothBlend then w=ease("smoothStep",w) end
