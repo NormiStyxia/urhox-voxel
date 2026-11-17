@@ -232,6 +232,7 @@ function Rig:Init(scene,world,controller)
     end
     self.combatFx=require("combat.CombatFx").New(scene,world)
     self.slashRibbon=require("combat.SlashRibbon").New(scene)
+    self.shockBurst=require("combat.ShockBurst").New(scene)
     self:CreateTrail()
     self:BuildSwordImages()
     self:BuildBowImages()
@@ -540,10 +541,16 @@ function Rig:BeginSlash(combo,heavy)
     self.wingGlow=math.max(self.wingGlow or 0,heavy and 1 or .8)
 end
 function Rig:ImpactFx(position,forward,plunge)
-    if self.pose=='hand' then self.combatFx:Impact(position,forward,plunge) end
+    if self.pose=='hand' then
+        self.combatFx:Impact(position,forward,plunge)
+        self.shockBurst:Emit(position,forward,plunge)
+    end
 end
 function Rig:SetPlunging(on)
-    self.combatFx.plunging=on==true and self.trailEnabled and self.pose=='hand'
+    local plunging=on==true and self.trailEnabled and self.pose=='hand'
+    if plunging and not self.combatFx.plunging then self.slashRibbon:Begin('plunge') end
+    if not plunging and self.combatFx.plunging then self.slashRibbon:End() end
+    self.combatFx.plunging=plunging
 end
 function Rig:HitImpulse(event)
     if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
@@ -667,6 +674,7 @@ end
 function Rig:StopCombatVisual()
     self.combatFx:Clear()
     self.slashRibbon:Clear()
+    self.shockBurst:Clear()
     self:ClearTrail()
     self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
     self.hitGroup,self.contactArc=nil,false
@@ -1295,8 +1303,9 @@ function Rig:UpdateCore(dt)
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
     self.combatFx:Update(dt)
-    if not self.visualActive then self.slashRibbon:End() end
+    if not self.visualActive and not self.combatFx.plunging then self.slashRibbon:End() end
     self.slashRibbon:Update(dt)
+    self.shockBurst:Update(dt)
     self:UpdateHang(dt)
     -- W2 submits the real hit_on state before Update and performs AfterPose
     -- sweeps afterwards. Never leave its first hit using a mid-flight pivot.
@@ -1333,7 +1342,9 @@ function Rig:UpdateCore(dt)
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
     if self.trailEnabled and self.combatFx.plunging then
-        self.combatFx:Descent(entry.pivot:LocalToWorld(self.bladeRoot),entry.pivot:LocalToWorld(self.bladeTip))
+        local root,tip=entry.pivot:LocalToWorld(self.bladeRoot),entry.pivot:LocalToWorld(self.bladeTip)
+        self.combatFx:Descent(root,tip)
+        self.slashRibbon:Sample(root,tip) -- falling sheet of light behind the blade
     end
     if not self.visualActive then self.combatFx.valid=false end
     if self.visualActive or self.tailLeft>0 then
@@ -1433,6 +1444,7 @@ function Rig:Dispose()
     self.disposed=true
     self.combatFx:Dispose()
     self.slashRibbon:Dispose()
+    self.shockBurst:Dispose()
     for _,layers in pairs(self.layers) do for _,layer in ipairs(layers) do DisposeEffect(self,layer) end end
     for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
     DisposeEffect(self,self.bowArrow)

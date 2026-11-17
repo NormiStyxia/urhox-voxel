@@ -86,6 +86,7 @@ add { -- Sword in hand: same additive stance, blade held low, tip down-forward-o
     root={{0,-.04},{1,-.04}},
     weapon={{0,offset={0,0,0},euler={45,0,-25}},{1,offset={0,0,0},euler={45,0,-25}}},
 }
+assert(C.Clips.stance_combat_sword)
 add { -- 符号待 Web 校准
     id="sword_draw",dur=.30,layer=L.DRAW,weaponType="sword",
     keys={body=k({6,0,0},{4,-10,0},{6,-4,0},{6,0,0},.42,.65),
@@ -177,6 +178,10 @@ end
 -- guard (tip toward the ground along the forearm) and blends into the stance.
 local RECOVERY_FADE=.22
 local LOW_GUARD={.30,.78,.38}
+-- Blade direction in the low guard (radial from the chest to LOW_GUARD): tip
+-- down, forward and out to the right. Recovery blends the blade into it.
+local SETTLE_DIR={.54,-.49,.68}
+local STANCE_EULER={45,0,-25} -- stance_combat_sword grip euler (same low guard)
 local LIGHT={
     {id="sword_light_1",dur=.80,on=.16,contact=.22,off=.26,cancel=.32,
         yaw={0,35,22,-30,-45,0},
@@ -215,7 +220,8 @@ for _,row in ipairs(LIGHT) do
         body[i]={6,row.yaw[i],0}
         right[i]={-65,0,12} -- replaced by the hand-path IK
         legs[i]={row.legs[i],0,0}
-        weapon[i]={{0,0,0},{0,0,0}}
+        -- Settle keys match the sword stance, so the fade into it never tips the blade up.
+        weapon[i]={{0,0,0},i>=5 and STANCE_EULER or {0,0,0}}
     end
     local root={}
     for i,key in ipairs(row.root) do root[i]={key[1]/d,key[2],key[3]} end
@@ -420,12 +426,14 @@ local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge,pole)
         arcPart(spec,on,contact/c.dur,0,.70,"inCubic"),
         arcPart(spec,contact/c.dur,ending/c.dur,.70,1,"outCubic"),
         arcPart(spec,ending/c.dur,(ending+.04)/c.dur,1,1.08,"outQuad"),
-        -- Inertia: the blade drifts past, then sinks to the low guard and rests there.
-        bez((ending+.04)/c.dur,math.min(.92,(ending+.34)/c.dur),overshoot,LOW_GUARD,
-            {(overshoot[1]+LOW_GUARD[1])*.5,(overshoot[2]+LOW_GUARD[2])*.5+.10,(overshoot[3]+LOW_GUARD[3])*.5+.10},"inOutCubic"),
-        bez(math.min(.92,(ending+.34)/c.dur),1,LOW_GUARD,LOW_GUARD,LOW_GUARD)},
+        -- Inertia: the hand keeps falling with the swing (no bump back up) and
+        -- sinks into the low guard at the right side, then rests there.
+        bez((ending+.04)/c.dur,math.min(.92,(ending+.30)/c.dur),overshoot,LOW_GUARD,
+            {(overshoot[1]+LOW_GUARD[1])*.5+.10,math.min(overshoot[2],LOW_GUARD[2])-.05,(overshoot[3]+LOW_GUARD[3])*.5+.05},"outCubic"),
+        bez(math.min(.92,(ending+.30)/c.dur),1,LOW_GUARD,LOW_GUARD,LOW_GUARD)},
         amplitude=degrees,windup=.12,overshoot=.08,space="body_feet",pole=pole}}
-    c.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+    c.bladePath={mode="radial",origin={0,1.05,0},side="arm_right",
+        settle={ending/c.dur,math.min(.95,(ending+.16)/c.dur),SETTLE_DIR}}
     c.motion={{t0=c.phases.active[1],t1=ending,forward=lunge}}
     -- IK and blade direction update at render cadence; hitstop freezes s.t.
     c.continuous=true
@@ -475,7 +483,7 @@ heavy.handPath={arm_right={space="body_feet",amplitude=360,windup=.12,overshoot=
     bez(.43/.72,.62/.72,{.10,.28,.70},LOW_GUARD,{.25,.45,.70},"inOutCubic"),
     bez(.62/.72,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
 heavy.fadeOut=RECOVERY_FADE
-heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right",settle={.32/.72,.48/.72,SETTLE_DIR}}
 heavy.motion={{t0=.22,t1=.38,forward=.65}}
 heavy.continuous=true
 -- Free-facing cleanup: the hand already describes a full circle. A second
