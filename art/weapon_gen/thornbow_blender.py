@@ -81,7 +81,7 @@ class Builder:
         v[self.tint] = (tint[0], tint[1], tint[2], tint[3] if len(tint) > 3 else 1.0)
         return v
 
-    def tube(self, pts, radii, seg, tint_fn=lambda t: (0, 0, 0), cap=True, jitter=0.0, rmod=None):
+    def tube(self, pts, radii, seg, tint_fn=lambda t: (0, 0, 0), cap=True, jitter=0.0, rmod=None, tint_ta=None):
         """Rotation-minimising frames; tip collapses to a point when its radius is ~0."""
         n = len(pts)
         tang = []
@@ -106,7 +106,7 @@ class Builder:
             for k in range(seg):
                 a = 2 * math.pi * k / seg
                 rr = r * (1 + jitter * (rng.random() - 0.5)) * (rmod(t, a) if rmod else 1.0)
-                ring.append(self.vert(pts[i] + (nrm * math.cos(a) + bin_ * math.sin(a)) * rr, tint_fn(t)))
+                ring.append(self.vert(pts[i] + (nrm * math.cos(a) + bin_ * math.sin(a)) * rr, tint_ta(t, a) if tint_ta else tint_fn(t)))
             rings.append(ring)
         for i in range(n - 1):
             A, B = rings[i], rings[i + 1]
@@ -290,12 +290,23 @@ def mat_sand():
 
 
 def mat_cloth():
-    m, nt, b = principled('Grip_Cloth', Roughness=0.85, **{'Base Color': (0.075, 0.042, 0.125, 1), 'Sheen Weight': 0.3,
-                                                         'Sheen Tint': (0.7, 0.55, 1.0, 1)})
-    tc = node(nt, 'ShaderNodeTexCoord', (-900, 0))
-    wv = node(nt, 'ShaderNodeTexWave', (-650, 0), Scale=22.0, Distortion=1.5)
+    # Wrapped cloth: dark violet straps, darker where one strap tucks under the next, fine weave bump.
+    m, nt, b = principled('Grip_Cloth', Roughness=0.9, **{'Sheen Weight': 0.45, 'Sheen Tint': (0.75, 0.6, 1.0, 1)})
+    at = node(nt, 'ShaderNodeAttribute', (-900, 250)); at.attribute_name = 'tint'
+    sep = node(nt, 'ShaderNodeSeparateColor', (-700, 250))
+    nt.links.new(at.outputs['Color'], sep.inputs['Color'])
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.location = (-500, 250)
+    e = ramp.color_ramp.elements
+    e[0].position = 0.0; e[0].color = (0.020, 0.010, 0.040, 1)
+    e[1].position = 0.30; e[1].color = (0.095, 0.055, 0.160, 1)
+    hi = e.new(0.92); hi.color = (0.150, 0.095, 0.240, 1)
+    nt.links.new(sep.outputs['Red'], ramp.inputs['Fac'])
+    nt.links.new(ramp.outputs['Color'], b.inputs['Base Color'])
+    tc = node(nt, 'ShaderNodeTexCoord', (-900, -50))
+    wv = node(nt, 'ShaderNodeTexWave', (-650, -50), Scale=180.0, Distortion=0.6)
+    wv.wave_profile = 'TRI'
     nt.links.new(tc.outputs['Object'], wv.inputs['Vector'])
-    bump = node(nt, 'ShaderNodeBump', (-300, -150), Strength=0.25, Distance=0.002)
+    bump = node(nt, 'ShaderNodeBump', (-300, -150), Strength=0.30, Distance=0.0008)
     nt.links.new(wv.outputs['Fac'], bump.inputs['Height'])
     nt.links.new(bump.outputs['Normal'], b.inputs['Normal'])
     return m
@@ -336,11 +347,49 @@ def np_median(a):
     return a[len(a) // 2] if a else 0.0
 
 
+def merge_through_joints(B, join=0.022):
+    """Two traced segments meeting at a plain joint (only two ends there) are one branch the skeleton
+    happened to split: join them into a single polyline so the tube runs through without a seam."""
+    B = [dict(pts=[list(p) for p in b['pts']], rad=list(b['rad'])) for b in B if len(b['pts']) >= 2]
+    changed = True
+    while changed:
+        changed = False
+        ends = [(i, k, (b['pts'][0] if k == 0 else b['pts'][-1])) for i, b in enumerate(B) for k in (0, 1)]
+        for i, k, p in ends:
+            near = [(j, kk) for j, kk, q in ends if math.dist(p, q) < join]
+            if len(near) != 2 or near[0][0] == near[1][0]:
+                continue
+            (a, ka), (c, kc) = near
+            A, C = B[a], B[c]
+            pa = A['pts'] if ka == 1 else A['pts'][::-1]; ra = A['rad'] if ka == 1 else A['rad'][::-1]
+            pc = C['pts'] if kc == 0 else C['pts'][::-1]; rc = C['rad'] if kc == 0 else C['rad'][::-1]
+            pts = pa + pc[1:]
+            rad = ra + rc[1:]
+            # soften the old kink: light moving average around the joint only
+            j0 = len(pa) - 1
+            for _ in range(2):
+                for jj in range(max(1, j0 - 3), min(len(pts) - 1, j0 + 4)):
+                    pts[jj] = [(pts[jj - 1][q] + 2 * pts[jj][q] + pts[jj + 1][q]) / 4 for q in (0, 1)]
+            B[a] = dict(pts=pts, rad=rad)
+            del B[c]
+            changed = True
+            break
+    return B
+
+
 def build_wood_from_trace(wb, flowers, seg_main, seg_thin):
     """Branches = tubes along the traced skeleton, radius from the silhouette (1:1 with the side view);
     depth from the front view; free ends taper to points; flowers sit on stems at the traced blobs."""
-    B = TRACE['branches']
+    B = merge_through_joints(TRACE['branches'])
+    print('branches after joint merge', len(TRACE['branches']), '->', len(B))
     grip_band = 0.069
+    global GRIP_AXIS, FL3, ANCHORS
+    GRIP_AXIS = [q for q in curve([P(x, y) for x, y in limb_ctrl(-1)][::-1][-4:] + [P(x, y) for x, y in limb_ctrl(1)][1:4], 40)
+                 if abs(q.z) < 0.060 * L]
+    FL3 = [(P(f['x'], f['y'], f['z']), f['radius'] * L) for f in TRACE['flowers']]
+    ANCHORS = []
+    PENDING = []
+    FLOWER_DONE = []
 
     def zfun(x, y):
         # depth budget grows away from the grip, tapers at the tips; deterministic weave
@@ -392,19 +441,45 @@ def build_wood_from_trace(wb, flowers, seg_main, seg_thin):
         # light smoothing so the silhouette radius never ribs the tube
         for _ in range(3):
             rr = [rr[0]] + [(rr[i - 1] + 2 * rr[i] + rr[i + 1]) / 4 for i in range(1, m - 1)] + [rr[-1]]
+        # local repairs (only where a free end visibly 'stops'):
+        #  - end touching the grip wrap  -> keep its thickness and run on into the wrap
+        #  - end sitting under a flower  -> keep its thickness; the flower stem continues from it
+        keep = {}
+        for end in (0, 1):
+            if not free.get((bi, end)):
+                continue
+            e = P3[-1] if end == 1 else P3[0]
+            sx, sy = e.x / L + XC, YC - e.z / L
+            if abs(sy - YC) < 0.105 and 0.10 < sx < 0.215:
+                tgt = min(GRIP_AXIS, key=lambda q: (q - e).length)
+                keep[end] = ('grip', [e.lerp(tgt, 0.5), tgt])
+            else:
+                near = [fp for fp, fr in FL3 if (e - fp).length < fr * 2.6]
+                if near:
+                    keep[end] = ('flower', None)
         # taper free tips to a point over the last 30 %
         for k, end in ((0, 0), (1, 1)):
-            if free.get((bi, end)):
+            if free.get((bi, end)) and end not in keep:
                 for i in range(m):
                     t = i / (m - 1) if end == 1 else 1 - i / (m - 1)
                     if t > 0.70:
                         rr[i] *= max(0.0, 1 - (t - 0.70) / 0.30) ** 0.9
-        if free.get((bi, 1)):
+        if free.get((bi, 1)) and 1 not in keep:
             rr[-1] = 0.0
-        if free.get((bi, 0)):
+        if free.get((bi, 0)) and 0 not in keep:
             rr[0] = 0.0
-        wb.tube(P3, rr, seg_main if max(rr) > 0.007 * L else seg_thin,
-                lambda t, bi=bi: (0.0, 0, 0), cap=False, jitter=0.015)
+        for end, (kind, ext) in keep.items():
+            tng = ((P3[-1] - P3[-2]) if end == 1 else (P3[0] - P3[1])).normalized()
+            r_end = rr[-1] if end == 1 else rr[0]
+            if kind == 'grip':
+                if end == 1:
+                    P3 = P3 + ext; rr = rr + [r_end * 0.95] * len(ext)
+                else:
+                    P3 = ext[::-1] + P3; rr = [r_end * 0.95] * len(ext) + rr
+            else:
+                ANCHORS.append(((P3[-1] if end == 1 else P3[0]), tng, r_end, len(PENDING), end))
+        m = len(P3)
+        PENDING.append([P3, rr])
         br['_p3'] = P3; br['_rr'] = rr
     # hub spheres hide the seams between tubes
     for h in hubs:
@@ -416,25 +491,66 @@ def build_wood_from_trace(wb, flowers, seg_main, seg_thin):
         for v in res['verts']:
             v[wb.tint] = (0.0, 0.0, 0.0, 1.0)
     # flowers on stems: nearest branch point -> traced flower centre
-    allp = []
+    allp, allt = [], []
     for br in B:
-        for q, r_ in zip(br.get('_p3', []), br.get('_rr', [])):
+        Q_ = br.get('_p3', [])
+        for i, (q, r_) in enumerate(zip(Q_, br.get('_rr', []))):
             allp.append((q, r_))
+            a_, b_ = Q_[max(0, i - 1)], Q_[min(len(Q_) - 1, i + 1)]
+            allt.append((b_ - a_).normalized() if (b_ - a_).length > 1e-9 else Vector((0, 0, 1)))
+    used = set()
     for f in TRACE['flowers']:
         fc = P(f['x'], f['y'], f['z'])
-        best = min(allp, key=lambda qr: (qr[0] - fc).length)
-        q0, r0 = best
+        fr = f['radius'] * L
+        # an anchored end is only used when the bloom lies ahead of it (otherwise the stem would loop back)
+        anc = [(k, a) for k, a in enumerate(ANCHORS) if k not in used and (a[0] - fc).length < fr * 2.6
+               and ((fc - a[0]).length < 1e-6 or a[1].dot((fc - a[0]).normalized()) > 0.25)]
+        if anc:
+            k, (q0, tng, r0, _, _) = min(anc, key=lambda ka: (ka[1][0] - fc).length)
+            used.add(k)
+            print('stem from branch end', round((fc - q0).length / L, 3))
+        else:
+            # attach on a branch part thick enough to carry the stem (never on a tapered twig tip)
+            ok = [i for i in range(len(allp)) if allp[i][1] >= 0.0050 * L] or list(range(len(allp)))
+            ki = min(ok, key=lambda i: (allp[i][0] - fc).length)
+            q0, r0 = allp[ki]
+            tng = allt[ki].copy()                              # the host branch's own direction here
+            if tng.dot(fc - q0) < 0:
+                tng = -tng
+            r0 = min(r0 * 0.70, 0.0075 * L)                  # starts on the host's axis, thinner than the host
         d = fc - q0
-        if d.length > 0.012 * L:
-            nrm = Vector((-d.z, 0, d.x)).normalized() * (0.18 * d.length)
-            if nrm.x * (fc.x - XC * 0) < 0:
-                nrm = -nrm
-            S = curve([q0, q0 + d * 0.33 + nrm, q0 + d * 0.72 + nrm * 0.55, fc - d.normalized() * 0.010 * L], 14)
-            wb.tube(S, taper(len(S), max(r0 * 0.85, 0.0055 * L), 0.0036 * L, 1.0), seg_thin, lambda t: (t * 0.5, 0, 0))
+        if d.length > 0.006 * L:
+            # leaves the branch along its own direction, then bends smoothly toward the bloom (no kink)
+            agree = max(0.0, tng.dot(d.normalized()))         # follow the branch only as far as it points at the bloom
+            h1 = q0 + (tng * 0.6 * agree + d.normalized() * (1 - 0.6 * agree)).normalized() * d.length * 0.38
+            # a gentle arc (bulging away from the grip) instead of a straight stick
+            perp = Vector((-d.z, 0, d.x)).normalized() if abs(d.z) + abs(d.x) > 1e-9 else Vector((0, 0, 0))
+            if perp.dot(fc - P(XC, YC)) < 0:
+                perp = -perp
+            h1 = h1 + perp * d.length * 0.10
+            h2 = fc - d.normalized() * d.length * 0.30 + perp * d.length * 0.06
+            S = curve([q0, h1, h2, fc - d.normalized() * 0.008 * L], 16)
+            r_start = min(max(r0, 0.0040 * L), 0.0080 * L)
+            wb.tube(S, [r_start + (0.0036 * L - r_start) * (i / (len(S) - 1)) ** 0.8 for i in range(len(S))],
+                    seg_thin, lambda t: (t * 0.5, 0, 0))
         inplane = d.normalized() if d.length > 1e-6 else Vector((0, 0, 1))
         facing = Vector((0, -1.0 if len(flowers) % 3 else 1.0, 0))      # blooms open toward the side camera (mostly)
+        FLOWER_DONE.append(None)
         axis = (inplane * 0.45 + facing * 0.90).normalized()
         flowers.append((fc, axis, f['radius'] * L * FL_SCALE))
+    # anchored ends that no stem used are real twig tips after all: taper them now
+    for k, (q0, tng, r0, pi_, end) in enumerate(ANCHORS):
+        if k in used:
+            continue
+        P3, rr = PENDING[pi_]
+        m = len(rr)
+        for i in range(m):
+            t = i / (m - 1) if end == 1 else 1 - i / (m - 1)
+            if t > 0.70:
+                rr[i] *= max(0.0, 1 - (t - 0.70) / 0.30) ** 0.9
+        rr[-1 if end == 1 else 0] = 0.0
+    for P3, rr in PENDING:
+        wb.tube(P3, rr, seg_main if max(rr) > 0.007 * L else seg_thin, lambda t: (0.0, 0, 0), cap=False, jitter=0.015)
 
 
 def build_bow():
@@ -471,11 +587,15 @@ def build_bow():
     A = curve([P(x, y) for x, y in limb_ctrl(-1)][::-1][-4:] + [P(x, y) for x, y in limb_ctrl(1)][1:4], 40)
     G = [p for p in A if abs(p.z) <= grip_zone]
     grip = Builder('GripWrap')
-    Gd = curve(G, 48)
+    Gd = curve(G, 96)
+    TURNS = 7.0
     def band(t, a):
-        f = (a / (2 * math.pi) + t * 6.0) % 1.0          # 6 diagonal turns of strap
-        return 1.0 + 0.085 * (f ** 0.6) - 0.03           # each strap rises then drops onto the next
-    grip.tube(Gd, [0.0232 * L] * len(Gd), max(10, int(20 * DETAIL)), cap=True, rmod=band)
+        f = (a / (2 * math.pi) + t * TURNS) % 1.0        # overlapping diagonal cloth straps
+        return 1.0 + 0.16 * (f ** 0.45) - 0.07          # strap rises, then steps down onto the next one
+    def groove(t, a):
+        f = (a / (2 * math.pi) + t * TURNS) % 1.0
+        return (f, 0, 0)                                 # 0 = tucked edge (dark), 1 = proud strap edge
+    grip.tube(Gd, [0.0172 * L] * len(Gd), max(16, int(32 * DETAIL)), cap=True, rmod=band, tint_ta=groove)
     # two binding rings
     for p_i in (0, len(G) - 1):
         p = G[p_i]
@@ -483,8 +603,8 @@ def build_bow():
         side = tng.cross(Vector((0, 1, 0))).normalized()
         ring = [p + (side * math.cos(a) + Vector((0, 1, 0)) * math.sin(a)) * 0.0225 * L
                 for a in [2 * math.pi * k / 24 for k in range(25)]]
-        ring = [p + (q - p) * (0.0262 / 0.0225) for q in ring]
-        grip.tube(ring, [0.0032 * L] * 25, 6, cap=False)
+        ring = [p + (q - p) * (0.0200 / 0.0225) for q in ring]
+        grip.tube(ring, [0.0026 * L] * 25, 6, cap=False, tint_fn=lambda t: (1, 0, 0))
     grip.finish(cloth_m)
 
     # ---- crystal (long faceted shard pointing at the target) + inner glow core
