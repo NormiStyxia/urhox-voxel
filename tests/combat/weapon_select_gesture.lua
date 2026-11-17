@@ -156,7 +156,10 @@ env.KEY_Q,env.KEY_C,env.KEY_G='Q','C','G'
 local qEdge=true
 env.Press=function(key)if key=='Q' and qEdge then qEdge=false;return true end;return false end
 env.Down=function(key)return key=='Q' end
-actions(true)
+actions(true,.016)
+assert(gesture.pending and not gesture:IsOpen(),'short press must not open wheel')
+actions(true,.12);assert(not gesture:IsOpen())
+actions(true,.11)
 assert(gesture:IsOpen() and live.wheel.DebugState().selected=='time' and #live.wheel.DebugLayout().slots==3,
  'Q opens the actual three-slot wheel from time mode')
 State.OnEnemyAggro('guard');assert(gesture:IsOpen() and State.GetSelection()=='time')
@@ -196,3 +199,32 @@ blocked=false;route();assert(lookCalls==1,'normal camera resumes')
 held=true;combat=false;route();assert(lookCalls==1,'exploration Q also owns the first camera frame')
 held=false;route();assert(lookCalls==2,'exploration camera resumes on release')
 print('PASS actual camera gate: first Q frame, selection/fade/release latch, normal and exploration restoration')
+-- Tap cycle uses actual SelectLoadout, Scene cleanup and animation completion.
+live.reset();moves:Cancel('test');State.FinishTransition();State.SetBusy(false)
+local function tap()
+ env.combatInputBlocked=false
+ qEdge=true;env.Down=function(key)return key=='Q'end
+ actions(true,.016);assert(gesture.pending and not gesture:IsOpen())
+ env.Down=function()return false end
+ actions(true,.05);assert(not gesture.pending and not gesture:IsOpen())
+ assert(not live.wheel.IsBlocked(),'tap creates no overlay/release guard')
+end
+for _,expected in ipairs({'sword','bow','time','sword'}) do
+ tap();assert(State.GetSelection()==expected,'tap order sword bow time')
+ if expected=='bow' then assert(moves.clip=='weapon_swap_sword_to_bow','quick swap survives cleanup') end
+ drain()
+ assert(pointer:IsEnabled() and not moves.pendingFire and not env.caster_.charging)
+end
+for _,reason in ipairs({'hit','mount','focus','settings','stop'}) do
+ assert(gesture:BeginPress());gesture:Interrupt(reason)
+ gesture:UpdatePress(.05,false,true);assert(State.GetSelection()=='sword' and not gesture.pending)
+end
+assert(gesture:BeginPress());gesture:UpdatePress(.05,false,false)
+assert(State.GetSelection()=='sword' and not gesture.pending,'unavailable input cancels tap')
+moves:Play('sword_light_1');assert(not gesture:BeginPress(),'active strike cannot queue a tap');moves:Cancel('test')
+assert(gesture:BeginPress());gesture:UpdatePress(.3,false,true)
+assert(not gesture:IsOpen() and State.GetSelection()=='sword','slow release of long hold never cycles')
+assert(gesture:BeginPress());gesture:UpdatePress(.23,true,true)
+assert(gesture:IsOpen() and not gesture.pending);live.wheel.Cancel();drain()
+gesture:UpdatePress(.01,false,true);assert(State.GetSelection()=='sword','long hold never also cycles')
+print('PASS quick Q cycle, real cleanup and swap animation, cancelled pending, held threshold, no double-switch')

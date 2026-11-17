@@ -738,7 +738,7 @@ local function AttachTouchControls()
     end,function()
         if foot_ then foot_:Cancel('touch-cancel') end
         combatInputBlocked=true
-        local selecting=weaponGesture_ and (weaponGesture_:IsOpen() or weaponGesture_.closing or WeaponWheel.IsBlocked())
+        local selecting=weaponGesture_ and (weaponGesture_:IsOpen() or weaponGesture_.committing or weaponGesture_.closing or WeaponWheel.IsBlocked())
         if not selecting and combatMoves_ and not combatMoves_.dead and combatMoves_.clip~='getup' then combatMoves_:Cancel('touch-clear') end
         caster_.charging,caster_.charge=false,0
         if M.stream then M.stream:Stop(true) end
@@ -1116,7 +1116,7 @@ local function ToggleTrainingDummy()
     material:SetShaderParameter('Roughness',Variant(.95))
     model:SetMaterial(material); model.castShadows=true
     trainingDummy_=CombatMoves.NewTrainingDummy(pos,node)
-    CombatHUD.Say('训练木桩 · 按住 Q 选择剑或弓')
+    CombatHUD.Say('训练木桩 · 点按 Q 切换 / 长按 Q 选择')
 end
 local function StartCombatTest()
     if combatTest_ and combatTest_.active then return end
@@ -1443,11 +1443,15 @@ local function UpdateCombatPreview(dt,combatAllowed)
     end
 end
 
-local function UpdateCombatActions(combatAllowed)
+local function UpdateCombatActions(combatAllowed,dt)
     -- External interruptions are independent of the wheel's own blocker.
     if weaponGesture_ and weaponGesture_:IsOpen() then
         if not weaponGesture_.o.canOpen() then weaponGesture_:ForceClose('interrupted')
         elseif not weaponGesture_.touch and not Down(KEY_Q) then weaponGesture_:Confirm() end
+        return
+    end
+    if weaponGesture_ and weaponGesture_.pending then
+        weaponGesture_:UpdatePress(dt,Down(KEY_Q),combatAllowed and not combatInputBlocked)
         return
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
@@ -1457,7 +1461,8 @@ local function UpdateCombatActions(combatAllowed)
         end
         if not combatInputBlocked then
             local touchSwap=TouchInput.Press('swap') or TouchInput.Press('sheath')
-            if Press(KEY_Q) or touchSwap then weaponGesture_:Open(touchSwap) end
+            if touchSwap then weaponGesture_:Open(true)
+            elseif Press(KEY_Q) then weaponGesture_:BeginPress() end
         end
     end
 end
@@ -1599,7 +1604,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         CombatState.SetBusy(false)
         Safe('Combat.Cancel',combatMoves_.Cancel,combatMoves_,'preview-error')
     end
-    Safe('Combat.Actions',UpdateCombatActions,combatAllowed)
+    Safe('Combat.Actions',UpdateCombatActions,combatAllowed,dt)
     if combatEnemies_ and not voidInputBlocked and animPreview_.index==0 then Safe('Enemies.Update',combatEnemies_.Update,combatEnemies_,dt,nomi_:Position()) end
     if trainingDummy_ then Safe('Debug.Dummy',trainingDummy_.Update,trainingDummy_) end
     if combatArrows_ then Safe('Arrows.Update',combatArrows_.Update,combatArrows_,dt) end

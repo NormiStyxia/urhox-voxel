@@ -96,6 +96,14 @@ local function Options(touch)
         onClose=function(reason) closed[#closed+1]=reason end}
 end
 
+-- Move the visible cursor to a screen point with physical mouse deltas.
+local function PointAt(x,y)
+ local l=Wheel.DebugLayout();local c=Wheel.DebugState()
+ relative.x=(x-l.cx-c.virtualX)*dpr/(.65*l.size)
+ relative.y=(y-l.cy-c.virtualY)*dpr/(.65*l.size)
+ frame=frame+1
+end
+
 -- Hollow ring geometry and reusable count-driven selection.
 for _,screen in ipairs({{1280,720},{320,430},{844,390},{390,844}}) do
     for _,anchor in ipairs({{0,0},{.5,.5},{1,1}}) do
@@ -170,7 +178,7 @@ accept=true;assert(Wheel.Confirm());assert(not Wheel.Confirm());Eq(calls,2);Flus
 
 -- PC movement selects direction; Escape and secondary click only cancel.
 Reset();assert(Wheel.Open(Options()));local l=Wheel.DebugLayout();local slot=l.slots[2]
-relative.x,relative.y=math.floor((slot.x-l.cx)*dpr),math.floor((slot.y-l.cy)*dpr);frame=frame+1;Wheel.Update(.02)
+PointAt(slot.x,slot.y);Wheel.Update(.02)
 Eq(Wheel.DebugState().selected,'bow');assert(Wheel.Confirm());Flush()
 Eq(input.mouseMode,MM_RELATIVE,'PC retirement preserves relative mode')
 -- Dead zone, DPR, frame sampling, final release delta, and anchor motion.
@@ -178,17 +186,17 @@ for _,density in ipairs({1,2,3})do
  Reset();dpr=density;assert(Wheel.Open(Options()))
  relative.x,relative.y=3*dpr,0;Wheel.Update(.02);Eq(Wheel.DebugState().selected,'sword','deadzone retains current')
  l=Wheel.DebugLayout();slot=l.slots[2]
- relative.x,relative.y=math.floor((slot.x-l.cx)*dpr),math.floor((slot.y-l.cy)*dpr);frame=frame+1
+ PointAt(slot.x,slot.y)
  -- Q-up may Confirm before late-frame Update, so consume its final delta here.
  assert(Wheel.Confirm());Eq(selected[#selected],'bow');Flush();Eq(input.mouseMode,MM_RELATIVE)
  Reset();assert(Wheel.Open(Options()));l=Wheel.DebugLayout();slot=l.slots[2]
- relative.x,relative.y=50,0;Wheel.Update(.02)
+ PointAt(slot.x,slot.y);Wheel.Update(.02)
  local once=Wheel.DebugState().virtualX;Wheel.Update(.02,{anchorX=.8,anchorY=.3})
  Eq(Wheel.DebugState().virtualX,once,'frame delta accumulated once, anchor is independent')
  layer=overlay;layer.props.onPointerMove(SlotEvent(1));Eq(Wheel.DebugState().selected,'bow','absolute pointer events ignored')
  layer.props.onPointerDown(SlotEvent(1));layer.props.onPointerUp(SlotEvent(1));assert(not Wheel.DebugState().closing,'left click cannot confirm PC selection')
 end
-Reset();assert(Wheel.Open(Options()));relative.x=-120;Wheel.Update(.02)
+Reset();assert(Wheel.Open(Options()));PointAt(Wheel.DebugLayout().cx-120,Wheel.DebugLayout().cy);Wheel.Update(.02)
 assert(not Wheel.Confirm(),'outside arc cancels, no forced closest sector');Flush()
 -- Web loss is reported once and never requests pointer lock or changes mode.
 Reset();platform='Web';assert(Wheel.Open(Options()));locked=false;input.mouseMode=0
@@ -227,3 +235,28 @@ end
 assert(inner and outer,'concentric hollow boundaries')
 assert(cleared>=12,'mode transitions clear touch actions')
 print('weapon_wheel: geometry, DPI, pointer, selection, guard, teardown, drawing PASS')
+
+-- Three-item visible cursor: no hidden-origin jump, opening delta ignored,
+-- small movement stays selected, boundary noise cannot oscillate selection.
+Reset();local opts3=Options();opts3.items={{id='sword'},{id='bow'},{id='time'}}
+relative.x,relative.y=900,900
+assert(Wheel.Open(opts3));Wheel.Update(.02)
+Eq(Wheel.DebugState().selected,'sword','opening camera delta ignored')
+l=Wheel.DebugLayout();local initial=Wheel.DebugState()
+assert(initial.virtualX~=0 and initial.virtualY~=0,'cursor begins at selected medallion')
+relative.x,relative.y=12,0;frame=frame+1;Wheel.Update(.02)
+Eq(Wheel.DebugState().selected,'sword','small hand motion stays on current item')
+for _,angleOffset in ipairs({1,3,-1,2}) do
+ local angle=l.slots[1].to+math.rad(angleOffset);local r=(l.inner+l.outer)/2
+ PointAt(l.cx+math.cos(angle)*r,l.cy+math.sin(angle)*r);Wheel.Update(.02)
+ Eq(Wheel.DebugState().selected,'sword','shared-edge hysteresis')
+end
+PointAt(l.slots[2].x,l.slots[2].y);Wheel.Update(.02)
+Eq(Wheel.DebugState().selected,'bow')
+PointAt(l.slots[3].x,l.slots[3].y);assert(Wheel.Confirm());Eq(selected[#selected],'time');Flush()
+-- Exercise the actual cursor render path, not just selection geometry.
+Reset();assert(Wheel.Open(opts3));local n=#pathPoints;overlay:Render(vg)
+local st=Wheel.DebugState();l=Wheel.DebugLayout()
+Eq(pathPoints[#pathPoints-3].x,l.cx+st.virtualX,'cursor tip matches hit-test position')
+assert(#pathPoints>n)
+print('PASS visible PC cursor, 3-slot targeting, reduced gain, boundary hysteresis, opening-frame delta')

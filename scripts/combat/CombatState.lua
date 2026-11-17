@@ -171,7 +171,7 @@ function M.Enter(reason)
     quiet, idle, glow, transition = 0, 0, 0, .3
     Pose('back')
     Changed(reason or 'manual')
-    if options.say then options.say(options.explicitSelection and '武器就绪 · 按住 Q 切换' or '拔刃 · 时间之力暂息') end
+    if options.say then options.say(options.explicitSelection and '武器就绪 · Q 点按切换 / 长按选择' or '拔刃 · 时间之力暂息') end
     return true
 end
 ---@param reason string|nil

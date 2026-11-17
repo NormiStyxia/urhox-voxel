@@ -36,6 +36,44 @@ function G:init(opts)
     self.grip=self.elbow and self.elbow.position+self.elbowPose*self.palm.position or self.palm.position
 end
 function G:IsOpen() return self.active end
+-- A press is only a candidate until release/hold. It owns no overlay or pose.
+function G:BeginPress()
+    if self.active or self.pending or self.o.wheel.IsBlocked() or not self.o.canOpen()
+        or not self.o.moves:CanCancel() then return false end
+    self.pending,self.holdTime=true,0
+    return true
+end
+function G:UpdatePress(dt,held,allowed)
+    if not self.pending then return end
+    if not allowed or not self.o.canOpen() or not self.o.moves:CanCancel() then
+        self.pending=false;return
+    end
+    self.holdTime=self.holdTime+math.max(0,dt or 0)
+    if held then
+        if self.holdTime>=.22 then self.pending=false;self:Open(false) end
+    else
+        self.pending=false
+        -- A long hold released on a slow frame must not become a quick swap.
+        if self.holdTime<.22 then self:Cycle() end
+    end
+end
+function G:Cycle()
+    if self.active or self.o.wheel.IsBlocked() or not self.o.canOpen()
+        or not self.o.moves:CanCancel() then return false end
+    local selected=self.o.selection and self.o.selection() or self.o.state.GetWeapon()
+    local order={'sword','bow','time'}
+    local target='sword'
+    for i,id in ipairs(order) do if selected==id then target=order[i%#order+1];break end end
+    -- Scene cancellation callbacks must not erase the newly accepted swap.
+    self.committing=true
+    self.o.moves.suspended=true
+    self.o.takeInput()
+    local ok,accepted=pcall(self.o.select,target)
+    self.o.releaseInput('quick-cycle')
+    self.committing=false
+    if not ok then error(accepted,0) end
+    return accepted==true
+end
 function G:Open(touch)
     if self.active or self.o.wheel.IsBlocked() or not self.o.canOpen() or not self.o.moves:CanCancel() then return false end
     self.active,self.committing,self.accepted,self.weight=true,false,false,0
@@ -74,6 +112,7 @@ function G:Closed(reason)
     self.closing=false
 end
 function G:ForceClose(reason)
+    self.pending=false
     self.weight=0 -- hard interruptions never cover hit/death/mount poses
     self.forceClosing=true
     self.o.wheel.ForceClose(reason or 'interrupted')

@@ -24,7 +24,7 @@ end
 local ready=false
 local EMPTY={}
 local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='R'}}
-local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='run',icon='sprint',key='Shift'},{name='swap',key='按住 Q'}}
+local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='run',icon='sprint',key='Shift'},{name='swap',key='Q'}}
 local MESSAGE_STEPS={-4,0,4,0}
 local MESSAGE_ALPHA={.34,.67,1,1}
 local combatObjective={x=0,y=0,h=0}
@@ -280,9 +280,9 @@ end
 function M.HelpLines(mode)
     if M.helpLines then return M.helpLines[mode] or M.helpLines.explore end
     M.helpLines={
-    combat= {'WASD 移动 · Space 跳跃','左键五连/蓄力 · 空中下落攻击','右键重击 · Shift 加速跑','按住 Q 选剑 / 弓 / 法器','Esc / 右键取消选武器','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
+    combat= {'WASD 移动 · Space 跳跃','左键五连/蓄力 · 空中下落攻击','右键重击 · Shift 加速跑','点按 Q 切下一把 · 长按 Q 选装备','Esc / 右键取消选武器','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
     mounted= {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Tab 远景 · Esc 释放鼠标','H 隐藏说明'},
-    explore= {'WASD 移动 · Space 跳跃','Shift 按住加速跑','左键蓄力碎时 · E 冻结 · R 回溯','按住 Q 选装备 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+    explore= {'WASD 移动 · Space 跳跃','Shift 按住加速跑','左键蓄力碎时 · E 冻结 · R 回溯','Q 点按切换 / 长按选择 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Tab 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
     }
     return M.helpLines[mode] or M.helpLines.explore
 end

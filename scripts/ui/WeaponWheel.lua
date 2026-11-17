@@ -208,6 +208,15 @@ function Layer:Render(vg)
     if not s or s.layer~=self then return end
     nvgSave(vg);nvgScale(vg,s.factor,s.factor)
     M.Draw(vg,s.layout,s.selected,s.items,s.closing and math.max(0,1-s.closeTime/.1) or math.min(1,s.age/.12))
+    if not s.touch and not s.closing then
+        -- Visible virtual cursor retains browser pointer lock; no re-capture click.
+        local x,y=s.layout.cx+s.virtualX,s.layout.cy+s.virtualY
+        local k=s.layout.size
+        nvgBeginPath(vg);nvgMoveTo(vg,x,y)
+        nvgLineTo(vg,x+4*k,y+19*k);nvgLineTo(vg,x+8*k,y+13*k)
+        nvgLineTo(vg,x+15*k,y+11*k);nvgClosePath(vg)
+        nvgFillColor(vg,Glass.Color(IVORY,1));nvgFill(vg);Stroke(vg,INK,1,2*k)
+    end
     nvgRestore(vg)
 end
 local function Pick(s,event,strict)
@@ -278,6 +287,11 @@ function M.Open(opts)
     if GetPlatform()=='Web' then s.wasLocked=input:IsMouseLocked() end
     session=s
     Metrics(s)
+    -- Start on the current item, not the invisible origin where tiny movement
+    -- produces huge angular changes. Discard the camera delta on the opening frame.
+    local slot=s.layout.slots[s.selected]
+    s.virtualX,s.virtualY=slot.x-s.layout.cx,slot.y-s.layout.cy
+    s.mouseFrame=GetTime():GetFrameNumber()
     s.layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',pointerEvents='auto',
         onPointerDown=Down,onPointerMove=Move,onPointerUp=Up,
         onPointerCancel=function(event)
@@ -326,14 +340,22 @@ local function RelativeSelection(s)
     s.mouseFrame=frame
     local delta=input:GetMouseMove()
     local dpr=math.max(1,graphics:GetDPR())
-    local x,y=s.virtualX+delta.x/dpr,s.virtualY+delta.y/dpr
+    local gain=.65*s.layout.size
+    local x,y=s.virtualX+delta.x/dpr*gain,s.virtualY+delta.y/dpr*gain
     local radius=math.sqrt(x*x+y*y)
     local limit=s.layout.outer
     if radius>limit then x,y=x*limit/radius,y*limit/radius;radius=limit end
     s.virtualX,s.virtualY=x,y
-    if radius<18*s.layout.size then s.selected=s.initialSelected;return end
+    if radius<42*s.layout.size then s.selected=s.initialSelected;return end
     local r=(s.layout.inner+s.layout.outer)*.5
-    s.selected=M.HitTest(s.layout,s.layout.cx+x/radius*r,s.layout.cy+y/radius*r,false)
+    local nextSelection=M.HitTest(s.layout,s.layout.cx+x/radius*r,s.layout.cy+y/radius*r,false)
+    local previous=s.layout.slots[s.selected or 0]
+    local angle=math.atan(y,x)
+    -- Four degrees of hysteresis at shared boundaries prevent hand jitter.
+    -- Moving outside the arc still cancels rather than forcing a choice.
+    if nextSelection and previous and angle>=previous.from-math.rad(4)
+        and angle<=previous.to+math.rad(4) then return end
+    s.selected=nextSelection
 end
 local function PointerLost(s)
     if s.touch or not s.wasLocked then return false end
