@@ -181,9 +181,18 @@ def mat_wood():
     ramp.color_ramp.elements[0].position = 0.35; ramp.color_ramp.elements[0].color = (0.009, 0.006, 0.015, 1)
     ramp.color_ramp.elements[1].position = 0.75; ramp.color_ramp.elements[1].color = (0.046, 0.030, 0.070, 1)
     nt.links.new(nz.outputs['Fac'], ramp.inputs['Fac'])
-    at = node(nt, 'ShaderNodeAttribute', (-700, 300)); at.attribute_name = 'tint'
-    sep = node(nt, 'ShaderNodeSeparateColor', (-480, 330))
-    nt.links.new(at.outputs['Color'], sep.inputs['Color'])
+    sx = node(nt, 'ShaderNodeSeparateXYZ', (-700, 330))
+    nt.links.new(tc.outputs['Object'], sx.inputs['Vector'])
+    cx = node(nt, 'ShaderNodeCombineXYZ', (-520, 330))
+    nt.links.new(sx.outputs['X'], cx.inputs['X']); nt.links.new(sx.outputs['Z'], cx.inputs['Z'])
+    ln = node(nt, 'ShaderNodeVectorMath', (-360, 330)); ln.operation = 'LENGTH'
+    nt.links.new(cx.outputs['Vector'], ln.inputs[0])
+    mr = nt.nodes.new('ShaderNodeMapRange'); mr.location = (-200, 330)
+    mr.inputs['From Min'].default_value = 0.30; mr.inputs['From Max'].default_value = 0.52
+    nt.links.new(ln.outputs['Value'], mr.inputs['Value'])
+    class _S:   # keep the later wiring unchanged: factor comes from the radial gradient
+        outputs = {'Red': mr.outputs['Result']}
+    sep = _S()
     mix = node(nt, 'ShaderNodeMix', (-220, 200)); mix.data_type = 'RGBA'
     mix.inputs[7].default_value = (0.13, 0.045, 0.28, 1)   # violet bleed
     nt.links.new(sep.outputs['Red'], mix.inputs['Factor'])
@@ -335,105 +344,141 @@ def np_median(a):
     return a[len(a) // 2] if a else 0.0
 
 
-def build_wood_from_trace(wb, flowers, seg_main, seg_thin):
-    """Branches = tubes along the traced skeleton, radius from the silhouette (1:1 with the side view);
-    depth from the front view; free ends taper to points; flowers sit on stems at the traced blobs."""
+def build_wood_from_trace(flowers, wood_mat):
+    """One fused tree: branches = Skin-modifier graph along the traced skeleton (radius from the silhouette),
+    junctions shared so branches grow out of each other, free tips taper to points, flower stems are extra
+    graph branches. Subdivision + smooth shading give a continuous bark surface (no tube ends / bead hubs)."""
     B = TRACE['branches']
-    grip_band = 0.069
 
     def zfun(x, y):
-        # depth budget grows away from the grip, tapers at the tips; deterministic weave
         amp = 0.030 * min(1.0, max(0.0, (abs(y - YC) - 0.05) / 0.18)) * min(1.0, (0.50 - abs(y - YC)) / 0.18 + 0.35)
         return amp * math.sin(9.1 * x + 6.7 * y + 1.3 * math.sin(13.0 * y))
 
-    # junction clustering (endpoints closer than 0.012 L share one depth + a hub sphere)
-    ends = []
-    for bi, br in enumerate(B):
-        ends.append((bi, 0, br['pts'][0])); ends.append((bi, 1, br['pts'][-1]))
-    hubs = []
-    for bi, k, pt in ends:
-        for h in hubs:
-            if math.dist(h['p'], pt) < 0.022:
-                h['m'].append((bi, k)); h['r'] = max(h['r'], float(np_median(B[bi]['rad'][1:4] if k == 0 else B[bi]['rad'][-4:-1]))); break
-        else:
-            hubs.append(dict(p=pt, m=[(bi, k)], r=float(np_median(B[bi]['rad'][1:4] if k == 0 else B[bi]['rad'][-4:-1]))))
-    hub_of = {}
-    for hi, h in enumerate(hubs):
-        for m in h['m']:
-            hub_of[m] = hi
-    free = {}
-    for hi, h in enumerate(hubs):
-        for bi, k in h['m']:
-            free[(bi, k)] = len(h['m']) == 1
+    verts, radii, edges = [], [], []          # world positions, skin radius, vertex index pairs
+
+    def add_vert(co, r):
+        verts.append(co.copy()); radii.append(r)
+        return len(verts) - 1
+
+    hub_idx = {}                              # clustered junction -> vertex index
+
+    def hub_vertex(pt, r):
+        for key, (hp, vi) in hub_idx.items():
+            if math.dist(hp, pt) < 0.022:
+                radii[vi] = max(radii[vi], r)
+                return vi
+        vi = add_vert(P(pt[0], pt[1], zfun(*pt)), r)
+        hub_idx[len(hub_idx)] = (pt, vi)
+        return vi
+
+    # which endpoints are junctions? (>=2 branch ends within the cluster distance)
+    ends = [(bi, k, br['pts'][0 if k == 0 else -1]) for bi, br in enumerate(B) for k in (0, 1)]
+    def n_near(pt):
+        return sum(1 for _, _, q in ends if math.dist(q, pt) < 0.022)
+
     for bi, br in enumerate(B):
         pts, rad = br['pts'], br['rad']
         n = len(pts)
         if n < 3:
             continue
-        zs = []
-        z0 = zfun(*hubs[hub_of[(bi, 0)]]['p'])
-        z1 = zfun(*hubs[hub_of[(bi, 1)]]['p'])
-        for i, (x, y) in enumerate(pts):
-            t = i / (n - 1)
-            zs.append(z0 + (z1 - z0) * (t * t * (3 - 2 * t)) + 0.35 * zfun(x + 0.5, y))
-        P3 = [P(x, y, z) for (x, y), z in zip(pts, zs)]
-        for end, idx_ in ((0, 0), (1, n - 1)):          # snap ends onto their hub so tubes connect
-            hb_ = hubs[hub_of[(bi, end)]]
-            if len(hb_['m']) > 1:
-                P3[idx_] = P(hb_['p'][0], hb_['p'][1], zfun(*hb_['p']))
-        P3 = curve(P3, max(n * 2, 12))
-        m = len(P3)
+        z0, z1 = zfun(*pts[0]), zfun(*pts[-1])
+        P3 = [P(x, y, z0 + (z1 - z0) * (i / (n - 1)) ** 2 * (3 - 2 * i / (n - 1)) + 0.35 * zfun(x + 0.5, y))
+              for i, (x, y) in enumerate(pts)]
+        length = sum((P3[i + 1] - P3[i]).length for i in range(n - 1))
+        m = max(4, int(length / (0.011 * L)))
+        Q = resample(curve(P3, max(m * 3, 12)), m)
         def lin(i):
-            f = i * (n - 1) / (m - 1)
-            j = min(n - 2, int(f))
+            f = i * (n - 1) / (m - 1); j = min(n - 2, int(f))
             return rad[j] + (rad[j + 1] - rad[j]) * (f - j)
-        rr = [max(0.0022, lin(i)) * L * BR_SCALE for i in range(m)]
-        # light smoothing so the silhouette radius never ribs the tube
+        rr = [max(0.0025, lin(i)) * L * BR_SCALE for i in range(m)]
         for _ in range(3):
             rr = [rr[0]] + [(rr[i - 1] + 2 * rr[i] + rr[i + 1]) / 4 for i in range(1, m - 1)] + [rr[-1]]
-        # taper free tips to a point over the last 30 %
-        for k, end in ((0, 0), (1, 1)):
-            if free.get((bi, end)):
+        free0, free1 = n_near(pts[0]) < 2, n_near(pts[-1]) < 2
+        for end, is_free in ((0, free0), (1, free1)):          # taper free tips
+            if is_free:
                 for i in range(m):
                     t = i / (m - 1) if end == 1 else 1 - i / (m - 1)
-                    if t > 0.70:
-                        rr[i] *= max(0.0, 1 - (t - 0.70) / 0.30) ** 0.9
-        if free.get((bi, 1)):
-            rr[-1] = 0.0
-        if free.get((bi, 0)):
-            rr[0] = 0.0
-        wb.tube(P3, rr, seg_main if max(rr) > 0.007 * L else seg_thin,
-                lambda t, bi=bi: (0.0, 0, 0), cap=False, jitter=0.015)
-        br['_p3'] = P3; br['_rr'] = rr
-    # hub spheres hide the seams between tubes
-    for h in hubs:
-        if len(h['m']) < 3:
-            continue
-        x, y = h['p']
-        c = P(x, y, zfun(x, y))
-        res = bmesh.ops.create_icosphere(wb.bm, subdivisions=2, radius=h['r'] * L * BR_SCALE * 1.0, matrix=Matrix.Translation(c))
-        for v in res['verts']:
-            v[wb.tint] = (0.0, 0.0, 0.0, 1.0)
-    # flowers on stems: nearest branch point -> traced flower centre
-    allp = []
-    for br in B:
-        for q, r_ in zip(br.get('_p3', []), br.get('_rr', [])):
-            allp.append((q, r_))
+                    if t > 0.55:
+                        rr[i] *= max(0.0, 1 - (t - 0.55) / 0.45) ** 0.85
+        idx = []
+        for i in range(m):
+            if i == 0 and not free0:
+                idx.append(hub_vertex(pts[0], rr[0] / L))
+            elif i == m - 1 and not free1:
+                idx.append(hub_vertex(pts[-1], rr[-1] / L))
+            else:
+                idx.append(add_vert(Q[i], max(rr[i], 0.0008 * L)))
+        for i in range(m - 1):
+            edges.append((idx[i], idx[i + 1]))
+        br['_Q'], br['_rr'], br['_idx'] = Q, rr, idx
+
+    # flower stems: new graph branches that start on the nearest existing vertex
     for f in TRACE['flowers']:
         fc = P(f['x'], f['y'], f['z'])
-        best = min(allp, key=lambda qr: (qr[0] - fc).length)
-        q0, r0 = best
+        vi0 = min(range(len(verts)), key=lambda i: (verts[i] - fc).length)
+        q0 = verts[vi0]
         d = fc - q0
+        r0 = max(radii[vi0], 0.0055 * L)
         if d.length > 0.012 * L:
             nrm = Vector((-d.z, 0, d.x)).normalized() * (0.18 * d.length)
-            if nrm.x * (fc.x - XC * 0) < 0:
+            if nrm.x < 0:
                 nrm = -nrm
-            S = curve([q0, q0 + d * 0.33 + nrm, q0 + d * 0.72 + nrm * 0.55, fc - d.normalized() * 0.010 * L], 14)
-            wb.tube(S, taper(len(S), max(r0 * 0.85, 0.0055 * L), 0.0036 * L, 1.0), seg_thin, lambda t: (t * 0.5, 0, 0))
+            S = resample(curve([q0, q0 + d * 0.33 + nrm, q0 + d * 0.72 + nrm * 0.55, fc - d.normalized() * 0.010 * L], 14),
+                         max(4, int(d.length / (0.012 * L))))
+            prev = vi0
+            for i in range(1, len(S)):
+                t = i / (len(S) - 1)
+                prev_new = add_vert(S[i], max(0.0030 * L, r0 * (1 - t) + 0.0036 * L * t) * 0.85)
+                edges.append((prev, prev_new)); prev = prev_new
         inplane = d.normalized() if d.length > 1e-6 else Vector((0, 0, 1))
-        facing = Vector((0, -1.0 if len(flowers) % 3 else 1.0, 0))      # blooms open toward the side camera (mostly)
+        facing = Vector((0, -1.0 if len(flowers) % 3 else 1.0, 0))
         axis = (inplane * 0.45 + facing * 0.90).normalized()
         flowers.append((fc, axis, f['radius'] * L * FL_SCALE))
+
+    me = bpy.data.meshes.new('WoodSkin')
+    me.from_pydata([tuple(v) for v in verts], edges, [])
+    ob = bpy.data.objects.new('Wood', me)
+    bpy.context.scene.collection.objects.link(ob)
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    sk = ob.modifiers.new('Skin', 'SKIN')
+    sk.branch_smoothing = 0.9
+    sk.use_smooth_shade = True
+    sk.use_x_symmetry = sk.use_y_symmetry = sk.use_z_symmetry = False
+    ob.data.skin_vertices.new() if False else None
+    layer = me.skin_vertices[0]
+    for i, r_ in enumerate(radii):
+        layer.data[i].radius = (r_ * 1.05, r_ * 1.05)
+    # one root per connected component
+    comp = {}
+    adj = {i: [] for i in range(len(verts))}
+    for a_, b_ in edges:
+        adj[a_].append(b_); adj[b_].append(a_)
+    seen = set()
+    for i in range(len(verts)):
+        if i in seen:
+            continue
+        stack, members = [i], []
+        while stack:
+            u = stack.pop()
+            if u in seen:
+                continue
+            seen.add(u); members.append(u); stack.extend(adj[u])
+        root = max(members, key=lambda u: radii[u])
+        layer.data[root].use_root = True
+    sub = ob.modifiers.new('Sub', 'SUBSURF')
+    sub.levels = sub.render_levels = max(1, int(round(2 * min(1.0, DETAIL + 0.5))))
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = ob.evaluated_get(dg)
+    baked = bpy.data.meshes.new_from_object(ev)
+    ob.modifiers.clear()
+    ob.data = baked
+    for pl in ob.data.polygons:
+        pl.use_smooth = True
+    ob.data.materials.clear()
+    ob.data.materials.append(wood_mat)
+    return ob
 
 
 def build_bow():
@@ -456,9 +501,8 @@ def build_bow():
     seg_thin = max(4, int(7 * DETAIL))
     gem_base_x, gem_tip_x = 0.120, 0.004
     tips = {1: P(0.2736, 0.013), -1: P(0.2736, 0.992)}          # string nocks (measured on the sheet)
-    build_wood_from_trace(wood_b, flowers, seg_main, seg_thin)
+    wood_ob = build_wood_from_trace(flowers, wood)
 
-    wood_ob = wood_b.finish(wood)
 
     # ---- flowers
     for pos, axis, size in flowers:
@@ -487,8 +531,8 @@ def build_bow():
     grip.finish(cloth_m)
 
     # ---- crystal (long faceted shard pointing at the target) + inner glow core
-    gem(P(gem_tip_x - 0.008, YC), P(gem_base_x + 0.020, YC), 0.030 * L, 0.030 * L, crystal_m, 'Crystal', 1.0)
-    gem(P(gem_tip_x - 0.008, YC), P(gem_base_x + 0.020, YC), 0.030 * L, 0.030 * L, core_m, 'CrystalCore', 0.52)
+    gem(P(0.005, YC), P(0.114, YC), 0.032 * L, 0.047 * L, crystal_m, 'Crystal', 1.0)
+    gem(P(0.005, YC), P(0.114, YC), 0.032 * L, 0.047 * L, core_m, 'CrystalCore', 0.50)
 
     # ---- string (nocks at the measured limb tips)
     top, bottom = tips[1], tips[-1]
