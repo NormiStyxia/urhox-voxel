@@ -114,14 +114,37 @@ function E:Slice(a,b,feet,radius,limit)
     if hit.normal.y>.55 or center.y-radius*2<feet.y+.15 then
         self:Report('sword','floor-guard',hit,center,radius);return
     end
-    for i=1,self.count do
-        if (self.marks[i].position-center):LengthSquared()<(radius*1.4)^2 then return end
-    end
     -- A blade pose can visually cross a wall; never carve its hidden far side.
     if self.rays>=E.MAX_RAYS then return end
     local target=hit.position+hit.normal*.02
-    local wall=self:Cast(feet+Vector3(0,.9,0),target)
-    if wall and wall<1-1e-5 then self:Report('sword','occluded',hit,center,radius);return end
+    local sightOrigin=feet+Vector3(0,.9,0)
+    if (target-sightOrigin):LengthSquared()<1e-8 then
+        self:Report('sword','occluded',hit,center,radius);return
+    end
+    local wall,front=self:Cast(sightOrigin,target)
+    if wall and wall<1-1e-5 then
+        -- A sampled blade can start INSIDE the struck stone (zero DDA normal),
+        -- especially at low FPS. Its own exposed surface is not a separate wall.
+        -- Resolve only that same volume's first surface, within this blade
+        -- segment's existing cut radius; never reach through another volume or
+        -- drill the hidden cell behind the surface.
+        local exposed=front and front.volume==hit.volume and self:Eligible(front) and E.Cell(front)
+        local segment=b-a
+        local length2=segment:LengthSquared()
+        local t=exposed and length2>1e-8 and math.max(0,math.min(1,(exposed-a):DotProduct(segment)/length2)) or 0
+        if not exposed or (exposed-(a+segment*t)):LengthSquared()>radius*radius
+            or front.normal:LengthSquared()<.5 then
+            self:Report('sword','occluded',hit,center,radius);return
+        end
+        hit,center=front,exposed
+        if hit.normal.y>.55 or center.y-radius*2<feet.y+.15 then
+            self:Report('sword','floor-guard',hit,center,radius);return
+        end
+        self:Report('sword','surface-contact',hit,center,radius)
+    end
+    for i=1,self.count do
+        if (self.marks[i].position-center):LengthSquared()<(radius*1.4)^2 then return end
+    end
     self.count=self.count+1 -- reserve before native callbacks; failed hard hits do not drill
     self.marks[self.count].position=center
     self.frameCuts=self.frameCuts+1

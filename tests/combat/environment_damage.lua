@@ -143,6 +143,31 @@ damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),2,'sword_he
 assert(#calls==1 and calls[1].radius==E.HEAVY_RADIUS)
 print('PASS sword strip/budgets/duplicates/30-120Hz/ground/landing/occlusion')
 
+-- GridHit starts inside a solid cell with normal=(0,0,0). Visibility must
+-- resolve its own exposed stone surface, not reject it as an unrelated wall.
+for _,fps in ipairs({20,30,60,120}) do
+    reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
+    damage:Melee(Vector3(.10,1.5,.5),Vector3(.65,1.5,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,1/fps)
+    assert(#calls==1 and calls[1].removed>0,'inside-cell blade resolves exposed surface at '..fps..'Hz')
+    assert(calls[1].center.x==.125,'cut first surface, not the hidden blade-origin cell')
+    assert(v:GetGrid():IsSolid(4,5,2),'deep stone survives')
+end
+reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
+damage:Melee(Vector3(.7,1.5,.5),Vector3(1.2,1.5,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,0)
+assert(#calls==0,'same volume is not permission to carve a distant hidden surface')
+reset()
+local frontWall=volume(Vector3(-.5,0,0),.25,{x=1,y=12,z=8})
+v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
+damage:Melee(Vector3(.1,1.5,.5),Vector3(.65,1.5,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,0)
+assert(#calls==0,'even a destructible different volume must block the hidden blade')
+reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
+damage:Melee(Vector3(.1,.3,.5),Vector3(.65,.3,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,0)
+assert(#calls==0,'inside-cell contact never relaxes floor clearance')
+reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
+damage:Melee(Vector3(.1,1.5,.5),Vector3(.65,1.5,.5),Vector3(.1,.6,.5),1,'sword_light_1',true,0)
+assert(#calls==0,'visibility origin inside solid cannot fabricate an exposed face')
+print('PASS embedded blade: same-volume exposed contact, distance bound, different-volume wall, floor and embedded observer guards')
+
 local function arrowCase(enemyFirst,initial,protected)
     reset();v=volume(Vector3(1,0,0),.25,{x=4,y=8,z=4});v.destructible=not protected
     damage=new()
