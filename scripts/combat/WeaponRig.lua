@@ -1235,11 +1235,13 @@ function Rig:UpdateBowVisual()
     local tipZ=thornOn and (ThornVisual.StringZ(thorn)-bend) or (-2-self.bowStage)*.03
     if thornOn then
         ThornVisual.SetBend(thorn,bend);ThornVisual.SetStringVisible(thorn,not showString)
+        self.thornAim=(drawn or vibrating) and 1 or 0
     end
     for i,mesh in ipairs(self.bowStrings) do
         mesh.node.enabled=showString
         if showString then
-            local tip=Vector3(0,(i==1 and 1 or -1)*(thornOn and ThornVisual.StringHalf(thorn) or self.bowHalfHeight),tipZ)
+            local tip=thornOn and thorn.node.rotation*Vector3(0,(i==1 and 1 or -1)*ThornVisual.StringHalf(thorn),tipZ)
+                or Vector3(0,(i==1 and 1 or -1)*self.bowHalfHeight,tipZ)
             local delta=tip-nock
             mesh.node:SetDirection(delta:Normalized())
             mesh.node.scale=Vector3(.35,.35,delta:Length()/.03)
@@ -1402,7 +1404,7 @@ function Rig:AttachThorn(entry)
     end
 end
 ---@param dt number?
-function Rig:SyncThorn()
+function Rig:SyncThorn(dt)
     local entry=self.entries.bow
     local thorn=entry and entry.thorn
     if not thorn then return end
@@ -1412,11 +1414,18 @@ function Rig:SyncThorn()
     local node=entry.mesh.node
     if node.scale.x>.01 then node.scale=Vector3(1e-4,1e-4,1e-4) end
     ThornVisual.SetVisible(thorn,self.active=='bow' and entry.mesh.alpha>=.5)
+    -- Aim stance eases in/out (~.15s); the voxel string tips follow the rotated limbs (UpdateBowVisual).
+    local target=(self.visualState=='hand' and self.thornAim) or 0
+    local k=thorn.aimK or 0
+    local step=(dt or 0)/.15
+    k=k<target and math.min(target,k+step) or math.max(target,k-step)
+    thorn.aimK=k
+    ThornVisual.SetAim(thorn,k)
 end
 function Rig:Update(dt)
     self:UpdateCore(dt)
     self:SyncWing(dt)
-    self:SyncThorn()
+    self:SyncThorn(dt)
 end
 
 function Rig:Dispose()

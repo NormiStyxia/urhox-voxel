@@ -4,7 +4,7 @@
 // Opaque on purpose: crystal depth is faked from the cut normals + a glowing core, no screen sampling.
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
-uniform vec4 wood_color : source_color = vec4(0.13, 0.085, 0.22, 1.0);
+uniform vec4 wood_color : source_color = vec4(0.045, 0.040, 0.058, 1.0);
 uniform vec4 petal_base : source_color = vec4(0.93, 0.50, 0.86, 1.0);
 uniform vec4 petal_tip : source_color = vec4(1.00, 0.95, 1.00, 1.0);
 uniform vec4 crystal_color : source_color = vec4(0.52, 0.24, 0.98, 1.0);
@@ -48,7 +48,7 @@ void fragment() {
     float fissure = sin(obj_pos.y * 150.0 + obj_pos.x * 55.0 + obj_pos.z * 40.0) * 0.5 + 0.5;
     float drift = sin(obj_pos.y * 17.0 + obj_pos.x * 9.0) * 0.5 + 0.5;
     vec3 wood = wood_color.rgb * (0.62 + 0.30 * fissure + 0.28 * drift);
-    vec3 wood_bleed = vec3(0.55, 0.30, 0.95) * 0.02 * (0.5 + 0.5 * drift);
+    vec3 wood_bleed = vec3(0.55, 0.30, 0.95) * 0.006 * (0.5 + 0.5 * drift);
 
     // petal: deep magenta at the base to pale pink tips, soft rim like thin tissue
     float u = clamp(COLOR.a, 0.0, 1.0);

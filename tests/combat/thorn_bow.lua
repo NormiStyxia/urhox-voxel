@@ -64,6 +64,11 @@ assert(not thorn.stringNode.enabled and rig.bowStrings[1].node.enabled)
 assert(thorn.bendKey==math.floor((.02+rig.bowStage*.03)*100+.5))
 rig:CancelBow();rig:Update(0)
 assert(thorn.stringNode.enabled and thorn.bendKey==0)
+-- hidden bow must not leave string/sand children rendering at the last pose (Node:SetEnabled is not recursive)
+rig:SetPose('hidden');rig:Update(.1)
+assert(not thorn.node.enabled and not thorn.stringNode.enabled and not (thorn.sandNode and thorn.sandNode.enabled),'children follow visibility')
+rig:SetPose('hand');for _=1,10 do rig:Update(.1) end
+assert(thorn.node.enabled and thorn.stringNode.enabled)
 -- stowed on the back: arc profile faces the camera behind the character
 rig:SetPose('back');for _=1,10 do rig:Update(.1) end
 assert(rig.sockets.back_bow.rotation.y==90 or rig.sockets.back_bow.rotation.angles~=nil)

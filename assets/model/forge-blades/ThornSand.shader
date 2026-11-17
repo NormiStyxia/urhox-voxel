@@ -24,6 +24,6 @@ void vertex() {
 void fragment() {
     vec3 c = mix(head_color.rgb, tail_color.rgb, s_v);
     float fade = smoothstep(0.0, 0.08, s_v) * (1.0 - smoothstep(0.80, 1.0, s_v));
-    ALBEDO = c * 2.4;
-    ALPHA = clamp(fade * (0.35 + 0.65 * (1.0 - s_v)) * strength, 0.0, 1.0);
+    ALBEDO = c * 1.8;
+    ALPHA = clamp(fade * (0.12 + 0.40 * (1.0 - s_v)) * strength, 0.0, 1.0);
 }

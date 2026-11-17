@@ -6,7 +6,9 @@ V.ENABLED=true             -- kill switch: false = always show the voxel bow
 V.PAD=.10                  -- visual limb length = (voxel limb span + this) * SCALE (metres)
 V.SCALE=1.32               -- bows read small next to the character; Ganyu-style full-size bow
 V.STEP_VERTICES=1800       -- per Step(); build is spread over frames
-V.GRAINS=44                -- per sand stream
+V.AIM_YAW=28               -- degrees, toward the shooter's right camera
+V.AIM_ROLL=14              -- degrees, top leans right
+V.GRAINS=70                -- per sand stream
 local MATERIAL='model/forge-blades/ThornBow.xml'
 local SAND='model/forge-blades/ThornSand.xml'
 local MASK=0xFFFFFFFF
@@ -47,7 +49,7 @@ local function BuildSand(node,material,mask)
     for stream=0,1 do
         for i=0,V.GRAINS-1 do
             local s0=(i+Rand()*.8)/V.GRAINS
-            local size=.0055+.0040*Rand()
+            local size=.0020+.0016*Rand()
             local jx,jy,jz=Rand(),Rand(),Rand()
             for plane=0,1 do
                 for _,q in ipairs(quad) do
@@ -123,6 +125,8 @@ function V.New(pivot,halfHeight)
     local visual,err=Create(pivot,(halfHeight*2+V.PAD)*V.SCALE/m.height)
     if not visual then return nil,err end
     visual.node.enabled=false
+    if visual.sandNode then visual.sandNode.enabled=false end
+    visual.stringNode.enabled=false
     return visual
 end
 
@@ -183,13 +187,32 @@ end
 function V.SetVisible(visual,visible)
     if not (visual and visual.node) then return end
     visible=visible and visual.ready==true
-    if visual.node.enabled~=visible then visual.node.enabled=visible end
+    if visual.shown==visible then return end
+    visual.shown=visible
+    -- Node:SetEnabled is NOT recursive: child nodes keep rendering at the old place unless toggled too.
+    visual.node.enabled=visible
+    if visual.sandNode then visual.sandNode.enabled=visible end
+    if visual.stringNode then visual.stringNode.enabled=visible and not visual.stringHidden end
 end
 
 ---@param visual table?
 ---@param visible boolean
 function V.SetStringVisible(visual,visible)
-    if visual and visual.stringNode and visual.stringNode.enabled~=visible then visual.stringNode.enabled=visible end
+    if not (visual and visual.stringNode) then return end
+    visual.stringHidden=not visible
+    visual.stringNode.enabled=visual.shown==true and visible
+end
+
+--- Aim stance (0..1): the bow turns a little toward the camera and cants so its profile is visible.
+---@param visual table?
+---@param k number
+function V.SetAim(visual,k)
+    if not (visual and visual.node) then return end
+    local q=math.floor(math.max(0,math.min(1,k))*16+.5)
+    if visual.aimStep==q then return end
+    visual.aimStep=q
+    local u=q/16
+    visual.node.rotation=Quaternion(0,V.AIM_YAW*u,-V.AIM_ROLL*u)
 end
 
 --- Limb tips pull toward the archer by `meters` (pivot space); cached Variants, no per-frame allocation.
