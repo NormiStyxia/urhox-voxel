@@ -159,7 +159,7 @@ env.Down=function(key)return key=='Q' end
 actions(true,.016)
 assert(gesture.pending and not gesture:IsOpen(),'short press must not open wheel')
 actions(true,.12);assert(not gesture:IsOpen())
-actions(true,.11)
+actions(true,.2)
 assert(gesture:IsOpen() and live.wheel.DebugState().selected=='time' and #live.wheel.DebugLayout().slots==3,
  'Q opens the actual three-slot wheel from time mode')
 State.OnEnemyAggro('guard');assert(gesture:IsOpen() and State.GetSelection()=='time')
@@ -224,7 +224,7 @@ assert(State.GetSelection()=='sword' and not gesture.pending,'unavailable input 
 moves:Play('sword_light_1');assert(not gesture:BeginPress(),'active strike cannot queue a tap');moves:Cancel('test')
 assert(gesture:BeginPress());gesture:UpdatePress(.3,false,true)
 assert(not gesture:IsOpen() and State.GetSelection()=='sword','slow release of long hold never cycles')
-assert(gesture:BeginPress());gesture:UpdatePress(.23,true,true)
+assert(gesture:BeginPress());gesture:UpdatePress(.31,true,true)
 assert(gesture:IsOpen() and not gesture.pending);live.wheel.Cancel();drain()
 gesture:UpdatePress(.01,false,true);assert(State.GetSelection()=='sword','long hold never also cycles')
 print('PASS quick Q cycle, real cleanup and swap animation, cancelled pending, held threshold, no double-switch')

@@ -15,6 +15,8 @@ local releaseGuard = false
 local guardFrames = 0
 local fonts = setmetatable({}, {__mode='k'})
 local START, SPAN = math.rad(-96), math.rad(122)
+M.GAIN = 1.0      -- virtual cursor px per mouse px (CSS)
+M.DEADZONE = 24   -- CSS px of push before direction counts
 local function Clamp(x,a,b) return math.max(a,math.min(b,x)) end
 local function Consume(event)
     if event then event:StopPropagation(); event:PreventDefault() end
@@ -307,7 +309,7 @@ function M.Open(opts)
     end
     for i,item in ipairs(items) do s.names[i]=Label(item.name) end
     s.caption=Label('');s.caption:SetStyle({textAlign='left'})
-    s.hint=Label(s.touch and '点击选择 · 空白处取消' or '松开 Q 确认 · 右键取消')
+    s.hint=Label(s.touch and '点击选择 · 空白处取消' or '松开 Q 确认 · 滚轮切换 · 右键取消')
     s.hint:SetStyle({textAlign='left'})
     Labels(s)
     root:AddChild(s.layer);UI.PushOverlay(s.layer)
@@ -340,22 +342,38 @@ local function RelativeSelection(s)
     s.mouseFrame=frame
     local delta=input:GetMouseMove()
     local dpr=math.max(1,graphics:GetDPR())
-    local gain=.65*s.layout.size
+    local gain=M.GAIN*s.layout.size
     local x,y=s.virtualX+delta.x/dpr*gain,s.virtualY+delta.y/dpr*gain
     local radius=math.sqrt(x*x+y*y)
     local limit=s.layout.outer
     if radius>limit then x,y=x*limit/radius,y*limit/radius;radius=limit end
     s.virtualX,s.virtualY=x,y
-    if radius<42*s.layout.size then s.selected=s.initialSelected;return end
-    local r=(s.layout.inner+s.layout.outer)*.5
-    local nextSelection=M.HitTest(s.layout,s.layout.cx+x/radius*r,s.layout.cy+y/radius*r,false)
-    local previous=s.layout.slots[s.selected or 0]
+    -- Mouse wheel steps through the items like Genshin's wheel (no aiming needed).
+    local steps=input.mouseMoveWheel or 0
+    if steps~=0 then
+        local count=#s.items
+        s.selected=((((s.selected or s.initialSelected)-1)+(steps>0 and -1 or 1))%count)+1
+        local slot=s.layout.slots[s.selected]
+        s.virtualX,s.virtualY=slot.x-s.layout.cx,slot.y-s.layout.cy
+        return
+    end
+    if radius<M.DEADZONE*s.layout.size then s.selected=s.initialSelected;return end
+    -- Direction only: once past the dead zone the NEAREST sector by angle wins, so a loose push
+    -- in any direction picks something sensible and the player never lands on "nothing".
+    -- Cancel stays explicit (Esc / right click). 5 degrees of hysteresis each side of a shared edge stop flicker.
     local angle=math.atan(y,x)
-    -- Four degrees of hysteresis at shared boundaries prevent hand jitter.
-    -- Moving outside the arc still cancels rather than forcing a choice.
-    if nextSelection and previous and angle>=previous.from-math.rad(4)
-        and angle<=previous.to+math.rad(4) then return end
-    s.selected=nextSelection
+    local function Away(slot)
+        local d=math.abs(angle-slot.angle)
+        return math.min(d,2*math.pi-d)
+    end
+    local best,bestAway=nil,math.huge
+    for i,slot in ipairs(s.layout.slots) do
+        local d=Away(slot)
+        if d<bestAway then best,bestAway=i,d end
+    end
+    local previous=s.layout.slots[s.selected or 0]
+    if previous and Away(previous)<=bestAway+math.rad(10) then return end
+    s.selected=best
 end
 local function PointerLost(s)
     if s.touch or not s.wasLocked then return false end

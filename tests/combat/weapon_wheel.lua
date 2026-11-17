@@ -99,8 +99,8 @@ end
 -- Move the visible cursor to a screen point with physical mouse deltas.
 local function PointAt(x,y)
  local l=Wheel.DebugLayout();local c=Wheel.DebugState()
- relative.x=(x-l.cx-c.virtualX)*dpr/(.65*l.size)
- relative.y=(y-l.cy-c.virtualY)*dpr/(.65*l.size)
+ relative.x=(x-l.cx-c.virtualX)*dpr/(Wheel.GAIN*l.size)
+ relative.y=(y-l.cy-c.virtualY)*dpr/(Wheel.GAIN*l.size)
  frame=frame+1
 end
 
@@ -197,7 +197,7 @@ for _,density in ipairs({1,2,3})do
  layer.props.onPointerDown(SlotEvent(1));layer.props.onPointerUp(SlotEvent(1));assert(not Wheel.DebugState().closing,'left click cannot confirm PC selection')
 end
 Reset();assert(Wheel.Open(Options()));PointAt(Wheel.DebugLayout().cx-120,Wheel.DebugLayout().cy);Wheel.Update(.02)
-assert(not Wheel.Confirm(),'outside arc cancels, no forced closest sector');Flush()
+assert(Wheel.Confirm(),'a push in any direction picks the nearest sector instead of cancelling');Eq(selected[#selected],'sword');Flush()
 -- Web loss is reported once and never requests pointer lock or changes mode.
 Reset();platform='Web';assert(Wheel.Open(Options()));locked=false;input.mouseMode=0
 local oldPrint=print;local losses=0

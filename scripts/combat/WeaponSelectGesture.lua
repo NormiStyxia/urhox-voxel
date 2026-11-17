@@ -1,6 +1,7 @@
 -- Selection owns input, not the simulation clock. The upper-arm overlay is
 -- applied AFTER CombatAnim; shared palms and bone translations stay read-only.
 local G={}; G.__index=G
+G.HOLD=.30 -- seconds: shorter = quick cycle (sword > bow > catalyst), longer = wheel
 local function inverse(q) return Quaternion(q.w,-q.x,-q.y,-q.z) end
 local function unit(v)
     local n=math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)
@@ -50,11 +51,11 @@ function G:UpdatePress(dt,held,allowed)
     end
     self.holdTime=self.holdTime+math.max(0,dt or 0)
     if held then
-        if self.holdTime>=.22 then self.pending=false;self:Open(false) end
+        if self.holdTime>=G.HOLD then self.pending=false;self:Open(false) end
     else
         self.pending=false
         -- A long hold released on a slow frame must not become a quick swap.
-        if self.holdTime<.22 then self:Cycle() end
+        if self.holdTime<G.HOLD then self:Cycle() end
     end
 end
 function G:Cycle()
