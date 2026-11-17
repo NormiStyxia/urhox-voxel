@@ -900,8 +900,16 @@ function A:Apply()
             rootDelta=rootDelta+(ry/total-rootDelta)*w
             ox,oy,oz=ox+(lx/total-ox)*w,oy+(ly/total-oy)*w,oz+(lz/total-oz)*w
             ex,ey,ez=ex+(lp/total-ex)*w,ey+(lyaw/total-ey)*w,ez+(lr/total-ez)*w
-            self.bladeWeight=self.bladeWeight*(1-w)+math.min(bladeTotal,1)
-            if bladeTotal>0 then self.bladeDirection=unit(Vector3(bx,by,bz),Vector3(0,1,0)) end
+            local lower=self.bladeWeight*(1-w)
+            local upper=math.min(bladeTotal,1)
+            self.bladeWeight=lower+upper
+            if bladeTotal>0 then
+                local d=unit(Vector3(bx,by,bz),Vector3(0,1,0))
+                local before=self.bladeDirection
+                local u=upper/self.bladeWeight
+                self.bladeDirection=unit(Vector3(before.x+(d.x-before.x)*u,before.y+(d.y-before.y)*u,
+                    before.z+(d.z-before.z)*u),d)
+            end
         end
     end
     if self.bladeWeight>0 then

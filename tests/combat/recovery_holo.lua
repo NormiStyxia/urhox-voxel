@@ -111,6 +111,14 @@ for _,fps in ipairs({30,60,120}) do
         assert(rotationDistance(character.bones.body.rotation,standalone.bones.body.rotation)<1e-5,'authored torso contact unchanged')
     end
 end
+-- 低位 stance 已有剑向时，极小的出招权重不能立刻抢走整个剑向。
+for _,id in ipairs({'sword_light_1','sword_heavy_charge'}) do
+    local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
+    anim:Play(stance.id,{fadeIn=0});anim:Update(.1);render(anim,character)
+    local before=anim.bladeDirection
+    anim:Play(id,{fadeIn=.08});anim:Update(.000001);render(anim,character)
+    assert(distance(anim.bladeDirection,before)<.001,'tiny entry weight must not snap blade from guard')
+end
 -- 首刀短按的抬剑识别姿态也平滑交给轻击；长按交叉斩保持原输入。
 local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
 m=New();m.anim=anim;m:Update(.01,{allowed=true,attack=true});run(m,.12,{allowed=true,attack=true})
