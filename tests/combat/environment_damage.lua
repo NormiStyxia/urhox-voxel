@@ -118,7 +118,7 @@ for _,fps in ipairs({30,60,120}) do
         damage:Melee(root,tip,feet,1,'sword_light_1',true,t)
         assert(#calls==n,'same-frame/hitstop repeat cannot deepen cut')
     end
-    assert(#calls>=1 and #calls<=5 and castCount<=E.MAX_RAYS,'one bounded wide cut at 30/60/120Hz')
+    assert(#calls>=1 and #calls<=7 and castCount<=E.MAX_RAYS,'one bounded wide cut at 30/60/120Hz')
     assert(effects>0)
     for _,c in ipairs(calls) do assert(c.radius<=E.CUT_RADIUS and c.radius>E.LIGHT_RADIUS and c.center.y>feet.y+.15+c.radius*2) end
     for x=0,7 do for z=0,7 do assert(v:GetGrid():IsSolid(x,0,z),'floor intact')end end
@@ -140,7 +140,7 @@ damage:Melee(Vector3(-.1,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),1,'sword_li
 assert(#calls==0,'LOS blocks damage through wall')
 reset();v=volume(Vector3.ZERO,.25,{x=4,y=12,z=8});damage=new()
 damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),2,'sword_heavy_release',true,0)
-assert(#calls>=1 and #calls<=7 and calls[1].radius>E.HEAVY_RADIUS and calls[1].radius<=E.HEAVY_CUT_RADIUS)
+assert(#calls>=1 and #calls<=9 and calls[1].radius>E.HEAVY_RADIUS and calls[1].radius<=E.HEAVY_CUT_RADIUS)
 print('PASS sword strip/budgets/duplicates/30-120Hz/ground/landing/occlusion')
 
 -- GridHit starts inside a solid cell with normal=(0,0,0). Visibility must
@@ -148,7 +148,7 @@ print('PASS sword strip/budgets/duplicates/30-120Hz/ground/landing/occlusion')
 for _,fps in ipairs({20,30,60,120}) do
     reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
     damage:Melee(Vector3(.10,1.5,.5),Vector3(.65,1.5,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,1/fps)
-    assert(#calls>=1 and #calls<=5 and calls[1].removed>0,'inside-cell blade resolves exposed surface at '..fps..'Hz')
+    assert(#calls>=1 and #calls<=7 and calls[1].removed>0,'inside-cell blade resolves exposed surface at '..fps..'Hz')
     assert(calls[1].center.x==.125,'cut first surface, not the hidden blade-origin cell')
     assert(v:GetGrid():IsSolid(7,5,2),'stone beyond the wide cut depth survives')
 end
@@ -233,7 +233,7 @@ for _,clip in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_lig
     local moves=combat(clip)
     moves:AfterPose();assert(#calls==0,'windup has no environment contact')
     for _=1,100 do moves:Update(.01,{allowed=true});moves:AfterPose() end
-    assert(#calls==1,'active blade cuts once with stationary endpoints: '..clip)
+    assert(#calls>=1 and #calls<=9 and effects==1,'one bounded burst with stationary endpoints: '..clip)
     local count=#calls;moves.hitstop=.2
     moves:Update(.05,{allowed=true});moves:AfterPose()
     assert(#calls==count,'recovery cannot cut')
@@ -247,8 +247,9 @@ for _=1,30 do moves:Update(.01,{allowed=true});moves:AfterPose()end
 assert(moves.clip==nil and #calls==0,'enemy callback cancellation precedes environment pass')
 moves=combat('sword_light_1')
 moves:Update(.4,{allowed=true});moves:AfterPose()
-assert(#calls==1,'hitch over hit_on/off preserves one pending contact')
-moves:AfterPose();assert(#calls==1,'pending contact is consumed once')
+assert(#calls>=1 and #calls<=7 and effects==1,'hitch over hit_on/off preserves one burst')
+local burstCalls=#calls
+moves:AfterPose();assert(#calls==burstCalls,'pending contact is consumed once')
 print('PASS real attack events: five stages/heavy/windup/recovery/cancel/reentrant cancellation/low FPS')
 
 -- Diagnostics identify the failing stage without changing the carve contract.
@@ -297,7 +298,7 @@ local function wideCase(clip)
     for frame=1,30 do damage:Melee(root,tip+Vector3(0,0,frame*.02),feet,1,clip,true,frame/60) end
     assert(#calls==cuts,'one burst per swing, no continued drilling during hitstop/active frames')
     assert(effects==1,'one aggregate impact feedback, not five duplicated flashes/shakes')
-    assert(cuts<=7 and castCount<=E.MAX_RAYS,'bounded native calls and rays')
+    assert(cuts<=(clip=='sword_light_5' and 9 or 7) and castCount<=E.MAX_RAYS,'bounded native calls and rays')
     for x=0,15 do for z=0,23 do assert(v:GetGrid():IsSolid(x,0,z),'ground under entire wide cut survives') end end
     return total,hi-lo,cuts
 end
@@ -309,3 +310,86 @@ assert(light>=spell*.8 and light>=40,'ordinary sword must remove a substantial a
 assert(width>=2.5 and heavyWidth>width and heavy>light,'heavy/finisher should widen the cutting plane')
 print('PASS wide-cut volume comparison: sword='..light..' shatter='..spell..' heavy='..heavy..' widths='..width..'/'..heavyWidth..' calls='..lightCalls..'/'..heavyCalls)
 world.damageEnvelope=nil
+
+-- Regression for native low contacts: the old radius cap reduced a fifth
+-- strike at .875m to .3575m, scattering the strip. Test the actual production
+-- Melee entry + GridHit at both reported heights, not WideCut in isolation.
+local function lowStrip(clip,height,envelope)
+    world.damageEnvelope=envelope
+    reset();v=volume(Vector3(0,0,-3),.25,{x=16,y=20,z=24});damage=new()
+    local feet=Vector3(-.8,0,0)
+    damage:Melee(Vector3(-.4,height,0),Vector3(.65,height,0),feet,1,clip,true,0)
+    local isHeavy=clip=='sword_light_5'
+    local limit=isHeavy and 9 or 7
+    assert(#calls>0 and #calls<=limit and effects==1)
+    assert(castCount<=limit+2,'one visibility ray per lobe, plus initial blade and contact LOS')
+    local total=0
+    for _,c in ipairs(calls) do
+        total=total+c.removed
+        assert(c.radius==.5,'low contact must not shrink the horizontal radius')
+        assert(c.center.y-c.radius*2>=feet.y+E.CUT_FLOOR-1e-8,'2x worst boundary clears floor')
+        assert(c.center.y-height<=E.MAX_CUT_LIFT+1e-8,'cut stays near the actual blade')
+        assert(math.abs(c.center.x-.125)<1e-8,'centres stay on initial surface depth, not newly exposed holes')
+    end
+    -- On this axis-aligned .25m stone, core of the strip is a continuous
+    -- two-cell-deep, three-cell-high window across the whole authored span.
+    local span=(isHeavy and 4 or 3)*E.CUT_STEP
+    local cells=0
+    for z=0,23 do
+        local worldZ=-3+(z+.5)*.25
+        if math.abs(worldZ-.125)<=span then
+            for x=0,1 do for y=3,5 do
+                assert(not v:GetGrid():IsSolid(x,y,z),'continuous core: no isolated pits/solid teeth at '..x..':'..y..':'..z)
+                cells=cells+1
+            end end
+        end
+    end
+    assert(cells>50)
+    for x=0,15 do for z=0,23 do
+        assert(v:GetGrid():IsSolid(x,0,z),'entire original support row survives, including 2x damage boundary')
+        assert(v:GetGrid():IsSolid(x,12,z),'overhead stone is not excavated')
+    end end
+    local count=#calls;local rays=castCount
+    for f=1,20 do
+        damage:Melee(Vector3(-.4,height,0),Vector3(.65,height,f*.01),feet,1,clip,true,f/60)
+    end
+    assert(#calls==count and castCount==rays and effects==1,'active/hitstop cannot issue a second cut')
+    return total,cells
+end
+for _,envelope in ipairs({1,2}) do
+    local light,lightCore=lowStrip('sword_light_1',1.125,envelope)
+    local fifth,fifthCore=lowStrip('sword_light_5',.875,envelope)
+    assert(fifth>light and fifthCore>lightCore,'lower fifth widens the same strip rather than becoming weaker')
+    print('PASS low horizontal strip envelope='..envelope..': first='..light..' fifth='..fifth..' continuous core cells='..lightCore..'/'..fifthCore)
+end
+
+-- A close independent wall remains an occluder across the entire cut. Carving
+-- the wall itself must never broadcast to the untouched rock behind it.
+world.damageEnvelope=1
+reset();wall=volume(Vector3(-.5,0,-3),.25,{x=1,y=20,z=24})
+v=volume(Vector3(0,0,-3),.25,{x=16,y=20,z=24});damage=new()
+damage:Melee(Vector3(-.8,1.125,0),Vector3(-.2,1.125,0),Vector3(-1.2,0,0),1,'sword_light_1',true,0)
+assert(#calls>0 and effects==1)
+for _,c in ipairs(calls) do assert(c.volume==wall,'specified volume only, never capsule/box broadcast') end
+for x=0,15 do for y=0,19 do for z=0,23 do
+    assert(v:GetGrid():IsSolid(x,y,z),'stone behind front wall survives')
+end end end
+
+-- A synchronous owner removal must not cause subsequent queries on a cached
+-- target/grid or switch the remaining strip to another volume.
+reset();v=volume(Vector3(0,0,-3),.25,{x=16,y=20,z=24});damage=new()
+local originalDamage=world.ApplyDamage
+local retired=false
+world.ApplyDamage=function(self,target,center,radius,power)
+    local n=originalDamage(self,target,center,radius,power)
+    if not retired then
+        retired=true;volumes={}
+        target.GetGrid=function()error('stale grid after damage callback')end
+        target.GetNode=function()error('stale node after damage callback')end
+    end
+    return n
+end
+damage:Melee(Vector3(-.4,1.125,0),Vector3(.65,1.125,0),Vector3(-.8,0,0),1,'sword_light_5',true,0)
+assert(retired and #calls==1 and effects==1,'target removal safely ends remaining strip')
+world.ApplyDamage=originalDamage;world.damageEnvelope=nil
+print('PASS continuous strip: lower finisher, exact lateral width, floor/overhead/wall guards, bounded queries and synchronous owner removal')

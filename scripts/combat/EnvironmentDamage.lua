@@ -11,15 +11,18 @@ E.LIGHT_RADIUS=.24
 E.HEAVY_RADIUS=.32
 E.MAX_RAYS=36 -- per swing, including visibility; no delayed destruction queue
 -- Contact tolerance stays small; the confirmed impact releases a broad cut.
-E.CUT_RADIUS=.70
-E.HEAVY_CUT_RADIUS=.90
-local LIGHT_OFFSETS={0,-.65,.65,-1.3,1.3}
-local HEAVY_OFFSETS={0,-.65,.65,-1.3,1.3,-1.95,1.95}
+E.CUT_RADIUS=.50
+E.HEAVY_CUT_RADIUS=.50 -- finisher widens the strip, not its downward reach
+E.CUT_STEP=.45 -- overlapping lobes leave a continuous central cutting band
+E.CUT_FLOOR=.16
+E.MAX_CUT_LIFT=.40 -- don't turn a low contact into a remote overhead cut
+local LIGHT_OFFSETS={0,-1,1,-2,2,-3,3}
+local HEAVY_OFFSETS={0,-1,1,-2,2,-3,3,-4,4}
 
 function E.New(opts)
     local self=setmetatable({o=opts or {},marks={},count=0,rays=0,serial=-1,active=false,
         reported={},reportCount=0},E)
-    for i=1,7 do self.marks[i]={} end
+    for i=1,9 do self.marks[i]={} end
     return self
 end
 
@@ -102,9 +105,9 @@ function E:Cast(a,b)
     return self.o.cast(a,b)
 end
 
--- One wide, horizontal cut per swing, only after actual blade contact. Each
--- lobe re-rays the exposed surface before mutating its specific volume. This
--- avoids a broadcast box hitting protected objects or stale refs after splitting.
+-- One horizontal capsule-like strip per swing, built from overlapping spheres
+-- on the ORIGINAL surface plane. Native capsule/box APIs broadcast to other
+-- volumes, so keep specified-volume damage and fresh player LOS per lobe.
 ---@param hit VoxelRaycastResult
 ---@param center Vector3
 ---@param feet Vector3
@@ -119,32 +122,32 @@ function E:WideCut(hit,center,feet,heavy)
     local tangent=Vector3(-normal.z,0,normal.x)
     local origin=feet+Vector3(0,.9,0)
     local offsets=heavy and HEAVY_OFFSETS or LIGHT_OFFSETS
-    local nominal=heavy and E.HEAVY_CUT_RADIUS or E.CUT_RADIUS
+    local radius=heavy and E.HEAVY_CUT_RADIUS or E.CUT_RADIUS
+    -- Clip the lower envelope by raising the shallow strip, never by shrinking
+    -- all three axes. Even the conservative 2x ragged boundary clears the feet.
+    local lift=math.max(0,feet.y+E.CUT_FLOOR+radius*2-center.y)
+    if lift>E.MAX_CUT_LIFT then self:Report('sword','cut-too-low',hit,center,radius);return end
+    local base=center+Vector3(0,lift,0)
     local total=0
     local impact,impactNormal=hit.position,hit.normal
-    for i,offset in ipairs(offsets) do
-        local sample,point
-        if i==1 then sample,point=hit,center else
-            -- Stop at the original surface band, never chase a hole backwards.
-            local target=center+tangent*offset-normal*.20
-            local _,front=self:Cast(origin,target)
+    for _,offset in ipairs(offsets) do
+        local point=base+tangent*(offset*E.CUT_STEP)
+        local surface=point-normal*((point-impact):DotProduct(normal))
+        local sight=surface-origin
+        local depth=-sight:DotProduct(normal)
+        if depth>.02 then
+            -- Extend along the same sightline AFTER the chosen surface point.
+            -- Adding a normal offset to the target instead shrinks its lateral
+            -- intersection toward the player, scattering/compressing the cut.
+            -- End at the original shallow band; never chase a hole backwards.
+            local _,front=self:Cast(origin,surface+sight*(.40/depth))
             if self:Eligible(front) and front.volume.volumeId==id and front.normal.y<=.55 then
-                sample=front;point=E.Cell(front)
-            end
-        end
-        if sample and point and math.abs((point-center):DotProduct(normal))<=.40 then
-            -- Conservative ragged-edge envelope: the radius can grow sideways,
-            -- but even a 2x noisy boundary must stay above the supporting floor.
-            local radius=math.min(nominal,math.max(0,(point.y-feet.y-.16)*.5))
-            if radius>=E.LIGHT_RADIUS then
-                local duplicate=false
-                for j=1,self.count do
-                    if (self.marks[j].position-point):LengthSquared()<.20^2 then duplicate=true;break end
-                end
-                if not duplicate then
+                local cell=E.Cell(front)
+                if cell and math.abs((cell-center):DotProduct(normal))<=.40
+                    and (cell-point):LengthSquared()<=radius*radius then
                     self.count=self.count+1
-                    self.marks[self.count].position=point
-                    total=total+self:Carve(sample,point,radius,'sword')
+                    self.marks[self.count].position=point -- scalars/positions only survive damage
+                    total=total+self:Carve(front,point,radius,'sword')
                 end
             end
         end
