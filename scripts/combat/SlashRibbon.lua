@@ -9,6 +9,7 @@
 ---@field samples table[]
 ---@field count integer
 ---@field head integer
+---@field activeKind string|nil
 local R={};R.__index=R
 R.CAPACITY=48
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
@@ -16,12 +17,12 @@ local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 -- reach: how far the band extends PAST the tip (fraction of blade length);
 -- the crescent is wider than the sword itself, like a projected slash.
 local STYLES={
-    light={life=.26,width=.85,reach=.35,core={.90,.97,1},body={.25,.62,1},glow=1.25},
-    heavy={life=.38,width=.95,reach=.55,core={1,.97,.86},body={.30,.55,1},glow=1.55},
-    moon={life=.50,width=1.0,reach=.80,core={1,1,1},body={.18,.42,1},glow=1.85},
-    plunge={life=.30,width=1.0,reach=.25,core={.95,.98,1},body={.22,.50,1},glow=1.35},
-    -- Cross slash: the first diagonal still glows when the second crosses it.
-    cross={life=.62,width=1.0,reach=.85,core={1,.98,.90},body={.24,.48,1},glow=1.9},
+    light={life=.18,width=.72,reach=.12,core={.90,.97,1},body={.25,.62,1},glow=1.05},
+    heavy={life=.24,width=.82,reach=.18,core={1,.97,.86},body={.30,.55,1},glow=1.25},
+    moon={life=.30,width=.88,reach=.22,core={1,1,1},body={.18,.42,1},glow=1.35},
+    plunge={life=.22,width=.82,reach=.12,core={.95,.98,1},body={.22,.50,1},glow=1.15},
+    -- Cross slash keeps two compact diagonal strokes instead of a large loop.
+    cross={life=.30,width=.86,reach=.18,core={1,.98,.90},body={.24,.48,1},glow=1.35},
 }
 ---@param scene Scene
 ---@return SlashRibbon
@@ -56,6 +57,10 @@ end
 ---@param kind string light | heavy | moon | plunge | cross
 function R:Begin(kind)
     self.style=STYLES[kind] or STYLES.light
+    self.activeKind=kind
+    -- Every swing starts with a fresh stroke; old samples must not survive into
+    -- the next attack and curve back across the actor.
+    self.count,self.head=0,0
     self.emitting=true
     self.lastValid=false
     self.stroke=true -- next sample starts a new stroke: never bridge to the previous one
@@ -91,6 +96,15 @@ function R:Sample(root,tip)
         local al=math.sqrt(ax*ax+ay*ay+az*az);local bl=math.sqrt(bx*bx+by*by+bz*bz)
         if al<1e-5 or bl<1e-5 then self.lastValid=false;return end
         local angle=math.acos(clamp((ax*bx+ay*by+az*bz)/(al*bl),-1,1))
+        -- Do not interpolate a near-reversal through the long way around the
+        -- actor. A blade trail is a short local stroke; a bad render sample
+        -- must be dropped instead of becoming a vertical halo.
+        if angle>math.rad(105) then
+            self.lastValid=false
+            self:Push(rx,ry,rz,tx,ty,tz)
+            self.lx,self.ly,self.lz,self.ltx,self.lty,self.ltz=rx,ry,rz,tx,ty,tz
+            return
+        end
         local moved=math.abs(tx-self.ltx)+math.abs(ty-self.lty)+math.abs(tz-self.ltz)
         if angle<math.rad(1.5) and moved<.02 then return end
         local steps=math.min(6,math.max(1,math.ceil(angle/math.rad(12))))

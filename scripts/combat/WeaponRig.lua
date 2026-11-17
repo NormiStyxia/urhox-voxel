@@ -1115,7 +1115,9 @@ end
 function Rig:SampleBlade(entry)
     local root=entry.pivot:LocalToWorld(self.bladeRoot)
     local tip=entry.pivot:LocalToWorld(self.bladeTip)
-    if self.visualActive and self.trailEnabled then self.combatFx:Blade(root,tip);self.slashRibbon:Sample(root,tip) end
+    if self.visualActive and self.trailEnabled then
+        self.slashRibbon:Sample(root,tip)
+    end
     local previousRoot,previousTip=self.previousRoot,self.previousTip
     local distance=self.sampleValid and math.max(Distance(root,previousRoot),Distance(tip,previousTip)) or 0
     local bend=(tip.x-root.x)*(previousTip.x-previousRoot.x)
@@ -1303,7 +1305,7 @@ function Rig:UpdateCore(dt)
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
     self.combatFx:Update(dt)
-    if not self.visualActive and not self.combatFx.plunging then self.slashRibbon:End() end
+    if not self.visualActive and not self.combatFx.plunging then self.slashRibbon:Clear() end
     self.slashRibbon:Update(dt)
     self.shockBurst:Update(dt)
     self:UpdateHang(dt)
@@ -1349,7 +1351,7 @@ function Rig:UpdateCore(dt)
     if not self.visualActive then self.combatFx.valid=false end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
-        self:DrawBands();if self.trailEnabled then self:UpdateImages(entry,dt) end
+        if self.trailEnabled then self:UpdateCharge(entry) end
     else self:ClearTrail() end
     if self.trailEnabled then self:UpdateCharge(entry) end
 end

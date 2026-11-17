@@ -184,19 +184,19 @@ local LOW_GUARD={.30,.74,.28}
 local SETTLE_DIR={.42,-.86,.28}
 local STANCE_EULER={73,0,-14} -- stance_combat_sword grip euler (same low guard)
 local LIGHT={
-    {id="sword_light_1",dur=.80,on=.16,contact=.22,off=.26,cancel=.32,
-        yaw={0,35,22,-30,-45,0},
+    {id="sword_light_1",dur=.80,on=.19,contact=.25,off=.29,cancel=.35,
+        yaw={0,0,28,-30,-45,0},
         left={{0,0,-8},{-35,-10,-25},{-20,-5,-28},{-10,15,-35},{-5,18,-25},{0,0,-8}},
         legs={0,-10,-16,-22,-14,0},
         root={{0,-.04},{.10,-.08},{.16,-.06},{.22,-.11},{.32,-.10},{.48,-.12},{.80,0}}},
-    {id="sword_light_2",dur=.82,on=.17,contact=.23,off=.27,cancel=.33,
-        yaw={0,-35,-25,22,40,0},
+    {id="sword_light_2",dur=.82,on=.20,contact=.26,off=.30,cancel=.36,
+        yaw={0,-28,25,22,40,0},
         left={{0,0,-8},{-10,15,-30},{-15,10,-25},{-40,-10,-20},{-30,-12,-18},{0,0,-8}},
         legs={0,-18,-22,-10,-6,0},
         -- Crouch into the low guard, then rise up onto the toes with the blade.
         root={{0,-.04},{.10,-.15},{.17,-.11},{.23,.05,"outQuad"},{.33,.03},{.48,-.10},{.82,0}}},
-    {id="sword_light_3",dur=.88,on=.18,contact=.24,off=.30,cancel=.38,
-        yaw={0,45,30,-35,-55,0},
+    {id="sword_light_3",dur=.88,on=.21,contact=.27,off=.33,cancel=.41,
+        yaw={0,35,28,-35,-55,0},
         left={{0,0,-8},{-60,-20,-35},{-45,-15,-40},{-15,20,-55},{-10,25,-45},{0,0,-8}},
         legs={0,-24,-34,-30,-22,0},
         root={{0,-.04},{.08,-.13},{.18,-.09},{.24,-.13},{.36,-.12},{.52,-.13},{.88,0}}},

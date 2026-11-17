@@ -222,8 +222,8 @@ test("invalid inputs do not mutate live animation",function()
 end)
 test("R1 move timings and cancel windows are authored once",function()
     -- Long recovery tails (inertia + low guard) after an unchanged cancel point.
-    local expected={sword_light_1={.80,.16,.26,.32},sword_light_2={.82,.17,.27,.33},
-        sword_light_3={.88,.18,.30,.38},sword_light_4={.96,.22,.40,.46},sword_light_5={1.10,.34,.46,.62}}
+    local expected={sword_light_1={.80,.19,.29,.35},sword_light_2={.82,.20,.30,.36},
+        sword_light_3={.88,.21,.33,.41},sword_light_4={.96,.22,.40,.46},sword_light_5={1.10,.34,.46,.62}}
     for id,v in pairs(expected) do
         local c=D.Clips[id];near(c.dur,v[1]);near(c.phases.active[1],v[2]);near(c.phases.active[2],v[3])
         near(c.events[1].t*c.dur,v[2]);near(c.events[2].t*c.dur,v[3]);near(c.events[3].t*c.dur,v[4])
@@ -247,7 +247,7 @@ test("six attack landmarks, torso .02s ahead and head compensates",function()
         assert(c.keys.head[2][2][2]*c.keys.body[2][2][2]<0)
     end
     local c=D.Clips.sword_light_1
-    for i,t in ipairs({0,.096,.16,.22,.32,.80}) do near(c.keys.arm_right[i][1]*c.dur,t) end
+    for i,t in ipairs({0,.114,.19,.25,.29,.80}) do near(c.keys.arm_right[i][1]*c.dur,t) end
 end)
 test("20Hz option and continuous root position",function()
     local a,c=new({quantize=true});local b,d=new({quantize=false})
@@ -379,9 +379,9 @@ local function distance(a,b)
 end
 test("path endpoints, explicit arc sweep, windup and overshoot",function()
     local cases={
-        {"sword_light_1",.16,.26,{.62,1.55,.05},{-.40,.85,.70},150,.55},
-        {"sword_light_2",.17,.27,{-.40,.80,.65},{.62,1.60,.30},-140,.45},
-        {"sword_light_3",.18,.30,{.70,1.20,-.20},{-.70,1.10,.35},200,1.6}}
+        {"sword_light_1",.19,.29,{.62,1.55,.05},{-.40,.85,.70},150,.55},
+        {"sword_light_2",.20,.30,{-.40,.80,.65},{.62,1.60,.30},-140,.45},
+        {"sword_light_3",.21,.33,{.70,1.20,-.20},{-.70,1.10,.35},200,1.6}}
     for _,v in ipairs(cases) do
         local c=D.Clips[v[1]];local path=c.handPath.arm_right
         near(path.amplitude,v[6]);near(path.windup,.12);near(path.overshoot,.08)
