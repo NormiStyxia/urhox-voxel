@@ -332,7 +332,8 @@ local function entryPoint(s,point,bodyHeight)
     local from,to=s.entry.hand,first.b
     local u=entryBlend(s)
     -- 连段直接接到下一刀的预备末端，不再绕过公共 ready 点。
-    return Vector3(from.x+(to[1]-from.x)*u,from.y+(to[2]-bodyHeight-from.y)*u,from.z+(to[3]-from.z)*u)
+    local out=math.sin(math.pi*u)*.60
+    return Vector3(from.x+(to[1]-from.x)*u,from.y+(to[2]-bodyHeight-from.y)*u,from.z+(to[3]-from.z)*u+out)
 end
 local function pathPole(path)
     if path.pole then return Vector3(path.pole[1],path.pole[2],path.pole[3]) end
@@ -883,7 +884,9 @@ function A:Apply()
                         end
                         if entryBlend(s)<1 then
                             local d,u=s.entry.blade,entryBlend(s)
-                            direction=unit(Vector3(d.x+(direction.x-d.x)*u,d.y+(direction.y-d.y)*u,d.z+(direction.z-d.z)*u),d)
+                            -- 翻腕换边时剑尖先绕到身前，不能在左右剑向之间穿胸抄近路。
+                            local out=math.sin(math.pi*u)*1.2
+                            direction=unit(Vector3(d.x+(direction.x-d.x)*u,d.y+(direction.y-d.y)*u,d.z+(direction.z-d.z)*u+out),d)
                         end
                         bladeTotal=bladeTotal+w
                         bx,by,bz=bx+direction.x*w,by+direction.y*w,bz+direction.z*w

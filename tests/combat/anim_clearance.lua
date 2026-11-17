@@ -54,7 +54,7 @@ local failures,frames=0,0
 for _,speed in ipairs({.5,.65,.8,1}) do
 for _,tuck in ipairs({0,1}) do
 for _,fade in ipairs({0,.08}) do
-for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light_4','sword_light_5','sword_heavy_charge','sword_heavy_release','plunge_start','plunge_loop','plunge_land'}) do
+for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light_4','sword_light_5','sword_heavy_charge','sword_heavy_release','plunge_start','plunge_loop','plunge_land','stance_combat_sword','combo_early','combo_late'}) do
  local character=Mock.character();local base={}
  for name,node in pairs(character.bones) do
   local p=pivots[name]
@@ -67,7 +67,12 @@ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light
    character.basePos[name]=node.position;base[name]=node.position
   end
  end
- local anim=A.New(character,nil,{quantize=false});anim:Play(id,{fadeIn=fade,fadeOut=fade,params={plungeSpeed=speed,plungeTuck=tuck}})
+ local anim=A.New(character,nil,{quantize=false})
+ local chain=id=='combo_early' or id=='combo_late'
+ local current=1
+ local active=chain and Data.Combo[current].id or id
+ local handle=anim:Play(active,{fadeIn=fade,fadeOut=fade,params={plungeSpeed=speed,plungeTuck=tuck}})
+ if chain then anim:Play('stance_combat_sword',{fadeIn=0}) end
  local positions,rotations={},{}
  local function world(name)
   if positions[name] then return positions[name],rotations[name] end
@@ -75,10 +80,11 @@ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light
   if parent[name] then local pp,pr=world(parent[name]);p=pp+pr*p;r=pr*r end
   positions[name],rotations[name]=p,r;return p,r
  end
- local duration=Data.Clips[id].dur;local previous=0
+ local duration=chain and 3.2 or Data.Clips[id].dur;local previous,clipTime=0,0
  for frame=0,math.ceil(duration*60) do
   local t=math.min(duration,frame/60)
-  anim:Update(t-previous);previous=t
+  local dt=t-previous
+  anim:Update(dt);previous=t;clipTime=clipTime+dt
   for name,node in pairs(character.bones) do node.rotation=Quaternion(0,0,0);if base[name] then node.position=base[name] end end
   anim:Apply();anim:Poll();positions,rotations={},{}
   -- Last frame after clip auto-removal is base idle, not the authored final pose.
@@ -96,6 +102,17 @@ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light
     end
    end
    frames=frames+1
+  end
+  if chain and current<#Data.Combo then
+   local clip=Data.Clips[active]
+   local at=clip.events[3].t*clip.dur+(id=='combo_late' and .18 or 0)
+   if clipTime>=at then
+    -- 原真实骨骼求解、OBB 和剑长保持不变，增加实际末势连段覆盖。
+    anim:Stop(handle,.08)
+    current=current+1;active=Data.Combo[current].id
+    handle=anim:Play(active,{fadeIn=.08,entryFrom=handle})
+    clipTime=0
+   end
   end
  end
 end
