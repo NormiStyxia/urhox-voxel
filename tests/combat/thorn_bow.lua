@@ -55,7 +55,7 @@ assert(thorn.geometry.commits==1 and #thorn.geometry.vertices==m.body.triangles*
 assert(thorn.node.enabled,'bow visual shown in hand')
 assert(rig.entries.bow.mesh.node.scale.x<.01,'voxel bow mesh hidden')
 local half=rig.bowHalfHeight
-assert(math.abs(thorn.scale*m.height-(half*2+.10))<1e-6)
+assert(math.abs(thorn.scale*m.height-(half*2+.10)*require("combat.ThornBowVisual").SCALE)<1e-6)
 -- draw: voxel string follows the pulled limb tips; voxel limb stage meshes stay hidden; static string hidden
 rig:SetBowDraw(.9);rig:Update(0)
 assert(rig.bowStage>=1)

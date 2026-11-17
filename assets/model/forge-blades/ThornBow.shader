@@ -4,9 +4,9 @@
 // Opaque on purpose: crystal depth is faked from the cut normals + a glowing core, no screen sampling.
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
-uniform vec4 wood_color : source_color = vec4(0.24, 0.16, 0.38, 1.0);
-uniform vec4 petal_base : source_color = vec4(0.58, 0.36, 0.88, 1.0);
-uniform vec4 petal_tip : source_color = vec4(0.93, 0.86, 1.00, 1.0);
+uniform vec4 wood_color : source_color = vec4(0.13, 0.085, 0.22, 1.0);
+uniform vec4 petal_base : source_color = vec4(0.93, 0.50, 0.86, 1.0);
+uniform vec4 petal_tip : source_color = vec4(1.00, 0.95, 1.00, 1.0);
 uniform vec4 crystal_color : source_color = vec4(0.52, 0.24, 0.98, 1.0);
 uniform vec4 string_color : source_color = vec4(1.00, 0.42, 0.92, 1.0);
 uniform vec4 grip_color : source_color = vec4(0.46, 0.32, 0.70, 1.0);
@@ -48,7 +48,7 @@ void fragment() {
     float fissure = sin(obj_pos.y * 150.0 + obj_pos.x * 55.0 + obj_pos.z * 40.0) * 0.5 + 0.5;
     float drift = sin(obj_pos.y * 17.0 + obj_pos.x * 9.0) * 0.5 + 0.5;
     vec3 wood = wood_color.rgb * (0.62 + 0.30 * fissure + 0.28 * drift);
-    vec3 wood_bleed = vec3(0.55, 0.30, 0.95) * 0.05 * (0.5 + 0.5 * drift);
+    vec3 wood_bleed = vec3(0.55, 0.30, 0.95) * 0.02 * (0.5 + 0.5 * drift);
 
     // petal: deep magenta at the base to pale pink tips, soft rim like thin tissue
     float u = clamp(COLOR.a, 0.0, 1.0);
@@ -72,12 +72,13 @@ void fragment() {
     vec3 base = wood * wood_w + petal * petal_w + stone * crystal_m + cloth * grip_w;
     base = mix(base, core * 0.6, core_m * cry_w);
     ALBEDO = base;
-    ROUGHNESS = clamp(0.82 * wood_w + 0.55 * petal_w + 0.10 * crystal_m + 0.90 * grip_w + 0.30 * string_m, 0.08, 0.95);
+    ROUGHNESS = clamp(0.95 * wood_w + 0.55 * petal_w + 0.10 * crystal_m + 0.90 * grip_w + 0.30 * string_m, 0.08, 0.95);
     METALLIC = 0.0;
-    SPECULAR = 0.35 + 0.40 * crystal_m;
+    // Low base specular: bright sky reflection washed the dark bark into lavender.
+    SPECULAR = 0.05 * wood_w + 0.22 * petal_w + 0.10 * grip_w + 0.75 * crystal_m + 0.2 * string_m;
 
     vec3 emit = wood_bleed * wood_w + petal * petal_glow * petal_w * (0.4 + 0.6 * u * u)
-              + petal_tip.rgb * fres * 0.18 * petal_w
+              + vec3(1.0, 0.55, 0.95) * fres * 0.30 * petal_w
               + vec3(1.0, 0.82, 1.0) * heart_m * 1.7
               + core * crystal_glow * core_m * cry_w * 1.4
               + chue * crystal_glow * 0.10 * crystal_m

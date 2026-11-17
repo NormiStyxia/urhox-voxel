@@ -3,9 +3,10 @@
 -- the voxel blueprint. Any failure returns nil so WeaponRig keeps showing the voxel bow.
 local V={}
 V.ENABLED=true             -- kill switch: false = always show the voxel bow
-V.PAD=.10                  -- visual limb length = voxel limb span + this (metres)
+V.PAD=.10                  -- visual limb length = (voxel limb span + this) * SCALE (metres)
+V.SCALE=1.32               -- bows read small next to the character; Ganyu-style full-size bow
 V.STEP_VERTICES=1800       -- per Step(); build is spread over frames
-V.GRAINS=26                -- per sand stream
+V.GRAINS=44                -- per sand stream
 local MATERIAL='model/forge-blades/ThornBow.xml'
 local SAND='model/forge-blades/ThornSand.xml'
 local MASK=0xFFFFFFFF
@@ -46,7 +47,7 @@ local function BuildSand(node,material,mask)
     for stream=0,1 do
         for i=0,V.GRAINS-1 do
             local s0=(i+Rand()*.8)/V.GRAINS
-            local size=.0032+.0022*Rand()
+            local size=.0055+.0040*Rand()
             local jx,jy,jz=Rand(),Rand(),Rand()
             for plane=0,1 do
                 for _,q in ipairs(quad) do
@@ -119,7 +120,7 @@ function V.New(pivot,halfHeight)
     if not V.ENABLED then return nil,'disabled' end
     local ok,m=pcall(Model)
     if not ok then return nil,tostring(m) end
-    local visual,err=Create(pivot,(halfHeight*2+V.PAD)/m.height)
+    local visual,err=Create(pivot,(halfHeight*2+V.PAD)*V.SCALE/m.height)
     if not visual then return nil,err end
     visual.node.enabled=false
     return visual
