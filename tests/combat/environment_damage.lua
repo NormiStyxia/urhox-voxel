@@ -54,7 +54,7 @@ function world:ApplyDamage(v,center,radius,power)
     for x=0,d.x-1 do for y=0,d.y-1 do for z=0,d.z-1 do
         local p=node:LocalToWorld(Vector3((x+.5)*v.voxelSize,(y+.5)*v.voxelSize,(z+.5)*v.voxelSize))
         -- Conservative ragged radius: neighbours must STILL survive arrows.
-        if grid:IsSolid(x,y,z) and (p-center):Length()<=radius*2 then
+        if grid:IsSolid(x,y,z) and (p-center):Length()<=radius*(self.damageEnvelope or 2) then
             grid:Remove(x,y,z);call.removed=call.removed+1
         end
     end end end
@@ -118,9 +118,9 @@ for _,fps in ipairs({30,60,120}) do
         damage:Melee(root,tip,feet,1,'sword_light_1',true,t)
         assert(#calls==n,'same-frame/hitstop repeat cannot deepen cut')
     end
-    assert(#calls>=2 and #calls<=4 and castCount<=E.MAX_RAYS,'bounded strip at 30/60/120Hz')
+    assert(#calls>=1 and #calls<=5 and castCount<=E.MAX_RAYS,'one bounded wide cut at 30/60/120Hz')
     assert(effects>0)
-    for _,c in ipairs(calls) do assert(c.radius==E.LIGHT_RADIUS and c.center.y>feet.y+.15+c.radius*2) end
+    for _,c in ipairs(calls) do assert(c.radius<=E.CUT_RADIUS and c.radius>E.LIGHT_RADIUS and c.center.y>feet.y+.15+c.radius*2) end
     for x=0,7 do for z=0,7 do assert(v:GetGrid():IsSolid(x,0,z),'floor intact')end end
     local n=#calls
     damage:Melee(Vector3(-.4,.2,.5),Vector3(.5,.2,.5),feet,2,'plunge_land',true,1)
@@ -140,7 +140,7 @@ damage:Melee(Vector3(-.1,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),1,'sword_li
 assert(#calls==0,'LOS blocks damage through wall')
 reset();v=volume(Vector3.ZERO,.25,{x=4,y=12,z=8});damage=new()
 damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),2,'sword_heavy_release',true,0)
-assert(#calls==1 and calls[1].radius==E.HEAVY_RADIUS)
+assert(#calls>=1 and #calls<=7 and calls[1].radius>E.HEAVY_RADIUS and calls[1].radius<=E.HEAVY_CUT_RADIUS)
 print('PASS sword strip/budgets/duplicates/30-120Hz/ground/landing/occlusion')
 
 -- GridHit starts inside a solid cell with normal=(0,0,0). Visibility must
@@ -148,9 +148,9 @@ print('PASS sword strip/budgets/duplicates/30-120Hz/ground/landing/occlusion')
 for _,fps in ipairs({20,30,60,120}) do
     reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
     damage:Melee(Vector3(.10,1.5,.5),Vector3(.65,1.5,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,1/fps)
-    assert(#calls==1 and calls[1].removed>0,'inside-cell blade resolves exposed surface at '..fps..'Hz')
+    assert(#calls>=1 and #calls<=5 and calls[1].removed>0,'inside-cell blade resolves exposed surface at '..fps..'Hz')
     assert(calls[1].center.x==.125,'cut first surface, not the hidden blade-origin cell')
-    assert(v:GetGrid():IsSolid(4,5,2),'deep stone survives')
+    assert(v:GetGrid():IsSolid(7,5,2),'stone beyond the wide cut depth survives')
 end
 reset();v=volume(Vector3.ZERO,.25,{x=8,y=12,z=8});damage=new()
 damage:Melee(Vector3(.7,1.5,.5),Vector3(1.2,1.5,.5),Vector3(-.8,0,.5),1,'sword_light_1',true,0)
@@ -274,6 +274,7 @@ reset();v=volume(Vector3.ZERO,.25,{x=4,y=12,z=8});damage=new()
 damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),Vector3(-1,0,.5),2,'sword_light_1',true,0)
 assert(effects==1 and calls[1].removed>0,'real deletion still produces sword feedback when native returns zero')
 local native
+v=volume(Vector3(20,0,0),.25,{x=4,y=12,z=8}) -- fresh target, outside the wide sword cut
 damage.o.trace=function(_,stage,_,_,_,removed,raw)
     if stage=='removed' then assert(removed==1);native=raw end
 end
@@ -281,3 +282,30 @@ damage:Arrow({worldHit=hit(v,1,9,1)})
 assert(native==0,'diagnostics distinguish verified deletion from native return')
 world.misreports=false
 print('PASS native-zero compatibility: arrow retires, sword feedback, protected wall still embeds, diagnostic keeps raw value')
+
+-- A nominal sphere comparison on identical fresh solid stone: broad sword cut
+-- vs .9m uncharged Shatter. This measures Lua geometry, not native fragments/FPS.
+world.damageEnvelope=1
+local function wideCase(clip)
+    reset();v=volume(Vector3(0,0,-3),.25,{x=16,y=20,z=24});damage=new()
+    local feet=Vector3(-.8,0,0)
+    local root,tip=Vector3(-.4,1.875,0),Vector3(.65,1.875,0)
+    damage:Melee(root,tip,feet,1,clip,true,0)
+    local total,lo,hi=0,math.huge,-math.huge
+    for _,c in ipairs(calls) do total=total+c.removed;lo=math.min(lo,c.center.z-c.radius);hi=math.max(hi,c.center.z+c.radius) end
+    local cuts=#calls
+    for frame=1,30 do damage:Melee(root,tip+Vector3(0,0,frame*.02),feet,1,clip,true,frame/60) end
+    assert(#calls==cuts,'one burst per swing, no continued drilling during hitstop/active frames')
+    assert(effects==1,'one aggregate impact feedback, not five duplicated flashes/shakes')
+    assert(cuts<=7 and castCount<=E.MAX_RAYS,'bounded native calls and rays')
+    for x=0,15 do for z=0,23 do assert(v:GetGrid():IsSolid(x,0,z),'ground under entire wide cut survives') end end
+    return total,hi-lo,cuts
+end
+local light,width,lightCalls=wideCase('sword_light_1')
+local heavy,heavyWidth,heavyCalls=wideCase('sword_light_5')
+reset();v=volume(Vector3(0,0,-3),.25,{x=16,y=20,z=24})
+local spell=world:ApplyDamage(v,Vector3(0,1.875,0),.9,3)
+assert(light>=spell*.8 and light>=40,'ordinary sword must remove a substantial amount comparable to ordinary Shatter')
+assert(width>=2.5 and heavyWidth>width and heavy>light,'heavy/finisher should widen the cutting plane')
+print('PASS wide-cut volume comparison: sword='..light..' shatter='..spell..' heavy='..heavy..' widths='..width..'/'..heavyWidth..' calls='..lightCalls..'/'..heavyCalls)
+world.damageEnvelope=nil

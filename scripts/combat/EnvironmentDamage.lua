@@ -10,11 +10,16 @@ E.POWER=3 -- same material threshold as Shatter; ancient stone stays protected
 E.LIGHT_RADIUS=.24
 E.HEAVY_RADIUS=.32
 E.MAX_RAYS=36 -- per swing, including visibility; no delayed destruction queue
+-- Contact tolerance stays small; the confirmed impact releases a broad cut.
+E.CUT_RADIUS=.70
+E.HEAVY_CUT_RADIUS=.90
+local LIGHT_OFFSETS={0,-.65,.65,-1.3,1.3}
+local HEAVY_OFFSETS={0,-.65,.65,-1.3,1.3,-1.95,1.95}
 
 function E.New(opts)
     local self=setmetatable({o=opts or {},marks={},count=0,rays=0,serial=-1,active=false,
         reported={},reportCount=0},E)
-    for i=1,6 do self.marks[i]={} end
+    for i=1,7 do self.marks[i]={} end
     return self
 end
 
@@ -97,12 +102,65 @@ function E:Cast(a,b)
     return self.o.cast(a,b)
 end
 
+-- One wide, horizontal cut per swing, only after actual blade contact. Each
+-- lobe re-rays the exposed surface before mutating its specific volume. This
+-- avoids a broadcast box hitting protected objects or stale refs after splitting.
+---@param hit VoxelRaycastResult
+---@param center Vector3
+---@param feet Vector3
+---@param heavy boolean
+function E:WideCut(hit,center,feet,heavy)
+    self.cutDone=true -- reserve before synchronous callbacks/reentrant pose ticks
+    local id=hit.volume.volumeId
+    local normal=Vector3(hit.normal.x,0,hit.normal.z)
+    if normal:LengthSquared()<.1 then normal=feet-center;normal=Vector3(normal.x,0,normal.z) end
+    if normal:LengthSquared()<1e-8 then return end
+    normal=normal:Normalized()
+    local tangent=Vector3(-normal.z,0,normal.x)
+    local origin=feet+Vector3(0,.9,0)
+    local offsets=heavy and HEAVY_OFFSETS or LIGHT_OFFSETS
+    local nominal=heavy and E.HEAVY_CUT_RADIUS or E.CUT_RADIUS
+    local total=0
+    local impact,impactNormal=hit.position,hit.normal
+    for i,offset in ipairs(offsets) do
+        local sample,point
+        if i==1 then sample,point=hit,center else
+            -- Stop at the original surface band, never chase a hole backwards.
+            local target=center+tangent*offset-normal*.20
+            local _,front=self:Cast(origin,target)
+            if self:Eligible(front) and front.volume.volumeId==id and front.normal.y<=.55 then
+                sample=front;point=E.Cell(front)
+            end
+        end
+        if sample and point and math.abs((point-center):DotProduct(normal))<=.40 then
+            -- Conservative ragged-edge envelope: the radius can grow sideways,
+            -- but even a 2x noisy boundary must stay above the supporting floor.
+            local radius=math.min(nominal,math.max(0,(point.y-feet.y-.16)*.5))
+            if radius>=E.LIGHT_RADIUS then
+                local duplicate=false
+                for j=1,self.count do
+                    if (self.marks[j].position-point):LengthSquared()<.20^2 then duplicate=true;break end
+                end
+                if not duplicate then
+                    self.count=self.count+1
+                    self.marks[self.count].position=point
+                    total=total+self:Carve(sample,point,radius,'sword')
+                end
+            end
+        end
+    end
+    if total>0 and self.o.feedback then
+        self.o.feedback({kind='hit',material='stone',tier='environment',pos=impact,
+            normal=impactNormal,dir=-normal,removed=total})
+    end
+end
+
 ---@param a Vector3
 ---@param b Vector3
 ---@param feet Vector3
 ---@param radius number
-function E:Slice(a,b,feet,radius,limit)
-    if self.count>=limit or self.frameCuts>=2 then return end
+function E:Slice(a,b,feet,radius)
+    if self.cutDone then return end
     local _,hit=self:Cast(a,b)
     local eligible,reason=self:Eligible(hit)
     if not eligible then self:Report('sword',reason,hit);return end
@@ -142,17 +200,7 @@ function E:Slice(a,b,feet,radius,limit)
         end
         self:Report('sword','surface-contact',hit,center,radius)
     end
-    for i=1,self.count do
-        if (self.marks[i].position-center):LengthSquared()<(radius*1.4)^2 then return end
-    end
-    self.count=self.count+1 -- reserve before native callbacks; failed hard hits do not drill
-    self.marks[self.count].position=center
-    self.frameCuts=self.frameCuts+1
-    local removed=self:Carve(hit,center,radius,'sword')
-    if removed>0 and self.o.feedback then
-        self.o.feedback({kind='hit',material='stone',tier='environment',
-            pos=hit.position,normal=hit.normal,dir=(b-a):Normalized(),removed=removed})
-    end
+    self:WideCut(hit,center,feet,radius==E.HEAVY_RADIUS)
 end
 
 -- Actual blade endpoints after the pose/rig update; independent of trail quality.
@@ -166,6 +214,7 @@ function E:Melee(root,tip,feet,serial,clip,active,clock)
     if not root or not tip or not sword then self.active=false;self.root,self.tip=nil,nil;return end
     if self.serial~=serial then
         self.serial,self.count,self.rays=serial,0,0
+        self.cutDone=false
         self.active=false;self.root,self.tip=nil,nil;self.nextAt=0
     end
     if not active then self.active=false;self.root,self.tip=root,tip;return end
@@ -179,14 +228,13 @@ function E:Melee(root,tip,feet,serial,clip,active,clock)
     local oldRoot,oldTip=self.root,self.tip
     self.root,self.tip,self.active,self.nextAt=root,tip,true,clock+.025
     local heavy=clip=='sword_heavy_release' or clip=='sword_light_5'
-    local radius,limit=heavy and E.HEAVY_RADIUS or E.LIGHT_RADIUS,heavy and 6 or 4
-    if self.count>=limit or self.rays>=E.MAX_RAYS then return end
-    self.frameCuts=0
+    local radius=heavy and E.HEAVY_RADIUS or E.LIGHT_RADIUS
+    if self.cutDone or self.rays>=E.MAX_RAYS then return end
     local start=Perf.Begin()
-    self:Slice(root,tip,feet,radius,limit)
+    self:Slice(root,tip,feet,radius)
     if swept then
-        self:Slice(oldTip,tip,feet,radius,limit)
-        self:Slice((oldRoot+oldTip)*.5,(root+tip)*.5,feet,radius,limit)
+        self:Slice(oldTip,tip,feet,radius)
+        self:Slice((oldRoot+oldTip)*.5,(root+tip)*.5,feet,radius)
     end
     Perf.Finish('VoxelSlash',start)
 end
