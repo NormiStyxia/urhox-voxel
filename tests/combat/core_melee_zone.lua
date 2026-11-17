@@ -21,7 +21,8 @@ assert(#query(sphere(math.sin(angle),1,math.cos(angle),.05))==0)
 assert(#query(sphere(0,2.1,1,.1))==1 and #query(sphere(0,2.11,1,.1))==0)
 assert(#query(sphere(0,-.4,1,.1))==1 and #query(sphere(0,-.41,1,.1))==0)
 assert(#query(sphere(0,1,-1,.3))==0,'ordinary attacks cannot hit behind')
-assert(#query(sphere(0,1,-1,.3),'sword_heavy_release')==1,'heavy spin is full 360')
+assert(#query(sphere(0,1,-1,.3),'sword_heavy_release')==0,'cross slash is a wide front sector, not a spin')
+assert(#query(sphere(1.6,1,.6,.1),'sword_heavy_release')==1,'cross slash covers 170 degrees out to 2.3m')
 assert(#query(sphere(0,1,2.3,.1),'sword_light_3')==1,'third zone shifts forward .4')
 assert(#query(sphere(0,1,2.31,.1),'sword_light_3')==0)
 assert(#query(sphere(0,1,2.4,.1),'sword_light_1',1.3)==1,'reach applied once to radius')
@@ -77,8 +78,8 @@ local function Run(fps,wall)
         assert(m:Action('heavy'))
         for _=1,fps do tick() end
     end
-    assert((damage.sword_heavy_release or 0)==(wall and 0 or 38),'short16/full22 from real geometry')
-    assert(#events==(wall and 0 or 5),'HitEvent remains once per real settlement')
+    assert((damage.sword_heavy_release or 0)==(wall and 0 or 52),'cross slash: two cuts of 13 per action, from real geometry')
+    assert(#events==(wall and 0 or 7),'HitEvent remains once per real settlement (one per cut)')
     return position
 end
 Run(60,false);Run(30,false);Run(10,false);Run(60,true)

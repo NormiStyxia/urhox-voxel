@@ -115,6 +115,8 @@ function M.Sync()
     end
 end
 local function Visible(b)
+    -- Sword heavy is a long press of attack; the heavy button is bow-only.
+    if b.name=='heavy' then return state.weapon=='bow' end
     return b.name~='mount' or state.canMount==true
 end
 local function Disabled(b)

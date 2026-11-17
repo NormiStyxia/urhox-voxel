@@ -70,14 +70,14 @@ Tick(.18); assert(not m:CanCancel(),'swap first .2 is not cancellable')
 Tick(.03); assert(m:CanCancel(),'swap cancel follows animation event')
 m=New(); assert(m:Swap()); Tick(.41)
 assert(State.GetWeapon()=='bow' and State.TransitionRemaining()==0 and not m.clip,'weapon_ready completes swap')
-local getStats=rig.GetStats
-rig.GetStats=function() local stats=getStats();stats.chargeMultiplier=.92;return stats end
-m=New(); Tick(.01,{attack=true})
-for i=1,44 do Tick(.02,{attack=true}) end
-assert(not m.fullCharged,'full-charge remains an animation event, not display progress')
+-- Long press: the cross slash fires by itself at HEAVY_HOLD, no release and no charge levels.
+m=New(); Tick(.01,{attack=true}); assert(m.clip=='sword_heavy_charge')
+for i=1,17 do Tick(.02,{attack=true}) end
+assert(m.clip=='sword_heavy_charge' and not m.fullCharged,'still winding up before HEAVY_HOLD')
 for i=1,3 do Tick(.02,{attack=true}) end
-assert(m.fullCharged,'crystal pommel advances charge clip by its multiplier')
-rig.GetStats=getStats
+assert(m.clip=='sword_heavy_release' and m.charge==0,'holding fires the cross slash without releasing')
+S.near(m.stamina.value,m.stamina.max-25,1e-6)
+Tick(.02); assert(m.clip=='sword_heavy_release','release after firing changes nothing')
 m=New(); m:Play('getup'); Tick(.46)
 assert(not m.clip and next(m.protection),'getup finishes pose at .45 but keeps real-time protection')
 assert(m:Action('light'))
@@ -91,7 +91,7 @@ local t,events=C.SeekPreview(preview,'sword_light_1',.18,4/30)
 S.near(t,.18); assert(C.PreviewPhase('sword_light_1',t)=='active' and events:find('hit_on',1,true))
 t,events=C.SeekPreview(preview,'sword_light_1',.10,.18)
 assert(C.PreviewPhase('sword_light_1',t)=='anticipation' and not events:find('hit_on',1,true))
-t,events=C.SeekPreview(preview,'sword_heavy_release',7/30,.2)
+t,events=C.SeekPreview(preview,'sword_heavy_release',11/30,.33) -- second cut's hit_on
 assert(C.PreviewPhase('sword_heavy_release',t)=='active' and events:find('hit_on',1,true))
 assert(preview.queueCount==0,'seek drains preview events without firing gameplay')
 
@@ -288,9 +288,9 @@ do
     m.o.audio={Play=function(cue)if cue=='sword_full' then full=full+1 end end}
     m:Play('sword_heavy_charge');m.anim:Update(1.1);m:Events();m:Events()
     m.anim:Update(.5);m:Events()
-    assert(full==1,'sword full cue only on charge_full edge, never hold frames')
+    assert(full==0 and not m.fullCharged,'long-press windup has no charge levels or full cue')
 end
-print('PASS R8 profiles 40/40/80/100ms, complete pooled event overwrite/consumer, bounded groups, local punch, low-FPS visible contact fallback, sword full once')
+print('PASS R8 profiles 40/40/80/100ms, complete pooled event overwrite/consumer, bounded groups, local punch, low-FPS visible contact fallback, no sword charge levels')
 do
     local owner=C.New{state={GetSetting=function()return false end},rig={},anim={}}
     local target={hitStop=0}

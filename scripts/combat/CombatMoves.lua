@@ -3,6 +3,7 @@
 local Hit=require('combat.Hit')
 local Perf=require('combat.SwingPerf')
 local Data=require('combat.AnimClips')
+local Stamina=require('combat.Stamina')
 local COMBO=Data.Combo
 ---@class PlayerCombatMoves
 ---@field o table
@@ -34,6 +35,7 @@ local COMBO=Data.Combo
 ---@field partNotice {part:string,untilTime:number}|nil
 ---@field strikeTarget table|nil Assist-selected melee target for the current swing.
 ---@field motionScale number|nil Lunge scale so a dash stops short of its target.
+---@field stamina CombatStamina Combat-only stamina (sprint, cross slash, plunge).
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
 -- Real seconds; frame-average velocity integrates across hover/terminal boundaries.
@@ -45,7 +47,9 @@ function C.PlungeDistance(age)
         +p.terminalSpeed*math.max(0,t-p.accelerationTime)
 end
 local BUFFER=.160
-local HEAVY_HOLD=.45 -- seconds the heavy button must be held before release fires
+-- Holding attack this long fires the cross slash at once (no charge levels).
+local HEAVY_HOLD=.40
+C.HEAVY_HOLD=HEAVY_HOLD
 local RING_EVENT={material='stone',kind='dust'}
 -- Immutable after module initialization. Special outcomes inherit the source
 -- stop; a weak point/kill does not silently upgrade the approved 40/80ms.
@@ -166,6 +170,7 @@ function C.New(opts)
     for i=1,12 do self.numberPool[i]={} end
     for _,e in ipairs(self.eventPool) do e.audio={};e.impactDir=Vector3() end
     self.shakeVector=Vector3()
+    self.stamina=Stamina.New()
     self.feedbackWrite,self.numberWrite=0,0
     return self
 end
@@ -191,7 +196,7 @@ function C:Play(id,fadeIn)
     if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
     -- Scale the clip clock; charge_full remains the sole full-charge signal.
-    local speed=id=='sword_heavy_charge' and 1/math.max(.1,stats.chargeMultiplier or 1) or 1
+    local speed=1
     local params=self.playParams
     for k in pairs(params) do params[k]=nil end
     params.weaponInHand=self:WeaponInHand() and 1 or 0
@@ -225,6 +230,7 @@ function C:Play(id,fadeIn)
     self.previousHit=nil
     self.motionDebt=0
     self.hitForward=(id:find('sword_light_',1,true) or id=='sword_heavy_release') and self.moveDir or nil
+    self.cut=0 -- hit windows opened by this clip (cross slash has two)
     self.state.SetBusy(true)
     return true
 end
@@ -333,6 +339,7 @@ function C:StartPlunge(air)
     if self.plunging or self.clip=='plunge_land' or self.state.GetWeapon()~='sword'
         or air.onGround or air.invalid or (air.height or 0)<.6 then return false end
     if not self:CanCancel() then return false end
+    if not self.stamina:Spend('plunge') then return false,'stamina' end
     if self.handle then self.anim:Stop(self.handle,.04) end
     if self.o.locomotion then self.o.locomotion:Cancel('attack') end
     self.state.Activity(true);self.rig:SetPose('hand')
@@ -389,7 +396,7 @@ function C:Action(kind,axis)
     if kind~='light' and kind~='heavy' and kind~='hold' then return false,'unknown-action' end
     if not self.state.InCombat() then return false,'explore' end
     local air=self:Air()
-    if self.state.GetWeapon()=='sword' and kind~='heavy' and air and not air.onGround and (air.height or 0)>=.6 then return self:StartPlunge(air) end
+    if self.state.GetWeapon()=='sword' and air and not air.onGround and (air.height or 0)>=.6 then return self:StartPlunge(air) end
     if self.plunging then return false,'air-attack' end
     if self.o.locomotion and self.o.locomotion:IsRunning() then self.o.locomotion:Cancel('attack') end
     if self.clip=='plunge_land' and self:CanCancel() then
@@ -429,11 +436,12 @@ function C:Action(kind,axis)
         self.drawElapsed,self.power=0,0
         self.drawFullReached,self.fireCrystal,self.fireCharge=false,false,nil
         return self:Play('bow_draw')
-    elseif kind=='heavy' then
+    elseif kind=='heavy' and self.stamina:Spend('heavy') then
         self.autoFire=false; self.combo=0
         return self:Play('sword_heavy_release') and self:LimitLunge('sword_heavy_release')
     elseif kind=='hold' then self.hold,self.charge,self.fullCharged=0,0,false; return self:Play('sword_heavy_charge')
     else
+        -- Light stage; also the fallback when a cross slash cannot be paid for.
         if self.comboUntil and self.age>self.comboUntil then self.combo=0 end
         self.comboUntil=nil
         self.combo=self.combo%C.COMBO_LENGTH+1
@@ -462,15 +470,8 @@ function C:LimitLunge(id)
 end
 function C:Release()
     if self.clip=='sword_heavy_charge' then
-        local heavy=self.hold>=HEAVY_HOLD -- gesture classification, not a damage window
-        local source=self.holdSource;self.holdSource=nil
-        self.releaseFull=self.charge>=1
-        if source=='heavy' and not heavy then
-            -- Short right-button press: nothing fires, the guard simply relaxes.
-            self.anim:Stop(self.handle,.12);self.clip,self.handle=nil,nil
-            self.hold,self.charge=0,0;self.state.SetBusy(false)
-            return
-        end
+        local heavy=self.hold>=HEAVY_HOLD-1e-8 -- gesture classification, not a damage window
+        self.holdSource=nil;self.releaseFull=false
         self.anim:Stop(self.handle,0); self.clip=nil
         self:Action(heavy and 'heavy' or 'light')
     elseif self.clip=='bow_hold' or self.clip=='bow_draw' then
@@ -490,10 +491,7 @@ function C:Release()
         if self.fireCrystal then shot.stats.crystalRadius,shot.stats.crystalDamageMultiplier=.8,.25 end
         self:Play('bow_release')
         self.pendingFire=shot -- release authority; the clip's fire cue cannot create a second shot
-    elseif self.pending=='hold' then
-        if self.holdSource=='heavy' then self.pending,self.holdSource=nil,nil
-        else self.pending,self.pendingReleased='light',true end
-    end
+    elseif self.pending=='hold' then self.pending,self.pendingReleased='light',true end
 end
 -- Group envelopes start at FIRST contact: later targets raise the maximum,
 -- never restart or add shakes. Bounded storage, including long-lived arrows.
@@ -629,6 +627,15 @@ function C:Events()
         if e.handle==self.handle then
         if self.observe then self.observe('event',{name=e.name,clip=e.clip,t=e.t,age=self.age}) end
         if e.name=='hit_on' then
+            self.cut=(self.cut or 0)+1
+            if self.cut>1 then
+                -- Cross slash second cut: fresh targets, hitstop group and whoosh.
+                self.swingSerial=self.swingSerial+1
+                for key in pairs(self.damaged) do self.damaged[key]=nil end
+                local sound=self.soundOpts
+                sound.pos,sound.tier,sound.pitch=self.o.position(),3,.82
+                self:Sound('sword_whoosh',sound);sound.pitch,sound.tier=nil,nil
+            end
             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
             if self.rig.BeginSlash then self.rig:BeginSlash(self.combo,e.clip=='sword_heavy_release') end
             self.hitForward=self.hitForward or Flat(self.moveDir or self.o.forward(),Vector3.FORWARD)
@@ -729,7 +736,17 @@ function C:Update(dt,controls)
         end
     elseif self.stanceHandle then self.anim:Stop(self.stanceHandle,.08);self.stanceHandle=nil end
     self.shakeAge=self.shakeAge+dt
+    local inCombat=self.state.InCombat()
+    self.stamina:Update(dt,inCombat,foot~=nil and foot:IsRunning())
+    -- Exhausted: sprint is refused until the bar recovers (combat only).
+    if inCombat and controls.runIntent and not self.stamina:CanSprint() then
+        controls.runIntent=false
+        if foot and foot:IsRunning() then foot:Cancel('stamina') end
+    end
     local attack,heavy=controls.attack==true,controls.heavy==true
+    -- The sword's heavy is a long press of attack; the right button is bow-only.
+    local swordHeavy=self.state.GetWeapon()=='sword'
+    if swordHeavy then heavy=false end
     if not controls.allowed then
         if not self.suspended then
             -- A death/getup animation must finish while its input is disabled.
@@ -747,22 +764,29 @@ function C:Update(dt,controls)
     if controls.allowed and not self.dead then self:UpdatePlunge(dt) end
     local animDt=math.max(0,dt-self.hitstop)
     if canInput and not self.plunging then
-        if (heavy and not self.lastHeavy) or controls.heavyTap then
-            -- Sword: the heavy button is a long press. It starts the charge pose;
-            -- releasing after HEAVY_HOLD fires the spin, an early release cancels.
-            local sword=self.state.GetWeapon()=='sword'
-            self.releaseFull=false;self.buffer,self.bufferAt,self.bufferUntil=sword and 'hold' or 'heavy',self.age,self.age+BUFFER
-            self.holdSource=sword and 'heavy' or nil
+        if not swordHeavy and ((heavy and not self.lastHeavy) or controls.heavyTap) then
+            self.releaseFull=false;self.buffer,self.bufferAt,self.bufferUntil='heavy',self.age,self.age+BUFFER
+            self.holdSource=nil
         end
         if (attack and not self.lastAttack) or controls.attackTap then
             self.buffer=(self.state.GetWeapon()=='bow' or (not self.clip and attack)) and 'hold' or 'light'
             self.bufferAt,self.bufferUntil=self.age,self.age+BUFFER
             self.holdSource='attack'
+            self.pressAt,self.pressHeavy=self.age,false
+        end
+        -- Mid-combo long press: queue the cross slash after the current stage.
+        if swordHeavy and attack and self.pressAt and not self.pressHeavy and self.age-self.pressAt>=HEAVY_HOLD-1e-8
+            and self.clip and self.clip:find('sword_light_',1,true) then
+            self.pressHeavy=true
+            self.buffer,self.bufferAt,self.bufferUntil='heavy',self.age,self.age+1.2
         end
         self:ConsumeBuffer(controls.axis)
         if self.clip=='sword_heavy_charge' or (self.clip=='sword_draw' and self.pending=='hold') then
             self.hold=self.hold+dt
-            self.charge=self.fullCharged and 1 or math.min(.999,self.hold/math.max(.1,self.rig:GetStats().chargeMultiplier or 1))
+            -- No charge levels: holding long enough fires the cross slash at once.
+            if self.clip=='sword_heavy_charge' and attack and self.hold>=HEAVY_HOLD-1e-8 then
+                self.pressHeavy=true;self:Release()
+            end
         end
         if self.clip=='bow_hold' or self.clip=='bow_draw' then
             self.drawElapsed=self.drawElapsed+dt
@@ -776,9 +800,7 @@ function C:Update(dt,controls)
             end
         end
         if self.autoFire and self.drawFullReached and self.clip=='bow_hold' and self.charge>=1 then self:Release() end
-        if self.holdSource=='heavy' then
-            if not heavy and (self.clip=='sword_heavy_charge' or self.pending=='hold') then self:Release() end
-        elseif self.lastAttack and not attack and not self.autoFire then self:Release() end
+        if self.lastAttack and not attack and not self.autoFire then self:Release() end
     end
     Perf.Context(self.swingSerial,self.combo,self.clip)
     Perf.Finish('input',inputStart)
@@ -889,8 +911,9 @@ function C.MeleeZone(id,position,forward,reach,slam,out)
     out.origin=Vector3(position.x+forward.x*offset,position.y,position.z+forward.z*offset)
     out.source=Vector3(position.x,position.y+.9,position.z)
     out.forward=forward
-    out.radius=(slam and 2 or (stage and stage.radius or 1.8))*math.max(.1,reach or 1)
-    out.angle=slam and 90 or (id=='sword_heavy_release' and 360 or (stage and stage.angle or 120))
+    local cross=id=='sword_heavy_release'
+    out.radius=(slam and 2 or (cross and 2.3 or (stage and stage.radius or 1.8)))*math.max(.1,reach or 1)
+    out.angle=slam and 90 or (cross and 170 or (stage and stage.angle or 120))
     out.low,out.high=-.3,2
     return out
 end
@@ -912,12 +935,7 @@ function C:StrikeZones()
     local direction=self.hitForward or self.moveDir or self.o.forward()
     local reach=self.rig:GetStats().reach
     self.strikeZone=C.MeleeZone(id,position,direction,reach,false,self.strikeZone)
-    local slam
-    if id=='sword_heavy_release' and t>=phase[1]+(phase[2]-phase[1])*2/3 then
-        self.slamZone=C.MeleeZone(id,position,direction,reach,true,self.slamZone)
-        slam=self.slamZone
-    end
-    return self.strikeZone,slam,self.hitOpen or self.hitPending
+    return self.strikeZone,nil,self.hitOpen or self.hitPending
 end
 -- Samples the same sector, including both radial edges. The caller must assign
 -- the returned Vector3: native vector arguments are passed by value.
@@ -980,8 +998,8 @@ function C:AfterPose()
             local plunge=self.hitClip=='plunge_land'
             local heavy=self.hitClip=='sword_heavy_release' or plunge
             local stage=COMBO[self.combo] or COMBO[1]
-            local info={dmg=(stats.attack or 10)*(plunge and 1.6*(self.plungeMultiplier or 1.4) or (heavy and (self.releaseFull and 2.2 or 1.6) or stage.damage)),
-                poise=(stats.poise or 6)*(plunge and 3 or (heavy and (self.releaseFull and 2.5 or 1.8) or stage.poise)),
+            local info={dmg=(stats.attack or 10)*(plunge and 1.6*(self.plungeMultiplier or 1.4) or (heavy and 1.3 or stage.damage)),
+                poise=(stats.poise or 6)*(plunge and 3 or (heavy and 1.6 or stage.poise)),
                 armorBreak=(stats.armorBreak or 1)*(plunge and 2 or (heavy and self.releaseFull and 1.5 or 1)),knockback=stage.knockback,
                 plunge=plunge,part=part,material=contact.shape.material or 'soft',normal=contact.normal,
                 deferPresentation=type(enemy.OnHitEvent)=='function',full=not plunge and heavy and self.releaseFull==true,

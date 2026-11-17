@@ -204,6 +204,8 @@ local function RenderHUD(self,vg)
     if not selecting and not preview and not touch and CombatHUD.Active() then
         local list=COMBAT_BUTTONS
         list[1].icon=CombatHUD.Weapon()
+        -- Sword: heavy = hold left button (cross slash); right button is the bow's crystal shot.
+        list[2].key=CombatHUD.Weapon()=='bow' and '右键' or '长按左键'
         for i,b in ipairs(list) do
             local x,y=Draw.Snap(w/2+(i-2.5)*80),Draw.Snap(h-s.bottom-64)
             Draw.Button(vg,b,x,y,.78,false,false,false,0,1,i==1 and CombatHUD.Charge() or 0)

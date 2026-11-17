@@ -536,7 +536,7 @@ end
 function Rig:BeginSlash(combo,heavy)
     if self.trailEnabled then
         self.combatFx:Begin(combo,heavy)
-        self.slashRibbon:Begin((heavy or combo==5) and "moon" or (combo==4 and "heavy" or "light"))
+        self.slashRibbon:Begin(heavy and "cross" or (combo==5 and "moon" or (combo==4 and "heavy" or "light")))
     end
     self.wingGlow=math.max(self.wingGlow or 0,heavy and 1 or .8)
 end

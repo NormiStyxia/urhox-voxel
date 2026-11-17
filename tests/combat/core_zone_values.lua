@@ -75,10 +75,11 @@ for _,yaw in ipairs({0,45,90,180,270})do
     for _,full in ipairs({false,true})do
      m:Cancel('test');State.SetBusy(false);State.Activity(true)
      n.node.worldPosition=dummy.position-targetDir*1.35
+     m.stamina.value,m.stamina.exhausted=m.stamina.max,false
      m.releaseFull=full;assert(m:Action('heavy'))
      for _=1,60 do tick()end
     end
-    assert((hits.sword_heavy_release or 0)==(wall and 0 or 38),'heavy short/full 16+22; no duplicate settlement')
+    assert((hits.sword_heavy_release or 0)==(wall and 0 or 52),'cross slash 13+13 per cut, twice; no duplicate settlement')
     tests=tests+1
    end
   end

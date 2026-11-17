@@ -20,6 +20,8 @@ local STYLES={
     heavy={life=.38,width=.95,reach=.55,core={1,.97,.86},body={.30,.55,1},glow=1.55},
     moon={life=.50,width=1.0,reach=.80,core={1,1,1},body={.18,.42,1},glow=1.85},
     plunge={life=.30,width=1.0,reach=.25,core={.95,.98,1},body={.22,.50,1},glow=1.35},
+    -- Cross slash: the first diagonal still glows when the second crosses it.
+    cross={life=.62,width=1.0,reach=.85,core={1,.98,.90},body={.24,.48,1},glow=1.9},
 }
 ---@param scene Scene
 ---@return SlashRibbon
@@ -42,7 +44,7 @@ function R.New(scene)
     self.samples={}
     for i=1,R.CAPACITY do
         self.samples[i]={rx=0,ry=0,rz=0,tx=0,ty=0,tz=0,age=1,
-            ix=0,iy=0,iz=0,mx=0,my=0,mz=0,ox=0,oy=0,oz=0,fade=0}
+            ix=0,iy=0,iz=0,mx=0,my=0,mz=0,ox=0,oy=0,oz=0,fade=0,stroke=false}
     end
     self.count,self.head=0,0
     self.style=STYLES.light
@@ -51,11 +53,12 @@ function R.New(scene)
     self.lx,self.ly,self.lz,self.ltx,self.lty,self.ltz=0,0,0,0,0,0
     return self
 end
----@param kind string light | heavy | moon | plunge
+---@param kind string light | heavy | moon | plunge | cross
 function R:Begin(kind)
     self.style=STYLES[kind] or STYLES.light
     self.emitting=true
     self.lastValid=false
+    self.stroke=true -- next sample starts a new stroke: never bridge to the previous one
 end
 function R:End()
     self.emitting=false
@@ -70,6 +73,7 @@ function R:Push(rx,ry,rz,tx,ty,tz)
     self.head=self.head%R.CAPACITY+1
     local s=self.samples[self.head]
     s.rx,s.ry,s.rz,s.tx,s.ty,s.tz,s.age=rx,ry,rz,tx,ty,tz,0
+    s.stroke=self.stroke==true;self.stroke=false
     self.count=math.min(R.CAPACITY,self.count+1)
 end
 -- Blade root/tip world positions for this frame. Subdivides by blade angle
@@ -145,7 +149,7 @@ function R:Update(dt)
             s.ox,s.oy,s.oz=s.tx+(s.tx-s.rx)*e,s.ty+(s.ty-s.ry)*e,s.tz+(s.tz-s.rz)*e
             s.ix,s.iy,s.iz=s.tx+(s.rx-s.tx)*w,s.ty+(s.ry-s.ty)*w,s.tz+(s.rz-s.tz)*w
             s.mx,s.my,s.mz=(s.tx+s.ix)*.5,(s.ty+s.iy)*.5,(s.tz+s.iz)*.5
-            if p then
+            if p and not p.stroke then
                 local pa,ca=p.fade,s.fade
                 local pb,cb=pa*.75,ca*.75
                 -- Outer flare: soft blue glow beyond the tip, transparent edge.

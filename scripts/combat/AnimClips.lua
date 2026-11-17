@@ -84,7 +84,7 @@ add { -- Sword in hand: same additive stance, blade held low, tip down-forward-o
     keys={body=k({6,0,0},{6,0,0},{6,0,0},{6,0,0}),head=k({3,0,0},{3,0,0},{3,0,0},{3,0,0}),
         arm_right=k({0,0,4},{0,0,4},{0,0,4},{0,0,4}),arm_left=k({0,0,-4},{0,0,-4},{0,0,-4},{0,0,-4})},
     root={{0,-.04},{1,-.04}},
-    weapon={{0,offset={0,0,0},euler={45,0,-25}},{1,offset={0,0,0},euler={45,0,-25}}},
+    weapon={{0,offset={0,0,0},euler={73,0,-14}},{1,offset={0,0,0},euler={73,0,-14}}},
 }
 assert(C.Clips.stance_combat_sword)
 add { -- 符号待 Web 校准
@@ -177,11 +177,11 @@ end
 -- Recovery: follow-through keeps its inertia, then the blade sinks to the low
 -- guard (tip toward the ground along the forearm) and blends into the stance.
 local RECOVERY_FADE=.22
-local LOW_GUARD={.30,.78,.38}
+local LOW_GUARD={.30,.74,.28}
 -- Blade direction in the low guard (radial from the chest to LOW_GUARD): tip
 -- down, forward and out to the right. Recovery blends the blade into it.
-local SETTLE_DIR={.54,-.49,.68}
-local STANCE_EULER={45,0,-25} -- stance_combat_sword grip euler (same low guard)
+local SETTLE_DIR={.42,-.86,.28}
+local STANCE_EULER={73,0,-14} -- stance_combat_sword grip euler (same low guard)
 local LIGHT={
     {id="sword_light_1",dur=.80,on=.16,contact=.22,off=.26,cancel=.32,
         yaw={0,35,22,-30,-45,0},
@@ -237,28 +237,36 @@ for _,row in ipairs(LIGHT) do
     -- Long recovery melts into the combat stance instead of snapping at the end.
     C.Clips[row.id].fadeOut=RECOVERY_FADE
 end
-add { -- 符号待 Web 校准
-    id="sword_heavy_charge",dur=1,layer=L.ATTACK,weaponType="sword",loop=true,loopFrom=.8,
-    keys={body=k({6,0,0},{-6,30,0},{-10,40,0},{-10,40,0},.45,.8),
+add { -- Long-press windup: blade lifts over the right shoulder, no charge levels.
+    -- Holding attack HEAVY_HOLD (.40s) fires the cross slash straight from this pose.
+    id="sword_heavy_charge",dur=.50,layer=L.ATTACK,weaponType="sword",loop=true,loopFrom=.9,
+    keys={body=k({6,0,0},{-6,30,0},{-8,38,0},{-8,38,0},.45,.8),
         arm_right=k({-65,0,12},{-130,30,50},{-160,35,60},{-160,35,60},.45,.8),
         arm_left=k({0,0,-8},{-50,10,-20},{-90,15,-15},{-90,15,-15},.45,.8),
         leg_right=k({0,0,0},{-28,0,5},{-38,0,5},{-38,0,5},.45,.8),
         leg_left=k({0,0,0},{-20,0,-5},{-28,0,-5},{-28,0,-5},.45,.8)},
-    root={{0,-.04},{.45,-.12},{.8,-.17},{1,-.17}},events={{t=1,"charge_full"}},
+    root={{0,-.04},{.45,-.12},{.8,-.15},{1,-.15}},
 }
-attack({ -- 符号待 Web 校准
-    id="sword_heavy_release",dur=.72,layer=L.ATTACK,weaponType="sword",speedStat="speed",
-    phases=phases(.72,.22,.32),events=hits(.22/.72,.32/.72,.48/.72),
-    root={{0,-.17},{.19/.72,-.10},{.22/.72,-.08},{.27/.72,-.14},{.38/.72,-.18},{1,0}},
-    motion={{t0=.22,t1=.40,forward=1.1}},
-}, {0,.19,.22,.27,.38,.72},
-    -- Unwrapped yaw: side 0 -> overshoot -365 -> settle -360. One full turn.
-    {{-10,40,0},{-8,55,0},{6,0,0},{18,-180,0},{12,-365,0},{6,-360,0}},
-    {{-160,35,60},{-145,45,65},{-100,20,70},{-70,-20,70},{-75,-35,75},{-65,0,12}},
-    {{-90,15,-15},{-60,0,-20},{-45,0,-40},{-30,0,-50},{-20,0,-55},{0,0,-8}},
-    {{-28,0,-5},{-25,0,-5},{-15,0,0},{-20,-15,0},{-12,0,0},{0,0,0}},
-    {{{0,0,0},{-25,0,10}},{{0,0,-.04},{-30,0,25}},{{0,0,0},{-15,0,30}},
-     {{0,0,.08},{25,0,-15}},{{0,0,.05},{38,0,-25}},{{0,0,0},{0,0,0}}})
+-- Cross slash (交叉连斩): forehand diagonal (upper right -> lower left), the
+-- wrist rolls back over the left shoulder, backhand diagonal (upper left ->
+-- lower right). Two hit windows; the ribbons cross into an X.
+local CROSS_DUR=.96
+local CROSS={0,.10,.19,.36,.46,CROSS_DUR} -- ready, cut1 on, cut1 off, cut2 on, cut2 off, end
+C.CrossCuts={{on=.10,contact=.15,off=.19},{on=.36,contact=.42,off=.46}}
+attack({
+    id="sword_heavy_release",dur=CROSS_DUR,layer=L.ATTACK,weaponType="sword",speedStat="speed",
+    phases=phases(CROSS_DUR,.10,.46),
+    events={{t=.10/CROSS_DUR,"hit_on"},{t=.19/CROSS_DUR,"hit_off"},{t=.36/CROSS_DUR,"hit_on"},
+        {t=.46/CROSS_DUR,"hit_off"},{t=.60/CROSS_DUR,"cancel_open"},{t=1,"cancel_close"}},
+    root={{0,-.15},{.10/CROSS_DUR,-.10},{.19/CROSS_DUR,-.17},{.30/CROSS_DUR,-.10},{.36/CROSS_DUR,-.09},
+        {.46/CROSS_DUR,-.19},{.62/CROSS_DUR,-.14},{1,0}},
+}, CROSS,
+    {{-8,38,0},{6,30,0},{18,-35,0},{6,-42,0},{20,32,0},{6,0,0}},
+    {{-160,35,60},{-145,45,65},{-70,-20,70},{-150,-30,40},{-70,20,60},{-65,0,12}},
+    {{-90,15,-15},{-40,-5,-30},{-15,15,-45},{-30,-10,-25},{-20,10,-50},{0,0,-8}},
+    {{-28,0,-5},{-18,0,-5},{-26,0,0},{-20,0,0},{-30,0,0},{0,0,0}},
+    {{{0,0,0},{0,0,0}},{{0,0,0},{0,0,0}},{{0,0,0},{0,0,0}},{{0,0,0},{0,0,0}},
+     {{0,0,0},{0,0,0}},{{0,0,0},STANCE_EULER}})
 -- Five-stage catalogue: gameplay and presentation read these same rows.
 C.Combo={
     {id="sword_light_1",damage=1,poise=1,radius=1.8,angle=120,offset=0,profile="light_1",tier="light",knockback=.1,pitch=1},
@@ -433,7 +441,7 @@ local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge,pole)
         bez(math.min(.92,(ending+.30)/c.dur),1,LOW_GUARD,LOW_GUARD,LOW_GUARD)},
         amplitude=degrees,windup=.12,overshoot=.08,space="body_feet",pole=pole}}
     c.bladePath={mode="radial",origin={0,1.05,0},side="arm_right",
-        settle={ending/c.dur,math.min(.95,(ending+.16)/c.dur),SETTLE_DIR}}
+        settle={ending/c.dur,math.min(.95,(ending+.16)/c.dur),SETTLE_DIR,1.2}}
     c.motion={{t0=c.phases.active[1],t1=ending,forward=lunge}}
     -- IK and blade direction update at render cadence; hitstop freezes s.t.
     c.continuous=true
@@ -471,26 +479,41 @@ moonPath[6].t0,moonPath[6].t1=moonEnd+.06/moonDur,moonEnd+.10/moonDur
 moonPath[7].t0=moonEnd+.10/moonDur
 
 local heavy=C.Clips.sword_heavy_release
-local circle={kind="arc",plane="xz",cx=0,cy=0,radius=.75,angle=0,sweep=math.pi*2,
-    a={.75,1.1,0},b={.75,1.1,0}}
-heavy.handPath={arm_right={space="body_feet",amplitude=360,windup=.12,overshoot=.08,segments={
-    bez(0,.14/.72,{.30,1.55,-.20},arcPoint(circle,-.12),{.75,1.45,-.5},"inQuad"),
-    arcPart(circle,.14/.72,.22/.72,-.12,0,"inQuad"),
-    arcPart(circle,.22/.72,.27/.72,0,.7,"inCubic"),
-    arcPart(circle,.27/.72,.32/.72,.7,1,"outCubic"),
-    bez(.32/.72,.38/.72,{.75,1.1,0},{.12,.35,.65},{.35,1.9,.65},"inQuad"),
-    bez(.38/.72,.43/.72,{.12,.35,.65},{.10,.28,.70},{.10,.28,.70},"outQuad"),
-    bez(.43/.72,.62/.72,{.10,.28,.70},LOW_GUARD,{.25,.45,.70},"inOutCubic"),
-    bez(.62/.72,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
-heavy.fadeOut=RECOVERY_FADE
-heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right",settle={.32/.72,.48/.72,SETTLE_DIR}}
-heavy.motion={{t0=.22,t1=.38,forward=.65}}
-heavy.continuous=true
--- Free-facing cleanup: the hand already describes a full circle. A second
--- torso revolution doubles the visible turn while the planted feet face W2
--- heading. Keep a bounded hip/shoulder windup and follow-through instead.
--- 符号待 Web 校准
-local heavyYaw={40,55,8,-35,-45,0}
+do
+    local D=CROSS_DUR
+    local cut1=arc({.62,1.72,.05},{-.52,.68,.70},160,"xz")
+    local cut2=arc({-.48,1.06,.64},{.60,.62,.70},-130,"xz")
+    local over1,wind2,over2=arcPoint(cut1,1.08),arcPoint(cut2,-.14),arcPoint(cut2,1.08)
+    heavy.handPath={arm_right={space="body_feet",amplitude=160,windup=.12,overshoot=.08,pole={1,.2,-.4},segments={
+        bez(0,.07/D,{.65,1.55,-.20},arcPoint(cut1,-.12),{.72,1.78,-.12},"inQuad"),
+        arcPart(cut1,.07/D,.10/D,-.12,0,"inQuad"),
+        arcPart(cut1,.10/D,.15/D,0,.72,"inCubic"),
+        arcPart(cut1,.15/D,.19/D,.72,1,"outCubic"),
+        arcPart(cut1,.19/D,.23/D,1,1.08,"outQuad"),
+        -- Wrist rolls back up across the chest to the left shoulder.
+        bez(.23/D,.33/D,over1,wind2,{-.70,.80,.80},"inOutCubic"),
+        arcPart(cut2,.33/D,.36/D,-.14,0,"inQuad"),
+        arcPart(cut2,.36/D,.42/D,0,.72,"inCubic"),
+        arcPart(cut2,.42/D,.46/D,.72,1,"outCubic"),
+        arcPart(cut2,.46/D,.50/D,1,1.08,"outQuad"),
+        bez(.50/D,.74/D,over2,LOW_GUARD,{(over2[1]+LOW_GUARD[1])*.5+.10,math.min(over2[2],LOW_GUARD[2])-.05,(over2[3]+LOW_GUARD[3])*.5+.05},"outCubic"),
+        bez(.74/D,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
+    heavy.fadeOut=RECOVERY_FADE
+    -- Lower radial origin (waist): a hand at chest height still holds the
+    -- blade on a steep diagonal, so both cuts read as the strokes of an X.
+    heavy.bladePath={mode="radial",origin={0,.75,0},side="arm_right",settle={.50/D,.66/D,SETTLE_DIR,1.2}}
+    heavy.motion={{t0=.08,t1=.20,forward=.45},{t0=.33,t1=.48,forward=.60}}
+    heavy.continuous=true
+    heavy.trail={.10,.52}
+    -- Elbow whips straight on each contact and cocks again for the second cut.
+    heavy.elbow={
+        arm_right={{0,-80},{.08/D,-70,"inQuad"},{.15/D,-4,"outCubic"},{.22/D,-18,"outQuad"},
+            {.32/D,-95,"inOutCubic"},{.36/D,-70,"inQuad"},{.42/D,-4,"outCubic"},{.50/D,-14,"outQuad"},{1,-22,"smoothStep"}},
+        arm_left={{0,-40},{.15/D,-50},{.30/D,-70},{.42/D,-45},{1,-25,"smoothStep"}}}
+end
+-- Torso: loaded right -> cut across to the left -> stays wound left for the
+-- backhand -> drives across to the right -> settles. Bounded, no full turn.
+local heavyYaw={38,30,-35,-42,32,0}
 for i,yaw in ipairs(heavyYaw) do heavy.keys.body[i][2][2]=yaw end
 for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release"}) do
     local c=C.Clips[id]
@@ -514,8 +537,8 @@ end
 -- Light rows author their own crouch/hop root; lean pitch is shared here.
 local LEAN={sword_light_1={6,-6,4,26,22,6},sword_light_2={6,14,10,-6,-8,6},
     sword_light_3={6,-4,18,30,26,6},sword_light_4={6,10,4,12,10,6},
-    sword_light_5={6,18,-10,8,34,6},sword_heavy_release={-10,-10,8,26,22,6}}
-local DIP={sword_heavy_release=-.18}
+    sword_light_5={6,18,-10,8,34,6},sword_heavy_release={-8,10,26,10,28,6}}
+local DIP={sword_heavy_release=-.19}
 for id,lean in pairs(LEAN) do
     local c=C.Clips[id]
     for i,pitch in ipairs(lean) do

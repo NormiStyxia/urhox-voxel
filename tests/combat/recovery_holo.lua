@@ -14,13 +14,22 @@ end
 local function run(m,seconds,controls)
     for _=1,math.ceil(seconds/.01) do m:Update(.01,controls or {allowed=true}) end
 end
--- 1) Right button: a tap does nothing, a long press fires the spin on release.
+-- 1) Sword heavy is a long press of attack: no right button, no charge levels.
 local m=New()
-m:Update(.01,{allowed=true,heavy=true});assert(m.clip=='sword_heavy_charge','press starts the charge pose')
-run(m,.15,{allowed=true,heavy=true});m:Update(.01,{allowed=true,heavy=false})
-assert(m.clip==nil and m.combo==0,'short press releases without an attack')
-m=New();m:Update(.01,{allowed=true,heavy=true});run(m,.50,{allowed=true,heavy=true})
-m:Update(.01,{allowed=true,heavy=false});assert(m.clip=='sword_heavy_release','long press fires the spin')
+run(m,.6,{allowed=true,heavy=true});assert(m.clip==nil,'right button does nothing for the sword')
+m=New();m:Update(.01,{allowed=true,attack=true});assert(m.clip=='sword_heavy_charge','press starts the windup')
+run(m,.15,{allowed=true,attack=true});m:Update(.01,{allowed=true,attack=false})
+assert(m.clip=='sword_light_1','short press is a light attack')
+m=New();m:Update(.01,{allowed=true,attack=true});run(m,.42,{allowed=true,attack=true})
+assert(m.clip=='sword_heavy_release','holding fires the cross slash without a release')
+-- Mid-combo long press queues the cross slash after the current stage.
+m=New();m:Update(.01,{allowed=true,attackTap=true});assert(m.clip=='sword_light_1')
+m:Update(.01,{allowed=true,attack=true});run(m,.30,{allowed=true,attack=true})
+assert(m.clip=='sword_light_1' and m.buffer~='heavy','not yet a long press')
+run(m,.12,{allowed=true,attack=true});assert(m.clip=='sword_heavy_release','long press cuts into the cross slash at the cancel window')
+-- Stamina: an unaffordable cross slash falls back to a light stage.
+m=New();m.stamina.value=10;m:Update(.01,{allowed=true,attack=true});run(m,.42,{allowed=true,attack=true})
+assert(m.clip=='sword_light_1' and m.stamina.value<25 and m.stamina.denyAt>0,'no stamina, no cross slash (bar flashes)')
 -- 2) Recovery is inertia: idle plays it out, any intent ends it.
 for stage,row in ipairs(D.Combo) do
     local clip=D.Clips[row.id];local open=clip.events[3].t*clip.dur
@@ -89,4 +98,4 @@ assert(r.visualState=='hang' and pivot.parent==back and wing.node.enabled and no
 r:SetPose('hidden');frames(40);assert(r.visualState=='hidden' and not wing.node.enabled and not wing.holoNode.enabled)
 r:Dispose();assert(r.entries.sword.wing==nil)
 rawset(_G,'WING_MATERIAL_MISSING',true)
-print('PASS long-press heavy, cancellable recovery, low guard rest, hologram stow/draw in place')
+print('PASS long-press cross slash, cancellable recovery, low guard rest, hologram stow/draw in place')
