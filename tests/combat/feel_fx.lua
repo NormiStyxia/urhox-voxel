@@ -8,7 +8,7 @@ fx:Impact(pos,forward,true)
 local active=0;for _,s in ipairs(fx.land)do if s.active then active=active+1 end end
 assert(active==30 and active<=40)
 fx:Update(.14);assert(fx.land[1].scale.x>2.1 and fx.land[1].scale.x<2.4)
-for i=16,21 do assert(fx.land[i].scale.z<=.420001 and fx.land[i].color==5)end
+for i=16,21 do assert(fx.land[i].scale.z<=.120001 and fx.land[i].color==5)end
 for i=2,15 do assert(fx.land[i].ttl>=.5 and fx.land[i].ttl<=.7)end
 fx:Impact(pos,forward,true)
 fx:Update(1/30);assert(fx.land[30].color==1)
@@ -34,7 +34,7 @@ local turn=math.rad(208);tip.x,tip.z=root.x+math.cos(turn),root.z+math.sin(turn)
 fx:Blade(root,tip)
 assert(fx.arcs[first].pos.z>root.z,'large spin follows authored positive XZ direction')
 fx.plunging=true;fx:Descent(root,tip)
-for _,s in ipairs(fx.ribbons)do assert(s.node.enabled)end
+for _,s in ipairs(fx.ribbons)do assert(not s.node.enabled,'no vertical descent bars')end
 fx.plunging=false;fx:Update(.001)
 for _,s in ipairs(fx.ribbons)do assert(not s.node.enabled)end
 -- Measure the effect itself, without the engine adapter's simulated allocations.

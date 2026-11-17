@@ -10,6 +10,7 @@
 ---@field plunging boolean
 local F={};F.__index=F
 F.LANDING_COUNT=30;F.ARC_COUNT=24;F.GHOST_COUNT=12
+F.GHOSTS=false
 -- Vector3 is a value type in the engine: callers MUST assign the result back.
 local function set(v,x,y,z) v.x,v.y,v.z=x,y,z;return v end
 local function clamp(x,a,b)return math.max(a,math.min(b,x))end
@@ -115,10 +116,10 @@ function F:Impact(pos,forward,plunge)
         show(self,s,cx+math.cos(a)*r,pos.y+.08,cz+math.sin(a)*r,size,size,size,i%7==0 and 2 or (i%11==0 and 3 or 4),.5+(i%5)*.05)
         s.ground=pos.y+size*.5;s.vx=math.cos(a)*(1.2+i%3*.4);s.vz=math.sin(a)*(1.2+i%3*.4);s.vy=2+i%4*.25;s.size=size
     end
-    -- Six short, displaced fissures; never radial beams from the origin.
+    -- Six flat stone chips knocked loose (no long fissure bars).
     for i=16,21 do
         local a=(i-16)*math.pi/3+.3;local s=self.land[i]
-        show(self,s,cx+math.cos(a)*.5,pos.y+.018,cz+math.sin(a)*.5,.12,.018,.32+(i%2)*.10,5,.6)
+        show(self,s,cx+math.cos(a)*.5,pos.y+.018,cz+math.sin(a)*.5,.10,.018,.10,5,.6)
         s.rot:FromEulerAngles(0,math.deg(a)+38,0);s.node.rotation=s.rot
     end
     for i=22,29 do
@@ -173,9 +174,10 @@ function F:Segment(root,tip)
                 local e=self.edges[self.head]
                 e.peak=.9;e.rot:FromAxes(s.x,s.y,s.z);e.node.rotation=e.rot
                 show(self,e,cx,cy,cz,distance*1.25,.07+self.width*.08,1,7,self.ttl*.55)
-                -- Every third segment leaves a full-blade blue ghost.
+                -- Full-blade ghost streaks read as thin light pillars next to the
+                -- continuous crescent ribbon; kept pooled but no longer emitted.
                 self.ghostStep=self.ghostStep+1
-                if self.ghostStep%3==1 then
+                if F.GHOSTS and self.ghostStep%3==1 then
                     self.ghostHead=self.ghostHead%F.GHOST_COUNT+1
                     local g=self.ghosts[self.ghostHead]
                     local blade=math.sqrt((tip.x-root.x)^2+(tip.y-root.y)^2+(tip.z-root.z)^2)
@@ -214,14 +216,10 @@ function F:Blade(root,tip)
         self:Segment(self.sampleRoot,self.sampleTip)
     end
 end
+-- Plunge descent is drawn by the continuous slash ribbon (moon style) now;
+-- the old stacked vertical bars read as light pillars and are retired.
 function F:Descent(root,tip)
-    for i,s in ipairs(self.ribbons) do
-        s.node.enabled=self.plunging
-        if self.plunging then
-            local u=(i-1)*.5
-            show(self,s,root.x+(tip.x-root.x)*u,root.y+(tip.y-root.y)*u+.22,root.z+(tip.z-root.z)*u,.035+i*.008,.45+i*.08,.035,i==1 and 1 or 3,1)
-        end
-    end
+    for _,s in ipairs(self.ribbons) do s.node.enabled=false end
 end
 local function ageSlot(self,s,dt)
     if not s.active then return end

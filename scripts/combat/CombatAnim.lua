@@ -815,6 +815,15 @@ function A:Apply()
                             local origin=c.bladePath.origin
                             direction=unit(Vector3(solved.target.x-origin[1],solved.target.y+self.bodyHeight-origin[2],
                                 solved.target.z-origin[3]),Vector3(0,1,0))
+                            -- Follow-through: after the cut the wrist rolls the blade
+                            -- down along the swing instead of pointing it at the sky.
+                            local settle=c.bladePath.settle
+                            if settle and s.sample>settle[1] then
+                                local u=ease("inOutCubic",clamp((s.sample-settle[1])/(settle[2]-settle[1]),0,1))
+                                local d=settle[3]
+                                direction=unit(Vector3(direction.x+(d[1]-direction.x)*u,direction.y+(d[2]-direction.y)*u,
+                                    direction.z+(d[3]-direction.z)*u),direction)
+                            end
                         end
                         bladeTotal=bladeTotal+w
                         bx,by,bz=bx+direction.x*w,by+direction.y*w,bz+direction.z*w

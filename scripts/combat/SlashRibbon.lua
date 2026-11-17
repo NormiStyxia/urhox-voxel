@@ -13,10 +13,13 @@ local R={};R.__index=R
 R.CAPACITY=48
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 -- Per-style look. width: fraction of the blade covered from the tip inward.
+-- reach: how far the band extends PAST the tip (fraction of blade length);
+-- the crescent is wider than the sword itself, like a projected slash.
 local STYLES={
-    light={life=.20,width=.62,core={.85,.95,1},body={.25,.62,1},glow=1.0},
-    heavy={life=.32,width=.80,core={1,.97,.86},body={.30,.55,1},glow=1.25},
-    moon={life=.42,width=.95,core={1,1,1},body={.18,.42,1},glow=1.45},
+    light={life=.26,width=.85,reach=.35,core={.90,.97,1},body={.25,.62,1},glow=1.25},
+    heavy={life=.38,width=.95,reach=.55,core={1,.97,.86},body={.30,.55,1},glow=1.55},
+    moon={life=.50,width=1.0,reach=.80,core={1,1,1},body={.18,.42,1},glow=1.85},
+    plunge={life=.30,width=1.0,reach=.25,core={.95,.98,1},body={.22,.50,1},glow=1.35},
 }
 ---@param scene Scene
 ---@return SlashRibbon
@@ -39,7 +42,7 @@ function R.New(scene)
     self.samples={}
     for i=1,R.CAPACITY do
         self.samples[i]={rx=0,ry=0,rz=0,tx=0,ty=0,tz=0,age=1,
-            ix=0,iy=0,iz=0,mx=0,my=0,mz=0,fade=0}
+            ix=0,iy=0,iz=0,mx=0,my=0,mz=0,ox=0,oy=0,oz=0,fade=0}
     end
     self.count,self.head=0,0
     self.style=STYLES.light
@@ -48,7 +51,7 @@ function R.New(scene)
     self.lx,self.ly,self.lz,self.ltx,self.lty,self.ltz=0,0,0,0,0,0
     return self
 end
----@param kind string light | heavy | moon
+---@param kind string light | heavy | moon | plunge
 function R:Begin(kind)
     self.style=STYLES[kind] or STYLES.light
     self.emitting=true
@@ -126,7 +129,7 @@ function R:Update(dt)
     local g=self.geometry
     g:BeginGeometry(0,TRIANGLE_LIST)
     local core,body,glow=style.core,style.body,style.glow
-    local width=style.width
+    local width,reach=style.width,style.reach or 0
     -- Walk newest -> oldest; quads between consecutive samples. Edge points are
     -- cached on the pooled samples, so the rebuild creates no Lua tables.
     local p=nil
@@ -137,12 +140,21 @@ function R:Update(dt)
             local u=s.age/life               -- 0 new .. 1 old
             s.fade=(1-u)*(1-u)*glow          -- tail dissolves quickly
             local w=width*(1-.55*u)          -- crescent thins toward the tail
-            -- Inner edge sits partway down the blade: the band hugs the tip.
+            -- Outer edge flung past the tip; inner edge partway down the blade.
+            local e=reach*(1-.6*u)
+            s.ox,s.oy,s.oz=s.tx+(s.tx-s.rx)*e,s.ty+(s.ty-s.ry)*e,s.tz+(s.tz-s.rz)*e
             s.ix,s.iy,s.iz=s.tx+(s.rx-s.tx)*w,s.ty+(s.ry-s.ty)*w,s.tz+(s.rz-s.tz)*w
             s.mx,s.my,s.mz=(s.tx+s.ix)*.5,(s.ty+s.iy)*.5,(s.tz+s.iz)*.5
             if p then
                 local pa,ca=p.fade,s.fade
                 local pb,cb=pa*.75,ca*.75
+                -- Outer flare: soft blue glow beyond the tip, transparent edge.
+                vertex(g,p.ox,p.oy,p.oz,0,0,0,0)
+                vertex(g,s.ox,s.oy,s.oz,0,0,0,0)
+                vertex(g,s.tx,s.ty,s.tz,body[1]*ca,body[2]*ca,body[3]*ca,ca)
+                vertex(g,p.ox,p.oy,p.oz,0,0,0,0)
+                vertex(g,s.tx,s.ty,s.tz,body[1]*ca,body[2]*ca,body[3]*ca,ca)
+                vertex(g,p.tx,p.ty,p.tz,body[1]*pa,body[2]*pa,body[3]*pa,pa)
                 -- Outer half: hot core line at the tip fading into the blue body.
                 vertex(g,p.tx,p.ty,p.tz,core[1]*pa,core[2]*pa,core[3]*pa,pa)
                 vertex(g,s.tx,s.ty,s.tz,core[1]*ca,core[2]*ca,core[3]*ca,ca)
