@@ -876,20 +876,20 @@ elif MODE == 'export':
     # Game axes (UrhoX, Y up, +Z target, string on -Z): game = (blender.y, blender.z, -blender.x).
     import json
     dg = bpy.context.evaluated_depsgraph_get()
-    RATIO = {'Wood': float(os.environ.get('TB_R_WOOD', 0.45)), 'Flowers': float(os.environ.get('TB_R_FLOWER', 1.0)),
-             'FlowerHearts': 1.0, 'GripWrap': float(os.environ.get('TB_R_GRIP', 0.30)),
+    RATIO = {'Wood': float(os.environ.get('TB_R_WOOD', 0.10)), 'Flowers': float(os.environ.get('TB_R_FLOWER', 1.0)),
+             'FlowerHearts': 1.0, 'GripWrap': float(os.environ.get('TB_R_GRIP', 0.25)),
              'Crystal': 1.0, 'CrystalCore': 1.0, 'String': float(os.environ.get('TB_R_STRING', 0.06))}
     # weights r,g,b (wood / petal / crystal+string), alpha mode, glow, flat shading, double sided, part
     SPEC = {'Wood': ((1, 0, 0), 'one', 0.0, False, False, 'body'),
             'Flowers': ((0, 1, 0), 'tint', 0.0, False, True, 'body'),
             'FlowerHearts': ((0, 1, 0), 'one', 1.0, False, False, 'body'),
             'GripWrap': ((0, 0, 0), 'tint', 0.0, False, False, 'body'),
-            'Crystal': ((0, 0, 1), 'one', 0.0, True, False, 'body'),
-            'CrystalCore': ((0, 0, 1), 'one', 0.35, True, False, 'body'),
+            'CrystalCore': ((0, 0, 1), 'one', 0.35, True, False, 'crystal'),   # inner core first: blended behind the shell
+            'Crystal': ((0, 0, 1), 'one', 0.0, True, False, 'crystal'),
             'String': ((0, 0, 1), 'one', 1.0, False, False, 'string')}
     def g(co):
         return (co.y, co.z, -co.x)
-    out = {'parts': {'body': [], 'string': []}, 'stats': {}}
+    out = {'parts': {'body': [], 'crystal': [], 'string': []}, 'stats': {}}
     for name, (w, amode, glow, flat, double, part) in SPEC.items():
         ob = bpy.data.objects[name]
         tri = ob.modifiers.new('tri', 'TRIANGULATE')
@@ -928,7 +928,7 @@ elif MODE == 'export':
             gp, gn = g(co), g(n)
             out['parts'][part].append([gp[0], gp[1], gp[2], gn[0], gn[1], gn[2], w[0], w[1], w[2], a, glow])
     json.dump(out, open(os.path.join(OUT, 'thornbow_game.json'), 'w'))
-    print('EXPORT tris', out['stats'], 'body', len(out['parts']['body']) // 3, 'string', len(out['parts']['string']) // 3)
+    print('EXPORT tris', out['stats'], 'body', len(out['parts']['body']) // 3, 'crystal', len(out['parts']['crystal']) // 3, 'string', len(out['parts']['string']) // 3)
 elif MODE == 'anim':
     setup_scene(dark=True)
     cam = camera('Gem', (-0.42, -0.42, 0.10), (P(0.07, YC).x, 0, 0), lens=60)

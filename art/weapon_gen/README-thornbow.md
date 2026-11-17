@@ -21,7 +21,7 @@ python3 art/weapon_gen/thornbow_export.py
 ## 格式 v1
 
 坐标单位米，握把中心为原点，+Y 指向上弓梢，+Z 指向目标，弦在 -Z。
-`body`、`string` 各含 `triangles`、扁平顶点数组 `v`、从 1 开始的索引数组 `i`。
+`body`、`crystal`（半透明水晶通道）、`string` 各含 `triangles`、扁平顶点数组 `v`、从 1 开始的索引数组 `i`。
 每个顶点 11 个整数：位置 xyz ×10000，法线 xyz ×1000，材质权重 rgb ×100，
 alpha 参数 ×100，glow ×100。rgb 分别代表木枝、花瓣、水晶，全零为握把布带；
 alpha 表示花瓣根尖位置或布带相位。解码与材质约定保持原版不变。

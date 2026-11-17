@@ -39,6 +39,7 @@ local function Validate(model)
     assert(type(sockets)=='table' and Vector(sockets.grip) and Vector(sockets.top)
         and Vector(sockets.bottom) and Finite(sockets.stringZ) and Finite(sockets.crystalTip),'invalid sockets')
     CheckPart(model.body,model.vertexStride)
+    CheckPart(model.crystal,model.vertexStride)
     CheckPart(model.string,model.vertexStride)
     return model
 end

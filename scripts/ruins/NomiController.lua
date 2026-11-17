@@ -93,10 +93,10 @@ function M.New(scene, world, spawn, spawnYaw)
             aim = { distance = 3.0, offset = Vector3(0.75, 1.6, 0), fov = 46.0 },
             combat = { distance = 5.0, offset = Vector3(.55,1.65,0), fov = 55 },
             combatBoss = { distance = 6.5, offset = Vector3(.55,1.65,0), fov = 55 },
-            combatBow = { distance = 3.4, offset = Vector3(1.0,1.6,0), fov = 50 }, -- close over-the-shoulder: bow arm/weapon stay visible
-            combatBossBow = { distance = 5.2, offset = Vector3(1.0,1.6,0), fov = 52 },
-            combatBowZoom = { distance = 3.4, offset = Vector3(1.0,1.6,0), fov = 47 },
-            combatBossBowZoom = { distance = 5.2, offset = Vector3(1.0,1.6,0), fov = 49 },
+            combatBow = { distance = 3.0, offset = Vector3(1.35,1.55,0), fov = 50 }, -- close over-the-shoulder: bow arm/weapon stay visible
+            combatBossBow = { distance = 5.2, offset = Vector3(1.35,1.55,0), fov = 52 },
+            combatBowZoom = { distance = 3.0, offset = Vector3(1.35,1.55,0), fov = 47 },
+            combatBossBowZoom = { distance = 5.2, offset = Vector3(1.35,1.55,0), fov = 49 },
             mounted = { distance = 13.0, offset = Vector3(0, 3.2, 0), fov = 55.0 },
             far = { distance = 26.0, offset = Vector3(0, 6.0, 0), fov = 55.0 },
         },
@@ -509,7 +509,7 @@ function N:UpdateCamera(dt, mode, followNode)
     -- 体素世界里的相机防穿墙（库只查 Bullet PhysicsWorld，这里补一条体素射线）
     local cn = self.cam:GetNode()
     local aimPoint = self.camTarget.position + Quaternion(self.camYaw, Vector3.UP) * ((mode == "aim") and Vector3(0.75, 1.6, 0) or Vector3(0.55, 1.65, 0))
-    if fighting and mode:find('Bow',1,true) then aimPoint=self.camTarget.position+Quaternion(self.camYaw,Vector3.UP)*Vector3(1.0,1.6,0) end
+    if fighting and mode:find('Bow',1,true) then aimPoint=self.camTarget.position+Quaternion(self.camYaw,Vector3.UP)*Vector3(1.35,1.55,0) end
     self.combatCameraOrigin=aimPoint
     if mode == "mounted" then aimPoint = self.camTarget.position + Vector3(0, 3.2, 0) end
     local d = cn.position - aimPoint

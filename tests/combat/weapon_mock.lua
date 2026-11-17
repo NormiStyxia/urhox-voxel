@@ -203,7 +203,7 @@ rawset(_G,'cache',{GetFile=Assets.GetFile,GetResource=function(_,kind,path)
         if rawget(_G,'WING_MATERIAL_MISSING') then return nil end
         return Material()
     end
-    if kind=='Material' and (path=='model/forge-blades/ThornBow.xml' or path=='model/forge-blades/ThornSand.xml') then
+    if kind=='Material' and (path=='model/forge-blades/ThornBow.xml' or path=='model/forge-blades/ThornSand.xml' or path=='model/forge-blades/ThornCrystal.xml') then
         if rawget(_G,'THORN_MATERIAL_MISSING') then return nil end
         return Material()
     end

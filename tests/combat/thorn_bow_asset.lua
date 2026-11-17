@@ -34,7 +34,7 @@ local function RejectThenRecover(fault)
     assert(not pcall(candidate.Load),'bad asset must be rejected')
     assert(closes==before+1,'file must close before parsing/validation')
     cjson.decode=realDecode
-    assert(candidate.Load().body.triangles==6448,'failed load must allow retry')
+    assert(candidate.Load().body.triangles==6320,'failed load must allow retry')
 end
 RejectThenRecover(function() error('invalid JSON') end)
 RejectThenRecover(function(data) data.formatVersion=2 end)

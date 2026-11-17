@@ -6,11 +6,12 @@ V.ENABLED=true             -- kill switch: false = always show the voxel bow
 V.PAD=.10                  -- visual limb length = (voxel limb span + this) * SCALE (metres)
 V.SCALE=1.32               -- bows read small next to the character; Ganyu-style full-size bow
 V.STEP_VERTICES=1800       -- per Step(); build is spread over frames
-V.AIM_YAW=28               -- degrees, toward the shooter's right camera
-V.AIM_ROLL=14              -- degrees, top leans right
+V.AIM_YAW=55               -- degrees, toward the shooter's right camera
+V.AIM_ROLL=16              -- degrees, top leans right
 V.GRAINS=70                -- per sand stream
 local MATERIAL='model/forge-blades/ThornBow.xml'
 local SAND='model/forge-blades/ThornSand.xml'
+local CRYSTAL='model/forge-blades/ThornCrystal.xml'
 local MASK=0xFFFFFFFF
 local model
 local function Model()
@@ -102,6 +103,16 @@ local function Create(parent,scale,mask,shadows)
         BuildBody(sg,m.string,1,m.string.triangles*3)
         sg:Commit()
         assert(sg:SetMaterial(0,visual.material)~=false,'thorn bow string binding failed')
+        -- Translucent crystal pass; without its material the opaque bow material draws the crystal.
+        local crystal=cache:GetResource('Material',CRYSTAL)
+        visual.crystal=crystal and crystal:Clone('ThornCrystalMat') or nil
+        visual.crystalNode=node:CreateChild('thorn_bow_crystal')
+        local cg=assert(visual.crystalNode:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
+        cg.viewMask=mask;cg.lightMask=mask;cg.zoneMask=mask;cg.castShadows=false
+        cg:BeginGeometry(0,TRIANGLE_LIST)
+        BuildBody(cg,m.crystal,1,m.crystal.triangles*3)
+        cg:Commit()
+        assert(cg:SetMaterial(0,visual.crystal or visual.material)~=false,'thorn crystal binding failed')
         if visual.sand then
             visual.sandNode=node:CreateChild('thorn_bow_sand')
             BuildSand(visual.sandNode,visual.sand,mask)
@@ -127,6 +138,7 @@ function V.New(pivot,halfHeight)
     visual.node.enabled=false
     if visual.sandNode then visual.sandNode.enabled=false end
     visual.stringNode.enabled=false
+    if visual.crystalNode then visual.crystalNode.enabled=false end
     return visual
 end
 
@@ -192,6 +204,7 @@ function V.SetVisible(visual,visible)
     -- Node:SetEnabled is NOT recursive: child nodes keep rendering at the old place unless toggled too.
     visual.node.enabled=visible
     if visual.sandNode then visual.sandNode.enabled=visible end
+    if visual.crystalNode then visual.crystalNode.enabled=visible end
     if visual.stringNode then visual.stringNode.enabled=visible and not visual.stringHidden end
 end
 
@@ -247,5 +260,6 @@ function V.Dispose(visual)
     if visual.node then pcall(visual.node.Remove,visual.node);visual.node=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end
     if visual.sand then pcall(visual.sand.Dispose,visual.sand);visual.sand=nil end
+    if visual.crystal then pcall(visual.crystal.Dispose,visual.crystal);visual.crystal=nil end
 end
 return V

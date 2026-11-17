@@ -13,6 +13,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INPUT = ROOT / "art/weapon_gen/out/thornbow_game.json"
 DEFAULT_OUTPUT = ROOT / "assets/model/forge-blades/ThornBow.mesh.json"
+PARTS = ("body", "crystal", "string")   # opaque mesh, translucent crystal pass, bow string
 
 
 def orient(rows):
@@ -42,16 +43,16 @@ def pack(rows):
 
 
 def build(data):
-    for name in ("body", "string"):
+    for name in PARTS:
         rows = data["parts"][name]
         if not rows or len(rows) % 3 or any(len(row) != 11 for row in rows):
             raise ValueError(f"{name}: expected triangle vertices with 11 components")
         if not np.isfinite(np.array(rows)).all():
             raise ValueError(f"{name}: non-finite vertex component")
-    allv = np.array(data["parts"]["body"] + data["parts"]["string"])
+    allv = np.array([row for name in PARTS for row in data["parts"][name]])
     mn, mx = allv[:, :3].min(0), allv[:, :3].max(0)
     sv = np.array(data["parts"]["string"])
-    crystal = allv[(allv[:, 8] == 1) & (allv[:, 10] < 0.9)]
+    crystal = np.array(data["parts"]["crystal"])
     # Keep the previous Lua export's exact four-decimal metadata rounding.
     def q(value):
         return float(f"{value:.4f}")
@@ -63,16 +64,15 @@ def build(data):
         "sockets": {"grip": [0, 0, 0], "top": [0, q(mx[1]), 0],
                     "bottom": [0, q(mn[1]), 0], "stringZ": q(sv[:, 2].mean()),
                     "crystalTip": q(crystal[:, 2].max())},
-        "body": pack(data["parts"]["body"]),
-        "string": pack(data["parts"]["string"]),
+        **{name: pack(data["parts"][name]) for name in PARTS},
     }
 
 
 def encode(model):
     # One vertex / five triangles per line: inspectable data, deterministic diffs.
-    header = {key: value for key, value in model.items() if key not in ("body", "string")}
+    header = {key: value for key, value in model.items() if key not in PARTS}
     lines = [json.dumps(header, indent=2)[:-2] + ","]
-    for part_index, name in enumerate(("body", "string")):
+    for part_index, name in enumerate(PARTS):
         part = model[name]
         lines.append(f'  "{name}": {{"triangles": {part["triangles"]},')
         for key, width in (("v", 11), ("i", 15)):
@@ -82,7 +82,7 @@ def encode(model):
                 row = ",".join(map(str, values[start:start + width]))
                 lines.append("      " + row + ("," if start + width < len(values) else ""))
             lines.append("    ]" + ("," if key == "v" else ""))
-        lines.append("  }" + ("," if part_index == 0 else ""))
+        lines.append("  }" + ("," if part_index < len(PARTS) - 1 else ""))
     return "\n".join(lines + ["}", ""])
 
 
@@ -98,7 +98,7 @@ def main():
     assert json.loads(encoded) == model
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(encoded)
-    print(f'wrote {args.output}: body={model["body"]["triangles"]}, string={model["string"]["triangles"]} triangles')
+    print(f'wrote {args.output}: ' + ", ".join(f'{name}={model[name]["triangles"]}' for name in PARTS) + " triangles")
 
 
 if __name__ == "__main__":
