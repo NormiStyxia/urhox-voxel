@@ -40,12 +40,15 @@ test("all active clips have complete, ordered tracks and matching event windows"
             assert(#track==6 and track[1][1]==0 and track[#track][1]==1)
             for i=2,#track do assert(track[i][1]>track[i-1][1]) end
         end
-        local previous=-1
+        -- Active phase spans the first hit_on to the last hit_off (cross slash has two windows).
+        local previous,firstOn,lastOff=-1,nil,nil
         for _,event in ipairs(c.events) do
             assert(event.t>=previous and event.t<=(c.eventDur or c.dur)/c.dur);previous=event.t
-            if event[1]=="hit_on" then near(c.phases.active[1],event.t*c.dur) end
-            if event[1]=="hit_off" then near(c.phases.active[2],event.t*c.dur) end
+            if event[1]=="hit_on" then firstOn=firstOn or event.t*c.dur end
+            if event[1]=="hit_off" then lastOff=event.t*c.dur end
         end
+        if firstOn then near(c.phases.active[1],firstOn) end
+        if lastOff then near(c.phases.active[2],lastOff) end
         for _,m in ipairs(c.motion) do assert(m.t1>m.t0 and m.t0>=0 and m.t1<=c.dur) end
     end
 end)
@@ -137,11 +140,11 @@ test("replay and stale handles",function()
     local nextHandle=a:Play("bow_release");assert(nextHandle~=h);a:Stop(h,0)
     a:Update(0);assert(names(a:Poll())=="fire,")
 end)
-test("loop full event only once and no repeated anticipation",function()
+test("long-press windup has no charge levels and holds its pose",function()
     local a=new();a:Play("sword_heavy_charge")
-    a:Update(9);assert(names(a:Poll())=="charge_full,");a:Update(9);assert(#a:Poll()==0)
+    a:Update(9);assert(#a:Poll()==0,"no charge_full event");a:Update(9);assert(#a:Poll()==0)
     local pose=A.DebugSample("sword_heavy_charge",9)
-    near(pose.body[2],40)
+    near(pose.body[2],38)
 end)
 test("bow parameter drives arm, clamps, and full fires once per play",function()
     local a,c=new();a:Play("bow_hold",{fadeIn=0,params={p=0}});a:Update(0);a:Apply()
@@ -188,10 +191,12 @@ test("uncontrolled bones untouched and root offset does not accumulate",function
         sameRotation(c.bones.cloak.rotation,Quaternion(17,2,3))
     end
 end)
-test("legacy spin preserve authored multi-turn angle path",function()
-    near(A.DebugSample("sword_heavy_release",.25,{legacyPose=1}).body[2],-180)
-    near(A.DebugSample("sword_heavy_release",.72,{legacyPose=1}).body[2],-360)
-    near(A.DebugSample("sword_heavy_release",.72).body[2],0)
+test("cross slash torso swings left then right, never a full turn",function()
+    local id="sword_heavy_release";local dur=D.Clips[id].dur
+    assert(A.DebugSample(id,.17).body[2]<-20,"first cut carries the torso left")
+    assert(A.DebugSample(id,.44).body[2]>20,"second cut carries it back right")
+    for i=0,100 do assert(math.abs(A.DebugSample(id,dur*i/100).body[2])<=45) end
+    near(A.DebugSample(id,dur).body[2],0)
 end)
 test("weapon pose and state buffers reuse tables",function()
     local a,c=new();local ordered,queue,output,pool=a.ordered,a.queue,a.output,a.eventPool
@@ -218,13 +223,17 @@ end)
 test("R1 move timings and cancel windows are authored once",function()
     -- Long recovery tails (inertia + low guard) after an unchanged cancel point.
     local expected={sword_light_1={.80,.16,.26,.32},sword_light_2={.82,.17,.27,.33},
-        sword_light_3={.88,.18,.30,.38},sword_light_4={.96,.22,.40,.46},sword_light_5={1.10,.34,.46,.62},
-        sword_heavy_release={.72,.22,.32,.48}}
+        sword_light_3={.88,.18,.30,.38},sword_light_4={.96,.22,.40,.46},sword_light_5={1.10,.34,.46,.62}}
     for id,v in pairs(expected) do
         local c=D.Clips[id];near(c.dur,v[1]);near(c.phases.active[1],v[2]);near(c.phases.active[2],v[3])
         near(c.events[1].t*c.dur,v[2]);near(c.events[2].t*c.dur,v[3]);near(c.events[3].t*c.dur,v[4])
         near(c.trail[2],v[3]+.06)
     end
+    -- Cross slash: two hit windows inside one clip, then a cancellable recovery.
+    local cross=D.Clips.sword_heavy_release;near(cross.dur,.96)
+    local want={{"hit_on",.10},{"hit_off",.19},{"hit_on",.36},{"hit_off",.46},{"cancel_open",.60},{"cancel_close",.96}}
+    for i,e in ipairs(want) do assert(cross.events[i][1]==e[1]);near(cross.events[i].t*cross.dur,e[2],1e-9) end
+    near(cross.phases.active[1],.10);near(cross.phases.active[2],.46)
     near(D.Clips.hit_light.dur,.24);near(D.Clips.hit_heavy.dur,.42)
     near(D.Clips.knockdown.dur,.55);near(D.Clips.getup.dur,.45)
 end)
@@ -380,9 +389,13 @@ test("path endpoints, explicit arc sweep, windup and overshoot",function()
         near(distance(A.DebugSample(v[1],v[3])._ik.arm_right.authored,v[5]),0)
         local a=new();a:Play(v[1]);near(a:GetMotion(1),v[7])
     end
-    local a=new();a:Play("sword_heavy_release");near(a:GetMotion(1),.65)
-    near(D.Clips.sword_heavy_release.handPath.arm_right.amplitude,360)
-    assert(A.DebugSample("sword_heavy_release",.38)._ik.arm_right.authored[2]<.4)
+    local a=new();a:Play("sword_heavy_release");near(a:GetMotion(1),1.05)
+    near(D.Clips.sword_heavy_release.handPath.arm_right.amplitude,160)
+    -- X: cut 1 runs right->left and high->low, cut 2 left->right and high->low.
+    local function hand(t) return A.DebugSample("sword_heavy_release",t)._ik.arm_right.authored end
+    local a1,b1,a2,b2=hand(.10),hand(.19),hand(.36),hand(.46)
+    assert(a1[1]>.3 and b1[1]<-.3 and a1[2]>b1[2]+.6,"first diagonal")
+    assert(a2[1]<-.3 and b2[1]>.3 and a2[2]>b2[2]+.3,"second diagonal")
 end)
 test("all IK samples remain finite and hit the rigid arm sphere",function()
     for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release","sword_heavy_charge","bow_draw","bow_hold","bow_release"}) do

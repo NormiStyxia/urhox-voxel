@@ -35,6 +35,7 @@ local COMBO=Data.Combo
 ---@field partNotice {part:string,untilTime:number}|nil
 ---@field strikeTarget table|nil Assist-selected melee target for the current swing.
 ---@field motionScale number|nil Lunge scale so a dash stops short of its target.
+---@field stamina CombatStamina Combat-only stamina (sprint, cross slash, plunge).
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
 -- Real seconds; frame-average velocity integrates across hover/terminal boundaries.
@@ -469,7 +470,7 @@ function C:LimitLunge(id)
 end
 function C:Release()
     if self.clip=='sword_heavy_charge' then
-        local heavy=self.hold>=HEAVY_HOLD -- gesture classification, not a damage window
+        local heavy=self.hold>=HEAVY_HOLD-1e-8 -- gesture classification, not a damage window
         self.holdSource=nil;self.releaseFull=false
         self.anim:Stop(self.handle,0); self.clip=nil
         self:Action(heavy and 'heavy' or 'light')

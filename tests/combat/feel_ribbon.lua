@@ -37,5 +37,30 @@ end
 assert(r.count<=Ribbon.CAPACITY)
 assert(#scene.children==children,'no nodes created after New')
 r:Clear();assert(not r.node.enabled and r.count==0)
+-- Cross slash: two strokes stay visible together and are never bridged.
+r:Begin('cross')
+local function stroke(x0,y0,x1,y1)
+    for i=0,6 do
+        local u=i/6;tip.x,tip.y,tip.z=x0+(x1-x0)*u,y0+(y1-y0)*u,1
+        r:Sample(Vector3(0,1,0),tip);r.geometry.vertices={};r:Update(1/60)
+    end
+end
+stroke(1,2,-1,0)      -- upper right -> lower left
+r:End();for _=1,8 do r.geometry.vertices={};r:Update(1/60) end
+r:Begin('cross');stroke(-1,2,1,0) -- upper left -> lower right
+assert(r.node.enabled,'both diagonals visible at once')
+local bridged=false
+local vs=r.geometry.vertices
+for i=1,#vs-2,3 do
+    -- A bridge triangle joins the first stroke's end tip (-1,0) to the second's start tip (-1,2).
+    local low,high=false,false
+    for j=i,i+2 do
+        local q=vs[j].position
+        if q.x<-.9 and q.y<.3 then low=true end
+        if q.x<-.9 and q.y>1.7 then high=true end
+    end
+    if low and high then bridged=true end
+end
+assert(not bridged,'second stroke never connects back to the first')
 r:Dispose()
-print('PASS slash ribbon: subdivided crescent, bright tip/transparent hilt, fades out, fixed node')
+print('PASS slash ribbon: subdivided crescent, bright tip/transparent hilt, fades out, fixed node, crossed strokes stay separate')

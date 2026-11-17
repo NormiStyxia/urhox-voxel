@@ -5,8 +5,7 @@ local T={}; T.__index=T
 local Clips=require('combat.AnimClips').Clips
 function T.New(o)
     local self=setmetatable({o=o,active=true,index=0,passed=0,failed=0,steps={
-        {id='combo',weapon='sword'}, {id='heavy_short',weapon='sword'},
-        {id='heavy_full',weapon='sword'},
+        {id='combo',weapon='sword'}, {id='heavy_cross',weapon='sword'},
         {id='arrow_weak',weapon='bow',charge=.18},
         {id='arrow_mid',weapon='bow',charge=.5},
         {id='arrow_full',weapon='bow',charge=1},
@@ -72,9 +71,10 @@ function T:Finish()
         self:Result('combo_all_hit',self.hits.sword_light_1==1 and self.hits.sword_light_2==1 and self.hits.sword_light_3==1 and self.hits.sword_light_4==1 and self.hits.sword_light_5==1,
             string.format('stage1=%.3f stage2=%.3f stage3=%.3f',self.damage.sword_light_1 or 0,self.damage.sword_light_2 or 0,self.damage.sword_light_3 or 0))
     elseif s.id:find('heavy_',1,true)==1 then
+        -- Cross slash: two cuts, each settles once at 1.3x attack.
         local damage=self.damage.sword_heavy_release or 0
-        local expected=m.rig:GetStats().attack*(s.id=='heavy_full' and 2.2 or 1.6)
-        self:Result(s.id,(self.hits.sword_heavy_release or 0)==1 and math.abs(damage-expected)<.01,
+        local expected=m.rig:GetStats().attack*1.3*2
+        self:Result(s.id,(self.hits.sword_heavy_release or 0)==2 and math.abs(damage-expected)<.01,
             string.format('damage=%.3f expected=%.3f hit_on=%.4f',damage,expected,self.hitTimes.sword_heavy_release or -1))
     else
         local shot=self.shots[1]; local tier=s.id:sub(7)
@@ -108,9 +108,8 @@ function T:Input(dt,allowed)
     elseif s.id:find('heavy_',1,true)==1 then
         if not self.released then
             neutral.attack=true
-            if (s.id=='heavy_short' and m.hold>=.52) or (s.id=='heavy_full' and m.fullCharged) then
-                neutral.attack=false; self.released=true
-            end
+            -- Long press fires by itself; let go once the cross slash is playing.
+            if m.clip=='sword_heavy_release' then neutral.attack=false; self.released=true end
         elseif not m.clip then self:Finish(); self:Next() end
     else
         if not self.released then

@@ -482,7 +482,7 @@ local heavy=C.Clips.sword_heavy_release
 do
     local D=CROSS_DUR
     local cut1=arc({.62,1.72,.05},{-.52,.68,.70},160,"xz")
-    local cut2=arc({-.50,1.32,.58},{.60,.62,.70},-130,"xz")
+    local cut2=arc({-.48,1.06,.64},{.60,.62,.70},-130,"xz")
     local over1,wind2,over2=arcPoint(cut1,1.08),arcPoint(cut2,-.14),arcPoint(cut2,1.08)
     heavy.handPath={arm_right={space="body_feet",amplitude=160,windup=.12,overshoot=.08,pole={1,.2,-.4},segments={
         bez(0,.07/D,{.65,1.55,-.20},arcPoint(cut1,-.12),{.72,1.78,-.12},"inQuad"),
@@ -491,7 +491,7 @@ do
         arcPart(cut1,.15/D,.19/D,.72,1,"outCubic"),
         arcPart(cut1,.19/D,.23/D,1,1.08,"outQuad"),
         -- Wrist rolls back up across the chest to the left shoulder.
-        bez(.23/D,.33/D,over1,wind2,{-.70,.95,.75},"inOutCubic"),
+        bez(.23/D,.33/D,over1,wind2,{-.70,.80,.80},"inOutCubic"),
         arcPart(cut2,.33/D,.36/D,-.14,0,"inQuad"),
         arcPart(cut2,.36/D,.42/D,0,.72,"inCubic"),
         arcPart(cut2,.42/D,.46/D,.72,1,"outCubic"),
@@ -499,7 +499,9 @@ do
         bez(.50/D,.74/D,over2,LOW_GUARD,{(over2[1]+LOW_GUARD[1])*.5+.10,math.min(over2[2],LOW_GUARD[2])-.05,(over2[3]+LOW_GUARD[3])*.5+.05},"outCubic"),
         bez(.74/D,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
     heavy.fadeOut=RECOVERY_FADE
-    heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right",settle={.50/D,.66/D,SETTLE_DIR,1.2}}
+    -- Lower radial origin (waist): a hand at chest height still holds the
+    -- blade on a steep diagonal, so both cuts read as the strokes of an X.
+    heavy.bladePath={mode="radial",origin={0,.75,0},side="arm_right",settle={.50/D,.66/D,SETTLE_DIR,1.2}}
     heavy.motion={{t0=.08,t1=.20,forward=.45},{t0=.33,t1=.48,forward=.60}}
     heavy.continuous=true
     heavy.trail={.10,.52}

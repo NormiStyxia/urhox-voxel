@@ -136,8 +136,8 @@ function H.Set(value)
     end
     staminaScreen.visible=false
     if data.combat and moves.stamina and moves.o and moves.o.position and data.camera then
-        local p=moves.o.position()
-        local right=data.cameraNode.worldRight
+        local p=moves.o.position() --[[@as Vector3]]
+        local right=data.cameraNode.worldRight --[[@as Vector3]]
         staminaPoint.x,staminaPoint.y,staminaPoint.z=p.x+right.x*.55,p.y+1.35,p.z+right.z*.55
         if (staminaPoint-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
             local sp=data.camera:WorldToScreenPoint(staminaPoint)
