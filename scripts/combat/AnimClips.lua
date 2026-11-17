@@ -41,6 +41,7 @@
 ---@field aimFacing boolean|nil Bow aim is relative to W2 facing, not torso lean.
 ---@field locomotion boolean|nil Pure pose, driven by real displacement gaitPhase.
 ---@field smoothBlend boolean|nil Smooth natural entry/exit, never retime events.
+---@field comboEntry number|nil 普攻继承上一刀末势的预备段终点（归一化时间）。
 
 ---@class CombatClipCatalog
 ---@field Layer table<string, number>
@@ -428,6 +429,7 @@ local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge,pole)
     local ready={.35,1.05,.30}
     local windup=arcPoint(spec,-.12)
     local overshoot=arcPoint(spec,1.08)
+    c.comboEntry=on*.65
     c.handPath={arm_right={segments={
         bez(0,on*.65,ready,windup,{a[1],a[2]+.10,a[3]-.12},"inQuad"),
         arcPart(spec,on*.65,on,-.12,0,"inQuad"),
@@ -559,6 +561,12 @@ C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
     bez(0,1,{.35,1.05,.30},{.65,1.55,-.20},{.70,1.45,-.35},"inQuad")}}}
 
 C.Clips.sword_heavy_charge.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+
+-- 攻击层淡出后仍保持低位握剑，不能交回基础层的前举持械姿势。
+local swordStance=C.Clips.stance_combat_sword
+swordStance.handPath={arm_right={space="body_feet",segments={bez(0,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
+swordStance.bladePath={mode="radial",origin={0,1.05,0},settle={-1,0,SETTLE_DIR},side="arm_right"}
+swordStance.elbow={arm_right={{0,-22},{1,-22}}}
 
 -- 多关键帧悬停→俯冲→落地随动；符号待 Web 校准。
 local ps,pl,pd=C.Clips.plunge_start,C.Clips.plunge_loop,C.Clips.plunge_land

@@ -52,16 +52,85 @@ end
 -- Moving out of recovery keeps the chain; jumping resets it.
 m=New();assert(m:Action('light'));run(m,.35);m:Update(.01,{allowed=true,axis=Vector3.RIGHT})
 assert(m.clip==nil and m.combo==1);run(m,.10);assert(m:Action('light') and m.clip=='sword_light_2')
--- 3) Rest pose: after the swing the blade sinks to the low guard, tip toward the ground.
+-- 3) 收招与持剑站姿必须用同一低位握点，攻击层淡出不能再把手抬平。
 local function tipDown(id)
     return A.DebugSample(id,D.Clips[id].dur*.98)._ik.arm_right.authored
 end
+local stance=D.Clips.stance_combat_sword
+local guard=A.DebugSample(stance.id,0)._ik.arm_right.authored
 for _,row in ipairs(D.Combo) do
     local hand=tipDown(row.id)
-    assert(math.abs(hand[1]-.30)<.02 and math.abs(hand[2]-.78)<.02,'low guard grip at clip end: '..row.id)
+    for i=1,3 do assert(math.abs(hand[i]-guard[i])<.02,'low guard matches stance: '..row.id) end
 end
-local stance=D.Clips.stance_combat_sword
 assert(stance and stance.additive and stance.weapon[1].euler[1]>30,'sword stance tilts the blade forward-down')
+-- 连段继承实际呈现姿态，不是共享 ready，更不改变原命中弧和事件。
+local function track(anim,handle)
+    for _,s in ipairs(anim.tracks) do if s.handle==handle then return s end end
+    error('missing track')
+end
+local function distance(a,b)
+    return math.sqrt((a.x-b.x)^2+(a.y-b.y)^2+(a.z-b.z)^2)
+end
+local function rotationDistance(a,b)
+    return math.deg(2*math.acos(math.min(1,math.abs(a.w*b.w+a.x*b.x+a.y*b.y+a.z*b.z))))
+end
+local function render(anim,character)
+    S.anim.reset(character);anim:Apply();anim:Poll()
+end
+for _,fps in ipairs({30,60,120}) do
+    for stage=1,#D.Combo-1 do
+        local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
+        m=New();m.anim=anim;m.combo=stage-1
+        assert(m:Action('light'));run(m,D.Clips[m.clip].events[3].t*D.Clips[m.clip].dur+.01)
+        render(anim,character)
+        local old=m.handle;local source=track(anim,old)
+        local hand=source.ik.arm_right.applied
+        local body,arm=character.bones.body.rotation,character.bones.arm_right.rotation
+        local e=anim.weaponEuler
+        local blade=arm*anim.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
+        assert(m:Action('light') and m.clip==D.Combo[stage+1].id)
+        local fresh=track(anim,m.handle)
+        assert(fresh.entry.enabled,'entry inheritance enabled on actual combo route')
+        assert(distance(fresh.entry.hand,hand)<1e-7,'entry stores rendered grip, not authored oversized target')
+        assert(distance(fresh.entry.blade,blade)<1e-7,'entry stores displayed blade direction')
+        assert(source.fadeOut==fresh.fadeIn and fresh.fadeIn==.08,'matched fade avoids base-pose leak')
+        anim:Update(0);render(anim,character)
+        assert(rotationDistance(character.bones.body.rotation,body)<1e-5,'no body reset at entry')
+        assert(rotationDistance(character.bones.arm_right.rotation,arm)<1e-5,'no arm reset at entry')
+        m:Update(1/fps,{allowed=true});render(anim,character)
+        local total=0
+        for _,s in ipairs(anim.ordered) do if s.live and s.clip.layer==D.Layer.ATTACK then total=total+s.weight end end
+        assert(math.abs(total-1)<1e-7,'no fixed stance exposed mid-combo')
+        -- 预备段最终接回原 windup，进入命中弧后与独立播放完全一致。
+        local id=m.clip;local contact=D.Clips[id].phases.active[1]+.02
+        local freshTime=fresh.t
+        m:Update(contact-freshTime,{allowed=true});render(anim,character)
+        local standalone=S.anim.character();local expected=A.New(standalone,nil,{quantize=false})
+        expected:Play(id,{fadeIn=0});expected:Update(contact);render(expected,standalone)
+        assert(rotationDistance(character.bones.arm_right.rotation,standalone.bones.arm_right.rotation)<1e-5,'authored strike unchanged')
+        assert(rotationDistance(character.bones.body.rotation,standalone.bones.body.rotation)<1e-5,'authored torso contact unchanged')
+    end
+end
+-- 首刀短按的抬剑识别姿态也平滑交给轻击；长按交叉斩保持原输入。
+local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
+m=New();m.anim=anim;m:Update(.01,{allowed=true,attack=true});run(m,.12,{allowed=true,attack=true})
+render(anim,character);local charge=m.handle;m:Update(.01,{allowed=true,attack=false})
+assert(m.clip=='sword_light_1' and track(anim,m.handle).entry.enabled and track(anim,charge).stopping,'short tap inherits windup')
+-- 持械基础层即使每帧仍写前举角，收招后也必须留在低位，而不是图中的平举。
+for _,row in ipairs(D.Combo) do
+    local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
+    anim:Play(stance.id,{fadeIn=0});anim:Play(row.id,{fadeIn=0})
+    anim:Update(D.Clips[row.id].dur+.1);render(anim,character)
+    local settled=character.bones.arm_right.rotation
+    for _=1,3 do
+        S.anim.reset(character);character.bones.arm_right.rotation=Quaternion(-80,0,8)
+        anim:Update(.1);anim:Apply();anim:Poll()
+        assert(rotationDistance(character.bones.arm_right.rotation,settled)<1e-5,'no raised base arm after recovery')
+        local e=anim.weaponEuler
+        local blade=character.bones.arm_right.rotation*anim.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
+        assert(blade.y<-.75,'resting blade stays down')
+    end
+end
 -- 4) Hologram: dissolve/reform in place, never fly through the body.
 local Mock=require('weapon_mock')
 local Rig=require('combat.WeaponRig')
