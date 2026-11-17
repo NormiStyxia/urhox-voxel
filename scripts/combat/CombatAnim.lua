@@ -821,8 +821,11 @@ function A:Apply()
                             if settle and s.sample>settle[1] then
                                 local u=ease("inOutCubic",clamp((s.sample-settle[1])/(settle[2]-settle[1]),0,1))
                                 local d=settle[3]
+                                -- Mid-blend the tip swings out front, so a cut that ends
+                                -- on the left side never drags the blade through the body.
+                                local out=math.sin(math.pi*u)*(settle[4] or 0)
                                 direction=unit(Vector3(direction.x+(d[1]-direction.x)*u,direction.y+(d[2]-direction.y)*u,
-                                    direction.z+(d[3]-direction.z)*u),direction)
+                                    direction.z+(d[3]-direction.z)*u+out),direction)
                             end
                         end
                         bladeTotal=bladeTotal+w

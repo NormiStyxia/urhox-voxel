@@ -144,7 +144,7 @@ end
 function F:Begin(combo,heavy)
     self.valid=false
     self.slash=heavy or (combo and combo>=1 and combo<=5)
-    self.spin=heavy or combo==4
+    self.spin=combo==4 and not heavy -- the cross slash is two straight diagonals
     -- Exaggerated crystal slash: wide translucent blue body, longer linger.
     local base=heavy and .8 or (combo==5 and .85 or (combo==4 and .7 or (combo==3 and .65 or .55)))
     self.width=base*1.35

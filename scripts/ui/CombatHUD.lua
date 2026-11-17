@@ -72,6 +72,11 @@ local debugLines={}
 local debugText
 local feedbackDebug,feedbackMetrics='',{}
 local enemyScreen={visible=false}
+-- Stamina wheel beside the player's right shoulder (screen fraction).
+local staminaScreen={visible=false,x=0,y=0}
+local staminaPoint=Vector3(0,0,0)
+local STAMINA={255,214,92}
+local STAMINA_OUT={232,76,60}
 local headOffset=Vector3(0,0,0)
 local PART_TEXT={}
 local BOW_HINT={'弱蓄 · 松手射击 · 切换取消','中蓄 · 松手射击 · 切换取消','满蓄 · 松手射击 · 切换取消'}
@@ -128,6 +133,17 @@ function H.Set(value)
         local sp=data.camera:WorldToScreenPoint(predicted.contact)
         bowPoint.x,bowPoint.y=sp.x,sp.y
         bowPoint.visible=sp.x>0 and sp.x<1 and sp.y>0 and sp.y<1
+    end
+    staminaScreen.visible=false
+    if data.combat and moves.stamina and moves.o and moves.o.position and data.camera then
+        local p=moves.o.position()
+        local right=data.cameraNode.worldRight
+        staminaPoint.x,staminaPoint.y,staminaPoint.z=p.x+right.x*.55,p.y+1.35,p.z+right.z*.55
+        if (staminaPoint-data.cameraNode.worldPosition):DotProduct(data.cameraNode.worldDirection)>0 then
+            local sp=data.camera:WorldToScreenPoint(staminaPoint)
+            staminaScreen.x,staminaScreen.y=sp.x,sp.y
+            staminaScreen.visible=sp.x>0 and sp.x<1 and sp.y>0 and sp.y<1
+        end
     end
     local aimedEnemy=data.aimed or (moves.age-(moves.targetAt or -100)<3 and moves.target)
     enemyScreen.visible=false
@@ -233,6 +249,19 @@ function H.Render(vg,w,h,s,objective)
         -- Hollow 4dp contact marker, separate from the straight-ray reticle.
         Draw.Rect(vg,px-4,py-4,8,2,C.gold);Draw.Rect(vg,px-4,py+2,8,2,C.gold)
         Draw.Rect(vg,px-4,py-2,2,4,C.gold);Draw.Rect(vg,px+2,py-2,2,4,C.gold)
+    end
+    local stamina=moves.stamina
+    if staminaScreen.visible and stamina then
+        -- Fades out once full and untouched; red while exhausted or refused.
+        local since=stamina.clock-stamina.shownAt
+        local alpha=stamina.value<stamina.max and 1 or math.max(0,1-(since-1.2)/.4)
+        if alpha>0 then
+            local denied=stamina.clock-stamina.denyAt<.45 and math.floor((stamina.clock-stamina.denyAt)*12)%2==0
+            local color=(stamina.exhausted or denied) and STAMINA_OUT or STAMINA
+            local cx,cy=staminaScreen.x*w,staminaScreen.y*h
+            Draw.Arc(vg,cx,cy,14,9,1,40,C.deep,.65*alpha)
+            Draw.Arc(vg,cx,cy,14,9,stamina.value/stamina.max,40,color,alpha)
+        end
     end
     if enemyScreen.visible then
         local enemy=enemyScreen.enemy

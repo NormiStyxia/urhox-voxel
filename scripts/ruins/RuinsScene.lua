@@ -1526,8 +1526,7 @@ local function UpdateCombatRig(dt)
         combatRig_:SetSwing(offset,euler)
         if combatRig_.SetTrail then combatRig_:SetTrail(not combatLowQuality_ and (CombatState.InCombat() or animPreview_.index>0)) end
         if combatRig_.SetCombatVisual then
-            combatRig_:SetCombatVisual(CombatState.GetWeapon()=='sword' and (combatMoves_.hitOpen or combatMoves_.hitPending),
-                combatMoves_.clip=='sword_heavy_charge' and combatMoves_.charge or nil)
+            combatRig_:SetCombatVisual(CombatState.GetWeapon()=='sword' and (combatMoves_.hitOpen or combatMoves_.hitPending),nil)
         end
         combatRig_:SetAfterimages(combatLowQuality_ and emptyAfterimages_ or combatAnim_:GetAfterimages())
         Safe('Rig.Update',combatRig_.Update,combatRig_,dt)
