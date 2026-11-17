@@ -113,14 +113,13 @@ def depth_budget(y_px):
 branches = []
 for path in edges:
     pts = [(p[1], p[0]) for p in path]            # (x_px, y_px)
-    if len(pts) < 4:
+    if len(pts) < 8:
         continue
     pl = smooth(pts)
     length = sum(math.dist(pl[i], pl[i + 1]) for i in range(len(pl) - 1)) / PXL
     rad = [dt[int(p[0]), int(p[1])] for p in path]
-    # discard short stubs that end freely; keep short connectors between junctions
-    free_end = deg.get(path[0], 0) == 1 or deg.get(path[-1], 0) == 1
-    if length < MIN_EDGE and free_end:
+    # discard stubs: short *and* thin
+    if length < MIN_EDGE:
         continue
     branches.append(dict(pts=[[(p[0] - SIDE[0]) / PXL, (p[1] - TOP) / PXL] for p in pl[::3]] + [[(pl[-1][0] - SIDE[0]) / PXL, (pl[-1][1] - TOP) / PXL]],
                          rad=[float(np.median(rad[max(0, i - 6):i + 7])) / PXL for i in range(0, len(rad), 3)] + [float(rad[-1]) / PXL],
