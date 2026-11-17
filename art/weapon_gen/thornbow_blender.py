@@ -18,6 +18,11 @@ MODE = ARGS[0] if ARGS else 'stills'
 OUT = ARGS[1] if len(ARGS) > 1 else 'art/weapons_2d/castorice_bow/blender'
 os.makedirs(OUT, exist_ok=True)
 DETAIL = 1.0          # 1 = preview density; lower for a game LOD later
+LOWPOLY = MODE == 'export'   # game LOD: coarse sections, decimated afterwards
+SEG_MAIN = int(os.environ.get('TB_SEG_MAIN', 6 if LOWPOLY else 10))
+SEG_THIN = int(os.environ.get('TB_SEG_THIN', 4 if LOWPOLY else 7))
+PET_NU = int(os.environ.get('TB_PET_NU', 3 if LOWPOLY else 12))
+PET_NV = int(os.environ.get('TB_PET_NV', 2 if LOWPOLY else 8))
 L = 1.0               # metres; fitted to the in-game bow at integration time
 YC = 0.489            # sheet y of the grip centre (top/bottom mirror line)
 CRYS_Y = 0.501        # measured crystal centre line (slightly below the grip centre)
@@ -569,8 +574,8 @@ def build_bow():
         return abs(p.z) > grip_zone + 0.012 * L
 
     flowers = []          # (position, outward axis, size)
-    seg_main = max(6, int(10 * DETAIL))
-    seg_thin = max(4, int(7 * DETAIL))
+    seg_main = max(3, int(SEG_MAIN * DETAIL))
+    seg_thin = max(3, int(SEG_THIN * DETAIL))
     gem_base_x, gem_tip_x = 0.120, 0.004
     tips = {1: P(0.2736, 0.013), -1: P(0.2736, 0.992)}          # string nocks (measured on the sheet)
     build_wood_from_trace(wood_b, flowers, seg_main, seg_thin)
@@ -595,7 +600,7 @@ def build_bow():
     def groove(t, a):
         f = (a / (2 * math.pi) + t * TURNS) % 1.0
         return (f, 0, 0)                                 # 0 = tucked edge (dark), 1 = proud strap edge
-    grip.tube(Gd, [0.0172 * L] * len(Gd), max(16, int(32 * DETAIL)), cap=True, rmod=band, tint_ta=groove)
+    grip.tube(Gd, [0.0172 * L] * len(Gd), (14 if LOWPOLY else max(16, int(32 * DETAIL))), cap=True, rmod=band, tint_ta=groove)
     # two binding rings
     for p_i in (0, len(G) - 1):
         p = G[p_i]
@@ -627,7 +632,7 @@ def lotus(fb, hb, pos, axis, size):
     # rounded lotus: ovate petals with soft tips that curve back in toward the centre -> round cup outline
     layers = ((5, size, math.radians(52), 0.0), (5, size * 0.90, math.radians(32), math.pi / 5),
               (3, size * 0.72, math.radians(12), 0.4))
-    nu, nv = max(6, int(12 * DETAIL)), max(4, int(8 * DETAIL))
+    nu, nv = PET_NU, PET_NV
     for count, ln, tilt, rot in layers:
         for k in range(count):
             phi = rot + 2 * math.pi * k / count + rng.uniform(-0.05, 0.05)
@@ -656,7 +661,7 @@ def lotus(fb, hb, pos, axis, size):
                 for iv in range(nv):
                     fb.bm.faces.new((grid[iu][iv], grid[iu][iv + 1], grid[iu + 1][iv + 1], grid[iu + 1][iv]))
     # glowing heart
-    bmesh.ops.create_icosphere(hb.bm, subdivisions=1, radius=size * 0.16,
+    bmesh.ops.create_icosphere(hb.bm, subdivisions=0 if LOWPOLY else 1, radius=size * 0.16,
                                matrix=Matrix.Translation(pos + axis * size * 0.12))
 
 
@@ -866,6 +871,64 @@ elif MODE == 'measure':
             if ob.type == 'MESH':
                 ob.hide_render = ob.name not in names
         render(cam, f'{OUT}/meas_{gname}.png', 2560, 1440)
+elif MODE == 'export':
+    # Game LOD -> JSON (consumed by art/weapon_gen/thornbow_export.py -> scripts/combat/models/ThornBow.lua).
+    # Game axes (UrhoX, Y up, +Z target, string on -Z): game = (blender.y, blender.z, -blender.x).
+    import json
+    dg = bpy.context.evaluated_depsgraph_get()
+    RATIO = {'Wood': float(os.environ.get('TB_R_WOOD', 0.45)), 'Flowers': float(os.environ.get('TB_R_FLOWER', 1.0)),
+             'FlowerHearts': 1.0, 'GripWrap': float(os.environ.get('TB_R_GRIP', 0.30)),
+             'Crystal': 1.0, 'CrystalCore': 1.0, 'String': float(os.environ.get('TB_R_STRING', 0.06))}
+    # weights r,g,b (wood / petal / crystal+string), alpha mode, glow, flat shading, double sided, part
+    SPEC = {'Wood': ((1, 0, 0), 'one', 0.0, False, False, 'body'),
+            'Flowers': ((0, 1, 0), 'tint', 0.0, False, True, 'body'),
+            'FlowerHearts': ((0, 1, 0), 'one', 1.0, False, False, 'body'),
+            'GripWrap': ((0, 0, 0), 'tint', 0.0, False, False, 'body'),
+            'Crystal': ((0, 0, 1), 'one', 0.0, True, False, 'body'),
+            'CrystalCore': ((0, 0, 1), 'one', 0.35, True, False, 'body'),
+            'String': ((0, 0, 1), 'one', 1.0, False, False, 'string')}
+    def g(co):
+        return (co.y, co.z, -co.x)
+    out = {'parts': {'body': [], 'string': []}, 'stats': {}}
+    for name, (w, amode, glow, flat, double, part) in SPEC.items():
+        ob = bpy.data.objects[name]
+        tri = ob.modifiers.new('tri', 'TRIANGULATE')
+        if RATIO[name] < 0.999:
+            dec = ob.modifiers.new('dec', 'DECIMATE')
+            dec.ratio = RATIO[name]
+            dec.use_collapse_triangulate = True
+        bpy.context.view_layer.update()
+        dg = bpy.context.evaluated_depsgraph_get()
+        ev = ob.evaluated_get(dg)
+        me = ev.to_mesh()
+        me.calc_loop_triangles()
+        tl = me.attributes['tint'] if 'tint' in me.attributes else None
+        verts = []
+        for tr in me.loop_triangles:
+            ids = list(tr.vertices)
+            P3 = [me.vertices[i].co.copy() for i in ids]
+            fn = (P3[1] - P3[0]).cross(P3[2] - P3[0])
+            if fn.length < 1e-12:
+                continue
+            fn = fn.normalized()
+            for i, co in zip(ids, P3):
+                n = fn if flat else me.vertices[i].normal.copy()
+                a = 1.0
+                if amode == 'tint' and tl is not None:
+                    a = float(tl.data[i].color[0])
+                verts.append((co, n, a))
+            if double:
+                for i, co in list(zip(ids, P3))[::-1]:
+                    n = -(fn if flat else me.vertices[i].normal.copy())
+                    a = float(tl.data[i].color[0]) if tl is not None else 1.0
+                    verts.append((co, n, a))
+        ev.to_mesh_clear()
+        out['stats'][name] = len(verts) // 3
+        for co, n, a in verts:
+            gp, gn = g(co), g(n)
+            out['parts'][part].append([gp[0], gp[1], gp[2], gn[0], gn[1], gn[2], w[0], w[1], w[2], a, glow])
+    json.dump(out, open(os.path.join(OUT, 'thornbow_game.json'), 'w'))
+    print('EXPORT tris', out['stats'], 'body', len(out['parts']['body']) // 3, 'string', len(out['parts']['string']) // 3)
 elif MODE == 'anim':
     setup_scene(dark=True)
     cam = camera('Gem', (-0.42, -0.42, 0.10), (P(0.07, YC).x, 0, 0), lens=60)

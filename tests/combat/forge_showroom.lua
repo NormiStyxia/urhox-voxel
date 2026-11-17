@@ -5,6 +5,8 @@ local Mock=require('weapon_mock')
 local Builder=require('combat.WeaponBuilder')
 local Parts=require('combat.WeaponParts')
 local Showroom=require('combat.ForgeShowroom')
+local ThornBow=require('combat.ThornBowVisual')
+ThornBow.ENABLED=false -- voxel fallback path under test below; thorn bow route has its own block at the end
 assert(Showroom.GetModelRoute()=='original','startup must retain the original voxel sword')
 local Dressing=require('combat.ForgeShowroomScene')
 local MASK=0x40000000
@@ -810,3 +812,28 @@ assert(Showroom.GetModelRoute()=='B','bow must not consume route hotkey')
 rawset(_G,'input',oldInput);rawset(_G,'KEY_F6',oldF6);rawset(_G,'KEY_F7',oldF7)
 Showroom.Exit();Restored(nodes,components)
 print('forge_showroom blade routes PASS: A/B/W masks, 1.7m, three colors, strengths, no reupload, bow exclusion, cancel/fallback/cleanup; MOCK ONLY')
+-- Thorn-flower bow route: bows show the generated model in the showroom; disabling it restores the voxel bow.
+do
+    ThornBow.ENABLED=true
+    Boot();nodes,components=Live();assert(Showroom.Enter(e.scene))
+    Showroom.SetWeapon(Config('bow'));Finish()
+    local g=Shape():GetComponent('CustomGeometry',true)
+    assert(g and #g.vertices>0,'thorn bow geometry published')
+    local shaped=Shape():GetChild('thorn_bow_visual',true)
+    assert(shaped,'thorn bow node present')
+    local model=require('combat.models.ThornBow')
+    local total=0
+    local function Count(node)
+        local c=node:GetComponent('CustomGeometry')
+        if c then total=total+#c.vertices end
+        for _,child in ipairs(node.children) do Count(child) end
+    end
+    Count(Shape())
+    assert(total>=model.body.triangles*3,'full body + string uploaded')
+    Mock.Near(Spin().scale.y*(model.bounds.max[2]-model.bounds.min[2]),2.05)
+    Showroom.SetWeapon(Config('sword'));Finish()
+    ThornBow.ENABLED=false
+    Showroom.SetWeapon(Config('bow'));Finish();assert(not Shape():GetChild('thorn_bow_visual',true),'kill switch restores voxel bow')
+    Showroom.Exit();Restored(nodes,components)
+    print('forge_showroom thorn bow route PASS; MOCK ONLY')
+end

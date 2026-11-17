@@ -24,6 +24,7 @@
 local Builder=require('combat.WeaponBuilder')
 local Dressing=require('combat.ForgeShowroomScene')
 local Blades=require('combat.ForgeShowroomBlades')
+local ThornBow=require('combat.ThornBowVisual')
 -- Temporary showroom-only comparison; nil restores the voxel sword default.
 local MODEL_TEST='model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.mdl'
 local MODEL_MATERIAL='model/c8d2cfd2bc29455abb72b044deb16d5d/Materials/c8d2cfd2bc29455abb72b044deb16d5d_00_tripo_material_af5190d1-e320-4160-9951-ed50bff7a75e.xml'
@@ -115,7 +116,8 @@ end
 local function Remove(s,node) if node then CleanupMethod(s,node,'Remove','Node:Remove') end end
 local function DisposeMesh(s,mesh)
     if not mesh then return end
-    if mesh.bladeRoute then CleanupFunction(s,'ForgeShowroomBlades.Dispose',Blades.Dispose,mesh)
+    if mesh.thorn then CleanupFunction(s,'ThornBowVisual.DisposeShowroom',ThornBow.DisposeShowroom,mesh)
+    elseif mesh.bladeRoute then CleanupFunction(s,'ForgeShowroomBlades.Dispose',Blades.Dispose,mesh)
     elseif mesh.modelOverride then CleanupMethod(s,mesh.material,'Dispose','Material:Dispose')
     else CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,mesh) end
 end
@@ -508,6 +510,12 @@ local function BuildStep(s,dt)
             if job then s.bladeJob=job;return end
             ReportFailure(s,'Update',err) -- unavailable shader/resources: retain voxel fallback
         end
+        if single.weapon=='bow' and ThornBow.ENABLED then
+            s.stage,s.api,s.apiType='thorn_bow','ThornBowVisual.BeginShowroom','function'
+            local job,err=ThornBow.BeginShowroom(s.pendingRoot,MASK,s.low)
+            if job then s.bladeJob=job;return end
+            ReportFailure(s,'Update',err) -- unavailable shader/resources: retain voxel fallback
+        end
         if single.weapon=='sword' and modelOverride then
             local mesh=TryModel(s,modelOverride)
             if mesh then PublishWeapon(s,mesh);return end
@@ -517,7 +525,7 @@ local function BuildStep(s,dt)
     end
     if s.bladeJob then
         s.stage,s.api,s.apiType='blade_route','ForgeShowroomBlades.Step','function'
-        local ok,done=pcall(Blades.Step,s.bladeJob)
+        local ok,done=pcall(s.bladeJob.step or Blades.Step,s.bladeJob)
         if ok then
             if done then PublishWeapon(s,s.bladeJob) end
         else

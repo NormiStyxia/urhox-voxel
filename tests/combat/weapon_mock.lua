@@ -194,9 +194,14 @@ end
 rawset(_G,'Material',{new=Material})
 -- Existing suites verify the voxel sword path; the wing visual suite flips this off.
 rawset(_G,'WING_MATERIAL_MISSING',true)
+rawset(_G,'THORN_MATERIAL_MISSING',true)
 rawset(_G,'cache',{GetResource=function(_,kind,path)
     if kind=='Material' and (path=='model/forge-blades/WingSword.xml' or path=='model/forge-blades/WingSwordCrystal.xml') then
         if rawget(_G,'WING_MATERIAL_MISSING') then return nil end
+        return Material()
+    end
+    if kind=='Material' and (path=='model/forge-blades/ThornBow.xml' or path=='model/forge-blades/ThornSand.xml') then
+        if rawget(_G,'THORN_MATERIAL_MISSING') then return nil end
         return Material()
     end
     assert(kind=='Technique' and (path=='Techniques/NoTextureUnlit.xml' or path=='Techniques/NoTextureVColAddAlpha.xml'));return Technique()

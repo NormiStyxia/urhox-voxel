@@ -2,6 +2,7 @@
 -- All volumes are visual-only. No Finalize, collision or gameplay damage calls.
 local Builder=require("combat.WeaponBuilder")
 local WingVisual=require("combat.WingSwordVisual")
+local ThornVisual=require("combat.ThornBowVisual")
 local Parts=require("combat.WeaponParts")
 local Store=require("combat.WeaponStore")
 
@@ -234,6 +235,7 @@ function Rig:Init(scene,world,controller)
     self:BuildSwordImages()
     self:BuildBowImages()
     self:BuildVisualPools('sword');self:BuildVisualPools('bow')
+    self:AttachThorn(self.entries.bow)
     self:PrepareTrailColor('sword');self:PrepareTrailColor('bow')
     self:UpdateTrailColor()
 end
@@ -856,6 +858,7 @@ function Rig:Apply(config)
     self:PrepareTrailColor(weapon)
     if weapon=='sword' then self:BuildSwordImages() else self:BuildBowImages() end
     self:BuildVisualPools(weapon)
+    if weapon=='bow' then self:AttachThorn(entry) end
     if weapon==self.active then self:UpdateTrailColor(); self:ClearTrail() end
     Store.Save(self.config)
     return true
@@ -1132,21 +1135,29 @@ function Rig:UpdateBowVisual()
         local t=self.visualClock-self.bowReleaseAt
         nock=nock+Vector3(.03*math.cos(t*math.pi*60)*(1-t/.05),0,0)
     end
+    local thorn=self.entries.bow.thorn
+    local thornOn=thorn and thorn.ready and true or false
+    -- Thorn bow: limb tips pull toward the archer while drawn; the voxel string follows them.
+    local bend=thornOn and drawn and (.02+self.bowStage*.03) or 0
+    local tipZ=thornOn and (ThornVisual.StringZ(thorn)-bend) or (-2-self.bowStage)*.03
+    if thornOn then
+        ThornVisual.SetBend(thorn,bend);ThornVisual.SetStringVisible(thorn,not showString)
+    end
     for i,mesh in ipairs(self.bowStrings) do
         mesh.node.enabled=showString
         if showString then
-            local tip=Vector3(0,(i==1 and 1 or -1)*self.bowHalfHeight,(-2-self.bowStage)*.03)
+            local tip=Vector3(0,(i==1 and 1 or -1)*(thornOn and ThornVisual.StringHalf(thorn) or self.bowHalfHeight),tipZ)
             local delta=tip-nock
             mesh.node:SetDirection(delta:Normalized())
             mesh.node.scale=Vector3(.35,.35,delta:Length()/.03)
             mesh.node.position=nock-mesh.node.rotation*Vector3(.00525,.00525,0)
         end
     end
-    for i,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=drawn and i==self.bowStage+1 end
+    for i,mesh in ipairs(self.bowDrawMeshes) do mesh.node.enabled=not thornOn and drawn and i==self.bowStage+1 end
     self.bowArrow.node.enabled=drawn
     if self.active=='bow' and self.visualState=='hand' then
         self.entries.bow.mesh.node.enabled=not (drawn or vibrating)
-        if vibrating and not drawn then self.bowDrawMeshes[1].node.enabled=true end
+        if vibrating and not drawn and not thornOn then self.bowDrawMeshes[1].node.enabled=true end
     end
     if drawn then
         local minimum=self.bowArrow.minimum
@@ -1154,7 +1165,7 @@ function Rig:UpdateBowVisual()
         self.bowArrowOffset=SetVec(self.bowArrowOffset,minimum.x+launch[1],minimum.y+launch[2],minimum.z+nock.z)
         self.bowArrow.node.position=self.bowArrowOffset
         self.bowArrow.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
-        self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
+        if not thornOn then self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17]) end
     end
 end
 
@@ -1276,9 +1287,42 @@ function Rig:SyncWing(dt)
     self.wingGlow=glow
     WingVisual.SetCharge(entry.wing,glow)
 end
+--- Thorn-flower bow visual (ThornBowVisual): replaces the voxel bow's look in hand and on the back.
+--- Nock, draw stages, arrows and the drawn string keep using the voxel blueprint.
+---@param entry table bow entry
+function Rig:AttachThorn(entry)
+    if not entry then return end
+    local half=self.bowHalfHeight
+    if not half then return end
+    if entry.thorn and math.abs((entry.thornHalf or 0)-half)>1e-6 then
+        ThornVisual.Dispose(entry.thorn);entry.thorn=nil
+    end
+    if not entry.thorn then
+        local thorn,err=ThornVisual.New(entry.pivot,half)
+        if not thorn then
+            if not Rig.thornWarned then Rig.thornWarned=true;print('WeaponRig: thorn bow unavailable, voxel bow kept: '..tostring(err)) end
+            return
+        end
+        entry.thorn,entry.thornHalf=thorn,half
+        self.sockets.back_bow.rotation=ThornVisual.BackRotation()
+    end
+end
+---@param dt number?
+function Rig:SyncThorn()
+    local entry=self.entries.bow
+    local thorn=entry and entry.thorn
+    if not thorn then return end
+    if not thorn.ready then ThornVisual.Step(thorn) end
+    if not thorn.ready then return end
+    -- Voxel bow mesh stays alive for opacity/pools/hit data but is invisible while the thorn bow shows.
+    local node=entry.mesh.node
+    if node.scale.x>.01 then node.scale=Vector3(1e-4,1e-4,1e-4) end
+    ThornVisual.SetVisible(thorn,self.active=='bow' and entry.mesh.alpha>=.5)
+end
 function Rig:Update(dt)
     self:UpdateCore(dt)
     self:SyncWing(dt)
+    self:SyncThorn()
 end
 
 function Rig:Dispose()
@@ -1296,7 +1340,7 @@ function Rig:Dispose()
     for _,image in ipairs(self.bowImages) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,particle in ipairs(self.particles) do self.world:RemoveVolume(particle.volume);particle.material:Dispose() end
     for _,flash in pairs(self.flashes) do self.world:RemoveVolume(flash.volume);flash.material:Dispose() end
-    for _,entry in pairs(self.entries) do WingVisual.Dispose(entry.wing);entry.wing=nil;Builder.Dispose(entry.mesh); entry.pivot:Remove() end
+    for _,entry in pairs(self.entries) do WingVisual.Dispose(entry.wing);entry.wing=nil;ThornVisual.Dispose(entry.thorn);entry.thorn=nil;Builder.Dispose(entry.mesh); entry.pivot:Remove() end
     self.sockets.back_sword:Remove()
     self.sockets.back_bow:Remove()
     -- Both palms are shared character-owned nodes: never delete, move or reset
