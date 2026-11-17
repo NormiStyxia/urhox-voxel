@@ -646,8 +646,35 @@ function M.CheckGate()
     Emit("gate", {})
 end
 
+-- This module owns puzzle volumes and its two sender-specific subscriptions.
+-- The parent scene owns all other static scenery.
+function M.Stop()
+    if M.world then
+        UnsubscribeFromEvent(M.world,'VoxelDamaged')
+        UnsubscribeFromEvent(M.world,'VoxelSevered')
+    end
+    for _,object in ipairs(M.list) do object:Dispose() end
+    for _,key in ipairs({'gateRubble','towerVol','chain'}) do
+        local volume=M[key]
+        if volume then
+            local node=volume:GetNode()
+            M.world:RemoveVolume(volume)
+            volume:Dispose()
+            if node then node:Dispose() end
+        end
+        M[key]=nil
+    end
+    if M.keyNode then M.keyNode:Remove() end
+    if M.gateMaterial then M.gateMaterial:Dispose() end
+    M.objects,M.list,M.steps,M.events={},{},{},{}
+    M.world,M.boulder,M.steles,M.keyNode,M.gateMaterial=nil,nil,nil,nil,nil
+    M.gateRubbleSolid0,M.STAIR_SLOTS=nil,nil
+    gateClock,gateNextCheck,gateNextRescan,gateDirty=0,0,0,true
+end
+
 ---@param world VoxelPhysicsWorld
 function M.Build(world, scene)
+    M.Stop()
     local t0 = os.clock()
     M.world = world
     gateClock, gateNextCheck, gateNextRescan, gateDirty = 0, 0, 0, true

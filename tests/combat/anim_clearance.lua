@@ -3,17 +3,14 @@ package.path='scripts/?.lua;tests/combat/?.lua;'..package.path
 local Mock=require('anim_mock')
 local A=require('combat.CombatAnim');local Data=require('combat.AnimClips')
 local Model=require('game.NomiVoxelData')
-local Parts=require('combat.WeaponParts');local Builder=require('combat.WeaponBuilder')
+local Parts=require('combat.WeaponCatalog');local Builder=require('combat.WeaponBuilder')
 local config=Parts.DefaultWeapon('sword');config.weapon='sword'
 local bp=Builder.Compile(config);assert(bp)
 local bladeMin,bladeMax=math.huge,-math.huge
-for _,blade in ipairs({'blade_straight','blade_broad','blade_rapier'}) do
-config.parts.blade=blade;bp=Builder.Compile(config);assert(bp)
-for _,cell in ipairs(bp.geometry.cells) do if cell.slot=='blade' then
+for _,cell in ipairs(bp.geometry.cells) do if cell.region=='blade' then
  bladeMin=math.min(bladeMin,(cell.y-.5)*Parts.VOXEL_SIZE*1.25)
  bladeMax=math.max(bladeMax,(cell.y+.5)*Parts.VOXEL_SIZE*1.25)
 end end
-end
 local parent,pivots,boxes={},{},{}
 local function shape(name,x,y,z)
  if name=='head' then return x,y,z end

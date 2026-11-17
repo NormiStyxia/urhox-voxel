@@ -44,6 +44,7 @@ function V.New(pivot,tipY,colors)
         local s=tipY/data.sockets.tip[2]
         node.scale=Vector3(s*V.WIDTH,s,s*V.DEPTH)
         local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
+        visual.geometry=g
         g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
         local span=data.uvHeight
         local vertices=data.vertices
@@ -76,9 +77,45 @@ function V.New(pivot,tipY,colors)
 end
 ---@param visual table?
 ---@param colors table?
-function V.Recolor(visual,colors)
-    if visual and visual.material then pcall(Tint,visual.material,colors) end
-    if visual and visual.crystal then pcall(Tint,visual.crystal,colors) end
+function V.Recolor(visual,colors,deferred)
+    if not visual or not visual.material then return end
+    local material,crystal
+    local ok,err=pcall(function()
+        material=assert(visual.material:Clone('WingSwordTint'))
+        Tint(material,colors)
+        if visual.crystal then crystal=assert(visual.crystal:Clone('WingCrystalTint'));Tint(crystal,colors) end
+        assert(visual.geometry:SetMaterial(0,material)~=false,'wing tint binding failed')
+        if crystal then assert(visual.geometry:SetMaterial(1,crystal)~=false,'crystal tint binding failed') end
+    end)
+    if not ok then
+        pcall(visual.geometry.SetMaterial,visual.geometry,0,visual.material)
+        if visual.crystal then pcall(visual.geometry.SetMaterial,visual.geometry,1,visual.crystal) end
+        if material then material:Dispose() end
+        if crystal then crystal:Dispose() end
+        error(err)
+    end
+    local oldMaterial,oldCrystal=visual.material,visual.crystal
+    local finished=false
+    local transaction={}
+    function transaction.Commit()
+        if finished then return end
+        finished=true
+        pcall(oldMaterial.Dispose,oldMaterial)
+        if oldCrystal then pcall(oldCrystal.Dispose,oldCrystal) end
+    end
+    function transaction.Rollback()
+        if finished then return end
+        -- Restore existing handles: rollback must not depend on another Clone.
+        visual.geometry:SetMaterial(0,oldMaterial)
+        if oldCrystal then visual.geometry:SetMaterial(1,oldCrystal) end
+        visual.material,visual.crystal=oldMaterial,oldCrystal
+        finished=true
+        pcall(material.Dispose,material)
+        if crystal then pcall(crystal.Dispose,crystal) end
+    end
+    visual.material,visual.crystal=material,crystal
+    if not deferred then transaction.Commit() end
+    return transaction
 end
 --- Swing charge 0..1 brightens the crystal interior (cached to avoid per-frame Variants).
 ---@param visual table?

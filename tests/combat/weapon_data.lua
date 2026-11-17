@@ -1,98 +1,22 @@
--- Run with Lua 5.4 from the project root, no engine required.
-package.path = "scripts/?.lua;" .. package.path
-local Parts = require("combat.WeaponParts")
-local seen = {}
-assert(Parts.VOXEL_SIZE==0.03)
-assert(#Parts.All==19)
-for _, part in ipairs(Parts.All) do
-    assert(not seen[part.id], "duplicate id")
-    seen[part.id] = true
-    assert(Parts.Get(part.id)==part)
-    assert(#part.name>0 and #part.desc>0)
-    local width, depth, count, colors = #part.voxels[1][1], #part.voxels[1], 0, {}
-    for _, layer in ipairs(part.voxels) do
-        assert(#layer==depth, part.id.." depth")
-        for _, row in ipairs(layer) do
-            assert(type(row)=="string" and #row==width,part.id.." row width")
-            for char in row:gmatch(".") do
-                assert(char=="." or part.palette[char], part.id.." channel")
-                if char~="." then count=count+1; colors[char]=true end
-            end
+package.path='scripts/?.lua;'..package.path
+local Catalog=require('combat.WeaponCatalog')
+local Builder=require('combat.WeaponBuilder')
+assert(Catalog.Slots==nil and Catalog.Presets==nil and Catalog.All==nil)
+for _,weapon in ipairs({'sword','bow'}) do
+    local definition=Catalog.Definitions[weapon]
+    for _,channel in ipairs(Catalog.Channels) do
+        for i=1,#Catalog.ColorPresets do
+            local config=Catalog.DefaultWeapon(weapon);config.weapon=weapon;config.colors[channel]=i
+            local mesh=assert(Builder.Compile(config))
+            assert(mesh.stats==definition.stats and mesh.hit==definition.hit)
+            assert(mesh.config.parts==nil)
+            if weapon=='bow' then assert(mesh.config.colors[channel]==definition.colors[channel]) end
         end
     end
-    assert(count>0 and count<=4000,part.id.." budget")
-    local colorCount=0
-    for _ in pairs(colors) do colorCount=colorCount+1 end
-    assert(colorCount>=2,part.id.." flat shading")
-    for _, vec in pairs(part.sockets) do
-        assert(#vec==3)
-        for _, value in ipairs(vec) do assert(math.type(value)=="integer") end
-    end
-    for _, value in ipairs(part.origin) do assert(math.type(value)=="integer") end
-    local good,bad=false,false
-    local lowerBetter={charge=true,draw=true,spread=true,chargeMultiplier=true,drawMultiplier=true,spreadMultiplier=true}
-    for key,value in pairs(part.stats) do
-        assert(type(value)=="number" and value==value)
-        local delta=value-((key:find('Multiplier') and key~='crystalDamageMultiplier') and 1 or 0)
-        if lowerBetter[key] then delta=-delta end
-        good=good or delta>0;bad=bad or delta<0
-    end
-    assert(good and bad,part.id..' must have both a benefit and a cost')
+    local bad=Catalog.DefaultWeapon(weapon);bad.colors.primary=1.5
+    assert(not Catalog.ValidateWeapon(weapon,bad))
+    bad.colors.primary=0/0;assert(not Catalog.ValidateWeapon(weapon,bad))
+    bad=Catalog.DefaultWeapon(weapon);bad.appearance='unknown'
+    assert(not Catalog.ValidateWeapon(weapon,bad))
 end
-for weapon, slots in pairs(Parts.Slots) do
-    assert(#Parts.Presets==3)
-    for _,preset in ipairs(Parts.Presets) do
-        local first=assert(Parts.Preset(weapon,preset.id))
-        assert(Parts.ValidateWeapon(weapon,first))
-        first.colors.primary=6
-        assert(Parts.Preset(weapon,preset.id).colors.primary~=6,'presets must be independent')
-    end
-    local config = Parts.DefaultWeapon(weapon)
-    assert(Parts.ValidateWeapon(weapon,config))
-    for _, slot in ipairs(slots) do
-        local options=Parts.GetOptions(weapon,slot)
-        assert(#options>=2 and #options<=3)
-        for _, part in ipairs(options) do
-            config.parts[slot]=part.id
-            assert(Parts.ValidateWeapon(weapon,config))
-        end
-    end
-    config.colors.accent=7
-    assert(not Parts.ValidateWeapon(weapon,config))
-    config.colors.accent=0/0
-    assert(not Parts.ValidateWeapon(weapon,config))
-end
-assert(Parts.Preset('axe','fast')==nil and Parts.Preset('sword','missing')==nil)
-local wrong = Parts.DefaultWeapon("sword")
-wrong.parts.grip = "bow_grip_leather"
-assert(not Parts.ValidateWeapon("sword",wrong))
-assert(not Parts.ValidateWeapon("sword",false))
--- A single-voxel straight string spans the full limb height.
-for _, part in ipairs(Parts.GetOptions("bow","limbs")) do
-    for _, layer in ipairs(part.voxels) do
-        local stringRow = assert(layer[1]) -- -Z, not -X
-        assert(stringRow:sub(2,2)~=".")
-    end
-end
--- Silhouettes are structural differences, not colour swaps or uniform scale.
-local function Widths(id)
-    local out={}
-    for _,layer in ipairs(Parts.Get(id).voxels) do
-        local n=0
-        for c in layer[2]:gmatch('.') do if c~='.' then n=n+1 end end
-        out[#out+1]=n
-    end
-    return out
-end
-local straight,broad,rapier=Widths('blade_straight'),Widths('blade_broad'),Widths('blade_rapier')
-assert(straight[2]<straight[8] and straight[17]<straight[8] and straight[#straight]==1)
-assert(broad[8]<broad[4] and broad[8]<broad[14] and broad[#broad]==1,'broad blade needs a waist and leaf shoulder')
-assert(rapier[3]>rapier[10] and rapier[#rapier]==1,'rapier needs a forte and needle')
-local recurve=Parts.Get('limbs_recurve')
-local centres={}
-for y=4,recurve.sockets.top[2] do
-    local layer=assert(recurve.voxels[y-recurve.origin[2]+1])
-    for z,row in ipairs(layer) do if row:find('P',1,true) then centres[y]=recurve.origin[3]+z-1 end end
-end
-assert(centres[13]>centres[10],'recurve must bend toward target again before its tip')
-print("weapon_data: PASS (19 parts, 7 slots, channels/sockets/strings/validation, distinct blade/limb contours)")
+print('weapon_data: fixed class stats/hit, appearance isolation, original bow palette PASS')

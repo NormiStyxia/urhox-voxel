@@ -1,6 +1,6 @@
 -- Showroom-only blade studies. Metres, root=(0,0,0), tip=+Y. No gameplay edits.
 -- Pure polygon/cuboid data is also used by the offline comparison renderer.
-local Parts=require('combat.WeaponParts')
+local Catalog=require('combat.WeaponCatalog')
 local M={}
 local WHITE,BLUE,GOLD,GEM={1,0,0},{.65,0,.35},{0,1,0},{0,0,1}
 local function Face(data,points,weights,shade,glow,outward)
@@ -154,7 +154,7 @@ function M.Palette(colors)
     local result={}
     for i,key in ipairs({'primary','secondary','accent'}) do
         local index=colors and colors[key] or ({3,1,2})[i]
-        local preset=Parts.ColorPresets[index] or Parts.ColorPresets[({3,1,2})[i]]
+        local preset=Catalog.ColorPresets[index] or Catalog.ColorPresets[({3,1,2})[i]]
         local c={}
         for n=1,3 do
             local value=preset.rgb[n]/255
@@ -163,7 +163,7 @@ function M.Palette(colors)
         end
         result[key]=c
     end
-    local grip=colors and Parts.ColorPresets[colors.grip]
+    local grip=colors and Catalog.ColorPresets[colors.grip]
     if grip then
         result.grip={grip.rgb[1]/255*.45,grip.rgb[2]/255*.45,grip.rgb[3]/255*.55}
     else result.grip={.08,.15,.36} end -- default: deep navy

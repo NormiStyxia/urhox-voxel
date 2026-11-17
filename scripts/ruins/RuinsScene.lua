@@ -74,6 +74,7 @@ local WeaponRig = require('combat.WeaponRig')
 local EnemySpawner = require('combat.enemies.Spawner')
 local CombatHUD = require('ui.CombatHUD')
 local ForgePanel = require('ui.ForgePanel')
+local WeaponLoadout = require('combat.WeaponLoadout')
 local ForgeShowroom = require('combat.ForgeShowroom')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 ---@type ClothInertia?
@@ -117,76 +118,28 @@ Breath.Register(Controller)
 ---@field stream table|nil Ordinary breath owned by RuinsDragon.
 local M = {}
 
--- Optional pacing, scoped to this scene. Never switch to generational GC.
--- GetSystemTime 是静态绑定，三个计时点都必须传 Time 类表而不是实例。
-M.gcEnabled=true
-M.gcDebug=false
-local gcState={running=false,configured=false,steps=0,cycles=0,skipped=0,maxMs=0,reclaimed=0}
+-- Explicit frame hooks; the pacing service owns GC state and restores it on Stop.
+local sceneGC=require('ruins.SceneGC').New()
+M.gcEnabled,M.gcDebug=true,false
 function M.SetGCEnabled(enabled)
     M.gcEnabled=enabled==true
-    if M.gcEnabled and gcState.running and not gcState.configured then
-        gcState.pause=collectgarbage('setpause',110)
-        gcState.stepmul=collectgarbage('setstepmul',300)
-        collectgarbage('incremental',110,300)
-        gcState.configured=true
-    elseif not M.gcEnabled and gcState.configured then
-        collectgarbage('setpause',gcState.pause)
-        collectgarbage('setstepmul',gcState.stepmul)
-        gcState.configured=false
-    end
+    sceneGC:SetEnabled(M.gcEnabled)
 end
 local function StartSceneGC()
-    gcState.running=true
-    gcState.steps,gcState.cycles,gcState.skipped,gcState.maxMs,gcState.reclaimed=0,0,0,0,0
-    gcState.frameStart=nil
-    gcState.at=Time:GetSystemTime()
-    gcState.heap=collectgarbage('count')
-    M.SetGCEnabled(M.gcEnabled)
+    sceneGC.enabled,sceneGC.debug=M.gcEnabled,M.gcDebug
+    sceneGC:Start()
 end
+local function StopSceneGC() sceneGC:Stop() end
 function Ruins_HandleGCBeginFrame()
     SwingPerf.BeginFrame(CombatState)
-    if gcState.running then gcState.frameStart=Time:GetSystemTime() end
-end
-local function StepSceneGC()
-    if not gcState.running then return end
-    M.SetGCEnabled(M.gcEnabled) -- direct debug flag changes also restore pacing
-    local now=Time:GetSystemTime()
-    if M.gcEnabled and gcState.frameStart then
-        if now-gcState.frameStart<=12 and now>=gcState.frameStart then
-            local before=M.gcDebug and collectgarbage('count') or 0
-            local t=M.gcDebug and os.clock() or 0
-            local completed=collectgarbage('step',8)
-            gcState.steps=gcState.steps+1
-            if completed then gcState.cycles=gcState.cycles+1 end
-            if M.gcDebug then
-                gcState.maxMs=math.max(gcState.maxMs,(os.clock()-t)*1000)
-                gcState.reclaimed=gcState.reclaimed+math.max(0,before-collectgarbage('count'))
-            end
-        else gcState.skipped=gcState.skipped+1 end
-    end
-    gcState.frameStart=nil -- at most one explicit step per frame
-    if now-gcState.at>=1000 then
-        local heap=collectgarbage('count')
-        if M.gcDebug then
-            print(string.format('RuinsGC: heapKB=%.1f deltaKB=%+.1f steps=%d completed=%d skipped=%d stepReclaimedKB=%.1f maxStepCPUms=%.3f',
-                heap,heap-gcState.heap,gcState.steps,gcState.cycles,gcState.skipped,gcState.reclaimed,gcState.maxMs))
-        end
-        gcState.at,gcState.heap=now,heap
-        gcState.steps,gcState.cycles,gcState.skipped,gcState.maxMs,gcState.reclaimed=0,0,0,0,0
-    end
+    sceneGC:BeginFrame()
 end
 function Ruins_HandleGCEndFrame()
-    Safe('GC.Step',StepSceneGC)
+    sceneGC.enabled,sceneGC.debug=M.gcEnabled,M.gcDebug
+    Safe('GC.Step',sceneGC.Step,sceneGC)
     Safe('Perf.Flush',CombatState.FlushSwapPerf)
     SwingPerf.EndFrame()
 end
-local function StopSceneGC()
-    local enabled=M.gcEnabled
-    M.SetGCEnabled(false)
-    M.gcEnabled=enabled
-    gcState.running=false;gcState.frameStart=nil
-end
-
 
 M.DEBUG_PANEL = false   -- 巨龙动画测试面板：默认隐藏（代码保留在 dragon/DragonDebugUI.lua）
 M.SPAWN = Vector3(0, Terrain.RING_Y + 0.1, -64.0)
@@ -328,6 +281,12 @@ local function SetupLighting()
     M.courtLight = l
 end
 
+local function GameplayInputAllowed()
+    return not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn
+        and not TouchControls.IsBlocked() and input.focus and not input.minimized
+        and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
+end
+
 -- ---------------------------------------------------------------- 龙
 local function SetupDragon()
     M.variant = "large"
@@ -352,9 +311,8 @@ local function SetupDragon()
     ride.lockedHint = ""
     ride.wander = { center = M.DRAGON_POS, min = 3, max = 11 }
     ride.node = nomi_.node
-    ride.controlsEnabled = function() return not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked()
-        and not (combatMoves_ and combatMoves_.dead) and animPreview_.index==0 and input.focus and not input.minimized
-        and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil) end
+    ride.controlsEnabled = function() return GameplayInputAllowed()
+        and not (combatMoves_ and combatMoves_.dead) and animPreview_.index==0 end
     ride.onNotice = function(text) caster_:Say(text) end
     ride.onMount = function()
         nomi_:ResetJump()
@@ -562,6 +520,7 @@ local function OpenForge()
     HUD.SetForgeVisibility(ForgePanel.HudHidden); CombatHUD.SetForgeVisibility(ForgePanel.HudHidden)
     TouchControls.SetForgeVisibility(ForgePanel.HudHidden); PerformanceHUD.SetForgeVisibility(ForgePanel.HudHidden)
     ForgePanel.Open({rig=combatRig_,canOpen=CanOpenForge,
+        onCommit=function(config) return WeaponLoadout.Commit(combatRig_,config,CombatState) end,
         onOpen=function()
             -- Once per opening: distinguish a stale/missing module cache from a
             -- phase issue in Web logs, without probing or printing each frame.
@@ -803,6 +762,13 @@ end
 
 -- ---------------------------------------------------------------- 启动
 function M.Start()
+    if scene_ then M.Stop() end
+    time_,stage_,farView=0,'gate',false
+    M.mounted,M.roared,M.spread,M.settled,M.wakeT=false,false,false,false,0
+    M.gateHover,M.gateHoverTarget,M.lastGateHover=0,0,nil
+    M.runeK,M.runeTarget,M.lastRuneQ=0,0,nil
+    M.aim,M.lastAimSignature,M.nextAimLog=nil,nil,nil
+    M.debugOn,M.fake,M.fakePress,M.forceCamMode=false,nil,nil,nil
     hudClockMinute,hudClockPhase=nil,nil
     CombatState.ResetIsolation()
     Safe('GC.Start',StartSceneGC)
@@ -1326,9 +1292,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         return
     end
     nomi_:MeasureMotion(dt)
-    local allowed=not (weaponGesture_ and WeaponWheel.IsBlocked()) and not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked()
-        and input.focus and not input.minimized
-        and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
+    local allowed=GameplayInputAllowed()
     local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
     local r = (Down(KEY_D) and 1 or 0) - (Down(KEY_A) and 1 or 0)
     local tf,tr=TouchInput.MoveAxis()
@@ -1627,9 +1591,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Safe('Combat.MountState',CombatState.SetMounted,M.ride.mode~='free')
     Safe('Combat.State',CombatState.Update,dt)
     Safe('Audio.Listener',CombatAudio.SetListenerPosition,nomi_:Position()); Safe('Audio.Update',UpdateCombatAudio,dt)
-    local combatAllowed=M.ride.mode=='free' and not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn
-        and not TouchControls.IsBlocked() and input.focus and not input.minimized
-        and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
+    local combatAllowed=M.ride.mode=='free' and GameplayInputAllowed()
     if combatTest_ and combatTest_.active and (not combatAllowed or ForgePanel.IsOpen() or SettingsMenu.IsBlocked()) then Safe('Debug.F11Stop',combatTest_.Stop,combatTest_,'blocked/menu') end
     Safe('Debug.Keys',HandleCombatDebugKeys,combatAllowed and not combatMoves_.dead)
     if not Safe('Debug.F7',UpdateCombatPreview,dt,combatAllowed) and animPreview_.index>0 then
@@ -1999,6 +1961,19 @@ function M.Stop()
     UnsubscribeFromEvent("InputFocus")
     UnsubscribeFromEvent("EnemyAttackCue")
     pointer:Release("stop")
+    if M.stream then M.stream:Stop(true) end
+    Puzzles.Stop()
+    Build.Stop()
+    Terrain.Stop()
+    Brush.materialFor=nil
+    if scene_ then scene_:Clear() end
+    scene_,world_,nomi_,caster_,fx_=nil,nil,nil,nil,nil
+    clothInertia_=nil
+    sleepBase.valid=false
+    for _,key in ipairs({'scene','world','puzzles','nomiCtl','caster','fx','rig','ctrl','ride','breath',
+        'dragonWorld','nomi','nomiNode','stream','sigils','atmosphere','surfaceMaterials',
+        'sun','zone','courtLight','combat','foot','dayNight','aim'}) do M[key]=nil end
+    if rawget(_G,'RUINS')==M then rawset(_G,'RUINS',nil) end
 end
 
 return M

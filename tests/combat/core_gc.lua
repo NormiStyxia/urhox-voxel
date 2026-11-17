@@ -1,6 +1,6 @@
 -- Execute the actual Scene pacing block, without loading an engine Scene.
 local f=assert(io.open('scripts/ruins/RuinsScene.lua'));local source=f:read('*a');f:close()
-local body=assert(source:match('(%-%- Optional pacing.-)\nM.DEBUG_PANEL'))
+local moduleFile=assert(io.open('scripts/ruins/SceneGC.lua'));local body=moduleFile:read('*a');moduleFile:close()
 local now,cpu,heap=0,0,1024
 local pause,mul,steps=200,100,0
 local logs,calls={},{}
@@ -19,22 +19,27 @@ local env={SwingPerf={BeginFrame=function()end,EndFrame=function()end},Safe=func
   if action=='incremental' then assert(a==110 and b==300);return 'incremental' end
   if action=='step' then assert(a==8);steps=steps+1;heap=heap-4;cpu=cpu+.00025;return steps%2==0 end
  end}
-local api=assert(load(body..'\nreturn {start=StartSceneGC,stop=StopSceneGC,begin=Ruins_HandleGCBeginFrame,finish=Ruins_HandleGCEndFrame}', 'Scene GC pacing','t',env))()
+env.setmetatable=setmetatable
+local gc=assert(load(body,'SceneGC','t',env))().New()
+env.M=gc
+gc.SetGCEnabled=function(value)gc:SetEnabled(value)end
+local api={start=function()gc:Start()end,stop=function()gc:Stop()end,
+    begin=function()gc:BeginFrame()end,finish=function()gc:Step()end}
 api.start();assert(pause==110 and mul==300)
 api.finish();assert(steps==0,'no begin frame, no manual step')
 api.begin();now=12;api.finish();assert(steps==1,'12ms frame allowed')
 api.finish();assert(steps==1,'duplicate EndFrame cannot double step')
 api.begin();now=25;api.finish();assert(steps==1,'13ms frame skips')
-env.M.gcDebug=true
+env.M.debug=true
 api.begin();now=30;api.finish();assert(steps==2 and #logs==0)
 api.begin();now=1030;api.finish();assert(steps==2 and #logs==1)
 assert(logs[1]:find('steps=2',1,true) and logs[1]:find('maxStepCPUms=0.250',1,true))
 env.M.SetGCEnabled(false);assert(pause==200 and mul==100)
 api.begin();now=1031;api.finish();assert(steps==2)
 env.M.SetGCEnabled(true);api.begin();now=1032;api.finish();assert(steps==3)
-api.stop();assert(pause==200 and mul==100 and env.M.gcEnabled)
+api.stop();assert(pause==200 and mul==100 and env.M.enabled)
 api.begin();now=2000;api.finish();assert(steps==3,'unloaded scene cannot step')
-env.M.gcEnabled=false;api.start();assert(pause==200 and mul==100,'disabled startup leaves global GC parameters intact')
+env.M.enabled=false;api.start();assert(pause==200 and mul==100,'disabled startup leaves global GC parameters intact')
 api.begin();now=2001;api.finish();assert(steps==3)
 api.stop()
 assert(source:find('SubscribeToEvent("BeginFrame", "Ruins_HandleGCBeginFrame")',1,true))

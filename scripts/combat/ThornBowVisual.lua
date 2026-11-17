@@ -11,7 +11,7 @@ local SAND='model/forge-blades/ThornSand.xml'
 local MASK=0xFFFFFFFF
 local model
 local function Model()
-    model=model or require('combat.models.ThornBow')
+    model=model or require('combat.models.ThornBow').Load()
     return model
 end
 --- Back-slung rotation: arc profile (crystal, branches) faces a camera behind the character.
@@ -71,9 +71,9 @@ end
 ---@return table visual
 local function Create(parent,scale,mask,shadows)
     mask=mask or MASK
-    local m=Model()
     local visual={cursor=1,ready=false,bendKey=-1,scale=scale}
     local ok,err=pcall(function()
+        local m=Model()
         local source=assert(cache:GetResource('Material',MATERIAL),'thorn bow material unavailable')
         visual.material=assert(source:Clone('ThornBowMat'),'thorn bow material clone failed')
         local sand=cache:GetResource('Material',SAND)
@@ -117,7 +117,9 @@ end
 ---@return string? err
 function V.New(pivot,halfHeight)
     if not V.ENABLED then return nil,'disabled' end
-    local visual,err=Create(pivot,(halfHeight*2+V.PAD)/Model().height)
+    local ok,m=pcall(Model)
+    if not ok then return nil,tostring(m) end
+    local visual,err=Create(pivot,(halfHeight*2+V.PAD)/m.height)
     if not visual then return nil,err end
     visual.node.enabled=false
     return visual

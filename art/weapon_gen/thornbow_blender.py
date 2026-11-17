@@ -872,7 +872,7 @@ elif MODE == 'measure':
                 ob.hide_render = ob.name not in names
         render(cam, f'{OUT}/meas_{gname}.png', 2560, 1440)
 elif MODE == 'export':
-    # Game LOD -> JSON (consumed by art/weapon_gen/thornbow_export.py -> scripts/combat/models/ThornBow.lua).
+    # Game LOD -> JSON (thornbow_export.py -> assets/model/forge-blades/ThornBow.mesh.json).
     # Game axes (UrhoX, Y up, +Z target, string on -Z): game = (blender.y, blender.z, -blender.x).
     import json
     dg = bpy.context.evaluated_depsgraph_get()

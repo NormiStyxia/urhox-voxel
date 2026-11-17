@@ -1,7 +1,7 @@
 package.path="scripts/?.lua;tests/combat/?.lua;"..package.path
 local Mock=require("weapon_mock")
 local Rig=require("combat.WeaponRig")
-local Parts=require("combat.WeaponParts")
+local Parts=require("combat.WeaponCatalog")
 local scene=Mock.Node("scene") --[[@as any]] -- intentional engine contract doubles
 local world=Mock.World(scene) --[[@as any]]
 local nomi=Mock.Nomi(scene) --[[@as any]]
@@ -66,11 +66,12 @@ frames(100)
 assert((rig.hangPosition-rig.hangTarget):Length()<.03)
 assert(world.writes==initialWrites and world.rebuilds==initialRebuilds,"combat must never rebuild or edit grids")
 local c=Parts.DefaultWeapon("bow");c.weapon="bow";c.colors.accent=6
-assert(rig:Apply(c) and world.rebuilds==initialRebuilds)
-assert(world.palette[175].r==Parts.ColorPresets[6].rgb[1]/255)
-c.parts.limbs="limbs_long"
-assert(rig:Apply(c) and world.rebuilds==initialRebuilds+27 and math.abs(rig:GetStats().range-(64+10*64/36))<1e-8,'bow edit refreshes fixed visual pools')
-assert(not rig:SetActive("axe") and not rig:SetPose("fly") and not rig:Apply({}))
+assert(rig:ApplyAppearance(c) and world.rebuilds==initialRebuilds)
+assert(rig.config.bow.colors.accent==2,'thorn bow preserves its original palette')
+c=Parts.DefaultWeapon('sword');c.weapon='sword';c.colors.accent=6
+assert(rig:ApplyAppearance(c) and world.rebuilds==initialRebuilds)
+assert(rig:GetStats().range==64,'appearance cannot change gameplay')
+assert(not rig:SetActive("axe") and not rig:SetPose("fly") and not rig:ApplyAppearance({}))
 rig:SetPose("hidden");frames(18)
 assert(not rig.entries.bow.mesh.node.enabled)
 rig:SetActive('sword');rig:SetPose('hand');frames(36)
@@ -99,8 +100,8 @@ for _,image in ipairs(rig.images) do assert(not image.node.enabled) end
 rig:SetTrail(true);rig:SetAfterimages({});rig:SetCombatVisual(false,nil);rig:Update(.1)
 assert(rig.sampleCount==0,'empty animation snapshots do not imply active')
 rig:SetAfterimages(nil);frames(2);assert(rig.sampleCount==0,'nil snapshots do not imply active')
-local sword=Parts.DefaultWeapon('sword');sword.weapon='sword';sword.parts.blade='blade_broad'
-assert(rig:Apply(sword) and world.rebuilds==beforeBuilds+18,'weapon, silhouettes, bands, blade flash and six reveal slices resize on edits')
+local sword=Parts.DefaultWeapon('sword');sword.weapon='sword';sword.colors.primary=5
+assert(rig:ApplyAppearance(sword) and world.rebuilds==beforeBuilds,'recolour must retain all geometry and effect pools')
 for _,volume in ipairs(world.volumes) do assert(volume.collisionLayer==0 and volume.collisionMask==0) end
 assert(world.palette[174].r==1 and world.palette[174].g==1 and world.palette[174].b==1)
 for _,band in ipairs(rig.trails) do
@@ -646,8 +647,8 @@ do
     assert(entry.wing.node.enabled)
     -- Apply recolours the same material; changed blade length rebuilds the visual
     local mat=entry.wing.material
-    local config={weapon='sword',parts={blade='blade_broad',guard='guard_cross',grip='sword_grip_leather',pommel='pommel_round'},colors={primary=5,secondary=6,accent=4}}
-    assert(r:Apply(config))
+    local config={weapon='sword',appearance='wing',colors={primary=5,secondary=6,accent=4}}
+    assert(r:ApplyAppearance(config))
     assert(entry.wing and entry.wing.node.parent==entry.pivot and entry.mesh.node.scale.x<.01)
     assert(entry.wing.material.parameters.accent_color~=nil)
     r:Dispose()

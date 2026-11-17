@@ -2,7 +2,7 @@
 -- Shader compilation/pixels/lighting still require Web preview.
 package.path='scripts/?.lua;'..package.path
 local Blades=require('combat.ForgeShowroomBlades')
-local Parts=require('combat.WeaponParts')
+local Parts=require('combat.WeaponCatalog')
 local d=Blades.Data('W')
 assert(d.route=='W' and d.triangles>200 and d.triangles<=1100 and #d.vertices==d.triangles*3)
 assert(Blades.Data('W')==d,'expanded model is cached read-only')

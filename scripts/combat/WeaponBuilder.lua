@@ -1,13 +1,14 @@
 -- Pure compilation + a small engine adapter. No physics finalization, ever.
 -- Integer cell coordinates denote centres; the volume's min corner is min-0.5.
-local Parts = require("combat.WeaponParts")
+local Catalog = require("combat.WeaponCatalog")
+local Geometry = require("combat.WeaponGeometry")
 
 ---@class WeaponCell
 ---@field x integer
 ---@field y integer
 ---@field z integer
 ---@field channel string
----@field slot string
+---@field region string
 ---@field feature? string
 
 ---@class WeaponGeometry
@@ -15,11 +16,9 @@ local Parts = require("combat.WeaponParts")
 ---@field weapon string
 ---@field cells WeaponCell[]
 ---@field sparse table<string, WeaponCell>
----@field offsets table<string, integer[]>
 ---@field bounds table
 ---@field stats table<string, number>
 ---@field hit table
----@field overlaps integer
 
 ---@class WeaponBlueprint
 ---@field key string
@@ -40,170 +39,37 @@ local Parts = require("combat.WeaponParts")
 ---@field disposed boolean
 
 local Builder = {}
-local SIZE = Parts.VOXEL_SIZE
+local SIZE = Catalog.VOXEL_SIZE
 local CACHE_LIMIT = 64
 Builder.PaletteBase = {sword=160, bow=176}
 Builder.ChannelOffset = {primary=0, secondary=1, accent=2, dark=3}
 -- 175 is a shared active-weapon trail entry, unused by either weapon's mesh.
 Builder.TRAIL_PALETTE = 175
----@type table<string, WeaponCell[]>
-local decoded = {}
----@type table<string, WeaponGeometry>
-local geometryCache = {}
 ---@type table<string, WeaponBlueprint>
 local blueprintCache = {}
-local geometryOrder, blueprintOrder = {}, {}
-
+local blueprintOrder = {}
 local function Cache(cacheTable, order, key, value)
     if #order>=CACHE_LIMIT then cacheTable[table.remove(order,1)] = nil end
     order[#order+1] = key
     cacheTable[key] = value
     return value
 end
-
----@param a number
----@param b number
----@param c number
 local function Key(a,b,c) return a..":"..b..":"..c end
 
----@param part WeaponPart
----@return WeaponCell[]
-local function Decode(part)
-    if decoded[part.id] then return decoded[part.id] end
-    local result = {}
-    for iy, layer in ipairs(part.voxels) do
-        for iz, row in ipairs(layer) do
-            for ix=1,#row do
-                local char = row:sub(ix,ix)
-                if char~="." then
-                    result[#result+1] = {x=part.origin[1]+ix-1, y=part.origin[2]+iy-1,
-                        z=part.origin[3]+iz-1, channel=part.palette[char], slot=part.slot,feature=char=='W' and 'string' or nil}
-                end
-            end
-        end
-    end
-    decoded[part.id] = result
-    return result
-end
-
-local function Sub(a,b) return {a[1]-b[1],a[2]-b[2],a[3]-b[3]} end
-local function Add(a,b) return {a[1]+b[1],a[2]+b[2],a[3]+b[3]} end
-local LIMITS = {attack={1,40},speed={0.7,1.4},reach={0.8,1.4},poise={0,30},
-    charge={0.2,1.2},draw={.3/.7,1.4/.7},range={12*64/36,96},spread={0.1,2},move={0.2,0.8},
-    projectileSpeed={0.7,1.4},armorBreak={.5,2},crystalRadius={0,1.5},crystalDamageMultiplier={0,.5}}
-local MULTIPLIERS={chargeMultiplier='charge',drawMultiplier='draw',rangeMultiplier='range',
-    spreadMultiplier='spread',projectileSpeedMultiplier='projectileSpeed'}
-
----@param config table
----@param key string
----@return WeaponGeometry
-local function Assemble(config,key)
-    if geometryCache[key] then return geometryCache[key] end
-    local weapon = config.weapon
-    ---@type table<string, WeaponPart>
-    local selected = {}
-    local stats = {}
-    for name,value in pairs(Parts.BaseStats[weapon]) do stats[name]=value end
-    for _,slot in ipairs(Parts.Slots[weapon]) do
-        local part = assert(Parts.Get(config.parts[slot]))
-        selected[slot]=part
-        for name,value in pairs(part.stats) do
-            if MULTIPLIERS[name] then stats[name]=(stats[name] or 1)*value
-            else stats[name]=(stats[name] or 0)+value end
-        end
-    end
-    for modifier,target in pairs(MULTIPLIERS) do if stats[modifier] then stats[target]=stats[target]*stats[modifier] end end
-    for name,limit in pairs(LIMITS) do
-        if stats[name] then stats[name]=math.max(limit[1],math.min(limit[2],stats[name])) end
-    end
-    -- Grip is anchored at zero; connect down to pommel, then up to guard/blade.
-    -- Bow grip/top = limbs/root, then limbs/top = tip/root.
-    local offsets = {grip={0,0,0}}
-    if weapon=="sword" then
-        offsets.pommel=Sub(selected.grip.sockets.root,selected.pommel.sockets.top)
-        offsets.guard=Sub(selected.grip.sockets.top,selected.guard.sockets.root)
-        offsets.blade=Sub(Add(offsets.guard,selected.guard.sockets.top),selected.blade.sockets.root)
-    else
-        offsets.limbs=Sub(selected.grip.sockets.top,selected.limbs.sockets.root)
-        offsets.tip=Sub(Add(offsets.limbs,selected.limbs.sockets.top),selected.tip.sockets.root)
-    end
-    ---@type table<string, WeaponCell>
-    local sparse = {}
-    local overlaps = 0
-    -- Low -> high priority. A later slot owns overlaps, not a second voxel.
-    for _,slot in ipairs(Parts.Slots[weapon]) do
-        local off=offsets[slot]
-        for _,cell in ipairs(Decode(selected[slot])) do
-            local x,y,z = cell.x+off[1],cell.y+off[2],cell.z+off[3]
-            local cellKey=Key(x,y,z)
-            if sparse[cellKey] then overlaps=overlaps+1 end
-            sparse[cellKey]={x=x,y=y,z=z,channel=cell.channel,slot=slot,feature=cell.feature}
-            -- A selected arrowhead also decorates both bow tips symmetrically.
-            if weapon=='bow' and slot=='tip' then
-                sparse[Key(x,-y,z)]={x=x,y=-y,z=z,channel=cell.channel,slot=slot}
-            end
-        end
-    end
-    local cells = {}
-    local low,high={math.huge,math.huge,math.huge},{-math.huge,-math.huge,-math.huge}
-    for _,cell in pairs(sparse) do
-        cells[#cells+1]=cell
-        local coord={cell.x,cell.y,cell.z}
-        for i=1,3 do low[i]=math.min(low[i],coord[i]); high[i]=math.max(high[i],coord[i]) end
-    end
-    assert(#cells>0 and #cells<=4000,"weapon voxel budget exceeded")
-    table.sort(cells,function(a,b)
-        if a.y~=b.y then return a.y<b.y end
-        if a.z~=b.z then return a.z<b.z end
-        return a.x<b.x
-    end)
-    local bounds={min={},max={},size={},gridMin=low,gridMax=high,dimensions={}}
-    for i=1,3 do
-        bounds.min[i]=(low[i]-0.5)*SIZE
-        bounds.max[i]=(high[i]+0.5)*SIZE
-        bounds.size[i]=(high[i]-low[i]+1)*SIZE
-        bounds.dimensions[i]=math.floor(high[i]-low[i]+1)
-    end
-    -- Sword capsule: grip o========> blade tip, radius .12m.
-    -- This exports geometry only; damage and reach scaling belong to Combat.
-    ---@type table
-    local hit={origin={0,0,0},dir={0,1,0}}
-    if weapon=="sword" then
-        hit.length=bounds.max[2]
-        hit.radius=0.12
-    else
-        local launch=Add(offsets.grip,selected.grip.sockets.launch)
-        hit.origin={launch[1]*SIZE,launch[2]*SIZE,launch[3]*SIZE}
-        hit.dir={0,0,1}
-    end
-    return Cache(geometryCache,geometryOrder,key,{key=key,weapon=weapon,cells=cells,sparse=sparse,
-        offsets=offsets,bounds=bounds,stats=stats,hit=hit,overlaps=overlaps})
-end
-
--- Returned blueprints/geometry are shared read-only. Inputs are always copied.
----@param config table
----@return WeaponBlueprint?
----@return string? error
+-- Only appearance is configurable. Fixed gameplay data never comes from mesh bounds.
 function Builder.Compile(config)
-    if type(config)~="table" or not Parts.ValidateWeapon(config.weapon,config) then
-        return nil,"invalid weapon configuration"
-    end
-    local normalized={weapon=config.weapon,parts={},colors={}}
-    local ids={config.weapon}
-    for _,slot in ipairs(Parts.Slots[config.weapon]) do
-        normalized.parts[slot]=config.parts[slot]
-        ids[#ids+1]=config.parts[slot]
-    end
-    local geometryKey=table.concat(ids,"|")
-    for _,channel in ipairs(Parts.Channels) do
-        normalized.colors[channel]=config.colors[channel]
-        ids[#ids+1]=tostring(config.colors[channel])
-    end
+    if type(config)~="table" then return nil,"invalid weapon configuration" end
+    local normalized=Catalog.CopyAppearance(config.weapon,config)
+    if not normalized then return nil,"invalid weapon appearance" end
+    normalized.weapon=config.weapon
+    local ids={config.weapon,normalized.appearance}
+    for _,channel in ipairs(Catalog.Channels) do ids[#ids+1]=tostring(normalized.colors[channel]) end
     local key=table.concat(ids,"|")
     if blueprintCache[key] then return blueprintCache[key] end
-    local geometry=Assemble(normalized,geometryKey)
+    local geometry=Geometry[config.weapon]
+    local definition=Catalog.Definitions[config.weapon]
     return Cache(blueprintCache,blueprintOrder,key,{key=key,geometry=geometry,config=normalized,
-        stats=geometry.stats,hit=geometry.hit,bounds=geometry.bounds})
+        stats=definition.stats,hit=definition.hit,bounds=geometry.bounds})
 end
 
 ---@param world VoxelPhysicsWorld
@@ -212,7 +78,7 @@ function Builder.ApplyPalette(world,config)
     -- Bank 0 has 256 slots; 160..191 are reserved. Enemy slots 200..239 untouched.
     local base=Builder.PaletteBase[config.weapon]
     for _,channel in ipairs({"primary","secondary","accent","dark"}) do
-        local preset=Parts.ColorPresets[config.colors[channel=="dark" and "primary" or channel]]
+        local preset=Catalog.ColorPresets[config.colors[channel=="dark" and "primary" or channel]]
         local rgb=preset.rgb
         local shade=channel=="dark" and 0.38 or 1
         local r,g,b=rgb[1]/255*shade,rgb[2]/255*shade,rgb[3]/255*shade
@@ -327,8 +193,7 @@ end
 ---@param previous WeaponMesh?
 ---@return table
 function Builder.BeginBuild(world,parent,config,previous)
-    local copy={weapon=config.weapon,parts={},colors={}}
-    for k,v in pairs(config.parts) do copy.parts[k]=v end
+    local copy={weapon=config.weapon,appearance=config.appearance,colors={}}
     for k,v in pairs(config.colors) do copy.colors[k]=v end
     return {world=world,parent=parent,config=copy,previous=previous,phase='compile',cursor=1,
         done=false,totalMs=0,maxStepMs=0,nativeMs=0,overBudget=false,steps=0}
@@ -614,7 +479,7 @@ function Builder.StepPreview(job,budgetMs,clock)
             for _,channel in ipairs({'primary','secondary','accent','dark'}) do
                 local index=job.blueprint.config.colors[channel=='dark' and 'primary' or channel]
                 ---@type number[]
-                local rgb=Parts.ColorPresets[index].rgb
+                local rgb=Catalog.ColorPresets[index].rgb
                 local shade=channel=='dark' and .38 or 1
                 job.colors[channel]=Color(rgb[1]/255*shade,rgb[2]/255*shade,rgb[3]/255*shade,1)
             end
@@ -687,12 +552,12 @@ end
 function Builder.BowVisual(blueprint,stage)
     local cells={}
     local seen={}
-    local half=assert(Parts.Get(blueprint.config.parts.limbs)).sockets.top[2]
+    local half=Catalog.Definitions.bow.halfHeight/SIZE
     local mid=stage==0 and -.06 or (stage==1 and -.18 or -.35)
     for _,cell in ipairs(blueprint.geometry.cells) do
         if cell.feature~='string' then
-            local bend=cell.slot=='limbs' and math.floor(stage*math.abs(cell.y)/half+.5) or (cell.slot=='tip' and stage or 0)
-            cells[#cells+1]={x=cell.x,y=cell.y,z=cell.z-bend,channel=cell.channel,slot=cell.slot}
+            local bend=cell.region=='limbs' and math.floor(stage*math.abs(cell.y)/half+.5) or (cell.region=='tip' and stage or 0)
+            cells[#cells+1]={x=cell.x,y=cell.y,z=cell.z-bend,channel=cell.channel,region=cell.region}
             seen[Key(cell.x,cell.y,cell.z-bend)]=true
         end
     end
@@ -707,7 +572,7 @@ function Builder.BowVisual(blueprint,stage)
             if y==nockY then nockZ=z*SIZE end
             local key=Key(0,y,z)
             if not seen[key] then
-                cells[#cells+1]={x=0,y=y,z=z,channel='accent',slot='limbs',feature='string'};seen[key]=true
+                cells[#cells+1]={x=0,y=y,z=z,channel='accent',region='limbs',feature='string'};seen[key]=true
             end
         end
     end
@@ -720,20 +585,7 @@ end
 ---@param blueprint WeaponBlueprint
 ---@return table[]
 function Builder.NockedArrow(blueprint)
-    local cells={}
-    for z=0,21 do cells[#cells+1]={x=0,y=0,z=z,channel=z==0 and 'dark' or 'secondary'} end
-    for x=-2,-1 do cells[#cells+1]={x=x,y=0,z=0,channel='dark'} end
-    for z=1,4 do
-        cells[#cells+1]={x=1,y=0,z=z,channel=z==4 and 'secondary' or 'primary'}
-        if z<=3 then cells[#cells+1]={x=0,y=1,z=z,channel='secondary'} end
-    end
-    for _,cell in ipairs(Decode(assert(Parts.Get(blueprint.config.parts.tip)))) do
-        -- Arrowhead +Y becomes the arrow's +Z. Root is attached at shaft 21.
-        if not (cell.x==0 and cell.z==0 and cell.y==0) then
-            cells[#cells+1]={x=cell.x,y=cell.z,z=21+cell.y,channel=cell.channel}
-        end
-    end
-    return cells
+    return Geometry.arrow
 end
 
 --- Rows run target(+Z) -> shooter(-Z), columns -X -> +X.

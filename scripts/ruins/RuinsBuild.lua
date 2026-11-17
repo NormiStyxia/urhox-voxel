@@ -968,7 +968,14 @@ end
 -- ---------------------------------------------------------------- 入口
 ---@param world VoxelPhysicsWorld
 ---@param scene Scene
+-- Native scenery is owned by the scene; release this module's references.
+function M.Stop()
+    M.volumes,M.floaters,M.stairVolumes={},{},{}
+    M.colBroken,M.ribs=nil,nil
+    M.scene=nil
+end
 function M.Build(world, scene)
+    M.Stop()
     M.scene = scene
     local t0 = os.clock()
     local steps = {

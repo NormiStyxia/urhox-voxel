@@ -3,11 +3,12 @@
 package.path='scripts/?.lua;tests/combat/?.lua;'..package.path
 local Mock=require('weapon_mock')
 local Builder=require('combat.WeaponBuilder')
-local Parts=require('combat.WeaponParts')
+local Parts=require('combat.WeaponCatalog')
 local Showroom=require('combat.ForgeShowroom')
 local ThornBow=require('combat.ThornBowVisual')
 ThornBow.ENABLED=false -- voxel fallback path under test below; thorn bow route has its own block at the end
-assert(Showroom.GetModelRoute()=='original','startup must retain the original voxel sword')
+assert(Showroom.GetModelRoute()=='W','startup shows the approved wing sword')
+Showroom.SetModelRoute('original') -- explicit fallback-route tests below
 local Dressing=require('combat.ForgeShowroomScene')
 local MASK=0x40000000
 local function Number(value,label)
@@ -212,7 +213,7 @@ local function Boot()
         end
         return m
     end})
-    rawset(_G,'cache',{GetResource=function(self,kind,path,sendEventOnFailure,...)
+    rawset(_G,'cache',{GetFile=Mock.GetFile,GetResource=function(self,kind,path,sendEventOnFailure,...)
         NoExtra('GetResource',...);assert(self==cache and type(kind)=='string' and type(path)=='string')
         assert(sendEventOnFailure==nil or type(sendEventOnFailure)=='boolean')
         if e.fail=='material' then return nil end
@@ -326,7 +327,7 @@ local zone=Room():GetComponent('Zone');assert(zone.ambientSource==AMBIENT_COLOR 
 local lights=Room():GetComponents('Light',true);assert(#lights==6)
 for _,l in ipairs(lights) do assert(l.viewMask==MASK and l.lightMask==MASK and l.range>0) end
 assert(not Room():GetChild('RuinsShowroom_sky'),'Enter must not emit scene geometry')
-local c=Config('sword');Showroom.SetWeapon(c);c.parts.blade='invalid-mutated-after-call'
+local c=Config('sword');Showroom.SetWeapon(c);c.appearance='invalid-mutated-after-call'
 Finish();assert(Shape() and Shape():GetComponent('CustomGeometry')==nil)
 local oldShape=Shape();local oldGeometry=oldShape.children[1]:GetComponent('CustomGeometry')
 assert(oldGeometry:GetNumVertices(0)>0 and oldGeometry.viewMask==MASK and oldGeometry.zoneMask==MASK)
@@ -356,12 +357,8 @@ Boot();nodes,components=Live();assert(Showroom.Enter(e.scene))
 local combos,maxWeaponTriangles=0,0
 local occupancyMin,occupancyMax=1,0
 for _,weapon in ipairs({'sword','bow'}) do
-    local config=Config(weapon);local slots=Parts.Slots[weapon]
-    local function Visit(i)
-        if i<=#slots then
-            for _,part in ipairs(Parts.GetOptions(weapon,slots[i])) do config.parts[slots[i]]=part.id;Visit(i+1) end
-            return
-        end
+    local config=Config(weapon)
+    local function Visit()
         combos=combos+1;Showroom.SetWeapon(config);Finish()
         maxWeaponTriangles=math.max(maxWeaponTriangles,#Shape().children[1]:GetComponent('CustomGeometry').vertices/3)
         local b=Builder.Compile(config).bounds
@@ -400,7 +397,7 @@ for _,weapon in ipairs({'sword','bow'}) do
     end
     Visit(1)
 end
-assert(combos==72);print('weapon occupancy min/max='..occupancyMin..'/'..occupancyMax..' max_weapon_triangles='..maxWeaponTriangles);Showroom.Exit();Restored(nodes,components)
+assert(combos==2);print('weapon occupancy min/max='..occupancyMin..'/'..occupancyMax..' max_weapon_triangles='..maxWeaponTriangles);Showroom.Exit();Restored(nodes,components)
 
 for _,fail in ipairs({'child','Zone','Camera','switch'}) do
     Boot();nodes,components=Live();e.fail=fail
@@ -821,7 +818,7 @@ do
     assert(g and #g.vertices>0,'thorn bow geometry published')
     local shaped=Shape():GetChild('thorn_bow_visual',true)
     assert(shaped,'thorn bow node present')
-    local model=require('combat.models.ThornBow')
+    local model=require('combat.models.ThornBow').Load()
     local total=0
     local function Count(node)
         local c=node:GetComponent('CustomGeometry')

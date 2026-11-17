@@ -717,7 +717,13 @@ end
 
 ---@param world VoxelPhysicsWorld
 ---@param scene Scene
+-- Components are scene-owned. Never carry terrain/grass handles into a new world.
+function M.Stop()
+    M.terrain,M.terrainNode,M.grass,M.flowers,M.tufts=nil,nil,nil,nil,nil
+    M.splat,M.groundMaterial,M.heightMap,M.grassWeight=nil,nil,nil,nil
+end
 function M.Build(world, scene)
+    M.Stop()
     local t0 = os.clock()
     local vols = BuildCollision(world)
     BuildVisual(scene)

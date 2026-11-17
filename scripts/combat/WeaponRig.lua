@@ -3,7 +3,7 @@
 local Builder=require("combat.WeaponBuilder")
 local WingVisual=require("combat.WingSwordVisual")
 local ThornVisual=require("combat.ThornBowVisual")
-local Parts=require("combat.WeaponParts")
+local Catalog=require("combat.WeaponCatalog")
 local Store=require("combat.WeaponStore")
 
 ---@class WeaponRigEntry
@@ -149,7 +149,7 @@ local function ScaleSword(node,minimum)
 end
 local function Distance(a,b) local x,y,z=a.x-b.x,a.y-b.y,a.z-b.z;return math.sqrt(x*x+y*y+z*z) end
 local function Single(config,weapon)
-    return {weapon=weapon,parts=config[weapon].parts,colors=config[weapon].colors}
+    return {weapon=weapon,appearance=config[weapon].appearance,colors=config[weapon].colors}
 end
 
 ---@param scene Scene
@@ -241,7 +241,7 @@ function Rig:Init(scene,world,controller)
 end
 
 local function Effect(self,w,h,name,kind)
-    local vol=self.world:CreateVolume(w,h,1,Parts.VOXEL_SIZE,Vector3.ZERO,Quaternion())
+    local vol=self.world:CreateVolume(w,h,1,Catalog.VOXEL_SIZE,Vector3.ZERO,Quaternion())
     local grid=vol:GetGrid()
     for y=0,h-1 do for x=0,w-1 do
         if kind~='socket' or x==1 or y==1 then
@@ -284,7 +284,7 @@ local function BuildSilhouettes(self,weapon,blueprint,pool)
     local b=blueprint.bounds
     for i=1,2 do
         local d=b.dimensions
-        local volume=self.world:CreateVolume(d[1],d[2],d[3],Parts.VOXEL_SIZE,Vector3.ZERO,Quaternion())
+        local volume=self.world:CreateVolume(d[1],d[2],d[3],Catalog.VOXEL_SIZE,Vector3.ZERO,Quaternion())
         local grid=volume:GetGrid()
         for _,cell in ipairs(blueprint.geometry.cells) do
             local x,y,z=cell.x-b.gridMin[1],cell.y-b.gridMin[2],cell.z-b.gridMin[3]
@@ -314,11 +314,11 @@ function Rig:BuildSwordImages()
     self.imageMin=Vector3(b.min[1]*SWORD_WIDTH,b.min[2]*SWORD_LENGTH,b.min[3])
     local root,tip,edge=math.huge,-math.huge,-math.huge
     for _,cell in ipairs(blueprint.geometry.cells) do
-        if cell.slot=='blade' then root=math.min(root,cell.y);tip=math.max(tip,cell.y);edge=math.max(edge,cell.x) end
+        if cell.region=='blade' then root=math.min(root,cell.y);tip=math.max(tip,cell.y);edge=math.max(edge,cell.x) end
     end
-    self.bladeRoot=Vector3(0,(root-.5)*Parts.VOXEL_SIZE*SWORD_LENGTH,0)
-    self.bladeTip=Vector3(0,(tip+.5)*Parts.VOXEL_SIZE*SWORD_LENGTH,0)
-    self.bladeFlashX=(edge+.5)*Parts.VOXEL_SIZE*SWORD_WIDTH
+    self.bladeRoot=Vector3(0,(root-.5)*Catalog.VOXEL_SIZE*SWORD_LENGTH,0)
+    self.bladeTip=Vector3(0,(tip+.5)*Catalog.VOXEL_SIZE*SWORD_LENGTH,0)
+    self.bladeFlashX=(edge+.5)*Catalog.VOXEL_SIZE*SWORD_WIDTH
     for _,trail in ipairs(self.trails) do self.world:RemoveVolume(trail.volume);trail.material:Dispose() end
     for i=1,TRAIL_SEGMENTS do
         self.trails[i]=Effect(self,5,tip-root+1,'WeaponBand_'..i,'band') -- 0.15m wide
@@ -336,7 +336,7 @@ local function DisposeEffect(self,effect)
 end
 
 -- Six non-overlapping horizontal slices reveal bottom-to-top without rebuilding
--- grids or animating scale. Pools resize only when the selected parts change.
+-- grids or animating scale. Pools resize only when the appearance changes.
 function Rig:BuildVisualPools(weapon)
     local entry=self.entries[weapon]
     local bp=entry.mesh.blueprint
@@ -377,7 +377,7 @@ function Rig:BuildVisualPools(weapon)
             local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,{{x=0,y=0,z=0,channel='accent'}},'BowString_'..i)
             self.bowStrings[i]=mesh
         end
-        self.bowHalfHeight=assert(Parts.Get(bp.config.parts.limbs)).sockets.top[2]*.03
+        self.bowHalfHeight=Catalog.Definitions.bow.halfHeight
         -- Twelve complete arrows are rebuilt only on idle equipment geometry change.
         for _,mesh in ipairs(self.flightArrows or {}) do DisposeEffect(self,mesh);mesh.root:Remove() end
         self.flightArrows={}
@@ -488,7 +488,7 @@ end
 function Rig:PrepareTrailColor(weapon)
     local index=self.config[weapon].colors.accent
     if self.trailColors[weapon] and self.trailColors[weapon].index==index then return end
-    local preset=Parts.ColorPresets[index]
+    local preset=Catalog.ColorPresets[index]
     local rgb=preset.rgb --[[@as number[] ]]
     local r,g,b=rgb[1]/255,rgb[2]/255,rgb[3]/255
     local colors={index=index,color=Color(r,g,b,1),emissive=Color(r*1.2,g*1.2,b*1.2,.9),
@@ -635,7 +635,7 @@ function Rig:Flash(kind)
     local parent=kind=='full_charge' and self.entries.sword.pivot
         or (kind=='draw' and self.sockets[self.active=='sword' and 'hand_right' or 'hand_left'] or self.sockets['back_'..self.active])
     flash.node:SetParent(parent);flash.node.rotation=flash.rotation
-    local size=Parts.VOXEL_SIZE
+    local size=Catalog.VOXEL_SIZE
     flash.offset=SetVec(flash.offset,kind=='full_charge' and self.bladeFlashX or -1.5*size,
         kind=='full_charge' and self.bladeRoot.y or -1.5*size,-.5*size)
     flash.node.position=flash.offset;flash.node.enabled=true
@@ -830,38 +830,55 @@ end
 ---@return table world-space hit description; length is actual geometry, unscaled by reach
 function Rig:GetHit()
     local entry=self.entries[self.active]
-    local hit=entry.mesh.blueprint.hit
+    local hit=Catalog.Definitions[self.active].hit
     return {origin=entry.pivot:LocalToWorld(Vec(hit.origin)),dir=entry.pivot.worldRotation*Vec(hit.dir),
         length=hit.length,radius=hit.radius}
 end
 
 ---@return table
-function Rig:GetStats() return self.entries[self.active].mesh.blueprint.stats end
+function Rig:GetStats() return Catalog.Definitions[self.active].stats end
 
----@param config table single-weapon config from section 4.3
----@return boolean
-function Rig:Apply(config)
-    if self.disposed then return false end
-    local blueprint=Builder.Compile(config)
-    if not blueprint then return false end
+-- Apply only cosmetic values, retaining all fixed geometry and effect pools.
+-- Persistence and loadout selection belong to WeaponLoadout, not the renderer.
+function Rig:ApplyAppearance(config,deferred)
+    if self.disposed then return false,'武器已释放' end
+    local blueprint,err=Builder.Compile(config)
+    if not blueprint then return false,err end
     local weapon=blueprint.config.weapon
     local entry=self.entries[weapon]
-    local mesh=Builder.Build(self.world,entry.pivot,blueprint.config,entry.mesh)
-    if not mesh then return false end
-    entry.mesh=mesh
-    if weapon=='sword' then ScaleSword(mesh.node,Vec(blueprint.bounds.min));self:AttachWing(entry,blueprint) end
-    -- Persist independent mutable tables, never cached blueprint references.
-    local value={parts={},colors={}}
-    for k,v in pairs(blueprint.config.parts) do value.parts[k]=v end
-    for k,v in pairs(blueprint.config.colors) do value.colors[k]=v end
-    self.config[weapon]=value
-    self:PrepareTrailColor(weapon)
-    if weapon=='sword' then self:BuildSwordImages() else self:BuildBowImages() end
-    self:BuildVisualPools(weapon)
-    if weapon=='bow' then self:AttachThorn(entry) end
-    if weapon==self.active then self:UpdateTrailColor(); self:ClearTrail() end
-    Store.Save(self.config)
-    return true
+    local previous=entry.mesh.blueprint
+    if previous.key==blueprint.key then return true end
+    local oldConfig,oldTrail=self.config[weapon],self.trailColors[weapon]
+    local wing,finished
+    local transaction={}
+    function transaction.Rollback()
+        if finished then return end
+        entry.mesh.blueprint=previous
+        self.config[weapon],self.trailColors[weapon]=oldConfig,oldTrail
+        if wing then wing.Rollback() end
+        Builder.ApplyPalette(self.world,previous.config)
+        if weapon==self.active then self:UpdateTrailColor() end
+        finished=true
+    end
+    function transaction.Commit()
+        if finished then return end
+        if wing then wing.Commit() end
+        finished=true
+    end
+    local ok,reason=pcall(function()
+        Builder.ApplyPalette(self.world,blueprint.config)
+        if entry.wing then wing=WingVisual.Recolor(entry.wing,blueprint.config.colors,true) end
+        entry.mesh.blueprint=blueprint
+        self.config[weapon]=Catalog.CopyAppearance(weapon,blueprint.config)
+        self:PrepareTrailColor(weapon)
+        if weapon==self.active then self:UpdateTrailColor() end
+    end)
+    if not ok then
+        local restored,restoreError=pcall(transaction.Rollback)
+        return false,tostring(reason)..(restored and '' or '; rollback: '..tostring(restoreError))
+    end
+    if not deferred then transaction.Commit() end
+    return true,nil,transaction
 end
 
 -- State storage and motion workspaces are reused across every transition.
@@ -1063,7 +1080,7 @@ function Rig:DrawBands()
             z=SetVec(z,x.y*y.z-x.z*y.y,x.z*y.x-x.x*y.z,x.x*y.y-x.y*y.x)
             band.xAxis,band.yAxis,band.zAxis=x,y,z
             band.rotation:FromAxes(x,y,z)
-            local halfWidth,halfDepth=Parts.VOXEL_SIZE*2.5,Parts.VOXEL_SIZE*.5
+            local halfWidth,halfDepth=Catalog.VOXEL_SIZE*2.5,Catalog.VOXEL_SIZE*.5
             band.position=SetVec(band.position,sample.root.x-x.x*halfWidth-z.x*halfDepth,
                 sample.root.y-x.y*halfWidth-z.y*halfDepth,sample.root.z-x.z*halfWidth-z.z*halfDepth)
             band.node.worldPosition=band.position;band.node.worldRotation=band.rotation
@@ -1110,7 +1127,7 @@ function Rig:UpdateCharge(entry)
             local d=particle.direction
             particle.offset=SetVec(particle.offset,d.x*radius,self.bladeRoot.y+d.y*radius,d.z*radius)
             local point=entry.pivot:LocalToWorld(particle.offset)
-            local half=Parts.VOXEL_SIZE*.5
+            local half=Catalog.VOXEL_SIZE*.5
             particle.position=SetVec(particle.position,point.x-half,point.y-half,point.z-half)
             particle.node.worldPosition=particle.position
         end
@@ -1254,12 +1271,7 @@ end
 ---@param blueprint table? freshly compiled blueprint (Apply) else entry.mesh.blueprint
 function Rig:AttachWing(entry,blueprint)
     blueprint=blueprint or entry.mesh.blueprint
-    local tip=-math.huge
-    for _,cell in ipairs(blueprint.geometry.cells) do
-        if cell.slot=='blade' then tip=math.max(tip,cell.y) end
-    end
-    if tip==-math.huge then return end
-    local tipY=(tip+.5)*Parts.VOXEL_SIZE*SWORD_LENGTH
+    local tipY=Catalog.Definitions.sword.visualTip
     local colors=blueprint.config and blueprint.config.colors
     if entry.wing and math.abs((entry.wingTip or 0)-tipY)>1e-6 then
         WingVisual.Dispose(entry.wing);entry.wing=nil

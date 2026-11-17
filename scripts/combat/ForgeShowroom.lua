@@ -30,7 +30,7 @@ local MODEL_TEST='model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455a
 local MODEL_MATERIAL='model/c8d2cfd2bc29455abb72b044deb16d5d/Materials/c8d2cfd2bc29455abb72b044deb16d5d_00_tripo_material_af5190d1-e320-4160-9951-ed50bff7a75e.xml'
 local MODEL_TEXTURE='model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_'
 local modelOverride=nil -- original voxel sword remains the startup default
-local modelRoute='original'
+local modelRoute='W'
 local flowStrength=.7
 local M={}
 local MASK=0x40000000
@@ -405,8 +405,7 @@ local function Weapon(s,single)
     s.stage,s.api,s.apiType='weapon','SetWeapon.config',type(single)
     assert(type(single)=='table' and (single.weapon=='sword' or single.weapon=='bow'),'invalid weapon config')
     -- Snapshot caller's draft, since BeginPreview is deferred until Update.
-    local copy={weapon=single.weapon,parts={},colors={}}
-    for k,v in pairs(single.parts or {}) do copy.parts[k]=v end
+    local copy={weapon=single.weapon,appearance=single.appearance,colors={}}
     for k,v in pairs(single.colors or {}) do copy.colors[k]=v end
     Cancel(s);s.selection=copy;s.pending=copy;s.buildAge=0;state=BUILDING
 end

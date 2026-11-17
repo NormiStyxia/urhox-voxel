@@ -8,5 +8,5 @@ _G.fileSystem = { FileExists = function() return false end }
 local Store = require("combat.WeaponStore")
 local cfg = Store.Load()
 assert(opened == 0, "Load must not open a missing save file")
-assert(cfg.version == 1 and cfg.active == "sword", "falls back to default config")
+assert(cfg.version == 2 and cfg.active == "sword", "falls back to default config")
 print("weapon_store_missing PASS")

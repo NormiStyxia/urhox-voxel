@@ -1,7 +1,7 @@
 -- Lua 5.4 offline File/cjson contract doubles; no local Runtime.
 package.path = "scripts/?.lua;" .. package.path
 local Store = require("combat.WeaponStore")
-local Parts = require("combat.WeaponParts")
+local Parts = require("combat.WeaponCatalog")
 local function Copy(value)
     if type(value)~="table" then return value end
     local result={}
@@ -41,21 +41,21 @@ _G.File=function(path,mode)
     }
 end
 local function Default(config)
-    assert(config.active=="sword" and config.version==1)
-    assert(config.sword.parts.blade=="blade_straight")
+    assert(config.active=="sword" and config.version==2)
+    assert(config.sword.appearance=="wing" and config.sword.parts==nil)
     assert(Parts.ValidateWeapon("sword",config.sword) and Parts.ValidateWeapon("bow",config.bow))
 end
 Default(Store.Load())
 local config=Store.Default()
 config.active="bow"
-config.sword.parts.blade="blade_broad"
+config.sword.colors.primary=4
 config.bow.colors.accent=6
 assert(Store.Save(config))
-config.sword.parts.blade="blade_rapier"
+config.sword.colors.primary=6
 local loaded=Store.Load()
-assert(loaded.active=="bow" and loaded.sword.parts.blade=="blade_broad" and loaded.bow.colors.accent==6)
+assert(loaded.active=="bow" and loaded.sword.colors.primary==4 and loaded.bow.colors.accent==2)
 loaded.bow.colors.accent=1
-assert(Store.Load().bow.colors.accent==6,"load must not share tables")
+assert(Store.Load().bow.colors.accent==2,"load must not share tables")
 local validRaw=disk["weapons-v1.json"]
 for _, kind in ipairs({"nil","constructor","open","read","oversize"}) do
     fault=kind; Default(Store.Load())
@@ -66,10 +66,10 @@ end
 fault=""
 assert(disk["weapons-v1.json"]==validRaw)
 for _, change in ipairs({
-    function(c) c.version=2 end,
+    function(c) c.version=3 end,
     function(c) c.active="axe" end,
-    function(c) c.sword.parts.blade="removed_id" end,
-    function(c) c.bow.parts.grip="sword_grip_leather" end,
+    function(c) c.sword.appearance="removed_id" end,
+    function(c) c.bow.appearance="wing" end,
     function(c) c.sword.colors.primary=1.5 end,
     function(c) c.bow.colors=false end,
     function(c) c.sword=nil end,
@@ -85,11 +85,14 @@ end
 disk["weapons-v1.json"]="broken"; Default(Store.Load())
 local defaults=Store.Default(); defaults.sword.colors.primary=6
 assert(Store.Default().sword.colors.primary==3)
-for _,weapon in ipairs({'sword','bow'}) do for _,preset in ipairs(Parts.Presets) do
-    local loadout=Store.Default();loadout[weapon]=Store.Preset(weapon,preset.id)
-    assert(Store.Save(loadout))
-    local roundTrip=Store.Load()
-    for slot,id in pairs(loadout[weapon].parts) do assert(roundTrip[weapon].parts[slot]==id) end
-end end
+local legacy=Store.Default();legacy.version=1;legacy.active='bow'
+legacy.sword.appearance=nil;legacy.sword.parts={blade='blade_broad'};legacy.sword.colors.primary=6
+legacy.bow.appearance=nil;legacy.bow.parts={tip='tip_crystal'};legacy.bow.colors.accent=6
+disk['weapons-v1.json']=cjson.encode(legacy)
+local migrated=Store.Load()
+assert(migrated.version==2 and migrated.active=='bow' and migrated.sword.colors.primary==6)
+assert(migrated.sword.parts==nil and migrated.bow.parts==nil and migrated.bow.colors.accent==2)
+assert(Store.Save(migrated))
+assert(payloads[disk['weapons-v1.json']].version==2)
 assert(opened==closed,"file handles must close on every exit")
 print("weapon_store: PASS (round trip, isolation, 7 invalid schemas, I/O failures, closed handles)")

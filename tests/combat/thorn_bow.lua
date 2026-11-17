@@ -2,7 +2,7 @@
 -- Shader compilation / pixels / bend look still require Web preview.
 package.path='scripts/?.lua;tests/combat/?.lua;'..package.path
 local Mock=require('weapon_mock')
-local m=require('combat.models.ThornBow')
+local m=require('combat.models.ThornBow').Load()
 assert(m.name=='thorn_bow' and m.scale==10000 and m.nscale==1000)
 assert(m.body.triangles>=3000 and m.body.triangles<=8000,'body budget '..m.body.triangles)
 assert(m.string.triangles>=4 and m.string.triangles<=40)

@@ -223,7 +223,12 @@ function M.SetDead(value)
     dead = value == true
     if dead then M.Exit('death') end
 end
+function M.CanSetWeapon(value)
+    return (value=='sword' or value=='bow')
+        and (value==weapon or not (busy or transition>0 or mounted or dead))
+end
 function M.SetWeapon(value)
+    if not M.CanSetWeapon(value) then return false end
     if value ~= 'sword' and value ~= 'bow' then return false end
     if value == weapon then return true end
     if busy or transition > 0 or mounted or dead then return false end
