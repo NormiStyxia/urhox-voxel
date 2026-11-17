@@ -210,8 +210,9 @@ local LIGHT={
         yaw={0,15,8,0,-8,0},
         left={{0,0,-8},{-60,0,-30},{-150,10,-20},{-60,15,-25},{-30,10,-30},{0,0,-8}},
         legs={0,-20,-45,-30,-26,0},
-        -- Leap: crouch, rise to ~.7m while the blade circles overhead, slam down.
-        root={{0,-.04},{.13,-.17},{.30,.70,"outQuad"},{.40,.30,"inQuad"},{.46,-.15,"inQuad"},{.70,-.14},{1.10,0}}},
+        -- Leap into a committed downward strike: lower the hips through contact,
+        -- then keep the chest folded over the landing leg instead of staying upright.
+        root={{0,-.04},{.13,-.17},{.30,.55,"outQuad"},{.40,.12,"inQuad"},{.46,-.20,"inQuad"},{.70,-.16},{1.10,0}}},
 }
 for _,row in ipairs(LIGHT) do
     local d=row.dur
@@ -539,7 +540,7 @@ end
 -- Light rows author their own crouch/hop root; lean pitch is shared here.
 local LEAN={sword_light_1={6,-6,4,26,22,6},sword_light_2={6,14,10,-6,-8,6},
     sword_light_3={6,-4,18,30,26,6},sword_light_4={6,10,4,12,10,6},
-    sword_light_5={6,18,-10,8,34,6},sword_heavy_release={-8,10,26,10,28,6}}
+    sword_light_5={6,18,30,48,42,10},sword_heavy_release={-8,10,26,10,28,6}}
 local DIP={sword_heavy_release=-.19}
 for id,lean in pairs(LEAN) do
     local c=C.Clips[id]

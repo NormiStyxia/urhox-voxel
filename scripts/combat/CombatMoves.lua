@@ -199,8 +199,8 @@ end
 function C:Play(id,fadeIn,entryFrom)
     if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
-    -- Scale the clip clock; charge_full remains the sole full-charge signal.
-    local speed=1
+    -- Sword attacks use a slightly slower clock so the anticipation and weight transfer read clearly.
+    local speed=(id:find('sword_light_',1,true) or id=='sword_heavy_release' or id=='sword_heavy_charge') and .90 or 1
     local params=self.playParams
     for k in pairs(params) do params[k]=nil end
     params.weaponInHand=self:WeaponInHand() and 1 or 0

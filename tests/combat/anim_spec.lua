@@ -249,6 +249,17 @@ test("six attack landmarks, torso .02s ahead and head compensates",function()
     local c=D.Clips.sword_light_1
     for i,t in ipairs({0,.114,.19,.25,.29,.80}) do near(c.keys.arm_right[i][1]*c.dur,t) end
 end)
+test("finisher commits the torso and hips to the downward strike",function()
+    local c=D.Clips.sword_light_5
+    assert(c.keys.body[4][2][1]>=42,'finisher torso folds forward at contact')
+    assert(c.keys.body[5][2][1]>=36,'finisher stays folded through follow-through')
+    assert(c.root[4][2]<-.15 and c.root[5][2]<-.12,'finisher hips drop on impact')
+    assert(c.keys.leg_left[4][2][1]<=-28 and c.keys.leg_right[4][2][1]>=18,'both legs brace the landing')
+    local contact=A.DebugSample('sword_light_5',c.phases.active[1]+.01)
+    local settle=A.DebugSample('sword_light_5',.70)
+    assert(contact.body[1]>35 and settle.body[1]>20,'downward weight persists after contact')
+end)
+
 test("20Hz option and continuous root position",function()
     local a,c=new({quantize=true});local b,d=new({quantize=false})
     near(a.quantizeHz,20)
