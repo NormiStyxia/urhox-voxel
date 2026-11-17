@@ -32,7 +32,7 @@ test("bone axis derivation",function()
     x,y,z=Mock.rotate(Quaternion(90,0,0),0,1,0);near(z,1)
 end)
 test("all active clips have complete, ordered tracks and matching event windows",function()
-    assert(#A.DebugList()==28)
+    assert(#A.DebugList()==29)
     for _,item in ipairs(A.DebugList()) do
         local c=D.Clips[item.id]
         assert(c.id==item.id and c.dur>0 and c.root and c.weapon and c.events and c.motion)
@@ -94,7 +94,7 @@ test("fade weights and slerp match base-to-pose interpolation",function()
 end)
 test("automatic recovery fade reaches zero",function()
     local a=new();local h=a:Play("sword_light_1",{fadeIn=0,fadeOut=.1})
-    a:Update(.49);near(state(a,h).weight,.5)
+    a:Update(.75);near(state(a,h).weight,.5)
     a:Update(.05);assert(not a:IsPlaying("sword_light_1"));near(state(a,h).weight,0)
 end)
 test("priority covers stance and cancels offensive tracks",function()
@@ -155,9 +155,9 @@ test("bow parameter drives arm, clamps, and full fires once per play",function()
 end)
 test("quantized anticipation but continuous active and monotonic recovery",function()
     local a=new({quantize=true});local h=a:Play("sword_light_1",{fadeIn=0})
-    a:Update(.10);near(state(a,h).sample*.54,.10)
-    a:Update(.07);near(state(a,h).sample*.54,.17);assert(a:Phase()=="active")
-    a:Update(.12);assert(state(a,h).sample*.54>=.26);assert(a:Phase()=="recovery")
+    a:Update(.10);near(state(a,h).sample*.80,.10)
+    a:Update(.07);near(state(a,h).sample*.80,.17);assert(a:Phase()=="active")
+    a:Update(.12);assert(state(a,h).sample*.80>=.26);assert(a:Phase()=="recovery")
 end)
 test("motion totals independent of speed, fades and timestep",function()
     for _,speed in ipairs({.5,1,3}) do
@@ -216,8 +216,9 @@ test("invalid inputs do not mutate live animation",function()
     assert(not pcall(function() a:Update(-.1) end))
 end)
 test("R1 move timings and cancel windows are authored once",function()
-    local expected={sword_light_1={.54,.16,.26,.32},sword_light_2={.56,.17,.27,.33},
-        sword_light_3={.62,.18,.30,.38},sword_light_4={.70,.22,.40,.46},sword_light_5={.90,.34,.46,.90},
+    -- Long recovery tails (inertia + low guard) after an unchanged cancel point.
+    local expected={sword_light_1={.80,.16,.26,.32},sword_light_2={.82,.17,.27,.33},
+        sword_light_3={.88,.18,.30,.38},sword_light_4={.96,.22,.40,.46},sword_light_5={1.10,.34,.46,.62},
         sword_heavy_release={.72,.22,.32,.48}}
     for id,v in pairs(expected) do
         local c=D.Clips[id];near(c.dur,v[1]);near(c.phases.active[1],v[2]);near(c.phases.active[2],v[3])
@@ -237,7 +238,7 @@ test("six attack landmarks, torso .02s ahead and head compensates",function()
         assert(c.keys.head[2][2][2]*c.keys.body[2][2][2]<0)
     end
     local c=D.Clips.sword_light_1
-    for i,t in ipairs({0,.096,.16,.22,.32,.54}) do near(c.keys.arm_right[i][1]*c.dur,t) end
+    for i,t in ipairs({0,.096,.16,.22,.32,.80}) do near(c.keys.arm_right[i][1]*c.dur,t) end
 end)
 test("20Hz option and continuous root position",function()
     local a,c=new({quantize=true});local b,d=new({quantize=false})

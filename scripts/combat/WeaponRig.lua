@@ -111,6 +111,7 @@ local FLASH_TIME=.08
 local WHITE_PALETTE=174 -- reserved weapon bank, adjacent to accent slot 175
 local SWORD_LENGTH,SWORD_WIDTH=1.25,1.3 -- visual only: pivot/GetHit remain unscaled
 local REVEAL_TIME,HIDE_TIME,SWAP_HALF=.16,.12,.08
+local HOLO_OUT,HOLO_IN=.20,.22 -- wing sword projection: dissolve / reform seconds
 local BACK_DEPTH=-.50 -- ~.34m behind torso back; clearance also covers hair/coat and lag
 local MAX_HANG_ANGLE=math.rad(5)
 local function Vec(t) return Vector3(t[1],t[2],t[3]) end
@@ -890,10 +891,83 @@ function Rig:BeginMotion(state,duration)
     self.visualState,self.transition=state,m
     local pivot=self.entries[self.active].pivot
     m.from=CopyVec(m.from,pivot.worldPosition);CopyRot(m.rotation,pivot.worldRotation)
+    m.holo=self:HoloCapable()
+    if m.holo then
+        -- Projection transition: the blade dissolves where it is (following the
+        -- hand or back) and reforms at the target; it never flies through the body.
+        for _,layer in ipairs(self.layers[self.active]) do layer.node.enabled=false end
+        local out=state~='materialize' and m.visibleFrom>0
+        -- A direct attack from hidden (.08s request) reforms faster.
+        local outTime=out and HOLO_OUT or 0
+        local inTime=state=='dissolve' and 0 or (duration<=.08 and .10 or HOLO_IN)
+        m.duration=math.max(1e-3,outTime+inTime)
+        m.split=outTime/m.duration
+        m.arrived=false
+        return
+    end
     if state=='fly_to_hand' or state=='stow' then
         for _,layer in ipairs(self.layers[self.active]) do layer.node.enabled=false end
         pivot:SetParent(self.scene)
         pivot.worldPosition=m.from;pivot.worldRotation=m.rotation
+    end
+end
+
+---@return boolean
+function Rig:HoloCapable()
+    local entry=self.entries.sword
+    return self.active=='sword' and entry~=nil and entry.wing~=nil and WingVisual.HasHolo(entry.wing)
+end
+
+-- Keeps the pivot on whichever socket it currently rides (hand pose or back hang).
+function Rig:HoldPivot(entry)
+    local hand=self.sockets.hand_right
+    if entry.pivot.parent==hand then
+        entry.pivot.position=self.swingOffset
+        HandRotation(self,self.poseRotation)
+        entry.pivot.rotation=self.poseRotation
+    else
+        entry.pivot.worldPosition=self.hangPosition;entry.pivot.worldRotation=self.hangRotation
+    end
+end
+
+--- Wing sword projection timeline. t in [0,1]; split marks dissolve -> reform.
+--- Out: projection glow rises over the solid blade, solid hides, cells blow away.
+--- In: cells assemble from the tip down, then the solid blade returns and the glow fades.
+function Rig:AdvanceHolo(entry,m,t)
+    local state=self.visualState
+    local into=state~='dissolve'
+    if t<m.split then
+        local u=t/m.split
+        self.holoSolid,self.holoGlow,self.holoCut=u<.30,math.min(1,u/.30),math.max(0,(u-.30)/.70)
+        MainAlpha(self,entry.mesh,1-u)
+    elseif into then
+        if not m.arrived then
+            m.arrived=true
+            self:Attach(state=='fly_to_hand' and 'hand' or 'back')
+        end
+        local v=m.split<1 and (t-m.split)/(1-m.split) or 1
+        self.holoSolid,self.holoGlow,self.holoCut=v>=.70,v<.70 and 1 or 1-(v-.70)/.30,math.max(0,1-v/.70)
+        MainAlpha(self,entry.mesh,math.max(v,1e-3))
+    else
+        self.holoSolid,self.holoGlow,self.holoCut=false,0,1
+    end
+    self:HoldPivot(entry)
+    if t>=1 then
+        self.transition=nil;self:ClearTrail()
+        if state=='dissolve' then
+            self:Attach('hidden');self.visualState='hidden';self:EmitEvent('dissolved')
+        elseif state=='fly_to_hand' then
+            MainAlpha(self,entry.mesh,1)
+            self:Attach('hand');self.visualState='hand';self:EmitEvent('blade_draw');self:ArrivalFlash('draw')
+        else
+            MainAlpha(self,entry.mesh,1);self:Attach('back');self.visualState='hang'
+            if state=='materialize' then
+                self:EmitEvent('materialized');self:ArrivalFlash('sheath')
+                if self.pose=='hand' then self:BeginMotion('fly_to_hand',.12) end
+            else
+                self.recoil=.12;self:EmitEvent('blade_sheath');self:ArrivalFlash('sheath')
+            end
+        end
     end
 end
 
@@ -952,7 +1026,8 @@ end
 function Rig:AdvanceTransition(dt)
     local entry=self.entries[self.active]
     local state=self.visualState
-    if state=='hang' or state=='materialize' or state=='dissolve' and entry.pivot.parent==self.sockets['back_'..self.active] then
+    if (state=='hang' or state=='materialize' or state=='dissolve' and entry.pivot.parent==self.sockets['back_'..self.active])
+        and not (self.transition and self.transition.holo) then
         entry.pivot.worldPosition=self.hangPosition;entry.pivot.worldRotation=self.hangRotation
         if self.recoil>0 then
             local p=CopyVec(self.motion.output,self.hangPosition)
@@ -968,6 +1043,7 @@ function Rig:AdvanceTransition(dt)
     m.elapsed=math.min(m.duration,m.elapsed+dt)
     if m.duration-m.elapsed<1e-8 then m.elapsed=m.duration end
     local t=Clamp(m.elapsed/m.duration,0,1)
+    if m.holo then self:AdvanceHolo(entry,m,t);return end
     if state=='materialize' or state=='dissolve' then
         local fraction=state=='materialize' and (m.visibleFrom+(1-m.visibleFrom)*t) or m.visibleFrom*(1-t)
         self:ShowLayers(math.min(6,math.floor(fraction*6+1e-7)))
@@ -1245,7 +1321,7 @@ function Rig:UpdateCore(dt)
     self:UpdateHitImpulse()
     if self.contactArc then self:ClearTrail() end -- one presented contact frame
     if self.visualState~='hand' then
-        if self.visualState=='fly_to_hand' and self.active=='sword' and entry.mesh.alpha>0 then
+        if self.visualState=='fly_to_hand' and self.active=='sword' and entry.mesh.alpha>0 and not (self.transition and self.transition.holo) then
             self:SampleBlade(entry);self:DrawBands()
         else self:ClearTrail() end
         if self.trailEnabled then self:UpdateMaterializeParticles() end
@@ -1291,7 +1367,13 @@ end
 function Rig:SyncWing(dt)
     local entry=self.entries.sword
     if not (entry and entry.wing) then return end
-    WingVisual.SetVisible(entry.wing,self.active=='sword' and entry.mesh.alpha>=.5)
+    if self.transition and self.transition.holo and self.active=='sword' then
+        WingVisual.SetVisible(entry.wing,self.holoSolid==true)
+        WingVisual.SetHolo(entry.wing,self.holoGlow or 0,self.holoCut or 1)
+    else
+        WingVisual.SetVisible(entry.wing,self.active=='sword' and entry.mesh.alpha>=.5)
+        WingVisual.SetHolo(entry.wing,0,1)
+    end
     -- Crystal glow: swings/hits spike it, heavy charge holds it, then ~0.3s decay.
     local glow=math.max(0,(self.wingGlow or 0)-(dt or 0)*3.2)
     if self.visualActive then glow=math.max(glow,.55) end

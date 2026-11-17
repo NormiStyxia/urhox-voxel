@@ -7,6 +7,8 @@ V.ENABLED=true            -- kill switch: false = always show the voxel sword
 V.WIDTH,V.DEPTH=1.3,1.25  -- visual-only thickening; length is fitted to the voxel blade tip
 local MATERIAL='model/forge-blades/WingSword.xml'
 local CRYSTAL='model/forge-blades/WingSwordCrystal.xml'
+-- Sheath/draw projection: the blade turns into this hologram, then breaks apart.
+local HOLO='model/forge-blades/WingSwordHolo.xml'
 local MASK=0xFFFFFFFF
 -- Same masks as WingSword.shader cw: core/gem glow bands and the .6r/.4b shoulder.
 local function IsCrystal(v)
@@ -68,6 +70,29 @@ function V.New(pivot,tipY,colors)
         assert(g:SetMaterial(0,visual.material)~=false,'wing material binding failed')
         if visual.crystal then assert(g:SetMaterial(1,visual.crystal)~=false,'crystal material binding failed') end
         node.enabled=false
+        -- Hologram twin (all triangles, one unlit additive material). Optional:
+        -- without it the rig falls back to the plain show/hide.
+        local holo=cache:GetResource('Material',HOLO)
+        visual.holoMaterial=holo and holo:Clone('WingSwordHoloHand') or nil
+        if visual.holoMaterial then
+            Tint(visual.holoMaterial,colors)
+            local holoNode=pivot:CreateChild('wing_sword_holo')
+            holoNode.temporary=true
+            holoNode.scale=node.scale
+            local h=assert(holoNode:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
+            h.viewMask=MASK;h.lightMask=MASK;h.zoneMask=MASK;h.castShadows=false
+            h:BeginGeometry(0,TRIANGLE_LIST)
+            for _,v in ipairs(vertices) do
+                h:DefineVertex(Vector3(v.p[1],v.p[2],v.p[3]))
+                h:DefineNormal(Vector3(v.n[1],v.n[2],v.n[3]))
+                h:DefineTexCoord(Vector2(v.glow,(v.p[2]-data.uvBase)/span))
+            end
+            h:Commit()
+            assert(h:SetMaterial(0,visual.holoMaterial)~=false,'holo material binding failed')
+            holoNode.enabled=false
+            visual.holoNode=holoNode
+            visual.holo,visual.cut=-1,-1
+        end
     end)
     if not ok then
         V.Dispose(visual)
@@ -79,6 +104,7 @@ end
 ---@param colors table?
 function V.Recolor(visual,colors,deferred)
     if not visual or not visual.material then return end
+    if visual.holoMaterial then pcall(Tint,visual.holoMaterial,colors) end
     local material,crystal
     local ok,err=pcall(function()
         material=assert(visual.material:Clone('WingSwordTint'))
@@ -130,6 +156,33 @@ function V.SetCharge(visual,k)
     if not value then value=Variant(q/16);V.chargeValues[q]=value end
     visual.crystal:SetShaderParameter('charge',value)
 end
+V.holoValues={}
+---@param x number
+---@return integer
+local function Step(x) return math.floor(math.max(0,math.min(1,x))*32+.5) end
+---@param q integer
+local function StepValue(q)
+    local value=V.holoValues[q]
+    if not value then value=Variant(q/32);V.holoValues[q]=value end
+    return value
+end
+---@param visual table?
+---@return boolean
+function V.HasHolo(visual) return visual~=nil and visual.holoNode~=nil end
+--- Projection layer: holo = brightness 0..1, cut = dissolve front 0..1 (1 = gone).
+--- Quantized to 1/32 with cached Variants; no allocation once warmed up.
+---@param visual table?
+---@param holo number
+---@param cut number
+function V.SetHolo(visual,holo,cut)
+    if not visual or not visual.holoNode then return end
+    local h,c=Step(holo),Step(cut)
+    local on=h>0 and c<32
+    if visual.holoNode.enabled~=on then visual.holoNode.enabled=on end
+    if not on then return end
+    if visual.holo~=h then visual.holo=h;visual.holoMaterial:SetShaderParameter('holo',StepValue(h)) end
+    if visual.cut~=c then visual.cut=c;visual.holoMaterial:SetShaderParameter('cut',StepValue(c)) end
+end
 ---@param visual table?
 ---@param visible boolean
 function V.SetVisible(visual,visible)
@@ -141,5 +194,7 @@ function V.Dispose(visual)
     if visual.node then pcall(visual.node.Remove,visual.node);visual.node=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end
     if visual.crystal then pcall(visual.crystal.Dispose,visual.crystal);visual.crystal=nil end
+    if visual.holoNode then pcall(visual.holoNode.Remove,visual.holoNode);visual.holoNode=nil end
+    if visual.holoMaterial then pcall(visual.holoMaterial.Dispose,visual.holoMaterial);visual.holoMaterial=nil end
 end
 return V

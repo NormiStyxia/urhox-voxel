@@ -31,7 +31,7 @@ local function untilTrue(fn)
 end
 local function count(id)local n=0;for _,s in ipairs(starts)do if s==id then n=n+1 end end;return n end
 New();assert(rig.pose=='back' and State.GetPose()=='back')
-frames(20,{allowed=true,axis=Vector3.RIGHT});assert(rig.pose=='back' and not m.anim:IsPlaying('stance_combat'))
+frames(20,{allowed=true,axis=Vector3.RIGHT});assert(rig.pose=='back' and not m.anim:IsPlaying('stance_combat') and not m.anim:IsPlaying('stance_combat_sword'))
 tick(.01,{allowed=true,runIntent=true,axis=Vector3.RIGHT});frames(60)
 assert(rig.pose=='back' and count('sword_draw')==0,'run never draws')
 New();tick(.01,{allowed=true,attackTap=true})
@@ -68,7 +68,7 @@ for _,reason in ipairs({'manual','quiet','mount','death','stop'}) do
  assert(m.charge>0)
  if reason=='mount' then State.SetMounted(true) elseif reason=='death' then State.SetDead(true) else State.Exit(reason) end
  assert(rig.pose=='hidden' and State.GetPose()=='hidden' and not m.pendingFire)
- frames(65,{allowed=false});assert(rig.pose=='hidden' and shots==0 and not m.anim:IsPlaying('stance_combat'))
+ frames(65,{allowed=false});assert(rig.pose=='hidden' and shots==0 and not m.anim:IsPlaying('stance_combat') and not m.anim:IsPlaying('stance_combat_sword'))
  State.SetMounted(false);State.SetDead(false);frames(10);assert(rig.pose=='hidden','unmount/revive never revives old weapon')
 end
 for _,reason in ipairs({'menu','focus','touch-clear'}) do

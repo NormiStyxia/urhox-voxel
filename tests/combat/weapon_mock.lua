@@ -199,7 +199,7 @@ local Assets=require('tests.combat.asset_mock')
 M.GetFile=Assets.GetFile
 if not rawget(_G,'cjson') then rawset(_G,'cjson',{decode=Assets.Decode}) end
 rawset(_G,'cache',{GetFile=Assets.GetFile,GetResource=function(_,kind,path)
-    if kind=='Material' and (path=='model/forge-blades/WingSword.xml' or path=='model/forge-blades/WingSwordCrystal.xml') then
+    if kind=='Material' and (path=='model/forge-blades/WingSword.xml' or path=='model/forge-blades/WingSwordCrystal.xml' or path=='model/forge-blades/WingSwordHolo.xml') then
         if rawget(_G,'WING_MATERIAL_MISSING') then return nil end
         return Material()
     end

@@ -79,6 +79,13 @@ add { -- 符号待 Web 校准
         arm_right=k({0,0,4},{0,0,4},{0,0,4},{0,0,4}),arm_left=k({0,0,-4},{0,0,-4},{0,0,-4},{0,0,-4})},
     root={{0,-.04},{1,-.04}},
 }
+add { -- Sword in hand: same additive stance, blade held low, tip down-forward-out.
+    id="stance_combat_sword",dur=1,layer=L.STANCE,loop=true,additive=true,
+    keys={body=k({6,0,0},{6,0,0},{6,0,0},{6,0,0}),head=k({3,0,0},{3,0,0},{3,0,0},{3,0,0}),
+        arm_right=k({0,0,4},{0,0,4},{0,0,4},{0,0,4}),arm_left=k({0,0,-4},{0,0,-4},{0,0,-4},{0,0,-4})},
+    root={{0,-.04},{1,-.04}},
+    weapon={{0,offset={0,0,0},euler={45,0,-25}},{1,offset={0,0,0},euler={45,0,-25}}},
+}
 add { -- 符号待 Web 校准
     id="sword_draw",dur=.30,layer=L.DRAW,weaponType="sword",
     keys={body=k({6,0,0},{4,-10,0},{6,-4,0},{6,0,0},.42,.65),
@@ -166,35 +173,39 @@ end
 -- Each row: dur, hit_on, contact, hit_off, cancel_open (seconds); body yaw per
 -- landmark; free-hand pose; lead-leg pitch; root height (metres, optional ease).
 -- Landmarks: ready, windup, release(hit_on), contact, follow-through, settle.
+-- Recovery: follow-through keeps its inertia, then the blade sinks to the low
+-- guard (tip toward the ground along the forearm) and blends into the stance.
+local RECOVERY_FADE=.22
+local LOW_GUARD={.30,.78,.38}
 local LIGHT={
-    {id="sword_light_1",dur=.54,on=.16,contact=.22,off=.26,cancel=.32,
+    {id="sword_light_1",dur=.80,on=.16,contact=.22,off=.26,cancel=.32,
         yaw={0,35,22,-30,-45,0},
         left={{0,0,-8},{-35,-10,-25},{-20,-5,-28},{-10,15,-35},{-5,18,-25},{0,0,-8}},
         legs={0,-10,-16,-22,-14,0},
-        root={{0,-.04},{.10,-.08},{.16,-.06},{.22,-.11},{.32,-.10},{.54,0}}},
-    {id="sword_light_2",dur=.56,on=.17,contact=.23,off=.27,cancel=.33,
+        root={{0,-.04},{.10,-.08},{.16,-.06},{.22,-.11},{.32,-.10},{.48,-.12},{.80,0}}},
+    {id="sword_light_2",dur=.82,on=.17,contact=.23,off=.27,cancel=.33,
         yaw={0,-35,-25,22,40,0},
         left={{0,0,-8},{-10,15,-30},{-15,10,-25},{-40,-10,-20},{-30,-12,-18},{0,0,-8}},
         legs={0,-18,-22,-10,-6,0},
         -- Crouch into the low guard, then rise up onto the toes with the blade.
-        root={{0,-.04},{.10,-.15},{.17,-.11},{.23,.05,"outQuad"},{.33,.03},{.56,0}}},
-    {id="sword_light_3",dur=.62,on=.18,contact=.24,off=.30,cancel=.38,
+        root={{0,-.04},{.10,-.15},{.17,-.11},{.23,.05,"outQuad"},{.33,.03},{.48,-.10},{.82,0}}},
+    {id="sword_light_3",dur=.88,on=.18,contact=.24,off=.30,cancel=.38,
         yaw={0,45,30,-35,-55,0},
         left={{0,0,-8},{-60,-20,-35},{-45,-15,-40},{-15,20,-55},{-10,25,-45},{0,0,-8}},
         legs={0,-24,-34,-30,-22,0},
-        root={{0,-.04},{.08,-.13},{.18,-.09},{.24,-.13},{.36,-.12},{.62,0}}},
-    {id="sword_light_4",dur=.70,on=.22,contact=.32,off=.40,cancel=.46,
+        root={{0,-.04},{.08,-.13},{.18,-.09},{.24,-.13},{.36,-.12},{.52,-.13},{.88,0}}},
+    {id="sword_light_4",dur=.96,on=.22,contact=.32,off=.40,cancel=.46,
         yaw={0,45,20,-30,-50,0},
         left={{0,0,-8},{-20,0,-30},{-30,0,-55},{-25,0,-70},{-15,0,-50},{0,0,-8}},
         legs={0,-12,-30,-36,-20,0},
         -- Visible hop: knees load, body leaves the ground through the whole turn.
-        root={{0,-.04},{.13,-.15},{.22,.20,"outQuad"},{.32,.36,"outQuad"},{.46,.08,"inQuad"},{.70,0}}},
-    {id="sword_light_5",dur=.90,on=.34,contact=.40,off=.46,cancel=.90,
+        root={{0,-.04},{.13,-.15},{.22,.20,"outQuad"},{.32,.36,"outQuad"},{.46,.08,"inQuad"},{.56,-.12},{.96,0}}},
+    {id="sword_light_5",dur=1.10,on=.34,contact=.40,off=.46,cancel=.62,
         yaw={0,15,8,0,-8,0},
         left={{0,0,-8},{-60,0,-30},{-150,10,-20},{-60,15,-25},{-30,10,-30},{0,0,-8}},
         legs={0,-20,-45,-30,-26,0},
         -- Leap: crouch, rise to ~.7m while the blade circles overhead, slam down.
-        root={{0,-.04},{.13,-.17},{.30,.70,"outQuad"},{.40,.30,"inQuad"},{.46,-.15,"inQuad"},{.90,0}}},
+        root={{0,-.04},{.13,-.17},{.30,.70,"outQuad"},{.40,.30,"inQuad"},{.46,-.15,"inQuad"},{.70,-.14},{1.10,0}}},
 }
 for _,row in ipairs(LIGHT) do
     local d=row.dur
@@ -215,8 +226,10 @@ for _,row in ipairs(LIGHT) do
     -- straight at contact, relaxes through follow-through: never a rigid stick.
     C.Clips[row.id].elbow={
         arm_right={{0,-35},{times[2]/d,-95,"outQuad"},{times[3]/d,-70,"inQuad"},
-            {times[4]/d,-4,"outCubic"},{times[5]/d,-22,"outQuad"},{1,-35,"smoothStep"}},
+            {times[4]/d,-4,"outCubic"},{times[5]/d,-14,"outQuad"},{1,-22,"smoothStep"}},
         arm_left={{0,-25},{times[2]/d,-70,"outQuad"},{times[4]/d,-45},{1,-25,"smoothStep"}}}
+    -- Long recovery melts into the combat stance instead of snapping at the end.
+    C.Clips[row.id].fadeOut=RECOVERY_FADE
 end
 add { -- 符号待 Web 校准
     id="sword_heavy_charge",dur=1,layer=L.ATTACK,weaponType="sword",loop=true,loopFrom=.8,
@@ -407,7 +420,10 @@ local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge,pole)
         arcPart(spec,on,contact/c.dur,0,.70,"inCubic"),
         arcPart(spec,contact/c.dur,ending/c.dur,.70,1,"outCubic"),
         arcPart(spec,ending/c.dur,(ending+.04)/c.dur,1,1.08,"outQuad"),
-        bez((ending+.04)/c.dur,1,overshoot,ready,{.15,1.30,.55},"outQuad")},
+        -- Inertia: the blade drifts past, then sinks to the low guard and rests there.
+        bez((ending+.04)/c.dur,math.min(.92,(ending+.34)/c.dur),overshoot,LOW_GUARD,
+            {(overshoot[1]+LOW_GUARD[1])*.5,(overshoot[2]+LOW_GUARD[2])*.5+.10,(overshoot[3]+LOW_GUARD[3])*.5+.10},"inOutCubic"),
+        bez(math.min(.92,(ending+.34)/c.dur),1,LOW_GUARD,LOW_GUARD,LOW_GUARD)},
         amplitude=degrees,windup=.12,overshoot=.08,space="body_feet",pole=pole}}
     c.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
     c.motion={{t0=c.phases.active[1],t1=ending,forward=lunge}}
@@ -442,8 +458,9 @@ C.Clips.sword_light_5.motion={{t0=.14,t1=.46,forward=1.3}}
 local moonPath=C.Clips.sword_light_5.handPath.arm_right.segments
 local moonEnd=moonPath[4].t1
 table.insert(moonPath,5,bez(moonEnd,moonEnd+.06/.90,{.40,.30,.80},{.40,.30,.80},{.40,.30,.80}))
-moonPath[6].t0,moonPath[6].t1=moonEnd+.06/.90,moonEnd+.10/.90
-moonPath[7].t0=moonEnd+.10/.90
+local moonDur=C.Clips.sword_light_5.dur
+moonPath[6].t0,moonPath[6].t1=moonEnd+.06/moonDur,moonEnd+.10/moonDur
+moonPath[7].t0=moonEnd+.10/moonDur
 
 local heavy=C.Clips.sword_heavy_release
 local circle={kind="arc",plane="xz",cx=0,cy=0,radius=.75,angle=0,sweep=math.pi*2,
@@ -455,7 +472,9 @@ heavy.handPath={arm_right={space="body_feet",amplitude=360,windup=.12,overshoot=
     arcPart(circle,.27/.72,.32/.72,.7,1,"outCubic"),
     bez(.32/.72,.38/.72,{.75,1.1,0},{.12,.35,.65},{.35,1.9,.65},"inQuad"),
     bez(.38/.72,.43/.72,{.12,.35,.65},{.10,.28,.70},{.10,.28,.70},"outQuad"),
-    bez(.43/.72,1,{.10,.28,.70},{.35,1.05,.30},{.25,1.25,.55},"outQuad")}}}
+    bez(.43/.72,.62/.72,{.10,.28,.70},LOW_GUARD,{.25,.45,.70},"inOutCubic"),
+    bez(.62/.72,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
+heavy.fadeOut=RECOVERY_FADE
 heavy.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
 heavy.motion={{t0=.22,t1=.38,forward=.65}}
 heavy.continuous=true

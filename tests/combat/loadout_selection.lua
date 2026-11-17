@@ -31,7 +31,7 @@ State.Update(30)
 assert(State.GetSelection()=='sword','quiet timeout cannot choose time automatically')
 local swung=false
 moves.observe=function(kind,e)if kind=='start' and e.clip=='sword_light_1' then swung=true end end
-tick(1,{allowed=true,attackTap=true});tick(100)
+tick(1,{allowed=true,attackTap=true});tick(130)
 assert(swung and State.GetSelection()=='sword' and not moves.clip,'first attack uses existing draw/action path')
 assert(moves:SelectLoadout('time') and State.CanUseTime(),'aggro cannot lock time selection or add the old 1s mode cooldown')
 assert(rig.pose=='hidden' and not moves.pendingFire and not moves.hitPending)

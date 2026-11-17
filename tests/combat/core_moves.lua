@@ -151,7 +151,7 @@ end
 pe.animPreview_.paused=false;pe.combatAllowed=false
 frame();character.time=1;S.anim.reset(character);pausedAnim:Apply()
 S.near(pausedAnim.tracks[1].t,.1)
-pe.combatAllowed=true;pe.animPreview_.t=.74
+pe.combatAllowed=true;pe.animPreview_.t=1.14
 frame();S.near(pe.animPreview_.t,0);S.near(pausedAnim.tracks[1].t,0)
 print('PASS actual Scene F7 pause/focus frames suppress Apply fallback; loop display clock matches pose')
 

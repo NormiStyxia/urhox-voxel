@@ -101,7 +101,7 @@ function T:Input(dt,allowed)
     self.t=self.t+dt; self.maxDt=math.max(self.maxDt,dt)
     if self.t<.35 then return neutral end
     local t=self.t-.35
-    if t>4.5 then self:Result(s.id,false,'timeout'); self:Next(); return neutral end
+    if t>7 then self:Result(s.id,false,'timeout'); self:Next(); return neutral end
     if s.id=='combo' then
         if not m.clip and self.phase<require('combat.AnimClips').ComboLength then neutral.attackTap=true; self.phase=self.phase+1 end
         if self.phase==require('combat.AnimClips').ComboLength and not neutral.attackTap and not m.clip and t>.2 then self:Finish(); self:Next() end
