@@ -1,15 +1,15 @@
 -- Time catalyst surroundings, two interchangeable looks (switch with TimeCatalystFx.SetMode):
 --   'pixel'   : voxel-world pixel particles (dragon.VoxelFX.WorldMotes, additive pixel sprites): star-river sand
 --               comets on three orbits, drifting star sparks, a pixel clock ring + burst on every cast, trail while flying.
---   'texture' : AI-painted textures (assets/image/fx/clock_dial.png, clock_sand.png) pasted through ClockTex.shader:
+--   'texture' : AI-painted textures (assets/Textures/fx/clock_dial.png, clock_sand.png) pasted through ClockTex.shader:
 --               a camera-facing dial halo behind the orb and two tilted star-sand rings that slowly spin.
 --   'off'     : neither (orb only).
 -- Visual only. All positions follow the orb through `state`, so motion rules stay in TimeCatalystVisual.
 local F={}
 F.MODES={'pixel','texture','off'}
 local TEX_SHADER='model/forge-blades/ClockTex.shader'
-local DIAL_TEX='image/fx/clock_dial.png'
-local SAND_TEX='image/fx/clock_sand.png'
+local DIAL_TEX='Textures/fx/clock_dial.png'
+local SAND_TEX='Textures/fx/clock_sand.png'
 local MASK=0xFFFFFFFF
 local TAU=math.pi*2
 
