@@ -57,7 +57,7 @@ function M.New(scene)
     -- Casting circle (hand) and the ground charge ring both use the Roman clock, not the old red seal/ring.
     self.hand=Shape(root,'CastingClock','dial'); self.hand.dial=true
     self.range=Shape(root,'ChargeRadius','dial'); self.range.dial=true
-    for i=1,4 do self.impacts[i]=Shape(root,'Impact'..i,nil) end
+    for i=1,4 do self.impacts[i]=Shape(root,'Impact'..i,'dial');self.impacts[i].dial=true end
     return self
 end
 function S:Pulse(pos,normal,color,radius)
@@ -106,9 +106,12 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     for _,p in ipairs(self.impacts) do
         if p.age then
             p.age=p.age+dt
-            local t=p.age/.6
+            local t=p.age/.85
             if t>=1 then p.age=nil; p.node.enabled=false
-            else Show(p,p.pos,p.rot,p.radius*(.3+.7*t),p.color,(1-t)*.9) end
+            else
+                local fade=(1-t)*(1-t)
+                Show(p,p.pos,p.rot*Quaternion(t*360,Vector3.FORWARD),p.radius*(.85+.15*t),p.color,fade)
+            end
         end
     end
 end

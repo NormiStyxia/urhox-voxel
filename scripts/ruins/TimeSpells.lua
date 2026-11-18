@@ -64,16 +64,20 @@ M.SPELLS = {
             if not aim.hit then return false, "没有目标" end
             local obj = aim.object
             local level = (charge >= 1.0) and 3 or ((charge >= 0.5) and 2 or 1)
+            local hitCount=SpellAOE(ctx,aim.pos,M.ShatterRadius(charge),{
+                dmg=8+4*charge,poise=3,armorBreak=0,pos=aim.pos,dir=aim.dir,
+                material='core',tier='light',kind='time_shatter',clip='time_shatter',
+                swingId='spell:shatter:'..tostring(ctx.castSerial or 0),combo=0,heavy=false})
+            if hitCount>0 then
+                if ctx.fx then ctx.fx:Burst(aim.pos,"shatter",1.0+charge) end
+                if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,M.ShatterRadius(charge)) end
+            end
             if obj ~= nil then
-                local hitCount=SpellAOE(ctx,aim.pos,M.ShatterRadius(charge),{
-                    dmg=8+4*charge,poise=3,armorBreak=0,pos=aim.pos,dir=aim.dir,
-                    material='core',tier='light',kind='time_shatter',clip='time_shatter',
-                    swingId='spell:shatter:'..tostring(ctx.castSerial or 0),combo=0,heavy=false})
-                if hitCount>0 then ctx.fx:Burst(aim.pos,"shatter",1.0+charge) end
                 if not obj.canShatter then return hitCount>0, obj.title .. "无法被打碎" end
                 local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge, radius = M.ShatterRadius(charge) })
                 if ok then
-                    ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge)
+                    if ctx.fx then ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge) end
+                    if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,M.ShatterRadius(charge)) end
                     local radius=M.ShatterRadius(charge)
                     for _,other in ipairs(ctx.puzzles.list) do
                         ---@type Vector3
@@ -98,7 +102,8 @@ M.SPELLS = {
                 local r = M.ShatterRadius(charge)
                 local removed = VoxelDamage.AtWorldPoint(ctx.world, aim.pos, r, 3.0)
                 ctx.world:ApplyRadialImpulse(aim.pos, r * 1.8, 1200.0 * (1 + charge))
-                ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge)
+                if ctx.fx then ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge) end
+                if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,r) end
                 if removed > 0 then return true, nil end
                 return false, "太坚硬了"
             end
@@ -128,6 +133,7 @@ M.SPELLS = {
                 end
             end
             ctx.fx:Burst(center, "freeze", 1.0)
+            if n>0 and ctx.sigils then ctx.sigils:Pulse(center,aim.normal or Vector3.UP,M.FREEZE_COLOR,3.5) end
             if n == 0 then return true, "附近没有正在坠落的时之碎块" end
             return true, nil
         end,

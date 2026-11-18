@@ -1210,8 +1210,20 @@ end
 -- 当前瞄准目标（时之物件）
 local aimTextCache={}
 local AIM_STATE_NAMES={WHOLE="完整",SHATTERED="破碎中",FROZEN="已碎",REWIND="回溯中"}
+local enemyAimHits,enemyAimPool,enemyAimShapes={},{},{}
 local function UpdateAim(presentation)
     local aim = nomi_:Aim(60.0)
+    if CombatState.InCombat() then
+        local cam=nomi_:CameraNode()
+        local a,b=cam.worldPosition,cam.worldPosition+cam.worldDirection*60
+        local enemyHits=Hit.QueryZone(CombatEnemies(),{origin=a,source=a,forward=cam.worldDirection,
+            radius=1.2,angle=40,low=-1.2,high=2.8},enemyAimHits,enemyAimPool,nil,enemyAimShapes)
+        local enemy=enemyHits[1] and enemyHits[1].enemy or nil
+        aim.enemy=enemy
+        if enemy and enemyHits[1] then
+            aim.hit=true;aim.pos=enemyHits[1].pos;aim.normal=enemyHits[1].normal
+        end
+    end
     if aim.hit then aim.object = aim.object or Puzzles.FindByVolume(aim.volume) end
     M.aim = aim
     if presentation==false then return aim end

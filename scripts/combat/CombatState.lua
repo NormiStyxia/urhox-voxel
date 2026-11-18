@@ -144,7 +144,8 @@ function M.FinishTransition()
     if M.InCombat() and not mounted and not dead and lastPose=='hidden' then Pose('back') end
 end
 function M.CanUseTime()
-    return state==M.EXPLORE and spellDelay<=0 and not mounted and not dead
+    return not mounted and not dead and spellDelay<=0
+        and (state==M.EXPLORE or (state~=M.EXPLORE and options.explicitSelection))
         and (not options.explicitSelection or not busy)
 end
 function M.Glow() return (mounted or dead) and 0 or glow end
