@@ -36,6 +36,8 @@ local COMBO=Data.Combo
 ---@field strikeTarget table|nil Assist-selected melee target for the current swing.
 ---@field motionScale number|nil Lunge scale so a dash stops short of its target.
 ---@field stamina CombatStamina Combat-only stamina (sprint, cross slash, plunge).
+---@field hitQueryDone boolean 当前命中窗口是否已完成敌人/环境结算。
+---@field environmentActive boolean 当前环境斩击是否占用一次命中窗口。
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
 -- Real seconds; frame-average velocity integrates across hover/terminal boundaries.
@@ -159,6 +161,7 @@ function C.New(opts)
         age=0,invuln=0,hitstop=0,charge=0,hold=0,combo=0,drawElapsed=0,power=0,fireSnapshot={stats={}},
         motion=Vector3.ZERO,buffer=nil,bufferUntil=0,hitOpen=false,hitPending=false,
         cancelOpen=false,damaged={},dead=false,blocked=false,
+        hitQueryDone=false,environmentActive=false,
         lastAttack=false,lastHeavy=false,shake=0,shakeAge=0,shakeDuration=0,
         eventPool={{},{},{},{},{},{},{},{}},eventWrite=0,swingSerial=0,feedbackGroups={},
         strikeZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
@@ -230,6 +233,7 @@ function C:Play(id,fadeIn,entryFrom)
     if self.observe then self.observe('start',{clip=id,age=self.age}) end
     if self.state.Log then self.state.Log('clip-start:'..id,'Combat: clip %s start',id) end
     self.hitOpen,self.hitPending,self.cancelOpen=false,false,false
+    self.hitQueryDone=false;self.environmentActive=false
     for key in pairs(self.damaged) do self.damaged[key]=nil end
     self.previousHit=nil
     self.motionDebt=0
@@ -270,6 +274,7 @@ function C:Cancel(reason,keepProtection)
     if not keepProtection then self.protection={} end
     self.drawFullReached,self.fireCrystal,self.fireCharge,self.fullCharged=false,false,nil,false
     self.hitOpen,self.hitPending,self.cancelOpen=false,false,false
+    self.hitQueryDone=false;self.environmentActive=false
     self.hold,self.charge,self.motion,self.knock=0,0,Vector3.ZERO,0
     self.lastAttack,self.lastHeavy,self.blocked=false,false,true
     if keepProtection then
@@ -309,6 +314,7 @@ function C:SoftStop(reason)
     self.anim:Stop(self.handle,reason=='move' and .18 or .10)
     self.clip,self.handle=nil,nil
     self.hitOpen,self.hitPending,self.cancelOpen=false,false,false
+    self.hitQueryDone=false;self.environmentActive=false
     self.motion,self.motionDebt,self.motionScale=Vector3.ZERO,0,1
     self.buffer,self.pending=nil,nil
     -- Moving out of recovery keeps the chain alive for the usual window; a jump resets it.
@@ -643,6 +649,8 @@ function C:Events()
                 self:Sound('sword_whoosh',sound);sound.pitch,sound.tier=nil,nil
             end
             self.hitOpen,self.hitPending,self.hitClip=true,true,e.clip
+            self.hitQueryDone=false
+            self.environmentActive=false
             if self.rig.BeginSlash then self.rig:BeginSlash(self.combo,e.clip=='sword_heavy_release') end
             self.hitForward=self.hitForward or Flat(self.moveDir or self.o.forward(),Vector3.FORWARD)
         elseif e.name=='hit_off' then
@@ -982,10 +990,13 @@ function C:AfterPose()
     end
     local environmentSwing,environmentHandle=self.swingSerial,self.handle
     local zone,slam=self:StrikeZones()
-    -- R8 conservative P0 path: keep the proven gameplay sector/reach and draw
-    -- its actual one-frame slash sample, including a hitch across hit_on/off.
-    -- This is NOT a blade-contact narrowphase; physical blade alignment remains
-    -- a Web acceptance item rather than silently reducing gameplay reach.
+    -- Expensive enemy/LOS/environment queries run once per hit window. The
+    -- second cross-slash hit opens a fresh window and therefore runs once again.
+    if self.hitQueryDone then
+        self.hitPending=false
+        return
+    end
+    self.hitQueryDone=true
     if zone and self.hitPending and self.rig.ShowContactArc then self.rig:ShowContactArc(zone) end
     self.hitPending=false
     if not zone then return end
@@ -1024,10 +1035,13 @@ function C:AfterPose()
     end
     Perf.Finish('HitEvent',hitStart)
     if self.o.environmentMelee then
-        -- Enemy callbacks may cancel, kill or replace this attack before the
-        -- environment pass. Never excavate with that stale contact pose.
-        self.o.environmentMelee(self,not self.dead and not self.blocked
-            and self.swingSerial==environmentSwing and self.handle==environmentHandle)
+        if not self.environmentActive then
+            self.environmentActive=true
+            -- Enemy callbacks may cancel, kill or replace this attack before the
+            -- environment pass. Never excavate with that stale contact pose.
+            self.o.environmentMelee(self,not self.dead and not self.blocked
+                and self.swingSerial==environmentSwing and self.handle==environmentHandle)
+        end
     end
 end
 -- Keep info/result as independent snapshots: enemy/FX callbacks may retain
