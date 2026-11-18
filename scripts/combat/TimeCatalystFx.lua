@@ -61,6 +61,26 @@ local function Quad(node,half,material,mask)
     return g
 end
 
+--- (Re)create the three pixel mote systems. Called at start and again every time 'pixel' is re-entered, so
+--- a mode round trip always starts from fresh geometry/free lists (no stale state from the other looks).
+---@param fx table
+function F.BuildPixel(fx)
+    local VoxelFX=require('dragon.VoxelFX')
+    for _,key in ipairs({'sand','spark','burst'}) do
+        local old=fx[key]
+        if old then
+            pcall(old.Clear,old)
+            if old.node then pcall(old.node.Remove,old.node) end
+            fx[key]=nil
+        end
+    end
+    fx.sand=VoxelFX.WorldMotes(fx.scene,'CatalystPixelSand',300,'square',true,fx.camera)
+    fx.spark=VoxelFX.WorldMotes(fx.scene,'CatalystPixelSpark',90,'star',true,fx.camera)
+    fx.burst=VoxelFX.WorldMotes(fx.scene,'CatalystPixelBurst',130,'square',true,fx.camera)
+    fx.acc={0,0,0};fx.sparkAcc=0;fx.trailAcc=0
+    fx.ready.pixel=true
+end
+
 ---@param scene Node world-space parent for pixel particles
 ---@param orb Node the orb root (texture quads live under it and inherit its scale/orientation)
 ---@param camera Node? camera node for billboarded pixel quads
@@ -68,13 +88,8 @@ end
 function F.New(scene,orb,camera)
     local fx={mode='off',shown=false,acc={0,0,0},heads={0,TAU*.37,TAU*.71},sparkAcc=0,trailAcc=0,
         cur={center=Vector3(0,0,0),rot=Quaternion(0,0,0),scale=1},ready={}}
-    local ok,err=pcall(function()
-        local VoxelFX=require('dragon.VoxelFX')
-        fx.sand=VoxelFX.WorldMotes(scene,'CatalystPixelSand',300,'square',true,camera)
-        fx.spark=VoxelFX.WorldMotes(scene,'CatalystPixelSpark',90,'star',true,camera)
-        fx.burst=VoxelFX.WorldMotes(scene,'CatalystPixelBurst',130,'square',true,camera)
-        fx.ready.pixel=true
-    end)
+    fx.scene,fx.camera=scene,camera
+    local ok,err=pcall(F.BuildPixel,fx)
     if not ok then print('TimeCatalystFx: pixel mode unavailable: '..tostring(err)) end
     ok,err=pcall(function()
         fx.dialMaterial=assert(MakeMaterial(DIAL_TEX),'dial texture/shader unavailable')
@@ -118,11 +133,21 @@ function F.SetMode(fx,mode)
     if mode=='pixel' and not fx.ready.pixel then mode='texture' end
     if mode=='texture' and not fx.ready.texture then mode='off' end
     if fx.mode==mode then return mode end
+    local from=fx.mode
     fx.mode=mode
     SetTexEnabled(fx,mode=='texture' and fx.shown)
     if mode~='pixel' then
         for _,m in ipairs({fx.sand,fx.spark,fx.burst}) do if m then m:Clear() end end
+    else
+        local ok,err=pcall(F.BuildPixel,fx)
+        if not ok then
+            print('TimeCatalystFx: pixel rebuild failed: '..tostring(err))
+            fx.ready.pixel=false
+            fx.mode='off'
+            return 'off'
+        end
     end
+    print(('TimeCatalystFx: mode %s -> %s (pixel=%s texture=%s shown=%s)'):format(from,mode,tostring(fx.ready.pixel),tostring(fx.ready.texture),tostring(fx.shown)))
     return mode
 end
 
@@ -185,6 +210,13 @@ end
 ---@param s table
 function F.Update(fx,dt,s)
     if not fx then return end
+    local ok,err=pcall(F.UpdateImpl,fx,dt,s)
+    if not ok and fx.lastError~=tostring(err) then
+        fx.lastError=tostring(err)
+        print('TimeCatalystFx: update failed in mode '..fx.mode..': '..fx.lastError)
+    end
+end
+function F.UpdateImpl(fx,dt,s)
     local cur=fx.cur
     cur.center,cur.rot,cur.scale=s.center,s.rot,s.scale
     if fx.mode=='pixel' then
@@ -249,8 +281,12 @@ end
 --- Pixel quads are drawn after the camera has moved (needs the final right/up vectors).
 ---@param fx table?
 function F.Draw(fx)
-    if fx and fx.mode=='pixel' then
-        fx.sand:Draw();fx.spark:Draw();fx.burst:Draw()
+    if fx and fx.mode=='pixel' and fx.sand then
+        local ok,err=pcall(function() fx.sand:Draw();fx.spark:Draw();fx.burst:Draw() end)
+        if not ok and fx.lastDrawError~=tostring(err) then
+            fx.lastDrawError=tostring(err)
+            print('TimeCatalystFx: pixel draw failed: '..fx.lastDrawError)
+        end
     end
 end
 
