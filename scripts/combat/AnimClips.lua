@@ -583,7 +583,7 @@ ps.handPath={arm_right={space="body_feet",segments={
     bez(.55,1,{.5,1.7,.35},{.5,1.6,.42},{.55,1.72,.4},"smoothStep")}}}
 ps.bladePath={mode="fixed",direction={.4,1,.3},side="arm_right"}
 pl.handPath={arm_right={space="body_feet",mode="plunge"}}
-pl.bladePath={mode="fixed",direction={0,-1,.25},side="arm_right"}
+pl.bladePath={mode="fixed",direction={.55,-.78,.35},side="arm_right"}
 pd.keys.body=k({30,0,0},{40,0,0},{18,0,0},{6,0,0},.18,.52)
 pd.keys.head=k({-10,0,0},{-16,0,0},{-7,0,0},{3,0,0},.18,.52)
 pd.keys.leg_right=k({14,0,0},{20,0,0},{8,0,0},{0,0,0},.18,.52)
@@ -593,7 +593,7 @@ pd.handPath={arm_right={space="body_feet",segments={
     bez(0,.18,{.48,.85,.62},{.5,.72,.66},{.5,.75,.64},"outQuad"),
     bez(.18,.52,{.5,.72,.66},{.55,1.05,.55},{.58,.90,.70},"outQuad"),
     bez(.52,1,{.55,1.05,.55},{.35,1.05,.30},{.50,1.12,.5},"smoothStep")}}}
-pd.bladePath={mode="fixed",direction={0,-1,.25},side="arm_right"}
+pd.bladePath={mode="fixed",direction={.55,-.78,.35},side="arm_right"}
 
 -- Keep authored legacy poses available, while the bow faces forward rather
 -- than sideways. Single rigid right arm aims toward chin; no elbow is invented.

@@ -593,7 +593,7 @@ test("plunge anticipation raises blade and descent points down without root disp
    local arm=c.bones.arm_right.rotation
    local _,e=a:GetWeaponPose()
    local blade=body*arm*a.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
-   assert(id=='plunge_start' and blade.y>.85 or id~='plunge_start' and blade.y<-.96,'overhead anticipation / downward descent')
+   assert(id=='plunge_start' and blade.y>.85 or id~='plunge_start' and blade.y<-.70 and blade.x>.25 and blade.z>.15,'overhead anticipation / forward-downward descent')
   end
  end
 end)

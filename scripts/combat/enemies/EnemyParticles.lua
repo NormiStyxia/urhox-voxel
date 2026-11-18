@@ -13,7 +13,7 @@ Pool.__index=Pool
 Pool.LIMIT=64
 Pool.RESERVED=16
 local pools=setmetatable({}, {__mode='k'})
-local COLORS={soft={.63,.66,.36},armor={.95,.79,.49},core={.58,.85,1},stone={.62,.63,.59},flash={1,1,1}}
+local COLORS={soft={.63,.66,.36},armor={.95,.79,.49},core={.58,.85,1},stone={.62,.63,.59},flash={1,1,1},hit_red={1,.16,.10}}
 -- Construction only. Unit box and two crossed tapered diamonds; transforms set size.
 local function mesh(parent,name,cross)
     local node=parent:CreateChild(name)
@@ -136,7 +136,8 @@ function Pool:Emit(owner,info)
     if dust then count=6 elseif phase then count=10 end
     if contact and info.killed then count=1 end
     local priority=death and 3 or (broken and 2 or 0)
-    if death then self:ClearOwner(owner) end
+    local hitFlash=contact and not death and info.kind~='dust'
+    if hitFlash then count=count+3 end
     local direction=info.impactDir or info.dir -- visual slash direction never changes gameplay knock
     local dx,dy,dz=direction.x,direction.y,direction.z
     local n=math.sqrt(dx*dx+dy*dy+dz*dz)
@@ -156,7 +157,9 @@ function Pool:Emit(owner,info)
     local contactKernel
     for i=1,count do
         local kernel=contact and i==1
-        local flat=kernel or (not (death or broken or phase or dust or heavy) and (weak or info.material=='armor' or info.material=='stone'))
+        local heavy=info.tier=='heavy' or info.tier=='third'
+        local flashParticle=hitFlash and i>count-3
+        local flat=kernel or flashParticle or (not (death or broken or phase or dust or heavy) and (weak or info.material=='armor' or info.material=='stone'))
         local family=flat and 'flat' or 'cube'
         local slotPriority=kernel and 1 or priority
         local slot=self:Claim(slotPriority,family,contactKernel)
@@ -172,7 +175,7 @@ function Pool:Emit(owner,info)
         self.serial=self.serial+1; slot.serial=self.serial
         slot.x,slot.y,slot.z=info.pos.x,info.pos.y,info.pos.z
         if contact then slot.x,slot.y,slot.z=slot.x+nx*.02,slot.y+ny*.02,slot.z+nz*.02 end
-        slot.material=COLORS[info.material] and info.material or 'stone'
+        slot.material=flashParticle and 'hit_red' or (COLORS[info.material] and info.material or 'stone')
         slot.shape,slot.gravity='cube',3
         local speed=.6+q*.6
         local ax,ay,az=dx,dy,dz
@@ -183,6 +186,10 @@ function Pool:Emit(owner,info)
             slot.shape,slot.material,slot.ttl,slot.gravity='cross','flash',.06,0
             local size=heavy and .18 or .12
             slot.sx,slot.sy,slot.sz=size,size,size; speed=0
+        elseif flashParticle then
+            slot.shape='cross';slot.ttl=.16+q*.04;slot.gravity=.5
+            slot.sx,slot.sy,slot.sz=.07+q*.025,.07+q*.025,.07+q*.025
+            speed=1.1+q*.5;ax,ay,az=tx,math.max(.2,ty),tz
         elseif death or broken or phase then
             slot.shape='plate'; slot.ttl=death and (.6+q*.25) or (.35+q*.25)
             slot.sx,slot.sy,slot.sz=.12+q*.08,.025,.10+q*.06

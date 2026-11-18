@@ -111,7 +111,7 @@ local FLASH_TIME=.08
 local WHITE_PALETTE=174 -- reserved weapon bank, adjacent to accent slot 175
 local SWORD_LENGTH,SWORD_WIDTH=1.25,1.3 -- visual only: pivot/GetHit remain unscaled
 local REVEAL_TIME,HIDE_TIME,SWAP_HALF=.16,.12,.08
-local HOLO_OUT,HOLO_IN=.20,.22 -- wing sword projection: dissolve / reform seconds
+local HOLO_OUT,HOLO_IN=.30,.40 -- wing sword projection: slower dissolve / back-socket reform
 local BACK_DEPTH=-.50 -- ~.34m behind torso back; clearance also covers hair/coat and lag
 local MAX_HANG_ANGLE=math.rad(5)
 local function Vec(t) return Vector3(t[1],t[2],t[3]) end

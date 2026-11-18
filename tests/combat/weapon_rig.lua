@@ -309,7 +309,7 @@ local function LivelyCase(fps,weapon)
         end
     end
     r:SetPose('back');assert(r.visualState=='stow')
-    r:Update(.18)
+    r:Update(.42)
     assert(r.visualState=='hang' and r.recoil==.12 and r:PopEvents()[1]=='blade_sheath')
     r:Update(.06)
     Mock.Near((entry.pivot.worldPosition-r.hangPosition):Length(),.02)
@@ -324,14 +324,14 @@ local function LivelyCase(fps,weapon)
     assert(r.visualState=='hidden' and count(r.layers[weapon])==0 and not entry.mesh.node.enabled and count(r.particles)==0)
     assert(r:PopEvents()[1]=='dissolved')
     -- Interrupt a flight without teleporting to the back socket.
-    r:SetPose('hand');assert(r.motion.duration==.08);r:Update(.04)
+    r:SetPose('hand');assert(r.motion.duration==.12);r:Update(.06)
     local mid=entry.pivot.worldPosition
     r:SetPose('hidden');r:Update(0)
     Mock.VectorNear(entry.pivot.worldPosition,mid)
     r:SetPose('hand');r:Update(.12);assert(r.visualState=='hand')
     -- Even an earlier hit_on (shortened combo / low FPS event catch-up) cannot
     -- run AfterPose against a flying grip. It settles before the owner's sweep.
-    r:SetPose('back');r:Update(.18);r:SetPose('hand');r:Update(.02)
+    r:SetPose('back');r:Update(.42);r:SetPose('hand');r:Update(.02)
     assert(r.visualState=='fly_to_hand')
     r:SetCombatVisual(true,nil);r:Update(0)
     assert(r.visualState=='hand' and r:GetAfterimagePose()~=nil)
@@ -571,7 +571,7 @@ do
     builder.Build=Forbidden;w.CreateVolume=Forbidden;w.GetPaletteMaterial=Forbidden;rawset(_G,'Color',Forbidden)
     for i=1,40 do
         r:SetActive(i%2==0 and 'sword' or 'bow');r:SetPose('hand');r:Update(.12)
-        r:SetPose('back');r:Update(.18);r:SetPose('hidden');r:Update(.30)
+        r:SetPose('back');r:Update(.42);r:SetPose('hidden');r:Update(.42)
     end
     builder.Build=build;w.CreateVolume=createVolume;w.GetPaletteMaterial=getPalette;rawset(_G,'Color',rawColor)
     assert(w.created==created and w.writes==writes and w.rebuilds==rebuilds)

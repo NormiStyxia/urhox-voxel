@@ -879,7 +879,7 @@ function A:Apply()
                             direction=unit(Vector3(d[1],d[2],d[3]),Vector3(0,-1,0))
                             if c.id=="plunge_loop" then
                                 local u=ease("smoothStep",math.max(clamp(((s.params.plungeSpeed or 1)-.5)*2,0,1),clamp(s.params.plungeTuck or 0,0,1)))
-                                direction=unit(Vector3(.4*(1-u),math.cos(math.pi*u),.25+.05*(1-u)+.6*math.sin(math.pi*u)),Vector3(0,-1,0))
+                                direction=unit(Vector3(.4*(1-u)+.55*u,math.cos(math.pi*u)*.0-.78, .25+.10*(1-u)+.35*u),Vector3(.55,-.78,.35))
                             end
                         else
                             local origin=c.bladePath.origin

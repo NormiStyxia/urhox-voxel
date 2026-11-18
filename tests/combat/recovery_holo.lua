@@ -148,12 +148,12 @@ local r=Rig.New(scene,Mock.World(scene),Mock.Nomi(scene))
 local wing=r.entries.sword.wing
 assert(wing and wing.holoNode and wing.holoMaterial,'hologram twin built')
 local function frames(n) for _=1,n do r:Update(1/60) end end
-r:SetPose('back');frames(30);assert(r.visualState=='hang')
+r:SetPose('back');frames(42);assert(r.visualState=='hang')
 r:SetPose('hand');assert(r.transition.holo and r.visualState=='fly_to_hand')
 local pivot=r.entries.sword.pivot
 local back=r.sockets.back_sword
 local sawHolo,sawSolidGone=false,false
-for _=1,40 do
+for _=1,60 do
     r:Update(1/60)
     if r.transition then
         assert(pivot.parent==back or pivot.parent==r.sockets.hand_right,'pivot always rides a socket')
@@ -167,7 +167,7 @@ local events=r:PopEvents();local drew=false
 for _,e in ipairs(events) do if e=='blade_draw' then drew=true end end
 assert(drew,'arrival still emits blade_draw for sound/flash')
 r:SetPose('back');local first=true
-for _=1,40 do
+for _=1,60 do
     r:Update(1/60)
     if r.transition and first then assert(pivot.parent==r.sockets.hand_right,'dissolves at the hand first');first=false end
 end
