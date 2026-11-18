@@ -820,7 +820,7 @@ function M.Start()
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
     do
-        local catalyst,err=TimeCatalyst.New(scene_)
+        local catalyst,err=TimeCatalyst.New(scene_,nomi_:CameraNode())
         if catalyst then timeCatalyst_=catalyst
         else print('TimeCatalyst unavailable: '..tostring(err)) end
     end
@@ -1463,6 +1463,10 @@ local function UpdateCombatActions(combatAllowed,dt)
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
         if Press(KEY_G) or TouchInput.Press('forge') then OpenForge() end
+        if timeCatalyst_ and Press(KEY_5) then -- A/B preview of the catalyst surroundings: pixel particles / texture sheets / off
+            local mode=TimeCatalyst.SetFxMode(timeCatalyst_)
+            CombatHUD.Say('法器特效 · '..(({pixel='像素粒子',texture='贴图特效',off='关闭'})[mode] or tostring(mode))..'（5 切换）',1.4)
+        end
         if not combatInputBlocked and Press(KEY_C) then
             combatMoves_:SelectLoadout(CombatState.InCombat() and 'time' or CombatState.GetWeapon())
         end
@@ -1927,6 +1931,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     if combatMoves_ and weaponGesture_ then Safe('WeaponSelect.Anchor',weaponGesture_.Update,weaponGesture_,dt,nomi_:Camera()) end
     Safe('FX.MotesB',fx_.motesB.Draw,fx_.motesB); Safe('FX.MotesG',fx_.motesG.Draw,fx_.motesG)
     Safe('FX.HandMotes',handMotes_.Draw,handMotes_)
+    if timeCatalyst_ then Safe('TimeCatalyst.Draw',TimeCatalyst.Draw,timeCatalyst_) end
 end
 
 function M.Stop()

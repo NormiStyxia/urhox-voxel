@@ -29,15 +29,43 @@ end
 assert(total>1500 and total<4500,'triangle budget '..total)
 assert(m.radius>.25 and m.radius<.30)
 
+-- engine doubles for the FX layer: pixel motes (dragon.VoxelFX) and texture materials
+local spawned={sand=0,spark=0,burst=0}
+local function FakeMotes(name,...)
+    local motes={list={},node=Mock.Node(name),draws=0,clears=0}
+    local key=name:find('Sand') and 'sand' or (name:find('Spark') and 'spark' or 'burst')
+    function motes:Spawn(p) spawned[key]=spawned[key]+1;self.list[#self.list+1]=p;p.age=0;return p end
+    function motes:Update(dt)
+        local keep={}
+        for _,m in ipairs(self.list) do
+            m.age=m.age+dt
+            local u=m.age/m.life
+            if u<1 then if m.fn then m.fn(m,dt,u) end;keep[#keep+1]=m end
+        end
+        self.list=keep
+    end
+    function motes:Draw() self.draws=self.draws+1 end
+    function motes:Clear() self.list={};self.clears=self.clears+1 end
+    function motes:Count() return #self.list end
+    return motes
+end
+package.loaded['dragon.VoxelFX']={WorldMotes=function(parent,name) return FakeMotes(name) end}
+local BaseMaterial=_G.Material
+rawset(_G,'Material',{new=function()
+    local m=BaseMaterial:new()
+    m.SetSurfaceShader=function() return true end
+    m.SetSurfaceTexture=function(self,slot,tex) self.tex=self.tex or {};self.tex[slot]=tex end
+    return m
+end})
 local Visual=require('combat.TimeCatalystVisual')
-local Material=_G.Material
 local oldCache=_G.cache
 rawset(_G,'cache',{GetResource=function(_,kind,path)
-    if kind=='Material' then return Material:new() end
+    if kind=='Material' then return BaseMaterial:new() end
+    if kind=='Texture2D' then return {path=path} end
     return oldCache:GetResource(kind,path)
 end})
 local scene=Mock.Node('scene')
-local v=assert(Visual.New(scene))
+local v=assert(Visual.New(scene,Mock.Node('camera')))
 assert(not v.ready and not v.root.enabled)
 for _=1,12 do Visual.Step(v) end
 assert(v.ready,'upload spread over frames completes')
@@ -79,18 +107,34 @@ for _=1,120 do Visual.Update(v,1/60,Ctx{active=false}) end
 assert(not v.root.enabled and v.fade==0)
 -- Urho Node enable is not recursive: every child that draws must be off too (regression: orb stayed in place)
 for _,child in ipairs(v.root.children) do assert(not child.enabled,child.name..' must be disabled with the root') end
+for _,fxChild in ipairs(v.fx.texRoot.children) do assert(not fxChild.enabled,'texture quad '..fxChild.name..' must be off while hidden') end
 -- re-appears at the rest slot (no flight from the last position)
 Visual.Update(v,1/60,Ctx())
 assert(v.root.enabled and v.root.position.z<-.3)
 for _,child in ipairs(v.root.children) do
-    if child.name~='catalyst_ring' then assert(child.enabled,child.name..' must be enabled with the root') end
+    if child.name~='catalyst_tex_fx' then assert(child.enabled,child.name..' must be enabled with the root') end
 end
--- cast ripple: shown right after the cast, gone when it has expired
-for _=1,5 do Visual.Update(v,1/60,Ctx()) end
+-- pixel mode (default): sand comets, sparks, cast ring burst
+assert(v.fx.mode=='pixel' and v.fx.ready.pixel and v.fx.ready.texture)
+for _=1,90 do Visual.Update(v,1/60,Ctx()) end
+assert(spawned.sand>20 and spawned.spark>3,'sand + sparks spawn at rest')
+local before=spawned.burst
 Visual.Update(v,1/60,Ctx{aiming=true,casting=true})
-assert(v.ringNode.enabled and v.ringAge<.05)
-for _=1,70 do Visual.Update(v,1/60,Ctx()) end
-assert(not v.ringNode.enabled)
+assert(spawned.burst>=before+90,'cast spawns the radial splash and the 60-tick pixel clock ring')
+Visual.Draw(v);assert(v.fx.sand.draws==1 and v.fx.burst.draws==1)
+for _=1,120 do Visual.Update(v,1/60,Ctx()) end
+assert(v.fx.burst:Count()==0,'burst motes expire')
+-- texture mode: pixel motes cleared, quads enabled and driven
+assert(Visual.SetFxMode(v,'texture')=='texture')
+assert(v.fx.sand:Count()==0 and v.fx.texRoot.enabled and v.fx.dialNode.enabled and v.fx.ringA.enabled)
+for _=1,40 do Visual.Update(v,1/60,Ctx{aiming=true,charge=1}) end
+assert(v.fx.dialMaterial.parameters.strength>.5 and v.fx.dialMaterial.parameters.billboard==1)
+Visual.Draw(v);assert(v.fx.sand.draws==1,'pixel quads not drawn in texture mode')
+-- off hides both; cycling returns to pixel
+assert(Visual.SetFxMode(v,'off')=='off' and not v.fx.texRoot.enabled)
+assert(Visual.SetFxMode(v)=='pixel' and Visual.SetFxMode(v)=='texture')
+assert(Visual.SetFxMode(v,'pixel')=='pixel')
 Visual.Dispose(v)
 rawset(_G,'cache',oldCache)
+rawset(_G,'Material',BaseMaterial)
 print('time_catalyst OK tris='..total)

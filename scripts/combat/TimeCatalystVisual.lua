@@ -1,22 +1,21 @@
 -- Time catalyst: the floating star-clock orb used while the caster is in time mode (CombatState selection
 -- 'time'). Visual only. Rests behind the right shoulder, flies to the casting palm while aiming/charging,
 -- dissolves when a real weapon is drawn. Model: art/weapon_gen/clock_catalyst_v6_blender.py (CLOCK_EXPORT=1).
+-- Surroundings (sand / sparks / cast ring) live in TimeCatalystFx with two switchable looks.
 -- Motion rules (all frame-rate independent):
 --   * position = critically damped spring toward the current anchor (rest slot / palm), plus a small lift arc
 --     while it travels, so it glides instead of teleporting;
 --   * bands / blades turn about the horizontal X axis in opposite directions, gems orbit the view axis, the
 --     sapphire turns slowly; all spin speeds ease toward `rest * (1 + aim + charge + pulse)`;
---   * a cast pops the scale (+14%) and spikes the spin, then both settle within ~0.5 s;
---   * sand streams tighten toward the core and speed up with charge.
+--   * a cast pops the scale and spikes the spin, then both settle within ~0.5 s.
 -- Any failure returns nil so the scene keeps working without the catalyst.
+local Fx=require('combat.TimeCatalystFx')
 local V={}
 V.ENABLED=true               -- kill switch
 V.SCALE=.95                  -- model radius .27 m -> ~.26 m in the world (readable at the follow-camera distance)
 V.STEP_VERTICES=2400         -- body upload per Step()
+V.FX_MODE='pixel'            -- default surroundings: pixel | texture | off (NextFxMode cycles at runtime)
 local MATERIAL='model/forge-blades/ClockCatalyst.xml'
-local SAND='model/forge-blades/ClockSand.xml'
-local MOTES='model/forge-blades/ClockMotes.xml'
-local RING='model/forge-blades/ClockRing.xml'
 local MASK=0xFFFFFFFF
 local PARTS={'bands','blades','gems','shards','core'}
 -- deg/s about the pivot axis at rest
@@ -40,143 +39,44 @@ local function DefineBody(g,part,from,to)
     end
 end
 
--- Ribbon grains for the star-river sand; ClockSand.shader moves them on the GPU.
-local function BuildSand(node,material)
-    local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
-    g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
-    g:BeginGeometry(0,TRIANGLE_LIST)
-    local seed=29
-    local function Rand()
-        seed=(seed*1103515245+12345)%2147483648
-        return seed/2147483648
-    end
-    local quad={{0,-1},{1,-1},{1,1},{0,-1},{1,1},{0,1}}
-    local counts={[0]=64,[1]=64,[2]=48}
-    for stream=0,2 do
-        for i=0,counts[stream]-1 do
-            local s0=(i+Rand()*.9)/counts[stream]
-            local jitter,size=Rand(),Rand()
-            for _,q in ipairs(quad) do
-                g:DefineVertex(Vector3(0,0,0))
-                g:DefineNormal(Vector3(0,0,-1))
-                g:DefineColor(Color(q[1],(q[2]+1)*.5,jitter,size))
-                g:DefineTexCoord(Vector2(s0,stream))
-            end
-        end
-    end
-    g:Commit()
-    assert(g:SetMaterial(0,material)~=false,'sand material binding failed')
-    return g
-end
-
--- Star motes: camera-facing diamonds, placed by ClockMotes.shader (phase in UV.x, seed in UV.y, corner in COLOR.rg).
-local function BuildMotes(node,material)
-    local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
-    g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
-    g:BeginGeometry(0,TRIANGLE_LIST)
-    local seed=71
-    local function Rand()
-        seed=(seed*1103515245+12345)%2147483648
-        return seed/2147483648
-    end
-    local corners={{0,0},{1,0},{1,1},{0,0},{1,1},{0,1}}
-    for i=0,79 do
-        local phase,s=(i+Rand()*.9)/80,Rand()
-        for _,c in ipairs(corners) do
-            g:DefineVertex(Vector3(0,0,0))
-            g:DefineNormal(Vector3(0,0,-1))
-            g:DefineColor(Color(c[1],c[2],0,1))
-            g:DefineTexCoord(Vector2(phase,s))
-        end
-    end
-    g:Commit()
-    assert(g:SetMaterial(0,material)~=false,'motes material binding failed')
-    return g
-end
-
--- Cast ripple: flat annulus in the orb's front plane (UV.x angle, UV.y radial).
-local function BuildRing(node,material)
-    local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
-    g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
-    g:BeginGeometry(0,TRIANGLE_LIST)
-    local n,r0,r1=96,.215,.30
-    local function Vert(a,rr,u,v)
-        g:DefineVertex(Vector3(math.cos(a)*rr,math.sin(a)*rr,-.03))
-        g:DefineNormal(Vector3(0,0,-1))
-        g:DefineColor(Color(1,1,1,1))
-        g:DefineTexCoord(Vector2(u,v))
-    end
-    for i=0,n-1 do
-        local a0,a1=i/n*math.pi*2,(i+1)/n*math.pi*2
-        Vert(a0,r0,i/n,0);Vert(a1,r0,(i+1)/n,0);Vert(a1,r1,(i+1)/n,1)
-        Vert(a0,r0,i/n,0);Vert(a1,r1,(i+1)/n,1);Vert(a0,r1,i/n,1)
-    end
-    g:Commit()
-    assert(g:SetMaterial(0,material)~=false,'ring material binding failed')
-    return g
-end
-
 local function SetShown(visual,flag)
     if visual.shown==flag then return end
     visual.shown=flag
     -- Node enable is NOT recursive: every child node must be toggled or it keeps rendering in place.
     visual.root.enabled=flag
     for _,pivot in pairs(visual.pivots) do pivot.enabled=flag end
-    if visual.sandNode then visual.sandNode.enabled=flag end
-    if visual.motesNode then visual.motesNode.enabled=flag end
-    if visual.ringNode then visual.ringNode.enabled=flag and visual.ringAge<1 end
+    Fx.SetShown(visual.fx,flag)
 end
 
 ---@param scene Node
+---@param cameraNode Node? camera node (pixel quads face it)
 ---@return table? visual
 ---@return string? err
-function V.New(scene)
+function V.New(scene,cameraNode)
     if not V.ENABLED then return nil,'disabled' end
     local visual={cursor=1,partIndex=1,ready=false,fade=0,aim=0,spinBoost=0,pulse=0,charge=0,
-        sandStrength=-1,sandTighten=-1,sandSpeed=-1,glowKey=-1,fadeKey=-1,
+        glowKey=-1,fadeKey=-1,shown=false,speed=0,
         pos=Vector3(0,0,0),vel=Vector3(0,0,0),initialised=false,clock=0,castSeen=false,
-        angles={bands=0,blades=0,gems=0,core=0},spin={bands=SPIN.bands,blades=SPIN.blades,gems=SPIN.gems,core=SPIN.core}}
+        angles={bands=0,blades=0,gems=0,core=0}}
     local ok,err=pcall(function()
         local source=assert(cache:GetResource('Material',MATERIAL),'catalyst material unavailable')
         visual.material=assert(source:Clone('ClockCatalystMat'),'catalyst material clone failed')
-        local sand=cache:GetResource('Material',SAND)
-        visual.sandMaterial=sand and sand:Clone('ClockSandMat') or nil
         visual.root=scene:CreateChild('time_catalyst')
         visual.root.temporary=true
         visual.root.enabled=false
-        visual.shown=false
-        visual.ringAge=1
         visual.pivots={}
         visual.geometry={}
         for _,name in ipairs(PARTS) do
             local pivot=visual.root:CreateChild('catalyst_'..name)
+            pivot.enabled=false
             visual.pivots[name]=pivot
             local g=assert(pivot:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
             g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
             g:BeginGeometry(0,TRIANGLE_LIST)
             visual.geometry[name]=g
         end
-        if visual.sandMaterial then
-            visual.sandNode=visual.root:CreateChild('catalyst_sand')
-            BuildSand(visual.sandNode,visual.sandMaterial)
-            visual.sandNode.enabled=false
-        end
-        local motes=cache:GetResource('Material',MOTES)
-        visual.motesMaterial=motes and motes:Clone('ClockMotesMat') or nil
-        if visual.motesMaterial then
-            visual.motesMaterial:SetShaderParameter('spread',Variant(V.SCALE))
-            visual.motesNode=visual.root:CreateChild('catalyst_motes')
-            BuildMotes(visual.motesNode,visual.motesMaterial)
-            visual.motesNode.enabled=false
-        end
-        local ring=cache:GetResource('Material',RING)
-        visual.ringMaterial=ring and ring:Clone('ClockRingMat') or nil
-        if visual.ringMaterial then
-            visual.ringNode=visual.root:CreateChild('catalyst_ring')
-            BuildRing(visual.ringNode,visual.ringMaterial)
-            visual.ringNode.enabled=false
-        end
-        for _,pivot in pairs(visual.pivots) do pivot.enabled=false end
+        visual.fx=Fx.New(scene,visual.root,cameraNode)
+        Fx.SetMode(visual.fx,V.FX_MODE)
     end)
     if not ok then
         V.Dispose(visual)
@@ -223,17 +123,16 @@ end
 local function Smooth(current,target,rate,dt)
     return current+(target-current)*(1-math.exp(-rate*dt))
 end
--- Critically damped spring on a Vector3 table (components updated in place).
+-- Critically damped spring on a Vector3 (returns new position and velocity).
 local function Spring(pos,vel,target,dt,omega)
-    local dx,dy,dz=pos.x-target.x,pos.y-target.y,pos.z-target.z
     local e=math.exp(-omega*dt)
     local function Axis(d,v)
         local t=v+omega*d
         return (d+t*dt)*e, (v-omega*t*dt)*e
     end
-    local nx,vx=Axis(dx,vel.x)
-    local ny,vy=Axis(dy,vel.y)
-    local nz,vz=Axis(dz,vel.z)
+    local nx,vx=Axis(pos.x-target.x,vel.x)
+    local ny,vy=Axis(pos.y-target.y,vel.y)
+    local nz,vz=Axis(pos.z-target.z,vel.z)
     return Vector3(target.x+nx,target.y+ny,target.z+nz),Vector3(vx,vy,vz)
 end
 
@@ -287,9 +186,11 @@ function V.Update(visual,dt,ctx)
     -- lift arc while travelling between the rest slot and the palm
     local travel=visual.aim*(1-visual.aim)*4
     visual.pos,visual.vel=newPos,newVel
+    visual.speed=newVel:Length()
     local show=Vector3(newPos.x,newPos.y+.08*travel,newPos.z)
     -- cast pop: edge of ctx.casting
-    if ctx.casting and not visual.castSeen then visual.pulse=1;visual.ringAge=0 end
+    local castEdge=false
+    if ctx.casting and not visual.castSeen then visual.pulse=1;castEdge=true end
     visual.castSeen=ctx.casting==true
     visual.pulse=Smooth(visual.pulse,0,5,dt)
     local boost=math.min(5,1+2.0*visual.aim+2.4*visual.charge+3.5*visual.pulse)
@@ -298,7 +199,8 @@ function V.Update(visual,dt,ctx)
     visual.root.position=show
     -- front face toward the camera behind the caster; gentle idle sway so it never looks pasted on
     local sway=Quaternion(0,7*math.sin(visual.clock*.7),0)
-    visual.root.rotation=yaw*sway
+    local orient=yaw*sway
+    visual.root.rotation=orient
     visual.root.scale=Vector3(scale,scale,scale)
     -- part spin
     for _,name in ipairs({'bands','blades','core'}) do
@@ -313,20 +215,23 @@ function V.Update(visual,dt,ctx)
     local glow=math.min(1,.15+.55*visual.aim+.5*visual.charge+.5*visual.pulse)
     SetQuant(visual,visual.material,'glow',glow,20)
     SetQuant(visual,visual.material,'fade',visual.fade,20)
-    if visual.ringMaterial then
-        visual.ringAge=math.min(1,visual.ringAge+dt/.8)
-        local on=visual.ringAge<1
-        if visual.ringNode.enabled~=on then visual.ringNode.enabled=on end
-        if on then SetQuant(visual,visual.ringMaterial,'age',visual.ringAge,40) end
-    end
-    if visual.motesMaterial then
-        SetQuant(visual,visual.motesMaterial,'strength',(.55+.45*visual.aim+.3*visual.charge)*visual.fade,20)
-    end
-    if visual.sandMaterial then
-        SetQuant(visual,visual.sandMaterial,'strength',(.40+.55*visual.aim+.35*visual.charge)*visual.fade,20)
-        SetQuant(visual,visual.sandMaterial,'tighten',math.min(1,.55*visual.aim+.45*visual.charge),20)
-        SetQuant(visual,visual.sandMaterial,'flow_speed',.11*(1+.9*visual.aim+1.6*visual.charge+1.2*visual.pulse),50)
-    end
+    Fx.Update(visual.fx,dt,{center=show,rot=orient,scale=scale,aim=visual.aim,charge=visual.charge,
+        pulse=visual.pulse,speed=visual.speed,fade=visual.fade,burst=castEdge})
+end
+
+--- Pixel particle quads face the camera: draw after the camera has moved this frame.
+---@param visual table?
+function V.Draw(visual)
+    if visual and visual.shown then Fx.Draw(visual.fx) end
+end
+
+---@param visual table?
+---@param mode string? pixel | texture | off; nil cycles
+---@return string? applied
+function V.SetFxMode(visual,mode)
+    if not visual then return nil end
+    if mode then return Fx.SetMode(visual.fx,mode) end
+    return Fx.NextMode(visual.fx)
 end
 
 ---@param visual table?
@@ -338,11 +243,9 @@ end
 ---@param visual table?
 function V.Dispose(visual)
     if not visual then return end
+    Fx.Dispose(visual.fx);visual.fx=nil
     if visual.root then pcall(visual.root.Remove,visual.root);visual.root=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end
-    if visual.sandMaterial then pcall(visual.sandMaterial.Dispose,visual.sandMaterial);visual.sandMaterial=nil end
-    if visual.motesMaterial then pcall(visual.motesMaterial.Dispose,visual.motesMaterial);visual.motesMaterial=nil end
-    if visual.ringMaterial then pcall(visual.ringMaterial.Dispose,visual.ringMaterial);visual.ringMaterial=nil end
     visual.pivots,visual.geometry=nil,nil
 end
 return V
