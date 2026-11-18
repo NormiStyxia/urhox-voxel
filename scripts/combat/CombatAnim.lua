@@ -43,6 +43,12 @@ local FOREARM_ARM = {forearm_right="arm_right",forearm_left="arm_left"}
 ---@field motion number
 ---@field ik table<string, CombatIKResult>
 ---@field handWeight number Smoothed weaponInHand value for running arms.
+---@field entry CombatComboEntry
+---@class CombatComboEntry
+---@field enabled boolean
+---@field hand Vector3 上一帧最终握点，身体局部坐标。
+---@field blade Vector3 上一帧最终剑向，身体局部坐标。
+---@field rotations table<string, Quaternion> 上一帧最终骨骼姿势。
 ---@class CombatArm
 ---@field shoulder Vector3
 ---@field grip Vector3
@@ -314,6 +320,21 @@ local function handTarget(c,name,p,params,arm,bodyHeight,bodyRotation)
     local target=pathPoint(path,p)
     return Vector3(target.x,target.y-bodyHeight,target.z)
 end
+local function entryBlend(s)
+    local ending=s.clip.comboEntry
+    return s.entry.enabled and ending and ease("smoothStep",clamp(s.sample/ending,0,1)) or 1
+end
+---@param s CombatAnimTrack
+---@param point Vector3
+local function entryPoint(s,point,bodyHeight)
+    if entryBlend(s)>=1 then return point end
+    local first=s.clip.handPath.arm_right.segments[1]
+    local from,to=s.entry.hand,first.b
+    local u=entryBlend(s)
+    -- 连段直接接到下一刀的预备末端，不再绕过公共 ready 点。
+    local out=math.sin(math.pi*u)*.60
+    return Vector3(from.x+(to[1]-from.x)*u,from.y+(to[2]-bodyHeight-from.y)*u,from.z+(to[3]-from.z)*u+out)
+end
 local function pathPole(path)
     if path.pole then return Vector3(path.pole[1],path.pole[2],path.pole[3]) end
     if path.mode or (path.segments and path.segments[2] and path.segments[2].plane=="yz") then return Vector3(1,0,0) end
@@ -360,7 +381,8 @@ end
 ---@param s CombatAnimTrack
 local function weight(s)
     if s.stopping then
-        return s.fadeOut<=0 and 0 or s.stopWeight*clamp(1-s.stopAge/s.fadeOut,0,1)
+        local remaining=s.fadeOut<=0 and 0 or clamp(1-s.stopAge/s.fadeOut,0,1)
+        return s.stopWeight*(s.clip.smoothBlend and ease("smoothStep",remaining) or remaining)
     end
     local w=s.fadeIn<=0 and 1 or clamp(s.age/s.fadeIn,0,1)
     if s.clip.smoothBlend then w=ease("smoothStep",w) end
@@ -466,7 +488,9 @@ function A:init(character,node,opts)
             t=0,age=0,realAge=0,previousT=0,speed=1,fadeIn=.08,fadeOut=.08,stopAge=0,stopWeight=0,weight=0,
             params={},nextEvent=1,complete=false,hitOpen=false,cancelOpen=false,protectOpen=false,
             sample=0,motion=0,handWeight=1,
+            entry={enabled=false,hand=Vector3(0,0,0),blade=Vector3(0,-1,0),rotations={}},
             ik={arm_right=ikBuffer(),arm_left=ikBuffer()}}
+        for _,name in ipairs(BONE_NAMES) do self.tracks[i].entry.rotations[name]=Quaternion(0,0,0) end
     end
     for i=1,MAX_EVENTS do
         self.queue[i]={name="",clip="",handle=0,t=0}
@@ -512,6 +536,31 @@ function A:Play(clipId,opts)
     local slot=nil
     for _,s in ipairs(self.tracks) do if not s.live then slot=s;break end end
     if not slot then return nil,"track_capacity" end
+    slot.entry.enabled=false
+    if c.comboEntry and self.pathIK and not (opts.params and opts.params.legacyPose==1) then
+        for _,source in ipairs(self.ordered) do
+            if source.live and source.handle==opts.entryFrom and (source.clip.comboEntry or source.clip.id=="sword_heavy_charge") then
+                local arm=self.arms.arm_right
+                local bone=self.character.bones.arm_right
+                local forearm=self.forearms.arm_right
+                local limb=forearm and bone.rotation*forearm.rotation or bone.rotation --[[@as Quaternion]]
+                local grip=forearm and bone.rotation*(arm.elbow+forearm.rotation*arm.hand)
+                    or bone.rotation*arm.grip --[[@as Vector3]]
+                slot.entry.hand=Vector3(arm.shoulder.x+grip.x,arm.shoulder.y+grip.y,arm.shoulder.z+grip.z)
+                local e=self.weaponEuler
+                slot.entry.blade=limb*self.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
+                for _,name in ipairs(BONE_NAMES) do
+                    local current=self.character.bones[name]
+                    if current then
+                        local q=current.rotation
+                        slot.entry.rotations[name]=Quaternion(q.w,q.x,q.y,q.z)
+                    end
+                end
+                slot.entry.enabled=true
+                break
+            end
+        end
+    end
     -- Remove dead references before reusing a slot; ordered retains blend order.
     for i=#self.ordered,1,-1 do if not self.ordered[i].live then table.remove(self.ordered,i) end end
     for _,s in ipairs(self.ordered) do
@@ -730,8 +779,10 @@ function A:Apply()
                         if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and (ik or authored) then
                             local bend=ik and solved.bend or elbowBend(c,armName,s.sample)
                             self.target:FromEulerAngles(bend,0,0)
+                            local target=self.target
+                            if entryBlend(s)<1 then target=s.entry.rotations[name]:Slerp(target,entryBlend(s)) end
                             total=total+s.weight
-                            mixed=mixed:Slerp(self.target,s.weight/total)
+                            mixed=mixed:Slerp(target,s.weight/total)
                         end
                     end
                     local track=not armName and ((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
@@ -772,11 +823,12 @@ function A:Apply()
                                     local delta=right.shoulder-offset-arm.shoulder
                                     local d=vectorLength(delta)
                                     if d>EPS and d<arm.length+right.length and d>math.abs(arm.length-right.length) then
-                                        local axis=delta*(1/d)
+                                        local axis=delta*(1/d) --[[@as Vector3]]
                                         local along=(arm.length^2-right.length^2+d*d)/(2*d)
-                                        local center=arm.shoulder+axis*along
-                                        local radial=point-center
-                                        radial=radial-axis*dot(radial,axis)
+                                        local center=arm.shoulder+axis*along --[[@as Vector3]]
+                                        local radial=point-center --[[@as Vector3]]
+                                        local alongAxis=dot(radial,axis)
+                                        radial=Vector3(radial.x-axis.x*alongAxis,radial.y-axis.y*alongAxis,radial.z-axis.z*alongAxis)
                                         point=center+unit(radial,Vector3(0,0,1))*math.sqrt(math.max(0,arm.length^2-along^2))
                                     end
                                 elseif path.mode=='bow_string' and c.id~='bow_cancel' then
@@ -788,8 +840,11 @@ function A:Apply()
                                     end
                                 end
                             end
+                            if name=="arm_right" then point=entryPoint(s,point,self.bodyHeight) end
                             target=solveArm(arm,point,target,s.ik[name],pathPole(path),elbowBend(c,name,s.sample))
                         elseif s.ik[name] then s.ik[name].enabled=false end
+                        local entry=s.entry.rotations[name]
+                        if entry and entryBlend(s)<1 then target=entry:Slerp(target,entryBlend(s)) end
                         total=total+s.weight
                         mixed=mixed:Slerp(target,s.weight/total)
                     end
@@ -843,6 +898,12 @@ function A:Apply()
                                     direction.z+(d[3]-direction.z)*u+out),direction)
                             end
                         end
+                        if entryBlend(s)<1 then
+                            local d,u=s.entry.blade,entryBlend(s)
+                            -- 翻腕换边时剑尖先绕到身前，不能在左右剑向之间穿胸抄近路。
+                            local out=math.sin(math.pi*u)*1.2
+                            direction=unit(Vector3(d.x+(direction.x-d.x)*u,d.y+(direction.y-d.y)*u,d.z+(direction.z-d.z)*u+out),d)
+                        end
                         bladeTotal=bladeTotal+w
                         bx,by,bz=bx+direction.x*w,by+direction.y*w,bz+direction.z*w
                         self.bladeSide,self.bladeMode=side,c.bladePath.mode
@@ -855,8 +916,16 @@ function A:Apply()
             rootDelta=rootDelta+(ry/total-rootDelta)*w
             ox,oy,oz=ox+(lx/total-ox)*w,oy+(ly/total-oy)*w,oz+(lz/total-oz)*w
             ex,ey,ez=ex+(lp/total-ex)*w,ey+(lyaw/total-ey)*w,ez+(lr/total-ez)*w
-            self.bladeWeight=self.bladeWeight*(1-w)+math.min(bladeTotal,1)
-            if bladeTotal>0 then self.bladeDirection=unit(Vector3(bx,by,bz),Vector3(0,1,0)) end
+            local lower=self.bladeWeight*(1-w)
+            local upper=math.min(bladeTotal,1)
+            self.bladeWeight=lower+upper
+            if bladeTotal>0 then
+                local d=unit(Vector3(bx,by,bz),Vector3(0,1,0))
+                local before=self.bladeDirection
+                local u=upper/self.bladeWeight
+                self.bladeDirection=unit(Vector3(before.x+(d.x-before.x)*u,before.y+(d.y-before.y)*u,
+                    before.z+(d.z-before.z)*u),d)
+            end
         end
     end
     if self.bladeWeight>0 then

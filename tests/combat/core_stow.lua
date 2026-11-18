@@ -87,9 +87,56 @@ for line in src:gmatch('[^\n]+')do if line:find("Safe('Animation.Base'",1,true)t
 assert(base)
 local armed
 local env=setmetatable({M={ride={mode='free'}},dt=.016,nomi_={Animate=function()end},
- caster_={charging=false,castAnim=0},combatMoves_={hitstop=0,WeaponInHand=function()return false end},
+ caster_={charging=false,castAnim=0},combatMoves_={hitstop=0,BaseArmed=function()return false end},
  Safe=function(_,fn,obj,dt,value)armed=value end},{__index=_G})
 assert(load(base,'actual Scene base armed routing','t',env))();assert(armed==false)
-env.combatMoves_.WeaponInHand=function()return true end
+env.combatMoves_.BaseArmed=function()return true end
 assert(load(base,'actual Scene base armed routing','t',env))();assert(armed==true)
-print('PASS stow/run ownership, grace, combo, swap, bow cancellation, base armed routing')
+New('sword');State.Activity(true);assert(m:WeaponInHand() and not m:BaseArmed(),'sword IK never enables legacy arm raising')
+New('bow');State.Activity(true);assert(m:BaseArmed(),'bow still uses armed base')
+env.combatMoves_.BaseArmed=function()return false end;env.caster_.charging=true
+assert(load(base,'actual Scene casting routing','t',env))();assert(armed==true,'real spell charging keeps armed base')
+-- 真实 BlockCharacter 基础动画 + CombatAnim：全息收剑期间不能先前伸再放下。
+local Block=require('game.BlockCharacter')
+Clamp=function(x,a,b)return math.max(a,math.min(b,x))end
+Lerp=function(a,b,t)return a+(b-a)*t end
+for _,fps in ipairs({30,60,120}) do
+ for stage=1,5 do
+  New('sword')
+  local character=S.anim.character()
+  setmetatable(character,{__index=Block})
+  character.gait,character.air,character.crouch,character.armed=0,0,0,0
+  character.phase,character.useTimer=0,0
+  character.basePos.root=Vector3(0,1,0)
+  m.anim=A.New(character,nil,{quantize=false});m.combo=stage-1
+  State.Activity(true);assert(m:Action('light'))
+  local stowAt,previous,returnHandle,startGrip
+  local total=0
+  for frame=1,math.ceil(2.4*fps) do
+   local dt=1/fps
+   State.Update(dt);m:Update(dt,{allowed=true})
+   character:Update(dt,{onGround=true,moveSpeed=0,armed=m:BaseArmed(),aiming=m:BaseArmed(),aimPitch=12})
+   m.anim:Apply();m.anim:Poll();m:AfterPose();total=total+dt
+   local arm=m.anim.arms.arm_right
+   local p=character.bones.arm_right.rotation*arm.grip+arm.shoulder
+   if rig.pose=='back' and not stowAt then
+    stowAt=total;startGrip=previous
+    for _,s in ipairs(m.anim.tracks)do
+     if s.live and s.clip.id=='stance_combat_sword' then
+      returnHandle=s;assert(s.stopping and s.fadeOut==.45,'idle sword return uses slow cosmetic fade')
+     end
+    end
+    assert(returnHandle and not m.clip and State.TransitionRemaining()==0,'return never locks gameplay')
+   end
+   if stowAt and total-stowAt<.46 then
+    assert(character.armed==0,'no residual legacy raised-arm base during sword stow')
+    assert(p.z<=startGrip.z+.004,'hand must not lunge forward when projection begins')
+    local jump=math.sqrt((p.x-previous.x)^2+(p.y-previous.y)^2+(p.z-previous.z)^2)
+    assert(jump<.03,'return remains slow and continuous')
+   end
+   previous=p
+  end
+  assert(stowAt and not returnHandle.live,'return finishes on the normal idle pose')
+ end
+end
+print('PASS stow/run ownership, grace, combo, swap, bow cancellation, base armed routing, smooth hologram arm return')

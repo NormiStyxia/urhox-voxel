@@ -87,8 +87,8 @@ m=New();m.invuln=.8;m.hitstop=1;Tick(.30);S.near(m.invuln,.5)
 
 -- F7 seek follows authored events without sending them through gameplay handlers.
 local preview=A.New(S.anim.character(),nil)
-local t,events=C.SeekPreview(preview,'sword_light_1',.18,4/30)
-S.near(t,.18); assert(C.PreviewPhase('sword_light_1',t)=='active' and events:find('hit_on',1,true))
+local t,events=C.SeekPreview(preview,'sword_light_1',.20,4/30)
+S.near(t,.20); assert(C.PreviewPhase('sword_light_1',t)=='active' and events:find('hit_on',1,true))
 t,events=C.SeekPreview(preview,'sword_light_1',.10,.18)
 assert(C.PreviewPhase('sword_light_1',t)=='anticipation' and not events:find('hit_on',1,true))
 t,events=C.SeekPreview(preview,'sword_heavy_release',11/30,.33) -- second cut's hit_on

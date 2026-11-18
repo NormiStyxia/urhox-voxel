@@ -192,11 +192,15 @@ end
 function C:WeaponInHand()
     return (self.rig.pose or self.state.GetPose())=='hand'
 end
-function C:Play(id,fadeIn)
+-- 剑由低位 IK 管手臂，基础层保持空手姿态，收剑时才不会露出旧前举。
+function C:BaseArmed()
+    return self:WeaponInHand() and self.state.GetWeapon()=='bow'
+end
+function C:Play(id,fadeIn,entryFrom)
     if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
-    -- Scale the clip clock; charge_full remains the sole full-charge signal.
-    local speed=1
+    -- Sword attacks use a slightly slower clock so the anticipation and weight transfer read clearly.
+    local speed=(id:find('sword_light_',1,true) or id=='sword_heavy_release' or id=='sword_heavy_charge') and .90 or 1
     local params=self.playParams
     for k in pairs(params) do params[k]=nil end
     params.weaponInHand=self:WeaponInHand() and 1 or 0
@@ -211,7 +215,7 @@ function C:Play(id,fadeIn)
         params.p,params.aimPitch=self.bowPoseCharge,self.bowPosePitch
     end
     local opts=self.playOpts
-    opts.stats,opts.speed,opts.fadeIn,opts.params=stats,speed,fadeIn,params
+    opts.stats,opts.speed,opts.fadeIn,opts.params,opts.entryFrom=stats,speed,fadeIn,params,entryFrom
     local handle=self.state.PerfCall('animPlay',self.anim.Play,self.anim,id,opts)
     if not handle then return false end
     self.clip,self.handle=id,handle
@@ -390,7 +394,7 @@ function C:UpdatePlunge(dt)
     self:Sound('hit_heavy',sound);sound.material='stone';self:Sound('arrow_hit',sound)
     sound.tier,sound.pitch,sound.material,sound.hitId=nil,nil,nil,nil
 end
-function C:Action(kind,axis)
+function C:Action(kind,axis,entryFrom)
     if self.dead then return false,'dead' end
     if self.comboCooldownUntil and self.age<self.comboCooldownUntil-1e-8 then return false,'recovery' end
     if kind~='light' and kind~='heavy' and kind~='hold' then return false,'unknown-action' end
@@ -403,7 +407,8 @@ function C:Action(kind,axis)
         self.anim:Stop(self.handle,.04);self.clip,self.handle=nil,nil
     end
     if self.clip and self.cancelOpen and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then
-        self.anim:Stop(self.handle,.04); self.clip,self.handle=nil,nil
+        if kind=='light' and Data.Clips[self.clip].comboEntry then entryFrom=self.handle end
+        self.anim:Stop(self.handle,entryFrom and .08 or .04); self.clip,self.handle=nil,nil
     end
     if self.state.TransitionRemaining()>0 then return false end
     if self.clip then return false end
@@ -445,7 +450,7 @@ function C:Action(kind,axis)
         if self.comboUntil and self.age>self.comboUntil then self.combo=0 end
         self.comboUntil=nil
         self.combo=self.combo%C.COMBO_LENGTH+1
-        return self:Play(COMBO[self.combo].id) and self:LimitLunge(COMBO[self.combo].id)
+        return self:Play(COMBO[self.combo].id,entryFrom and .08 or nil,entryFrom) and self:LimitLunge(COMBO[self.combo].id)
     end
 end
 -- Dashes and leaps stop STOP_GAP short of the nearest target in front instead
@@ -472,8 +477,9 @@ function C:Release()
     if self.clip=='sword_heavy_charge' then
         local heavy=self.hold>=HEAVY_HOLD-1e-8 -- gesture classification, not a damage window
         self.holdSource=nil;self.releaseFull=false
-        self.anim:Stop(self.handle,0); self.clip=nil
-        self:Action(heavy and 'heavy' or 'light')
+        local entryFrom=not heavy and self.handle or nil
+        self.anim:Stop(self.handle,entryFrom and .08 or 0); self.clip=nil
+        self:Action(heavy and 'heavy' or 'light',nil,entryFrom)
     elseif self.clip=='bow_hold' or self.clip=='bow_draw' then
         local power=(self.charge*self.charge+2*self.charge)/3
         if power<.1 or not self:WeaponInHand() then
@@ -734,7 +740,13 @@ function C:Update(dt,controls)
             if self.stanceHandle then self.anim:Stop(self.stanceHandle,.15) end
             self.stanceHandle=self.anim:Play(stance,{fadeIn=.15})
         end
-    elseif self.stanceHandle then self.anim:Stop(self.stanceHandle,.08);self.stanceHandle=nil end
+    elseif self.stanceHandle then
+        local idleStow=self.state.InCombat() and self.state.GetWeapon()=='sword'
+            and self.state.GetPose()=='back' and not self.clip
+        -- 原地全息收剑：低位手臂缓缓回到空手站姿，不加动作锁或重播起手。
+        self.anim:Stop(self.stanceHandle,idleStow and .45 or .08)
+        self.stanceHandle=nil
+    end
     self.shakeAge=self.shakeAge+dt
     local inCombat=self.state.InCombat()
     self.stamina:Update(dt,inCombat,foot~=nil and foot:IsRunning())

@@ -41,6 +41,7 @@
 ---@field aimFacing boolean|nil Bow aim is relative to W2 facing, not torso lean.
 ---@field locomotion boolean|nil Pure pose, driven by real displacement gaitPhase.
 ---@field smoothBlend boolean|nil Smooth natural entry/exit, never retime events.
+---@field comboEntry number|nil 普攻继承上一刀末势的预备段终点（归一化时间）。
 
 ---@class CombatClipCatalog
 ---@field Layer table<string, number>
@@ -183,19 +184,19 @@ local LOW_GUARD={.30,.74,.28}
 local SETTLE_DIR={.42,-.86,.28}
 local STANCE_EULER={73,0,-14} -- stance_combat_sword grip euler (same low guard)
 local LIGHT={
-    {id="sword_light_1",dur=.80,on=.16,contact=.22,off=.26,cancel=.32,
-        yaw={0,35,22,-30,-45,0},
+    {id="sword_light_1",dur=.80,on=.19,contact=.25,off=.29,cancel=.35,
+        yaw={0,0,28,-30,-45,0},
         left={{0,0,-8},{-35,-10,-25},{-20,-5,-28},{-10,15,-35},{-5,18,-25},{0,0,-8}},
         legs={0,-10,-16,-22,-14,0},
         root={{0,-.04},{.10,-.08},{.16,-.06},{.22,-.11},{.32,-.10},{.48,-.12},{.80,0}}},
-    {id="sword_light_2",dur=.82,on=.17,contact=.23,off=.27,cancel=.33,
-        yaw={0,-35,-25,22,40,0},
+    {id="sword_light_2",dur=.82,on=.20,contact=.26,off=.30,cancel=.36,
+        yaw={0,-28,25,22,40,0},
         left={{0,0,-8},{-10,15,-30},{-15,10,-25},{-40,-10,-20},{-30,-12,-18},{0,0,-8}},
         legs={0,-18,-22,-10,-6,0},
         -- Crouch into the low guard, then rise up onto the toes with the blade.
         root={{0,-.04},{.10,-.15},{.17,-.11},{.23,.05,"outQuad"},{.33,.03},{.48,-.10},{.82,0}}},
-    {id="sword_light_3",dur=.88,on=.18,contact=.24,off=.30,cancel=.38,
-        yaw={0,45,30,-35,-55,0},
+    {id="sword_light_3",dur=.88,on=.21,contact=.27,off=.33,cancel=.41,
+        yaw={0,35,28,-35,-55,0},
         left={{0,0,-8},{-60,-20,-35},{-45,-15,-40},{-15,20,-55},{-10,25,-45},{0,0,-8}},
         legs={0,-24,-34,-30,-22,0},
         root={{0,-.04},{.08,-.13},{.18,-.09},{.24,-.13},{.36,-.12},{.52,-.13},{.88,0}}},
@@ -209,8 +210,9 @@ local LIGHT={
         yaw={0,15,8,0,-8,0},
         left={{0,0,-8},{-60,0,-30},{-150,10,-20},{-60,15,-25},{-30,10,-30},{0,0,-8}},
         legs={0,-20,-45,-30,-26,0},
-        -- Leap: crouch, rise to ~.7m while the blade circles overhead, slam down.
-        root={{0,-.04},{.13,-.17},{.30,.70,"outQuad"},{.40,.30,"inQuad"},{.46,-.15,"inQuad"},{.70,-.14},{1.10,0}}},
+        -- Leap into a committed downward strike: lower the hips through contact,
+        -- then keep the chest folded over the landing leg instead of staying upright.
+        root={{0,-.04},{.13,-.17},{.30,.55,"outQuad"},{.40,.12,"inQuad"},{.46,-.20,"inQuad"},{.70,-.16},{1.10,0}}},
 }
 for _,row in ipairs(LIGHT) do
     local d=row.dur
@@ -428,6 +430,7 @@ local function pathAttack(id,a,b,degrees,plane,contact,ending,lunge,pole)
     local ready={.35,1.05,.30}
     local windup=arcPoint(spec,-.12)
     local overshoot=arcPoint(spec,1.08)
+    c.comboEntry=on*.65
     c.handPath={arm_right={segments={
         bez(0,on*.65,ready,windup,{a[1],a[2]+.10,a[3]-.12},"inQuad"),
         arcPart(spec,on*.65,on,-.12,0,"inQuad"),
@@ -537,7 +540,7 @@ end
 -- Light rows author their own crouch/hop root; lean pitch is shared here.
 local LEAN={sword_light_1={6,-6,4,26,22,6},sword_light_2={6,14,10,-6,-8,6},
     sword_light_3={6,-4,18,30,26,6},sword_light_4={6,10,4,12,10,6},
-    sword_light_5={6,18,-10,8,34,6},sword_heavy_release={-8,10,26,10,28,6}}
+    sword_light_5={6,18,30,48,42,10},sword_heavy_release={-8,10,26,10,28,6}}
 local DIP={sword_heavy_release=-.19}
 for id,lean in pairs(LEAN) do
     local c=C.Clips[id]
@@ -559,6 +562,13 @@ C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
     bez(0,1,{.35,1.05,.30},{.65,1.55,-.20},{.70,1.45,-.35},"inQuad")}}}
 
 C.Clips.sword_heavy_charge.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
+
+-- 攻击层淡出后仍保持低位握剑，不能交回基础层的前举持械姿势。
+local swordStance=C.Clips.stance_combat_sword
+swordStance.smoothBlend=true
+swordStance.handPath={arm_right={space="body_feet",segments={bez(0,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
+swordStance.bladePath={mode="radial",origin={0,1.05,0},settle={-1,0,SETTLE_DIR},side="arm_right"}
+swordStance.elbow={arm_right={{0,-22},{1,-22}}}
 
 -- 多关键帧悬停→俯冲→落地随动；符号待 Web 校准。
 local ps,pl,pd=C.Clips.plunge_start,C.Clips.plunge_loop,C.Clips.plunge_land
