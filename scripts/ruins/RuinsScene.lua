@@ -20,6 +20,7 @@ local Build = require("ruins.RuinsBuild")
 local Puzzles = require("ruins.RuinsPuzzles")
 local Spells = require("ruins.TimeSpells")
 local Sigil = require("ruins.TimeSigil")
+local TimeCatalyst = require("combat.TimeCatalystVisual")
 local RuinsDragon = require("ruins.RuinsDragon")
 local Nomi = require("ruins.NomiController")
 local HUD = require("ruins.RuinsHUD")
@@ -98,6 +99,7 @@ local combatDebugText_,combatDebugUntil_=nil,0
 local handWasOn_
 ---@type table|nil
 local combatRig_ = nil
+local timeCatalyst_ = nil -- floating star-clock orb for time (casting) mode; visual only
 local combatInputBlocked = false
 local combatNoticeAt = 0
 local touchRevision = 0
@@ -817,6 +819,11 @@ function M.Start()
         handPos = function() return nomi_:HandPos() end,
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
+    do
+        local catalyst,err=TimeCatalyst.New(scene_)
+        if catalyst then timeCatalyst_=catalyst
+        else print('TimeCatalyst unavailable: '..tostring(err)) end
+    end
     nomi_.ignoreAimVolume=IsCombatVisualVolume
     CombatState.Configure({rig=combatRig_,weapon=combatRig_.active,aggro=CombatHasAggro,explicitSelection=true,
         cancel=function(reason)
@@ -1713,6 +1720,16 @@ function Ruins_HandleUpdate(eventType, eventData)
     if CombatState.InCombat() then fx_.handGlow=0 end
     glow=glow*CombatState.Glow()
     Safe('FX.Hand',CombatMoves.UpdateHandFX,fx_,handMotes_,dt,nomi_:HandPos(),glowCol,glow)
+    if timeCatalyst_ then
+        Safe('TimeCatalyst',function()
+            TimeCatalyst.Step(timeCatalyst_)
+            local active=CombatState.GetSelection()=='time' and not M.mounted and not (combatMoves_ and combatMoves_.dead)
+                and not ForgeShowroom.Active()
+            TimeCatalyst.Update(timeCatalyst_,dt,{active=active,position=nomi_:Position(),yaw=nomi_.yaw or 0,
+                hand=nomi_:HandPos(),aiming=caster_.charging or caster_.castAnim>0,charge=caster_.charging and caster_.charge or 0,
+                casting=caster_.castAnim>0})
+        end)
+    end
     M.combat.handEffect=M.combat.handEffect or {}
     local handEffect=M.combat.handEffect
     handEffect.requested,handEffect.glow=glow,fx_.handGlow
@@ -1948,6 +1965,7 @@ function M.Stop()
     arrowNodes_={}; animPreview_={index=0,t=0,params={moveX=0,moveZ=-1,bow=0,p=.5,weaponInHand=1},direction='后'}; CombatHUD.Set(nil)
     if combatRig_ and combatRig_.Dispose then combatRig_:Dispose() end
     combatRig_=nil
+    if timeCatalyst_ then TimeCatalyst.Dispose(timeCatalyst_);timeCatalyst_=nil end
     VoidRewind.Stop() -- release images while the UI NanoVG context is still alive
     TouchControls.Stop()
     HUD.Stop()
