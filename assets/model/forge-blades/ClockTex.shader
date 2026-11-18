@@ -10,6 +10,8 @@ uniform float spin = 0.3;              // rad/sec, texture rotation about its ce
 uniform float breathe = 0.0;           // 0..1: brightness swell (cast / charge)
 uniform float billboard = 0.0;
 uniform float half_size = 0.5;         // object-space half edge of the quad (billboard mode)
+uniform float hand_rate = 0.0;          // only impact sigils enable a rotating hand
+uniform float hand_phase = 0.0;         // phase for a fresh impact
 varying vec2 uv_v;
 void vertex() {
     uv_v = UV;
@@ -27,7 +29,7 @@ void fragment() {
     // The Roman dial and its bezel stay fixed. Only the procedural hand moves.
     vec2 q = uv_v;
     vec4 t = texture(tex, q);
-    float handAngle = TIME * 4.2;
+    float handAngle = hand_phase + TIME * hand_rate;
     vec2 hand = vec2(cos(handAngle), sin(handAngle));
     float along = dot(p, hand);
     vec2 side = p - hand * along;

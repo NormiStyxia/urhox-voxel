@@ -45,6 +45,8 @@ local function Show(s,pos,rot,r,color,fade,progress)
     s.mat:SetShaderParameter('tint',Variant(color))
     if s.dial then
         s.mat:SetShaderParameter('strength',Variant(fade))
+        s.mat:SetShaderParameter('hand_rate',Variant(s.handRate or 0.0))
+        s.mat:SetShaderParameter('hand_phase',Variant(s.handPhase or 0.0))
     else
         s.mat:SetShaderParameter('fade',Variant(fade))
         s.mat:SetShaderParameter('progress',Variant(progress or 1))
@@ -65,6 +67,7 @@ function S:Pulse(pos,normal,color,radius)
     local p=self.impacts[self.next]
     p.pos=pos+normal*.07; p.rot=Quaternion(Vector3.FORWARD,normal)
     p.color=color; p.radius=radius; p.age=0
+    p.handRate=0.0;p.handPhase=0.0
 end
 ---@param aim table
 ---@param hand Vector3
@@ -110,7 +113,8 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
             if t>=1 then p.age=nil; p.node.enabled=false
             else
                 local fade=(1-t)*(1-t)
-                Show(p,p.pos,p.rot*Quaternion(t*360,Vector3.FORWARD),p.radius*(.85+.15*t),p.color,fade)
+                p.handRate=math.pi*8.0
+                Show(p,p.pos,p.rot,p.radius*(.85+.15*t),p.color,fade)
             end
         end
     end
