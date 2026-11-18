@@ -1213,7 +1213,7 @@ local AIM_STATE_NAMES={WHOLE="完整",SHATTERED="破碎中",FROZEN="已碎",REWI
 local enemyAimHits,enemyAimPool,enemyAimShapes={},{},{}
 local function UpdateAim(presentation)
     local aim = nomi_:Aim(60.0)
-    if CombatState.InCombat() then
+    if CombatState.InCombat() or CombatState.GetSelection()=='time' then
         local cam=nomi_:CameraNode()
         local a,b=cam.worldPosition,cam.worldPosition+cam.worldDirection*60
         local enemyHits=Hit.QueryZone(CombatEnemies(),{origin=a,source=a,forward=cam.worldDirection,
