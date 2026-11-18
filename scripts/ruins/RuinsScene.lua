@@ -43,6 +43,7 @@ local WeaponSelectGesture=require('combat.WeaponSelectGesture')
 local WeaponWheel=require('ui.WeaponWheel')
 local weaponGesture_
 local CombatHit = require('combat.Hit')
+local Hit = CombatHit
 local CombatAudio = require('combat.CombatAudio')
 -- Keep failed audio playback from aborting damage/projectile settlement.
 local combatAudioPort={}
