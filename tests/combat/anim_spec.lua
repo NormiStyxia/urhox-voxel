@@ -509,17 +509,17 @@ test("free-facing attacks leave controller heading and horizontal position untou
         end
     end
 end)
-test("both attack feet override gait and head compensation matches final torso keys",function()
+test("attack leg keys stay available for authoring while runtime preserves gait legs",function()
     for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release"}) do
         local c=D.Clips[id]
         for i=1,6 do
             near(c.keys.leg_right[i][2][1],-c.keys.leg_left[i][2][1]*.65)
             near(c.keys.head[i][2][2],-math.max(-30,math.min(30,c.keys.body[i][2][2]*.65)))
         end
-        local a,character=new();a:Play(id,{fadeIn=0,fadeOut=0});a:Update(c.phases.active[1]+.04)
-        character.bones.leg_right.rotation=Quaternion(60,0,0);a:Apply()
+        local a,character=new();a:Play("sprint_loop",{fadeIn=0,params={sprintWeight=1,gaitPhase=.35}})
+        a:Update(0);a:Apply()
         local foot=character.bones.leg_right.rotation
-        Mock.reset(character);character.bones.leg_right.rotation=Quaternion(-60,0,0);a:Update(0);a:Apply()
+        a:Play(id,{fadeIn=0,fadeOut=0});a:Update(c.phases.active[1]+.04);a:Apply()
         sameRotation(character.bones.leg_right.rotation,foot)
     end
 end)
@@ -585,4 +585,27 @@ test("plunge anticipation raises blade and descent points down without root disp
    assert(id=='plunge_start' and blade.y>.85 or id~='plunge_start' and blade.y<-.96,'overhead anticipation / downward descent')
   end
  end
+end)
+
+test("attack preserves locomotion legs and adds body turn over base pose",function()
+    local a,c=new({quantize=false})
+    c.bones.leg_right.rotation=Quaternion(-17,0,0)
+    c.bones.leg_left.rotation=Quaternion(21,0,0)
+    c.bones.body.rotation=Quaternion(14,8,0)
+    a:Play("sprint_loop",{fadeIn=0,params={sprintWeight=1,gaitPhase=.35}})
+    a:Update(0);a:Apply()
+    local legRightBefore,legLeftBefore=c.bones.leg_right.rotation,c.bones.leg_left.rotation
+    a:Play("sword_light_1",{fadeIn=0})
+    a:Update(.18);a:Apply()
+    sameRotation(c.bones.leg_right.rotation,legRightBefore)
+    sameRotation(c.bones.leg_left.rotation,legLeftBefore)
+    local authored=Quaternion(table.unpack(A.DebugSample("sword_light_1",.18).body))
+    assert(math.abs(c.bones.body.rotation.w*authored.w+c.bones.body.rotation.x*authored.x
+        +c.bones.body.rotation.y*authored.y+c.bones.body.rotation.z*authored.z)<.999,
+        "attack must not replace body with the authored combat pose")
+    assert(math.abs(c.bones.body.rotation.w*Quaternion(14,8,0).w
+        +c.bones.body.rotation.x*Quaternion(14,8,0).x
+        +c.bones.body.rotation.y*Quaternion(14,8,0).y
+        +c.bones.body.rotation.z*Quaternion(14,8,0).z)<.999,
+        "body must add a turn during the attack")
 end)

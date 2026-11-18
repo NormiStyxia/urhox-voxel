@@ -710,7 +710,12 @@ function A:Apply()
     for layer=Data.Layer.STANCE,Data.Layer.DEATH do
         for _,name in ipairs(BONE_NAMES) do
             local bone=self.character.bones[name]
-            if bone then
+            -- Attack clips describe the upper-body strike. Keep the locomotion
+            -- layer's leg phases underneath it so a swing does not freeze both
+            -- feet into authored kick angles.
+            local keepLocomotionLegs=layer==Data.Layer.ATTACK
+                and (name=="leg_right" or name=="leg_left")
+            if bone and not keepLocomotionLegs then
                 local base=bone.rotation
                 local mixed=base
                 local total=0
@@ -737,6 +742,16 @@ function A:Apply()
                         end
                         self.target:FromEulerAngles(x,y,z)
                         local target=c.additive and base*self.target or self.target
+                        if c.layer==Data.Layer.ATTACK and c.weaponType=="sword"
+                            and name=="body" and c.keys.body then
+                            -- Attack body keys are authored from the combat
+                            -- stance. Apply only their delta over the current
+                            -- locomotion/base torso pose, preserving gait lean
+                            -- while letting the torso lead the shoulder turn.
+                            local first=c.keys.body[1]
+                            local authoredStart=Quaternion(first[2][1],first[2][2],first[2][3])
+                            target=base*(inverse(authoredStart)*self.target)
+                        end
                         if c.aimFacing and name=="head" and s.params.legacyPose~=1 then
                             target=inverse(self.character.bones.body.rotation)*Quaternion(clamp(s.params.aimPitch or 0,-35,35)+4,0,0)
                         end
