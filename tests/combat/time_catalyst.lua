@@ -126,9 +126,11 @@ for _=1,120 do Visual.Update(v,1/60,Ctx()) end
 assert(v.fx.burst:Count()==0,'burst motes expire')
 -- texture mode: pixel motes cleared, quads enabled and driven
 assert(Visual.SetFxMode(v,'texture')=='texture')
-assert(v.fx.sand:Count()==0 and v.fx.texRoot.enabled and v.fx.dialNode.enabled and v.fx.ringA.enabled)
+assert(v.fx.sand:Count()==0 and v.fx.texRoot.enabled and not v.fx.ringA.enabled,'rings wait for aim/charge')
 for _=1,40 do Visual.Update(v,1/60,Ctx{aiming=true,charge=1}) end
-assert(v.fx.dialMaterial.parameters.strength>.5 and v.fx.dialMaterial.parameters.billboard==1)
+assert(v.fx.ringA.enabled and v.fx.sandMaterialA.parameters.strength>.5,'rings appear while charging')
+for _=1,200 do Visual.Update(v,1/60,Ctx()) end
+assert(not v.fx.ringA.enabled,'rings vanish at rest')
 Visual.Draw(v);assert(v.fx.sand.draws==1,'pixel quads not drawn in texture mode')
 -- off hides both; cycling returns to pixel
 assert(Visual.SetFxMode(v,'off')=='off' and not v.fx.texRoot.enabled)

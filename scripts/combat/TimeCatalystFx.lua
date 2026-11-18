@@ -1,14 +1,14 @@
 -- Time catalyst surroundings, two interchangeable looks (switch with TimeCatalystFx.SetMode):
 --   'pixel'   : voxel-world pixel particles (dragon.VoxelFX.WorldMotes, additive pixel sprites): star-river sand
 --               comets on three orbits, drifting star sparks, a pixel clock ring + burst on every cast, trail while flying.
---   'texture' : AI-painted textures (assets/Textures/fx/clock_dial.png, clock_sand.png) pasted through ClockTex.shader:
---               a camera-facing dial halo behind the orb and two tilted star-sand rings that slowly spin.
+--   'texture' : AI-painted star-sand (assets/Textures/fx/clock_sand.png) through ClockTex.shader: two tilted rings
+--               that appear only while aiming / charging. The Roman clock itself is the casting circle (TimeSigil),
+--               so it is never parked on the weapon.
 --   'off'     : neither (orb only).
 -- Visual only. All positions follow the orb through `state`, so motion rules stay in TimeCatalystVisual.
 local F={}
 F.MODES={'pixel','texture','off'}
 local TEX_SHADER='model/forge-blades/ClockTex.shader'
-local DIAL_TEX='Textures/fx/clock_dial.png'
 local SAND_TEX='Textures/fx/clock_sand.png'
 local MASK=0xFFFFFFFF
 local TAU=math.pi*2
@@ -92,18 +92,11 @@ function F.New(scene,orb,camera)
     local ok,err=pcall(F.BuildPixel,fx)
     if not ok then print('TimeCatalystFx: pixel mode unavailable: '..tostring(err)) end
     ok,err=pcall(function()
-        fx.dialMaterial=assert(MakeMaterial(DIAL_TEX),'dial texture/shader unavailable')
         fx.sandMaterialA=assert(MakeMaterial(SAND_TEX),'sand texture/shader unavailable')
         fx.sandMaterialB=assert(MakeMaterial(SAND_TEX),'sand texture/shader unavailable')
-        fx.dialMaterial:SetShaderParameter('billboard',Variant(1))
-        fx.dialMaterial:SetShaderParameter('half_size',Variant(.50))
-        fx.dialMaterial:SetShaderParameter('spin',Variant(.16))
         fx.sandMaterialA:SetShaderParameter('spin',Variant(.38))
         fx.sandMaterialB:SetShaderParameter('spin',Variant(-.52))
         fx.texRoot=orb:CreateChild('catalyst_tex_fx')
-        fx.dialNode=fx.texRoot:CreateChild('dial')
-        fx.dialNode.position=Vector3(0,0,.06)
-        Quad(fx.dialNode,.50,fx.dialMaterial,MASK)
         fx.ringA=fx.texRoot:CreateChild('sand_a')
         fx.ringA.rotation=Quaternion(58,0,18)
         Quad(fx.ringA,.56,fx.sandMaterialA,MASK)
@@ -111,7 +104,7 @@ function F.New(scene,orb,camera)
         fx.ringB.rotation=Quaternion(-52,20,-32)
         Quad(fx.ringB,.50,fx.sandMaterialB,MASK)
         fx.texRoot.enabled=false
-        for _,n in ipairs({fx.dialNode,fx.ringA,fx.ringB}) do n.enabled=false end
+        for _,n in ipairs({fx.ringA,fx.ringB}) do n.enabled=false end
         fx.ready.texture=true
     end)
     if not ok then print('TimeCatalystFx: texture mode unavailable: '..tostring(err)) end
@@ -121,7 +114,8 @@ end
 local function SetTexEnabled(fx,on)
     if not fx.texRoot then return end
     fx.texRoot.enabled=on
-    fx.dialNode.enabled=on;fx.ringA.enabled=on;fx.ringB.enabled=on
+    -- rings are driven by Update (only while aiming / charging), so entering the mode leaves them off
+    fx.ringA.enabled=false;fx.ringB.enabled=false
 end
 
 ---@param fx table?
@@ -262,8 +256,12 @@ function F.UpdateImpl(fx,dt,s)
         local fade=s.fade
         local aim,charge,pulse=s.aim,s.charge,s.pulse
         local breathe=math.min(1,.5*aim+.5*charge+pulse)
-        fx.dialMaterial:SetShaderParameter('strength',Variant((.34+.42*aim+.30*charge+.35*pulse)*fade))
-        fx.dialMaterial:SetShaderParameter('breathe',Variant(breathe))
+        -- star-sand rings exist only while aiming / charging / casting; nothing parked on the weapon at rest
+        local active=(aim+charge+pulse)>.02 and fade>.01
+        if fx.ringA.enabled~=(active and fx.shown) then
+            fx.ringA.enabled=active and fx.shown;fx.ringB.enabled=active and fx.shown
+        end
+        if not active then return end
         local sandStrength=Variant((.55+.35*aim+.25*charge)*fade)
         fx.sandMaterialA:SetShaderParameter('strength',sandStrength)
         fx.sandMaterialB:SetShaderParameter('strength',sandStrength)
@@ -273,8 +271,6 @@ function F.UpdateImpl(fx,dt,s)
         local ringScale=1-.22*math.min(1,.55*aim+.45*charge)
         fx.ringA.scale=Vector3(ringScale,ringScale,ringScale)
         fx.ringB.scale=Vector3(ringScale*.9,ringScale*.9,ringScale*.9)
-        local dial=1+.18*pulse
-        fx.dialNode.scale=Vector3(dial,dial,dial)
     end
 end
 
@@ -303,7 +299,7 @@ function F.Dispose(fx)
     for _,m in ipairs({fx.sand,fx.spark,fx.burst}) do
         if m and m.node then pcall(m.node.Remove,m.node) end
     end
-    for _,mat in ipairs({fx.dialMaterial,fx.sandMaterialA,fx.sandMaterialB}) do
+    for _,mat in ipairs({fx.sandMaterialA,fx.sandMaterialB}) do
         if mat then pcall(mat.Dispose,mat) end
     end
     fx.sand,fx.spark,fx.burst=nil,nil,nil
