@@ -1053,6 +1053,22 @@ function C:SettleContact(enemy,info,key,weak,swing)
         self:Feedback(enemy,info,result,weak,false)
     end
 end
+-- Time artifacts use the same enemy ApplyHit/feedback path, but keep their own
+-- AOE query and do not consume the sword swing dedup table.
+function C:SpellHit(enemy,info)
+    if not enemy or not info then return false end
+    if info.control and enemy.Stagger and not enemy.dead then
+        local ok=enemy:Stagger(info.control,false)
+        if ok then
+            if self.o.feedback then self.o.feedback({pos=info.pos,dir=info.dir,normal=info.normal,
+                material='core',tier='light',kind='spell_freeze',enemy=enemy,player=false}) end
+            return true
+        end
+    end
+    local result=Hit.Apply(enemy,info)
+    if result.hit then self:Feedback(enemy,info,result,false,false) end
+    return result.hit==true
+end
 function C:ShakeOffset(right,up)
     if self.state.GetSetting('cameraShake')==false then return Vector3.ZERO end
     right,up=right or Vector3.RIGHT,up or Vector3.UP

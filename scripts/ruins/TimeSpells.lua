@@ -17,6 +17,7 @@
 
 local VoxelFX = require("dragon.VoxelFX")
 local VoxelDamage = require("ruins.VoxelDamage")
+local Hit = require("combat.Hit")
 
 local M = {}
 M.CHARGE_SECONDS = 1.4
@@ -36,6 +37,23 @@ M.SHATTER_COLOR, M.FREEZE_COLOR, M.REWIND_COLOR = M.RED, M.BLUE, M.GOLD
 local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
 local function Rand(a, b) return a + (b - a) * math.random() end
 
+local function SpellAOE(ctx,center,radius,info)
+    local enemies=ctx.enemies and ctx.enemies() or {}
+    local hits=Hit.QueryZone(enemies,{origin=center,source=center,forward=Vector3.FORWARD,
+        radius=radius,angle=360,low=-1.2,high=2.6},ctx.hitPool,ctx.hitContactPool)
+    local count=0
+    for _,contact in ipairs(hits) do
+        local key=Hit.TargetKey(contact.enemy,contact.shape.id)
+        if not ctx.spellDamaged[key] then
+            ctx.spellDamaged[key]=true
+            info.pos,info.normal,info.part=contact.pos,contact.normal,contact.shape.id
+            if ctx.spellHit and ctx.spellHit(contact.enemy,info) then count=count+1 end
+        end
+    end
+    for key in pairs(ctx.spellDamaged) do ctx.spellDamaged[key]=nil end
+    return count
+end
+
 -- ---------------------------------------------------------------- 法术定义
 M.SPELLS = {
     {
@@ -47,7 +65,12 @@ M.SPELLS = {
             local obj = aim.object
             local level = (charge >= 1.0) and 3 or ((charge >= 0.5) and 2 or 1)
             if obj ~= nil then
-                if not obj.canShatter then return false, obj.title .. "无法被打碎" end
+                local hitCount=SpellAOE(ctx,aim.pos,M.ShatterRadius(charge),{
+                    dmg=8+4*charge,poise=3,armorBreak=0,pos=aim.pos,dir=aim.dir,
+                    material='core',tier='light',kind='time_shatter',clip='time_shatter',
+                    swingId='spell:shatter:'..tostring(ctx.castSerial or 0),combo=0,heavy=false})
+                if hitCount>0 then ctx.fx:Burst(aim.pos,"shatter",1.0+charge) end
+                if not obj.canShatter then return hitCount>0, obj.title .. "无法被打碎" end
                 local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge, radius = M.ShatterRadius(charge) })
                 if ok then
                     ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge)
@@ -90,6 +113,9 @@ M.SPELLS = {
         cast = function(ctx, aim)
             local center = aim.hit and aim.pos or aim.far
             local n = 0
+            n=n+SpellAOE(ctx,center,3.5,{dmg=0,poise=0,armorBreak=0,pos=center,dir=aim.dir,
+                material='core',tier='light',kind='time_freeze',clip='time_freeze',control=1.5,
+                swingId='spell:freeze:'..tostring(ctx.castSerial or 0),combo=0,heavy=false})
             for _, obj in ipairs(ctx.puzzles.list) do
                 if obj.state == "SHATTERED" then
                     local near = false
@@ -141,6 +167,10 @@ C.__index = C
 function M.NewCaster(ctx)
     local self = setmetatable({}, C)
     self.ctx = ctx
+    self.ctx.spellDamaged=self.ctx.spellDamaged or {}
+    self.ctx.hitPool=self.ctx.hitPool or {}
+    self.ctx.hitContactPool=self.ctx.hitContactPool or {}
+    self.castSerial=0
     self.cool = {}
     self.charge = 0
     self.charging = false
@@ -167,6 +197,8 @@ function C:Cast(id, aim)
     ---@type table|nil
     local sp = M.BY_ID[id]
     if sp == nil or not self:Ready(id) then return false end
+    self.castSerial=self.castSerial+1
+    self.ctx.castSerial=self.castSerial
     if self.ctx.prepareCast then self.ctx.prepareCast(aim) end
     local ok, msg = sp.cast(self.ctx, aim, self.charge)
     self.cool[id] = sp.cooldown

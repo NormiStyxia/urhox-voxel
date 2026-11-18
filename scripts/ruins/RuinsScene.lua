@@ -816,6 +816,8 @@ function M.Start()
     handMotes_=require('dragon.VoxelFX').WorldMotes(fx_.root,'CombatHandMotes',32,'square',true,nomi_:CameraNode())
     M.sigils=Sigil.New(scene_)
     caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_, sigils = M.sigils,
+        enemies=function() return CombatEnemies() end,
+        spellHit=function(enemy,info) return combatMoves_ and combatMoves_:SpellHit(enemy,info) or false end,
         handPos = function() return nomi_:HandPos() end,
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
