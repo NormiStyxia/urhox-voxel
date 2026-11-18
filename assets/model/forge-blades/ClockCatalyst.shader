@@ -64,9 +64,9 @@ void fragment() {
     float glint = pow(rl, 48.0) * (0.4 + 0.6 * step(0.5, hash13(floor(obj_pos * 90.0))));
     float pulse = 0.5 + 0.5 * sin(TIME * 1.7);
     vec3 gem_emit = sapphire_color.rgb * (0.30 + 0.22 * pulse + 0.9 * glow) * (0.35 + 0.65 * facet) + vec3(1.0) * glint * 1.1;
-    // Transparent sapphire core: facet colour remains visible while grazing
-    // edges and internal glow make it read as a cut crystal instead of a flat orb.
-    float gem_alpha_value = clamp(0.24 + facet * 0.30 + fres * 0.48 + glint * 0.22, 0.18, 0.92);
+    // Sapphire is mostly solid: facets and grazing light create the sense of
+    // depth/transmission without reading as a hollow transparent glass ball.
+    float gem_alpha_value = clamp(0.68 + facet * 0.18 + fres * 0.22 + glint * 0.12, 0.68, 1.0);
 
     // glass blade: pale blue that thickens toward the edges
     vec3 glass = mix(glass_color.rgb * 0.55, glass_color.rgb, fres + 0.25);
@@ -75,9 +75,9 @@ void fragment() {
     float metal_k = k_silver * 0.85 + k_band * 0.30 + k_gold * 0.6;
     ALBEDO = (band * k_band + silver_color.rgb * k_silver + gold_color.rgb * k_gold + vec3(0.96, 0.98, 1.0) * k_num
               + glass * k_glass + gem * k_gem + glass_color.rgb * k_ice) * fade;
-    ROUGHNESS = clamp(0.38 * k_band + 0.25 * k_silver + 0.30 * k_gold + 0.50 * k_num + 0.10 * k_glass + 0.06 * k_gem + 0.10 * k_ice, 0.05, 0.9);
+    ROUGHNESS = clamp(0.38 * k_band + 0.25 * k_silver + 0.30 * k_gold + 0.50 * k_num + 0.10 * k_glass + 0.035 * k_gem + 0.10 * k_ice, 0.025, 0.9);
     METALLIC = metal_k;
-    SPECULAR = 0.5 + 0.4 * k_gem;
+    SPECULAR = 0.78 + 0.18 * k_gem;
     EMISSION = (band_emit * k_band + silver_color.rgb * 0.22 * k_silver
               + gold_color.rgb * (1.5 + 1.0 * glow) * k_gold + vec3(1.0, 1.0, 1.0) * (0.85 + 0.6 * glow) * k_num
               + glass_emit * k_glass + gem_emit * k_gem + glass_color.rgb * (0.9 + 0.4 * glow) * k_ice) * fade;
