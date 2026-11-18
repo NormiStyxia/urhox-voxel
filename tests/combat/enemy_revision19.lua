@@ -106,6 +106,8 @@ print('PASS 30/60fps rigid fall/get-up, hurt-shape rotation, one landing cue, tw
 b=actor(Beetle); local log=events(b)
 b:ApplyHit({dmg=1,part='side_r',dir=Vector3(1,0,0)})
 assert(b.reaction.angle>=4 and b.reaction.angle<=8 and b.reaction.shift>=.02 and b.reaction.shift<=.05)
+assert(b.reaction.bodyPitch>0 and b.reaction.bodyYaw<0
+    and b.reaction.bodyShiftX<0,'directional body recoil is staged with local part recoil')
 T.Tick(b,.17,combat.pos); assert(b.reaction.age>=.12)
 b:ApplyHit({dmg=1000,part='shell',pos=Vector3(.4,.5,.6),dir=Vector3(1,0,0)})
 assert(b.particles.count==1 and b:GetStats().deathStage=='hold')

@@ -188,9 +188,6 @@ function Visual:Update(enemy)
     self.root.rotation=Quaternion(enemy.yaw,Vector3.UP)
     local roll=math.rad(enemy.poseRoll or 0)
     local pivot=enemy.posePivot
-    self.body.position=Vector3(pivot*math.sin(roll),(enemy.config.hover or 0)+enemy.poseY+pivot*(1-math.cos(roll)),0)
-    self.body.rotation=(enemy.poseRoll or 0)~=0 and Quaternion(enemy.poseRoll,Vector3.FORWARD)
-        or Quaternion(enemy.posePitch or 0,Vector3.RIGHT)
     self.body.scale=Vector3(1,1,1) -- down is a rigid side-roll, never a squash
     local step=enemy.warning.step
     for kind,node in pairs(self.warnings) do
@@ -212,6 +209,19 @@ function Visual:Update(enemy)
     HitMaterial.Rage(self,enemy.rageActive and not enemy.dead and not enemy.down
         and (enemy.rageTime or 0)>=.2 and (enemy.rageTime or 0)<.7)
     local recoil=math.max(0,1-reaction.recoilAge/.12)
+    local bodyPitch=(reaction.bodyPitch or 0)*recoil
+    local bodyYaw=(reaction.bodyYaw or 0)*recoil
+    local bodyShiftX=(reaction.bodyShiftX or 0)*recoil
+    local bodyShiftY=(reaction.bodyShiftY or 0)*recoil
+    local bodyShiftZ=(reaction.bodyShiftZ or 0)*recoil
+    local bodyX=pivot*math.sin(roll)+bodyShiftX
+    local bodyY=(enemy.config.hover or 0)+enemy.poseY+pivot*(1-math.cos(roll))+bodyShiftY
+    local bodyZ=bodyShiftZ
+    self.body.position=Vector3(bodyX,bodyY,bodyZ)
+    -- Keep the authored pose and add a short directional recoil. The previous
+    -- implementation only rotated the impacted piece around +X, which made a
+    -- front hit and a side hit look almost identical.
+    self.body.rotation=Quaternion((enemy.posePitch or 0)+bodyPitch,bodyYaw,enemy.poseRoll or 0)
     for name,bone in pairs(self.bones) do
         if not enemy.dead then
             local angle=0

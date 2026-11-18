@@ -78,7 +78,8 @@ function Base:Init(scene, world, terrain, combat, config, position, id)
     self.phasePulse=0
     self.aggroClock, self.hitStop, self.poseY, self.posePitch = 0, 0, 0, 0
     self.poseRoll,self.posePivot=0,config.boss and .85 or .38
-    self.reaction={part='',age=1,recoilAge=1,flashAge=1,peak=.85,angle=0,shift=0,flash=0,dx=0,dy=0,dz=0}
+    self.reaction={part='',age=1,recoilAge=1,flashAge=1,peak=.85,angle=0,shift=0,flash=0,
+        dx=0,dy=0,dz=0,bodyPitch=0,bodyYaw=0,bodyShiftX=0,bodyShiftY=0,bodyShiftZ=0}
     self.impact={pos=Vector3(0,0,0),dir=Vector3(0,0,1),normal=Vector3(0,0,-1),material='soft',tier='light',part='',weak=false,broke=false,kind='hit'}
     self.deathImpact={pos=Vector3(0,0,0),dir=Vector3(0,0,1),normal=Vector3(0,1,0),material='stone',tier='light',part='',kind='death'}
     self.deathBurst,self.deathFinished,self.staggerLanded=false,false,false
@@ -442,6 +443,14 @@ function Base:ReactToImpact()
     r.age,r.angle,r.shift,r.flash=0,heavy and 8 or 5,heavy and .05 or .025,heavy and .08 or .06
     r.recoilAge,r.flashAge,r.peak=0,0,heavy and 1 or .85
     r.dx,r.dy,r.dz=fx.dir.x*self.fz-fx.dir.z*self.fx,fx.dir.y,fx.dir.x*self.fx+fx.dir.z*self.fz
+    -- Directional body recoil is separate from the small local-part twitch.
+    -- Keep the gameplay knockback and poise rules unchanged.
+    local bodyScale=heavy and 1 or .65
+    r.bodyPitch=(heavy and 10 or 6)*bodyScale
+    r.bodyYaw=-r.dx*(heavy and 10 or 6)*bodyScale
+    r.bodyShiftX=-r.dx*(heavy and .06 or .035)*bodyScale
+    r.bodyShiftY=heavy and .012 or .006
+    r.bodyShiftZ=-r.dz*(heavy and .06 or .035)*bodyScale
     if self.visual then self.visual:StartHit(r.part,heavy) end
 end
 
