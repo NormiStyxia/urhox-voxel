@@ -24,12 +24,18 @@ void vertex() {
 }
 void fragment() {
     vec2 p = uv_v - 0.5;
-    float a = TIME * spin;
-    float s = sin(a);
-    float c = cos(a);
-    vec2 q = vec2(c * p.x - s * p.y, s * p.x + c * p.y) + 0.5;
+    // The Roman dial and its bezel stay fixed. Only the procedural hand moves.
+    vec2 q = uv_v;
     vec4 t = texture(tex, q);
+    float handAngle = TIME * 4.2;
+    vec2 hand = vec2(cos(handAngle), sin(handAngle));
+    float along = dot(p, hand);
+    vec2 side = p - hand * along;
+    float handWidth = 0.012 + 0.010 * (1.0 - clamp(along * 2.0, 0.0, 1.0));
+    float handLine = (1.0 - smoothstep(handWidth, handWidth + 0.008, length(side)))
+        * step(0.0, along) * (1.0 - smoothstep(0.36, 0.48, length(p)));
+    float handHub = 1.0 - smoothstep(0.035, 0.055, length(p));
     float inside = 1.0 - smoothstep(0.46, 0.5, length(p));
-    ALBEDO = t.rgb * tint.rgb * (1.4 + 1.2 * breathe);
-    ALPHA = clamp(t.a * tint.a * strength * inside, 0.0, 1.0);
+    ALBEDO = (t.rgb * tint.rgb + vec3(1.0, 0.88, 0.55) * (handLine + handHub) * 1.6) * (1.4 + 1.2 * breathe);
+    ALPHA = clamp(max(t.a * tint.a, (handLine + handHub) * tint.a) * strength * inside, 0.0, 1.0);
 }

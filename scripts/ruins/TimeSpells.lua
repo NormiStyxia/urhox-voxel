@@ -353,8 +353,8 @@ function F:Beam(from, to, color)
     local n = math.min(40, math.floor(len * 2))
     for i = 1, n do
         local p = from + d * (i / n)
-        self.motesB:Spawn({ pos = p + Vector3(Rand(-0.1, 0.1), Rand(-0.1, 0.1), Rand(-0.1, 0.1)), vel = Vector3(0, 0.4, 0),
-            life = Rand(0.2, 0.45), size = Rand(0.06, 0.12), colors = { M.WHITE, color } })
+        self.motesB:Spawn({ pos = p + Vector3(Rand(-0.04, 0.04), Rand(-0.04, 0.04), Rand(-0.04, 0.04)), vel = Vector3(0, 0.7, 0),
+            life = Rand(0.3, 0.55), size = Rand(0.08, 0.15), colors = { M.WHITE, color } })
     end
 end
 
