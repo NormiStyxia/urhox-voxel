@@ -269,7 +269,7 @@ FONT = bpy.data.fonts.load('/System/Library/Fonts/Supplemental/Times New Roman B
 root = empty('ClockCatalyst_ROOT')
 D = math.radians
 R_BAND = .245          # band centre radius
-W_BAND = .040          # band radial width
+W_BAND = .046          # band radial width (a bit wider than the sheet: reads at game distance)
 T_BAND = .014          # band thickness (Y)
 
 # ------------------------------------------------------------------ band pair (rotates around X)
@@ -301,11 +301,11 @@ for half, rot in ((0, 0.0), (1, math.pi)):
     # numerals: XII/IX on one half, VI/III on the other (front + mirrored back)
     labels = (('XII', D(338)), ('IX', D(270))) if half == 0 else (('VI', D(158)), ('III', D(90)))
     for label, th in labels:
-        numeral(label, R_BAND + W_BAND * .12, th, -(T_BAND / 2 + .0012), .026, band_pivot)
+        numeral(label, R_BAND + W_BAND * .10, th, -(T_BAND / 2 + .0012), .036, band_pivot)
     # gold sparkles on the band
     for frac in (.12, .52, .88):
         th = a0 + (a1 - a0) * frac
-        sparkle('Band_sparkle', P(R_BAND + W_BAND * .18, th, -(T_BAND / 2 + .0013)), .0055, band_pivot)
+        sparkle('Band_sparkle', P(R_BAND + W_BAND * .18, th, -(T_BAND / 2 + .0013)), .0075, band_pivot)
 
     # glass blade crescent just inside the band; thick in the middle, sharp tips, the lower tip runs past
     # the band end (like the reference's left blade)

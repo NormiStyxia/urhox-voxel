@@ -48,10 +48,10 @@ void fragment() {
     float neb = 0.5 + 0.5 * sin(obj_pos.x * 31.0 + sin(obj_pos.y * 23.0 + obj_pos.z * 17.0) * 1.7)
                     * sin(obj_pos.y * 19.0 + obj_pos.x * 11.0);
     vec3 band = navy_color.rgb * (0.55 + 0.9 * neb);
-    float star_cell = hash13(floor(obj_pos * 240.0));
-    float star = step(0.985, star_cell);
+    float star_cell = hash13(floor(obj_pos * 110.0));
+    float star = step(0.975, star_cell);
     float twinkle = 0.55 + 0.45 * sin(TIME * 2.0 + star_cell * 60.0);
-    vec3 band_emit = star_color.rgb * star * twinkle * 1.6 + navy_color.rgb * 0.30 * neb;
+    vec3 band_emit = star_color.rgb * star * twinkle * 1.3 + navy_color.rgb * 0.22 * neb;
 
     // sapphire: per-facet blue level, icy grazing rim, sparse white glints, pulsing heart
     float facet = clamp(COLOR.a, 0.0, 1.0);

@@ -11,10 +11,12 @@
 -- Any failure returns nil so the scene keeps working without the catalyst.
 local V={}
 V.ENABLED=true               -- kill switch
-V.SCALE=.52                  -- model radius .27 m -> ~.14 m in the world
+V.SCALE=.95                  -- model radius .27 m -> ~.26 m in the world (readable at the follow-camera distance)
 V.STEP_VERTICES=2400         -- body upload per Step()
 local MATERIAL='model/forge-blades/ClockCatalyst.xml'
 local SAND='model/forge-blades/ClockSand.xml'
+local MOTES='model/forge-blades/ClockMotes.xml'
+local RING='model/forge-blades/ClockRing.xml'
 local MASK=0xFFFFFFFF
 local PARTS={'bands','blades','gems','shards','core'}
 -- deg/s about the pivot axis at rest
@@ -67,6 +69,64 @@ local function BuildSand(node,material)
     return g
 end
 
+-- Star motes: camera-facing diamonds, placed by ClockMotes.shader (phase in UV.x, seed in UV.y, corner in COLOR.rg).
+local function BuildMotes(node,material)
+    local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
+    g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
+    g:BeginGeometry(0,TRIANGLE_LIST)
+    local seed=71
+    local function Rand()
+        seed=(seed*1103515245+12345)%2147483648
+        return seed/2147483648
+    end
+    local corners={{0,0},{1,0},{1,1},{0,0},{1,1},{0,1}}
+    for i=0,79 do
+        local phase,s=(i+Rand()*.9)/80,Rand()
+        for _,c in ipairs(corners) do
+            g:DefineVertex(Vector3(0,0,0))
+            g:DefineNormal(Vector3(0,0,-1))
+            g:DefineColor(Color(c[1],c[2],0,1))
+            g:DefineTexCoord(Vector2(phase,s))
+        end
+    end
+    g:Commit()
+    assert(g:SetMaterial(0,material)~=false,'motes material binding failed')
+    return g
+end
+
+-- Cast ripple: flat annulus in the orb's front plane (UV.x angle, UV.y radial).
+local function BuildRing(node,material)
+    local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
+    g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
+    g:BeginGeometry(0,TRIANGLE_LIST)
+    local n,r0,r1=96,.215,.30
+    local function Vert(a,rr,u,v)
+        g:DefineVertex(Vector3(math.cos(a)*rr,math.sin(a)*rr,-.03))
+        g:DefineNormal(Vector3(0,0,-1))
+        g:DefineColor(Color(1,1,1,1))
+        g:DefineTexCoord(Vector2(u,v))
+    end
+    for i=0,n-1 do
+        local a0,a1=i/n*math.pi*2,(i+1)/n*math.pi*2
+        Vert(a0,r0,i/n,0);Vert(a1,r0,(i+1)/n,0);Vert(a1,r1,(i+1)/n,1)
+        Vert(a0,r0,i/n,0);Vert(a1,r1,(i+1)/n,1);Vert(a0,r1,i/n,1)
+    end
+    g:Commit()
+    assert(g:SetMaterial(0,material)~=false,'ring material binding failed')
+    return g
+end
+
+local function SetShown(visual,flag)
+    if visual.shown==flag then return end
+    visual.shown=flag
+    -- Node enable is NOT recursive: every child node must be toggled or it keeps rendering in place.
+    visual.root.enabled=flag
+    for _,pivot in pairs(visual.pivots) do pivot.enabled=flag end
+    if visual.sandNode then visual.sandNode.enabled=flag end
+    if visual.motesNode then visual.motesNode.enabled=flag end
+    if visual.ringNode then visual.ringNode.enabled=flag and visual.ringAge<1 end
+end
+
 ---@param scene Node
 ---@return table? visual
 ---@return string? err
@@ -84,6 +144,8 @@ function V.New(scene)
         visual.root=scene:CreateChild('time_catalyst')
         visual.root.temporary=true
         visual.root.enabled=false
+        visual.shown=false
+        visual.ringAge=1
         visual.pivots={}
         visual.geometry={}
         for _,name in ipairs(PARTS) do
@@ -97,7 +159,24 @@ function V.New(scene)
         if visual.sandMaterial then
             visual.sandNode=visual.root:CreateChild('catalyst_sand')
             BuildSand(visual.sandNode,visual.sandMaterial)
+            visual.sandNode.enabled=false
         end
+        local motes=cache:GetResource('Material',MOTES)
+        visual.motesMaterial=motes and motes:Clone('ClockMotesMat') or nil
+        if visual.motesMaterial then
+            visual.motesMaterial:SetShaderParameter('spread',Variant(V.SCALE))
+            visual.motesNode=visual.root:CreateChild('catalyst_motes')
+            BuildMotes(visual.motesNode,visual.motesMaterial)
+            visual.motesNode.enabled=false
+        end
+        local ring=cache:GetResource('Material',RING)
+        visual.ringMaterial=ring and ring:Clone('ClockRingMat') or nil
+        if visual.ringMaterial then
+            visual.ringNode=visual.root:CreateChild('catalyst_ring')
+            BuildRing(visual.ringNode,visual.ringMaterial)
+            visual.ringNode.enabled=false
+        end
+        for _,pivot in pairs(visual.pivots) do pivot.enabled=false end
     end)
     if not ok then
         V.Dispose(visual)
@@ -186,22 +265,22 @@ function V.Update(visual,dt,ctx)
     visual.fade=Smooth(visual.fade,wantFade,rate,dt)
     if visual.fade<.01 and wantFade==0 then
         visual.fade=0
-        if visual.root.enabled then visual.root.enabled=false end
+        SetShown(visual,false)
         visual.initialised=false
         return
     end
     local yaw=Quaternion(0,ctx.yaw,0)
-    local rest=ctx.position+yaw*Vector3(.54,1.38,-.40)
+    local rest=ctx.position+yaw*Vector3(.62,1.45,-.46)
     rest.y=rest.y+.035*math.sin(visual.clock*2.1)+.012*math.sin(visual.clock*5.3+1.3)
     local aimTarget=ctx.aiming and 1 or 0
     visual.aim=Smooth(visual.aim,aimTarget,ctx.aiming and 11 or 6,dt)
     visual.charge=Smooth(visual.charge,ctx.aiming and (ctx.charge or 0) or 0,10,dt)
     local forward=yaw*Vector3(0,0,1)
-    local hand=ctx.hand+forward*.17+Vector3(0,.03,0)
+    local hand=ctx.hand+forward*.27+Vector3(0,.04,0)
     local target=Vector3(rest.x+(hand.x-rest.x)*visual.aim,rest.y+(hand.y-rest.y)*visual.aim,rest.z+(hand.z-rest.z)*visual.aim)
     if not visual.initialised then
         visual.pos=Vector3(rest.x,rest.y-.15,rest.z);visual.vel=Vector3(0,.4,0);visual.initialised=true
-        visual.root.enabled=true
+        SetShown(visual,true)
     end
     local omega=8+8*visual.aim
     local newPos,newVel=Spring(visual.pos,visual.vel,target,dt,omega)
@@ -210,12 +289,12 @@ function V.Update(visual,dt,ctx)
     visual.pos,visual.vel=newPos,newVel
     local show=Vector3(newPos.x,newPos.y+.08*travel,newPos.z)
     -- cast pop: edge of ctx.casting
-    if ctx.casting and not visual.castSeen then visual.pulse=1 end
+    if ctx.casting and not visual.castSeen then visual.pulse=1;visual.ringAge=0 end
     visual.castSeen=ctx.casting==true
     visual.pulse=Smooth(visual.pulse,0,5,dt)
-    local boost=1+2.4*visual.aim+3.2*visual.charge+5*visual.pulse
+    local boost=math.min(5,1+2.0*visual.aim+2.4*visual.charge+3.5*visual.pulse)
     visual.spinBoost=Smooth(visual.spinBoost,boost,6,dt)
-    local scale=V.SCALE*(1+.20*visual.aim+.10*visual.charge+.14*visual.pulse)*(.25+.75*visual.fade)
+    local scale=V.SCALE*(1+.04*visual.aim+.06*visual.charge+.12*visual.pulse)*(.25+.75*visual.fade)
     visual.root.position=show
     -- front face toward the camera behind the caster; gentle idle sway so it never looks pasted on
     local sway=Quaternion(0,7*math.sin(visual.clock*.7),0)
@@ -234,8 +313,17 @@ function V.Update(visual,dt,ctx)
     local glow=math.min(1,.15+.55*visual.aim+.5*visual.charge+.5*visual.pulse)
     SetQuant(visual,visual.material,'glow',glow,20)
     SetQuant(visual,visual.material,'fade',visual.fade,20)
+    if visual.ringMaterial then
+        visual.ringAge=math.min(1,visual.ringAge+dt/.8)
+        local on=visual.ringAge<1
+        if visual.ringNode.enabled~=on then visual.ringNode.enabled=on end
+        if on then SetQuant(visual,visual.ringMaterial,'age',visual.ringAge,40) end
+    end
+    if visual.motesMaterial then
+        SetQuant(visual,visual.motesMaterial,'strength',(.55+.45*visual.aim+.3*visual.charge)*visual.fade,20)
+    end
     if visual.sandMaterial then
-        SetQuant(visual,visual.sandMaterial,'strength',(.55+.45*visual.aim+.35*visual.charge)*visual.fade,20)
+        SetQuant(visual,visual.sandMaterial,'strength',(.40+.55*visual.aim+.35*visual.charge)*visual.fade,20)
         SetQuant(visual,visual.sandMaterial,'tighten',math.min(1,.55*visual.aim+.45*visual.charge),20)
         SetQuant(visual,visual.sandMaterial,'flow_speed',.11*(1+.9*visual.aim+1.6*visual.charge+1.2*visual.pulse),50)
     end
@@ -253,6 +341,8 @@ function V.Dispose(visual)
     if visual.root then pcall(visual.root.Remove,visual.root);visual.root=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end
     if visual.sandMaterial then pcall(visual.sandMaterial.Dispose,visual.sandMaterial);visual.sandMaterial=nil end
+    if visual.motesMaterial then pcall(visual.motesMaterial.Dispose,visual.motesMaterial);visual.motesMaterial=nil end
+    if visual.ringMaterial then pcall(visual.ringMaterial.Dispose,visual.ringMaterial);visual.ringMaterial=nil end
     visual.pivots,visual.geometry=nil,nil
 end
 return V

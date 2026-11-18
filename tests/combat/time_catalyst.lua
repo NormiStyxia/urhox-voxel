@@ -62,7 +62,7 @@ for _=1,90 do Visual.Update(v,1/60,Ctx{aiming=true,charge=1}) end
 local atHand=v.root.position
 assert(math.abs(atHand.x-.3)<.1 and math.abs(atHand.y-1.23)<.12 and atHand.z>.3,'settles at the palm')
 assert(v.spinBoost>restSpin*3,'spin boost while charging')
-assert(v.root.scale.x>Visual.SCALE*1.2,'slightly larger while aiming')
+assert(v.root.scale.x>Visual.SCALE*1.05,'slightly larger while aiming')
 -- cast pop then back to the back slot
 Visual.Update(v,1/60,Ctx{aiming=true,charge=1,casting=true})
 assert(v.pulse>.9)
@@ -77,9 +77,20 @@ assert(Delta(v.angles.bands,a0)*Delta(v.angles.blades,b0)<0,'opposite spin')
 -- armed combat: dissolves and disables
 for _=1,120 do Visual.Update(v,1/60,Ctx{active=false}) end
 assert(not v.root.enabled and v.fade==0)
+-- Urho Node enable is not recursive: every child that draws must be off too (regression: orb stayed in place)
+for _,child in ipairs(v.root.children) do assert(not child.enabled,child.name..' must be disabled with the root') end
 -- re-appears at the rest slot (no flight from the last position)
 Visual.Update(v,1/60,Ctx())
 assert(v.root.enabled and v.root.position.z<-.3)
+for _,child in ipairs(v.root.children) do
+    if child.name~='catalyst_ring' then assert(child.enabled,child.name..' must be enabled with the root') end
+end
+-- cast ripple: shown right after the cast, gone when it has expired
+for _=1,5 do Visual.Update(v,1/60,Ctx()) end
+Visual.Update(v,1/60,Ctx{aiming=true,casting=true})
+assert(v.ringNode.enabled and v.ringAge<.05)
+for _=1,70 do Visual.Update(v,1/60,Ctx()) end
+assert(not v.ringNode.enabled)
 Visual.Dispose(v)
 rawset(_G,'cache',oldCache)
 print('time_catalyst OK tris='..total)
