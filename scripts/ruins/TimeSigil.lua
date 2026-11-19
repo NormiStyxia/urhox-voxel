@@ -75,19 +75,9 @@ end
 ---@param caster table
 function S:Update(dt,aim,hand,camera,caster,radius,enabled)
     self.age=self.age+dt
-    local face=camera.worldRotation
-    local selected=enabled and aim.hit and (aim.object~=nil or aim.breakable==true)
-    self.target.node.enabled=selected
-    if selected then
-        local hitPos = aim.pos --[[@as Vector3]]
-        local pos=hitPos+(camera.worldPosition-hitPos):Normalized()*.16
-        -- 目标钟面颜色跟随可施放的法术：蓄力/只能碎 = 红，可回溯 = 黄
-        local obj=aim.object
-        local rewindable=obj~=nil and obj.canRewind and (obj.state=='SHATTERED' or obj.state=='FROZEN')
-        local col=(caster.charging or not rewindable) and Color(1,.36,.3,1) or Color(1,.8,.36,1)
-        -- 表盘按时间缓慢逆转，像在倒拨时间
-        Show(self.target,pos,face*Quaternion(self.age*12,Vector3.FORWARD),.65,col,.9)
-    end
+    -- 瞄准阶段不显示目标盘/指针；目标反馈交给准星与 HUD。
+    -- 红色命中表盘只由 Pulse() 在释放后创建。
+    self.target.node.enabled=false
     local active=enabled and (caster.charging or caster.castAnim>0)
     self.hand.node.enabled=active
     if active then
