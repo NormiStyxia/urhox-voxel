@@ -1,0 +1,27 @@
+{
+  "project_id": "m_hi4f",
+  "version": "1.0.2",
+  "author": {
+    "id": "1838934907"
+  },
+  "taptap_publish": {
+    "title": "urhox-voxel",
+    "category": "casual",
+    "screen_orientation": "landscape",
+    "collection_type": "sce",
+    "app_platforms": "1,2",
+    "app_id": 1023130,
+    "developer_id": 411438,
+    "miniapp_id": "tapmcx3epvjxagpvht"
+  },
+  "assets": {
+    "icon": "",
+    "screenshots": [],
+    "promotional_image": "",
+    "icon_url": "https://img.tapimg.com/market/images/ef4719159691d7db73760cadfc67eac4.png"
+  },
+  "test_qrcode": {
+    "url": "https://tapcode-sce.spark.xd.com/qrcode/m_hi4f_1794549452360.png",
+    "generated_at": "2026-11-13T05:57:32.520Z"
+  }
+}

@@ -1,0 +1,2242 @@
+[
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.0271413914112169
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.0705567586009397
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.810311256882414
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.397266902675471
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.6041100986003305
+  },
+  {
+    "count": 4,
+    "patch": 0,
+    "seconds": 10,
+    "version": "new",
+    "px390": 10.67970537629127
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.7074263179663184
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 3,
+    "version": "new",
+    "px390": 2.1110567136507385
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.245967268352921
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 5,
+    "version": "new",
+    "px390": 3.7032290231655476
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 10,
+    "version": "old",
+    "px390": 2.476683069460397
+  },
+  {
+    "count": 4,
+    "patch": 1,
+    "seconds": 10,
+    "version": "new",
+    "px390": 7.294292247659818
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.0308880970099128
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.1036854271497005
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.8218479313541867
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.50005922390421
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.6497751283298947
+  },
+  {
+    "count": 4,
+    "patch": 2,
+    "seconds": 10,
+    "version": "new",
+    "px390": 11.088728961764664
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.7099357092807211
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 3,
+    "version": "new",
+    "px390": 2.141261121067657
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.2554973108423193
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 5,
+    "version": "new",
+    "px390": 3.8024628972784025
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 10,
+    "version": "old",
+    "px390": 2.519155795268853
+  },
+  {
+    "count": 4,
+    "patch": 3,
+    "seconds": 10,
+    "version": "new",
+    "px390": 7.703696057495551
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.0250621954870662
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.0648527360713063
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.8066419978817085
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.387153247174416
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.5967842061338056
+  },
+  {
+    "count": 12,
+    "patch": 0,
+    "seconds": 10,
+    "version": "new",
+    "px390": 10.659302229883835
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.38237353272278696
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 3,
+    "version": "new",
+    "px390": 1.1311509330007998
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 5,
+    "version": "old",
+    "px390": 0.6732220850288958
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 5,
+    "version": "new",
+    "px390": 1.98228534296746
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 10,
+    "version": "old",
+    "px390": 1.3371098618296882
+  },
+  {
+    "count": 12,
+    "patch": 1,
+    "seconds": 10,
+    "version": "new",
+    "px390": 3.8957265426161745
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.223059866089752
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.668068891902523
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 5,
+    "version": "old",
+    "px390": 2.158265635586281
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 5,
+    "version": "new",
+    "px390": 6.471310343908698
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 10,
+    "version": "old",
+    "px390": 4.3089907281418895
+  },
+  {
+    "count": 12,
+    "patch": 2,
+    "seconds": 10,
+    "version": "new",
+    "px390": 12.913005871442774
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.4720519641107777
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 3,
+    "version": "new",
+    "px390": 1.4298021572920685
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 5,
+    "version": "old",
+    "px390": 0.8350185978714354
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 5,
+    "version": "new",
+    "px390": 2.5411378091949848
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 10,
+    "version": "old",
+    "px390": 1.6764478969449021
+  },
+  {
+    "count": 12,
+    "patch": 3,
+    "seconds": 10,
+    "version": "new",
+    "px390": 5.158244350421974
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.9722582210687243
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 3,
+    "version": "new",
+    "px390": 2.9259634139230934
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.718527344137571
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.1878216760726055
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.4441484377320184
+  },
+  {
+    "count": 12,
+    "patch": 4,
+    "seconds": 10,
+    "version": "new",
+    "px390": 10.471964453371038
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.3521774712498598
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 3,
+    "version": "new",
+    "px390": 7.023667683306987
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 5,
+    "version": "old",
+    "px390": 4.144036667209156
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 5,
+    "version": "new",
+    "px390": 12.33139379358595
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 10,
+    "version": "old",
+    "px390": 8.242910123049235
+  },
+  {
+    "count": 12,
+    "patch": 5,
+    "seconds": 10,
+    "version": "new",
+    "px390": 24.335787424221856
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.1689126525165947
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 3,
+    "version": "new",
+    "px390": 6.46510599864847
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 5,
+    "version": "old",
+    "px390": 3.8180815170162035
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 5,
+    "version": "new",
+    "px390": 11.324245489985996
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 10,
+    "version": "old",
+    "px390": 7.580558574866055
+  },
+  {
+    "count": 12,
+    "patch": 6,
+    "seconds": 10,
+    "version": "new",
+    "px390": 22.23083411304065
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.0216065634836358
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.106788705332043
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.8114435415315076
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.56257500361326
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.657020455626096
+  },
+  {
+    "count": 12,
+    "patch": 7,
+    "seconds": 10,
+    "version": "new",
+    "px390": 11.492356684859036
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.1918517143451655
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 3,
+    "version": "new",
+    "px390": 9.461445146352757
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.608816978892876
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 5,
+    "version": "new",
+    "px390": 16.485532556245758
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 10,
+    "version": "old",
+    "px390": 11.090868073382127
+  },
+  {
+    "count": 12,
+    "patch": 8,
+    "seconds": 10,
+    "version": "new",
+    "px390": 31.98583664240789
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.3218298135501465
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 3,
+    "version": "new",
+    "px390": 9.860065959212669
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.839606021505996
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 5,
+    "version": "new",
+    "px390": 17.20098026574338
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 10,
+    "version": "old",
+    "px390": 11.557942707072792
+  },
+  {
+    "count": 12,
+    "patch": 9,
+    "seconds": 10,
+    "version": "new",
+    "px390": 33.46373477699281
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.015357206911731
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 3,
+    "version": "new",
+    "px390": 9.161767216895875
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.348377404529042
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 5,
+    "version": "new",
+    "px390": 16.418563304608263
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 10,
+    "version": "old",
+    "px390": 10.805772349459106
+  },
+  {
+    "count": 12,
+    "patch": 10,
+    "seconds": 10,
+    "version": "new",
+    "px390": 33.99496090284921
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.007937275930145
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 3,
+    "version": "new",
+    "px390": 9.141509207916878
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.335259570756097
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 5,
+    "version": "new",
+    "px390": 16.38304106725581
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 10,
+    "version": "old",
+    "px390": 10.779484135801583
+  },
+  {
+    "count": 12,
+    "patch": 11,
+    "seconds": 10,
+    "version": "new",
+    "px390": 33.925401621424314
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.0247921462439824
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.0645687811227966
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.8061708059433839
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.386656404214802
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.59586859078832
+  },
+  {
+    "count": 24,
+    "patch": 0,
+    "seconds": 10,
+    "version": "new",
+    "px390": 10.658331017551717
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.47951013142304044
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 3,
+    "version": "new",
+    "px390": 1.4168957875837835
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 5,
+    "version": "old",
+    "px390": 0.8443721943711044
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 5,
+    "version": "new",
+    "px390": 2.4836615755034845
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 10,
+    "version": "old",
+    "px390": 1.6776176414155781
+  },
+  {
+    "count": 24,
+    "patch": 1,
+    "seconds": 10,
+    "version": "new",
+    "px390": 4.883830697638487
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.350425169394678
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 3,
+    "version": "new",
+    "px390": 1.0497657927102886
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 5,
+    "version": "old",
+    "px390": 0.616897818364529
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 5,
+    "version": "new",
+    "px390": 1.839502383966854
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 10,
+    "version": "old",
+    "px390": 1.2249066377196853
+  },
+  {
+    "count": 24,
+    "patch": 2,
+    "seconds": 10,
+    "version": "new",
+    "px390": 3.6144122959810776
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.9598540119852087
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 3,
+    "version": "new",
+    "px390": 2.8718860942370927
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.6913950402873748
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.045225473749441
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.3658875216390296
+  },
+  {
+    "count": 24,
+    "patch": 3,
+    "seconds": 10,
+    "version": "new",
+    "px390": 9.97042708639389
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.2234265773436
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.6685130655213154
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 5,
+    "version": "old",
+    "px390": 2.1589379709514946
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 5,
+    "version": "new",
+    "px390": 6.47219122376803
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 10,
+    "version": "old",
+    "px390": 4.310448595845917
+  },
+  {
+    "count": 24,
+    "patch": 4,
+    "seconds": 10,
+    "version": "new",
+    "px390": 12.915209520011288
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.033195564554929
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.1080271879920573
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.8259305420220333
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.507692654526288
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.657973631266515
+  },
+  {
+    "count": 24,
+    "patch": 5,
+    "seconds": 10,
+    "version": "new",
+    "px390": 11.103829192628506
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.4596459778747244
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 3,
+    "version": "new",
+    "px390": 1.381848207419699
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 5,
+    "version": "old",
+    "px390": 0.8131628467737126
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 5,
+    "version": "new",
+    "px390": 2.4560923246136164
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 10,
+    "version": "old",
+    "px390": 1.6329771535132478
+  },
+  {
+    "count": 24,
+    "patch": 6,
+    "seconds": 10,
+    "version": "new",
+    "px390": 4.986463634589225
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.3445030183629323
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 3,
+    "version": "new",
+    "px390": 1.0475518660025063
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 5,
+    "version": "old",
+    "px390": 0.6094055686261545
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 5,
+    "version": "new",
+    "px390": 1.8622299130183921
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 10,
+    "version": "old",
+    "px390": 1.223538905212326
+  },
+  {
+    "count": 24,
+    "patch": 7,
+    "seconds": 10,
+    "version": "new",
+    "px390": 3.7823057065841366
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 3,
+    "version": "old",
+    "px390": 0.9656388477587909
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 3,
+    "version": "new",
+    "px390": 2.910797018888967
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 5,
+    "version": "old",
+    "px390": 1.706826123296413
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 5,
+    "version": "new",
+    "px390": 5.161109414152479
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 10,
+    "version": "old",
+    "px390": 3.4206967048976824
+  },
+  {
+    "count": 24,
+    "patch": 8,
+    "seconds": 10,
+    "version": "new",
+    "px390": 10.418892551531039
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.223452056621555
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.671531748510927
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 5,
+    "version": "old",
+    "px390": 2.159474587540392
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 5,
+    "version": "new",
+    "px390": 6.482019593301634
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 10,
+    "version": "old",
+    "px390": 4.31377888827985
+  },
+  {
+    "count": 24,
+    "patch": 9,
+    "seconds": 10,
+    "version": "new",
+    "px390": 12.955518801538135
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.352550217873823
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 3,
+    "version": "new",
+    "px390": 7.024049786562351
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 5,
+    "version": "old",
+    "px390": 4.144719742351684
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 5,
+    "version": "new",
+    "px390": 12.332108116488152
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 10,
+    "version": "old",
+    "px390": 8.244392377102026
+  },
+  {
+    "count": 24,
+    "patch": 10,
+    "seconds": 10,
+    "version": "new",
+    "px390": 24.33740199015592
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.4425971204119623
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 3,
+    "version": "new",
+    "px390": 4.258718254901649
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 5,
+    "version": "old",
+    "px390": 2.5353360481254463
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 5,
+    "version": "new",
+    "px390": 7.424106680481511
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 10,
+    "version": "old",
+    "px390": 5.014975449403424
+  },
+  {
+    "count": 24,
+    "patch": 11,
+    "seconds": 10,
+    "version": "new",
+    "px390": 14.420595990500068
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.0754430799366865
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 3,
+    "version": "new",
+    "px390": 6.188560870643132
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 5,
+    "version": "old",
+    "px390": 3.652440614063013
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 5,
+    "version": "new",
+    "px390": 10.830417148495998
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 10,
+    "version": "old",
+    "px390": 7.246714320597994
+  },
+  {
+    "count": 24,
+    "patch": 12,
+    "seconds": 10,
+    "version": "new",
+    "px390": 21.219946398636548
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.3627974066049675
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 3,
+    "version": "new",
+    "px390": 7.120749321020618
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 5,
+    "version": "old",
+    "px390": 4.1773066466853574
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 5,
+    "version": "new",
+    "px390": 12.633996607474291
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 10,
+    "version": "old",
+    "px390": 8.376106449097508
+  },
+  {
+    "count": 24,
+    "patch": 13,
+    "seconds": 10,
+    "version": "new",
+    "px390": 25.54366893233193
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.4460250191727602
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 3,
+    "version": "new",
+    "px390": 4.388561902306715
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 5,
+    "version": "old",
+    "px390": 2.563011714251376
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 5,
+    "version": "new",
+    "px390": 7.845781207503283
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 10,
+    "version": "old",
+    "px390": 5.169663410702996
+  },
+  {
+    "count": 24,
+    "patch": 14,
+    "seconds": 10,
+    "version": "new",
+    "px390": 16.1510610228888
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.0994125150453726
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 3,
+    "version": "new",
+    "px390": 6.336631686463773
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 5,
+    "version": "old",
+    "px390": 3.7156847636475123
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 5,
+    "version": "new",
+    "px390": 11.28031472138654
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 10,
+    "version": "old",
+    "px390": 7.46924460921003
+  },
+  {
+    "count": 24,
+    "patch": 15,
+    "seconds": 10,
+    "version": "new",
+    "px390": 22.986488785415986
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.1951416293278188
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 3,
+    "version": "new",
+    "px390": 9.464763644804489
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.614645128817795
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 5,
+    "version": "new",
+    "px390": 16.49146283379861
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 10,
+    "version": "old",
+    "px390": 11.10259943736989
+  },
+  {
+    "count": 24,
+    "patch": 16,
+    "seconds": 10,
+    "version": "new",
+    "px390": 31.997970216008298
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.8692757839362715
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 3,
+    "version": "new",
+    "px390": 8.468582313183585
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.0377284379386795
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 5,
+    "version": "new",
+    "px390": 14.719244466363575
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 10,
+    "version": "old",
+    "px390": 9.942584323591847
+  },
+  {
+    "count": 24,
+    "patch": 17,
+    "seconds": 10,
+    "version": "new",
+    "px390": 28.404447541001783
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 3,
+    "version": "old",
+    "px390": 2.6641122019310486
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 3,
+    "version": "new",
+    "px390": 7.880086083095973
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 5,
+    "version": "old",
+    "px390": 4.675450207863171
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 5,
+    "version": "new",
+    "px390": 13.680119406475542
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 10,
+    "version": "old",
+    "px390": 9.218390260129546
+  },
+  {
+    "count": 24,
+    "patch": 18,
+    "seconds": 10,
+    "version": "new",
+    "px390": 26.330730803396975
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.8488443724818233
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 3,
+    "version": "new",
+    "px390": 11.533940047315165
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 5,
+    "version": "old",
+    "px390": 6.789700754100034
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 5,
+    "version": "new",
+    "px390": 20.329523383674022
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 10,
+    "version": "old",
+    "px390": 13.5458472333148
+  },
+  {
+    "count": 24,
+    "patch": 19,
+    "seconds": 10,
+    "version": "new",
+    "px390": 40.47920505387648
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.484326734812846
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 3,
+    "version": "new",
+    "px390": 10.536801556020107
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 5,
+    "version": "old",
+    "px390": 6.1706560786282525
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 5,
+    "version": "new",
+    "px390": 18.793721871627536
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 10,
+    "version": "old",
+    "px390": 12.422247730058626
+  },
+  {
+    "count": 24,
+    "patch": 20,
+    "seconds": 10,
+    "version": "new",
+    "px390": 38.47357551521444
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 3,
+    "version": "old",
+    "px390": 1.1915327447984985
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 3,
+    "version": "new",
+    "px390": 3.6150473257156546
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 5,
+    "version": "old",
+    "px390": 2.118845364624671
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 5,
+    "version": "new",
+    "px390": 6.531469659846587
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 10,
+    "version": "old",
+    "px390": 4.30666106237207
+  },
+  {
+    "count": 24,
+    "patch": 21,
+    "seconds": 10,
+    "version": "new",
+    "px390": 13.797151904815276
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.0023825486252833
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 3,
+    "version": "new",
+    "px390": 9.135989026790893
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 5,
+    "version": "old",
+    "px390": 5.325452276555332
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 5,
+    "version": "new",
+    "px390": 16.3733592480934
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 10,
+    "version": "old",
+    "px390": 10.759893574171533
+  },
+  {
+    "count": 24,
+    "patch": 22,
+    "seconds": 10,
+    "version": "new",
+    "px390": 33.90643673186809
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 0,
+    "version": "old",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 0,
+    "version": "new",
+    "px390": 0.0
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 3,
+    "version": "old",
+    "px390": 3.8547913030878944
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 3,
+    "version": "new",
+    "px390": 11.575278610627002
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 5,
+    "version": "old",
+    "px390": 6.805565517868574
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 5,
+    "version": "new",
+    "px390": 20.44988323177491
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 10,
+    "version": "old",
+    "px390": 13.602225454993693
+  },
+  {
+    "count": 24,
+    "patch": 23,
+    "seconds": 10,
+    "version": "new",
+    "px390": 40.937312893920584
+  }
+]

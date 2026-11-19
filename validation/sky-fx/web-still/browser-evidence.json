@@ -1,0 +1,29 @@
+{
+  "checked_at_utc": "2026-11-16T04:31:03.328535+00:00",
+  "initial": {
+    "backend": "external",
+    "executable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "running": true,
+    "pid": 67186
+  },
+  "own_tab": {
+    "label": "cloud-diagnosis-20261116",
+    "tabId": "t1393",
+    "rawTarget": "729870B7031EA6F805DA81642D8BC62D",
+    "maker_project": "f323832c-195d-4276-a841-0ceafd1f1cf1"
+  },
+  "observed_requests": {
+    "client_manifest": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/1.0.2/manifest-d92d6d0a.json",
+    "status": 200,
+    "engine_manifest": "https://tapcode-sce.spark.xd.com/src/engine/1.38.17/manifest-3da161a9.json"
+  },
+  "failure_sequence": [
+    "iframe snapshot TimeoutError at 5000ms",
+    "tabs returned running:false tabs:[]",
+    "screenshot returned404 tab not found"
+  ],
+  "cause_of_browser_stop": "UNKNOWN",
+  "restart_attempted": false,
+  "user_input_or_other_tabs_changed": false,
+  "runtime_motion_observed": false
+}

@@ -1,0 +1,19 @@
+{
+  "version": "v3",
+  "core": "blue-white solid sphere",
+  "frame_count": 3,
+  "frame_segments_per_frame": 2,
+  "frame_axis": "X horizontal",
+  "frame_phases_deg": [
+    0,
+    120,
+    240
+  ],
+  "numerals": "attached to segmented arc projection",
+  "support_geometry": false,
+  "hands": false,
+  "rear_sand_grains": 54,
+  "feather_light_sheets": 2,
+  "triangles": 6718,
+  "animation_period_s": 12
+}

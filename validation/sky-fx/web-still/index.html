@@ -1,0 +1,181 @@
+<!doctype html>
+<!-- UrhoX Project Index - Bootstrap Loader -->
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <title>TapTap Maker</title>
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      background: radial-gradient(ellipse at center, #1a1a1a 0%, #000000 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      opacity: 1;
+      transition: opacity 1.5s ease-out;
+    }
+    
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    #loading-logo {
+      width: clamp(300px, 30vw, 400px);
+      height: auto;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+    }
+    
+    #loading-container {
+      width: clamp(300px, 60vw, 600px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(12px, 2vh, 20px);
+    }
+    
+    #loading-progress-bg {
+      width: 100%;
+      height: clamp(6px, 1vh, 10px);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+    
+    #loading-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4a9eff 0%, #6eb5ff 100%);
+      border-radius: 999px;
+      transition: width 0.3s ease-out;
+      box-shadow: 0 0 15px rgba(78, 158, 255, 0.6);
+    }
+    
+    #loading-status {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: clamp(14px, 2.5vw, 18px);
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      text-align: center;
+      min-height: 1.5em;
+    }
+    
+    #loading-percent {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: clamp(12px, 2vw, 16px);
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+    
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: block;
+      background-color: black;
+      border: 0;
+      outline: none;
+    }
+    
+    #version-info {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 12px;
+      font-family: monospace;
+      z-index: 9998;
+      pointer-events: none;
+    }
+
+    #watermark-logo {
+      position: fixed;
+      bottom: 0;
+      right: 8px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    
+    /* 对话框 */
+    #dialog-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; z-index: 20000;
+      opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s;
+    }
+    #dialog-overlay.visible { opacity: 1; visibility: visible; }
+    #dialog-box {
+      width: 100%; background: rgba(77,77,102,0.95);
+      padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 24px;
+    }
+    #dialog-title { color: rgba(255,255,255,0.9); font-size: 24px; margin: 0; }
+    #dialog-message { color: #ddd; font-size: 20px; text-align: center; line-height: 1.5; margin: 0; }
+    #dialog-buttons { display: flex; gap: 32px; }
+    .dialog-btn {
+      padding: 6px 32px; font-size: 18px;
+      border: none; cursor: pointer;
+      background: #fff; color: #444;
+    }
+    .dialog-btn:active { background: #ccc; }
+    #dialog-cancel.hidden { display: none; }
+  </style>
+<script src="/__preview-bridge.js?v=f323832c-195d-4276-a841-0ceafd1f1cf1" data-preview-bridge="taptap-maker" data-build-id="f323832c-195d-4276-a841-0ceafd1f1cf1"></script></head>
+<body oncontextmenu="return false;">
+
+  <div id="loading-screen">
+    <img id="loading-logo" src="https://tapcode-sce.spark.xd.com/src/web/src/LogoLarge.png" alt="UrhoX" onerror="this.style.display='none'">
+    <div id="loading-container">
+      <div id="loading-progress-bg">
+        <div id="loading-progress-bar"></div>
+      </div>
+      <div id="loading-status">Initializing...</div>
+      <div id="loading-percent">0%</div>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <img id="watermark-logo" src="https://tapcode-sce.spark.xd.com/src/web/src/Logo.png" alt="" onerror="this.style.display='none'">
+
+  <!-- 对话框 -->
+  <div id="dialog-overlay">
+    <div id="dialog-box">
+      <h2 id="dialog-title">Title</h2>
+      <p id="dialog-message">Message</p>
+      <div id="dialog-buttons">
+        <button id="dialog-confirm" class="dialog-btn">OK</button>
+        <button id="dialog-cancel" class="dialog-btn hidden">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://tapcode-sce.spark.xd.com/src/web/src/index.min.js"></script>
+
+</body>
+</html>

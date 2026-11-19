@@ -1,0 +1,9 @@
+{
+  "version": 6,
+  "triangles": 17372,
+  "mesh_count": 41,
+  "band_radius_m": 0.245,
+  "core_radius_m": 0.088,
+  "loop_seconds": 12,
+  "motion": "bands +360 about X, blades -360 about X, rhombus gems +360 about Y (front plane), shards bob"
+}

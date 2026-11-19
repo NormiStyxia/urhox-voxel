@@ -1,0 +1,12 @@
+# Self-review: one production adjustment, not a freeze fix
+
+- Production speed change is limited to SkyClouds.lua: one WIND_SPEED_SCALE=3.0 and four multiplications. Displacement and its velocity derivative agree to <2e-6m/s over24h samples; same heading at every instant. elapsed/drift_time are not scaled.
+- Existing SkyAtmosphere default-off six-sample Probe is prior WIP, unchanged by this task. No other production file/shader/material/texture changed. Ground/fallback grass read the same live wind; no new independent phase.
+- Actual Lua host/Settings and material writes supply0/3/5/10s data; at3s a60fps host last uploaded2.8333s, not a fictional frame-continuous3s. Old and new run the same host. Projection/CPU imagery uses those values and the actual vertex expressions, not the older evaluator's default1x wind helper.
+- Confirmed world-coordinate invariance in4200 cases using actual3x values. Cold cache/late callback/disposal/auto tiers/freeze/off/zero logging/shadow coupling regressions pass. No fwidth/billow or new GPU syntax added.
+- Nominal5Hz remains4.3–4.7Hz under the fixed30/60fps fixtures. Visible step p95=.892px/max1.628px at390px image height; this can reach4.51px at1080px. Did not introduce new unverified shader-time interpolation just to smooth a CPU preview; real Web smoothness remains unvalidated.
+- Fade caveat: opacity remains the original distance-based120–170m window. Faster crossing naturally takes fewer seconds (sampled9.13–27.65s); no claim that real-time fade duration stays unchanged. A strict equal-duration requirement needs a separate local slowdown/window design, with cloud-population implications, rather than silently widening opacity ranges.
+- Two-hour5s-spaced population checks never hide the entire layer; low can still be sparse (one visible patch, opacity sum~.339).240 exact seam checks are transparent on both sides, not just a coarse timestep test.
+- Read all three regenerated formal CPU comparison images after switching to real host write times. They show the same silhouettes and larger motion. They are not Web screenshots or GPU performance measurements.
+- Existing motion-visible JSON artifacts regenerated with new real Lua values; table-key ordering normalized without changing values. Prior baseline source snapshots and real Web evidence remain untouched.
+- No commit/push/build/localRuntime/browser interaction in this task. No new runtime resources or meta. Ready for Lead review as an unbuilt3x candidate, with fade duration/5Hz smoothness limitations explicitly disclosed.

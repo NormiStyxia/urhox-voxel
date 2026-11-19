@@ -1,0 +1,3417 @@
+{
+  "format": 1,
+  "target": "client",
+  "project_id": "m_hi4f",
+  "sources": {
+    "engine-res": {
+      "tag": "stable",
+      "base_url": "https://tapcode-sce.spark.xd.com/src/engine-res/"
+    },
+    "urhox-libs": {
+      "tag": "1.0",
+      "base_url": "https://tapcode-sce.spark.xd.com/src/urhox-libs/"
+    },
+    "official-res": {
+      "tag": "stable",
+      "base_url": "https://tapcode-sce.spark.xd.com/src/official-res/"
+    }
+  },
+  "asset_prefixes": [
+    "assets",
+    "scripts"
+  ],
+  "entry": "ruins_main.lua",
+  "preload_groups": [
+    "shader_includes",
+    "#shaders",
+    "#config"
+  ],
+  "files": [
+    {
+      "uuid": "A0sRgUqBrfP6OtavkKNIiBAP",
+      "ext": ".lua",
+      "hash": "ab10e56f",
+      "size": 9039,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/NightBraziers.lua"
+    },
+    {
+      "uuid": "A4FXmZgxj6sfPQbnRsWS15jz",
+      "ext": ".lua",
+      "hash": "86390d54",
+      "size": 1137,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/tests/TouchLayout.lua"
+    },
+    {
+      "uuid": "A4v7GUgGHiLB7JEL0rRj-RKH",
+      "ext": ".lua",
+      "hash": "2f6b27f3",
+      "size": 3304,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/ContactAO.lua"
+    },
+    {
+      "uuid": "A7E62b1X9aFXrr1jJD42Hono",
+      "ext": ".png",
+      "hash": "e84114e7",
+      "size": 665,
+      "hash@windows": "c49204ba",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/swap.png"
+    },
+    {
+      "uuid": "A8LWCVQDqxl3cuA-nK6MwOih",
+      "ext": ".xml",
+      "hash": "ae6e2f6f",
+      "size": 343,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_N.xml"
+    },
+    {
+      "uuid": "A9DZiRyBWg3Nj8DTitOuaUlI",
+      "ext": ".png",
+      "hash": "a8c4d14b",
+      "size": 665,
+      "hash@windows": "9d365cc1",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/clock.png"
+    },
+    {
+      "uuid": "ABhfobZX0LE7zAkoY0Uv8Tgi",
+      "ext": ".lua",
+      "hash": "9f388f34",
+      "size": 3979,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonShaderWarmup.lua"
+    },
+    {
+      "uuid": "ABiTGf92XLzGWcp16Y62nzjD",
+      "ext": ".png",
+      "hash": "46397ba2",
+      "size": 76579,
+      "fs_path": "Textures/Sky/cloud_flat_atlas.png"
+    },
+    {
+      "uuid": "AGcDQZ4RVaVIizO1U9DlQP9-",
+      "ext": ".xml",
+      "hash": "f673b58c",
+      "size": 395,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "BUppMZj7jZFE5DO-VA2W7u5E",
+        "ERXwEerdeI3Xf1i5jTWQhCM1"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Materials/c8d2cfd2bc29455abb72b044deb16d5d_00_tripo_material_af5190d1-e320-4160-9951-ed50bff7a75e.xml"
+    },
+    {
+      "uuid": "AK6NydFNIVNF1ktQSRVgM0oH",
+      "ext": ".xml",
+      "groups": [
+        "#blocking"
+      ],
+      "source": "engine-res",
+      "fs_path": "Techniques/NoTextureUnlit.xml"
+    },
+    {
+      "uuid": "AMyGWa_hbHU2t55Ti5rFmzqn",
+      "ext": ".shader",
+      "hash": "5bb07923",
+      "size": 1632,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/DragonMembrane.shader"
+    },
+    {
+      "uuid": "ANTb0UTvgmwcNZ1xQSVZUIPQ",
+      "ext": ".png",
+      "hash": "4226f89f",
+      "size": 665,
+      "hash@windows": "26a3cbc1",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/armor_break.png"
+    },
+    {
+      "uuid": "AQJd2fzZjQtcpFGslnmgQFQr",
+      "ext": ".lua",
+      "hash": "a12cb1b6",
+      "size": 6344,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/EnvironmentDamage.lua"
+    },
+    {
+      "uuid": "AQo0mQ6WqK0pp1_L3mUMTO9R",
+      "ext": ".lua",
+      "hash": "6a7ef5bd",
+      "size": 7925,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/PointerCaptureTest.lua"
+    },
+    {
+      "uuid": "ARQeyUc6XGAu1hIsK25Zqprw",
+      "ext": ".lua",
+      "hash": "2ef2a0be",
+      "size": 9315,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/GameSettings.lua"
+    },
+    {
+      "uuid": "AURcuRYCrsWbtvWEMGYaP0Rd",
+      "ext": ".png",
+      "hash": "5df55dc7",
+      "size": 345,
+      "hash@windows": "f644b178",
+      "size@windows": 489,
+      "fs_path": "ui/touch/jump_s.png"
+    },
+    {
+      "uuid": "AV0MUTqnD-zJNUbyWO3bI7Xg",
+      "ext": ".mp3",
+      "hash": "c21e2e83",
+      "size": 52653,
+      "fs_path": "audio/sfx/breath_astral_beam.mp3"
+    },
+    {
+      "uuid": "AV6vIfE6twvoQJtMkUKQeQjZ",
+      "ext": ".mp3",
+      "hash": "15b4a071",
+      "size": 20397,
+      "fs_path": "audio/sfx/breath_ice_shatter.mp3"
+    },
+    {
+      "uuid": "AVYQ-ShV2vMnN5kxuCOEt5z6",
+      "ext": ".mp3",
+      "hash": "872a3c1e",
+      "size": 45741,
+      "fs_path": "audio/sfx/breath_frost_blast.mp3"
+    },
+    {
+      "uuid": "AYChiQxbnlc7QY28YnN90NPi",
+      "ext": ".mdl",
+      "hash": "59f099f0",
+      "size": 1135182,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.mdl"
+    },
+    {
+      "uuid": "AZWWgT5QAd_CNJpKr8YrZkgk",
+      "ext": ".png",
+      "hash": "8d04b475",
+      "size": 2025,
+      "hash@windows": "9e809dec",
+      "size@windows": 4185,
+      "fs_path": "ui/touch/joy_base_run.png"
+    },
+    {
+      "uuid": "AZW_uWu2H8iL5UHIcc55uZIR",
+      "ext": ".lua",
+      "hash": "049fc320",
+      "size": 8153,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/StairGeometryTest.lua"
+    },
+    {
+      "uuid": "A_RSYZLPIs9B4RCw5w9kUY3a",
+      "ext": ".shader",
+      "hash": "14bfe2b4",
+      "size": 1140,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/TimeSigil.shader"
+    },
+    {
+      "uuid": "Acc6-XpQCwQWt9Ay3E_w4aG3",
+      "ext": ".lua",
+      "hash": "3ba70966",
+      "size": 5589,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/tests/HUDLayoutAcceptance.lua"
+    },
+    {
+      "uuid": "Aei5AXEoxCSjV82TlaGbK3vJ",
+      "ext": ".png",
+      "hash": "1fedf86a",
+      "size": 626417,
+      "hash@windows": "b10ef914",
+      "size@windows": 1398257,
+      "fs_path": "Textures/Sky/cloud_atlas.png"
+    },
+    {
+      "uuid": "AkXvEXNXt-IcgdDTFvVmnYxI",
+      "ext": ".mp3",
+      "hash": "09de1277",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_sword_whoosh_1.mp3"
+    },
+    {
+      "uuid": "AnyC2aJr1aN9SxSFofJR61ln",
+      "ext": ".png",
+      "hash": "c21e26f5",
+      "size": 233,
+      "hash@windows": "35a13965",
+      "size@windows": 345,
+      "fs_path": "ui/touch/heart_empty_16.png"
+    },
+    {
+      "uuid": "Aq6kgdxeN-uNQX483LUNfSAW",
+      "ext": ".png",
+      "hash": "0714ea09",
+      "size": 665,
+      "hash@windows": "66b94bf4",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/btn32_main_down.png"
+    },
+    {
+      "uuid": "Aq7usXNjkTResC1vHqe7zVvp",
+      "ext": ".png",
+      "hash": "5d8a40eb",
+      "size": 665,
+      "hash@windows": "53c1e635",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/combo.png"
+    },
+    {
+      "uuid": "Ar0bwfLf1EJ0cVZ7Q0Cgturr",
+      "ext": ".shader",
+      "hash": "e428e212",
+      "size": 2962,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsPillarFlameDynamic.shader"
+    },
+    {
+      "uuid": "ArAgCTfkRb1_WKRM3qGqnsxi",
+      "ext": ".png",
+      "hash": "44dec477",
+      "size": 665,
+      "hash@windows": "11d08985",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/breath.png"
+    },
+    {
+      "uuid": "At6UKcpd3Ux0pGxXHQoAobQK",
+      "ext": ".lua",
+      "hash": "b56b100d",
+      "size": 10897,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/enemies/Spawner.lua"
+    },
+    {
+      "uuid": "AuxayWcvnLS_VcBqO9bXJdhX",
+      "ext": ".mp3",
+      "hash": "bc7cad43",
+      "size": 17325,
+      "fs_path": "audio/sfx/breath_ice_grow.mp3"
+    },
+    {
+      "uuid": "Av6GMavIDQ5zlo3Zv1M2DVVa",
+      "ext": ".mp3",
+      "hash": "3f8f2d31",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_arrow_hit_stone_1.mp3"
+    },
+    {
+      "uuid": "AvaJCUo5qU3UPfSMil72ytsO",
+      "ext": ".ttf",
+      "hash": "f0d519fa",
+      "size": 623604,
+      "fs_path": "Fonts/ForgeSerif-SemiBold.ttf"
+    },
+    {
+      "uuid": "AxDrMWHIIweVvEfW6egBBwPg",
+      "ext": ".lua",
+      "hash": "54de297a",
+      "size": 31368,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonSpec.lua"
+    },
+    {
+      "uuid": "Ay0UeVZ8RZCc7MVpzDybQvR0",
+      "ext": ".lua",
+      "hash": "c975d191",
+      "size": 11186,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/GateTargetTest.lua"
+    },
+    {
+      "uuid": "AzTdWfNZRFjO0CbJ2AyRDRcx",
+      "ext": ".lua",
+      "hash": "fa973285",
+      "size": 443763,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "game/NomiVoxelData.lua"
+    },
+    {
+      "uuid": "B0Cn6dgW66essqCr4NR4bn7A",
+      "ext": ".lua",
+      "hash": "94655072",
+      "size": 10385,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/ForgeShowroomBlades.lua"
+    },
+    {
+      "uuid": "B0I8mc8VboKksncTRor4W0Z2",
+      "ext": ".json",
+      "hash": "90788a73",
+      "size": 301,
+      "groups": [
+        "#config",
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "BgCviebFkuFhKjMsq6Cjz4K1"
+      ],
+      "fs_path": "settings.json"
+    },
+    {
+      "uuid": "B17JYVMolWfN8iyPV-2FdWv6",
+      "ext": ".png",
+      "hash": "211d8255",
+      "size": 158557,
+      "hash@windows": "73b797a0",
+      "size@windows": 174901,
+      "fs_path": "Textures/Sigils/sigil_clock.png"
+    },
+    {
+      "uuid": "B18oCQbsBcBXDZMeda4AoxFx",
+      "ext": ".png",
+      "hash": "ed846d3e",
+      "size": 345,
+      "hash@windows": "3fee1aeb",
+      "size@windows": 489,
+      "fs_path": "ui/touch/dodge_s.png"
+    },
+    {
+      "uuid": "B2LTMb4kOzz6zB_65JzaC2A8",
+      "ext": ".lua",
+      "hash": "d8609992",
+      "size": 6616,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonIK.lua"
+    },
+    {
+      "uuid": "B2UZOcCSipafCe9Rf9SjC2HN",
+      "ext": ".xml",
+      "groups": [
+        "#blocking"
+      ],
+      "source": "engine-res",
+      "fs_path": "Techniques/PBR/PBRNoTexture.xml"
+    },
+    {
+      "uuid": "B2lnkUFoU3xh0l1TJ53R9CLW",
+      "ext": ".lua",
+      "hash": "5fc733ef",
+      "size": 797,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins_main.lua"
+    },
+    {
+      "uuid": "B32GWUiujKdiCxGfDVtA1I4T",
+      "ext": ".lua",
+      "hash": "1f6cddc3",
+      "size": 18144,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/TouchControls.lua"
+    },
+    {
+      "uuid": "B393uZUMXEjcJyYNvpBqhmpu",
+      "ext": ".lua",
+      "hash": "d15cd68f",
+      "size": 6930,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonStream.lua"
+    },
+    {
+      "uuid": "B3tGqeIq_9cKTAXduUSGklA0",
+      "ext": ".shader",
+      "hash": "666528dc",
+      "size": 1391,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/DragonBeamSmooth.shader"
+    },
+    {
+      "uuid": "B4rXEXFtLEnsiL_Pxg1a1gTJ",
+      "ext": ".lua",
+      "hash": "7988313d",
+      "size": 3296,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/SceneQuality.lua"
+    },
+    {
+      "uuid": "B4tu-U6gejw0Qnzo8t8cJP2q",
+      "ext": ".png",
+      "hash": "163782f8",
+      "size": 153,
+      "hash@windows": "f2127f1a",
+      "size@windows": 121,
+      "fs_path": "ui/touch/bar_fill_blue.png"
+    },
+    {
+      "uuid": "B7kCUdFGjP2SetnaTjmh7PX4",
+      "ext": ".shader",
+      "hash": "7aa94223",
+      "size": 4952,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsCloud.shader"
+    },
+    {
+      "uuid": "BAIpAWsrSBq9pUuZa4jYa-99",
+      "ext": ".png",
+      "hash": "23c7a7d6",
+      "size": 345,
+      "hash@windows": "34f23600",
+      "size@windows": 489,
+      "fs_path": "ui/touch/ascend_s.png"
+    },
+    {
+      "uuid": "BFX-GWZ8Esgm27ibwhmcMgt-",
+      "ext": ".lua",
+      "hash": "1ff3d0db",
+      "size": 15152,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsDragon.lua"
+    },
+    {
+      "uuid": "BFmMsYEmTFY0SkB_HWQg99Bc",
+      "ext": ".png",
+      "hash": "77a7825f",
+      "size": 29673,
+      "hash@windows": "d0dee4f7",
+      "size@windows": 65625,
+      "fs_path": "ui/rewind/rewind_spark.png"
+    },
+    {
+      "uuid": "BJI5SZJxpGxC6ipFKgHty7le",
+      "ext": ".png",
+      "hash": "626f8b14",
+      "size": 345,
+      "hash@windows": "22f608dd",
+      "size@windows": 489,
+      "fs_path": "ui/touch/aim_s.png"
+    },
+    {
+      "uuid": "BM_SGfgFGNyS8REAumnRBeXm",
+      "ext": ".png",
+      "hash": "7ff4efeb",
+      "size": 345,
+      "hash@windows": "944dab92",
+      "size@windows": 489,
+      "fs_path": "ui/touch/defeated_s.png"
+    },
+    {
+      "uuid": "BNe0GTFeNj6wIkMDctyKxaI1",
+      "ext": ".mp3",
+      "hash": "d07e9fb6",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_hit_soft_3.mp3"
+    },
+    {
+      "uuid": "BOEMwWFzpUK_p8XMJzHP9epz",
+      "ext": ".lua",
+      "hash": "cfb16924",
+      "size": 3925,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/LightQuality.lua"
+    },
+    {
+      "uuid": "BPjs2aLf5NE6LS-piu2Fcya3",
+      "ext": ".lua",
+      "hash": "cef0a6be",
+      "size": 7116,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/CombatTest.lua"
+    },
+    {
+      "uuid": "BSgFWZwLGlZj8wYqy3GmzOQE",
+      "ext": ".lua",
+      "hash": "38223f06",
+      "size": 1439,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/UrnView.lua"
+    },
+    {
+      "uuid": "BTjv4R9DfzDYjU7DN4ssLacl",
+      "ext": ".lua",
+      "hash": "a052a62a",
+      "size": 2629,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/enemies/MossBeetle.lua"
+    },
+    {
+      "uuid": "BUppMZj7jZFE5DO-VA2W7u5E",
+      "ext": ".png",
+      "hash": "00c33564",
+      "size": 2497901,
+      "hash@windows": "e8bbbac5",
+      "size@windows": 5592621,
+      "refs": [
+        "A8LWCVQDqxl3cuA-nK6MwOih"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_N.png"
+    },
+    {
+      "uuid": "BZ7FoZfW8Af8jjl_kUrq3L0J",
+      "ext": ".png",
+      "hash": "36a8a7c1",
+      "size": 665,
+      "hash@windows": "813349af",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/heavy.png"
+    },
+    {
+      "uuid": "B_VpAfNKxlN3Vj0WjTwpS8Kk",
+      "ext": ".mp3",
+      "hash": "d1529d31",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_arrow_hit_body_1.mp3"
+    },
+    {
+      "uuid": "Bb632d6LiyX81xK7sAvJ2q8D",
+      "ext": ".lua",
+      "hash": "48961c17",
+      "size": 4847,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/enemies/EnemyHitMaterial.lua"
+    },
+    {
+      "uuid": "Bb9p6RsMhjutbJjjoSBIsIFY",
+      "ext": ".png",
+      "hash": "87925be4",
+      "size": 7657,
+      "hash@windows": "16eea926",
+      "size@windows": 67673,
+      "fs_path": "ui/forge/icon_bow.png"
+    },
+    {
+      "uuid": "BbIPOZaT6GcieSuEEhfcc6HX",
+      "ext": ".lua",
+      "hash": "28579126",
+      "size": 55225,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonBreath.lua"
+    },
+    {
+      "uuid": "BchRoUGxGOV2Edhki_nbBnns",
+      "ext": ".xml",
+      "hash": "6591b125",
+      "size": 4926,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "LightGroup/RuinsDay.xml"
+    },
+    {
+      "uuid": "BdeHQUmDUCVwYuSyNM9Iq6IP",
+      "ext": ".mp3",
+      "hash": "a996b635",
+      "size": 20397,
+      "fs_path": "audio/sfx/breath_frost_charge.mp3"
+    },
+    {
+      "uuid": "Be3L8Sjz40mWcNl08B_ZikVv",
+      "ext": ".png",
+      "hash": "af8fe7a6",
+      "size": 39712,
+      "fs_path": "ui/rewind/rewind_hand_minute.png"
+    },
+    {
+      "uuid": "BgCviebFkuFhKjMsq6Cjz4K1",
+      "ext": ".json",
+      "groups": [
+        "#blocking"
+      ],
+      "source": "official-res",
+      "refs": [
+        "AvmfQQWPOJKQln4kISbq1qsK",
+        "B9gxWZGEvJv99DLadVBNjeBm",
+        "C5TH8Um7enDvsccQp0yKaFKv",
+        "ENWpeS8aUuN3DMZ4kLZtqc6Q",
+        "EPbSsW5xhUNav0MZt0b_VGe-",
+        "Ej2uwTLda_LOVYIAw4Bs_Hog",
+        "F4ItQUiV0gmvAelLXpk5yrTs",
+        "FmD_MVX6NJVaeW9vdQ4EIlTq",
+        "FmaJEb00vYdE9vFmbO60Xkn6",
+        "Fr5sya5vN3P0bfThXYJ2XcGw",
+        "G2FlEdwwzR0rliGuXVgGpK2C",
+        "Gegssbk9ZAijVsigDH-iMHAR",
+        "HBTyuRZ6z-VATB16tjmWi3Uo",
+        "HIsCIUT7yv1mueg3KlvzX2Xz",
+        "HTriplanarTech01aB2cDe",
+        "KTriplanarShaderFinal1",
+        "XimTixnDEW7k2OzjV7sFq9vM",
+        "iV_WrtdX3cKmljRIMhn5PZlT"
+      ],
+      "fs_path": "generated/__official_pinned_refs__.json"
+    },
+    {
+      "uuid": "BgLUSQE8G36xElE5xpK-Dbyf",
+      "ext": ".mp3",
+      "hash": "3abdfb43",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_dodge_slide_1.mp3"
+    },
+    {
+      "uuid": "Bn_vMUWVf_OdSlaghYGdKsnZ",
+      "ext": ".lua",
+      "hash": "e948a716",
+      "size": 14720,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/CombatHUD.lua"
+    },
+    {
+      "uuid": "BpQ8wRmVaK_4WOHF8fVi9vu5",
+      "ext": ".lua",
+      "hash": "a34c74fb",
+      "size": 373,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/WebPointerEntry.lua"
+    },
+    {
+      "uuid": "BsihyTNANxafENk8-SunZN5e",
+      "ext": ".lua",
+      "hash": "f1fbaee2",
+      "size": 2794,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/SwingPerf.lua"
+    },
+    {
+      "uuid": "BtYnucBc6wCXH7j-cB06pvhm",
+      "ext": ".png",
+      "hash": "6201c333",
+      "size": 42889,
+      "hash@windows": "decf0696",
+      "size@windows": 371289,
+      "fs_path": "ui/forge/plate_button.png"
+    },
+    {
+      "uuid": "Bt_LCQl000a0S56DFxAJ3WDp",
+      "ext": ".lodgroup",
+      "hash": "c74a2390",
+      "size": 1264,
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.lodgroup"
+    },
+    {
+      "uuid": "BvuoGYJsbmuivatDGSwcM9SH",
+      "ext": ".png",
+      "hash": "2b3ba346",
+      "size": 665,
+      "hash@windows": "72e0bb23",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/shatter.png"
+    },
+    {
+      "uuid": "BxWDAWn-o58g0jlOY-agHO5H",
+      "ext": ".lua",
+      "hash": "b4fea49d",
+      "size": 5582,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/Fireflies.lua"
+    },
+    {
+      "uuid": "C0mW-ffTDOtAW5m6jG6ot0Br",
+      "ext": ".png",
+      "hash": "92417c51",
+      "size": 153,
+      "hash@windows": "14021a7d",
+      "size@windows": 121,
+      "fs_path": "ui/touch/bar_fill_red.png"
+    },
+    {
+      "uuid": "C3_RwQYISz9JyRatJh43Ii47",
+      "ext": ".png",
+      "hash": "a32d356f",
+      "size": 345,
+      "hash@windows": "546cdc3a",
+      "size@windows": 489,
+      "fs_path": "ui/touch/sword_s.png"
+    },
+    {
+      "uuid": "C7Z6ATD1U_oaFs4P9HvfN5p-",
+      "ext": ".lua",
+      "hash": "c04147be",
+      "size": 55472,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonAnimationController.lua"
+    },
+    {
+      "uuid": "C8IlOTmjwMSfwD1EuusM44Mt",
+      "ext": ".xml",
+      "hash": "afc2a8f0",
+      "size": 88,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "model/forge-blades/WingSword.xml"
+    },
+    {
+      "uuid": "C8LzScaK1nMLfs2sc7sdAjcH",
+      "ext": ".lua",
+      "hash": "619a021a",
+      "size": 11896,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/WeaponParts.lua"
+    },
+    {
+      "uuid": "CDHkQWGeqBOc7qYV2eGVKSqP",
+      "ext": ".png",
+      "hash": "5a89a66f",
+      "size": 489,
+      "hash@windows": "45cc67c1",
+      "size@windows": 873,
+      "fs_path": "ui/touch/joy_thumb.png"
+    },
+    {
+      "uuid": "CG7-MUSDoPvuMQHv9mcf8ahV",
+      "ext": ".lua",
+      "hash": "8153a343",
+      "size": 5329,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/WeaponSelectGesture.lua"
+    },
+    {
+      "uuid": "CGipGZotHQZo6Lnw3pQeMIsT",
+      "ext": ".lua",
+      "hash": "d63a0eb8",
+      "size": 16496,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsHUD.lua"
+    },
+    {
+      "uuid": "CH2ukU53R-k9JMWAciHBMyyt",
+      "ext": ".png",
+      "hash": "b95ed6af",
+      "size": 315121,
+      "hash@windows": "63d3efca",
+      "size@windows": 699217,
+      "fs_path": "Textures/Sky/cloud_sculpted_atlas_low.png"
+    },
+    {
+      "uuid": "CHuTcXdiXJzYmx2QyMCKESUJ",
+      "ext": ".lua",
+      "hash": "21627e75",
+      "size": 20914,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonRide.lua"
+    },
+    {
+      "uuid": "CJsg4d4-pr-tlwaFRMbp6cW5",
+      "ext": ".shader",
+      "hash": "d1680a2a",
+      "size": 512,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/BlockCharacter.shader"
+    },
+    {
+      "uuid": "CMI50Q7w63UDKAVJF6v39S7S",
+      "ext": ".png",
+      "hash": "558d55a1",
+      "size": 665,
+      "hash@windows": "92db8b41",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/heart_empty.png"
+    },
+    {
+      "uuid": "CMKDEZjU1qHCDp6fAr5YsXEf",
+      "ext": ".lua",
+      "hash": "3bd629e8",
+      "size": 36100,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/WeaponBuilder.lua"
+    },
+    {
+      "uuid": "CMrBCcddLz9hkdbnK5UAFYbT",
+      "ext": ".mp3",
+      "hash": "911f28e6",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_hit_armor_3.mp3"
+    },
+    {
+      "uuid": "COUpeW4ycpsJDT1EgmyjjklG",
+      "ext": ".png",
+      "hash": "33032cb6",
+      "size": 665,
+      "hash@windows": "f2ef1cb7",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/arrow.png"
+    },
+    {
+      "uuid": "COt2WbbO8bcgNVaf50qTHDPu",
+      "ext": ".xml",
+      "hash": "275801bb",
+      "size": 299,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/RuinsCloud.xml"
+    },
+    {
+      "uuid": "CPH2-TZmax3O2Pg-5aJXN8XT",
+      "ext": ".xml",
+      "hash": "cffe473f",
+      "size": 110,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Fonts/ArkPixel-12px-zh_hans.xml"
+    },
+    {
+      "uuid": "CRYdoRgQSvLx8E4cq73IRTi2",
+      "ext": ".png",
+      "hash": "416174f0",
+      "size": 62553,
+      "hash@windows": "ed57a576",
+      "size@windows": 554585,
+      "fs_path": "ui/forge/medal_active.png"
+    },
+    {
+      "uuid": "CURqsaXDFUNd1JdtV4GY6WaO",
+      "ext": ".ttf",
+      "groups": [
+        "#refs"
+      ],
+      "source": "engine-res",
+      "refs": [
+        "DUZISSdd1e-IaoM5QAAx9QYX"
+      ],
+      "fs_path": "Fonts/MiSans-Regular.ttf"
+    },
+    {
+      "uuid": "C_u-MV_T95PqduWw-6es0k_1",
+      "ext": ".lua",
+      "hash": "ea3b91f3",
+      "size": 4615,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/TimeSigil.lua"
+    },
+    {
+      "uuid": "C_w_CQgLVcGrUSjf1Br7sL5J",
+      "ext": ".png",
+      "hash": "7a528ece",
+      "size": 233,
+      "hash@windows": "bdb026ff",
+      "size@windows": 345,
+      "fs_path": "ui/touch/heart_half_16.png"
+    },
+    {
+      "uuid": "CadNoY2Zq6ZDU-pDFWWyAxW9",
+      "ext": ".lua",
+      "hash": "a7f43771",
+      "size": 15538,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonSculpt.lua"
+    },
+    {
+      "uuid": "CbajCY2mGnTXDcOT5TG7JUg9",
+      "ext": ".png",
+      "hash": "171d3d29",
+      "size": 665,
+      "hash@windows": "710fdbed",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/descend.png"
+    },
+    {
+      "uuid": "CbczST1WFdQRA0uhqc8JXeK-",
+      "ext": ".png",
+      "hash": "4f99ce25",
+      "size": 9721,
+      "hash@windows": "9b953a23",
+      "size@windows": 21593,
+      "fs_path": "ui/forge/icon_sword.png"
+    },
+    {
+      "uuid": "Ch6LEa-OcrN9u1qbWMgq4XsJ",
+      "ext": ".png",
+      "hash": "4e68572a",
+      "size": 345,
+      "hash@windows": "039a5886",
+      "size@windows": 489,
+      "fs_path": "ui/touch/armor_break_s.png"
+    },
+    {
+      "uuid": "CiYBCXLF4yOXrMiYX0I-pY5s",
+      "ext": ".lua",
+      "hash": "da93a4f1",
+      "size": 505,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon_main.lua"
+    },
+    {
+      "uuid": "CmatEYd8PiEKkOx1lfzCTiZJ",
+      "ext": ".png",
+      "hash": "b7f323cf",
+      "size": 65625,
+      "hash@windows": "06e4e2cd",
+      "size@windows": 147545,
+      "fs_path": "ui/forge/medal_idle.png"
+    },
+    {
+      "uuid": "CnpVWfgd5O_x6uezQ9DAYXqb",
+      "ext": ".png",
+      "hash": "01223310",
+      "size": 345,
+      "hash@windows": "73d42175",
+      "size@windows": 489,
+      "fs_path": "ui/touch/farview_s.png"
+    },
+    {
+      "uuid": "CoUWQSH5Eif3h4n0zGoemFoA",
+      "ext": ".lua",
+      "hash": "20c1d274",
+      "size": 8195,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/VoxelBrush.lua"
+    },
+    {
+      "uuid": "Coft0ZriqZ68zjh24OJjDeqW",
+      "ext": ".png",
+      "hash": "4d0415a6",
+      "size": 665,
+      "hash@windows": "61b8e0f2",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/rewind.png"
+    },
+    {
+      "uuid": "CpkOab_drbB6D8wwU_V1uhdm",
+      "ext": ".png",
+      "hash": "0c9c02f4",
+      "size": 345,
+      "hash@windows": "b223fc77",
+      "size@windows": 489,
+      "fs_path": "ui/touch/mount_s.png"
+    },
+    {
+      "uuid": "Cq14gYbo3n-OaI0pesIJ4yf0",
+      "ext": ".png",
+      "hash": "77dbff65",
+      "size": 1364,
+      "fs_path": "Textures/Sky/cloud_occupancy.png"
+    },
+    {
+      "uuid": "Cq5FOapzi9J9r2E78ls-TMRp",
+      "ext": ".lua",
+      "hash": "4c785976",
+      "size": 21458,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonTest.lua"
+    },
+    {
+      "uuid": "CqLzIYN7c6hLFoJwktKevHHy",
+      "ext": ".mp3",
+      "hash": "954631d7",
+      "size": 12333,
+      "fs_path": "audio/sfx/cmb_bow_draw.mp3"
+    },
+    {
+      "uuid": "CsZRsSHMYK8rzZ_mtLuFhKWm",
+      "ext": ".lua",
+      "hash": "4ac45b69",
+      "size": 2093,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/tests/TouchAcceptance.lua"
+    },
+    {
+      "uuid": "Ctej4Q__QZXDWSs1N13eYjGR",
+      "ext": ".txt",
+      "hash": "f7ed9d00",
+      "size": 4412,
+      "fs_path": "Fonts/ArkPixel-OFL.txt"
+    },
+    {
+      "uuid": "CvFOuTjoBRlh6vesJEXGRcWI",
+      "ext": ".png",
+      "hash": "a1834ea1",
+      "size": 665,
+      "hash@windows": "7dd269d8",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/jump.png"
+    },
+    {
+      "uuid": "CxLlsdnU3jrErYlO--1ABvIh",
+      "ext": ".png",
+      "hash": "d4a5804a",
+      "size": 345,
+      "hash@windows": "78b8f2df",
+      "size@windows": 489,
+      "fs_path": "ui/touch/sprint_s.png"
+    },
+    {
+      "uuid": "CxQh6fg6WPO-oQk6XBM_ZCjr",
+      "ext": ".mp3",
+      "hash": "c3e1580a",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_dodge_slide_2.mp3"
+    },
+    {
+      "uuid": "CxzrIbjvlokn9yRwDDbUAGkf",
+      "ext": ".png",
+      "hash": "a1acb715",
+      "size": 665,
+      "hash@windows": "94a168f6",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/forge.png"
+    },
+    {
+      "uuid": "Cz4JYcqL6uD3TCtVWPxQgUYo",
+      "ext": ".mp3",
+      "hash": "233362d4",
+      "size": 7725,
+      "fs_path": "audio/sfx/cmb_hit_heavy_2.mp3"
+    },
+    {
+      "uuid": "D-jFoQhiY_uWZdGXGAwW9U2h",
+      "ext": ".png",
+      "hash": "ceebfa7a",
+      "size": 873,
+      "hash@windows": "0a926d85",
+      "size@windows": 1689,
+      "fs_path": "ui/touch/btn40_main.png"
+    },
+    {
+      "uuid": "D0k4CfiY6XPlAXG508WdAggJ",
+      "ext": ".shader",
+      "hash": "ce11185f",
+      "size": 1720,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "EaGCaU0mEFfKUEWzNeZ1JVJ5"
+      ],
+      "fs_path": "model/forge-blades/BladeStudy.shader"
+    },
+    {
+      "uuid": "D3Q8OenAPrJ_XsneukCuqS5I",
+      "ext": ".lua",
+      "hash": "d06bf54b",
+      "size": 12464,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "AK6NydFNIVNF1ktQSRVgM0oH"
+      ],
+      "fs_path": "combat/enemies/EnemyVisual.lua"
+    },
+    {
+      "uuid": "D4AyuZfIXojbB0hWnozozT6o",
+      "ext": ".png",
+      "hash": "4a44164d",
+      "size": 665,
+      "hash@windows": "0ed01561",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/btn32_main.png"
+    },
+    {
+      "uuid": "D7YcqQ0sXC3jnBsdZckVsLsV",
+      "ext": ".lua",
+      "hash": "e79f6884",
+      "size": 5630,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/FootLocomotion.lua"
+    },
+    {
+      "uuid": "D7t06bHHcHLTfs7Cp8icH6Zx",
+      "ext": ".png",
+      "hash": "41490ec0",
+      "size": 345,
+      "hash@windows": "b6915b59",
+      "size@windows": 489,
+      "fs_path": "ui/touch/heart_empty_s.png"
+    },
+    {
+      "uuid": "D8d0odtgPXANJjHy2g9RdT1r",
+      "ext": ".png",
+      "hash": "370a9704",
+      "size": 665,
+      "hash@windows": "28d3e7a9",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/freeze.png"
+    },
+    {
+      "uuid": "DBHuETA2FjXV9hfZxjMBgRFR",
+      "ext": ".xml",
+      "hash": "fa855fe6",
+      "size": 87,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/RuinsFireflies.xml"
+    },
+    {
+      "uuid": "DBHx6VmzUdXoAqEXqb_W3Bbg",
+      "ext": ".lua",
+      "hash": "f7bd4728",
+      "size": 21909,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "game/BlockCharacter.lua"
+    },
+    {
+      "uuid": "DBQ3sTgZrck-hMMUWtig4Yn9",
+      "ext": ".png",
+      "hash": "4e4bbbf8",
+      "size": 665,
+      "hash@windows": "cce0fdd1",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/btn32_down.png"
+    },
+    {
+      "uuid": "DBXCOV00XboIs1Y3V55aPnYx",
+      "ext": ".xml",
+      "groups": [
+        "#blocking"
+      ],
+      "source": "engine-res",
+      "fs_path": "Techniques/DiffUnlitParticleAdd.xml"
+    },
+    {
+      "uuid": "DCw8iRIM6ILyJ_66pZmj4fOa",
+      "ext": ".lua",
+      "hash": "7ac1d201",
+      "size": 1757,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/tests/HUDLayout.lua"
+    },
+    {
+      "uuid": "DEguITkZrW5sFjjD6cVvRZOh",
+      "ext": ".lua",
+      "hash": "4640c4e5",
+      "size": 3771,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/PerformanceTest.lua"
+    },
+    {
+      "uuid": "DFBdAZsn-crnAxFHecyqgzww",
+      "ext": ".png",
+      "hash": "eba15535",
+      "size": 665,
+      "hash@windows": "f66cd357",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/aim.png"
+    },
+    {
+      "uuid": "DFerCaXZ3K3ftwjlZ7Gs7dpU",
+      "ext": ".png",
+      "hash": "770a7679",
+      "size": 233,
+      "hash@windows": "0da98243",
+      "size@windows": 345,
+      "fs_path": "ui/touch/heart_16.png"
+    },
+    {
+      "uuid": "DGH4eQoaGWL-p10oRD4kN3V3",
+      "ext": ".png",
+      "hash": "5ad1a699",
+      "size": 345,
+      "hash@windows": "ae6880dd",
+      "size@windows": 489,
+      "fs_path": "ui/touch/dismount_s.png"
+    },
+    {
+      "uuid": "DHDZQT_ATtjY1ccd0kiMkf3J",
+      "ext": ".lua",
+      "hash": "9a5ddc11",
+      "size": 189,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/tests/LayoutGround.lua"
+    },
+    {
+      "uuid": "DHKq-RuaT-vONqHDP_UGFQ4L",
+      "ext": ".lua",
+      "hash": "3c0641d2",
+      "size": 45867,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/CombatAnim.lua"
+    },
+    {
+      "uuid": "DHc82UXWvtXNMc0agMh8VDpL",
+      "ext": ".png",
+      "hash": "eebcb35d",
+      "size": 665,
+      "hash@windows": "af8e72ab",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/defeated.png"
+    },
+    {
+      "uuid": "DHx06dYO8RwgRXwCuB8m2f56",
+      "ext": ".shader",
+      "hash": "987fa6e6",
+      "size": 6488,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/TimeVoxel.shader"
+    },
+    {
+      "uuid": "DJMX4WhGoyLwMC1SByKMroU_",
+      "ext": ".shader",
+      "hash": "c1f0fbe8",
+      "size": 12134,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsGround.shader"
+    },
+    {
+      "uuid": "DO9U4Vp38KEDINPWkl-DyVMu",
+      "ext": ".png",
+      "hash": "193de9e0",
+      "size": 665,
+      "hash@windows": "bce18751",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/dash.png"
+    },
+    {
+      "uuid": "DOTOuTic3Wj0RkgX8Klxc7au",
+      "ext": ".mp3",
+      "hash": "b0029e5e",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_hit_armor_2.mp3"
+    },
+    {
+      "uuid": "DPTTmXJwS8sFuKX_s3NvwU4Q",
+      "ext": ".png",
+      "hash": "fe5f611e",
+      "size": 665,
+      "hash@windows": "590d8736",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/mount.png"
+    },
+    {
+      "uuid": "DPa1-RGJnlisSS1FRAMOia73",
+      "ext": ".shader",
+      "hash": "e09bc17d",
+      "size": 2175,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsLeafCard.shader"
+    },
+    {
+      "uuid": "DQYYSYOeYLFeTy9aHGbGek1y",
+      "ext": ".png",
+      "hash": "1aced70f",
+      "size": 873,
+      "hash@windows": "b07db29f",
+      "size@windows": 1689,
+      "fs_path": "ui/touch/btn40.png"
+    },
+    {
+      "uuid": "DTCzse2hWacKh-l4wWKEAmAg",
+      "ext": ".lua",
+      "hash": "97942542",
+      "size": 13979,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonDebugUI.lua"
+    },
+    {
+      "uuid": "DUThSRIcfjYu6k6_R6sJKVgd",
+      "ext": ".png",
+      "hash": "9b84cf9a",
+      "size": 345,
+      "hash@windows": "a0a83f42",
+      "size@windows": 489,
+      "fs_path": "ui/touch/swap_s.png"
+    },
+    {
+      "uuid": "DVIBSfRpNRBVyYTePYCGks-g",
+      "ext": ".shader",
+      "hash": "2658d70f",
+      "size": 2004,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/DragonBeam.shader"
+    },
+    {
+      "uuid": "DWK5-VmZZHaS26wFR5ir0a2N",
+      "ext": ".mp3",
+      "hash": "952ab0fa",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_blade_sheath.mp3"
+    },
+    {
+      "uuid": "DXr_eTH3pGfVJdQV9X9vO6lB",
+      "ext": ".png",
+      "hash": "745a2d6e",
+      "size": 3265,
+      "fs_path": "Textures/Characters/nomi.png"
+    },
+    {
+      "uuid": "DYkQeUXKurZLgPYPDquE20PK",
+      "ext": ".lua",
+      "hash": "2509ab80",
+      "size": 15270,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/SkyAtmosphere.lua"
+    },
+    {
+      "uuid": "DZ8pOTIECLWx4hWCVALaDuFo",
+      "ext": ".mp3",
+      "hash": "7b5db866",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_bow_fire_1.mp3"
+    },
+    {
+      "uuid": "D_UYwexCMRe13w5g6azDX7Pf",
+      "ext": ".png",
+      "hash": "ee7926ca",
+      "size": 40217,
+      "hash@windows": "d8ad3f1a",
+      "size@windows": 87529,
+      "fs_path": "Textures/RuinsLeaves.png"
+    },
+    {
+      "uuid": "D_pSiSwK6q5qnuUt88U75ZC6",
+      "ext": ".lua",
+      "hash": "33bd01b4",
+      "size": 3385,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/TouchInput.lua"
+    },
+    {
+      "uuid": "DbxXMb3iXIDmPlvtf8bwKBww",
+      "ext": ".lua",
+      "hash": "54dda3ee",
+      "size": 5060,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonFlight.lua"
+    },
+    {
+      "uuid": "DdLlsS4MMttAofMXx1Uyxt35",
+      "ext": ".shader",
+      "hash": "bbc6d1f3",
+      "size": 2076,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsPillarFlame.shader"
+    },
+    {
+      "uuid": "DdqREQhyw4MDoST7x5nhfAfk",
+      "ext": ".mp3",
+      "hash": "a43763bf",
+      "size": 7725,
+      "fs_path": "audio/sfx/cmb_hit_heavy_1.mp3"
+    },
+    {
+      "uuid": "DeOnmfDe-HLwp0fmVC8lAXYE",
+      "ext": ".png",
+      "hash": "0b75e934",
+      "size": 467945,
+      "hash@windows": "f24d3770",
+      "size@windows": 1048665,
+      "fs_path": "ui/rewind/rewind_dial.png"
+    },
+    {
+      "uuid": "DgSYoXejGPDAy6-3A6S9LMHZ",
+      "ext": ".lua",
+      "hash": "1a9499b3",
+      "size": 32503,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "B2UZOcCSipafCe9Rf9SjC2HN",
+        "FjxlQYcZ956mcfHO3cA2h4qf",
+        "Gtu3aclojPDbWuRdsQSP7UJ9"
+      ],
+      "fs_path": "combat/ForgeShowroom.lua"
+    },
+    {
+      "uuid": "DiYkQVEWpBEv0uq5KmDz1FTY",
+      "ext": ".lua",
+      "hash": "0a79c74b",
+      "size": 9295,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/UrnTargetTest.lua"
+    },
+    {
+      "uuid": "DjM4yUULosM6DeYkRUVTul2x",
+      "ext": ".lua",
+      "hash": "f79d86cc",
+      "size": 36047,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/enemies/EnemyBase.lua"
+    },
+    {
+      "uuid": "DklyMfsvDZPfBRpoBbgWkGd_",
+      "ext": ".lua",
+      "hash": "3cb186e6",
+      "size": 34866,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "AK6NydFNIVNF1ktQSRVgM0oH",
+        "B2UZOcCSipafCe9Rf9SjC2HN"
+      ],
+      "fs_path": "combat/ForgeShowroomScene.lua"
+    },
+    {
+      "uuid": "Dl9-qWSi0qRec9jx261I2jGG",
+      "ext": ".png",
+      "hash": "5a9b0729",
+      "size": 665,
+      "hash@windows": "bcde6c23",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/panel_ink.png"
+    },
+    {
+      "uuid": "DoMxMY_BoyyvS2EnqaecZqZm",
+      "ext": ".mp3",
+      "hash": "b0b9cd9c",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_deflect_stone_1.mp3"
+    },
+    {
+      "uuid": "DrhXUcype05QObni3VBPXJkz",
+      "ext": ".lua",
+      "hash": "c14eef8f",
+      "size": 4278,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/EffectsTest.lua"
+    },
+    {
+      "uuid": "DtVguRd3wS7COhnZ2jnRNCiH",
+      "ext": ".lua",
+      "hash": "3ca3dce9",
+      "size": 5660,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonGait.lua"
+    },
+    {
+      "uuid": "DuL4AQrISYJXdgVI864_KspU",
+      "ext": ".lua",
+      "hash": "4eb49e42",
+      "size": 1343,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/StairViewTest.lua"
+    },
+    {
+      "uuid": "DxNm0aIm_mRT-CxQ4qAKoDDv",
+      "ext": ".png",
+      "hash": "11c404b3",
+      "size": 665,
+      "hash@windows": "4bfd9ffd",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/farview.png"
+    },
+    {
+      "uuid": "DyNLMfvEjWS0h2Crq_sDchoI",
+      "ext": ".png",
+      "hash": "60afa6a5",
+      "size": 665,
+      "hash@windows": "fd6061e9",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/bow.png"
+    },
+    {
+      "uuid": "E0GG8ZOqrWjd5n5Q42NacLN9",
+      "ext": ".mp3",
+      "hash": "3436f6ba",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_dodge_land.mp3"
+    },
+    {
+      "uuid": "E10SAQukCmTkVFD33237N2xs",
+      "ext": ".png",
+      "hash": "13516945",
+      "size": 137305,
+      "hash@windows": "2d45b654",
+      "size@windows": 1222745,
+      "fs_path": "ui/forge/plate_menu.png"
+    },
+    {
+      "uuid": "E2xEuSqMwYu-frgr7I26MeQP",
+      "ext": ".png",
+      "hash": "afaeb414",
+      "size": 2025,
+      "hash@windows": "b482c4a8",
+      "size@windows": 4185,
+      "fs_path": "ui/touch/joy_base.png"
+    },
+    {
+      "uuid": "E525qa6kRk6zftMjWydfdcWN",
+      "ext": ".mp3",
+      "hash": "c10ea67a",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_hit_armor_1.mp3"
+    },
+    {
+      "uuid": "E6HZcYi3B1HXsUONToCkfOWp",
+      "ext": ".png",
+      "hash": "a8f54004",
+      "size": 665,
+      "hash@windows": "b9f999cb",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/sheath.png"
+    },
+    {
+      "uuid": "E6l14XsfXdG0EiL30hemjLDa",
+      "ext": ".ttf",
+      "hash": "809f453d",
+      "size": 5312476,
+      "refs": [
+        "CPH2-TZmax3O2Pg-5aJXN8XT"
+      ],
+      "fs_path": "Fonts/ArkPixel-12px-zh_hans.ttf"
+    },
+    {
+      "uuid": "E7UiKdUjHTZMqRPeLSujiGCM",
+      "ext": ".png",
+      "hash": "847b70b7",
+      "size": 665,
+      "hash@windows": "d65f645c",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/panel_paper.png"
+    },
+    {
+      "uuid": "EBgMmWLXzgnhnWKVfHWHwIPH",
+      "ext": ".mp3",
+      "hash": "c3ba685f",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_bow_full.mp3"
+    },
+    {
+      "uuid": "EBlwAf6BLy-1x6vnI5ro-ap-",
+      "ext": ".png",
+      "hash": "7d8d64f8",
+      "size": 345,
+      "hash@windows": "01f3a44c",
+      "size@windows": 489,
+      "fs_path": "ui/touch/combo_s.png"
+    },
+    {
+      "uuid": "EDOEafbG3e9l99eSKcDNUNa-",
+      "ext": ".lua",
+      "hash": "6fa48393",
+      "size": 58905,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/WeaponRig.lua"
+    },
+    {
+      "uuid": "EEBvSRlZGUK-WsSCUFHF7C-g",
+      "ext": ".lua",
+      "hash": "c04e8a1f",
+      "size": 4302,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/PointerCapture.lua"
+    },
+    {
+      "uuid": "EEodOX_2ni2Z6Pzp0QDS4uqt",
+      "ext": ".png",
+      "hash": "e1c3891c",
+      "size": 345,
+      "hash@windows": "adab0c79",
+      "size@windows": 489,
+      "fs_path": "ui/touch/heart_s.png"
+    },
+    {
+      "uuid": "EGhgAdC-bEsjN834QpSh8gMG",
+      "ext": ".lua",
+      "hash": "d4847446",
+      "size": 12282,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonMembrane.lua"
+    },
+    {
+      "uuid": "EII7iSERc-M7r1efR0G4ZB2p",
+      "ext": ".lua",
+      "hash": "032a913d",
+      "size": 12566,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "AK6NydFNIVNF1ktQSRVgM0oH"
+      ],
+      "fs_path": "combat/enemies/EnemyParticles.lua"
+    },
+    {
+      "uuid": "ELe2cbH2cQhQ5PSYxqvsobeV",
+      "ext": ".lua",
+      "hash": "ca2e8794",
+      "size": 36525,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/TimeObject.lua"
+    },
+    {
+      "uuid": "EMclmZWJvXUn52UcxDq5H-b-",
+      "ext": ".xml",
+      "hash": "b6482f12",
+      "size": 367,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_D.xml"
+    },
+    {
+      "uuid": "EN38YQaf5w6D-KAR5a9mGNaW",
+      "ext": ".lua",
+      "hash": "2c840973",
+      "size": 1687,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/GateViewTest.lua"
+    },
+    {
+      "uuid": "ENtYueanBVvrsttvBcTPuOKO",
+      "ext": ".shader",
+      "hash": "231fe680",
+      "size": 803,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsLightShaft.shader"
+    },
+    {
+      "uuid": "EOKdwbt2awRQWmGHHStRsjRu",
+      "ext": ".lua",
+      "hash": "93d0ba93",
+      "size": 13373,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/Projectile.lua"
+    },
+    {
+      "uuid": "EP_GCVnpDc7oGFtONCMboc9Q",
+      "ext": ".mp3",
+      "hash": "2ae21497",
+      "size": 12333,
+      "fs_path": "audio/sfx/cmb_armor_break_2.mp3"
+    },
+    {
+      "uuid": "ERPf-VDo1_WiHeogcwNI8GeQ",
+      "ext": ".xml",
+      "hash": "573c6822",
+      "size": 96,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/RuinsPillarFlameDynamic.xml"
+    },
+    {
+      "uuid": "ERXwEerdeI3Xf1i5jTWQhCM1",
+      "ext": ".jpg",
+      "hash": "46276d45",
+      "size": 2497925,
+      "hash@windows": "75f60c12",
+      "size@windows": 745487,
+      "refs": [
+        "EMclmZWJvXUn52UcxDq5H-b-"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_D.jpg"
+    },
+    {
+      "uuid": "ER_lAYg4vSWnYKjRa1Gt65KQ",
+      "ext": ".png",
+      "hash": "c990feb8",
+      "size": 617,
+      "hash@windows": "ffe43d37",
+      "size@windows": 319,
+      "fs_path": "ui/touch/bar_frame.png"
+    },
+    {
+      "uuid": "ERmIaXDeSzZ_wpYzEk7O93Wh",
+      "ext": ".mp3",
+      "hash": "895c6da1",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_blade_draw.mp3"
+    },
+    {
+      "uuid": "ETRtef5sdf3UvQdESFBCJIUV",
+      "ext": ".shader",
+      "hash": "532a60b3",
+      "size": 9108,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/DragonRune.shader"
+    },
+    {
+      "uuid": "EVDSSUd44NSqPcVNqEUgyA73",
+      "ext": ".png",
+      "hash": "0bfb7805",
+      "size": 665,
+      "hash@windows": "e4d60ab4",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/dismount.png"
+    },
+    {
+      "uuid": "EXXnORBqpBzc2dsi6JCNvVTv",
+      "ext": ".png",
+      "hash": "ada0619e",
+      "size": 345,
+      "hash@windows": "a44fd0cb",
+      "size@windows": 489,
+      "fs_path": "ui/touch/bow_s.png"
+    },
+    {
+      "uuid": "EXiVkfe--TOUFEJ6yE6RSYrZ",
+      "ext": ".shader",
+      "hash": "562b1bb3",
+      "size": 1152,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/VoxelPalettePBR.shader"
+    },
+    {
+      "uuid": "E_ZYmfIW07RtDal_VUIk9vtC",
+      "ext": ".lua",
+      "hash": "1a0d9067",
+      "size": 6212,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsPalette.lua"
+    },
+    {
+      "uuid": "EaGCaU0mEFfKUEWzNeZ1JVJ5",
+      "ext": ".xml",
+      "hash": "82dbab63",
+      "size": 89,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "model/forge-blades/BladeStudy.xml"
+    },
+    {
+      "uuid": "EaGmgXYKf7kcSVLECF2KccZl",
+      "ext": ".lua",
+      "hash": "eca0ca1e",
+      "size": 34293,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsPuzzles.lua"
+    },
+    {
+      "uuid": "EakywXg2Binu1PoejjJZ-gVu",
+      "ext": ".png",
+      "hash": "df7fe37d",
+      "size": 665,
+      "hash@windows": "c52d376e",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/heart.png"
+    },
+    {
+      "uuid": "EiE2EU_M44gasL94njSoE_Q_",
+      "ext": ".lua",
+      "hash": "5dccc4df",
+      "size": 34299,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/NomiController.lua"
+    },
+    {
+      "uuid": "EkCqwVC0wUNR85nqkLTLEMVN",
+      "ext": ".lua",
+      "hash": "65dcc1b0",
+      "size": 9013,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/PlungeTest.lua"
+    },
+    {
+      "uuid": "El9AoYekw_JIxObXQqjZfAv1",
+      "ext": ".png",
+      "hash": "e22e4307",
+      "size": 345,
+      "hash@windows": "564f3f3a",
+      "size@windows": 489,
+      "fs_path": "ui/touch/forge_s.png"
+    },
+    {
+      "uuid": "Eng4qcHwkh3znmrc_PjjNRFt",
+      "ext": ".mp3",
+      "hash": "1863cef7",
+      "size": 10797,
+      "fs_path": "audio/sfx/cmb_armor_break_1.mp3"
+    },
+    {
+      "uuid": "EnhjaYENvRnmr6-0aHQIWDRS",
+      "ext": ".png",
+      "hash": "61451f06",
+      "size": 873,
+      "hash@windows": "6a6294be",
+      "size@windows": 1689,
+      "fs_path": "ui/touch/btn40_down.png"
+    },
+    {
+      "uuid": "EoeM-YCZLNLvg-btxN1BsatN",
+      "ext": ".shader",
+      "hash": "9e8877ff",
+      "size": 586,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/DragonStream.shader"
+    },
+    {
+      "uuid": "ErhxueBgiHMyHIResB0QdRPR",
+      "ext": ".lua",
+      "hash": "b8e06b0f",
+      "size": 5138,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonPoses.lua"
+    },
+    {
+      "uuid": "ErvVGed1PnsmWleeH1TZz88k",
+      "ext": ".shader",
+      "hash": "9b00d87d",
+      "size": 1806,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/VoxelSprite.shader"
+    },
+    {
+      "uuid": "Esx_8bLUYT_CvLKhBheAhAgG",
+      "ext": ".mp3",
+      "hash": "626ace31",
+      "size": 33453,
+      "fs_path": "audio/sfx/breath_astral_charge.mp3"
+    },
+    {
+      "uuid": "Eu7QQUU2KQHzAFLgauEDiBBn",
+      "ext": ".png",
+      "hash": "b8640784",
+      "size": 3897,
+      "hash@windows": "21cc27c4",
+      "size@windows": 8089,
+      "fs_path": "ui/touch/plaque_ink.png"
+    },
+    {
+      "uuid": "Eurl8c4mL5pi0_HevEanH52M",
+      "ext": ".lua",
+      "hash": "d8e58241",
+      "size": 18504,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "CURqsaXDFUNd1JdtV4GY6WaO"
+      ],
+      "fs_path": "ui/WeaponWheel.lua"
+    },
+    {
+      "uuid": "EzxT0ZnaK0Ly-lGXfd46Pmw-",
+      "ext": ".lua",
+      "hash": "3ec30875",
+      "size": 25323,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonVariants.lua"
+    },
+    {
+      "uuid": "EzyU6TMwQufXMXHPT0n6YRK0",
+      "ext": ".xml",
+      "hash": "22893f7f",
+      "size": 4925,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "LightGroup/TownDay.xml"
+    },
+    {
+      "uuid": "F0rjUQdCEb9ps36gjcz4wjBm",
+      "ext": ".mp3",
+      "hash": "89a07369",
+      "size": 26925,
+      "fs_path": "audio/sfx/breath_astral_impact.mp3"
+    },
+    {
+      "uuid": "F1gTQXqCib1icGoXCJ7HtwUW",
+      "ext": ".lua",
+      "hash": "5155f7bd",
+      "size": 15980,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsTrees.lua"
+    },
+    {
+      "uuid": "F1uiaSgHjqRhGVVDt5HVg1KN",
+      "ext": ".mp3",
+      "hash": "c66a0863",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_arrow_hit_armor_1.mp3"
+    },
+    {
+      "uuid": "F2QKmRoMgLYzO1iOBld-9Zpb",
+      "ext": ".mp3",
+      "hash": "dafc2f01",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_hit_soft_1.mp3"
+    },
+    {
+      "uuid": "F4jMsYNo4XqscuITM3dQ54Zh",
+      "ext": ".png",
+      "hash": "5c66c5b1",
+      "size": 467945,
+      "hash@windows": "f7e64226",
+      "size@windows": 1048665,
+      "fs_path": "ui/rewind/rewind_ring.png"
+    },
+    {
+      "uuid": "F9Vz6b5yRS28D9ORRq8zGzMT",
+      "ext": ".png",
+      "hash": "d47b77ff",
+      "size": 345,
+      "hash@windows": "0e1819b3",
+      "size@windows": 489,
+      "fs_path": "ui/touch/rewind_s.png"
+    },
+    {
+      "uuid": "FAzNiU0_Tphg7DojRN-Ev2x8",
+      "ext": ".lua",
+      "hash": "f35dfbd2",
+      "size": 12369,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "CURqsaXDFUNd1JdtV4GY6WaO"
+      ],
+      "fs_path": "ui/Glass.lua"
+    },
+    {
+      "uuid": "FCC6gVoVS0hedJDEOnda2gB_",
+      "ext": ".png",
+      "hash": "c2590442",
+      "size": 345,
+      "hash@windows": "baa77b13",
+      "size@windows": 489,
+      "fs_path": "ui/touch/arrow_crystal_s.png"
+    },
+    {
+      "uuid": "FEE0KV8pjRziunhSdvAfU0mF",
+      "ext": ".lua",
+      "hash": "32ce8a8a",
+      "size": 25992,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/CombatAudio.lua"
+    },
+    {
+      "uuid": "FEf32aiP9yia5-J6TJ1BAGt_",
+      "ext": ".png",
+      "hash": "faa01074",
+      "size": 345,
+      "hash@windows": "b8bdb006",
+      "size@windows": 489,
+      "fs_path": "ui/touch/land_s.png"
+    },
+    {
+      "uuid": "FFNu4bZyvYNG1gAb-670oWgJ",
+      "ext": ".ttf",
+      "hash": "1649670f",
+      "size": 457716,
+      "fs_path": "Fonts/ForgeSans-Medium.ttf"
+    },
+    {
+      "uuid": "FIfysZCL6dSpyYBpFlIFGRAO",
+      "ext": ".mp3",
+      "hash": "12f82066",
+      "size": 7725,
+      "fs_path": "audio/sfx/cmb_stagger_land.mp3"
+    },
+    {
+      "uuid": "FL4wyY67maLL6JzRglfs4jLG",
+      "ext": ".shader",
+      "hash": "37e531cf",
+      "size": 1755,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "GIhdCSEppskNShv-CfcW14Xa"
+      ],
+      "fs_path": "Shaders/BLGL/EnemyVoxelHit.shader"
+    },
+    {
+      "uuid": "FLZSqZsCUTCxPPZx9sqspFEf",
+      "ext": ".mp3",
+      "hash": "bc6ac60e",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_deflect_stone_2.mp3"
+    },
+    {
+      "uuid": "FMq_SaOudoSyYxo6wOMkWuEp",
+      "ext": ".lua",
+      "hash": "6ee463cf",
+      "size": 1971,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/SpellViewTest.lua"
+    },
+    {
+      "uuid": "FMvLeT_iEvUJHt6K_LRLmY2A",
+      "ext": ".xml",
+      "hash": "0771d3b1",
+      "size": 88,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/RuinsLightShaft.xml"
+    },
+    {
+      "uuid": "FR9Z8XPhauKok68VjFj3ikTa",
+      "ext": ".lua",
+      "hash": "9f83c952",
+      "size": 29837,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonRig.lua"
+    },
+    {
+      "uuid": "FSgakQtMvjRvez46c1zUGLGx",
+      "ext": ".png",
+      "hash": "33811a6d",
+      "size": 345,
+      "hash@windows": "8819c5ef",
+      "size@windows": 489,
+      "fs_path": "ui/touch/clock_s.png"
+    },
+    {
+      "uuid": "FVjrienIQWxv6LlEUPST2_3h",
+      "ext": ".png",
+      "hash": "e477dc09",
+      "size": 5209,
+      "hash@windows": "2e48293c",
+      "size@windows": 11609,
+      "fs_path": "ui/touch/banner_scroll.png"
+    },
+    {
+      "uuid": "FXpSYZvnLtosp7OCQHi62BiX",
+      "ext": ".png",
+      "hash": "89562d92",
+      "size": 345,
+      "hash@windows": "0a1a08cb",
+      "size@windows": 489,
+      "fs_path": "ui/touch/breath_s.png"
+    },
+    {
+      "uuid": "FZoIobzpUiPzGq3fl73-wUIu",
+      "ext": ".lua",
+      "hash": "57cfecb7",
+      "size": 10879,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/PixelDraw.lua"
+    },
+    {
+      "uuid": "F_CVoYBzwZR7ZMmjzdK9gp7V",
+      "ext": ".lua",
+      "hash": "1686fa87",
+      "size": 1817,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/GCTimingTest.lua"
+    },
+    {
+      "uuid": "Fat0mUn1nf2dGKMa87iBBLke",
+      "ext": ".lua",
+      "hash": "365f2bad",
+      "size": 448507,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "game/NomiVoxelDataElbow.lua"
+    },
+    {
+      "uuid": "FdESuZVA8YcFvAt5lXuTtpGQ",
+      "ext": ".lua",
+      "hash": "c5182689",
+      "size": 35346,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonBreathClassic.lua"
+    },
+    {
+      "uuid": "FdsDyVI5XRQVuS2q8NSdu0mS",
+      "ext": ".lua",
+      "hash": "b856fd97",
+      "size": 2554,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/PerformanceHUD.lua"
+    },
+    {
+      "uuid": "FduOIQKzvKVgsDTvSZCd0sh_",
+      "ext": ".png",
+      "hash": "a632ebda",
+      "size": 345,
+      "hash@windows": "fbb7f97e",
+      "size@windows": 489,
+      "fs_path": "ui/touch/arrow_s.png"
+    },
+    {
+      "uuid": "Fewy6SzrupujkDTrz6e_jrlW",
+      "ext": ".lua",
+      "hash": "54f4d0db",
+      "size": 8480,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/SettingsMenu.lua"
+    },
+    {
+      "uuid": "FfMuceD3Id2qXD_anLLjSe6C",
+      "ext": ".shader",
+      "hash": "af316824",
+      "size": 3564,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/IceCrystal.shader"
+    },
+    {
+      "uuid": "FiPNgdZRzHRlok0ZxBqCUiTm",
+      "ext": ".lua",
+      "hash": "76ac9366",
+      "size": 46179,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/ForgePanel.lua"
+    },
+    {
+      "uuid": "FjxlQYcZ956mcfHO3cA2h4qf",
+      "ext": ".xml",
+      "groups": [
+        "#blocking"
+      ],
+      "source": "engine-res",
+      "fs_path": "Techniques/PBR/PBRDiffNormal.xml"
+    },
+    {
+      "uuid": "FkbeMaNT9oteh9Y5JaA2bg9F",
+      "ext": ".mp3",
+      "hash": "92268954",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_hit_soft_2.mp3"
+    },
+    {
+      "uuid": "FlXBgcm5mhYFUOp1M9lGBUOV",
+      "ext": ".png",
+      "hash": "47ce159f",
+      "size": 47542,
+      "fs_path": "ui/rewind/rewind_hand_hour.png"
+    },
+    {
+      "uuid": "Fn1RSawDHMYSILsFOj5YbK0h",
+      "ext": ".png",
+      "hash": "2df6cba7",
+      "size": 345,
+      "hash@windows": "c3f28950",
+      "size@windows": 489,
+      "fs_path": "ui/touch/menu_s.png"
+    },
+    {
+      "uuid": "FnWP4ciwMtRw0sVBRpX47vBk",
+      "ext": ".mp3",
+      "hash": "e07b3201",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_bow_fire_2.mp3"
+    },
+    {
+      "uuid": "FowROf-FdU1jhudrEwrkZxb5",
+      "ext": ".shader",
+      "hash": "7641ce82",
+      "size": 8556,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsVoxel.shader"
+    },
+    {
+      "uuid": "FpA_GYqsqdBCEG426rdyE4FV",
+      "ext": ".mp3",
+      "hash": "0b00264e",
+      "size": 9261,
+      "fs_path": "audio/sfx/cmb_enemy_die_2.mp3"
+    },
+    {
+      "uuid": "FpraoXRJcU6BX_18FSQop38T",
+      "ext": ".png",
+      "hash": "856f5d53",
+      "size": 345,
+      "hash@windows": "f9f1d872",
+      "size@windows": 489,
+      "fs_path": "ui/touch/descend_s.png"
+    },
+    {
+      "uuid": "FxR2uY-wqF7q7QAyPU34Qg40",
+      "ext": ".png",
+      "hash": "b5b64ac0",
+      "size": 665,
+      "hash@windows": "f819e3dc",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/arrow_crystal.png"
+    },
+    {
+      "uuid": "G0O88fVOYS4ov2sfrAuYvw-u",
+      "ext": ".png",
+      "hash": "c5293955",
+      "size": 345,
+      "hash@windows": "8eb854ba",
+      "size@windows": 489,
+      "fs_path": "ui/touch/heart_half_s.png"
+    },
+    {
+      "uuid": "G1WmcQMvoLAHp3A5nHBFGWjB",
+      "ext": ".lua",
+      "hash": "ff018833",
+      "size": 12031,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "AK6NydFNIVNF1ktQSRVgM0oH"
+      ],
+      "fs_path": "combat/CombatFx.lua"
+    },
+    {
+      "uuid": "G2sGySQk7Wu2NRXW3N_frv6W",
+      "ext": ".png",
+      "hash": "7620d335",
+      "size": 408296,
+      "fs_path": "Textures/Sky/cloud_density.png"
+    },
+    {
+      "uuid": "G3odQSfRZG0YLqXfheVeTQ24",
+      "ext": ".ttf",
+      "hash": "d3af5055",
+      "size": 457932,
+      "fs_path": "Fonts/ForgeSans-Regular.ttf"
+    },
+    {
+      "uuid": "G43HQUubSzzDS7Vbvj7b-m9a",
+      "ext": ".lua",
+      "hash": "24065f9b",
+      "size": 19363,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/TargetingTest.lua"
+    },
+    {
+      "uuid": "G4Kt2UEEFGIHRki67vjbtw7w",
+      "ext": ".lua",
+      "hash": "42166d05",
+      "size": 24991,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/VoxelFX.lua"
+    },
+    {
+      "uuid": "G942ESCRKt2Q8d_hNP84NSvA",
+      "ext": ".png",
+      "hash": "b25380e5",
+      "size": 345,
+      "hash@windows": "b472fd40",
+      "size@windows": 489,
+      "fs_path": "ui/touch/dash_s.png"
+    },
+    {
+      "uuid": "G96k2TEyJU2htkmi3RJSpMqc",
+      "ext": ".png",
+      "hash": "23e4c8c3",
+      "size": 665,
+      "hash@windows": "d06b55b7",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/ascend.png"
+    },
+    {
+      "uuid": "G9WIef2KYIRsJHp-IhSj7Yuj",
+      "ext": ".lua",
+      "hash": "f9db33cd",
+      "size": 4205,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/DayNightTest.lua"
+    },
+    {
+      "uuid": "GAIKKWkG5svB-PEqKK9hP7LW",
+      "ext": ".shaderinc",
+      "hash": "dc855028",
+      "size": 3273,
+      "groups": [
+        "#shaders",
+        "default",
+        "shader_includes"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsContactAO.shaderinc"
+    },
+    {
+      "uuid": "GBfsqbiMuZMBXfk_AjgyArxL",
+      "ext": ".png",
+      "hash": "56723d90",
+      "size": 345,
+      "hash@windows": "88d70c43",
+      "size@windows": 489,
+      "fs_path": "ui/touch/freeze_s.png"
+    },
+    {
+      "uuid": "GCZRQXzSmpTWcO-b-cvJ-ioQ",
+      "ext": ".lua",
+      "hash": "81f9911a",
+      "size": 104045,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsScene.lua"
+    },
+    {
+      "uuid": "GD7egSheO-egOpi12Fv9FzeJ",
+      "ext": ".shader",
+      "hash": "61752368",
+      "size": 4955,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "C8IlOTmjwMSfwD1EuusM44Mt"
+      ],
+      "fs_path": "model/forge-blades/WingSword.shader"
+    },
+    {
+      "uuid": "GFnjsVLETJ4hoJ95WjC5XA9y",
+      "ext": ".png",
+      "hash": "9543f384",
+      "size": 665,
+      "hash@windows": "1db45b49",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/glide.png"
+    },
+    {
+      "uuid": "GGtLATZ5eyWmp5BDOTYxj0Ni",
+      "ext": ".shaderinc",
+      "hash": "81cea84a",
+      "size": 2035,
+      "groups": [
+        "#shaders",
+        "default",
+        "shader_includes"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsFrost.shaderinc"
+    },
+    {
+      "uuid": "GHVd0VIxuowmsGlfvLDsKw4w",
+      "ext": ".lua",
+      "hash": "99ccb80b",
+      "size": 7929,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/DayNight.lua"
+    },
+    {
+      "uuid": "GIhdCSEppskNShv-CfcW14Xa",
+      "ext": ".xml",
+      "hash": "d67e1d3e",
+      "size": 176,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/EnemyVoxelHit.xml"
+    },
+    {
+      "uuid": "GJKuIdKB_W4ZSwROYtc9_AAd",
+      "ext": ".lua",
+      "hash": "58b31008",
+      "size": 14698,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/TimeLifecycleTest.lua"
+    },
+    {
+      "uuid": "GJQPweDTUFnqKkO3DCDW6fpA",
+      "ext": ".mp3",
+      "hash": "f5632588",
+      "size": 10797,
+      "fs_path": "audio/sfx/cmb_enemy_die_1.mp3"
+    },
+    {
+      "uuid": "GKqOge3HHJv2mZFmemM6HySi",
+      "ext": ".png",
+      "hash": "72631b78",
+      "size": 345,
+      "hash@windows": "cfd773e4",
+      "size@windows": 489,
+      "fs_path": "ui/touch/shatter_s.png"
+    },
+    {
+      "uuid": "GLdleavMxcm5mjJgdtmWTghs",
+      "ext": ".lua",
+      "hash": "947629f5",
+      "size": 4379,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonPose.lua"
+    },
+    {
+      "uuid": "GN4TGXaodHj2JGbhxiyS1XWZ",
+      "ext": ".lua",
+      "hash": "98e52eb5",
+      "size": 188,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ui/tests/LayoutAir.lua"
+    },
+    {
+      "uuid": "GNuNecYSx7Hht_6Ux02IBUiF",
+      "ext": ".mp3",
+      "hash": "e2cd376c",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_sword_whoosh_3.mp3"
+    },
+    {
+      "uuid": "GRJqyWUMsj3s-u40UO9xqeDx",
+      "ext": ".lua",
+      "hash": "5efa3612",
+      "size": 2691,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/LightShafts.lua"
+    },
+    {
+      "uuid": "GTOkoSbQKc8iXlQ3DEJCJ8w5",
+      "ext": ".lua",
+      "hash": "d7634dc4",
+      "size": 8806,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/enemies/StoneBeast.lua"
+    },
+    {
+      "uuid": "GWKxaeikV8LTRChbbHoaHYuU",
+      "ext": ".lua",
+      "hash": "a4a10195",
+      "size": 3050,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/DebugLog.lua"
+    },
+    {
+      "uuid": "GYlhsQl3Wy8lIK6Y_nvuiuWr",
+      "ext": ".lua",
+      "hash": "423aad28",
+      "size": 2812,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/Noise.lua"
+    },
+    {
+      "uuid": "GZVsubjhgXZh6G1VXJLerni0",
+      "ext": ".lua",
+      "hash": "be8965ad",
+      "size": 10348,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/SkyClouds.lua"
+    },
+    {
+      "uuid": "G_ScoRDj76lzrk0eobA-Vnou",
+      "ext": ".lua",
+      "hash": "91c14ed3",
+      "size": 48796,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsBuild.lua"
+    },
+    {
+      "uuid": "Gc606fS2Y1t48ABKqx_KMw_U",
+      "ext": ".lua",
+      "hash": "2b5fd06d",
+      "size": 13369,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/VoidRewind.lua"
+    },
+    {
+      "uuid": "GekKoa-Rg5nwBbd-i9fdMQ0U",
+      "ext": ".lua",
+      "hash": "72bbcaea",
+      "size": 7227,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/enemies/StoneSentry.lua"
+    },
+    {
+      "uuid": "Gg0iSYjr_jPQMR9KBCAOzahR",
+      "ext": ".png",
+      "hash": "029481fc",
+      "size": 665,
+      "hash@windows": "e517c1de",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/land.png"
+    },
+    {
+      "uuid": "Gk9tUcSRfaKqRgFFK8U7B40M",
+      "ext": ".png",
+      "hash": "bb491f4a",
+      "size": 665,
+      "hash@windows": "e644e442",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/btn32.png"
+    },
+    {
+      "uuid": "GmWGYcivMVcZKwDSXzAbTO7V",
+      "ext": ".txt",
+      "hash": "3fa251ea",
+      "size": 4635,
+      "fs_path": "Fonts/NotoCJK-OFL.txt"
+    },
+    {
+      "uuid": "GmZfCROSQoAInMmgESsWInaU",
+      "ext": ".lua",
+      "hash": "2209cdc3",
+      "size": 9698,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/Hit.lua"
+    },
+    {
+      "uuid": "GnwdcW3eSNyzK4V4RvlX9y2O",
+      "ext": ".shader",
+      "hash": "bb64ea0e",
+      "size": 8077,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/DragonRuneSmooth.shader"
+    },
+    {
+      "uuid": "GnxbuaiKgoyyivs9VZflkAhR",
+      "ext": ".lua",
+      "hash": "2b54b6f1",
+      "size": 29178,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/AnimClips.lua"
+    },
+    {
+      "uuid": "GoI84SJ3hczQDtyBjWagawgi",
+      "ext": ".lua",
+      "hash": "028219f6",
+      "size": 3231,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/CombatCamera.lua"
+    },
+    {
+      "uuid": "GpLeQaLCpIEhOgyezz6o7gV9",
+      "ext": ".png",
+      "hash": "5ccf2af0",
+      "size": 665,
+      "hash@windows": "ceeeacf2",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/dodge.png"
+    },
+    {
+      "uuid": "GpOGaaSHm8I8ijoHT79_Q4cz",
+      "ext": ".lua",
+      "hash": "36ed025c",
+      "size": 58204,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/CombatMoves.lua"
+    },
+    {
+      "uuid": "GrYkqds1QYNxvUqABchsBebE",
+      "ext": ".lua",
+      "hash": "32d8ba19",
+      "size": 50256,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/models/WingSword.lua"
+    },
+    {
+      "uuid": "GtcCsWFYwg6sCv0linvFfV8F",
+      "ext": ".lua",
+      "hash": "e9d5fde1",
+      "size": 3871,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/GrassTufts.lua"
+    },
+    {
+      "uuid": "Gtu3aclojPDbWuRdsQSP7UJ9",
+      "ext": ".png",
+      "groups": [
+        "#refs"
+      ],
+      "source": "engine-res",
+      "fs_path": "Editor/Textures/Engine/Vignetting.png"
+    },
+    {
+      "uuid": "GvYduSs5-iVxzG_OIl0prk2p",
+      "ext": ".png",
+      "hash": "0becbbc1",
+      "size": 873,
+      "hash@windows": "78f72519",
+      "size@windows": 1689,
+      "fs_path": "ui/touch/btn40_main_down.png"
+    },
+    {
+      "uuid": "GvgmUbvWgFPxHkS1nP6ZF6SY",
+      "ext": ".png",
+      "hash": "50b60125",
+      "size": 665,
+      "hash@windows": "1e2cb1e8",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/sword.png"
+    },
+    {
+      "uuid": "GwMu-aIrp9ddlTlT4WeGTDf8",
+      "ext": ".png",
+      "hash": "04b5ad66",
+      "size": 665,
+      "hash@windows": "312da968",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/sprint.png"
+    },
+    {
+      "uuid": "H--BadYTL6u0ekZkiWOndJI_",
+      "ext": ".mp3",
+      "hash": "fbc3f26c",
+      "size": 18861,
+      "fs_path": "audio/sfx/cmb_boss_roar.mp3"
+    },
+    {
+      "uuid": "H-DXybppMRTdvsmqG2ElfLi2",
+      "ext": ".lua",
+      "hash": "b71cbbe4",
+      "size": 30265,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/RuinsTerrain.lua"
+    },
+    {
+      "uuid": "H4MuWd_u2LE7l7o7v-BJoFFF",
+      "ext": ".png",
+      "hash": "6b5f9c63",
+      "size": 153,
+      "hash@windows": "825bdcff",
+      "size@windows": 121,
+      "fs_path": "ui/touch/bar_fill_gold.png"
+    },
+    {
+      "uuid": "H7_k2bVv0WnRciWbNTk0DV2y",
+      "ext": ".mp3",
+      "hash": "5c0474d0",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_hit_core_1.mp3"
+    },
+    {
+      "uuid": "HAxs8Z6P6x7O1Ln9R59kW3k4",
+      "ext": ".lua",
+      "hash": "f453158e",
+      "size": 2499,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/tests/SpellScaleTest.lua"
+    },
+    {
+      "uuid": "HB1xscHeF_JEQyt7CnToLr0t",
+      "ext": ".lua",
+      "hash": "2d91bf44",
+      "size": 7707,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "dragon/DragonCollision.lua"
+    },
+    {
+      "uuid": "HBo9SbMFummRBxXwAbmFLYJi",
+      "ext": ".shader",
+      "hash": "022137cb",
+      "size": 3075,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsGrassTuft.shader"
+    },
+    {
+      "uuid": "HCCOYU7fDAIANC5d0_3_xHDx",
+      "ext": ".lua",
+      "hash": "07b42954",
+      "size": 6535,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "game/NomiModelData.lua"
+    },
+    {
+      "uuid": "HE072atijukKHuwh5pgNIEc_",
+      "ext": ".xml",
+      "hash": "0166e06e",
+      "size": 89,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/RuinsPillarFlame.xml"
+    },
+    {
+      "uuid": "HEQU2RUcbBOFFx4zPH725_w4",
+      "ext": ".shader",
+      "hash": "3c0e5d87",
+      "size": 921,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsCrystal.shader"
+    },
+    {
+      "uuid": "HFb0WX4cVKfFLm2TTewxTAek",
+      "ext": ".shader",
+      "hash": "4d37bb7f",
+      "size": 2143,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsBark.shader"
+    },
+    {
+      "uuid": "HFd7YZbB4stO8r0CwaV8xKyC",
+      "ext": ".lua",
+      "hash": "9cd00b4a",
+      "size": 10340,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/CombatState.lua"
+    },
+    {
+      "uuid": "HI7DmbNnCN_rdhYxvWqgi2W8",
+      "ext": ".lua",
+      "hash": "8c91e1cb",
+      "size": 20009,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "ruins/TimeSpells.lua"
+    },
+    {
+      "uuid": "HIqViaxO_Q4KsuyKg2fQNMPt",
+      "ext": ".mp3",
+      "hash": "5af7b20a",
+      "size": 12333,
+      "fs_path": "audio/sfx/cmb_windup_beast.mp3"
+    },
+    {
+      "uuid": "HNM6ueyupUtS1IuFf_ndmNaN",
+      "ext": ".mp3",
+      "hash": "18a95139",
+      "size": 9261,
+      "fs_path": "audio/sfx/cmb_windup_beetle.mp3"
+    },
+    {
+      "uuid": "HNfQAZc9Oqq_A3oHnbhITjkg",
+      "ext": ".png",
+      "hash": "090affb8",
+      "size": 345,
+      "hash@windows": "82b937ce",
+      "size@windows": 489,
+      "fs_path": "ui/touch/glide_s.png"
+    },
+    {
+      "uuid": "HORyAf6HTN1UifGdMG-BpzOy",
+      "ext": ".xml",
+      "hash": "3cc90b0b",
+      "size": 87,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/NomiVoxel.xml"
+    },
+    {
+      "uuid": "HQ-5qfZwSR37r_zXuUDQ01dw",
+      "ext": ".shader",
+      "hash": "668d00f6",
+      "size": 300,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/HiddenVoxel.shader"
+    },
+    {
+      "uuid": "HR1tWXavB4unEhVa_tJfDCMz",
+      "ext": ".png",
+      "hash": "3ec25a41",
+      "size": 665,
+      "hash@windows": "b33ab604",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/menu.png"
+    },
+    {
+      "uuid": "HR8ZYUqqH96uKwQQ3fFpxbHw",
+      "ext": ".png",
+      "hash": "9f47c796",
+      "size": 665,
+      "hash@windows": "06874339",
+      "size@windows": 1113,
+      "fs_path": "ui/touch/heart_half.png"
+    },
+    {
+      "uuid": "HWrmWUqDWZH4fch4ZtieRRX9",
+      "ext": ".mp3",
+      "hash": "14b64ac1",
+      "size": 10797,
+      "fs_path": "audio/sfx/cmb_windup_sentry.mp3"
+    },
+    {
+      "uuid": "H_zoUeJBsX81Z6vQgT0gSgs4",
+      "ext": ".png",
+      "hash": "2c7a9515",
+      "size": 10778,
+      "fs_path": "Textures/Sky/cloud_density_low.png"
+    },
+    {
+      "uuid": "Ha-mcYX8hAUbl_LXa6Cxd9V0",
+      "ext": ".mp3",
+      "hash": "ad7274ba",
+      "size": 12333,
+      "fs_path": "audio/sfx/cmb_victory.mp3"
+    },
+    {
+      "uuid": "HcYTufSI4yB1wR8rsvVq0_ti",
+      "ext": ".shader",
+      "hash": "20a6e6ad",
+      "size": 591,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/VoxelCharacter.shader"
+    },
+    {
+      "uuid": "HdZrqU5ey8_amUZexm9unkBT",
+      "ext": ".lua",
+      "hash": "fd2f57a1",
+      "size": 3258,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "DBXCOV00XboIs1Y3V55aPnYx"
+      ],
+      "fs_path": "ruins/FloatingMotes.lua"
+    },
+    {
+      "uuid": "HdwoUfmDURoDMqYAIEuPpeTW",
+      "ext": ".lua",
+      "hash": "f92b17ee",
+      "size": 2842,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "combat/WeaponStore.lua"
+    },
+    {
+      "uuid": "HlaukZRo-crtRzNcfxYtOc9M",
+      "ext": ".png",
+      "hash": "c1ca1186",
+      "size": 345,
+      "hash@windows": "68c75553",
+      "size@windows": 489,
+      "fs_path": "ui/touch/sheath_s.png"
+    },
+    {
+      "uuid": "HlwHUYc18mOZBRicgH88IAHF",
+      "ext": ".mp3",
+      "hash": "2c075ab5",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_player_hurt_1.mp3"
+    },
+    {
+      "uuid": "Hmm0eVENuc8bmHwp6hHhCQ8w",
+      "ext": ".png",
+      "hash": "a9548b0b",
+      "size": 345,
+      "hash@windows": "77eecad6",
+      "size@windows": 489,
+      "fs_path": "ui/touch/heavy_s.png"
+    },
+    {
+      "uuid": "Hp_f8RfKFx2YuXNqAes1nhkq",
+      "ext": ".png",
+      "hash": "83be0707",
+      "size": 158557,
+      "hash@windows": "ab30dadc",
+      "size@windows": 174901,
+      "fs_path": "Textures/Sigils/sigil_seal.png"
+    },
+    {
+      "uuid": "HqtvidIVTpqLMpdVNg09SwnJ",
+      "ext": ".mp3",
+      "hash": "33e7336e",
+      "size": 4653,
+      "fs_path": "audio/sfx/cmb_sword_whoosh_2.mp3"
+    },
+    {
+      "uuid": "HsZtIYZugutnfBXq2yPUZmzc",
+      "ext": ".mp3",
+      "hash": "d53b8d6d",
+      "size": 6189,
+      "fs_path": "audio/sfx/cmb_player_hurt_2.mp3"
+    },
+    {
+      "uuid": "Ht70ybUSnU1Bu28PloVrgM93",
+      "ext": ".prefab",
+      "hash": "a960e9fc",
+      "size": 613,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "refs": [
+        "AGcDQZ4RVaVIizO1U9DlQP9-",
+        "AYChiQxbnlc7QY28YnN90NPi"
+      ],
+      "fs_path": "model/c8d2cfd2bc29455abb72b044deb16d5d/Prefabs/c8d2cfd2bc29455abb72b044deb16d5d.prefab"
+    },
+    {
+      "uuid": "HtaN6aW4XN4Ldg_NV5i8ELxn",
+      "ext": ".shader",
+      "hash": "8e784e1f",
+      "size": 873,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/VoxelCube.shader"
+    },
+    {
+      "uuid": "HugTwcRgEB-isk56qmmtrRQq",
+      "ext": ".xml",
+      "hash": "529b3dab",
+      "size": 167,
+      "groups": [
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Materials/Nomi.xml"
+    },
+    {
+      "uuid": "Hur0mQaKOgNz2gQCJxVFwopQ",
+      "ext": ".shader",
+      "hash": "2c1c86a1",
+      "size": 1298,
+      "groups": [
+        "#shaders",
+        "default",
+        "#blocking"
+      ],
+      "fs_path": "Shaders/BLGL/RuinsFireflies.shader"
+    },
+    {
+      "uuid": "Hxf6YaCUt5wJjkqmqEq9BrUa",
+      "ext": ".png",
+      "hash": "766e2ff8",
+      "size": 1250837,
+      "hash@windows": "5c80aca7",
+      "size@windows": 2796373,
+      "fs_path": "Textures/Sky/cloud_sculpted_atlas.png"
+    }
+  ],
+  "metadata": {
+    "total_files": 336,
+    "local_files": 329,
+    "remote_files": 7,
+    "total_size": 19149396,
+    "preload_files": 31,
+    "preload_size": 87859,
+    "groups": {
+      "#blocking": {
+        "files": 170,
+        "size": 3843896,
+        "hash": "9f08720b8452d29c7d4a892520062f5187f6b82cc52de55feb0cceda53ce262f"
+      },
+      "default": {
+        "files": 329,
+        "size": 19149396,
+        "hash": "f5a6e0339acbe5ac4c65911446c22c7af5d1340f208f19f01b20011a2ff0bd90"
+      },
+      "#shaders": {
+        "files": 30,
+        "size": 87558,
+        "hash": "0ae799ea2c7f7d607f1ef8946097761650c5f0367ba7e86ef7114fe2b6a035af"
+      },
+      "shader_includes": {
+        "files": 2,
+        "size": 5308,
+        "hash": "7ba29d6f49e7b6b3e979b7369a4c93ebc6a7265ef09d3870fda5ebea28e2fe45"
+      },
+      "#config": {
+        "files": 1,
+        "size": 301,
+        "hash": "17b20898913f689178df28d810e74e25bacf44ee0d2e3c01276411b3d99453cc"
+      }
+    }
+  },
+  "assets_pak": 0
+}

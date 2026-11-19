@@ -1,0 +1,41 @@
+[
+  {
+    "path": "assets/Shaders/BLGL/RuinsCloud.shader",
+    "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/B7kCUdFGjP2SetnaTjmh7PX4-7aa94223.shader",
+    "bytes": 4952,
+    "sha256": "29c2d937697f8d03660578f0e32690568483a0ac1d3098468af88a89cd6b2f3c",
+    "manifest_hash": "7aa94223",
+    "matches": {
+      "HEAD": true,
+      "a9a3b2e250a066ea9a8dadeed1348b04e9a16455": true,
+      "b9b10a2": true,
+      "worktree": true
+    }
+  },
+  {
+    "path": "scripts/ruins/SkyAtmosphere.lua",
+    "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/DYkQeUXKurZLgPYPDquE20PK-2509ab80.lua",
+    "bytes": 15270,
+    "sha256": "4eb3e269364a75f13c85a7b7f31b7ccbe12c90b3ef22b8aa9a01d591d1ea30dd",
+    "manifest_hash": "2509ab80",
+    "matches": {
+      "HEAD": false,
+      "a9a3b2e250a066ea9a8dadeed1348b04e9a16455": false,
+      "b9b10a2": false,
+      "worktree": false
+    }
+  },
+  {
+    "path": "scripts/ruins/SkyClouds.lua",
+    "url": "https://f323832c-195d-4276-a841-0ceafd1f1cf1.games.tapapps.cn/assets/GZVsubjhgXZh6G1VXJLerni0-be8965ad.lua",
+    "bytes": 10348,
+    "sha256": "65ac6ddf53fa211f3cb62008427aea127016e2407c2ab0b2e59d53dd98d26ad9",
+    "manifest_hash": "be8965ad",
+    "matches": {
+      "HEAD": false,
+      "a9a3b2e250a066ea9a8dadeed1348b04e9a16455": false,
+      "b9b10a2": false,
+      "worktree": false
+    }
+  }
+]

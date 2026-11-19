@@ -1,0 +1,279 @@
+diff --git a/scripts/ruins/NomiController.lua b/scripts/ruins/NomiController.lua
+index b13371c..3b2599d 100644
+--- a/scripts/ruins/NomiController.lua
++++ b/scripts/ruins/NomiController.lua
+@@ -19,6 +19,7 @@ local M = {}
+ 
+ local WALK, RUN = 4.2, 7.2
+ local JUMP = 6.4
++local COYOTE_TIME, JUMP_BUFFER = .12, .12
+ local AIR_CONTROL = 0.35
+ 
+ local function Clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
+@@ -80,6 +81,7 @@ function M.New(scene, world, spawn, spawnYaw)
+     self.speed = 0
+     self.vel = Vector3(0, 0, 0)
+     self.enabled = true
++    self:ResetJump()
+     self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
+     self.safePos = Vector3(spawn.x,spawn.y,spawn.z)
+     self.safeT = 0
+@@ -167,9 +169,50 @@ function N:CombatAirState(out)
+     return out
+ end
+ 
++function N:ResetJump()
++    self.jumpCoyote,self.jumpBuffer=0,0
++    self.jumpSpent,self.jumpAirborne=false,false
++    self.jumpLaunchAge=0
++end
++
++-- Input is a press edge, not a held key. Consume once; stale onGround after a
++-- queued native jump must not re-arm until we have observed air then landing.
++function N:UpdateJump(dt,pressed,allowed)
++    local grounded=self.cc.onGround
++    self.jumpLaunchAge=(self.jumpLaunchAge or 0)+dt
++    if not grounded then self.jumpAirborne=true
++    elseif self.jumpAirborne then
++        self.jumpSpent,self.jumpAirborne=false,false
++    elseif self.jumpSpent and self.jumpLaunchAge>=COYOTE_TIME and self.cc:GetLinearVelocity().y<=0 then
++        -- A low ceiling/blocked native launch may never report air. Once the
++        -- grounded solver has settled, allow a fresh press instead of locking.
++        self.jumpSpent=false
++    end
++    if not allowed then
++        self.jumpCoyote,self.jumpBuffer=0,0
++        return false
++    end
++    self.jumpCoyote=grounded and not self.jumpSpent and COYOTE_TIME
++        or math.max(0,(self.jumpCoyote or 0)-dt)
++    self.jumpBuffer=pressed and JUMP_BUFFER or math.max(0,(self.jumpBuffer or 0)-dt)
++    if self.jumpSpent or self.jumpCoyote<=0 or self.jumpBuffer<=0 then return false end
++    if grounded then
++        self.cc:Jump(JUMP)
++    else
++        -- No support remains for the native ground jump. Give exactly one
++        -- vertical launch via the documented velocity port, retaining X/Z.
++        local velocity=self.cc:GetLinearVelocity()
++        self.cc:SetLinearVelocity(Vector3(velocity.x,JUMP,velocity.z))
++    end
++    self.jumpCoyote,self.jumpBuffer=0,0
++    self.jumpSpent,self.jumpAirborne=true,false
++    self.jumpLaunchAge=0
++    return true
++end
++
+ -- 移动输入（f, r ∈ [-1,1]）
+ function N:Move(dt, f, r, run, jump, aiming, combat)
+-    if self:UpdateSafety(dt) then return end
++    if self:UpdateSafety(dt) then self:ResetJump(); return end
+     local cc = self.cc
+     local rad = math.rad(self.camYaw)
+     local fwd = Vector3(math.sin(rad), 0, math.cos(rad))
+@@ -206,7 +249,8 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
+         end
+         cc.desiredVelocity=self.vel+motion*(fraction/math.max(dt,.001))
+     end
+-    if jump and onGround and (not combat or combat.scale>0) then cc:Jump(JUMP) end
++    local jumped=self:UpdateJump(dt,jump,not combat or
++        (combat.jumpAllowed~=false and (combat.scale or 1)>0 and not combat.plungeVelocity))
+     -- 朝向：瞄准时面朝相机方向；否则面朝移动方向
+     local wantYaw = self.yaw
+     if aiming then wantYaw = self.camYaw
+@@ -217,7 +261,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
+     else self.yaw = self.yaw + WrapDeg(wantYaw - self.yaw) * (1 - math.exp(-14 * dt)) end
+     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
+     self.speed = Vector3(self.vel.x, 0, self.vel.z):Length()
+-    self.onGround = onGround
++    self.onGround = onGround and not jumped
+ end
+ 
+ -- Probe actual collision surfaces (including rebuilt bridge), not the aim
+@@ -359,6 +403,7 @@ end
+ 
+ -- Original safety result, shared by immediate fallback and the black-screen callback.
+ function N:ReturnFromVoid()
++    self:ResetJump()
+     local safe=self.safePos
+     if not safe or not Terrain.IsSafeGround(safe.x,safe.y,safe.z) then safe=self.fallbackPos end
+     self.cc.desiredVelocity=Vector3.ZERO
+@@ -374,6 +419,7 @@ end
+ -- Debug-only caller supplies a terrain- and building-validated permanent point.
+ function N:TeleportForCombatDebug(pos,yaw)
+     if not Terrain.IsSafeGround(pos.x,pos.y,pos.z) then return false end
++    self:ResetJump()
+     self.cc.desiredVelocity=Vector3.ZERO
+     self.cc:SetLinearVelocity(Vector3.ZERO)
+     self.cc:Teleport(pos)
+diff --git a/scripts/ruins/RuinsScene.lua b/scripts/ruins/RuinsScene.lua
+index 8ab4e41..56866a9 100644
+--- a/scripts/ruins/RuinsScene.lua
++++ b/scripts/ruins/RuinsScene.lua
+@@ -357,12 +357,14 @@ local function SetupDragon()
+         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil) end
+     ride.onNotice = function(text) caster_:Say(text) end
+     ride.onMount = function()
++        nomi_:ResetJump()
+         CombatState.SetMounted(true)
+         caster_.charging,caster_.charge=false,0
+         nomi_.cc.enabled = false
+         M.mounted = true
+     end
+     ride.onDismount = function(pos)
++        nomi_:ResetJump()
+         nomi_.cc.enabled = true
+         nomi_.cc:Teleport(pos + Vector3(0, 0.2, 0))
+         nomi_.node.rotation = Quaternion(nomi_.yaw, Vector3.UP)
+@@ -1311,6 +1313,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
+     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
+     local dt = eventData["TimeStep"]:GetFloat()
+     if nomi_ == nil or M.mounted or (M.ride ~= nil and M.ride.mode ~= "free") then
++        if nomi_ then nomi_:ResetJump() end
+         if foot_ then foot_:Cancel('mounted') end
+         return
+     end
+@@ -1369,6 +1372,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
+         end
+         if foot_ or CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip=='getup' then
+             local options=combatMoveOptions
++            options.jumpAllowed=allowed and not combatInputBlocked and not combatMoves_.dead
+             options.scale=allowed and not combatMoves_.motionChecked and combatMoves_:MoveScale() or 0
+             options.motion=allowed and combatMoves_.motion or Vector3.ZERO
+             options.explore=not CombatState.InCombat()
+@@ -1384,7 +1388,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
+             return
+         end
+     end
+-    if not allowed or animPreview_.index>0 then nomi_:Move(dt,0,0,false,false,false); return end
++    if not allowed or animPreview_.index>0 then nomi_:Move(dt,0,0,false,false,false,{scale=0}); return end
+     nomi_:Move(dt, f, r, false, Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0)
+ end
+ 
+diff --git a/tests/combat/core_motion.lua b/tests/combat/core_motion.lua
+index 9818459..bf3ac9d 100644
+--- a/tests/combat/core_motion.lua
++++ b/tests/combat/core_motion.lua
+@@ -4,9 +4,9 @@ local file=assert(io.open('scripts/ruins/NomiController.lua')); local source=fil
+ local function method(name)
+     return assert(source:match('(function N:'..name..'%b().-)\nend'))..'\nend'
+ end
+-local body=method('Move')..'\n'..method('AssistMelee')
++local body=method('ResetJump')..'\n'..method('UpdateJump')..'\n'..method('Move')..'\n'..method('AssistMelee')
+ local N={}
+-local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,
++local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,COYOTE_TIME=.12,JUMP_BUFFER=.12,
+     WrapDeg=function(a) return a end,Quaternion=function() return {} end,
+     Clamp=function(v,a,b) return math.max(a,math.min(b,v)) end,
+     Terrain={HasGround=function(x,z,margin) return x<1 or x>2 end}}, {__index=_G})
+diff --git a/tests/combat/core_zone_values.lua b/tests/combat/core_zone_values.lua
+index d80492f..5a1af30 100644
+--- a/tests/combat/core_zone_values.lua
++++ b/tests/combat/core_zone_values.lua
+@@ -19,7 +19,7 @@ local N={}
+ local terrain={IsSafeGround=function()return true end,GroundHeight=function()return 6 end}
+ local function yawRotation(yaw)return Quaternion(0,yaw,0)end
+ local env=setmetatable({N=N,Terrain=terrain,Quaternion=yawRotation},{__index=_G})
+-for _,name in ipairs({'TeleportForCombatDebug','AssistMelee'})do
++for _,name in ipairs({'ResetJump','TeleportForCombatDebug','AssistMelee'})do
+  assert(load(assert(ns:match('(function N:'..name..'.-)\nend'))..'\nend',name,'t',env))()
+ end
+ local startCode=assert(scene:match('(local function StartCombatTest%(%).-)\nlocal function HandleCombatDebugKeys'))
+diff --git a/tests/combat/locomotion_camera_motion.lua b/tests/combat/locomotion_camera_motion.lua
+index 52b76a2..2501900 100644
+--- a/tests/combat/locomotion_camera_motion.lua
++++ b/tests/combat/locomotion_camera_motion.lua
+@@ -13,9 +13,9 @@ m.clip=nil;cam:Cancel();cam:Update(.2,m,false,false,false);S.near(cam.output.fov
+ cam:Update(.3,m,true,true,false);S.near(cam.output.fov,0)
+ -- Execute actual Nomi movement body with documented engine ports only.
+ local file=assert(io.open('scripts/ruins/NomiController.lua'));local source=file:read('*a');file:close()
+-local code=assert(source:match('(function N:Move%(.+)\n%-%- Probe actual'))
++local code=assert(source:match('(function N:ResetJump%(.+)\n%-%- Probe actual'))
+ local N={}
+-local env=setmetatable({N=N,WALK=4.2,RUN=7.2,JUMP=6.4,AIR_CONTROL=.35,
++local env=setmetatable({N=N,WALK=4.2,RUN=7.2,JUMP=6.4,AIR_CONTROL=.35,COYOTE_TIME=.12,JUMP_BUFFER=.12,
+  Clamp=function(v,a,b)return math.max(a,math.min(b,v))end,
+  WrapDeg=function(a)return (a+180)%360-180 end,Terrain={HasGround=function()return true end}}, {__index=_G})
+ -- N:Move uses Quaternion(angle, axis); this mock stores only the resulting yaw.
+diff --git a/tests/combat/jump_grace.lua b/tests/combat/jump_grace.lua
+new file mode 100644
+index 0000000..9f312e0
+--- /dev/null
++++ b/tests/combat/jump_grace.lua
+@@ -0,0 +1,77 @@
++-- Run the actual controller methods; native ports are spies, not a physics sim.
++local S=dofile('tests/combat/core_support.lua')
++local file=assert(io.open('scripts/ruins/NomiController.lua'))
++local source=file:read('*a');file:close()
++local N={}
++local env=setmetatable({N=N,Terrain={HasGround=function()return true end},
++    Clamp=function(v,a,b)return math.max(a,math.min(b,v))end,
++    WrapDeg=function(a)return (a+180)%360-180 end,
++    Quaternion=function()return {} end}, {__index=_G})
++local constants=assert(source:match('(local WALK, RUN.-)\nlocal function Clamp'))
++local methods=assert(source:match('(function N:ResetJump%(.+)\n%-%- Probe actual'))
++assert(load(constants..'\n'..methods,'actual jump controller','t',env))()
++local function New(grounded)
++    local cc={onGround=grounded,nativeJumps=0,airLaunches=0,velocity=Vector3(2,-1,3)}
++    function cc:Jump(speed)self.nativeJumps=self.nativeJumps+1;S.near(speed,6.4)end
++    function cc:GetLinearVelocity()return self.velocity end
++    function cc:SetLinearVelocity(v)self.velocity=v;self.airLaunches=self.airLaunches+1 end
++    local n=setmetatable({cc=cc,camYaw=0,yaw=0,vel=Vector3.ZERO,
++        node={worldPosition=Vector3.ZERO},UpdateSafety=function()return false end},{__index=N})
++    n:ResetJump()
++    return n,cc
++end
++local function Step(n,dt,press,options)n:Move(dt,0,0,false,press,false,options)end
++for _,hz in ipairs({30,60,120}) do
++    local dt=1/hz
++    -- Walk off, press 100ms later: one launch, same height/speed, X/Z intact.
++    local n,cc=New(true);Step(n,dt,false);cc.onGround=false
++    for _=1,math.floor(.1*hz)-1 do Step(n,dt,false) end
++    Step(n,dt,true)
++    assert(cc.airLaunches==1 and cc.nativeJumps==0)
++    S.near(cc.velocity.x,2);S.near(cc.velocity.y,6.4);S.near(cc.velocity.z,3)
++    Step(n,dt,true);assert(cc.airLaunches==1,'no second air jump')
++    -- The same edge press after 150ms must fail.
++    n,cc=New(true);Step(n,dt,false);cc.onGround=false
++    Step(n,.15,true);assert(cc.airLaunches==0)
++    -- Press before first landing: buffered input fires once on real support.
++    n,cc=New(false);Step(n,dt,true);Step(n,.06,false)
++    cc.onGround=true;Step(n,dt,false);assert(cc.nativeJumps==1)
++    Step(n,dt,false);assert(cc.nativeJumps==1)
++end
++-- A stale grounded report after queuing Jump cannot grant another jump.
++do
++    local n,cc=New(true);Step(n,.016,true)
++    assert(cc.nativeJumps==1 and not n.onGround)
++    Step(n,.016,true);assert(cc.nativeJumps==1)
++    cc.onGround=false;Step(n,.016,false);Step(n,.2,false)
++    Step(n,.016,true);cc.onGround=true;Step(n,.016,false)
++    assert(cc.nativeJumps==2,'fresh press before a real landing is buffered')
++end
++-- An expired early press, or merely holding after takeoff, never auto-bounces.
++do
++    local n,cc=New(true);Step(n,.016,true)
++    Step(n,.13,false);assert(cc.nativeJumps==1,'blocked takeoff cannot auto-retry')
++    Step(n,.016,true);assert(cc.nativeJumps==2,'low ceiling cannot lock jumping forever')
++end
++do
++    local n,cc=New(false);Step(n,.016,true);Step(n,.13,false)
++    cc.onGround=true;Step(n,.016,false);assert(cc.nativeJumps==0)
++    Step(n,.016,true);cc.onGround=false;Step(n,.3,false)
++    cc.onGround=true;Step(n,.016,false);assert(cc.nativeJumps==1)
++end
++-- UI/focus locks, attack locks, plunge and safety must discard pending input.
++for _,options in ipairs({{scale=1,jumpAllowed=false},{scale=0},
++    {scale=1,plungeVelocity=Vector3(0,-9,0)}}) do
++    local n,cc=New(false);Step(n,.016,true)
++    Step(n,.016,false,options);cc.onGround=true;Step(n,.016,false)
++    assert(cc.nativeJumps==0,'blocked buffer must not launch on release')
++    Step(n,.016,true,options);Step(n,.016,false)
++    assert(cc.nativeJumps==0,'blocked press must not be queued')
++end
++do
++    local n,cc=New(true);Step(n,.016,false);cc.onGround=false
++    n:ResetJump();Step(n,.016,true);assert(cc.airLaunches==0,'teleport/mount clears grace')
++    n.UpdateSafety=function()return true end;Step(n,.016,false)
++    assert(n.jumpBuffer==0 and n.jumpCoyote==0)
++end
++print('PASS jump grace: edge/expiry/buffer/one-shot/landing/locks/reset at 30/60/120Hz; native physics not simulated')

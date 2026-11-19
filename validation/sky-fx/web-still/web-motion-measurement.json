@@ -1,0 +1,9 @@
+{
+  "source": "REAL WEB SCREENSHOTS, no runtime/code/parameter edits between frames",
+  "elapsed_wall_seconds": 21.724,
+  "cloud_left_edge_median_dx_px": 24.5,
+  "stone_registration_dx_px": 0,
+  "stone_registration_dy_px": 0,
+  "stone_gradient_correlation": 0.9493539976720757,
+  "limits": "18 shoulder rows; no full optical flow/GPU readback; this session only; quality/persisted motion unobserved"
+}

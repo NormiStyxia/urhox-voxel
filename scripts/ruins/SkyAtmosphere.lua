@@ -46,6 +46,7 @@ function M:Init(scene,dn)
     self.elapsed,self.clock = 0.2,0
     self.cloudElapsed=0 -- preserve wind phase across quality rebuilds and off/on
     self.cloudStep=0 -- real motion dt; tint's forced initial .2s is not elapsed time
+    self.motionProbeSamples=0 -- opt-in DebugLog only; at most six material readbacks
     ---@type Material|nil
     self.ground = nil
     ---@type Material|nil 本次开启已绑定（或已尝试失败）的地表，避免每帧重试/查资源
@@ -248,8 +249,22 @@ function M:Update(dt,position,ground)
 end
 
 -- 只被DebugLog的开启态probe调用；关闭日志时不构造统计表，不遍历粒子。
+---@param material Material|nil
+local function MotionMaterialSnapshot(material)
+    if not material then return "missing" end
+    local ok,value=pcall(function()
+        local parameter=material:GetShaderParameter("cloud_wind")
+        local wind=parameter:GetVector4()
+        return string.format("%s:(%.3f,%.3f,%.3f,%.3f);t=%.3f;enabled=%.1f",
+            parameter:GetTypeName(),wind.x,wind.y,wind.z,wind.w,
+            material:GetShaderParameter("drift_time"):GetFloat(),
+            material:GetShaderParameter("cloud_enabled"):GetFloat())
+    end)
+    return ok and value or "readback-error"
+end
+
 function M:Probe()
-    return {clouds=self.clouds and self.clouds.count or 0,shafts=self.shafts and self.shafts.count or 0,
+    local result={clouds=self.clouds and self.clouds.count or 0,shafts=self.shafts and self.shafts.count or 0,
         cloudShapes=self.clouds and self.clouds.shapeCount or 0,cloudTriangles=self.clouds and self.clouds.triangleCount or 0,
         cloudBaking=self.clouds and self.clouds.baking or false,cloudReady=self.clouds and self.clouds.readyCount or 0,
         cloudFallback=self.clouds and self.clouds.fallback or false,
@@ -264,6 +279,30 @@ function M:Probe()
         motesMax=self.motes and self.motes.count or 0,volume=self.realFog,
         active=self.active,quality=self.quality,cloudShadow=self.shadowActive,
         batches=(self.clouds and self.clouds.batchCount or 0)+(self.shafts and 1 or 0)+(self.motes and 1 or 0)+(self.braziers and self.braziers.batchCount or 0)+(self.fireflies and self.fireflies.batchCount or 0)}
+    -- No new Update branch/timer/print. Existing 5-second opt-in probe owns this
+    -- bounded trace. Material getters are CPU-side evidence, NOT GPU readback.
+    if DebugLog and DebugLog.enabled and self.motionProbeSamples<6 then
+        self.motionProbeSamples=self.motionProbeSamples+1
+        local clouds=self.clouds
+        result.motionSample=self.motionProbeSamples
+        result.hostClock,result.cloudStep,result.hostStopped=self.clock,self.cloudStep,self.stopped
+        result.settingMotion=GameSettings and tostring(GameSettings.Get("cloudMotion")) or "unmanaged"
+        result.settingQuality=GameSettings and tostring(GameSettings.Get("quality")) or "unmanaged"
+        result.motionEnabled=clouds and clouds.motionEnabled or false
+        result.cloudElapsed=clouds and clouds.elapsed or 0
+        result.cloudLoading=clouds and clouds.loading or false
+        if clouds then
+            local wind=clouds.wind
+            result.luaWind=string.format("%.3f,%.3f,%.3f,%.3f",wind.x,wind.y,wind.z,wind.w)
+            result.ownedMaterial=MotionMaterialSnapshot(clouds.material)
+            local geometry=clouds.geometry[1]
+            if geometry then
+                local ok,material=pcall(function() return geometry:GetMaterial() end)
+                result.drawMaterial=ok and MotionMaterialSnapshot(material) or "binding-readback-error"
+            else result.drawMaterial="missing" end
+        end
+    end
+    return result
 end
 
 function M:Stop()

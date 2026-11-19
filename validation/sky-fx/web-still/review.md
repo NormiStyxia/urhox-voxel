@@ -1,0 +1,12 @@
+# Self-review / bounded diagnostic candidate
+
+- Real Web captures were read. Same architecture registration (0,0), 21.724s capture completion interval, cloud shoulder +24.5px. High tier confirmed by the settings screen. No claim that the user's stationary session is fixed.
+- Online source identity is verified after TNND decoding, not inferred from HEAD. Actual WebGPU cloud vertex shader cache was read: wind uniforms survive into WGSL and participate in the vertex position. Material/GPU uniform values themselves remain unobserved.
+- Only production change: bounded diagnostics in SkyAtmosphere.Probe plus an instance counter. Update body, SkyClouds and shader byte-for-byte unchanged. Default logging off means zero added runtime getters/formatting; enabled means at most six material snapshots per host instance.
+- Reads both owned and geometry-bound material, using documented CustomGeometry:GetMaterial and Material:GetShaderParameter/Variant getters. CPU-side material reads are explicitly not GPU uploads. Missing resources, changed bindings, failed getters, disposal, disabled motion and exhausted budget covered by actual Lua fixture.
+- Existing tests' Variant(v)=v mocks cannot prove native Variant/dirty-bit semantics. The new test models returned values as copies, detects deliberately mismatched bound material, and makes no claim about native dirty flags.
+- Did not alter wind speed, settings persistence, quality budgets, world transformation, fragments, textures, late async callbacks, night/AO, combat or camera code. No commit/build/push/local Runtime.
+- Browser recovered without restart by this worker. One tool connection closed while status showed original PID alive; another screenshot failed PortInUseError. Neither proves another person closed a tab. Game iframe was accessed through Cindy's allowed CDP call helper; no direct CDP client/CLI or invented Lua eval API.
+- Intermediate HTTP-LSP wrapper failed because localhost19552 was not listening; direct installed maker-lua-lsp stdio session completed with Error=0 for both cloud Lua files. No engine Runtime was launched.
+- During investigation shared HEAD advanced from881ac73 to1c5564f. Other workers' art/combat changes were not edited. Final status and cloud hashes are saved.
+- No runtime resource added; no new .meta needed. Diagnostic source needs a separately authorized future Web build; remote evidence is the unchanged build80, not this diagnostic candidate.

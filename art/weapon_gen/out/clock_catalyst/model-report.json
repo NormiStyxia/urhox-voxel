@@ -1,0 +1,28 @@
+{
+  "source": "Mivo Tripo task 6afc7d23f861de608444b904; manually rebuilt articulated topology",
+  "meridian_count": 3,
+  "meridian_radii_m": [
+    0.238,
+    0.224,
+    0.21
+  ],
+  "meridian_angles_deg": [
+    0,
+    65,
+    -65
+  ],
+  "common_axis": "Z, through origin",
+  "dial_diameter_m": 0.302,
+  "overall_height_m": 0.516,
+  "minimum_ring_sweep_gap_m": 0.004952802395370354,
+  "minimum_dial_sweep_gap_m": 0.0335,
+  "triangles": 37404,
+  "mesh_objects": 5,
+  "animation_seconds": 8,
+  "parts": {
+    "outer": "fixed",
+    "middle": "+1 turn / 8s",
+    "inner": "-1 turn / 8s",
+    "dial": "+2 turns / 8s"
+  }
+}

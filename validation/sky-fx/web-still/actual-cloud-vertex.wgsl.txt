@@ -1,0 +1,105 @@
+// urhox-wgsl-uniform-layout:2
+enable f16;
+diagnostic(off, derivative_uniformity);
+diagnostic(off, subgroup_uniformity);
+
+struct UniformBlock_1_1 {
+  u_view : mat4x4<f32>,
+  u_proj : mat4x4<f32>,
+  u_model : array<mat4x4<f32>, 1u>,
+  u_CameraPos : vec3<f32>,
+  u_DepthMode : vec4<f32>,
+  u_ElapsedTime : f32,
+  u_UOffset : vec4<f32>,
+  u_VOffset : vec4<f32>,
+  u_OddNegativeScale : vec2<f32>,
+  u_drift_time : f32,
+  u_motion_detail : f32,
+  u_cloud_wind : vec4<f32>,
+}
+
+@group(0u) @binding(0u) var<uniform> v : UniformBlock_1_1;
+
+var<private> v_1 : vec4<f32>;
+
+var<private> v_2 : vec4<f16>;
+
+var<private> v_3 : vec4<f32>;
+
+var<private> v_4 : vec3<f32>;
+
+var<private> v_5 : vec3<f32>;
+
+var<private> v_6 : vec4<f16>;
+
+var<private> v_7 : vec4<f32>;
+
+fn main_inner(a_color0 : vec4<f32>, a_normal : vec3<f32>, a_position : vec4<f32>, a_texcoord0 : vec2<f32>) {
+  let v_8 = transpose(v.u_model[0i]);
+  let v_9 = vec3<f16>(a_normal);
+  let v_10 = vec3<f16>(normalize(((v_8 * vec4<f32>(vec4<f16>(v_9.x, v_9.y, v_9.z, 0.0h)))).xyz));
+  let v_11 = vec4<f16>(a_color0);
+  let v_12 = (((v_8 * a_position)).xyz - ((vec4<f32>(0.0f, 0.0f, 0.0f, 1.0f) * transpose(v_8))).xyz);
+  let v_13 = length(v_12);
+  let v_14 = max(v_13, 0.00009999999747378752f);
+  let v_15 = (v_12 / vec3<f32>(v_14, v_14, v_14));
+  let v_16 = vec3<f32>(f32(v_10.z), 0.0f, f32(-(v_10.x)));
+  let v_17 = max(length(v_16), 0.00009999999747378752f);
+  let v_18 = (v_16 / vec3<f32>(v_17, v_17, v_17));
+  let v_19 = vec3<f32>(cross(v_10, vec3<f16>(v_18)));
+  let v_20 = max(dot(v_15, vec3<f32>(v_10)), 0.00009999999747378752f);
+  let v_21 = (vec2<f32>(dot(v_15, v_18), dot(v_15, v_19)) / vec2<f32>(v_20, v_20));
+  let v_22 = ((0.5f + step(0.34999999403953552246f, f32(v_11.x))) - (0.5f * step(0.55000001192092895508f, f32(v_11.x))));
+  let v_23 = vec3<f32>((v_10 * f16(v_13)));
+  let v_24 = ((vec2<f32>(f32(v_11.y), f32(fract((v_11.y * 5.3671875h)))) - vec2<f32>(0.5f)) * 180.0f);
+  let v_25 = ((fract(((((v.u_cloud_wind.xy * v_22) + v_24) + vec2<f32>(180.0f)) * vec2<f32>(0.00277777784503996372f))) * 360.0f) - vec2<f32>(180.0f));
+  let v_26 = ((v_23.xz + v_25) - v_24);
+  let v_27 = f32((v_11.y * 6.28125h));
+  let v_28 = (1.0f + ((v.u_motion_detail * 0.01999999955296516418f) * (sin(((v.u_drift_time * 0.01200000010430812836f) + v_27)) - sin(v_27))));
+  let v_29 = (1.0f + ((v.u_motion_detail * 0.02999999932944774628f) * (sin(((v.u_drift_time * 0.00800000037997961044f) + (v_27 * 1.70000004768371582031f))) - sin((v_27 * 1.70000004768371582031f)))));
+  let v_30 = normalize(vec3<f32>(v_26.x, (v_23.y + ((v.u_motion_detail * 1.5f) * (sin(((v.u_drift_time * 0.00600000005215406418f) + v_27)) - sin(v_27)))), v_26.y));
+  let v_31 = vec3<f32>(v_30.z, 0.0f, -(v_30.x));
+  let v_32 = length(v_31);
+  let v_33 = max(v_32, 0.00009999999747378752f);
+  let v_34 = step(0.00009999999747378752f, v_32);
+  let v_35 = (v_18 + (vec3<f32>(v_34, v_34, v_34) * ((v_31 / vec3<f32>(v_33, v_33, v_33)) - v_18)));
+  let v_36 = normalize(((v_30 + ((v_35 * v_21.x) * v_28)) + ((cross(v_30, v_35) * v_21.y) * v_29)));
+  let v_37 = vec3<f32>(v_11.xyz);
+  let v_38 = vec4<f32>(v_37.x, v_37.y, v_37.z, f32((v_11.w * f16((1.0f - smoothstep(120.0f, 170.0f, max(abs(v_25.x), abs(v_25.y))))))));
+  let v_39 = (v.u_CameraPos + (v_36 * v_13));
+  let v_40 = vec4<f16>(vec2<f16>(f16((dot(a_texcoord0, v.u_UOffset.xy) + v.u_UOffset.w)), f16((dot(a_texcoord0, v.u_VOffset.xy) + v.u_VOffset.w))).xy, vec4<f16>().zw);
+  let v_41 = (transpose(v.u_proj) * (transpose(v.u_view) * vec4<f32>(v_39.x, v_39.y, v_39.z, 1.0f)));
+  let v_42 = vec3<f16>(v_39);
+  let v_43 = vec4<f32>(vec4<f16>(v_42.x, v_42.y, v_42.z, f16(dot(v_41.zw, v.u_DepthMode.zw))));
+  v_1 = v_41;
+  v_2 = v_11;
+  v_3 = v_38;
+  v_4 = v_36;
+  v_5 = v_35;
+  v_6 = v_40;
+  v_7 = v_43;
+}
+
+struct tint_symbol {
+  @builtin(position)
+  m : vec4<f32>,
+  @location(0u)
+  m_1 : vec4<f16>,
+  @location(1u)
+  m_2 : vec4<f32>,
+  @location(2u)
+  m_3 : vec3<f32>,
+  @location(3u)
+  m_4 : vec3<f32>,
+  @location(4u)
+  m_5 : vec4<f16>,
+  @location(5u)
+  m_6 : vec4<f32>,
+}
+
+@vertex
+fn main(@location(0u) a_color0 : vec4<f32>, @location(1u) a_normal : vec3<f32>, @location(2u) a_position : vec4<f32>, @location(3u) a_texcoord0 : vec2<f32>) -> tint_symbol {
+  main_inner(a_color0, a_normal, a_position, a_texcoord0);
+  return tint_symbol(v_1, v_2, v_3, v_4, v_5, v_6, v_7);
+}
+
