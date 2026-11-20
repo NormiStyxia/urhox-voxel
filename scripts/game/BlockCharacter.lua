@@ -417,6 +417,8 @@ function M:Update(timeStep, s)
     local t = self.time
     local g = math.min(self.gait, 1.3)
     local swing = math.sin(self.phase) * 38.0 * g
+    local stride = math.sin(self.phase)
+    local counterBody = math.sin(self.phase) * 3.5 * g
     local idle = 1.0 - math.min(self.gait, 1.0)
     local breath = math.sin(t * 2.2)
 
@@ -430,7 +432,7 @@ function M:Update(timeStep, s)
     self:SetBone("leg_left", swing + airLegL - self.crouch * 30.0, 0, 0)
 
     -- 身体：跑起来前倾，蹲下前倾
-    self:SetBone("body", g * 6.0 + self.crouch * 14.0, math.sin(self.phase) * 4.0 * g, 0)
+    self:SetBone("body", g * 6.0 + self.crouch * 14.0, counterBody, 0)
 
     -- 手臂：与腿反向摆；A 字外张；空中张开；持械时右手前举
     local spread = 6.0 + breath * 1.5 * idle + self.air * 30.0
@@ -452,20 +454,26 @@ function M:Update(timeStep, s)
     local headYaw = math.sin(t * 0.7) * 6.0 * idle
     self:SetBone("head", -g * 4.0 - self.crouch * 10.0 + breath * 1.0 * idle, headYaw, 0)
     -- 肩前发束挂在身体上（不跟头点头，免得扫进肩膀），只跟一半的左右转头
-    self:SetBone("hair_locks", 0, headYaw * 0.5, 0)
+    -- The two side tufts hang below the buns. They lag the head and swing
+    -- sideways with the stride, instead of reading as one rear hair sheet.
+    local tuftWind = stride * 4.5 * g + math.sin(t * 2.4 + .8) * 1.5 * idle
+    self:SetBone("hair_locks", tuftWind * .25, headYaw * .25, tuftWind)
     -- 帽兜：挂在外套上半，跑起来稍微往后掀
     self:SetBone("hood", g * 5.0 + self.air * 8.0 + math.sin(t * 5.0 + 0.6) * 0.8 * g, 0, 0)
     -- 背后长发：跟一半转头，跑起来往后飘一点
-    self:SetBone("hair_back", 2.0 + g * 8.0 + self.air * 10.0 + math.sin(t * 4.0) * 1.5 * g, headYaw * 0.5, 0)
+    -- Keep the short nape close to the neck. This prevents the old rear-hair
+    -- interpretation from swinging through the shoulders.
+    self:SetBone("hair_back", 1.0 + g * 3.0 + self.air * 4.0 + math.sin(t * 4.0) * .7 * g, headYaw * .15, -tuftWind * .25)
 
     -- 裙摆、斗篷：随速度往后飘，带一点抖动
-    self:SetBone("skirt", g * 5.0 + self.air * 8.0, 0, 0)
-    self:SetBone("cloak", g * 8.0 + self.air * 12.0, 0, 0)
+    local clothLag = math.sin(self.phase - .42)
+    self:SetBone("skirt", g * 4.0 + self.air * 7.0 + clothLag * 2.0 * g, 0, -stride * 1.5 * g)
+    self:SetBone("cloak", g * 6.0 + self.air * 10.0 + clothLag * 2.5 * g, 0, -stride * 2.0 * g)
     -- 体素版外套：上半从肩部轻微后仰，下摆从腰部往后飘、左右荡（碎条挂在下摆上继续叠加）
     local wave = math.sin(t * 5.0 + 0.6)
-    self:SetBone("coat_upper", 2.0 + g * 6.0 + self.air * 6.0 + wave * 0.8 * g, 0, 0)
-    self:SetBone("coat_lower", 3.0 + g * 16.0 + self.air * 18.0 + wave * (1.5 + 5.0 * g),
-        math.sin(self.phase) * 3.0 * g, math.sin(self.phase * 0.5 + 0.3) * 2.5 * g)
+    self:SetBone("coat_upper", 2.0 + g * 5.0 + self.air * 5.0 + wave * 0.8 * g, 0, 0)
+    local coatBack = 3.0 + g * 12.0 + self.air * 15.0 + math.sin(self.phase - .5) * (1.5 + 4.0 * g)
+    self:SetBone("coat_lower", coatBack, stride * 2.5 * g, math.sin(self.phase * 0.5 + 0.3) * 2.0 * g)
     -- 碎条：方块版是 cloak_strip_1..6，体素版是 cloak_strip_r / _l / _b
     local i = 0
     for name, _ in pairs(self.bones) do
