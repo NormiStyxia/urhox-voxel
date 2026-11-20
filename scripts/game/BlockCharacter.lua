@@ -165,6 +165,18 @@ function M.Create(parent, data)
         self.basePos[b.name] = node.position
     end
 
+    -- Preserve the weapon attachment contract for imported Blockbench/YSM data.
+    self.handSocketPositions = {}
+    for _, side in ipairs({ "right", "left" }) do
+        local owner = self.bones["forearm_" .. side] and ("forearm_" .. side) or ("arm_" .. side)
+        local pivot = pivots[owner]
+        if pivot then
+            local x = side == "right" and 19 or -19
+            self.handSocketPositions[side] = Vector3((x - pivot[1]) * UNIT,
+                (33 - pivot[2]) * UNIT, (-.75 - pivot[3]) * UNIT)
+        end
+    end
+
     local faces, cubes = 0, 0
     for _, b in ipairs(data.bones) do
         local list = {}

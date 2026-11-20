@@ -11,6 +11,8 @@ require "urhox-libs.Camera.ThirdPersonCamera"
 local BlockCharacter = require("game.BlockCharacter")
 -- Two-segment arms: CombatAnim solves shoulder + elbow so swings bend naturally.
 local NomiVoxelData = require("game.NomiVoxelDataElbow")
+local NomiYSMData = require("game.NomiYSMData")
+local USE_YSM_TRIAL = true
 local TimeObject = require("ruins.TimeObject")
 local DebugLog = require("ruins.DebugLog")
 local Terrain = require("ruins.RuinsTerrain")
@@ -58,7 +60,7 @@ function M.New(scene, world, spawn, spawnYaw)
     self.scene, self.world = scene, world
     self.node = scene:CreateChild("Nomi")
     self.node.worldPosition = spawn
-    self.nomi = BlockCharacter.CreateVoxel(self.node, NomiVoxelData, BlockCharacter.SLENDER)
+    self.nomi = USE_YSM_TRIAL and BlockCharacter.Create(self.node, NomiYSMData) or BlockCharacter.CreateVoxel(self.node, NomiVoxelData, BlockCharacter.SLENDER)
     -- Character owns the calibrated palm (±19,33,-.75), including its parent.
     -- Reuse it read-only: arm for legacy data, forearm for elbow data.
     self.castSocket = assert(self.nomi:HandSocket("right"), "Nomi right palm is unavailable")
