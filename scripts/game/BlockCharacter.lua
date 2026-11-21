@@ -204,8 +204,8 @@ function M.Create(parent, data)
         local pivot = pivots[owner]
         if pivot then
             local x = side == "right" and 19 or -19
-            self.handSocketPositions[side] = Vector3((x - pivot[1]) * UNIT,
-                (33 - pivot[2]) * UNIT, (-.75 - pivot[3]) * UNIT)
+            local socketOffset = ToLocal({ x, 33, -.75 }, pivot)
+            self.handSocketPositions[side] = self.bones[owner].rotation:Inverse() * socketOffset
         end
     end
 
