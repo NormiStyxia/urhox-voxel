@@ -168,6 +168,9 @@ function M.Create(parent, data)
     local material = cache:GetResource("Material", MATERIAL)
     if material == nil then
         print("BlockCharacter: material not found: " .. MATERIAL)
+    else
+        local texture = cache:GetResource("Texture2D", "Textures/Characters/nomi.png")
+        if texture ~= nil then material:SetSurfaceTexture("albedo_map", texture) end
     end
 
     local pivots = {}
@@ -177,6 +180,11 @@ function M.Create(parent, data)
         local parentPivot = b.parent and pivots[b.parent] or { 0, 0, 0 }
         local node = parentNode:CreateChild(b.name)
         node.position = ToLocal(b.pivot, parentPivot)
+        if b.rotation ~= nil then
+            -- Blockbench and UrhoX use opposite X/Y handedness after the Z
+            -- conversion. Preserve the source bind pose before runtime motion.
+            node.rotation = Quaternion(-(b.rotation[1] or 0), -(b.rotation[2] or 0), b.rotation[3] or 0)
+        end
         self.bones[b.name] = node
         self.basePos[b.name] = node.position
     end
