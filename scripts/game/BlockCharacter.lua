@@ -53,6 +53,16 @@ local function ToLocal(v, pivot)
     return Vector3((x - px) * UNIT, (y - py) * UNIT, -(z - pz) * UNIT)
 end
 
+-- Blockbench uses intrinsic ZYX (Rz * Ry * Rx), whereas Urho's three-angle
+-- Quaternion constructor uses a different order. Reflecting Z negates X/Y
+-- angles; compose the axis rotations explicitly for both bones and cubes.
+local function BlockbenchRotation(rotation)
+    if rotation == nil then return Quaternion() end
+    return Quaternion(rotation[3] or 0, Vector3(0, 0, 1))
+        * Quaternion(-(rotation[2] or 0), Vector3(0, 1, 0))
+        * Quaternion(-(rotation[1] or 0), Vector3(1, 0, 0))
+end
+
 -- 与 Blockbench box UV 一致的六面 UV 矩形 {x1, y1, x2, y2}（UV 单位）
 local function FaceUVs(u, v, w, h, d)
     return {
@@ -106,8 +116,11 @@ local function EmitCube(geom, cube, pivot, uvW, uvH)
     local b = ToLocal({ f[1] + s[1] + inf, f[2] + s[2] + inf, f[3] + s[3] + inf }, pivot)
     local lo = Vector3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z))
     local hi = Vector3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z))
+    local rotation = BlockbenchRotation(cube.rotation)
+    local origin = ToLocal(cube.origin or pivot, pivot)
     local uvs
-    if cube.uv.north ~= nil then
+    local perFaceUV = cube.uv.north ~= nil
+    if perFaceUV then
         -- YSM/Bedrock cubes carry an independent UV rectangle per face.
         -- Keeping those rectangles is required for the original character
         -- texture. Older generated data still uses the compact {u, v} form.
@@ -129,17 +142,25 @@ local function EmitCube(geom, cube, pivot, uvW, uvH)
         local r = uvs[face]
         if r[1] ~= r[3] and r[2] ~= r[4] then -- 零面积的面（薄片的侧面）跳过
             local normal, c = FaceCorners(face, lo, hi)
-            local sx = r[3] > r[1] and UV_INSET or -UV_INSET
-            local sy = r[4] > r[2] and UV_INSET or -UV_INSET
+            -- The legacy box-UV helper starts horizontal faces at the opposite
+            -- corner. Explicit BB face rectangles use BB's original corner order.
+            if perFaceUV and (face == "up" or face == "down") then
+                c = { c[3], c[4], c[1], c[2] }
+            end
+            normal = rotation * normal
+            local inset = perFaceUV and 0 or UV_INSET
+            local sx = r[3] > r[1] and inset or -inset
+            local sy = r[4] > r[2] and inset or -inset
             local u1, v1 = (r[1] + sx) / uvW, (r[2] + sy) / uvH
             local u2, v2 = (r[3] - sx) / uvW, (r[4] - sy) / uvH
             local t = {
                 Vector2(u1, v1), Vector2(u2, v1), Vector2(u2, v2), Vector2(u1, v2),
             }
+            local uvTurns = cube.uvRotation and (cube.uvRotation[face] or 0) / 90 or 0
             for _, k in ipairs({ 1, 2, 3, 1, 3, 4 }) do
-                geom:DefineVertex(c[k])
+                geom:DefineVertex(origin + rotation * (c[k] - origin))
                 geom:DefineNormal(normal)
-                geom:DefineTexCoord(t[k])
+                geom:DefineTexCoord(t[(k - uvTurns - 1) % 4 + 1])
             end
             count = count + 1
         end
@@ -180,33 +201,14 @@ function M.Create(parent, data)
         local parentNode = b.parent and self.bones[b.parent] or self.root
         local parentPivot = b.parent and pivots[b.parent] or { 0, 0, 0 }
         local node = parentNode:CreateChild(b.name)
-        local offset = ToLocal(b.pivot, parentPivot)
-        -- YSM pivots are model-space coordinates. Convert a child pivot into
-        -- the rotated parent's local frame before attaching the node.
-        if b.parent ~= nil then
-            offset = self.bones[b.parent].rotation:Inverse() * offset
-        end
-        node.position = offset
-        if b.rotation ~= nil then
-            -- Blockbench and UrhoX use opposite X/Y handedness after the Z
-            -- conversion. Preserve the source bind pose before runtime motion.
-            node.rotation = Quaternion(-(b.rotation[1] or 0), -(b.rotation[2] or 0), b.rotation[3] or 0)
-        end
+        -- BB origins are absolute coordinates in the unrotated model. Its scene
+        -- graph subtracts the parent's origin without undoing the parent rotation;
+        -- all ancestor bind rotations then affect the child and its geometry.
+        node.position = ToLocal(b.pivot, parentPivot)
+        node.rotation = BlockbenchRotation(b.rotation)
         self.bones[b.name] = node
         self.basePos[b.name] = node.position
         self.baseRotation[b.name] = node.rotation
-    end
-
-    -- Preserve the weapon attachment contract for imported Blockbench/YSM data.
-    self.handSocketPositions = {}
-    for _, side in ipairs({ "right", "left" }) do
-        local owner = self.bones["forearm_" .. side] and ("forearm_" .. side) or ("arm_" .. side)
-        local pivot = pivots[owner]
-        if pivot then
-            local x = side == "right" and 19 or -19
-            local socketOffset = ToLocal({ x, 33, -.75 }, pivot)
-            self.handSocketPositions[side] = self.bones[owner].rotation:Inverse() * socketOffset
-        end
     end
 
     local faces, cubes = 0, 0
@@ -406,6 +408,8 @@ end
 ---@return Node|nil
 function M:HandSocket(side)
     assert(side == "right" or side == "left", "HandSocket side must be right or left")
+    local locator = self.bones[side == "right" and "RightHandLocator" or "LeftHandLocator"]
+    if locator then return locator end
     local owner = self.bones["forearm_" .. side] or self.bones["arm_" .. side]
     if owner == nil then return nil end
     local name = side == "right" and "SpellPalm" or "hand_left"

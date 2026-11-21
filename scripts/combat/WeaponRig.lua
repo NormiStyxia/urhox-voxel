@@ -29,6 +29,7 @@ local Store=require("combat.WeaponStore")
 ---@field world VoxelPhysicsWorld
 ---@field controller NomiController
 ---@field body Node
+---@field backAnchor Node? Imported model's shared BackpackLocator, owned by the character.
 ---@field sockets table<string, Node>
 ---@field entries table<string, WeaponRigEntry>
 ---@field config table
@@ -112,7 +113,7 @@ local WHITE_PALETTE=174 -- reserved weapon bank, adjacent to accent slot 175
 local SWORD_LENGTH,SWORD_WIDTH=1.25,1.3 -- visual only: pivot/GetHit remain unscaled
 local REVEAL_TIME,HIDE_TIME,SWAP_HALF=.16,.12,.08
 local HOLO_OUT,HOLO_IN=.30,.40 -- wing sword projection: slower dissolve / back-socket reform
-local BACK_DEPTH=-.50 -- ~.34m behind torso back; clearance also covers hair/coat and lag
+local BACK_DEPTH=-.50 -- legacy voxel character; imported model is fitted below
 local MAX_HANG_ANGLE=math.rad(5)
 local function Vec(t) return Vector3(t[1],t[2],t[3]) end
 local function Clamp(n,lo,hi) return math.max(lo,math.min(hi,n)) end
@@ -205,13 +206,22 @@ function Rig:Init(scene,world,controller)
     local bones=controller.nomi.bones
     self.body=assert(bones.body,"WeaponRig requires body bone")
     self.previousBody=self.body.rotation.eulerAngles
-    local backSword=self.body:CreateChild("back_sword")
-    backSword.position=Vector3(.12,1.18-self.body.position.y,BACK_DEPTH-self.body.position.z)
+    self.backAnchor=bones.BackpackLocator
+    local backParent=self.backAnchor or self.body
+    local backSword=backParent:CreateChild("back_sword")
+    -- Nomi.bbmodel BackpackLocator=(0,24.98947,2), 0.05m/unit, Z flipped.
+    -- Its -0.10m plane is inside the coat (back=-0.155m, hood=-0.205m).
+    -- Start at Z=-0.32m for the taller fallback sword grip and bow branches
+    -- to clear the long hair. AttachWing fits the shorter wing hilt closer,
+    -- at Z=-0.27m, also allowing for the flared coat hem.
+    backSword.position=self.backAnchor and Vector3(.12,-.07,-.22)
+        or Vector3(.12,1.18-self.body.position.y,BACK_DEPTH-self.body.position.z)
     -- Actual blade axis is +Y. Rz(165): +Y=(-sin15,-cos15,0),
     -- so the point hangs down-left and the negative-Y handle points up-right.
     backSword.rotation=Quaternion(0,0,165)
-    local backBow=self.body:CreateChild("back_bow")
-    backBow.position=Vector3(0,.86-self.body.position.y,BACK_DEPTH-self.body.position.z)
+    local backBow=backParent:CreateChild("back_bow")
+    backBow.position=self.backAnchor and Vector3(0,-.39,-.22)
+        or Vector3(0,.86-self.body.position.y,BACK_DEPTH-self.body.position.z)
     -- Ry(180)*Rz(35): +Y=(sin35,cos35,0), +Z=(0,0,-1).
     -- 35deg from vertical; the model's -Z string faces the character's +Z.
     backBow.rotation=Quaternion(0,180,35)
@@ -985,7 +995,7 @@ function Rig:UpdateHang(dt)
     local socket=self.sockets['back_'..self.active]
     self.hangTarget=CopyVec(self.hangTarget,socket.worldPosition)
     local target=self.hangTarget
-    target.y=target.y+.02*math.sin(self.visualClock*math.pi*1.2)
+    target.y=target.y+(self.backAnchor and .004 or .02)*math.sin(self.visualClock*math.pi*1.2)
     self.hangTarget=target
     if not self.hangReady or Distance(target,self.hangPosition)>2 then
         self.hangPosition=CopyVec(self.hangPosition,target);self.hangVelocity=SetVec(self.hangVelocity,0,0,0)
@@ -998,17 +1008,27 @@ function Rig:UpdateHang(dt)
         p.y,v.y=SpringAxis(p.y,v.y,target.y,dt,omega,decay)
         p.z,v.z=SpringAxis(p.z,v.z,target.z,dt,omega,decay)
         local distance=Distance(p,target)
-        if distance>.12 then
-            local k=.12/distance
+        local maxLag=self.backAnchor and .012 or .12
+        if distance>maxLag then
+            local k=maxLag/distance
             p=SetVec(p,target.x+(p.x-target.x)*k,target.y+(p.y-target.y)*k,target.z+(p.z-target.z)*k)
         end
         -- A fast turn must not drag the hilt inward through the coat.
-        self.hangForward=Rotate(self.hangForward,self.body.worldRotation,Vector3.FORWARD)
+        self.hangForward=Rotate(self.hangForward,(self.backAnchor or self.body).worldRotation,Vector3.FORWARD)
         local f=self.hangForward
         local inward=(p.x-target.x)*f.x+(p.y-target.y)*f.y+(p.z-target.z)*f.z
-        if inward>.025 then p=SetVec(p,p.x-f.x*(inward-.025),p.y-f.y*(inward-.025),p.z-f.z*(inward-.025)) end
+        if self.backAnchor then
+            -- Strapped to the coat: allow a small tangential sway, but no depth
+            -- lag in either direction (which previously reopened a 12cm gap).
+            p=SetVec(p,p.x-f.x*inward,p.y-f.y*inward,p.z-f.z*inward)
+            local normalVelocity=v.x*f.x+v.y*f.y+v.z*f.z
+            v=SetVec(v,v.x-f.x*normalVelocity,v.y-f.y*normalVelocity,v.z-f.z*normalVelocity)
+        elseif inward>.025 then
+            p=SetVec(p,p.x-f.x*(inward-.025),p.y-f.y*(inward-.025),p.z-f.z*(inward-.025))
+        end
         self.hangPosition,self.hangVelocity=p,v
-        BlendRot(self.hangRotation,self.hangRotation,socket.worldRotation,1-math.exp(-dt/.08))
+        if self.backAnchor then CopyRot(self.hangRotation,socket.worldRotation)
+        else BlendRot(self.hangRotation,self.hangRotation,socket.worldRotation,1-math.exp(-dt/.08)) end
         local a,b=self.hangRotation,socket.worldRotation
         local angle=2*math.acos(Clamp(math.abs(a.w*b.w+a.x*b.x+a.y*b.y+a.z*b.z),0,1))
         if angle>MAX_HANG_ANGLE then BlendRot(self.hangRotation,a,b,1-MAX_HANG_ANGLE/angle) end
@@ -1040,7 +1060,7 @@ function Rig:AdvanceTransition(dt)
         if self.recoil>0 then
             local p=CopyVec(self.motion.output,self.hangPosition)
             self.motion.curve=Rotate(self.motion.curve,self.body.worldRotation,Vector3.FORWARD)
-            local d=self.motion.curve;local amount=.02*math.sin((1-self.recoil/.12)*math.pi)
+            local d=self.motion.curve;local amount=(self.backAnchor and .004 or .02)*math.sin((1-self.recoil/.12)*math.pi)
             p=SetVec(p,p.x-d.x*amount,p.y-d.y*amount,p.z-d.z*amount)
             self.motion.output=p
             entry.pivot.worldPosition=p
@@ -1367,6 +1387,10 @@ function Rig:AttachWing(entry,blueprint)
     if entry.wing and math.abs((entry.wingTip or 0)-tipY)>1e-6 then
         WingVisual.Dispose(entry.wing);entry.wing=nil
     end
+    if self.backAnchor then
+        local socket=self.sockets.back_sword
+        local p=socket.position;p.z=entry.wing and -.17 or -.22;socket.position=p
+    end
     if entry.wing then WingVisual.Recolor(entry.wing,colors)
     else
         local wing,err=WingVisual.New(entry.pivot,tipY,colors)
@@ -1375,6 +1399,10 @@ function Rig:AttachWing(entry,blueprint)
             return
         end
         entry.wing,entry.wingTip=wing,tipY
+    end
+    if self.backAnchor then
+        local socket=self.sockets.back_sword
+        local p=socket.position;p.z=-.17;socket.position=p
     end
     entry.mesh.node.scale=Vector3(1e-4,1e-4,1e-4) -- keep the voxel mesh alive for opacity/pools, just invisible
 end

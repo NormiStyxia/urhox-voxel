@@ -454,13 +454,20 @@ function A:init(character,node,opts)
     local body=character.bones.body
     local rootBase=character.basePos and character.basePos.root
     self.footBaseY=rootBase and rootBase.y or 0
-    self.bodyHeight=opts.bodyHeight or (body and rootBase and body.position.y+rootBase.y) or reference.bodyHeight
+    local height=body and rootBase and body.position.y+rootBase.y
+    if character.bones.RightHandLocator then height=character.root:WorldToLocal(body.worldPosition).y end
+    self.bodyHeight=opts.bodyHeight or height or reference.bodyHeight
     self.pathIK=opts.pathIK~=false
     local function build(shoulder,fallbackShoulder,socket,fallbackGrip,forearm)
         local s=shoulder and shoulder.position or vec(fallbackShoulder)
         if forearm and socket then
             -- Straight-elbow grip = forearm pivot + palm offset (forearm identity).
             local e,h=forearm.position,socket.position
+            if socket==character.bones.RightHandLocator or socket==character.bones.LeftHandLocator then
+                -- The imported shoulder and palm both sit below intermediate groups.
+                s=body:WorldToLocal(shoulder.worldPosition)
+                h=forearm:WorldToLocal(socket.worldPosition)
+            end
             return makeArm(s,Vector3(e.x+h.x,e.y+h.y,e.z+h.z),Vector3(e.x,e.y,e.z),Vector3(h.x,h.y,h.z))
         end
         return makeArm(s,socket and socket.position or vec(fallbackGrip))
