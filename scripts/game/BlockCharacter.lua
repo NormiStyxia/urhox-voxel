@@ -157,6 +157,7 @@ function M.Create(parent, data)
     self.root = parent:CreateChild("BlockCharacter")
     self.bones = {}      ---@type table<string, Node>
     self.basePos = {}    ---@type table<string, Vector3>
+    self.baseRotation = {} ---@type table<string, Quaternion>
     self.time = 0.0
     self.phase = 0.0
     self.gait = 0.0
@@ -179,7 +180,13 @@ function M.Create(parent, data)
         local parentNode = b.parent and self.bones[b.parent] or self.root
         local parentPivot = b.parent and pivots[b.parent] or { 0, 0, 0 }
         local node = parentNode:CreateChild(b.name)
-        node.position = ToLocal(b.pivot, parentPivot)
+        local offset = ToLocal(b.pivot, parentPivot)
+        -- YSM pivots are model-space coordinates. Convert a child pivot into
+        -- the rotated parent's local frame before attaching the node.
+        if b.parent ~= nil then
+            offset = self.bones[b.parent].rotation:Inverse() * offset
+        end
+        node.position = offset
         if b.rotation ~= nil then
             -- Blockbench and UrhoX use opposite X/Y handedness after the Z
             -- conversion. Preserve the source bind pose before runtime motion.
@@ -187,6 +194,7 @@ function M.Create(parent, data)
         end
         self.bones[b.name] = node
         self.basePos[b.name] = node.position
+        self.baseRotation[b.name] = node.rotation
     end
 
     -- Preserve the weapon attachment contract for imported Blockbench/YSM data.
@@ -418,7 +426,8 @@ end
 function M:SetBone(name, pitch, yaw, roll)
     local node = self.bones[name]
     if node == nil then return end
-    node.rotation = Quaternion(pitch, yaw, roll)
+    local bind = self.baseRotation and self.baseRotation[name]
+    node.rotation = bind and (bind * Quaternion(pitch, yaw, roll)) or Quaternion(pitch, yaw, roll)
 end
 
 function M:TriggerUse()
