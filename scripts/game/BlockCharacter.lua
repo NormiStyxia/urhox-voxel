@@ -481,11 +481,42 @@ function M:Update(timeStep, s)
     local clothLag = math.sin(self.phase - .42)
     self:SetBone("skirt", g * 4.0 + self.air * 7.0 + clothLag * 2.0 * g, 0, -stride * 1.5 * g)
     self:SetBone("cloak", g * 6.0 + self.air * 10.0 + clothLag * 2.5 * g, 0, -stride * 2.0 * g)
+
+    -- The YSM skirt is made from 24 narrow pleats. Keep the ring coherent while
+    -- letting the leading side follow the thigh by a small amount. The previous
+    -- single-bone sway left every pleat rigid in the game and made the baked
+    -- cloth motion disappear at runtime.
+    for name, node in pairs(self.bones) do
+        local n = string.match(name, "^NomiPleatSwing(%d+)_(%d+)$")
+        if n ~= nil then
+            local section = tonumber(n) or 0
+            local side = tonumber(string.match(name, "_(%d+)$")) or 0
+            local phase = self.phase + section * 0.28 + side * 0.12
+            local front = section >= 9 and section <= 11
+            local back = section >= 3 and section <= 5
+            local follow = front and 1.0 or (back and -0.72 or 0.15)
+            local pleatPitch = follow * (8.0 * g) + math.sin(phase) * (2.0 + 2.0 * g)
+            self:SetBone(name, pleatPitch, 0, math.sin(phase * 0.5) * 0.8 * g)
+        end
+    end
     -- 体素版外套：上半从肩部轻微后仰，下摆从腰部往后飘、左右荡（碎条挂在下摆上继续叠加）
     local wave = math.sin(t * 5.0 + 0.6)
     self:SetBone("coat_upper", 2.0 + g * 5.0 + self.air * 5.0 + wave * 0.8 * g, 0, 0)
     local coatBack = 3.0 + g * 12.0 + self.air * 15.0 + math.sin(self.phase - .5) * (1.5 + 4.0 * g)
     self:SetBone("coat_lower", coatBack, stride * 2.5 * g, math.sin(self.phase * 0.5 + 0.3) * 2.0 * g)
+    -- Secondary coat panels lag the waist by a few degrees. This preserves the
+    -- heavy-cloth silhouette and prevents the front and back panels from lifting
+    -- like separate rigid strips when the character runs.
+    for name, _ in pairs(self.bones) do
+        local side, section, part = string.match(name, "^NomiCoat([LR])(%d+)(Hip|Hem)$")
+        if section ~= nil then
+            local i = tonumber(section) or 0
+            local sign = side == "L" and 1.0 or -1.0
+            local lag = math.sin(self.phase - 0.35 + i * 0.18) * (1.2 + 2.2 * g)
+            local depth = part == "Hem" and 0.7 or 0.35
+            self:SetBone(name, coatBack * depth + lag, sign * lag * 0.18, 0)
+        end
+    end
     -- 碎条：方块版是 cloak_strip_1..6，体素版是 cloak_strip_r / _l / _b
     local i = 0
     for name, _ in pairs(self.bones) do
