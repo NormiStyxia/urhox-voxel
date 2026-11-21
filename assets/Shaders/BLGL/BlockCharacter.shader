@@ -2,7 +2,7 @@
 shader_type spatial;
 render_mode shading_model_unlit, cull_back;
 
-uniform sampler2D albedo_map : source_color, filter_nearest, repeat_disable;
+uniform sampler2D albedo_map : filter_nearest, repeat_disable;
 varying float face_shade;
 
 void vertex() {
@@ -14,7 +14,10 @@ void vertex() {
 
 void fragment() {
     vec4 c = texture(albedo_map, UV);
-    ALBEDO = c.rgb * pow(face_shade, 2.2);
+    // The atlas and Blockbench face brightness are in display space. Supply
+    // linear colour to the game's output pass so it encodes them only once.
+    vec3 rgb = c.rgb * face_shade;
+    ALBEDO = rgb * (rgb * (rgb * 0.305306011 + 0.682171111) + 0.012522878);
     ALPHA = c.a;
     ALPHA_SCISSOR_THRESHOLD = 0.5;
 }
