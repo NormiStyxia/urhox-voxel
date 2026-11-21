@@ -106,7 +106,23 @@ local function EmitCube(geom, cube, pivot, uvW, uvH)
     local b = ToLocal({ f[1] + s[1] + inf, f[2] + s[2] + inf, f[3] + s[3] + inf }, pivot)
     local lo = Vector3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z))
     local hi = Vector3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z))
-    local uvs = FaceUVs(cube.uv[1], cube.uv[2], s[1], s[2], s[3])
+    local uvs
+    if cube.uv.north ~= nil then
+        -- YSM/Bedrock cubes carry an independent UV rectangle per face.
+        -- Keeping those rectangles is required for the original character
+        -- texture. Older generated data still uses the compact {u, v} form.
+        uvs = {}
+        for _, face in ipairs(FACE_ORDER) do
+            local fuv = cube.uv[face]
+            if fuv ~= nil then
+                uvs[face] = { fuv[1], fuv[2], fuv[3], fuv[4] }
+            else
+                uvs[face] = { 0, 0, 0, 0 }
+            end
+        end
+    else
+        uvs = FaceUVs(cube.uv[1], cube.uv[2], s[1], s[2], s[3])
+    end
     local count = 0
 
     for _, face in ipairs(FACE_ORDER) do
