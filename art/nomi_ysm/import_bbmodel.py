@@ -7,6 +7,7 @@ unrotated bounds, own origin/rotation, face UVs and the full group hierarchy.
 """
 import argparse
 import json
+import math
 from pathlib import Path
 
 
@@ -32,6 +33,52 @@ def lua(value):
     if isinstance(value, list):
         return "{" + ",".join(lua(v) for v in value) + "}"
     return json.dumps(value, ensure_ascii=False, allow_nan=False)
+
+
+def animation_data(source):
+    """Keep authored local channels, including every cloth/hair bone.
+
+    Fail on unfamiliar interpolation/expressions rather than silently dropping
+    channels. The only Molang dependency is the run root's head-yaw roll.
+    """
+    groups = {g["uuid"]: g for g in source["groups"]}
+    result = {}
+    for anim in source["animations"]:
+        if anim["name"] not in ("idle", "walk", "run"):
+            continue
+        assert anim["loop"] == "loop" and not anim.get("override")
+        tracks = {}
+        for uuid, animator in anim["animators"].items():
+            frames = animator.get("keyframes", [])
+            if not frames:
+                continue
+            assert uuid in groups, animator.get("name")
+            assert not animator.get("rotation_global")
+            assert not animator.get("quaternion_interpolation")
+            name = groups[uuid]["name"]
+            channels = {}
+            for frame in frames:
+                channel = frame["channel"]
+                assert channel in ("rotation", "position", "scale")
+                assert frame.get("interpolation", "linear") == "linear"
+                assert len(frame["data_points"]) == 1
+                values = []
+                for axis in "xyz":
+                    value = frame["data_points"][0][axis]
+                    if value == "0.4*ysm.head_yaw":
+                        value = {"headYaw": 0.4}
+                    else:
+                        value = float(value)
+                        assert math.isfinite(value)
+                    values.append(value)
+                channels.setdefault(channel, []).append([frame["time"], *values])
+            for frames in channels.values():
+                frames.sort(key=lambda f: f[0])
+                assert all(a[0] < b[0] for a, b in zip(frames, frames[1:]))
+            tracks[ALIASES.get(name, name)] = channels
+        result[anim["name"]] = dict(length=anim["length"], tracks=tracks)
+    assert set(result) == {"idle", "walk", "run"}
+    return result
 
 
 def convert(source):
@@ -81,7 +128,8 @@ def convert(source):
             'return {texture="Textures/Characters/nomi.png",'
             f'uvWidth={resolution["width"]},uvHeight={resolution["height"]},bones={{\n'
             + "".join(" " + lua(b) + ",\n" for b in bones) + "},cubes={\n"
-            + "".join(" " + lua(c) + ",\n" for c in cubes) + "}}\n")
+            + "".join(" " + lua(c) + ",\n" for c in cubes)
+            + "},animations=" + lua(animation_data(source)) + "}\n")
 
 
 def main():

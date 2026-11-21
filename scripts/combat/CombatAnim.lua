@@ -759,7 +759,8 @@ function A:Apply()
     self.bladeWeight=0
     for _,s in ipairs(self.ordered) do
         if s.live and not s.stopping then s.sample=sampleTime(self,s) end
-        if s.live and s.weight>0 and (s.clip.finalDirectional or s.clip.locomotion) then baseY=self.footBaseY end
+        local importedSprint=self.character.animations and s.clip.id=="sprint_loop"
+        if s.live and s.weight>0 and not importedSprint and (s.clip.finalDirectional or s.clip.locomotion) then baseY=self.footBaseY end
     end
     -- Normalize competing tracks WITHIN each layer, then cover lower layers.
     -- Sequential old*.5 then new*.5 would leak 25% of the base at mid-crossfade.
@@ -793,6 +794,11 @@ function A:Apply()
                         end
                     end
                     local track=not armName and ((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
+                    -- The imported full skeleton owns the run cycle. Keep the
+                    -- game's held-weapon arms, but do not replace its legs,
+                    -- torso/head or empty-hand arm phase with the old rigid run.
+                    if self.character.animations and c.id=="sprint_loop"
+                        and (s.params.weaponInHand~=1 or (name~="arm_right" and name~="arm_left")) then track=nil end
                     if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and track then
                         local x,y,z=boneSample(c,name,s.sample,s.params,s.handWeight)
                         if c.param=="p" and s.sample>.8 and name=="body" then

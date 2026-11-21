@@ -186,6 +186,10 @@ function M.Create(parent, data)
     self.crouch = 0.0
     self.armed = 0.0
     self.useTimer = 0.0
+    -- Authored BB tracks live beside the geometry: no separate resource/UUID.
+    self.animations = data.animations
+    self.bindBones = data.bones
+    self.bbCycle, self.bbMotion, self.bbRun = 0.0, 0.0, 0.0
 
     local material = cache:GetResource("Material", MATERIAL)
     if material == nil then
@@ -442,6 +446,109 @@ function M:IsUsing()
     return self.useTimer > 0.0
 end
 
+local function AnimationValue(value, headYaw)
+    if type(value) == "table" then return value.headYaw * headYaw end
+    return value
+end
+
+local ANIMATION_CHANNELS = { "rotation", "position", "scale" }
+local ZERO_ROTATION = { 0, 0, 0 }
+local ARM_SIDES = { "right", "left" }
+
+-- The source clips use linear Euler channels (not quaternion interpolation).
+-- Preserve sparse timestamps and constants, with endpoint holding like BB.
+function M.SampleAnimationChannel(frames, time, fallback, headYaw)
+    if frames == nil or #frames == 0 then return fallback, fallback, fallback end
+    local first, last = frames[1], frames[#frames]
+    local a, b = first, first
+    if time >= last[1] then
+        a, b = last, last
+    elseif time > first[1] then
+        local lo, hi = 1, #frames
+        while hi - lo > 1 do
+            local mid = math.floor((lo + hi) / 2)
+            if frames[mid][1] <= time then lo = mid else hi = mid end
+        end
+        a, b = frames[lo], frames[hi]
+    end
+    local u = b[1] > a[1] and (time - a[1]) / (b[1] - a[1]) or 0
+    local yaw = headYaw or 0
+    local ax, ay, az = AnimationValue(a[2], yaw), AnimationValue(a[3], yaw), AnimationValue(a[4], yaw)
+    return ax + (AnimationValue(b[2], yaw) - ax) * u,
+        ay + (AnimationValue(b[3], yaw) - ay) * u,
+        az + (AnimationValue(b[4], yaw) - az) * u
+end
+
+local function ClipChannel(clip, name, channel, time, fallback, yaw)
+    local track = clip.tracks[name]
+    return M.SampleAnimationChannel(track and track[channel], time, fallback, yaw)
+end
+
+-- One normalized foot cycle drives every body/cloth/hair channel. Walk and run
+-- have matching left/right phase; never restart a limb or secondary track.
+function M:UpdateImportedLocomotion(dt, s, speed, k)
+    local clips = self.animations
+    local moving = s.onGround and Clamp((speed - 0.12) / 0.68, 0.0, 1.0) or 0.0
+    self.bbMotion = Lerp(self.bbMotion, moving, k)
+    self.bbRun = Lerp(self.bbRun, Clamp((speed - 4.2) / 3.0, 0.0, 1.0), k)
+    -- Distance-driven cadence: exactly the source 1s walk at 4.2m/s and
+    -- .6667s run at 7.2m/s, with no walking-in-place while blocked.
+    local stride = Lerp(4.2 * clips.walk.length, 7.2 * clips.run.length, self.bbRun)
+    if moving > 0 then self.bbCycle = (self.bbCycle + dt * speed / stride) % 1 end
+    self.phase = self.bbCycle * math.pi * 2
+    local idleT = self.time % clips.idle.length
+    local walkT, runT = self.bbCycle * clips.walk.length, self.bbCycle * clips.run.length
+    local idleW = 1 - self.bbMotion
+    local walkW, runW = self.bbMotion * (1 - self.bbRun), self.bbMotion * self.bbRun
+    local yaw = s.headYaw or 0
+    for _, bone in ipairs(self.bindBones) do
+        local name = bone.name
+        local node = self.bones[name]
+        -- Reset every imported transform each frame before later combat/seat
+        -- overlays. Unkeyed limbs must not keep last frame's attack pose.
+        for _, channel in ipairs(ANIMATION_CHANNELS) do
+            local fallback = channel == "scale" and 1 or 0
+            local ix, iy, iz = ClipChannel(clips.idle, name, channel, idleT, fallback, yaw)
+            local wx, wy, wz = ClipChannel(clips.walk, name, channel, walkT, fallback, yaw)
+            local rx, ry, rz = ClipChannel(clips.run, name, channel, runT, fallback, yaw)
+            local x, y, z = ix * idleW + wx * walkW + rx * runW,
+                iy * idleW + wy * walkW + ry * runW, iz * idleW + wz * walkW + rz * runW
+            if channel == "rotation" then
+                -- BB adds animated Euler angles to bind Euler angles BEFORE
+                -- composing ZYX. bindQuaternion * deltaQuaternion is different.
+                local bind = bone.rotation or ZERO_ROTATION
+                node.rotation = BlockbenchRotation({ bind[1] + x, bind[2] + y, bind[3] + z })
+            elseif channel == "position" then
+                node.position = self.basePos[name] + Vector3(x * UNIT, y * UNIT, -z * UNIT)
+            else
+                node.scale = Vector3(x, y, z)
+            end
+        end
+    end
+    local function AddPose(name, pitch, roll)
+        local node = self.bones[name]
+        if node then node.rotation = node.rotation * Quaternion(pitch, 0, roll or 0) end
+    end
+    AddPose("leg_right", -28 * self.air - 30 * self.crouch)
+    AddPose("leg_left", 14 * self.air - 30 * self.crouch)
+    AddPose("body", 14 * self.crouch)
+    AddPose("head", -10 * self.crouch)
+    AddPose("arm_right", 0, 30 * self.air)
+    AddPose("arm_left", 0, -30 * self.air)
+    local root = self.bones.root
+    root.position = root.position + Vector3(0, -self.crouch * 0.12, 0)
+    -- Preserve the existing spell/use base pose; CombatAnim still applies last.
+    local use = self.useTimer > 0 and self.useTimer / 0.3 * 25 or 0
+    for _, side in ipairs(ARM_SIDES) do
+        if side == "right" or s.aiming then
+            local name = "arm_" .. side
+            local node = self.bones[name]
+            local pitch = (side == "right" and -80 - use or -70) + (s.aimPitch or 0) * 0.6
+            node.rotation = node.rotation:Slerp(self.baseRotation[name] * Quaternion(pitch, 0, 0), self.armed)
+        end
+    end
+end
+
 ---@param timeStep number
 ---@param s table { moveSpeed, onGround, armed, aiming, crouching, aimPitch }
 function M:Update(timeStep, s)
@@ -461,6 +568,10 @@ function M:Update(timeStep, s)
     self.air = Lerp(self.air, s.onGround and 0.0 or 1.0, k)
     self.crouch = Lerp(self.crouch, s.crouching and 1.0 or 0.0, k)
     self.armed = Lerp(self.armed, (s.armed or s.aiming) and 1.0 or 0.0, k)
+    if self.animations then
+        self:UpdateImportedLocomotion(dt, s, speed, k)
+        return
+    end
     self.phase = self.phase + dt * (3.0 + speed * 1.5)
 
     local t = self.time

@@ -61,8 +61,7 @@ function M.New(scene, world, spawn, spawnYaw)
     self.node = scene:CreateChild("Nomi")
     self.node.worldPosition = spawn
     self.nomi = USE_YSM_TRIAL and BlockCharacter.Create(self.node, NomiYSMData) or BlockCharacter.CreateVoxel(self.node, NomiVoxelData, BlockCharacter.SLENDER)
-    -- Character owns the calibrated palm (±19,33,-.75), including its parent.
-    -- Reuse it read-only: arm for legacy data, forearm for elbow data.
+    -- Spells and held equipment share the hand locator supplied by the character.
     self.castSocket = assert(self.nomi:HandSocket("right"), "Nomi right palm is unavailable")
     local cc = self.node:CreateComponent("VoxelCharacterController")
     cc.height = 1.65
