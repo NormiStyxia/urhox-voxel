@@ -60,12 +60,12 @@ print('PASS sentry 0.9 telegraph, 12m/s pooled projectile, sword interception, r
 
 local boss=Beast.New(nil,nil,terrain,combat,Vector3.ZERO,'boss')
 assert(boss.hp==600 and boss.maxPoise==100 and #boss:GetHurtShapes()==5)
-assert(not boss:ApplyHit({dmg=100,part='core'}).hit)
-local a=boss:ApplyHit({dmg=40,part='foreleg_l',poise=0})
+assert(not boss:ApplyHit({dmg=100,part='core',kind='arrow'}).hit)
+local a=boss:ApplyHit({dmg=40,part='foreleg_l',poise=0,kind='arrow'})
 assert(a.partBroken=='foreleg_l' and not boss.down and boss.pendingTrip and boss.poise==0)
 boss:Stagger(3,true)
-local old=boss.hp; boss:ApplyHit({dmg=10,part='foreleg_r'}); T.Near(old-boss.hp,15)
-boss:Reset(); boss:ApplyHit({dmg=70,part='back_armor'}); assert(boss.parts.back_armor.broken)
+local old=boss.hp; boss:ApplyHit({dmg=10,part='foreleg_r',kind='arrow'}); T.Near(old-boss.hp,15)
+boss:Reset(); boss:ApplyHit({dmg=70,part='back_armor',kind='arrow'}); assert(boss.parts.back_armor.broken)
 old=boss.hp; boss:ApplyHit({dmg=10,part='core'}); T.Near(old-boss.hp,16)
 boss:Reset(); boss:ApplyHit({dmg=1,poise=100,part='head'}); assert(boss.down and boss.staggerDuration==3)
 T.Near(boss.hp,598.4) -- head weak point, independently of the later down multiplier
