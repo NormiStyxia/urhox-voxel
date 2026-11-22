@@ -267,19 +267,23 @@ local function SetupLighting()
     Brush.materialFor = function(size, masonry)
         local key = tostring(size) .. ":" .. (masonry or "plain")
         local m = vmats[key]
-        if m ~= nil then return m end
-        m = Material:new()
-        if not m:SetSurfaceShader("Shaders/BLGL/RuinsVoxel.shader") then
-            print("RuinsScene: RuinsVoxel.shader failed, using palette material")
-            Brush.materialFor = nil
-            return nil
+        if m == nil then
+            m = Material:new()
+            if not m:SetSurfaceShader("Shaders/BLGL/RuinsVoxel.shader") then
+                print("RuinsScene: RuinsVoxel.shader failed, using palette material")
+                Brush.materialFor = nil
+                return nil
+            end
+            m:SetSurfaceTexture("palette_tex", world_:GetPaletteTexture())
+            m:SetShaderParameter("voxel_size", Variant(size))
+            m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
+            m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
+            if masonry=="meadow" then m:SetShaderParameter("meadow_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z))) end
+            vmats[key] = m
         end
-        m:SetSurfaceTexture("palette_tex", world_:GetPaletteTexture())
-        m:SetShaderParameter("voxel_size", Variant(size))
-        m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
-        m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
-        if masonry=="meadow" then m:SetShaderParameter("meadow_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z))) end
-        vmats[key] = m
+        -- Rebind on cache hits as well when a cancelled home build is retried.
+        if masonry=="meadow" then HomeIsland.meadowMaterial=m end
+        if masonry=="homeWindows" then HomeIsland.housing=m end
         return m
     end
     -- 法阵灯：龙庭中央的蓝色点光（苏醒时变亮）
@@ -737,7 +741,7 @@ local function TravelToRegion(region)
     local destination,yaw
     if region=='home' then
         if not Terrain.home then
-            homeJob=homeJob or HomeIsland.BeginBuild(world_,scene_)
+            homeJob=homeJob or HomeIsland.BeginBuild(world_,scene_,M.dayNight)
             return false,'正在展开家园小岛…'
         end
         destination=Vector3(HomeIsland.x+5,HomeIsland.base+.1,HomeIsland.z-12)
@@ -748,6 +752,7 @@ local function TravelToRegion(region)
         yaw=0
     end
     if not nomi_:TeleportToSafeGround(destination,yaw) then return false,'此落点暂不可用' end
+    HomeIsland.ClearRipples()
     nomi_.fallbackPos=region=='home' and destination or M.SPAWN
     M.ride.pos=destination
     M.ride.vy,M.ride.speed=0,0
@@ -785,7 +790,7 @@ local function OpenWorldMap()
     WorldMap.Open(HUD.root,M.region,TravelToRegion,function()
         if homeJob then homeJob:Cancel();homeJob=nil end
         TouchControls.Cancel();combatInputBlocked=true;pointer:SetBlocked(false);pointer:Release('map-close');pointer:Resume()
-    end)
+    end,TouchInput.IsEnabled())
 end
 local function AttachTouchControls()
     local touchState={}
@@ -1023,8 +1028,10 @@ function M.ApplyCamera() end
 ---@param eventData MouseButtonDownEventData
 function Ruins_HandleMouseDown(eventType, eventData)
     if WorldMap.IsOpen() then
-        if not TouchInput.IsEnabled() and eventData:GetInt('Button')==MOUSEB_LEFT then
-            local k=PixelDraw.PixelToHUD();WorldMap.Click(eventData:GetInt('X')*k,eventData:GetInt('Y')*k)
+        local button=eventData:GetInt('Button')
+        if not TouchInput.IsEnabled() and (button==MOUSEB_LEFT or button==MOUSEB_RIGHT) then
+            local k=PixelDraw.PixelToHUD()
+            WorldMap.Down(-button,eventData:GetInt('X')*k,eventData:GetInt('Y')*k,button==MOUSEB_LEFT and 'orbit' or 'pan')
         end
         return
     end
@@ -1045,7 +1052,14 @@ end
 ---@param eventType string
 ---@param eventData MouseMoveEventData
 function Ruins_HandleMouseMove(eventType, eventData)
-    if WorldMap.IsOpen() then return end
+    if WorldMap.IsOpen() then
+        if not TouchInput.IsEnabled() then
+            local k=PixelDraw.PixelToHUD()
+            local x,y=eventData:GetInt('X')*k,eventData:GetInt('Y')*k
+            WorldMap.Move(-MOUSEB_LEFT,x,y);WorldMap.Move(-MOUSEB_RIGHT,x,y)
+        end
+        return
+    end
     if (weaponGesture_ and WeaponWheel.IsBlocked()) or voidInputBlocked or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or TouchInput.IsEnabled() then return end
     if mouseLocked or M.debugOn or nomi_ == nil or drag.buttons == 0 then return end
     local x, y = eventData:GetInt("X"), eventData:GetInt("Y")
@@ -1065,7 +1079,13 @@ end
 ---@param eventType string
 ---@param eventData MouseButtonUpEventData
 function Ruins_HandleMouseUp(eventType, eventData)
-    if WorldMap.IsOpen() then return end
+    if WorldMap.IsOpen() then
+        if not TouchInput.IsEnabled() then
+            local k=PixelDraw.PixelToHUD()
+            WorldMap.Up(-eventData:GetInt('Button'),eventData:GetInt('X')*k,eventData:GetInt('Y')*k)
+        end
+        return
+    end
     if (weaponGesture_ and WeaponWheel.IsBlocked()) or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() then return end
     if TouchInput.IsEnabled() then return end
     local button = eventData:GetInt("Button")
@@ -1121,6 +1141,7 @@ end
 ---@param eventData InputFocusEventData
 function Ruins_HandleInputFocus(eventType, eventData)
     if not eventData:GetBool("Focus") or eventData:GetBool("Minimized") then
+        if WorldMap.IsOpen() then WorldMap.CancelPointers() end
         if combatTest_ and combatTest_.active then Safe('Debug.F11Stop',combatTest_.Stop,combatTest_,'focus') end
         combatInputBlocked=true
         if weaponGesture_ then weaponGesture_:ForceClose('focus') end
@@ -1697,6 +1718,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Safe('Touch.Update',TouchControls.Update,dt)
     if WorldMap.IsOpen() then
         if voidInputBlocked or combatMoves_.dead then WorldMap.Close()
+        elseif WorldMap.StepClosing() then return
         elseif homeJob then AdvanceHomeTravel();return
         else return end
     end
@@ -1837,8 +1859,14 @@ function Ruins_HandleUpdate(eventType, eventData)
     -- 法阵灯：苏醒后常亮；夜里本来就有一点微光
     M.courtLight.brightness = 2.2 * M.runeK + 0.6 * (dn.nightK or 0)
     -- 草：诺米 / 龙脚下压开
-    Terrain.SetInteractor(0, nomi_:Position(), 0.6)
-    Terrain.SetInteractor(1, M.rig.root.worldPosition, (M.rig.size or 1) * 2.2)
+    local playerFeet=nomi_:Position() -- VoxelCharacterController syncs the root to the foot of the capsule.
+    local dragonPos,dragonRadius=M.rig.root.worldPosition,(M.rig.size or 1)*2.2
+    Terrain.SetInteractor(0, playerFeet, 0.6)
+    Terrain.SetInteractor(1, dragonPos, dragonRadius)
+    if Terrain.home then
+        local walking=M.region=='home' and M.ride.mode=='free' and not voidInputBlocked
+        HomeIsland.Update(dt,walking and playerFeet or nil,dn)
+    end
     Build.UpdateFloaters(time_, 1.0)
     -- 特效 / 手光
     -- 碎石堆选中红光（平滑淡入淡出，量化后才写材质参数）
@@ -2078,7 +2106,9 @@ function M.Stop()
     if ForgeShowroom then ForgeShowroom.Exit() end -- teardown between panel fades
     if M.atmosphere then M.atmosphere:Stop() end
     DebugLog.RegisterProbe('Ruins',nil)
-    WorldMap.Close(); TouchControls.onMap=nil; Terrain.home=nil
+    WorldMap.Close(); TouchControls.onMap=nil
+    if homeJob then homeJob:Cancel();homeJob=nil end
+    HomeIsland.Stop(); Terrain.home=nil; lastRuinsLanding=nil
     SettingsMenu.Stop()
     PerformanceHUD.Stop()
     CombatState.Stop()

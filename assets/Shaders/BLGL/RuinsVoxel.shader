@@ -19,6 +19,8 @@ uniform vec3 daynight_tint = vec3(1.0);
 uniform float masonry_mode = 0.0;
 uniform float wall_radius = 51.0;
 uniform vec3 meadow_origin = vec3(0.0);
+uniform float meadow_sun = 0.0;
+uniform float window_light = 1.0;
 // 可破坏体积被准星选中时的外轮廓光（碎时 = 红）
 uniform float hover = 0.0;
 uniform vec4 hover_color = vec4(1.0, 0.30, 0.24, 1.0);
@@ -158,10 +160,35 @@ void fragment() {
         shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
     }
     // 世界空间表面梯度已在非一致分支前求好，不依赖体素切线流。
+    float woodRoughness = 0.0;
+    // A single growth-ring field through the timber gives longitudinal fibres on
+    // its sides and curved rings on a sawn end. The three frame axes come from
+    // the voxel palette, so turning the camera never turns a plank's grain.
+    if ((idx >= 150.0 && idx <= 152.0) || (idx >= 157.0 && idx <= 159.0)) {
+        vec3 timber = wp.xyz;
+        if (idx == 157.0) { timber = wp.yzx; }
+        if (idx >= 158.0) { timber = wp.zxy; }
+        vec2 bow = vec2(sin(timber.x * 1.3), cos(timber.x * 0.83)) * 0.019;
+        vec2 radial = (fract((timber.yz + bow) / 0.75 + vec2(0.19,0.37)) - 0.5) * 0.75;
+        radial.y *= 0.87;
+        float radius = max(length(radial), 0.0001);
+        float phase = radius * 76.0 + sin(radius * 14.0);
+        float visible = 1.0 - smoothstep(0.014, 0.065, footprint);
+        float ring = sin(phase) * visible;
+        shade *= 1.0 + 0.15 * ring;
+        woodRoughness = -0.077 - 0.047 * ring;
+        vec2 slope = radial / radius * vec2(1.0,0.87) * cos(phase) * 0.068 * visible;
+        vec3 grainNormal = vec3(0.0,slope);
+        if (idx == 157.0) { grainNormal = grainNormal.zxy; }
+        if (idx >= 158.0) { grainNormal = grainNormal.yzx; }
+        grad += grainNormal - n * dot(n,grainNormal);
+    }
     NORMAL = normalize(n - clamp(grad, vec3(-0.22), vec3(0.22)) * surfaceFade);
     float emiK = emi.a;
+    // Home glass has its own palette entry. Coals, flames and rune slots keep their emission.
+    if (abs(idx-156.0)<.5) { emiK*=window_light; }
     ALBEDO = base * shade * daynight_tint;
-    ROUGHNESS = clamp(pbr.r + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
+    ROUGHNESS = clamp(pbr.r + woodRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
@@ -186,9 +213,10 @@ void fragment() {
         canopy = min(canopy,min(length(lawn-vec2(0.0,-13.0)),length(lawn-vec2(19.0,-5.0))));
         canopy = min(canopy,length(lawn-vec2(5.0,13.5)));
         float cover = 1.0-smoothstep(.65,4.2,canopy);
-        float sunPatch = smoothstep(.37,.67,n3(vec3(lawn*.63,TIME*.055)));
-        float sunlight = smoothstep(.05,.5,MAIN_LIGHT_DIRECTION.y);
-        ALBEDO *= mix(vec3(1.0),mix(vec3(.83,.91,.97),vec3(1.14,1.10,.99),sunPatch),cover*sunlight);
+        if (meadow_sun>0.0) {
+            float sunPatch = smoothstep(.37,.67,n3(vec3(lawn*.63,TIME*.055)));
+            ALBEDO *= mix(vec3(1.0),mix(vec3(.83,.91,.97),vec3(1.14,1.10,.99),sunPatch),cover*meadow_sun);
+        }
         AO *= 1.0-.22*cover;
     }
 }

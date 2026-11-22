@@ -260,7 +260,7 @@ end
 
 -- ---------------------------------------------------------------- 碰撞层（隐藏体素）
 local hiddenMat_ = nil
-local function HiddenMaterial()
+function M.HiddenMaterial()
     if hiddenMat_ ~= nil then return hiddenMat_ end
     local m = Material:new()
     if not m:SetSurfaceShader("Shaders/BLGL/HiddenVoxel.shader") then
@@ -287,7 +287,7 @@ local function BuildCollision(world)
         end
     end
     M.heightMap=H
-    local vols, hidden = {},HiddenMaterial()
+    local vols, hidden = {},M.HiddenMaterial()
     local CH=32 -- 16m：减少空洞块包围盒的浪费
     local allocated,solid=0,0
     for ci=0,N-1,CH do for ck=0,N-1,CH do
@@ -637,19 +637,15 @@ end
 ---@field windStrength number
 ---@field windSpeed number
 ---@field SetInteractor fun(self:RuinsGrassField, slot:integer, pos:Vector3, radius:number)
-local function BuildGrass(scene)
-    local node = M.terrainNode
+local function nativeGrass(field,prepareMaps)
+    local node = field.terrainNode
     local create=node.CreateComponent --[[@as fun(self:Node,name:string):RuinsGrassField|nil]]
     local grass = create(node,"GrassField")
-    if grass==nil or not grass.supported then
-        print("RuinsTerrain: GrassField not supported, using tuft fallback")
-        if grass then node:RemoveComponent(grass) end
-        M.grass = nil
-        local Tufts = require("ruins.GrassTufts")
-        M.tufts = Tufts.Build(scene, M)
-        return
-    end
-    grass.densityMap = M.splat
+    field.grass=grass
+    if not grass or not grass.supported then return false end
+    grass.enabled=false
+    if prepareMaps then prepareMaps(field) end
+    grass.densityMap = field.splat
     grass.densityChannel = 3
     grass.densityRange = Vector2(0.15, 0.75)
     grass.density = 110
@@ -672,12 +668,14 @@ local function BuildGrass(scene)
     gm:SetShaderParameter("GrassTipColor", Variant(Vector4(0.17, 0.30, 0.06, 0)))
     gm:SetShaderParameter("GrassDryColor", Variant(Vector4(0.32, 0.26, 0.08, 0.18)))
     grass.material = gm
-    M.grass = grass
+    grass.enabled=true
     -- 野花：白 / 金 / 时之蓝
     local fl = create(node,"GrassField")
-    if fl==nil then return end
+    if not fl then return true end
+    if not fl.supported then node:RemoveComponent(fl);return true end
+    field.flowers=fl
     fl.plantType = _G["GRASS_PLANT_FLOWER"]
-    fl.densityMap = M.splat
+    fl.densityMap = field.splat
     fl.densityChannel = 3
     fl.densityRange = Vector2(0.45, 0.95)
     fl.density = 2.5
@@ -697,8 +695,17 @@ local function BuildGrass(scene)
     fm:SetShaderParameter("GrassFlowerColor2", Variant(Vector4(0.25, 0.42, 0.95, 0.35)))
     fm:SetShaderParameter("GrassFlowerCenter", Variant(Vector4(0.95, 0.70, 0.20, 0.3)))
     fl.material = fm
-    M.flowers = fl
-    print("RuinsTerrain: GrassField ready")
+    return true
+end
+
+function M.BuildGrass(scene,field,prepareMaps,checkpoint)
+    local ok,native=pcall(nativeGrass,field,prepareMaps)
+    if ok and native then return end
+    if not ok then print("RuinsTerrain: GrassField setup failed: "..tostring(native)) end
+    if field.flowers then field.terrainNode:RemoveComponent(field.flowers) end
+    if field.grass then field.terrainNode:RemoveComponent(field.grass) end
+    field.grass,field.flowers=nil,nil
+    field.tufts=require("ruins.GrassTufts").Build(scene,field,checkpoint)
 end
 
 -- 显示层顶点网格上的草地权重（0..1）
@@ -713,17 +720,24 @@ function M.GrassAt(x, z)
 end
 
 -- 角色 / 龙压草：每帧调用
-function M.SetInteractor(slot, pos, radius)
-    local g = M.grass --[[@as RuinsGrassField?]]
+local function updateInteractor(field,slot,pos,radius)
+    local g = field.grass --[[@as RuinsGrassField?]]
     if g ~= nil and g.enabled then g:SetInteractor(slot, pos, radius) end
-    local fl = M.flowers --[[@as RuinsGrassField?]]
+    local fl = field.flowers --[[@as RuinsGrassField?]]
     if fl ~= nil and fl.enabled then fl:SetInteractor(slot, pos, radius) end
+end
+
+function M.SetInteractor(slot,pos,radius)
+    updateInteractor(M,slot,pos,radius)
+    -- Move the old island's slot away on the same update as the new island's slot.
+    if M.home and M.home.field then updateInteractor(M.home.field,slot,pos,radius) end
 end
 
 ---@param world VoxelPhysicsWorld
 ---@param scene Scene
 -- Components are scene-owned. Never carry terrain/grass handles into a new world.
 function M.Stop()
+    hiddenMat_=nil
     M.terrain,M.terrainNode,M.grass,M.flowers,M.tufts=nil,nil,nil,nil,nil
     M.splat,M.groundMaterial,M.heightMap,M.grassWeight=nil,nil,nil,nil
 end
@@ -732,7 +746,7 @@ function M.Build(world, scene)
     local t0 = os.clock()
     local vols = BuildCollision(world)
     BuildVisual(scene)
-    local ok, err = pcall(BuildGrass, scene)
+    local ok, err = pcall(M.BuildGrass, scene, M)
     if not ok then print("RuinsTerrain: grass FAILED: " .. tostring(err)) end
     print(string.format("RuinsTerrain: total %.2fs", os.clock() - t0))
     return { volumes = vols }

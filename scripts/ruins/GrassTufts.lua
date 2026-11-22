@@ -1,85 +1,78 @@
--- ====================================================================
--- GrassTufts.lua — GrassField 不可用时（如 WebGL）的兜底草地
---
--- 每簇 5–7 片细三角草叶，按 6m 分块合并成一个 CustomGeometry（每块一个 draw call），
--- 只铺在内环 / 外环平台这类玩家看得到的平地上；风摆在 RuinsGrassTuft.shader 里做。
--- ====================================================================
-
+-- Static fallback for devices without GrassField. Each six-metre tile is a single mesh.
 local Noise = require("ruins.Noise")
-
 local M = {}
+local BLOCK = 6
+local sin, cos = math.sin, math.cos
 
-local sin, cos, floor, sqrt = math.sin, math.cos, math.floor, math.sqrt
+local function emit(geo,x,y,z,uv,col)
+    geo:DefineVertex(Vector3(x,y,z))
+    geo:DefineNormal(Vector3.UP)
+    geo:DefineColor(col)
+    geo:DefineTexCoord(uv)
+end
 
----@param scene Scene
----@param T table RuinsTerrain 模块
-function M.Build(scene, T)
-    local t0 = os.clock()
-    local mat = Material:new()
+function M.Build(scene,field,checkpoint)
+    local mat=Material:new()
     if not mat:SetSurfaceShader("Shaders/BLGL/RuinsGrassTuft.shader") then
-        print("GrassTufts: shader failed")
-        return nil
+        mat:SetTechnique(0,cache:GetResource("Technique","Techniques/PBR/PBRNoTexture.xml"))
+        mat:SetShaderParameter("MatDiffColor",Variant(Color(.36,.55,.24)))
+        mat.cullMode=CULL_NONE
     end
-    local root = scene:CreateChild("GrassTufts")
-    local rng = Noise.Rng(5150)
-    local BLOCK = 6.0
-    local R0, R1 = T.COURT_R + 6.5, 68.0
-    local blocks, tufts = 0, 0
-    for bx = -R1, R1 - BLOCK, BLOCK do
-        for bz = -R1, R1 - BLOCK, BLOCK do
-            local cx, cz = bx + BLOCK * 0.5, bz + BLOCK * 0.5
-            local rc = sqrt(cx * cx + cz * cz)
-            if rc > R0 - 5 and rc < R1 + 4 then
-                local node = root:CreateChild("Tufts")
-                local geo = node:CreateComponent("CustomGeometry")
-                geo:BeginGeometry(0, TRIANGLE_LIST)
-                local n = 0
-                for _ = 1, 70 do
-                    local x, z = bx + rng:Next() * BLOCK, bz + rng:Next() * BLOCK
-                    local w = T.GrassAt(x, z)
-                    if T.HasGround(x,z,1) and w > 0.25 and rng:Next() < w then
-                        local y = T.Height(x, z) - 0.02
-                        local blades = rng:Int(5, 7)
-                        local tint = 0.85 + rng:Next() * 0.3
-                        local dry = rng:Next() < 0.12
-                        local col = dry and Color(1.35 * tint, 1.15 * tint, 0.7 * tint) or Color(tint, tint, tint)
-                        for _ = 1, blades do
-                            local a = rng:Next() * 6.2832
-                            local lean = 0.08 + rng:Next() * 0.18
-                            local h = 0.22 + rng:Next() * 0.3
-                            local wdt = 0.025 + rng:Next() * 0.02
-                            local ox, oz = cos(a) * 0.06, sin(a) * 0.06
-                            local px, pz = -sin(a) * wdt, cos(a) * wdt
-                            local base = Vector3(x + ox, y, z + oz)
-                            local tip = Vector3(x + ox + cos(a) * lean, y + h, z + oz + sin(a) * lean)
-                            local verts = {
-                                { base + Vector3(px, 0, pz), Vector2(0, 0) },
-                                { base - Vector3(px, 0, pz), Vector2(1, 0) },
-                                { tip, Vector2(0.5, 1) },
-                            }
-                            for _, v in ipairs(verts) do
-                                geo:DefineVertex(v[1] - node.position)
-                                geo:DefineNormal(Vector3.UP)
-                                geo:DefineColor(col)
-                                geo:DefineTexCoord(v[2])
+    local root=scene:CreateChild("GrassTufts")
+    local rng=Noise.Rng(5150)
+    local inner=field.COURT_R and field.COURT_R+6.5 or 0
+    local extent=field.grassExtent or 68
+    local originX,originZ=field.x or 0,field.z or 0
+    local left,right,tip=Vector2(0,0),Vector2(1,0),Vector2(.5,1)
+    local tiles={}
+    local tufts=0
+    for bx=-extent,extent-BLOCK,BLOCK do
+        for bz=-extent,extent-BLOCK,BLOCK do
+            local cx,cz=bx+BLOCK*.5,bz+BLOCK*.5
+            local r=math.sqrt(cx*cx+cz*cz)
+            if r>inner-5 and r<extent+4 then
+                local geo,node
+                for _=1,70 do
+                    local x,z=originX+bx+rng:Next()*BLOCK,originZ+bz+rng:Next()*BLOCK
+                    local w=field.GrassAt(x,z)
+                    if w>.25 and rng:Next()<w and field.HasGround(x,z,1) then
+                        local y=field.Height(x,z)
+                        -- A blade base fits in a 20 cm square. Keep the tuft on one tread.
+                        if not field.grassExtent or (field.Height(x-.1,z-.1)==y and field.Height(x+.1,z-.1)==y
+                            and field.Height(x-.1,z+.1)==y and field.Height(x+.1,z+.1)==y) then
+                            if not geo then
+                                node=root:CreateChild("Tufts")
+                                node.position=Vector3(originX+cx,y,originZ+cz)
+                                geo=node:CreateComponent("CustomGeometry")
+                                geo:BeginGeometry(0,TRIANGLE_LIST)
                             end
+                            local blades=rng:Int(5,7)
+                            local tint=.85+rng:Next()*.3
+                            local col=rng:Next()<.12 and Color(1.35*tint,1.15*tint,.7*tint) or Color(tint,tint,tint)
+                            local lx,ly,lz=x-originX-cx,y-node.position.y-.02,z-originZ-cz
+                            for _=1,blades do
+                                local a=rng:Next()*6.2832
+                                local dx,dz=cos(a),sin(a)
+                                local lean,h,wdt=.08+rng:Next()*.18,.22+rng:Next()*.3,.025+rng:Next()*.02
+                                local px,pz=lx+dx*.06,lz+dz*.06
+                                emit(geo,px-dz*wdt,ly,pz+dx*wdt,left,col)
+                                emit(geo,px+dz*wdt,ly,pz-dx*wdt,right,col)
+                                emit(geo,px+dx*lean,ly+h,pz+dz*lean,tip,col)
+                            end
+                            tufts=tufts+1
                         end
-                        n = n + 1
                     end
                 end
-                if n > 0 then
-                    geo:Commit()
-                    geo:SetMaterial(mat)
-                    geo.castShadows = false
-                    blocks, tufts = blocks + 1, tufts + n
-                else
-                    node:Remove()
+                if geo then
+                    geo:Commit();geo:SetMaterial(mat);geo.castShadows=false
+                    tiles[#tiles+1]={node=node,drawable=geo}
+                    if checkpoint and #tiles%3==0 then checkpoint() end
                 end
             end
         end
     end
-    print(string.format("GrassTufts: %d tufts in %d blocks, %.2fs", tufts, blocks, os.clock() - t0))
-    return { root = root, material = mat }
+    print(string.format("GrassTufts: %d tufts in %d blocks",tufts,#tiles))
+    return {root=root,material=mat,tiles=tiles}
 end
 
 return M

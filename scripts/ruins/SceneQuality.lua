@@ -6,6 +6,30 @@ local M={}
 ---@class SettingsGrass: Component
 ---@field density number
 ---@field viewDistance number
+function M.ApplyGrass(field,p)
+    local grass=field.grass --[[@as SettingsGrass?]]
+    local flowers=field.flowers --[[@as SettingsGrass?]]
+    if grass then
+        grass.enabled=p.grassDensity>0
+        grass.density=110*p.grassDensity
+        grass.viewDistance=p.grassDistance
+    end
+    if flowers then
+        flowers.enabled=p.grassDensity>0
+        flowers.density=2.5*p.grassDensity
+        flowers.viewDistance=math.min(35,p.grassDistance)
+    end
+    if field.tufts then
+        local root=field.tufts.root --[[@as Node]]
+        root.enabled=p.grassDensity>0
+        -- Stable spatial thinning of existing 6m batches, no rebuild on clicks.
+        local stride=p.grassDensity>=1 and 1 or (p.grassDensity>=.5 and 2 or 4)
+        for i,tile in ipairs(field.tufts.tiles) do
+            tile.node.enabled=p.grassDensity>0 and (i-1)%stride==0
+            tile.drawable.drawDistance=p.grassDistance
+        end
+    end
+end
 ---@param host table
 function M.Attach(host)
     local sun=host.sun --[[@as Light]]
@@ -44,26 +68,8 @@ function M.Attach(host)
         zone.bloomUEIntensity=p.bloom and originalBloom.ue or 0
     end)
     Settings.RegisterQuality('scene-grass',function(p)
-        local grass=Terrain.grass --[[@as SettingsGrass?]]
-        local flowers=Terrain.flowers --[[@as SettingsGrass?]]
-        if grass then
-            grass.enabled=p.grassDensity>0
-            grass.density=110*p.grassDensity
-            grass.viewDistance=p.grassDistance
-        end
-        if flowers then
-            flowers.enabled=p.grassDensity>0
-            flowers.density=2.5*p.grassDensity
-            flowers.viewDistance=math.min(35,p.grassDistance)
-        end
-        if Terrain.tufts then
-            local root=Terrain.tufts.root --[[@as Node]]
-            root.enabled=p.grassDensity>0
-            -- Stable spatial thinning of existing 6m batches, no rebuild on clicks.
-            local nodes=root:GetChildren()
-            local stride=p.grassDensity>=1 and 1 or (p.grassDensity>=.5 and 2 or 4)
-            for i,node in ipairs(nodes) do node.enabled=(i-1)%stride==0 end
-        end
+        M.ApplyGrass(Terrain,p)
+        if Terrain.home and Terrain.home.field then M.ApplyGrass(Terrain.home.field,p) end
     end)
 end
 return M

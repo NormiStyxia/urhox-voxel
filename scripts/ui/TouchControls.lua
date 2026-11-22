@@ -74,6 +74,8 @@ local function TopButtons()
 end
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Cancel()
+    local map=package.loaded['ui.WorldMap']
+    if map and map.IsOpen() then map.CancelPointers() end
     owners,buttons={},{}
     joy,lookID=nil,nil
     Input.Clear()
@@ -158,7 +160,9 @@ function M.BeginTouch(id,x,y)
     Input.OnTouch(); M.Sync()
     Settings.TouchDetected()
     local map=package.loaded['ui.WorldMap']
-    if map and map.IsOpen() then map.Click(x,y);return end
+    if map and map.IsOpen() then
+        owners[id]={kind='map'};map.Down(id,x,y,'touch');return
+    end
     if SettingsMenu.IsOpen() then SettingsMenu.Click(x,y); return end
     if SettingsMenu.IsBlocked() then return end
     if not Input.IsEnabled() or state.blocked or owners[id] then return end
@@ -194,7 +198,10 @@ function M.MoveTouch(id,x,y)
     local o=owners[id]
     if not o then return end
     idle=0
-    if o.kind=='joy' then JoyMove(x,y)
+    if o.kind=='map' then
+        local map=package.loaded['ui.WorldMap']
+        if map and map.IsOpen() then map.Move(id,x,y) end
+    elseif o.kind=='joy' then JoyMove(x,y)
     elseif o.kind=='look' then Input.AddLook(x-o.x,y-o.y); o.x,o.y=x,y
     elseif o.kind=='button' and o.name=='attack' and current=='combat' and state.weapon=='bow' then
         -- The attack finger remains captured outside the button. It can aim and
@@ -211,10 +218,13 @@ function M.MoveTouch(id,x,y)
         o.x,o.y=x,y
     end
 end
-function M.EndTouch(id)
+function M.EndTouch(id,x,y)
     local o=owners[id]
     if not o then return end
-    if o.kind=='joy' then
+    if o.kind=='map' then
+        local map=package.loaded['ui.WorldMap']
+        if map and map.IsOpen() then map.Up(id,x,y) end
+    elseif o.kind=='joy' then
         releasedJoy,releasedFrame=joy,frame
         joy=nil; Input.SetMove(0,0); Input.Set('runIntent',false)
     elseif o.kind=='look' then lookID=nil
@@ -363,7 +373,10 @@ function RuinsTouch_Move(_,data)
     M.MoveTouch(data:GetInt('TouchID'),data:GetInt('X')*k,data:GetInt('Y')*k)
 end
 ---@param data TouchEndEventData
-function RuinsTouch_End(_,data) M.EndTouch(data:GetInt('TouchID')) end
+function RuinsTouch_End(_,data)
+    local k=Draw.PixelToHUD()
+    M.EndTouch(data:GetInt('TouchID'),data:GetInt('X')*k,data:GetInt('Y')*k)
+end
 ---@param data InputFocusEventData
 function RuinsTouch_Focus(_,data)
     if not data:GetBool('Focus') or data:GetBool('Minimized') then Cancel() end
