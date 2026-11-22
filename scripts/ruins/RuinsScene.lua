@@ -278,6 +278,7 @@ local function SetupLighting()
         m:SetShaderParameter("voxel_size", Variant(size))
         m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
         m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
+        if masonry=="meadow" then m:SetShaderParameter("meadow_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z))) end
         vmats[key] = m
         return m
     end

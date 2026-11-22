@@ -17,10 +17,13 @@ end
 local function channel(x,z) return abs(x+11.75)<1.65 and z < -6 end
 local function pad(x,z) return sqrt((x-12)^2+(z-3)^2) end
 local function top(x,z)
-    if channel(x,z) or pool(x,z)<1 then return -1.5 end
+    if channel(x,z) then return -1.5 end
+    local basin=pool(x,z)
+    if basin<1 then return -.75-.25*floor(4*(1-basin)) end
     if pad(x,z)<8.8 then return 1.5 end
     if x>9 and x<15 and z<0 then return math.max(0,math.min(1.5,floor((z+10)*1.3)*.25)) end
-    return 0
+    local bank=1-((x+6)/15)^2-((z-17)/4)^2
+    return .5*floor(4*math.max(0,bank))
 end
 function H.Contains(x,z) return abs(x-H.x)<35 and abs(z-H.z)<28 end
 function H.Ground(x,z,margin) return edge(x-H.x,z-H.z)>=(margin or 0) end
@@ -62,7 +65,7 @@ local function terrain(world)
                 b:Box(x-.25,h-.5,z-.25,x+.25,h,z+.25,mat)
             end
         end end
-        b:Finish()
+        b:Finish({masonry='meadow'})
     end end
 end
 local function column(b,x,z,y,h)
@@ -145,7 +148,7 @@ local function house(world)
         b:Box(x-.125,1.5,6.5,x+.125,3,6.625,oak)
         b:Box(x-.75,2.125,6.5,x+.75,2.25,6.625,oak)
     end
-    roof(b,-11,9.5,6.25,3.375,4.15,2.5)
+    roof(b,-14.5,9.5,2.875,3.375,4.15,2.5)
     roof(b,-3.5,9.75,3.25,3.25,4.0,1.75)
     roof(b,-9,5.75,7.75,2,3.2,1)
     -- A cross-gable dormer faces the pond. Its lit window breaks the long roof slope.
@@ -170,6 +173,28 @@ local function house(world)
     b:Box(.625,0,4.625,1.625,.75,5.625,P.WOOD); b:Box(.375,.75,4.5,1.875,1,5.75,slate)
     b:Box(.875,1,4.875,1.375,1.375,5.5,slate); b:Box(.125,1.375,4.75,2.125,1.625,5.625,slate)
     b:Finish()
+    -- Upper rooms step back from the forge and the low pond-facing porch.
+    local loft=brush(world,{-14,4,5.5},{-4,14,13.75},.125)
+    local function storey(x0,z0,x1,z1,y,h)
+        loft:Box(x0,y,z0,x1,y+h,z1,P.MARBLE_B)
+        loft:Carve(x0+.25,y+.25,z0+.25,x1-.25,y+h,z1-.25)
+        for _,level in ipairs({y,y+h-.25}) do
+            loft:Box(x0-.125,level,z0-.125,x1+.125,level+.25,z1+.125,cedar)
+        end
+        for _,x in ipairs({x0,(x0+x1)/2,x1-.25}) do
+            loft:Box(x,y,z0-.125,x+.25,y+h,z0+.125,cedar)
+        end
+        for _,x in ipairs({x0+.875,x1-1.75}) do
+            loft:Box(x-.125,y+.625,z0-.25,x+.875,y+2,z0,oak)
+            loft:Box(x,y+.875,z0-.375,x+.75,y+1.875,z0-.25,flame)
+            loft:Box(x+.25,y+.875,z0-.5,x+.375,y+1.875,z0-.375,cedar)
+        end
+    end
+    storey(-12.75,7,-5.25,12,4,3)
+    roof(loft,-9,9.5,4.375,3.375,7,2)
+    storey(-11.875,8.125,-6.375,11.875,8.125,2.625)
+    roof(loft,-9.125,10,3.375,2.75,10.75,2.625)
+    loft:Finish()
 end
 local function banks(world)
     local b=brush(world,{-21,-1.5,-19},{5,5,4},.25)
@@ -208,7 +233,7 @@ local function trees(world)
             b:Box(math.min(x,cx)-.25,cy-1.25,math.min(z,cz)-.25,math.max(x,cx)+.25,cy-.75,math.max(z,cz)+.25,P.BARK)
             b:Shape(cx-r,cy-1,cz-r,cx+r,cy+1.15,cz+r,function(px,y,pz)
                 local u,v=abs(px-cx)/r,abs(pz-cz)/r
-                if u+v+abs(y-cy)*.48<1.52 and math.max(u,v)<.95 then
+                if u*u+v*v+((y-cy)/1.2)^2<1 then
                     if index==2 then return y>cy and P.LEAF_GOLD or P.LEAF_GOLD_B end
                     return y>cy+.25 and P.LEAF_B or (y<cy-.35 and P.LEAF_C or P.LEAF_A)
                 end

@@ -18,6 +18,7 @@ uniform float bevel = 0.0;        // 格边压暗（0 = 不画格缝）
 uniform vec3 daynight_tint = vec3(1.0);
 uniform float masonry_mode = 0.0;
 uniform float wall_radius = 51.0;
+uniform vec3 meadow_origin = vec3(0.0);
 // 可破坏体积被准星选中时的外轮廓光（碎时 = 红）
 uniform float hover = 0.0;
 uniform vec4 hover_color = vec4(1.0, 0.30, 0.24, 1.0);
@@ -179,4 +180,15 @@ void fragment() {
         EMISSION += hover_color.rgb * (0.35 + fres * 2.4) * hover;
     }
     AO=ruins_contact_ao(VERTEX,n,jointK,CAMERA_POSITION_WORLD);
+    if (meadow_origin.x > 0.0 && idx >= 115.0 && idx <= 118.0) {
+        vec2 lawn = wp.xz-meadow_origin.xz;
+        float canopy = min(length(lawn-vec2(-20.5,.5)),length(lawn-vec2(-17.0,-10.0)));
+        canopy = min(canopy,min(length(lawn-vec2(0.0,-13.0)),length(lawn-vec2(19.0,-5.0))));
+        canopy = min(canopy,length(lawn-vec2(5.0,13.5)));
+        float cover = 1.0-smoothstep(.65,4.2,canopy);
+        float sunPatch = smoothstep(.37,.67,n3(vec3(lawn*.63,TIME*.055)));
+        float sunlight = smoothstep(.05,.5,MAIN_LIGHT_DIRECTION.y);
+        ALBEDO *= mix(vec3(1.0),mix(vec3(.83,.91,.97),vec3(1.14,1.10,.99),sunPatch),cover*sunlight);
+        AO *= 1.0-.22*cover;
+    }
 }
