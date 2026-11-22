@@ -312,7 +312,7 @@ do
     local terrain,port=EnemySupport.Fixture()
     local beetle=require('combat.enemies.MossBeetle').New(nil,nil,terrain,port,Vector3.ZERO,'r8_contract')
     local owner=C.New{state={GetSetting=function()return false end},rig={},anim={}}
-    local input={dmg=1,poise=0,part='side_l',kind='sword',swingId=21,deferPresentation=true,combo=1,
+    local input={dmg=1,poise=0,part='shell',kind='sword',swingId=21,deferPresentation=true,combo=1,
         pos=Vector3(-.6,.3,0),dir=Vector3.FORWARD,normal=Vector3.LEFT or Vector3(-1,0,0)}
     local result=H.Apply(beetle,input)
     assert(result.resolved and beetle.presentedHits==0)
@@ -362,53 +362,50 @@ do
  m=New();m.combo=2;m.comboUntil=0;Tick(.8);assert(m:Action('light') and m.combo==1)
 end
 print('PASS five-stage data, exact damage/poise/stop/zones/dedupe, heavy branches, finisher .35s lock, timeout reset')
--- Air eligibility, interruption, real landing signal, height damage cap and dedupe.
+-- Removed aerial landing attack: ordinary input, no fall control or landing damage.
 do
- local air={onGround=false,height=.6,y=3,vx=2,vz=1}
- local function setup()
-  m=New();m.o.airState=function(out)for k,v in pairs(air)do out[k]=v end;return out end
-  return m
- end
- for _,height in ipairs({0,.59,.6,4})do
-  air.height,air.y,air.onGround,air.invalid=height,height,false,false
-  setup();assert(m:Action('light'))
-  assert(m.plunging==(height>=.6))
- end
- for _,reason in ipairs({'hit','void','rewind','mount','menu'}) do
-  air.height,air.y,air.onGround,air.invalid=2,2,false,false
-  setup();assert(m:Action('light'));Tick(.13)
-  assert(m.clip=='plunge_loop' and not m.hitOpen and m:MoveScale()==0)
-  m:Cancel(reason);air.onGround=true;air.y=0;Tick(.3)
-  assert(not m.plunging and not m.hitPending and not m.plungeLanded)
- end
- air.height,air.y,air.onGround,air.invalid=2,2,false,false
- setup();assert(m:Action('light'));assert(m:ApplyHit{dmg=5,dir=Vector3.RIGHT}.hit)
- assert(not m.plunging and m.clip=='hit_light','air attacker remains vulnerable')
- for _,height in ipairs({.6,4,20}) do
-  air.height,air.y,air.onGround,air.invalid=height,height,false,false
-  setup();local damage,calls,rings,sound=0,0,0,{}
-  local target={active=true,GetHurtShapes=function()return {{id='body',center=Vector3(0,.5,-2),radius=.25}}end,
-   ApplyHit=function(_,info)damage=info.dmg;calls=calls+1;assert(info.plunge and info.poise==18 and info.armorBreak==2);return {hit=true}end}
+ assert(C.PLUNGE==nil and C.PlungeDistance==nil and C.StartPlunge==nil and C.UpdatePlunge==nil)
+ for _,height in ipairs({0,.59,.6,4,20}) do
+  local air={onGround=false,height=height,y=height,vx=2,vz=1}
+  m=New();m.o.airState=function()error('ordinary attacks must not request fall control')end
+  m.o.position=function()return Vector3(0,air.y,0)end
+  local calls,rings,lands,fx,impactSounds=0,0,0,0,0
+  local target={active=true,GetHurtShapes=function()return {{id='body',center=Vector3(0,air.y+.5,-2),radius=.25}}end,
+   ApplyHit=function()calls=calls+1;return {hit=true}end}
   m.o.enemies=function()return {target}end
   m.o.impactRing=function()rings=rings+1 end
-  m.o.audio={Play=function(name)sound[name]=(sound[name]or 0)+1 end}
-  assert(m:Action('light'));S.near(m.plungeVelocity.x,2);S.near(m.plungeVelocity.z,1)
-  Tick(.13);assert(calls==0)
-  air.onGround,air.y=true,0;Tick(.01)
-  assert(m.clip=='plunge_land' and calls==1 and rings==1 and sound.arrow_hit==1)
-  S.near(damage,16*math.min(2.2,1.4+height*.1));S.near(m.lastStop,.10)
-  local zone=m:StrikeZones();S.near(zone.radius,2.4);S.near(zone.angle,360)
-  local landed=m.landedAt
-  for _=1,24 do Tick(.01);assert(not m:CanCancel()) end
-  Tick(.01);assert(m:CanCancel() and m.age-landed>=.25-1e-8)
-  assert(m:Action('light') and m.clip=='sword_light_1')
-  assert(calls==1 and rings==1,'repeated contact/poll cannot replay impact')
+  m.o.camera={Land=function()lands=lands+1 end,Cancel=function()end}
+  m.o.feedback=function()fx=fx+1 end
+  m.o.audio={Play=function(cue)if cue=='hit_heavy' or cue=='arrow_hit' then impactSounds=impactSounds+1 end end}
+  Tick(.01,{attackTap=true,onGround=false})
+  assert(m.clip=='sword_light_1' and m.plunging==nil and m.plungeVelocity==nil)
+  local handle,serial=m.handle,m.swingSerial
+  Tick(.05,{onGround=false});air.onGround,air.y=true,0;Tick(.01,{onGround=true})
+  assert(m.handle==handle and m.swingSerial==serial,'landing cannot replace/requeue the ordinary attack')
+  for _=1,100 do Tick(.02,{onGround=true}) end
+  assert(not m.clip and m.buffer==nil and m:MoveScale()==1 and m:CanCancel(),'no landing lock or buffered follow-up')
+  assert(calls==0 and rings==0 and lands==0 and fx==0 and impactSounds==0,'landing emits no radial hit or landing combat feedback')
+  S.near(m.stamina.value,m.stamina.max)
  end
- air.height,air.y,air.onGround,air.invalid=2,2,false,false
- setup();assert(m:Action('light'));air.invalid=true;Tick(.05)
- assert(not m.plunging and not m.hitPending)
+ for _,reason in ipairs({'hit','void','rewind','mount','menu'}) do
+  m=New();Tick(.01,{attackTap=true,onGround=false});m:Cancel(reason)
+  for _=1,80 do Tick(.02,{onGround=true}) end
+  assert(not m.clip and not m.hitPending and m.buffer==nil and m:MoveScale()==1,'interrupted air input cannot resume on landing')
+ end
+ -- Stale/unknown authored hit events cannot reopen a damage window, even if
+ -- their old handle is accidentally retained by a caller during cancellation.
+ for _,id in ipairs({'plunge_start','plunge_loop','plunge_land','sword_light_6','unknown'}) do
+  m=New();m.clip,m.handle=id,900
+  m.anim.Poll=function()return {{name='hit_on',clip=id,handle=900}}end
+  m:Events();assert(not m.hitOpen and not m.hitPending and m:StrikeZones()==nil)
+  m.hitOpen,m.hitPending,m.hitClip=true,true,id
+  local before=count;m:AfterPose();assert(count==before,'stale landing clip never settles damage')
+ end
+ m=New();Tick(.01,{attackTap=true,onGround=false})
+ assert(m:ApplyHit{dmg=5,dir=Vector3.RIGHT}.hit and m.clip=='hit_light','ordinary air attack remains vulnerable')
+ Tick(.01,{onGround=true});assert(m.clip=='hit_light','landing cannot replace the hit reaction')
 end
-print('PASS plunge .6m eligibility, preserved inertia, interrupt/void, one 2.4m disc, damage 1.4..2.2 heavy factor, .10 stop and .25 real recovery')
+print('PASS removed landing attack: heights/input, no forced velocity/cost/radial hit/feedback/lock, interrupts and stale events')
 
 Bow();m.o.airState=function(out)out.onGround,out.height,out.y=false,2,2;return out end
-assert(m:Action('hold') and m.clip=='bow_draw','sword air move cannot consume existing bow input')
+assert(m:Action('hold') and m.clip=='bow_draw','airborne bow input keeps its existing draw rule')

@@ -5,9 +5,9 @@ local Sentry=setmetatable({}, {__index=Base})
 Sentry.__index=Sentry
 Sentry.Config={kind='stone_sentry',enemy='sentry',name='碎石哨灵',ranged=true,hp=24,poise=100,radius=.55,height=2.4,
     hover=1.1,speed=2.7,aggro=15,leash=32,attackDistance=12,defaultPart='body',voxelSize=.1,
+    -- Small enemies have a single hit zone: no part armor, no weak points.
     parts={
-        {id='body',material='stone',x=0,y=.40,z=0,radius=.56,armor=0},
-        {id='core',material='core',x=0,y=.38,z=.48,radius=.22,weak=true},
+        {id='body',material='stone',x=0,y=.40,z=0,radius=.60,armor=0},
     },
     attacks={{name='stone',telegraph=.9,duration=.12,recover=1.2,range=12,warning='line',damage=9,poise=7}},
     sculpt={

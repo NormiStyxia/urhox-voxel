@@ -1,4 +1,4 @@
--- Ground shockwave for plunge landings and the half-moon finisher.
+-- Ground shockwave for the half-moon finisher.
 -- Continuous shapes only (no bars/pillars): an expanding soft ring, a low
 -- energy wall riding the ring, swirling crescent petals and a white core flash.
 -- One node, one dynamic geometry, additive vertex colour, fixed burst pool.
@@ -13,10 +13,7 @@ local PETALS,PETAL_STEPS=7,8
 local TAU=math.pi*2
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 -- size: ring radius (m); wall: wall height (m); life: seconds.
-local KINDS={
-    plunge={size=3.4,wall=1.25,life=.55,petal=1,flash=1.0},
-    finisher={size=2.4,wall=.80,life=.45,petal=.8,flash=.8},
-}
+local FINISHER={size=2.4,wall=.80,life=.45,petal=.8,flash=.8}
 ---@param scene Scene
 ---@return ShockBurst
 function B.New(scene)
@@ -33,7 +30,7 @@ function B.New(scene)
     g:SetMaterial(0,material)
     self.geometry,self.material=g,material
     self.bursts={}
-    for i=1,B.POOL do self.bursts[i]={active=false,x=0,y=0,z=0,fx=0,fz=1,age=0,spin=0,kind=KINDS.plunge} end
+    for i=1,B.POOL do self.bursts[i]={active=false,x=0,y=0,z=0,fx=0,fz=1,age=0,spin=0,kind=FINISHER} end
     self.head=0
     -- Unit circle table built once; the rebuild reads it without allocating.
     self.cos,self.sin={},{}
@@ -42,17 +39,15 @@ function B.New(scene)
 end
 ---@param pos Vector3 ground point (feet)
 ---@param forward Vector3
----@param plunge boolean
-function B:Emit(pos,forward,plunge)
+function B:Emit(pos,forward)
     self.head=self.head%B.POOL+1
     local b=self.bursts[self.head]
-    local kind=plunge and KINDS.plunge or KINDS.finisher
     local fx,fz=forward and forward.x or 0,forward and forward.z or 1
     local l=math.sqrt(fx*fx+fz*fz);if l<1e-4 then fx,fz,l=0,1,1 end
     fx,fz=fx/l,fz/l
-    -- Finisher lands in front of the player; plunge is centred on the feet.
-    local offset=plunge and 0 or .65
-    b.active,b.kind,b.age=true,kind,0
+    -- The finisher lands in front of the player.
+    local offset=.65
+    b.active,b.kind,b.age=true,FINISHER,0
     b.x,b.y,b.z=pos.x+fx*offset,pos.y,pos.z+fz*offset
     b.fx,b.fz=fx,fz
     b.spin=math.atan(fx,fz)

@@ -4,11 +4,9 @@ local Beetle=setmetatable({}, {__index=Base})
 Beetle.__index=Beetle
 Beetle.Config={kind='moss_beetle',enemy='beetle',name='苔壳虫',hp=30,poise=100,radius=.5,height=1,
     speed=2.1,aggro=9,leash=25,attackDistance=2,defaultPart='shell',voxelSize=.09,
+    -- Small enemies have a single hit zone: no part armor, no weak points.
     parts={
-        {id='shell',material='armor',x=0,y=.48,z=-.05,radius=.51,armor=18},
-        {id='side_l',material='soft',bone='belly',x=-.46,y=.30,z=.03,radius=.19,weak=true,weakMultiplier=1.4},
-        {id='side_r',material='soft',bone='belly',x=.46,y=.30,z=.03,radius=.19,weak=true,weakMultiplier=1.4},
-        {id='belly',material='soft',x=0,y=.16,z=.19,radius=.30,weak=true,weakMultiplier=1.4,recoveryOnly=true},
+        {id='shell',material='armor',x=0,y=.36,z=-.02,radius=.62,armor=0},
     },
     attacks={{name='pounce',telegraph=.6,duration=.2,recover=.8,travel=1.8,
         range=1.8,hitRange=.75,warning='ring',damage=10,poise=8,cosine=-.2}},
@@ -37,18 +35,9 @@ function Beetle:Chase(dt,target,distance)
             (self.fz*.92-self.fx*.38*side)*self.config.speed*dt)
     end
 end
----@return boolean
-function Beetle:PartEnabled(spec)
-    if spec.recoveryOnly then return self.state==Base.State.RECOVER and self.attack.name=='pounce' end
-    return Base.PartEnabled(self,spec)
-end
 function Beetle:UpdatePose()
     Base.UpdatePose(self)
     -- Fixed roll exposes the underside for the entire advertised .8s window.
     if self.state==Base.State.RECOVER and self.attack.name=='pounce' then self.poseRoll=180 end
-end
-function Beetle:DamageScale(_,part)
-    if part.spec.id=='shell' and self.state~=Base.State.RECOVER then return .7 end
-    return 1
 end
 return Beetle

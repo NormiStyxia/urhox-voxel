@@ -49,6 +49,11 @@ local FOREARM_ARM = {forearm_right="arm_right",forearm_left="arm_left"}
 ---@field hand Vector3 上一帧最终握点，身体局部坐标。
 ---@field blade Vector3 上一帧最终剑向，身体局部坐标。
 ---@field rotations table<string, Quaternion> 上一帧最终骨骼姿势。
+---@field root number Previous applied root overlay, excluding imported locomotion.
+---@field offset Vector3 Previous weapon offset.
+---@field velocity table<string, Vector3> Inherited local angular velocity, radians/game second.
+---@field rootVelocity number
+---@field bladeVelocity Vector3 Inherited body-local blade angular velocity.
 ---@class CombatArm
 ---@field shoulder Vector3
 ---@field grip Vector3
@@ -121,6 +126,14 @@ local FOREARM_ARM = {forearm_right="arm_right",forearm_left="arm_left"}
 ---@field arms table<string, CombatArm>
 ---@field bodyHeight number
 ---@field pathIK boolean
+---@field rootOffset number
+---@field poseClock number Scaled pose clock, frozen during hitstop.
+---@field lastPoseClock number
+---@field poseRotations table<string, Quaternion> Last applied local joint rotations.
+---@field poseVelocity table<string, Vector3> Last local angular velocities.
+---@field rootVelocity number
+---@field poseBlade Vector3 Last applied body-local blade direction.
+---@field poseBladeVelocity Vector3
 ---@field bladeDirection Vector3
 ---@field bladeWeight number
 ---@field bladeSide string
@@ -191,6 +204,18 @@ local function align(from,to)
     return Quaternion(w/n,x/n,y/n,z/n)
 end
 local function inverse(q) return Quaternion(q.w,-q.x,-q.y,-q.z) end
+-- Rotation vectors keep the inherited tangent in the joint's local frame.
+local function rotationVector(q)
+    local sign=q.w<0 and -1 or 1
+    local n=math.sqrt(q.x*q.x+q.y*q.y+q.z*q.z)
+    local scale=n>1e-8 and 2*math.atan(n,q.w*sign)*sign/n or 2*sign
+    return Vector3(q.x*scale,q.y*scale,q.z*scale)
+end
+local function rotationExp(v)
+    local n=vectorLength(v)
+    local scale=n>1e-8 and math.sin(n*.5)/n or .5
+    return Quaternion(math.cos(n*.5),v.x*scale,v.y*scale,v.z*scale)
+end
 local function vectorCross(a,b) return Vector3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x) end
 local function dot(a,b) return a.x*b.x+a.y*b.y+a.z*b.z end
 local function project(v,axis)
@@ -287,11 +312,6 @@ end
 ---@param arm CombatArm
 local function handTarget(c,name,p,params,arm,bodyHeight,bodyRotation)
     local path=c.handPath[name]
-    if path.mode=="plunge" then
-        local u=math.max(clamp(((params.plungeSpeed or 1)-.5)*2,0,1),clamp(params.plungeTuck or 0,0,1))
-        u=ease("smoothStep",u)
-        return Vector3(.5-.02*u,1.6-.75*u-bodyHeight,.42+.20*u)
-    end
     if path.mode=="bow_aim" or path.mode=="bow_string" then
         local aim=math.rad(clamp(params.aimPitch or 0,-35,35))
         local cp,sp=math.cos(aim),math.sin(aim)
@@ -322,18 +342,35 @@ local function handTarget(c,name,p,params,arm,bodyHeight,bodyRotation)
 end
 local function entryBlend(s)
     local ending=s.clip.comboEntry
-    return s.entry.enabled and ending and ease("smoothStep",clamp(s.sample/ending,0,1)) or 1
+    if not s.entry.enabled or not ending then return 1 end
+    local u=clamp(s.sample/ending,0,1)
+    return u*u*(3-2*u)
+end
+local function entryRotation(s,name,target)
+    if entryBlend(s)>=1 then return target end
+    local from=s.entry.rotations[name]
+    local u=clamp(s.sample/s.clip.comboEntry,0,1)
+    local duration=s.clip.comboEntry*s.clip.dur/math.max(s.speed,EPS)
+    local turn=rotationVector(inverse(from)*target)
+    local velocity=s.entry.velocity[name]
+    local tangent=Vector3(velocity.x*duration,velocity.y*duration,velocity.z*duration)
+    -- Bound inherited overshoot by the remaining turn, not by a per-cut rule.
+    local limit=math.max(.25,2*vectorLength(turn))
+    local length=vectorLength(tangent)
+    local h=u*(1-u)*(1-u)*(length>limit and limit/length or 1)
+    local blend=entryBlend(s)
+    return from*rotationExp(Vector3(turn.x*blend+tangent.x*h,turn.y*blend+tangent.y*h,turn.z*blend+tangent.z*h))
 end
 ---@param s CombatAnimTrack
 ---@param point Vector3
 local function entryPoint(s,point,bodyHeight)
     if entryBlend(s)>=1 then return point end
     local first=s.clip.handPath.arm_right.segments[1]
-    local from,to=s.entry.hand,first.b
-    local u=entryBlend(s)
-    -- 连段直接接到下一刀的预备末端，不再绕过公共 ready 点。
-    local out=math.sin(math.pi*u)*.60
-    return Vector3(from.x+(to[1]-from.x)*u,from.y+(to[2]-bodyHeight-from.y)*u,from.z+(to[3]-from.z)*u+out)
+    local to=first.b
+    -- Blend toward a fixed solved windup pose. Solving an interpolated hand
+    -- arc and then blending that shoulder again crosses the pole singularity
+    -- on reverse cuts and eases the same transition twice.
+    return Vector3(to[1],to[2]-bodyHeight,to[3])
 end
 local function pathPole(path)
     if path.pole then return Vector3(path.pole[1],path.pole[2],path.pole[3]) end
@@ -342,14 +379,6 @@ local function pathPole(path)
 end
 ---@param c CombatClip
 local function boneSample(c,name,p,params,handWeight)
-    if c.id=="plunge_loop" then
-        local u=ease("smoothStep",math.max(clamp(((params.plungeSpeed or 1)-.5)*2,0,1),clamp(params.plungeTuck or 0,0,1)))
-        local tuck=clamp(params.plungeTuck or 0,0,1)
-        if name=="body" then return -4+34*u,0,0 end
-        if name=="head" then return 3-13*u,0,0 end
-        if name=="leg_right" then return 14+11*u*(1-tuck),0,0 end
-        if name=="leg_left" then return -10-10*u*(1-tuck),0,0 end
-    end
     if c.locomotion then
         local phase=(params.gaitPhase or 0)*math.pi*2
         local wave=math.cos(phase)
@@ -439,6 +468,15 @@ function A:init(character,node,opts)
     self.advanced=false
     self.target=Quaternion(0,0,0)
     self.weaponOffset,self.weaponEuler=Vector3(0,0,0),Vector3(0,0,0)
+    self.rootOffset=0
+    self.poseClock,self.lastPoseClock,self.rootVelocity=0,0,0
+    self.poseBlade,self.poseBladeVelocity=Vector3(0,0,1),Vector3(0,0,0)
+    self.poseRotations,self.poseVelocity={},{}
+    for _,name in ipairs(BONE_NAMES) do
+        local bone=character.bones[name]
+        self.poseRotations[name]=bone and bone.rotation or Quaternion(0,0,0)
+        self.poseVelocity[name]=Vector3(0,0,0)
+    end
     local arm=character.bones.arm_right
     local forearmR,forearmL=character.bones.forearm_right,character.bones.forearm_left
     -- Two-segment rigs own their palm on the forearm; ask the character, never guess.
@@ -495,9 +533,12 @@ function A:init(character,node,opts)
             t=0,age=0,realAge=0,previousT=0,speed=1,fadeIn=.08,fadeOut=.08,stopAge=0,stopWeight=0,weight=0,
             params={},nextEvent=1,complete=false,hitOpen=false,cancelOpen=false,protectOpen=false,
             sample=0,motion=0,handWeight=1,
-            entry={enabled=false,hand=Vector3(0,0,0),blade=Vector3(0,-1,0),rotations={}},
+            entry={enabled=false,hand=Vector3(0,0,0),blade=Vector3(0,-1,0),bladeVelocity=Vector3(0,0,0),rotations={},velocity={},root=0,rootVelocity=0,offset=Vector3(0,0,0)},
             ik={arm_right=ikBuffer(),arm_left=ikBuffer()}}
-        for _,name in ipairs(BONE_NAMES) do self.tracks[i].entry.rotations[name]=Quaternion(0,0,0) end
+        for _,name in ipairs(BONE_NAMES) do
+            self.tracks[i].entry.rotations[name]=Quaternion(0,0,0)
+            self.tracks[i].entry.velocity[name]=Vector3(0,0,0)
+        end
     end
     for i=1,MAX_EVENTS do
         self.queue[i]={name="",clip="",handle=0,t=0}
@@ -556,14 +597,31 @@ function A:Play(clipId,opts)
                 slot.entry.hand=Vector3(arm.shoulder.x+grip.x,arm.shoulder.y+grip.y,arm.shoulder.z+grip.z)
                 local e=self.weaponEuler
                 slot.entry.blade=limb*self.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
+                local body=self.character.bones.body
+                if self.character.bones.RightHandLocator and self.handSocket then
+                    -- Imported palms sit below wrist/intermediate groups. Capture
+                    -- the real socket rather than treating it as an elbow child.
+                    slot.entry.hand=body:WorldToLocal(self.handSocket.worldPosition)
+                    slot.entry.blade=inverse(body.worldRotation)*self.handSocket.worldRotation
+                        *self.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
+                end
+                slot.entry.root,slot.entry.offset=self.rootOffset,self.weaponOffset
+                slot.entry.rootVelocity=self.rootVelocity
+                slot.entry.bladeVelocity=self.poseBladeVelocity
                 for _,name in ipairs(BONE_NAMES) do
                     local current=self.character.bones[name]
                     if current then
                         local q=current.rotation
                         slot.entry.rotations[name]=Quaternion(q.w,q.x,q.y,q.z)
+                        slot.entry.velocity[name]=self.poseVelocity[name]
                     end
                 end
                 slot.entry.enabled=true
+                -- The snapshot already contains the displayed outgoing pose.
+                -- Keep its close/cancel events, but do not blend that pose twice.
+                self:Stop(source.handle,0)
+                source.weight,source.live=0,false -- Stop may already be fading.
+                fadeIn=0
                 break
             end
         end
@@ -662,6 +720,7 @@ function A:Update(dt,realDt)
     assert(finite(self.timeScale) and self.timeScale>=0,"CombatAnim: invalid timeScale")
     self.realTime=self.realTime+realDt
     dt=dt*self.timeScale
+    self.poseClock=self.poseClock+dt
     self.advanced=true
     self.motion=0
     for _,s in ipairs(self.ordered) do
@@ -767,12 +826,7 @@ function A:Apply()
     for layer=Data.Layer.STANCE,Data.Layer.DEATH do
         for _,name in ipairs(BONE_NAMES) do
             local bone=self.character.bones[name]
-            -- Attack clips describe the upper-body strike. Keep the locomotion
-            -- layer's leg phases underneath it so a swing does not freeze both
-            -- feet into authored kick angles.
-            local keepLocomotionLegs=layer==Data.Layer.ATTACK
-                and (name=="leg_right" or name=="leg_left")
-            if bone and not keepLocomotionLegs then
+            if bone then
                 local base=bone.rotation
                 local mixed=base
                 local total=0
@@ -788,19 +842,22 @@ function A:Apply()
                             local bend=ik and solved.bend or elbowBend(c,armName,s.sample)
                             self.target:FromEulerAngles(bend,0,0)
                             local target=self.target
-                            if entryBlend(s)<1 then target=s.entry.rotations[name]:Slerp(target,entryBlend(s)) end
+                            if entryBlend(s)<1 then target=entryRotation(s,name,target) end
                             total=total+s.weight
                             mixed=mixed:Slerp(target,s.weight/total)
                         end
                     end
                     local track=not armName and ((s.params.legacyPose==1 and c.legacyKeys) or c.keys)[name]
+                    -- Ground swings retain the base locomotion legs.
+                    if layer==Data.Layer.ATTACK and (name=="leg_right" or name=="leg_left") then track=nil end
                     -- The imported full skeleton owns the run cycle. Keep the
                     -- game's held-weapon arms, but do not replace its legs,
                     -- torso/head or empty-hand arm phase with the old rigid run.
                     if self.character.animations and c.id=="sprint_loop"
                         and (s.params.weaponInHand~=1 or (name~="arm_right" and name~="arm_left")) then track=nil end
                     if s.live and s.weight>0 and (s.mixLayer or c.layer)==layer and track then
-                        local x,y,z=boneSample(c,name,s.sample,s.params,s.handWeight)
+                        local poseSample=entryBlend(s)<1 and c.comboEntry or s.sample
+                        local x,y,z=boneSample(c,name,poseSample,s.params,s.handWeight)
                         if c.param=="p" and s.sample>.8 and name=="body" then
                             x=x+math.sin(s.t*48)*.4
                         end
@@ -854,10 +911,10 @@ function A:Apply()
                                 end
                             end
                             if name=="arm_right" then point=entryPoint(s,point,self.bodyHeight) end
-                            target=solveArm(arm,point,target,s.ik[name],pathPole(path),elbowBend(c,name,s.sample))
+                            target=solveArm(arm,point,target,s.ik[name],pathPole(path),elbowBend(c,name,poseSample))
                         elseif s.ik[name] then s.ik[name].enabled=false end
                         local entry=s.entry.rotations[name]
-                        if entry and entryBlend(s)<1 then target=entry:Slerp(target,entryBlend(s)) end
+                        if entry and entryBlend(s)<1 then target=entryRotation(s,name,target) end
                         total=total+s.weight
                         mixed=mixed:Slerp(target,s.weight/total)
                     end
@@ -873,8 +930,22 @@ function A:Apply()
                 total=total+w
                 -- Root translation remains continuous even when local rotations step.
                 local rootP=c.param and s.sample or normalized(c,s.t)
-                ry=ry+scalarSample(c.root,rootP)*w
+                local rootValue=scalarSample(c.root,rootP)
+                local entryU=entryBlend(s)
+                if entryU<1 then
+                    local u=clamp(s.sample/c.comboEntry,0,1)
+                    local duration=c.comboEntry*c.dur/math.max(s.speed,EPS)
+                    local start=scalarSample(c.root,0)
+                    local initial=(scalarSample(c.root,.0001)-start)/(.0001*c.dur)*s.speed
+                    rootValue=rootValue+(s.entry.root-start)*(1-entryU)
+                        +(s.entry.rootVelocity-initial)*duration*u*(1-u)*(1-u)
+                end
+                ry=ry+rootValue*w
                 local x,y,z=vectorSample(c.weapon,s.sample,"offset")
+                if entryU<1 then
+                    local from=s.entry.offset
+                    x,y,z=from.x+(x-from.x)*entryU,from.y+(y-from.y)*entryU,from.z+(z-from.z)*entryU
+                end
                 lx,ly,lz=lx+x*w,ly+y*w,lz+z*w
                 x,y,z=vectorSample(c.weapon,s.sample,"euler")
                 lp,lyaw,lr=lp+x*w,lyaw+y*w,lr+z*w
@@ -890,10 +961,6 @@ function A:Apply()
                         elseif c.bladePath.mode=="fixed" then
                             local d=c.bladePath.direction
                             direction=unit(Vector3(d[1],d[2],d[3]),Vector3(0,-1,0))
-                            if c.id=="plunge_loop" then
-                                local u=ease("smoothStep",math.max(clamp(((s.params.plungeSpeed or 1)-.5)*2,0,1),clamp(s.params.plungeTuck or 0,0,1)))
-                                direction=unit(Vector3(.4*(1-u)+.55*u,math.cos(math.pi*u)*.0-.78, .25+.10*(1-u)+.35*u),Vector3(.55,-.78,.35))
-                            end
                         else
                             local origin=c.bladePath.origin
                             direction=unit(Vector3(solved.target.x-origin[1],solved.target.y+self.bodyHeight-origin[2],
@@ -913,9 +980,25 @@ function A:Apply()
                         end
                         if entryBlend(s)<1 then
                             local d,u=s.entry.blade,entryBlend(s)
-                            -- 翻腕换边时剑尖先绕到身前，不能在左右剑向之间穿胸抄近路。
-                            local out=math.sin(math.pi*u)*1.2
-                            direction=unit(Vector3(d.x+(direction.x-d.x)*u,d.y+(direction.y-d.y)*u,d.z+(direction.z-d.z)*u+out),d)
+                            -- A spherical quadratic keeps the tip in front during
+                            -- the wrist change. Normalizing opposite linear rays
+                            -- squeezed most of the turn into just one or two frames.
+                            local front=Vector3(0,0,1)
+                            local goal=direction
+                            local first=Quaternion(0,0,0):Slerp(align(d,front),u)*d
+                            local second=Quaternion(0,0,0):Slerp(align(front,direction),u)*front
+                            direction=Quaternion(0,0,0):Slerp(align(first,second),u)*first
+                            -- Carry the outgoing tip's angular velocity too;
+                            -- preserving shoulder momentum alone leaves the
+                            -- compensated blade abruptly stationary at takeover.
+                            local phase=clamp(s.sample/c.comboEntry,0,1)
+                            local duration=c.comboEntry*c.dur/math.max(s.speed,EPS)
+                            local velocity=s.entry.bladeVelocity
+                            local turn=vectorLength(velocity)*duration
+                            local route=math.acos(clamp(dot(d,front),-1,1))+math.acos(clamp(dot(front,goal),-1,1))
+                            local limit=math.max(.25,2*route)
+                            local h=duration*phase*(1-phase)*(1-phase)*(turn>limit and limit/turn or 1)
+                            direction=rotationExp(Vector3(velocity.x*h,velocity.y*h,velocity.z*h))*direction
                         end
                         bladeTotal=bladeTotal+w
                         bx,by,bz=bx+direction.x*w,by+direction.y*w,bz+direction.z*w
@@ -956,6 +1039,34 @@ function A:Apply()
         ex,ey,ez=result.x,result.y,result.z
     end
     if root then local pos=root.position;root.position=Vector3(pos.x,baseY+rootDelta,pos.z) end
+    local poseDt=self.poseClock-self.lastPoseClock
+    if poseDt>EPS then
+        self.rootVelocity=(rootDelta-self.rootOffset)/poseDt
+        local arm=self.character.bones.arm_right
+        if arm then
+            local forearm=self.forearms.arm_right
+            local limb=forearm and arm.rotation*forearm.rotation or arm.rotation
+            local blade=limb*self.gripRotation*Quaternion(ex,ey,ez)*Vector3(0,1,0)
+            if self.character.bones.RightHandLocator and self.handSocket then
+                blade=inverse(self.character.bones.body.worldRotation)*self.handSocket.worldRotation
+                    *self.gripRotation*Quaternion(ex,ey,ez)*Vector3(0,1,0)
+            end
+            local turn=rotationVector(align(self.poseBlade,blade))
+            self.poseBladeVelocity=Vector3(turn.x/poseDt,turn.y/poseDt,turn.z/poseDt)
+            self.poseBlade=blade
+        end
+        for _,name in ipairs(BONE_NAMES) do
+            local bone=self.character.bones[name]
+            if bone then
+                local q=bone.rotation
+                local turn=rotationVector(inverse(self.poseRotations[name])*q)
+                self.poseVelocity[name]=Vector3(turn.x/poseDt,turn.y/poseDt,turn.z/poseDt)
+                self.poseRotations[name]=Quaternion(q.w,q.x,q.y,q.z)
+            end
+        end
+        self.lastPoseClock=self.poseClock
+    end
+    self.rootOffset=rootDelta
     self.weaponOffset,self.weaponEuler=Vector3(ox,oy,oz),Vector3(ex,ey,ez)
     for _,s in ipairs(self.ordered) do
         if s.live then

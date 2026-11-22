@@ -47,8 +47,8 @@ _,shot=p:Fire(Vector3.ZERO,Vector3.FORWARD,1,{},Vector3(0,0,1))
 assert(shot.embedded and hits==0 and casts==1 and wallSounds==1);S.near(shot.pos.z,.5)
 p:Update(.2);assert(casts==1 and wallSounds==1)
 p:Clear();p.opts.cast=nil;p.opts.enemies=nil
-_,shot=p:Fire(Vector3.ZERO,Vector3.FORWARD,1,{attack=10,projectileSpeed=.9})
-S.near(shot.fullSpeed,54);S.near(shot.damage,18);assert(shot.sound.material==nil and shot.sound.hitId==nil)
+_,shot=p:Fire(Vector3.ZERO,Vector3.FORWARD,1,{attack=10})
+S.near(shot.fullSpeed,60);S.near(shot.damage,18);assert(shot.sound.material==nil and shot.sound.hitId==nil)
 
 -- Predict uses the real integrator and collision chords <=25cm, no audio/hit.
 local prediction=P.NewPrediction();local segments=0

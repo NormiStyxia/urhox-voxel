@@ -154,6 +154,31 @@ local function Single(config,weapon)
     return {weapon=weapon,appearance=config[weapon].appearance,colors=config[weapon].colors}
 end
 
+-- The high-detail model only needs pose/opacity state. Allocate a fallback
+-- volume (and draw stages for bows) only if the model cannot be loaded.
+local function BuildFallback(self,entry)
+    local state=entry.mesh
+    local weapon=state.blueprint.config.weapon
+    local mesh=assert(Builder.Build(self.world,entry.pivot,state.blueprint.config))
+    Builder.SetOpacity(mesh,state.alpha)
+    state.node:Remove()
+    entry.mesh=mesh
+    if weapon=='sword' then
+        ScaleSword(mesh.node,Vec(mesh.blueprint.bounds.min))
+    else
+        for stage=0,2 do
+            local shape=Builder.BowVisual(mesh.blueprint,stage)
+            local limbs={}
+            for _,cell in ipairs(shape.cells) do
+                if cell.feature~='string' then limbs[#limbs+1]=cell end
+            end
+            local draw=Builder.VisualVolume(self.world,entry.pivot,mesh.blueprint,limbs,'BowDraw_'..stage)
+            draw.stringZ,draw.nockZ=shape.stringMidpoint[3],shape.nockZ
+            self.bowDrawMeshes[stage+1]=draw
+        end
+    end
+end
+
 ---@param scene Scene
 ---@param world VoxelPhysicsWorld
 ---@param nomiController NomiController
@@ -234,11 +259,19 @@ function Rig:Init(scene,world,controller)
     for _,weapon in ipairs({"sword","bow"}) do
         local pivot=self.body:CreateChild("weapon_grip_"..weapon)
         pivot.temporary=true
-        local mesh=assert(Builder.Build(world,pivot,Single(self.config,weapon)))
-        self.entries[weapon]={pivot=pivot,mesh=mesh}
-        if weapon=='sword' then ScaleSword(mesh.node,Vec(mesh.blueprint.bounds.min)) end
-        Builder.SetOpacity(mesh,0)
-        if weapon=='sword' then self:AttachWing(self.entries.sword) end
+        local blueprint=assert(Builder.Compile(Single(self.config,weapon)))
+        local stateNode=pivot:CreateChild('weapon_pose_'..weapon)
+        stateNode.temporary=true
+        stateNode.enabled=false
+        local entry={pivot=pivot,mesh={node=stateNode,blueprint=blueprint,alpha=0}}
+        self.entries[weapon]=entry
+        if weapon=='sword' then self:AttachWing(entry)
+        else
+            self.bowHalfHeight=Catalog.Definitions.bow.halfHeight
+            self:AttachThorn(entry)
+        end
+        if entry.wing or entry.thorn then Builder.ApplyPalette(world,blueprint.config)
+        else BuildFallback(self,entry) end
     end
     self.combatFx=require("combat.CombatFx").New(scene,world)
     self.slashRibbon=require("combat.SlashRibbon").New(scene)
@@ -247,7 +280,6 @@ function Rig:Init(scene,world,controller)
     self:BuildSwordImages()
     self:BuildBowImages()
     self:BuildVisualPools('sword');self:BuildVisualPools('bow')
-    self:AttachThorn(self.entries.bow)
     self:PrepareTrailColor('sword');self:PrepareTrailColor('bow')
     self:UpdateTrailColor()
 end
@@ -370,14 +402,6 @@ function Rig:BuildVisualPools(weapon)
     end
     self.layers[weapon]=layers
     if weapon=='bow' then
-        for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
-        for stage=0,2 do
-            local shape=Builder.BowVisual(bp,stage)
-            local limbs={}
-            for _,cell in ipairs(shape.cells) do if cell.feature~='string' then limbs[#limbs+1]=cell end end
-            local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,limbs,'BowDraw_'..stage)
-            mesh.stringZ=shape.stringMidpoint[3];mesh.nockZ=shape.nockZ;self.bowDrawMeshes[stage+1]=mesh
-        end
         DisposeEffect(self,self.bowArrow)
         local arrow=Builder.NockedArrow(bp)
         self.bowArrow=Builder.VisualVolume(self.world,entry.pivot,bp,arrow,'BowNockedArrow')
@@ -389,7 +413,6 @@ function Rig:BuildVisualPools(weapon)
             local mesh=Builder.VisualVolume(self.world,entry.pivot,bp,{{x=0,y=0,z=0,channel='accent'}},'BowString_'..i)
             self.bowStrings[i]=mesh
         end
-        self.bowHalfHeight=Catalog.Definitions.bow.halfHeight
         -- Twelve complete arrows are rebuilt only on idle equipment geometry change.
         for _,mesh in ipairs(self.flightArrows or {}) do DisposeEffect(self,mesh);mesh.root:Remove() end
         self.flightArrows={}
@@ -550,17 +573,11 @@ function Rig:BeginSlash(combo,heavy)
     end
     self.wingGlow=math.max(self.wingGlow or 0,heavy and 1 or .8)
 end
-function Rig:ImpactFx(position,forward,plunge)
+function Rig:ImpactFx(position,forward)
     if self.pose=='hand' then
-        self.combatFx:Impact(position,forward,plunge)
-        self.shockBurst:Emit(position,forward,plunge)
+        self.combatFx:Impact(position,forward)
+        self.shockBurst:Emit(position,forward)
     end
-end
-function Rig:SetPlunging(on)
-    local plunging=on==true and self.trailEnabled and self.pose=='hand'
-    if plunging and not self.combatFx.plunging then self.slashRibbon:Begin('plunge') end
-    if not plunging and self.combatFx.plunging then self.slashRibbon:End() end
-    self.combatFx.plunging=plunging
 end
 function Rig:HitImpulse(event)
     if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
@@ -677,6 +694,7 @@ end
 
 local function MainAlpha(self,mesh,a)
     mesh.alpha=a;mesh.node.enabled=a>0
+    if not mesh.volume then return end
     mesh.volume.material=a>=1 and mesh.opaque or mesh.fade
     if a>0 and a<1 then mesh.fade:SetShaderParameter('MatDiffColor',self.fxAlpha[math.floor(a*16+.5)+1]) end
 end
@@ -855,7 +873,15 @@ function Rig:GetHit()
 end
 
 ---@return table
-function Rig:GetStats() return Catalog.Definitions[self.active].stats end
+function Rig:GetStats(class)
+    local progress=self.config.progress
+    if self.statsProgress~=progress then
+        self.statsProgress=progress
+        self.statsByClass={}
+        for _,kind in ipairs(Catalog.Classes) do self.statsByClass[kind]=Catalog.Stats(kind,progress) end
+    end
+    return self.statsByClass[class or self.active]
+end
 
 -- Apply only cosmetic values, retaining all fixed geometry and effect pools.
 -- Persistence and loadout selection belong to WeaponLoadout, not the renderer.
@@ -1282,7 +1308,7 @@ function Rig:UpdateBowVisual()
     self.bowArrow.node.enabled=drawn
     if self.active=='bow' and self.visualState=='hand' then
         self.entries.bow.mesh.node.enabled=not (drawn or vibrating)
-        if vibrating and not drawn and not thornOn then self.bowDrawMeshes[1].node.enabled=true end
+        if vibrating and not drawn and self.bowDrawMeshes[1] then self.bowDrawMeshes[1].node.enabled=true end
     end
     if drawn then
         local minimum=self.bowArrow.minimum
@@ -1290,7 +1316,7 @@ function Rig:UpdateBowVisual()
         self.bowArrowOffset=SetVec(self.bowArrowOffset,minimum.x+launch[1],minimum.y+launch[2],minimum.z+nock.z)
         self.bowArrow.node.position=self.bowArrowOffset
         self.bowArrow.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
-        if not thornOn then self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17]) end
+        if self.bowDrawMeshes[self.bowStage+1] then self.bowDrawMeshes[self.bowStage+1].material:SetShaderParameter('MatDiffColor',self.fxAlpha[17]) end
     end
 end
 
@@ -1325,7 +1351,7 @@ function Rig:UpdateCore(dt)
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
     self.combatFx:Update(dt)
-    if not self.visualActive and not self.combatFx.plunging then self.slashRibbon:Clear() end
+    if not self.visualActive then self.slashRibbon:Clear() end
     self.slashRibbon:Update(dt)
     self.shockBurst:Update(dt)
     self:UpdateHang(dt)
@@ -1363,11 +1389,6 @@ function Rig:UpdateCore(dt)
     end
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
-    if self.trailEnabled and self.combatFx.plunging then
-        local root,tip=entry.pivot:LocalToWorld(self.bladeRoot),entry.pivot:LocalToWorld(self.bladeTip)
-        self.combatFx:Descent(root,tip)
-        self.slashRibbon:Sample(root,tip) -- falling sheet of light behind the blade
-    end
     if not self.visualActive then self.combatFx.valid=false end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
@@ -1404,7 +1425,6 @@ function Rig:AttachWing(entry,blueprint)
         local socket=self.sockets.back_sword
         local p=socket.position;p.z=-.17;socket.position=p
     end
-    entry.mesh.node.scale=Vector3(1e-4,1e-4,1e-4) -- keep the voxel mesh alive for opacity/pools, just invisible
 end
 ---@param dt number?
 function Rig:SyncWing(dt)
@@ -1450,10 +1470,14 @@ function Rig:SyncThorn(dt)
     local thorn=entry and entry.thorn
     if not thorn then return end
     if not thorn.ready then ThornVisual.Step(thorn) end
+    if thorn.failed then
+        ThornVisual.Dispose(thorn)
+        entry.thorn=nil
+        self.sockets.back_bow.rotation=Quaternion(0,180,35)
+        BuildFallback(self,entry)
+        return
+    end
     if not thorn.ready then return end
-    -- Voxel bow mesh stays alive for opacity/pools/hit data but is invisible while the thorn bow shows.
-    local node=entry.mesh.node
-    if node.scale.x>.01 then node.scale=Vector3(1e-4,1e-4,1e-4) end
     ThornVisual.SetVisible(thorn,self.active=='bow' and entry.mesh.alpha>=.5)
     -- Aim stance eases in/out (~.15s); the voxel string tips follow the rotated limbs (UpdateBowVisual).
     local target=(self.visualState=='hand' and self.thornAim) or 0
@@ -1464,6 +1488,17 @@ function Rig:SyncThorn(dt)
     ThornVisual.SetAim(thorn,k)
 end
 function Rig:Update(dt)
+    local slots=self.config.progress.slots
+    if self.swordId~=slots.sword.weapon then
+        self.swordId=slots.sword.weapon
+        local _,grade=Catalog.Find(Catalog.Weapons.sword,self.swordId)
+        WingVisual.SetGrade(self.entries.sword.wing,grade)
+    end
+    if self.bowId~=slots.bow.weapon then
+        self.bowId=slots.bow.weapon
+        local _,grade=Catalog.Find(Catalog.Weapons.bow,self.bowId)
+        ThornVisual.SetGrade(self.entries.bow.thorn,grade)
+    end
     self:UpdateCore(dt)
     self:SyncWing(dt)
     self:SyncThorn(dt)

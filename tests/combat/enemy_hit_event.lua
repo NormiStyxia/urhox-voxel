@@ -15,21 +15,21 @@ local function event(info,r)
         broke=r.broke,staggered=r.staggered,killed=r.killed,weak=r.weak}
 end
 local a,b=enemy(Beetle,'sweep_a'),enemy(Beetle,'sweep_b')
-local info={dmg=1,part='side_l',kind='sword',swingId='sword:51',deferPresentation=true,
+local info={dmg=1,part='shell',kind='sword',swingId='sword:51',deferPresentation=true,
     pos=Vector3(-.6,.3,0),dir=Vector3(1,0,0),normal=Vector3(-1,0,0)}
 local ar=Hit.Apply(a,info); local br=Hit.Apply(b,info)
-assert(ar.hit and br.hit and a.hp==28.6 and b.hp==28.6)
+assert(ar.hit and br.hit and a.hp==29 and b.hp==29)
 assert(a.presentedHits==0 and b.presentedHits==0 and a.particles.count==0)
 assert(a.reaction.age==1 and b.reaction.age==1 and a.hitStop==0)
 local borrowed=event(info,ar)
 assert(a:OnHitEvent(borrowed))
-assert(a.presentedHits==1 and b.presentedHits==0 and a.particles:CountOwner(a)==6)
+assert(a.presentedHits==1 and b.presentedHits==0 and a.particles:CountOwner(a)==11)
 local serial=a.particles.serial
 assert(not a:OnHitEvent(borrowed) and a.particles.serial==serial)
 assert(b:OnHitEvent(borrowed),'same swing must still present the second target')
 assert(b.presentedHits==1 and b.particles:CountOwner(b)==6 and a.particles.count==12)
 assert(not b:OnHitEvent(borrowed))
-assert(a.reaction.age==0 and a.reaction.part=='belly')
+assert(a.reaction.age==0 and a.reaction.part=='shell')
 borrowed.pos.x=100; borrowed.dir.z=100; borrowed.normal.x=100
 T.Near(a.impact.pos.x,-.6); T.Near(a.impact.dir.z,0); T.Near(a.impact.normal.x,-1)
 assert(a.impact~=borrowed)
@@ -43,13 +43,13 @@ assert(e.presentedHits==1 and e.particles:CountOwner(e)==8 and e.reaction.age==0
 serial=e.particles.serial
 assert(not e:OnHitEvent(event(legacy,r)) and e.particles.serial==serial)
 e.reaction.age=.07
-local defer={dmg=1,part='side_r',swingId=53,deferPresentation=true,pos=Vector3(.5,.3,0),dir=Vector3(-1,0,0)}
+local defer={dmg=1,part='shell',swingId=53,deferPresentation=true,pos=Vector3(.5,.3,0),dir=Vector3(-1,0,0)}
 r=e:ApplyHit(defer)
 assert(e.reaction.age==.07 and e.reaction.part=='shell' and e.presentedHits==1 and e.particles.serial==serial)
 local nextEvent=event(defer,r)
 nextEvent.swingId=52; assert(not e:OnHitEvent(nextEvent))
 nextEvent.swingId=53; nextEvent.part='shell'; assert(not e:OnHitEvent(nextEvent))
-nextEvent.part='side_r'; assert(e:OnHitEvent(nextEvent) and e.presentedHits==2 and e.reaction.part=='belly')
+nextEvent.part='shell'; assert(e:OnHitEvent(nextEvent) and e.presentedHits==2 and e.reaction.part=='shell')
 e:Reset(); r=e:ApplyHit(defer); nextEvent=event(defer,r); e:Reset(); assert(not e:OnHitEvent(nextEvent))
 e:Destroy()
 print('PASS default/explicit legacy behavior; previous reaction preserved until handoff; mismatched events and reset cannot consume a token')

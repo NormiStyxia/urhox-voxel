@@ -19,7 +19,6 @@
 ---@field motion table[]
 ---@field events table[]
 ---@field phases table<string, number[]>
----@field speedStat string|nil
 ---@field loop boolean|nil
 ---@field loopFrom number|nil
 ---@field hold boolean|nil
@@ -227,7 +226,7 @@ for _,row in ipairs(LIGHT) do
     end
     local root={}
     for i,key in ipairs(row.root) do root[i]={key[1]/d,key[2],key[3]} end
-    attack({id=row.id,dur=d,layer=L.ATTACK,weaponType="sword",speedStat="speed",
+    attack({id=row.id,dur=d,layer=L.ATTACK,weaponType="sword",
         phases=phases(d,row.on,row.off),events=hits(row.on/d,row.off/d,row.cancel/d),root=root},
         times,body,right,row.left,legs,weapon)
     -- Elbow (forearm pitch, negative = flex). Cocked in the windup, whips
@@ -256,7 +255,7 @@ local CROSS_DUR=.96
 local CROSS={0,.10,.19,.36,.46,CROSS_DUR} -- ready, cut1 on, cut1 off, cut2 on, cut2 off, end
 C.CrossCuts={{on=.10,contact=.15,off=.19},{on=.36,contact=.42,off=.46}}
 attack({
-    id="sword_heavy_release",dur=CROSS_DUR,layer=L.ATTACK,weaponType="sword",speedStat="speed",
+    id="sword_heavy_release",dur=CROSS_DUR,layer=L.ATTACK,weaponType="sword",
     phases=phases(CROSS_DUR,.10,.46),
     events={{t=.10/CROSS_DUR,"hit_on"},{t=.19/CROSS_DUR,"hit_off"},{t=.36/CROSS_DUR,"hit_on"},
         {t=.46/CROSS_DUR,"hit_off"},{t=.60/CROSS_DUR,"cancel_open"},{t=1,"cancel_close"}},
@@ -278,23 +277,6 @@ C.Combo={
     {id="sword_light_5",damage=1.9,poise=2.3,radius=2.2,angle=150,offset=.4,profile="finisher",tier="heavy",knockback=.7,pitch=.82,cooldown=.35,impactRing=true},
 }
 C.ComboLength=#C.Combo
--- 符号待 Web 校准；air clips supply pose only, physical descent belongs to CC.
-add {id="plunge_start",dur=.12,layer=L.ATTACK,weaponType="sword",continuous=true,
-    keys={body=k({6,0,0},{18,0,0},{30,0,0},{30,0,0}),head=k({3,0,0},{-3,0,0},{-10,0,0},{-10,0,0}),
-        arm_right=k({-65,0,12},{-50,0,20},{-20,0,8},{-20,0,8}),arm_left=k({0,0,-8},{-30,0,-20},{-50,0,-25},{-50,0,-25}),
-        leg_right=k({0,0,0},{15,0,0},{25,0,0},{25,0,0}),leg_left=k({0,0,0},{-10,0,0},{-20,0,0},{-20,0,0})}}
-add { -- 符号待 Web 校准
-    id="plunge_loop",dur=.5,layer=L.ATTACK,weaponType="sword",continuous=true,loop=true,
-    keys={body=k({30,0,0},{30,0,0},{30,0,0},{30,0,0}),head=k({-10,0,0},{-10,0,0},{-10,0,0},{-10,0,0}),
-        arm_right=k({-20,0,8},{-20,0,8},{-20,0,8},{-20,0,8}),arm_left=k({-50,0,-25},{-50,0,-25},{-50,0,-25},{-50,0,-25}),
-        leg_right=k({25,0,0},{25,0,0},{25,0,0},{25,0,0}),leg_left=k({-20,0,0},{-20,0,0},{-20,0,0},{-20,0,0})}}
-add { -- 符号待 Web 校准
-    id="plunge_land",dur=.25,layer=L.ATTACK,weaponType="sword",continuous=true,
-    phases=phases(.25,0,.04),events=hits(0,.04/.25,1),
-    keys={body=k({30,0,0},{38,0,0},{20,0,0},{6,0,0}),head=k({-10,0,0},{-14,0,0},{-8,0,0},{3,0,0}),
-        arm_right=k({-20,0,8},{-10,0,12},{-35,0,12},{-65,0,12}),arm_left=k({-50,0,-25},{-35,0,-30},{-20,0,-15},{0,0,-8}),
-        leg_right=k({25,0,0},{16,0,0},{6,0,0},{0,0,0}),leg_left=k({-20,0,0},{-16,0,0},{-6,0,0},{0,0,0})},
-    root={{0,-.04},{.2,-.08},{.6,-.04},{1,0}}}
 add { -- 符号待 Web 校准；phase follows actual metres, no horizontal root motion.
     id="sprint_loop",dur=.38,layer=L.LOCOMOTION,loop=true,realTime=true,continuous=true,locomotion=true,
     fadeIn=.04,fadeOut=.06,keys={body=k({14,0,0},{14,0,0},{14,0,0},{14,0,0}),
@@ -569,31 +551,6 @@ swordStance.smoothBlend=true
 swordStance.handPath={arm_right={space="body_feet",segments={bez(0,1,LOW_GUARD,LOW_GUARD,LOW_GUARD)}}}
 swordStance.bladePath={mode="radial",origin={0,1.05,0},settle={-1,0,SETTLE_DIR},side="arm_right"}
 swordStance.elbow={arm_right={{0,-22},{1,-22}}}
-
--- 多关键帧悬停→俯冲→落地随动；符号待 Web 校准。
-local ps,pl,pd=C.Clips.plunge_start,C.Clips.plunge_loop,C.Clips.plunge_land
-ps.hold,ps.fadeOut=true,0
-pl.root={{0,-.04},{1,-.04}}
-ps.keys.body=k({6,0,0},{-12,8,0},{-10,5,0},{-4,0,0},.5,.83)
-ps.keys.head=k({3,0,0},{8,-5,0},{6,-3,0},{3,0,0},.5,.83)
-ps.keys.leg_right=k({0,0,0},{12,0,0},{18,0,0},{14,0,0},.5,.83)
-ps.keys.leg_left=k({0,0,0},{-8,0,0},{-14,0,0},{-10,0,0},.5,.83)
-ps.handPath={arm_right={space="body_feet",segments={
-    bez(0,.55,{.35,1.05,.30},{.5,1.7,.35},{.6,1.35,.45},"outQuad"),
-    bez(.55,1,{.5,1.7,.35},{.5,1.6,.42},{.55,1.72,.4},"smoothStep")}}}
-ps.bladePath={mode="fixed",direction={.4,1,.3},side="arm_right"}
-pl.handPath={arm_right={space="body_feet",mode="plunge"}}
-pl.bladePath={mode="fixed",direction={.55,-.78,.35},side="arm_right"}
-pd.keys.body=k({30,0,0},{40,0,0},{18,0,0},{6,0,0},.18,.52)
-pd.keys.head=k({-10,0,0},{-16,0,0},{-7,0,0},{3,0,0},.18,.52)
-pd.keys.leg_right=k({14,0,0},{20,0,0},{8,0,0},{0,0,0},.18,.52)
-pd.keys.leg_left=k({-10,0,0},{-14,0,0},{-6,0,0},{0,0,0},.18,.52)
-pd.root={{0,-.04},{.18,-.14},{.40,-.10},{.60,.015},{.80,.006},{1,0}}
-pd.handPath={arm_right={space="body_feet",segments={
-    bez(0,.18,{.48,.85,.62},{.5,.72,.66},{.5,.75,.64},"outQuad"),
-    bez(.18,.52,{.5,.72,.66},{.55,1.05,.55},{.58,.90,.70},"outQuad"),
-    bez(.52,1,{.55,1.05,.55},{.35,1.05,.30},{.50,1.12,.5},"smoothStep")}}}
-pd.bladePath={mode="fixed",direction={.55,-.78,.35},side="arm_right"}
 
 -- Keep authored legacy poses available, while the bow faces forward rather
 -- than sideways. Single rigid right arm aims toward chin; no elbow is invented.

@@ -71,7 +71,7 @@ print('PASS cubic incremental knock .1/.1/.55, Boss zero/.6, fixed record and te
 for _,heavy in ipairs({false,true}) do
     b=make(Beetle); local dies=0
     b.onEvent=function(name) if name=='die' then dies=dies+1 end end
-    b:ApplyHit({dmg=1000,part='side_l',heavy=heavy,pos=Vector3(1,1,1),dir=Vector3(1,0,0),normal=Vector3(0,1,0)})
+    b:ApplyHit({dmg=1000,part='shell',heavy=heavy,pos=Vector3(1,1,1),dir=Vector3(1,0,0),normal=Vector3(0,1,0)})
     assert(b.particles.count==1 and b.particles.slots[1].material=='flash')
     T.Near(b.particles.slots[1].y,1.02)
     local stop=b.hitStop; b:Update(stop,combat.pos)

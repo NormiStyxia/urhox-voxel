@@ -20,7 +20,6 @@ local STYLES={
     light={life=.18,width=.72,reach=.12,core={.90,.97,1},body={.25,.62,1},glow=1.05},
     heavy={life=.24,width=.82,reach=.18,core={1,.97,.86},body={.30,.55,1},glow=1.25},
     moon={life=.30,width=.88,reach=.22,core={1,1,1},body={.18,.42,1},glow=1.35},
-    plunge={life=.22,width=.82,reach=.12,core={.95,.98,1},body={.22,.50,1},glow=1.15},
     -- Cross slash keeps two compact diagonal strokes instead of a large loop.
     cross={life=.30,width=.86,reach=.18,core={1,.98,.90},body={.24,.48,1},glow=1.35},
 }
@@ -54,7 +53,7 @@ function R.New(scene)
     self.lx,self.ly,self.lz,self.ltx,self.lty,self.ltz=0,0,0,0,0,0
     return self
 end
----@param kind string light | heavy | moon | plunge | cross
+---@param kind string light | heavy | moon | cross
 function R:Begin(kind)
     self.style=STYLES[kind] or STYLES.light
     self.activeKind=kind

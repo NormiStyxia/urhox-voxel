@@ -38,10 +38,10 @@ function P:Fire(origin,dir,charge,stats,tip)
     if not slot then return false end -- never evict a live arrow or allocate a 13th
     local p=slot
     local full=charge>=1
-    local fullSpeed=60*(stats.projectileSpeed or 1)
+    local fullSpeed=60
     local speed=power*fullSpeed
     local random=self.opts.random or math.random
-    local spread=(1-.7*charge)*(stats.spread or 1)
+    local spread=1-.7*charge
     local yaw,pitch=(random()-random())*spread,(random()-random())*spread
     local rotated=Quaternion(pitch,yaw,0)*dir:Normalized()
     local direction=Vector3(rotated.x,rotated.y,rotated.z):Normalized()
@@ -231,7 +231,7 @@ function P.Predict(p,origin,dir,u,stats,now,low,budget,cast,enemies)
     if not p.working and now>=p.nextAt then
         p.valid,p.working=false,P.Power(u)>=.1
         p.origin,p.direction,p.u,p.pos=origin,dir,u,origin
-        p.vel=dir*(60*(stats.projectileSpeed or 1)*P.Power(u))
+        p.vel=dir*(60*P.Power(u))
         p.elapsed,p.distance,p.count=0,0,0
         p.range,p.limit=stats.range or 64,low and 12 or 24
         p.nextAt=now+(low and .2 or 1/15)

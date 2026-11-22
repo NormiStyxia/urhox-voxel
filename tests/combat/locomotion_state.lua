@@ -26,4 +26,10 @@ collectgarbage('collect');collectgarbage('stop');local before=collectgarbage('co
 for _=1,100 do f:Finish(.01,input,m) end
 local bytes=(collectgarbage('count')-before)*1024;collectgarbage('restart')
 assert(bytes<256 and params==f.animOpts.params)
+-- Fast sprint is a run flagged by sprintIntent; a plain run is not.
+do local m,f=S.New(false)
+ S.Tick(m,.1,{runIntent=true,actualSpeed=7.2});assert(f:IsRunning() and not f:IsSprinting())
+ S.Tick(m,.1,{runIntent=true,sprintIntent=true,actualSpeed=10});assert(f:IsRunning() and f:IsSprinting())
+ S.Tick(m,.1,{runIntent=true,sprintIntent=false,actualSpeed=7.2});assert(f:IsRunning() and not f:IsSprinting())
+ S.Tick(m,.1,{runIntent=false,sprintIntent=true});assert(not f:IsSprinting(),'no movement intent, no sprint') end
 print('PASS ordinary held run both modes, release/gates/air, no immunity, attack priority, stable pose buffers')

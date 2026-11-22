@@ -22,7 +22,7 @@ local function LogCount(message)
 end
 local width,height,dpr,scale=844,390,3,2
 local safe={left=47,right=47,top=0,bottom=21}
-for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
+for _,name in ipairs({'W','A','S','D','SHIFT','SPACE','1','2','3','E','R','Q','F','T','TAB','C','B','G','L','ESCAPE'}) do rawset(_G,'KEY_'..name,name) end
 for i,name in ipairs({'MOUSEB_LEFT','MOUSEB_RIGHT','MOUSEB_MIDDLE','MM_ABSOLUTE','MM_RELATIVE'}) do rawset(_G,name,i) end
 NVG_ALIGN_LEFT,NVG_ALIGN_CENTER,NVG_ALIGN_RIGHT,NVG_ALIGN_MIDDLE=1,2,4,16
 for _,name in ipairs({'nvgArc','nvgRotate','nvgEllipse'}) do rawset(_G,name,function() end) end
@@ -278,3 +278,18 @@ for _,fallback in ipairs({false,true}) do
 end
 assert(room.entered==room.exited and not next(eventHandlers))
 print('weapon_forge: cosmetics, original bow, safety/drafts, failure, layout, fallback, teardown PASS')
+
+local rig={config=Store.Default()}
+rig.config.progress.ore,rig.config.progress.sand=9,2
+s=OpenReady({rig=rig})
+Click('level_sword');Click('imprint_edge');Click('guarantee_sword')
+assert(rig.config.progress.slots.sword.ranks.edge==2 and rig.config.progress.sand==0)
+Click('smelt_warden');assert(s.confirm=='warden' and rig.config.progress.ore==8)
+Click('smelt_warden');assert(rig.config.progress.slots.sword.levels.warden==2 and rig.config.progress.ore==2)
+Click('color_primary');Click('swatch_6');assert(Forge.ForceClose())
+rig.config.progress.ore=5 -- enemy reward between openings
+s=OpenReady({rig=rig});assert(s.config.progress.ore==5 and s.config.sword.colors.primary==6)
+Click('undo');assert(s.config.progress.ore==5 and s.config.sword.colors.primary==3)
+Click('tab_time');Click('imprint_rift');Click('level_time');Click('equip');Tick(80)
+assert(not Forge.IsOpen() and saved.progress.ore==4 and saved.progress.slots.time.levels.clock==2)
+print('weapon_forge: touch purchase, smelt confirmation, restored draft and catalyst PASS')

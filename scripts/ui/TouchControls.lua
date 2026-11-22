@@ -41,14 +41,14 @@ local eventObject
 local SETS = {
     combat={
         {name='attack',icon='sword',size=80,main=true,x=-48,y=-48},
-        {name='jump',x=-48,y=-148}, {name='run',icon='sprint',label='跑',x=-148,y=-32},
+        {name='jump',x=-48,y=-148}, {name='run',icon='sprint',label='冲',x=-148,y=-32},
         {name='heavy',x=-124,y=-124}, {name='swap',x=-212,y=-72},
     },
     foot={
         {name='shatter',size=80,main=true,x=-48,y=-48},
         {name='jump',x=-48,y=-148}, {name='freeze',x=-148,y=-32},
         {name='rewind',x=-124,y=-124}, {name='mount',main=true,x=-212,y=-72},
-        {name='run',icon='sprint',label='跑',size=64,x=-292,y=-32},
+        {name='run',icon='sprint',label='冲',size=64,x=-292,y=-32},
     },
     ground={
         {name='breath',size=80,main=true,x=-48,y=-48},
@@ -62,11 +62,11 @@ local SETS = {
         {name='breathSpecial',icon='breath',label='大招',x=-196,y=-160},
     },
 }
-local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','按住【跑】加速 · 松开恢复','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
+local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','轻推摇杆步行 · 推到底奔跑 · 按住【冲】冲刺耗体力','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
-local FOOT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='forge'},{name='farview'},{name='fastTime',icon='clock'}}
-local COMBAT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='farview'}}
+local FOOT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='forge'},{name='skill',icon='shatter',label='碎时'},{name='farview'},{name='fastTime',icon='clock'}}
+local COMBAT_TOP={{name='menu',icon='menu'},{name='freeze',label='冻结'},{name='rewind',label='回溯'},{name='skill',icon='sword',label='武技'},{name='forge'},{name='farview'}}
 local function TopButtons()
     if current=='combat' then return COMBAT_TOP end
     if current=='foot' then return FOOT_TOP end
@@ -89,7 +89,7 @@ function M.CancelActions()
 end
 function M.IsBlocked() return SettingsMenu.IsBlocked() or M.menuOpen or state.blocked == true end
 function M.Hint()
-    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 按住跑键加速' or '点按五连 · 空中下劈 · 按住跑键加速' end
+    if current=='combat' then return state.weapon=='bow' and '按住拉弓 · 松手射击 · 按住冲键冲刺' or '点按五连 · 空中下劈 · 按住冲键冲刺' end
     if state.charging then return '松手释放碎时' end
     if current=='ground' then return '点【起飞】升空 · 摇杆控制方向' end
     if current=='air' then return '按住【上升】/【下降】· 点【滑翔】省力' end
@@ -120,6 +120,7 @@ local function Visible(b)
     return b.name~='mount' or state.canMount==true
 end
 local function Disabled(b)
+    if b.name=='skill' then return state.noSpells or (state.skillLeft or 0)>0 end
     if b.name=='sheath' then return not state.unifiedSelection and state.combat and state.aggro end
     if b.name=='shatter' or b.name=='freeze' or b.name=='rewind' then return (state.cool and (state.cool[b.name] or 0)>0) or state.noSpells end
     return state.mounting==true or (state.disabled and state.disabled[b.name])
@@ -164,7 +165,7 @@ function M.BeginTouch(id,x,y)
     for i,b in ipairs(TopButtons()) do
         if Hit(b,x,y,true,i) then
             if b.name=='menu' then Cancel(); M.menuOpen=not SettingsMenu.Open(); owners[id]={kind='retired'}
-            elseif not buttons[b.name] then buttons[b.name]=id; owners[id]={kind='button',name=b.name}; Input.Set(b.name,true) end
+            elseif not Disabled(b) and not buttons[b.name] then buttons[b.name]=id; owners[id]={kind='button',name=b.name}; Input.Set(b.name,true) end
             return
         end
     end
@@ -291,7 +292,7 @@ local function RenderControls(self,vg)
     for i,b in ipairs(TopButtons()) do
         local x,y=Position(b,true,i)
         local down=Input.Down(b.name)
-        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,Disabled(b))
+        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,Disabled(b),b.name=='skill' and state.skillLeft or nil,4)
     end
     if M.menuOpen then
         local w=math.min(420,width-safe.left-safe.right-40)

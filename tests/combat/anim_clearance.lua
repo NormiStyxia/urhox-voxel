@@ -51,10 +51,8 @@ local function intersects(a,b,box)
  return true
 end
 local failures,frames=0,0
-for _,speed in ipairs({.5,.65,.8,1}) do
-for _,tuck in ipairs({0,1}) do
 for _,fade in ipairs({0,.08}) do
-for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light_4','sword_light_5','sword_heavy_charge','sword_heavy_release','plunge_start','plunge_loop','plunge_land','stance_combat_sword','combo_early','combo_late'}) do
+for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light_4','sword_light_5','sword_heavy_charge','sword_heavy_release','stance_combat_sword','combo_early','combo_late'}) do
  local character=Mock.character();local base={}
  for name,node in pairs(character.bones) do
   local p=pivots[name]
@@ -71,7 +69,7 @@ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light
  local chain=id=='combo_early' or id=='combo_late'
  local current=1
  local active=chain and Data.Combo[current].id or id
- local handle=anim:Play(active,{fadeIn=fade,fadeOut=fade,params={plungeSpeed=speed,plungeTuck=tuck}})
+ local handle=anim:Play(active,{fadeIn=fade,fadeOut=fade})
  if chain then anim:Play('stance_combat_sword',{fadeIn=0}) end
  local positions,rotations={},{}
  local function world(name)
@@ -117,6 +115,5 @@ for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light
  end
 end
 end
-end end
 assert(failures==0,'sword/body intersections: '..failures)
 print('PASS real pose/socket sword OBB clearance frames='..frames..' blade='..bladeMin..'..'..bladeMax)

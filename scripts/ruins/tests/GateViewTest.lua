@@ -19,8 +19,9 @@ V.atFrame(8,function()
     g.caster.charging=not lateral
     g.caster.charge=lateral and 0 or .85 --[[@as number]]
     local e=VariantMap(); e["TimeStep"]=0
-    g.fake=lateral and {} or {[KEY_1]=true}
+    g.fake={shatter=not lateral}
     Ruins_HandleUpdate("Update",e)
+    g.fake=nil
     local a=g.aim
     g.sigils:Update(0,a,n:HandPos(),n:CameraNode(),g.caster,1,true)
     print(string.format("GateViewTest: framebuffer=%dx%d dpr=%.2f origin=%s dir=%s hit=%s projected=%s hand=%s",

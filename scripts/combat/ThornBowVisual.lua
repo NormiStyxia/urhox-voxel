@@ -203,9 +203,20 @@ function V.SetVisible(visual,visible)
     visual.shown=visible
     -- Node:SetEnabled is NOT recursive: child nodes keep rendering at the old place unless toggled too.
     visual.node.enabled=visible
-    if visual.sandNode then visual.sandNode.enabled=visible end
+    if visual.sandNode then visual.sandNode.enabled=visible and (visual.grade or 3)==3 end
     if visual.crystalNode then visual.crystalNode.enabled=visible end
     if visual.stringNode then visual.stringNode.enabled=visible and not visual.stringHidden end
+end
+
+local finishes={{.40,.27,.16},{.50,.71,.74},{.93,.50,.86}}
+function V.SetGrade(visual,grade,visible)
+    if not visual or visual.grade==grade then return end
+    visual.grade=grade
+    local c=finishes[grade]
+    visual.material:SetShaderParameter('petal_base',Variant(Color(c[1],c[2],c[3],1)))
+    visual.material:SetShaderParameter('petal_glow',Variant(({0,.08,.22})[grade]))
+    visual.material:SetShaderParameter('string_glow',Variant(({.1,.5,1.5})[grade]))
+    if visual.sandNode then visual.sandNode.enabled=(visible or visual.shown)==true and grade==3 end
 end
 
 ---@param visual table?

@@ -23,8 +23,8 @@ end
 -- Heavy release and charge are committed; jump does not cancel them.
 local m=New();assert(m:Action('heavy'));m:Update(.05,{allowed=true,jump=true,onGround=true})
 assert(m.clip=='sword_heavy_release')
--- In the air, jump has no effect and a light press becomes a plunge.
+-- In the air, jump has no effect on the ordinary light attack.
 m=New();m.o.airState=function(out)out.onGround,out.height,out.y=false,2,2;return out end
-assert(m:Action('light') and m.plunging)
-m:Update(.01,{allowed=true,jump=true,onGround=false});assert(m.plunging)
-print('PASS jump cancels all five light stages at start/active/recovery; heavy and plunge stay committed')
+assert(m:Action('light') and m.clip=='sword_light_1')
+m:Update(.01,{allowed=true,jump=true,onGround=false});assert(m.clip=='sword_light_1')
+print('PASS jump cancels all five light stages at start/active/recovery; heavy stays committed; airborne light uses ordinary rules')

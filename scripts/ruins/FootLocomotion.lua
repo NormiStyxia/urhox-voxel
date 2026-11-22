@@ -27,8 +27,10 @@ function F.New(ports)
         weight=0,phase=0,speed=0,animOpts={params={}}},F)
 end
 function F:IsRunning()return self.state==F.State.SPRINT end
+-- Held fast sprint (Shift / sprint button): a run that also drains stamina.
+function F:IsSprinting()return self.fast==true end
 function F:Cancel(reason)
-    self.state=F.State.LOCOMOTION;self.reason=reason;self.weight=0;self.speed=0
+    self.state=F.State.LOCOMOTION;self.reason=reason;self.weight=0;self.speed=0;self.fast=false
 end
 -- Inputs are held intent, never a tap classifier. No distance or immunity here.
 function F:Begin(dt,c,moves)
@@ -54,6 +56,7 @@ function F:Finish(dt,c,moves)
         if self.ports.start then self.ports.start() end
     end
     self.state=running and F.State.SPRINT or F.State.LOCOMOTION
+    self.fast=running and c.sprintIntent==true
     local wanted=running and clamp(self.speed/F.MAX_SPEED,0,1) or 0
     self.weight=self.weight+(wanted-self.weight)*(1-math.exp(-dt/.06))
     if moves.clip or self.weight<1e-4 then self.weight=0 end

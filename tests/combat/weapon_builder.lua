@@ -36,7 +36,7 @@ local function verify(c)
         for _,cell in ipairs(g.cells) do if cell.region=='blade' then tip=math.max(tip,cell.y) end end
         Mock.Near(b.hit.length,(tip+.5)*P.VOXEL_SIZE)
         assert(g.sparse['0:'..tip..':0'].region=='blade','actual tip must lie on the hit axis')
-        assert(b.stats.speed>=.7 and b.stats.speed<=1.4 and b.stats.reach<=1.4)
+        assert(b.stats.reach<=1.4)
     else
         local lx,ly,lz=math.floor(b.hit.origin[1]/.03+.5),math.floor(b.hit.origin[2]/.03+.5),math.floor(b.hit.origin[3]/.03+.5)
         assert(b.hit.dir[1]==0 and b.hit.dir[2]==0 and b.hit.dir[3]==1)
@@ -100,86 +100,6 @@ assert(B.Compile(sword).stats.attack==10 and B.Compile(sword).hit.length==.825)
 local bow=config('bow');bow.parts={tip='tip_crystal',limbs='limbs_long'}
 local fixed=assert(B.Compile(bow))
 assert(fixed.stats.attack==8 and fixed.stats.range==64 and fixed.stats.crystalRadius==nil)
--- Time-sliced preview writes, cancellation and measured indivisible native work.
-local clockMs=0
-local function clock() clockMs=clockMs+.1;return clockMs end
-local job=B.BeginBuild(world,scene,config('sword'))
-for _=1,200 do
-    local before=world.writes
-    local done=B.StepBuild(job,2,clock)
-    assert(world.writes-before<=192,'cell batch exceeded')
-    if job.phase=='geometry' then
-        local rebuild=job.volume.RebuildGeometry
-        job.volume.RebuildGeometry=function() clockMs=clockMs+3;rebuild() end
-    end
-    if done then break end
-end
-assert(job.done and job.mesh and job.steps>5 and job.overBudget and job.nativeMs>=3)
-assert(job.mesh.volume.collisionLayer==0 and job.mesh.volume.collisionMask==0)
-local asyncMesh=job.mesh
-local same=config('sword');same.colors.primary=4
-local recolor=B.BeginBuild(world,scene,same,asyncMesh)
-local rebuilds=world.rebuilds
-assert(B.StepBuild(recolor,2,clock) and recolor.mesh==asyncMesh and world.rebuilds==rebuilds)
-local replacement=config('sword')
-local cancel=B.BeginBuild(world,scene,replacement)
-B.StepBuild(cancel,2,clock);B.StepBuild(cancel,2,clock);B.StepBuild(cancel,2,clock)
-local partial=cancel.volume
-B.CancelBuild(cancel);B.CancelBuild(cancel)
-assert(partial.removed and not asyncMesh.disposed and cancel.cancelled)
-B.Dispose(asyncMesh);assert(world.created==world.removed)
--- Real binding shape: the global Time singleton requires its receiver, returns
--- seconds, and may be absent/broken in a sandbox. None may stall the build.
-local savedTime,savedOs=rawget(_G,'time'),rawget(_G,'os')
-rawset(_G,'os',nil) -- no accidental reliance on the host Lua standard library
-rawset(_G,'GetTime',function() error('legacy GetSystemTime path') end)
-local function Complete(clockOverride,unavailable)
-    local pending=B.BeginBuild(world,scene,config('sword'))
-    for _=1,1000 do
-        local cursor,phase,writesBefore=pending.cursor,pending.phase,world.writes
-        local done=B.StepBuild(pending,2,clockOverride)
-        assert(world.writes-writesBefore<=192,'96 solid+material writes maximum')
-        if phase=='fill' then assert(pending.cursor>cursor,'clock must not starve filling') end
-        if done then break end
-    end
-    assert(pending.done and pending.mesh and not pending.error,'clock failure must not abort assembly')
-    assert((pending.clockUnavailable==true)==unavailable)
-    B.Dispose(pending.mesh)
-    return pending
-end
-local engineTime={seconds=0}
-function engineTime:GetElapsedTime()
-    assert(self==engineTime,'requires time:GetElapsedTime()')
-    self.seconds=self.seconds+.0001
-    return self.seconds
-end
-rawset(_G,'time',engineTime)
-local unitProbe=B.BeginBuild(world,scene,config('sword'))
-assert(not B.StepBuild(unitProbe,2,nil))
-Mock.Near(unitProbe.totalMs,.1) -- .0001 seconds between samples, not .0001 ms
-B.CancelBuild(unitProbe)
-local measured=Complete(nil,false)
-assert(measured.totalMs>0 and measured.steps>5 and measured.maxStepMs<4,'seconds must become milliseconds')
-rawset(_G,'time',nil);local untimed=Complete(nil,true)
-assert(untimed.totalMs==0 and untimed.nativeMs==0)
-rawset(_G,'time',{});Complete(nil,true)
-rawset(_G,'time',setmetatable({},{__index=function() error('binding lookup failed') end}));Complete(nil,true)
-for _,value in ipairs({'bad',false,0/0,math.huge,-1}) do
-    rawset(_G,'time',{GetElapsedTime=function(self) assert(self==rawget(_G,'time'));return value end})
-    Complete(nil,true)
-end
-for _,failAt in ipairs({1,2,9}) do
-    local reads=0
-    Complete(function() reads=reads+1;if reads>=failAt then error('clock failed mid-build') end;return reads*.1 end,true)
-    assert(reads==failAt,'failed clock should be disabled for the remaining job')
-end
-local backwards=5
-Complete(function() backwards=backwards-1;return backwards end,true)
-Complete(function() return 0 end,false) -- a coarse/frozen clock still has a cell cap
-local coarse=0
-Complete(function() coarse=coarse+3;return coarse end,false) -- always over budget; still advances
-rawset(_G,'time',savedTime);rawset(_G,'os',savedOs)
-assert(world.created==world.removed)
 -- Render-only greedy CustomGeometry: exact exposed surface coverage, no hidden
 -- faces/duplicates, outward winding, all palette channels, fixed grip/bounds.
 local savedCache=rawget(_G,'cache')

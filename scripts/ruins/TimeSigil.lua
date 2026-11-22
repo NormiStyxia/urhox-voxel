@@ -73,10 +73,16 @@ end
 ---@param hand Vector3
 ---@param camera Node
 ---@param caster table
-function S:Update(dt,aim,hand,camera,caster,radius,enabled)
+---@param timeSelected boolean? Whether the time catalyst owns targeting/charge presentation.
+function S:Update(dt,aim,hand,camera,caster,radius,enabled,timeSelected)
     self.age=self.age+dt
     local face=camera.worldRotation
-    local selected=enabled and aim.hit and (aim.object~=nil or aim.breakable==true)
+    -- E/R remain portable with sword/bow; their permission must not enable
+    -- the catalyst's passive target clock or resurrect a stale shatter charge.
+    local catalyst=enabled and timeSelected~=false
+    local charging=catalyst and caster.charging
+    local charge=charging and caster.charge or 0
+    local selected=catalyst and aim.hit and (aim.object~=nil or aim.breakable==true)
     self.target.node.enabled=selected
     if selected then
         local hitPos = aim.pos --[[@as Vector3]]
@@ -84,15 +90,17 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
         -- 目标钟面颜色跟随可施放的法术：蓄力/只能碎 = 红，可回溯 = 黄
         local obj=aim.object
         local rewindable=obj~=nil and obj.canRewind and (obj.state=='SHATTERED' or obj.state=='FROZEN')
-        local col=(caster.charging or not rewindable) and Color(1,.36,.3,1) or Color(1,.8,.36,1)
+        local col=(charging or not rewindable) and Color(1,.36,.3,1) or Color(1,.8,.36,1)
         -- 表盘按时间缓慢逆转，像在倒拨时间
         Show(self.target,pos,face*Quaternion(self.age*12,Vector3.FORWARD),.65,col,.9)
     end
-    local active=enabled and (caster.charging or caster.castAnim>0)
+    local casting=enabled and caster.castAnim>0
+        and (catalyst or caster.lastCast=='freeze' or caster.lastCast=='rewind')
+    local active=charging or casting
     self.hand.node.enabled=active
     if active then
         local spell=caster.lastCast
-        local col=(caster.charging or spell=='shatter') and Color(.74,.91,1,1)
+        local col=(charging or spell=='shatter') and Color(.74,.91,1,1)
             or (spell=='freeze' and Color(.42,.66,1,1) or Color(1,.8,.36,1))
         -- 蓄力法阵：罗马时钟，属于施法空间，不是始终朝镜头的屏幕标记。
         local target = aim.hit and aim.pos or aim.far --[[@as Vector3?]]
@@ -100,11 +108,11 @@ function S:Update(dt,aim,hand,camera,caster,radius,enabled)
         local delta = target and (target-hand) or aim.dir
         local direction = delta:LengthSquared()>.0001 and delta:Normalized() or Vector3.FORWARD
         local rotation = Quaternion(Vector3.FORWARD,direction)
-        Show(self.hand,hand+direction*.12,rotation*Quaternion(-self.age*35,Vector3.FORWARD),.18+.08*caster.charge,col,.85)
+        Show(self.hand,hand+direction*.12,rotation*Quaternion(-self.age*35,Vector3.FORWARD),.18+.08*charge,col,.85)
     end
-    self.range.node.enabled=enabled and caster.charging and aim.hit
+    self.range.node.enabled=charging and aim.hit
     if self.range.node.enabled then
-        Show(self.range,aim.pos+aim.normal*.08,Quaternion(Vector3.FORWARD,aim.normal)*Quaternion(self.age*-18,Vector3.FORWARD),radius,Color(.74,.91,1,1),.8,caster.charge)
+        Show(self.range,aim.pos+aim.normal*.08,Quaternion(Vector3.FORWARD,aim.normal)*Quaternion(self.age*-18,Vector3.FORWARD),radius,Color(.74,.91,1,1),.8,charge)
     end
     for _,p in ipairs(self.impacts) do
         if p.age then

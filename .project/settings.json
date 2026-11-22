@@ -22,7 +22,8 @@
       "../scripts"
     ],
     "asset_ignores": [
-      "../assets/image"
+      "../assets/image",
+      "../assets/model/c8d2cfd2bc29455abb72b044deb16d5d"
     ]
   },
   "@runtime": {

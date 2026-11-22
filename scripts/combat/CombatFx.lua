@@ -1,13 +1,11 @@
 -- Presentation only. Fixed 30 landing slots + 24 slash wedges (+24 additive edges,
--- 12 blue blade ghosts) + 3 descent ribbons.
+-- 12 blue blade ghosts).
 -- No emit/update creates a node, mesh, material, table, Color or Variant.
 ---@class CombatFx
 ---@field land table[] Fixed landing slots (30).
 ---@field arcs table[] Fixed slash wedges (24).
 ---@field edges table[] Additive bright tip edges (24).
 ---@field ghosts table[] Additive blue blade afterimages (12).
----@field ribbons table[] Fixed descent strips (3).
----@field plunging boolean
 local F={};F.__index=F
 F.LANDING_COUNT=30;F.ARC_COUNT=24;F.GHOST_COUNT=12
 F.GHOSTS=false
@@ -69,8 +67,8 @@ end
 ---@param world VoxelPhysicsWorld
 ---@return CombatFx
 function F.New(scene,world)
-    local self=setmetatable({scene=scene,land={},arcs={},edges={},ghosts={},ribbons={},
-        colors={},head=0,ghostHead=0,ghostStep=0,width=.55,ttl=.16,tip=Vector3(),root=Vector3(),sampleTip=Vector3(),sampleRoot=Vector3(),valid=false,plunging=false},F)
+    local self=setmetatable({scene=scene,land={},arcs={},edges={},ghosts={},
+        colors={},head=0,ghostHead=0,ghostStep=0,width=.55,ttl=.16,tip=Vector3(),root=Vector3(),sampleTip=Vector3(),sampleRoot=Vector3(),valid=false},F)
     self.technique=cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'):Clone('CombatFxAlpha')
     local pass=self.technique:GetPass('base')
     pass:SetBlendMode(BLEND_ALPHA);pass:SetDepthWrite(false);pass:SetDepthTestMode(CMP_LESSEQUAL)
@@ -89,7 +87,6 @@ function F.New(scene,world)
     for i=1,F.LANDING_COUNT do self.land[i]=slot(self,i==1 and 'ring' or (i==30 and 'star' or 'cube'),i) end
     for i=1,F.ARC_COUNT do self.arcs[i]=slot(self,'arc',i);self.edges[i]=slot(self,'arc',i,true) end
     for i=1,F.GHOST_COUNT do self.ghosts[i]=slot(self,'arc',i+F.ARC_COUNT,true) end
-    for i=1,3 do self.ribbons[i]=slot(self,'cube',i+30) end
     return self
 end
 local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
@@ -99,16 +96,15 @@ local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
     s.vx,s.vy,s.vz=0,0,0
     s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 7 or color][math.floor((s.peak or 1)*16)+1])
 end
-function F:Impact(pos,forward,plunge)
-    self.plunging=false
-    local radius=plunge and 2.4 or 1.5
-    local cx,cz=pos.x+(plunge and 0 or forward.x*.65),pos.z+(plunge and 0 or forward.z*.65)
+function F:Impact(pos,forward)
+    local radius=1.5
+    local cx,cz=pos.x+forward.x*.65,pos.z+forward.z*.65
     local ring=self.land[1]
-    show(self,ring,cx,pos.y+.035,cz,.3,1,.3,plunge and 2 or 3,.28)
+    show(self,ring,cx,pos.y+.035,cz,.3,1,.3,3,.28)
     ring.radius=radius
-    ring.forwardX,ring.forwardZ=plunge and 0 or forward.x,plunge and 0 or forward.z
+    ring.forwardX,ring.forwardZ=forward.x,forward.z
     ring.centerX,ring.centerZ=cx,cz
-    ring.narrow=plunge and 1 or .55
+    ring.narrow=.55
     ring.rot:FromEulerAngles(0,math.deg(math.atan(forward.x,forward.z)),0);ring.node.rotation=ring.rot
     for i=2,15 do
         local s=self.land[i];local a=(i-2)*math.pi*2/14+.19
@@ -216,11 +212,6 @@ function F:Blade(root,tip)
         self:Segment(self.sampleRoot,self.sampleTip)
     end
 end
--- Plunge descent is drawn by the continuous slash ribbon (moon style) now;
--- the old stacked vertical bars read as light pillars and are retired.
-function F:Descent(root,tip)
-    for _,s in ipairs(self.ribbons) do s.node.enabled=false end
-end
 local function ageSlot(self,s,dt)
     if not s.active then return end
     s.age=s.age+dt
@@ -259,20 +250,19 @@ function F:Update(dt)
     for _,s in ipairs(self.arcs) do ageSlot(self,s,dt) end
     for _,s in ipairs(self.edges) do ageSlot(self,s,dt) end
     for _,s in ipairs(self.ghosts) do ageSlot(self,s,dt) end
-    if not self.plunging then for _,s in ipairs(self.ribbons) do s.node.enabled=false end end
 end
 local function clearPool(pool)
     for _,s in ipairs(pool) do s.active=false;s.node.enabled=false end
 end
 function F:ClearSword()
-    self.valid,self.plunging,self.slash=false,false,false
-    clearPool(self.arcs);clearPool(self.edges);clearPool(self.ghosts);clearPool(self.ribbons)
+    self.valid,self.slash=false,false
+    clearPool(self.arcs);clearPool(self.edges);clearPool(self.ghosts)
 end
 function F:Clear()
     self:ClearSword();clearPool(self.land)
 end
 function F:Dispose()
-    for _,pool in ipairs({self.land,self.arcs,self.edges,self.ghosts,self.ribbons}) do
+    for _,pool in ipairs({self.land,self.arcs,self.edges,self.ghosts}) do
         for _,s in ipairs(pool) do s.node:Remove();s.mat:Dispose() end
     end
 end

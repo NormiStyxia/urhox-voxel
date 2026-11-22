@@ -3,9 +3,9 @@
 package.path='scripts/?.lua;'..package.path
 local Blades=require('combat.ForgeShowroomBlades')
 local Parts=require('combat.WeaponCatalog')
-local d=Blades.Data('W')
+local d=Blades.Data()
 assert(d.route=='W' and d.triangles>200 and d.triangles<=1100 and #d.vertices==d.triangles*3)
-assert(Blades.Data('W')==d,'expanded model is cached read-only')
+assert(Blades.Data()==d,'expanded model is cached read-only')
 -- model space: origin = grip centre, tip +Y
 assert(math.abs(d.displayHeight-1.855)<2e-3)
 assert(d.sockets.grip[2]==0 and math.abs(d.sockets.tip[2]-1.62)<1e-6 and d.sockets.pommel[2]<-.2)
@@ -91,9 +91,5 @@ assert(pal.primary and pal.secondary and pal.accent and pal.grip)
 assert(pal.grip[3]>pal.grip[1] and pal.grip[3]<.5,'default grip stays dark navy')
 local custom=Blades.Palette({primary=3,secondary=1,accent=2,grip=#Parts.ColorPresets})
 assert(custom.grip[1]~=pal.grip[1] or custom.grip[2]~=pal.grip[2] or custom.grip[3]~=pal.grip[3])
--- A/B routes unaffected: weights sum to 1 so grip weight stays zero in the shader
-for _,route in ipairs({'A','B'}) do
-    for _,v in ipairs(Blades.Data(route).vertices) do assert(math.abs(v.c[1]+v.c[2]+v.c[3]-1)<1e-8) end
-end
 print(('forge_wing_sword PASS triangles=%d vertex_bytes=%d grip=%d metal=%d core=%d gem=%d blade=%d wingReach L%.3f R%.3f'):format(
     d.triangles,#d.vertices*36,gripTris,metalTris,coreTris,gemTris,bladeTris,-leftReach,rightReach))

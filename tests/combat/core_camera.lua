@@ -17,11 +17,22 @@ local function bow(fps)
     near(c.output.fov,0);near(c.output.look,1);return c
 end
 bow(30);bow(60)
-cam=Camera.New();m={clip='sword_light_1',whooshTime=.13}
+local firstActive=require('combat.AnimClips').Clips.sword_light_1.phases.active[1]
+cam=Camera.New();m={clip='sword_light_1',whooshTime=firstActive-.03}
 out=cam:Update(0,m,true,true);near(out.distance,.08)
-m.whooshTime=.16;out=cam:Update(0,m,true,true);near(out.distance,0)
+m.whooshTime=firstActive;out=cam:Update(0,m,true,true);near(out.distance,0)
 cam:Land();out=cam:Update(.02,m,true,true);near(out.impact.y,-.03)
 out=cam:Update(.02,m,true,true);assert(out.impact.y>-.03 and out.impact.y<-.02);near(out.focus.y,0)
+-- Ordinary airborne motion stays neutral; explicit ground feedback still works.
+for _,fps in ipairs({30,60}) do
+ local fall=Camera.New()
+ for _=1,fps do
+  out=fall:Update(1/fps,{onGround=false},true,true,true)
+  near(out.fov,0);near(out.distance,0);near(out.impact:Length(),0)
+ end
+ fall:Land();out=fall:Update(1/fps,{},true,true,true);near(out.impact.y,-.03)
+ out=fall:Update(.13,{},true,true,true);near(out.impact:Length(),0)
+end
 cam=Camera.New();cam:Full();out=cam:Update(.02,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)
 out=cam:Update(.08,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)
 out=cam:Update(.5,{clip='bow_hold',charge=1},true,true);near(out.focus.y,0)

@@ -23,7 +23,7 @@ local function Consume(event)
 end
 local function Released()
     return input.numTouches == 0 and not input:GetMouseButtonDown(MOUSEB_LEFT)
-        and not input:GetMouseButtonDown(MOUSEB_RIGHT) and not input:GetKeyDown(KEY_Q)
+        and not input:GetMouseButtonDown(MOUSEB_RIGHT) and not input:GetKeyDown(KEY_TAB)
 end
 local function EnsureFont()
     local vg=ImageCache.GetContext()
@@ -229,7 +229,7 @@ local function Down(event)
     local s=session
     if not s or s.closing then return end
     if event:IsMouse() and event:IsSecondaryButton() then M.Cancel();return end
-    if not s.touch then return end -- desktop selection is relative direction + Q release
+    if not s.touch then return end -- desktop selection is relative direction + Tab release
     if not event:IsPrimaryAction() then return end
     if s.pointer~=nil and s.pointer~=event.pointerId then return end
     s.pointer=event.pointerId
@@ -309,7 +309,7 @@ function M.Open(opts)
     end
     for i,item in ipairs(items) do s.names[i]=Label(item.name) end
     s.caption=Label('');s.caption:SetStyle({textAlign='left'})
-    s.hint=Label(s.touch and '点击选择 · 空白处取消' or '松开 Q 确认 · 滚轮切换 · 右键取消')
+    s.hint=Label(s.touch and '点击选择 · 空白处取消' or '松开 Tab 确认 · 滚轮切换 · 右键取消')
     s.hint:SetStyle({textAlign='left'})
     Labels(s)
     root:AddChild(s.layer);UI.PushOverlay(s.layer)
@@ -381,7 +381,7 @@ local function PointerLost(s)
     if GetPlatform()=='Web' then locked=input:IsMouseLocked() end
     if locked then return false end
     if not s.lockLossLogged then
-        print('WeaponWheel: pointer lock lost during Q selection; cancel, no automatic relock')
+        print('WeaponWheel: pointer lock lost during Tab selection; cancel, no automatic relock')
         s.lockLossLogged=true
     end
     M.Close('pointer-unlocked')

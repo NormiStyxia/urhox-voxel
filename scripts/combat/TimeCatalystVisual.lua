@@ -1,7 +1,7 @@
 -- Time catalyst: the floating star-clock orb used while the caster is in time mode (CombatState selection
 -- 'time'). Visual only. Rests behind the right shoulder, flies to the casting palm while aiming/charging,
 -- dissolves when a real weapon is drawn. Model: art/weapon_gen/clock_catalyst_v6_blender.py (CLOCK_EXPORT=1).
--- Surroundings (sand / sparks / cast ring) live in TimeCatalystFx with two switchable looks.
+-- Surroundings (sand / sparks / cast ring) live in TimeCatalystFx.
 -- Motion rules (all frame-rate independent):
 --   * position = critically damped spring toward the current anchor (rest slot / palm), plus a small lift arc
 --     while it travels, so it glides instead of teleporting;
@@ -14,7 +14,6 @@ local V={}
 V.ENABLED=true               -- kill switch
 V.SCALE=.95                  -- model radius .27 m -> ~.26 m in the world (readable at the follow-camera distance)
 V.STEP_VERTICES=2400         -- body upload per Step()
-V.FX_MODE='pixel'            -- default surroundings: pixel | texture | off (NextFxMode cycles at runtime)
 local MATERIAL='model/forge-blades/ClockCatalyst.xml'
 local MASK=0xFFFFFFFF
 local PARTS={'bands','blades','gems','shards','core'}
@@ -52,7 +51,7 @@ end
 ---@param cameraNode Node? camera node (pixel quads face it)
 ---@return table? visual
 ---@return string? err
-function V.New(scene,cameraNode)
+function V.New(scene,cameraNode,showroomMask)
     if not V.ENABLED then return nil,'disabled' end
     local visual={cursor=1,partIndex=1,ready=false,fade=0,aim=0,spinBoost=0,pulse=0,charge=0,
         glowKey=-1,fadeKey=-1,shown=false,speed=0,
@@ -71,12 +70,11 @@ function V.New(scene,cameraNode)
             pivot.enabled=false
             visual.pivots[name]=pivot
             local g=assert(pivot:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
-            g.viewMask=MASK;g.lightMask=MASK;g.zoneMask=MASK;g.castShadows=false
+            g.viewMask=showroomMask or MASK;g.lightMask=g.viewMask;g.zoneMask=g.viewMask;g.castShadows=false
             g:BeginGeometry(0,TRIANGLE_LIST)
             visual.geometry[name]=g
         end
-        visual.fx=Fx.New(scene,visual.root,cameraNode)
-        Fx.SetMode(visual.fx,V.FX_MODE)
+        if not showroomMask then visual.fx=Fx.New(scene,cameraNode) end
     end)
     if not ok then
         V.Dispose(visual)
@@ -118,6 +116,19 @@ function V.Step(visual)
         return false
     end
     return visual.ready
+end
+
+function V.BeginShowroom(parent,mask)
+    local visual,err=V.New(parent,nil,mask)
+    if not visual then return nil,err end
+    local job={catalyst=visual,node=visual.root,blueprint={bounds=Model().bounds,displayHeight=1.3}}
+    job.step=function()
+        local ready=V.Step(visual)
+        assert(not visual.failed,'catalyst upload failed')
+        if ready then SetShown(visual,true) end
+        return ready
+    end
+    return job
 end
 
 local function Smooth(current,target,rate,dt)
@@ -226,12 +237,11 @@ function V.Draw(visual)
 end
 
 ---@param visual table?
----@param mode string? pixel | texture | off; nil cycles
+---@param mode string? pixel | off; nil cycles
 ---@return string? applied
 function V.SetFxMode(visual,mode)
     if not visual then return nil end
-    if mode then return Fx.SetMode(visual.fx,mode) end
-    return Fx.NextMode(visual.fx)
+    return Fx.SetMode(visual.fx,mode or (visual.fx.mode=='pixel' and 'off' or 'pixel'))
 end
 
 ---@param visual table?

@@ -22,11 +22,11 @@ local function count(log,name)
     local n=0; for _,e in ipairs(log) do if e.name==name then n=n+1 end end; return n
 end
 local b=actor(Beetle)
-assert(b:GetHurtShapes()[1].material=='armor' and b:GetHurtShapes()[2].material=='soft')
-local hit=b:ApplyHit({dmg=1,part='side_l',pos=Vector3(-.6,.3,0),dir=Vector3(1,0,0),tier='light'})
-assert(hit.hit and hit.part=='side_l' and hit.material=='soft' and hit.weak and not hit.broke and not hit.staggered and not hit.killed)
+assert(#b:GetHurtShapes()==1 and b:GetHurtShapes()[1].material=='armor','small beetle has one zone')
+local hit=b:ApplyHit({dmg=1,part='shell',pos=Vector3(-.6,.3,0),dir=Vector3(1,0,0),tier='light'})
+assert(hit.hit and hit.part=='shell' and hit.material=='armor' and not hit.weak and not hit.broke and not hit.staggered and not hit.killed)
 local pool=b.particles
-assert(pool.count==6)
+assert(pool.count==11)
 for _,p in ipairs(pool.slots) do if p.active then
     T.Near(p.x,-.6+b.impact.normal.x*.02); T.Near(p.y,.3+b.impact.normal.y*.02); T.Near(p.z,b.impact.normal.z*.02)
     assert(p.material=='flash' or (p.vx>0 and p.shape=='cross' and p.ttl>=.18 and p.ttl<=.28))
@@ -104,7 +104,7 @@ end
 print('PASS 30/60fps rigid fall/get-up, hurt-shape rotation, one landing cue, two windup cues including danger lock')
 
 b=actor(Beetle); local log=events(b)
-b:ApplyHit({dmg=1,part='side_r',dir=Vector3(1,0,0)})
+b:ApplyHit({dmg=1,part='shell',dir=Vector3(1,0,0)})
 assert(b.reaction.angle>=4 and b.reaction.angle<=8 and b.reaction.shift>=.02 and b.reaction.shift<=.05)
 assert(b.reaction.bodyPitch>0 and b.reaction.bodyYaw<0
     and b.reaction.bodyShiftX<0,'directional body recoil is staged with local part recoil')

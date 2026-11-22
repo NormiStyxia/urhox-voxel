@@ -26,7 +26,7 @@ assert(State.GetSelection()=='time' and State.CanUseTime() and State.CanSheath()
 State.OnEnemyAggro('enemy');State.OnPlayerHit();State.Update(20)
 assert(State.GetSelection()=='time' and State.CanUseTime(),'alert and damage notifications cannot auto-equip a sword')
 assert(moves:SelectLoadout('sword'));tick(40)
-assert(State.GetSelection()=='sword' and not State.CanUseTime() and rig.pose=='back')
+assert(State.GetSelection()=='sword' and State.CanUseTime() and rig.pose=='back')
 State.Update(30)
 assert(State.GetSelection()=='sword','quiet timeout cannot choose time automatically')
 local swung=false

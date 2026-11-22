@@ -46,6 +46,12 @@ rawset(_G,'THORN_MATERIAL_MISSING',true)
 local rig=NewRig();rig:SetActive('bow');rig:SetPose('hand');rig:Update(.3)
 assert(rig.entries.bow.thorn==nil)
 rawset(_G,'THORN_MATERIAL_MISSING',false)
+rig:Dispose()
+rig=NewRig()
+rig.entries.bow.thorn.geometry.Commit=function() error('injected upload failure') end
+for i=1,40 do rig:Update(.016) end
+assert(not rig.entries.bow.thorn and rig.entries.bow.mesh.volume and #rig.bowDrawMeshes==3)
+rig:Dispose()
 rig=NewRig()
 local thorn=rig.entries.bow.thorn
 assert(thorn and not thorn.ready,'visual created, upload is spread over frames')
@@ -54,7 +60,7 @@ for _=1,40 do rig:Update(.1) end
 assert(thorn.ready,'visual finished building')
 assert(thorn.geometry.commits==1 and #thorn.geometry.vertices==m.body.triangles*3)
 assert(thorn.node.enabled,'bow visual shown in hand')
-assert(rig.entries.bow.mesh.node.scale.x<.01,'voxel bow mesh hidden')
+assert(not rig.entries.bow.mesh.volume and #rig.bowDrawMeshes==0,'no duplicate body or draw stages')
 local half=rig.bowHalfHeight
 assert(math.abs(thorn.scale*m.height-(half*2+.10)*require("combat.ThornBowVisual").SCALE)<1e-6)
 -- draw: voxel string follows the pulled limb tips; voxel limb stage meshes stay hidden; static string hidden

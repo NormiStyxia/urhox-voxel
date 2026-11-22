@@ -31,7 +31,7 @@ function V.New(pivot,tipY,colors)
     if not V.ENABLED then return nil,'disabled' end
     local visual={}
     local ok,err=pcall(function()
-        local data=Blades.Data('W')
+        local data=Blades.Data()
         local source=assert(cache:GetResource('Material',MATERIAL),'wing material unavailable')
         visual.material=assert(source:Clone('WingSwordHand'),'wing material clone failed')
         Tint(visual.material,colors)
@@ -143,6 +143,18 @@ function V.Recolor(visual,colors,deferred)
     if not deferred then transaction.Commit() end
     return transaction
 end
+function V.SetGrade(visual,grade)
+    if not visual or visual.grade==grade then return end
+    visual.grade=grade
+    visual.material:SetShaderParameter('blade_emit',Variant(({.01,.09,.2})[grade]))
+    visual.material:SetShaderParameter('gold_metal',Variant(({.05,.2,.35})[grade]))
+    visual.material:SetShaderParameter('crystal_amt',Variant(({0,.55,1})[grade]))
+    if visual.crystal then
+        visual.crystal:SetShaderParameter('crystal_alpha',Variant(({.94,.68,.42})[grade]))
+        visual.crystal:SetShaderParameter('inner_glow',Variant(({0,.2,.55})[grade]))
+    end
+end
+
 --- Swing charge 0..1 brightens the crystal interior (cached to avoid per-frame Variants).
 ---@param visual table?
 ---@param k number

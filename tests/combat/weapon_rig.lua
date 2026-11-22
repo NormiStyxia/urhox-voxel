@@ -633,7 +633,7 @@ do
     WingVisual.SetCharge(entry.wing,-1);assert(entry.wing.chargeStep==0)
     r:BeginSlash(1,false);assert(r.wingGlow>=.8,'swing lights the crystal')
     assert(entry.wing.node.parent==entry.pivot,'wing follows the weapon pivot (hand/back)')
-    assert(entry.mesh.node.scale.x<.01 and entry.mesh.node.scale.y<.01,'voxel main mesh hidden by scale')
+    assert(not entry.mesh.volume,'wing model avoids a second native volume')
     assert(not entry.wing.node.enabled,'hidden pose hides the wing visual')
     -- state follows pose
     r:SetPose('hand');for _=1,12 do r:Update(1/60) end
@@ -649,7 +649,7 @@ do
     local mat=entry.wing.material
     local config={weapon='sword',appearance='wing',colors={primary=5,secondary=6,accent=4}}
     assert(r:ApplyAppearance(config))
-    assert(entry.wing and entry.wing.node.parent==entry.pivot and entry.mesh.node.scale.x<.01)
+    assert(entry.wing and entry.wing.node.parent==entry.pivot and not entry.mesh.volume)
     assert(entry.wing.material.parameters.accent_color~=nil)
     r:Dispose()
     assert(entry.wing==nil,'dispose releases the wing visual')

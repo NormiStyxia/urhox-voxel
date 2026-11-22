@@ -5,6 +5,10 @@ local Perf=require('combat.SwingPerf')
 local Data=require('combat.AnimClips')
 local Stamina=require('combat.Stamina')
 local COMBO=Data.Combo
+-- Only authored ordinary sword attacks can open a melee damage window.
+local function IsMeleeAttack(id)
+    return id and (id:match('^sword_light_[1-5]$') or id=='sword_heavy_release')
+end
 ---@class PlayerCombatMoves
 ---@field o table
 ---@field anim table Animation port (real CombatAnim or offline event stub).
@@ -14,8 +18,6 @@ local COMBO=Data.Combo
 ---@field motion Vector3
 ---@field playParams table
 ---@field playOpts table
----@field airState table
----@field plungeVelocity Vector3
 ---@field soundOpts table
 ---@field fireSnapshot table
 ---@field pendingFire table|nil
@@ -26,8 +28,6 @@ local COMBO=Data.Combo
 ---@field damaged table
 ---@field queryHits table[]
 ---@field queryPool table[]
----@field slamHits table[]
----@field slamPool table[]
 ---@field queryShapes table
 ---@field feedbackGroups table
 ---@field eventPool table[]
@@ -35,19 +35,11 @@ local COMBO=Data.Combo
 ---@field partNotice {part:string,untilTime:number}|nil
 ---@field strikeTarget table|nil Assist-selected melee target for the current swing.
 ---@field motionScale number|nil Lunge scale so a dash stops short of its target.
----@field stamina CombatStamina Combat-only stamina (sprint, cross slash, plunge).
+---@field stamina CombatStamina Sprint and cross-slash stamina.
 ---@field hitQueryDone boolean 当前命中窗口是否已完成敌人/环境结算。
 ---@field environmentActive boolean 当前环境斩击是否占用一次命中窗口。
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
--- Real seconds; frame-average velocity integrates across hover/terminal boundaries.
-C.PLUNGE={hover=.10,initialSpeed=6,terminalSpeed=12,accelerationTime=.25}
-function C.PlungeDistance(age)
-    local p=C.PLUNGE
-    local t=math.max(0,age-p.hover);local a=math.min(t,p.accelerationTime)
-    return p.initialSpeed*a+(p.terminalSpeed-p.initialSpeed)*a*a/(2*p.accelerationTime)
-        +p.terminalSpeed*math.max(0,t-p.accelerationTime)
-end
 local BUFFER=.160
 -- Holding attack this long fires the cross slash at once (no charge levels).
 local HEAVY_HOLD=.40
@@ -58,7 +50,7 @@ local RING_EVENT={material='stone',kind='dust'}
 local PROFILES={}
 local SOURCES={
     light_1={.04,.01,.06,0,.06,.85},light_2={.04,.01,.06,0,.06,.85},
-    third={.04,.015,.08,0,.08,.95},spin={.06,.02,.09,0,.08,.95},finisher={.09,.03,.12,0,.10,1},plunge={.10,.03,.12,0,.10,1},heavy={.08,.025,.10,2,.08,1},full={.08,.025,.10,2,.10,1},
+    third={.04,.015,.08,0,.08,.95},spin={.06,.02,.09,0,.08,.95},finisher={.09,.03,.12,0,.10,1},heavy={.08,.025,.10,2,.08,1},full={.08,.025,.10,2,.10,1},
     arrow_weak={.03,0,0,0,.05,.75},arrow_mid={.03,0,0,0,.06,.85},arrow_full={.03,0,0,0,.07,.95},
 }
 for source,v in pairs(SOURCES) do
@@ -76,7 +68,7 @@ end
 local ARROW_TIERS={weak='arrow_weak',mid='arrow_mid',full='arrow_full'}
 local function Profile(e,info,arrow)
     local source=arrow and (ARROW_TIERS[info.tier] or 'arrow_weak')
-        or (info.plunge and 'plunge') or (info.heavy and (e.full and 'full' or 'heavy') or (COMBO[e.combo] or COMBO[1]).profile)
+        or (info.heavy and (e.full and 'full' or 'heavy') or (COMBO[e.combo] or COMBO[1]).profile)
     local outcome=e.broke and 'break' or (e.staggered and 'stagger' or (e.killed and 'kill' or (e.critical and 'critical' or 'source')))
     return PROFILES[source][outcome]
 end
@@ -165,8 +157,7 @@ function C.New(opts)
         lastAttack=false,lastHeavy=false,shake=0,shakeAge=0,shakeDuration=0,
         eventPool={{},{},{},{},{},{},{},{}},eventWrite=0,swingSerial=0,feedbackGroups={},
         strikeZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
-        slamZone={origin=Vector3(0,0,0),source=Vector3(0,0,0)},
-        queryHits={},queryPool={},slamHits={},slamPool={},queryShapes={},playParams={},playOpts={},airState={},plunging=false,plungeLanded=false,plungeVelocity=Vector3.ZERO},C)
+        queryHits={},queryPool={},queryShapes={},playParams={},playOpts={}},C)
     self.feedbackPool,self.numberPool,self.numbers,self.soundOpts={},{},{},{}
     self.partNoticePool={part='',untilTime=0}
     for i=1,32 do self.feedbackPool[i]={at=-math.huge,amp=0,duration=0,fov=0,stop=0,dir=Vector3()} end
@@ -207,10 +198,6 @@ function C:Play(id,fadeIn,entryFrom)
     local params=self.playParams
     for k in pairs(params) do params[k]=nil end
     params.weaponInHand=self:WeaponInHand() and 1 or 0
-    if id=='plunge_loop' then
-        params.plungeSpeed=(self.plungeSpeed or 6)/C.PLUNGE.terminalSpeed
-        params.plungeTuck=math.max(0,1-(self.airState.height or 1)/.4)
-    end
     if id=='bow_release' or id=='bow_cancel' then
         self.bowPoseCharge=self.charge
         self.bowPosePitch=math.max(-35,math.min(35,self.o.aimPitch and self.o.aimPitch() or 0))
@@ -263,8 +250,6 @@ function C:Cancel(reason,keepProtection)
         self.cancelUntil=self.age+1.2
         if self.state.Log then self.state.Log('arrow-cancel','Combat: arrow cancel %s',reason or 'unknown') end
     end
-    self.plunging,self.plungePeak,self.plungeLanded=false,nil,false
-    if self.rig.SetPlunging then self.rig:SetPlunging(false) end
     self.buffer,self.pending,self.clip,self.handle=nil,nil,nil,nil
     self.motionDebt=0
     self.pendingFire=nil
@@ -293,8 +278,8 @@ function C:Cancel(reason,keepProtection)
     end
 end
 -- Jump interrupts any light-combo stage at any time. Soft: the attack pose
--- blends out over .10s instead of snapping, and the next press in the air
--- becomes a plunge. Heavy, charge, plunge and bow keep their own commitments.
+-- blends out over .10s instead of snapping. Heavy, charge and bow keep
+-- their own commitments; later airborne input uses the ordinary attack rules.
 function C:JumpCancel()
     local clip=self.clip
     if not clip or not clip:find('sword_light_',1,true) then return false end
@@ -331,87 +316,20 @@ function C:BowParameters(pitch)
     return self.state.GetWeapon()=='bow' and self.charge or 0,math.max(-35,math.min(35,pitch or 0))
 end
 function C:CanCancel()
-    return not self.clip or self.cancelOpen or (self.clip=='plunge_land' and self.age-(self.landedAt or self.age)>=.25-1e-8) or self.clip=='sword_heavy_charge'
+    return not self.clip or self.cancelOpen or self.clip=='sword_heavy_charge'
         or self.clip=='bow_hold' or self.clip=='bow_draw' or self.clip=='sword_draw' or self.clip=='sword_sheath'
         or self.clip=='bow_equip' or self.clip=='bow_sheath'
 end
 function C:Facing()
     if self.clip=='bow_release' then return self.bowPoseFacing end
-    if self.plunging or self.clip=='plunge_land' then return self.moveDir end
     return self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release' or self.clip=='sword_heavy_charge') and self.moveDir or nil
-end
--- Borrowed ground/velocity record is refreshed by the controller without rays.
-function C:Air()
-    if self.o.airState then return self.o.airState(self.airState) end
-    return nil
-end
-function C:StartPlunge(air)
-    if self.plunging or self.clip=='plunge_land' or self.state.GetWeapon()~='sword'
-        or air.onGround or air.invalid or (air.height or 0)<.6 then return false end
-    if not self:CanCancel() then return false end
-    if not self.stamina:Spend('plunge') then return false,'stamina' end
-    if self.handle then self.anim:Stop(self.handle,.04) end
-    if self.o.locomotion then self.o.locomotion:Cancel('attack') end
-    self.state.Activity(true);self.rig:SetPose('hand')
-    self.moveDir=Flat(self.o.forward(),Vector3.FORWARD)
-    self.combo,self.comboUntil,self.pending,self.hold,self.charge=0,nil,nil,0,0
-    self.releaseFull,self.autoFire=false,false
-    if not self:Play('plunge_start',.04) then return false end
-    self.plunging,self.plungePeak,self.plungeLanded=true,air.y,false
-    self.plungeVelocity=Vector3(air.vx or 0,0,air.vz or 0)
-    self.plungeAge,self.plungeSpeed=0,0
-    if self.rig.SetPlunging then self.rig:SetPlunging(false) end
-    self.buffer=nil
-    return true
-end
-function C:UpdatePlunge(dt)
-    if not self.plunging then return end
-    local air=self:Air()
-    if not air or air.invalid then self:Cancel('void');return end
-    self.plungePeak=math.max(self.plungePeak or air.y,air.y)
-    if not air.onGround then
-        local old=self.plungeAge or 0
-        self.plungeAge=old+math.max(0,dt or 0)
-        self.plungeSpeed=dt and dt>0 and (C.PlungeDistance(self.plungeAge)-C.PlungeDistance(old))/dt or 0
-        -- Vector3 是值类型：整体写回速度，分量赋值只会修改副本。
-        local velocity=self.plungeVelocity
-        self.plungeVelocity=Vector3(velocity.x,-self.plungeSpeed,velocity.z)
-        if self.rig.SetPlunging then self.rig:SetPlunging(self.plungeSpeed>0) end
-        if self.anim.SetParam and self.handle then
-            self.anim:SetParam('plungeSpeed',self.plungeSpeed/C.PLUNGE.terminalSpeed)
-            self.anim:SetParam('plungeTuck',math.max(0,1-(air.height or 1)/.4))
-        end
-        return
-    end
-    if self.rig.SetPlunging then self.rig:SetPlunging(false) end
-    self.plunging,self.plungeLanded=false,true
-    self.plungeMultiplier=math.min(2.2,1.4+math.max(0,self.plungePeak-air.y)*.1)
-    if self.handle then self.anim:Stop(self.handle,0) end
-    self:Play('plunge_land',0)
-    self.swingSerial=self.swingSerial+1
-    self.hitForward=self.moveDir
-    self.landedAt=self.age
-    self:Envelope('plunge:'..self.swingSerial,.03,.12,0,Vector3(0,-1,0),.10)
-    if self.o.camera then self.o.camera:Land() end
-    if self.rig.ImpactFx then self.rig:ImpactFx(self.o.position(),self.moveDir,true)
-    elseif self.o.impactRing then self.o.impactRing(self.o.position(),self.moveDir) end
-    local sound=self.soundOpts
-    sound.pos,sound.tier,sound.pitch,sound.hitId=self.o.position(),'heavy',.8,'plunge:'..self.swingSerial
-    self:Sound('hit_heavy',sound);sound.material='stone';self:Sound('arrow_hit',sound)
-    sound.tier,sound.pitch,sound.material,sound.hitId=nil,nil,nil,nil
 end
 function C:Action(kind,axis,entryFrom)
     if self.dead then return false,'dead' end
     if self.comboCooldownUntil and self.age<self.comboCooldownUntil-1e-8 then return false,'recovery' end
     if kind~='light' and kind~='heavy' and kind~='hold' then return false,'unknown-action' end
     if not self.state.InCombat() then return false,'explore' end
-    local air=self:Air()
-    if self.state.GetWeapon()=='sword' and air and not air.onGround and (air.height or 0)>=.6 then return self:StartPlunge(air) end
-    if self.plunging then return false,'air-attack' end
     if self.o.locomotion and self.o.locomotion:IsRunning() then self.o.locomotion:Cancel('attack') end
-    if self.clip=='plunge_land' and self:CanCancel() then
-        self.anim:Stop(self.handle,.04);self.clip,self.handle=nil,nil
-    end
     if self.clip and self.cancelOpen and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then
         if kind=='light' and Data.Clips[self.clip].comboEntry then entryFrom=self.handle end
         self.anim:Stop(self.handle,entryFrom and .08 or .04); self.clip,self.handle=nil,nil
@@ -544,7 +462,7 @@ function C:Feedback(enemy,info,result,weak,arrow)
     local f=info.dir or Vector3.FORWARD
     local x,y,z
     if arrow then x,y,z=f.x,f.y,f.z
-    elseif info.plunge or e.combo==3 or e.combo==C.COMBO_LENGTH then x,y,z=f.x*.3,-1,f.z*.3
+    elseif e.combo==3 or e.combo==C.COMBO_LENGTH then x,y,z=f.x*.3,-1,f.z*.3
     else
         local sign=e.combo==2 and -1 or 1
         x,y,z=f.z*sign,info.heavy and -.3 or 0,-f.x*sign
@@ -638,7 +556,7 @@ function C:Events()
         elseif e.name=='protect_off' then self.protection[e.handle]=nil end
         if e.handle==self.handle then
         if self.observe then self.observe('event',{name=e.name,clip=e.clip,t=e.t,age=self.age}) end
-        if e.name=='hit_on' then
+        if e.name=='hit_on' and e.clip==self.clip and IsMeleeAttack(e.clip) then
             self.cut=(self.cut or 0)+1
             if self.cut>1 then
                 -- Cross slash second cut: fresh targets, hitstop group and whoosh.
@@ -709,8 +627,7 @@ function C:Events()
             local finished=self.clip
             if self.state.Log then self.state.Log('clip-finish:'..finished,'Combat: clip %s finish',finished) end
             self.clip,self.handle=nil,nil
-            if finished=='plunge_start' and self.plunging then self:Play('plunge_loop',.08)
-            elseif finished=='sword_draw' or finished=='bow_equip' then
+            if finished=='sword_draw' or finished=='bow_equip' then
                 local pending,released=self.pending,self.pendingReleased
                 local heldTime=self.hold
                 self.pending,self.pendingReleased=nil,false
@@ -757,11 +674,11 @@ function C:Update(dt,controls)
     end
     self.shakeAge=self.shakeAge+dt
     local inCombat=self.state.InCombat()
-    self.stamina:Update(dt,inCombat,foot~=nil and foot:IsRunning())
-    -- Exhausted: sprint is refused until the bar recovers (combat only).
-    if inCombat and controls.runIntent and not self.stamina:CanSprint() then
-        controls.runIntent=false
-        if foot and foot:IsRunning() then foot:Cancel('stamina') end
+    self.stamina:Update(dt,inCombat,foot~=nil and foot:IsSprinting())
+    -- Exhausted: the fast sprint is refused until the bar recovers; the
+    -- character keeps running at the normal pace (Genshin behaviour).
+    if controls.sprintIntent and not self.stamina:CanSprint() then
+        controls.sprintIntent=false
     end
     local attack,heavy=controls.attack==true,controls.heavy==true
     -- The sword's heavy is a long press of attack; the right button is bow-only.
@@ -778,12 +695,11 @@ function C:Update(dt,controls)
     if self.blocked and not controls.attack and not controls.heavy then self.blocked=false end
     local canInput=controls.allowed and not self.blocked and not self.dead and self.state.InCombat()
     if canInput and controls.jump and controls.onGround~=false then self:JumpCancel() end
-    if canInput and self.cancelOpen and ((controls.axis and controls.axis:LengthSquared()>.18*.18) or controls.runIntent) then
+    if canInput and self.cancelOpen and ((controls.axis and controls.axis:LengthSquared()>.18*.18) or controls.sprintIntent) then
         self:RecoveryCancel('move')
     end
-    if controls.allowed and not self.dead then self:UpdatePlunge(dt) end
     local animDt=math.max(0,dt-self.hitstop)
-    if canInput and not self.plunging then
+    if canInput then
         if not swordHeavy and ((heavy and not self.lastHeavy) or controls.heavyTap) then
             self.releaseFull=false;self.buffer,self.bufferAt,self.bufferUntil='heavy',self.age,self.age+BUFFER
             self.holdSource=nil
@@ -834,7 +750,7 @@ function C:Update(dt,controls)
     if self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then
         local clip=require('combat.AnimClips').Clips[self.clip]
         local threshold=math.max(0,clip.phases.active[1]-.02)
-        self.whooshTime=self.whooshTime+stepDt*(clip.speedStat and self.rig:GetStats()[clip.speedStat] or 1)*(self.anim.timeScale or 1)
+        self.whooshTime=self.whooshTime+stepDt*(self.anim.timeScale or 1)
         if not self.whoosh and self.whooshTime>=threshold then
             self.whoosh=true
             local row=COMBO[self.combo]
@@ -915,7 +831,6 @@ end
 function C:MoveScale()
     if self.dead or self.suspended or self.clip=='getup' or self.clip=='death' then return 0 end
     if self.clip and (self.clip:find('hit_',1,true) or self.clip=='knockdown') then return 0 end
-    if self.plunging or self.clip=='plunge_land' then return 0 end
     if self.clip=='sword_heavy_charge' then return .4 end
     if self.clip=='bow_hold' or self.clip=='bow_draw' then return self.rig:GetStats().move or .5 end
     if self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then return 0 end
@@ -939,15 +854,7 @@ function C.MeleeZone(id,position,forward,reach,slam,out)
 end
 function C:StrikeZones()
     local id=self.hitPending and self.hitClip or self.clip
-    if self.dead or not id or not (id:find('sword_light_',1,true) or id=='sword_heavy_release' or id=='plunge_land') then return nil end
-    if id=='plunge_land' then
-        if not (self.hitOpen or self.hitPending) then return nil end
-        local out=self.strikeZone
-        out.origin=self.o.position();out.source=out.origin+Vector3(0,.4,0)
-        out.forward=self.hitForward or self.o.forward()
-        out.radius,out.angle,out.low,out.high=2.4,360,-.3,1.5
-        return out,nil,true
-    end
+    if self.dead or not IsMeleeAttack(id) then return nil end
     local phase=require('combat.AnimClips').Clips[id].phases.active
     local t=self.whooshTime or 0
     if not (self.hitOpen or self.hitPending) and t>=phase[1] then return nil end
@@ -989,7 +896,7 @@ function C:AfterPose()
         return
     end
     local environmentSwing,environmentHandle=self.swingSerial,self.handle
-    local zone,slam=self:StrikeZones()
+    local zone=self:StrikeZones()
     -- Expensive enemy/LOS/environment queries run once per hit window. The
     -- second cross-slash hit opens a fresh window and therefore runs once again.
     if self.hitQueryDone then
@@ -1007,10 +914,6 @@ function C:AfterPose()
     local queryStart=Perf.Begin()
     for enemy in pairs(self.queryShapes) do self.queryShapes[enemy]=nil end
     local contacts=Hit.QueryZone(enemies,zone,self.queryHits,self.queryPool,self.damaged,self.queryShapes)
-    if slam then
-        for _,contact in ipairs(Hit.QueryZone(enemies,slam,self.slamHits,self.slamPool,self.damaged,self.queryShapes)) do contacts[#contacts+1]=contact end
-        table.sort(contacts,Hit.DistanceLess)
-    end
     Perf.Finish('QueryZone',queryStart)
     local hitStart=Perf.Begin()
     for _,contact in ipairs(contacts) do
@@ -1018,14 +921,13 @@ function C:AfterPose()
         -- Stone projectiles are distinct targets; a deflection cannot consume the body hit.
         local key=Hit.TargetKey(enemy,part)
         if not self.damaged[key] and Hit.Visible(position+Vector3(0,.9,0),contact.pos,self.o.cast) then
-            local plunge=self.hitClip=='plunge_land'
-            local heavy=self.hitClip=='sword_heavy_release' or plunge
+            local heavy=self.hitClip=='sword_heavy_release'
             local stage=COMBO[self.combo] or COMBO[1]
-            local info={dmg=(stats.attack or 10)*(plunge and 1.6*(self.plungeMultiplier or 1.4) or (heavy and 1.3 or stage.damage)),
-                poise=(stats.poise or 6)*(plunge and 3 or (heavy and 1.6 or stage.poise)),
-                armorBreak=(stats.armorBreak or 1)*(plunge and 2 or (heavy and self.releaseFull and 1.5 or 1)),knockback=stage.knockback,
-                plunge=plunge,part=part,material=contact.shape.material or 'soft',normal=contact.normal,
-                deferPresentation=type(enemy.OnHitEvent)=='function',full=not plunge and heavy and self.releaseFull==true,
+            local info={dmg=(stats.attack or 10)*(heavy and 1.3 or stage.damage),
+                poise=(stats.poise or 6)*(heavy and 1.6 or stage.poise),
+                armorBreak=(stats.armorBreak or 1)*(heavy and self.releaseFull and 1.5 or 1),knockback=stage.knockback,
+                part=part,material=contact.shape.material or 'soft',normal=contact.normal,
+                deferPresentation=type(enemy.OnHitEvent)=='function',full=heavy and self.releaseFull==true,
                 swingId='sword:'..self.swingSerial,tier=heavy and 'heavy' or stage.tier,kind='sword',clip=self.hitClip,pos=contact.pos,dir=direction,source='player',heavy=heavy,combo=self.combo}
             self.settlingContact=true
             local ok,message=pcall(C.SettleContact,self,enemy,info,key,contact.shape.weak,self.swingSerial)

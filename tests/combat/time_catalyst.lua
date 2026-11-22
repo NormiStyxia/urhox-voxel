@@ -107,7 +107,6 @@ for _=1,120 do Visual.Update(v,1/60,Ctx{active=false}) end
 assert(not v.root.enabled and v.fade==0)
 -- Urho Node enable is not recursive: every child that draws must be off too (regression: orb stayed in place)
 for _,child in ipairs(v.root.children) do assert(not child.enabled,child.name..' must be disabled with the root') end
-for _,fxChild in ipairs(v.fx.texRoot.children) do assert(not fxChild.enabled,'texture quad '..fxChild.name..' must be off while hidden') end
 -- re-appears at the rest slot (no flight from the last position)
 Visual.Update(v,1/60,Ctx())
 assert(v.root.enabled and v.root.position.z<-.3)
@@ -115,7 +114,7 @@ for _,child in ipairs(v.root.children) do
     if child.name~='catalyst_tex_fx' then assert(child.enabled,child.name..' must be enabled with the root') end
 end
 -- pixel mode (default): sand comets, sparks, cast ring burst
-assert(v.fx.mode=='pixel' and v.fx.ready.pixel and v.fx.ready.texture)
+assert(v.fx.mode=='pixel' and v.fx.ready)
 for _=1,90 do Visual.Update(v,1/60,Ctx()) end
 assert(spawned.sand>20 and spawned.spark>3,'sand + sparks spawn at rest')
 local before=spawned.burst
@@ -124,18 +123,9 @@ assert(spawned.burst>=before+90,'cast spawns the radial splash and the 60-tick p
 Visual.Draw(v);assert(v.fx.sand.draws==1 and v.fx.burst.draws==1)
 for _=1,120 do Visual.Update(v,1/60,Ctx()) end
 assert(v.fx.burst:Count()==0,'burst motes expire')
--- texture mode: pixel motes cleared, quads enabled and driven
-assert(Visual.SetFxMode(v,'texture')=='texture')
-assert(v.fx.sand:Count()==0 and v.fx.texRoot.enabled and not v.fx.ringA.enabled,'rings wait for aim/charge')
-for _=1,40 do Visual.Update(v,1/60,Ctx{aiming=true,charge=1}) end
-assert(v.fx.ringA.enabled and v.fx.sandMaterialA.parameters.strength>.5,'rings appear while charging')
-for _=1,200 do Visual.Update(v,1/60,Ctx()) end
-assert(not v.fx.ringA.enabled,'rings vanish at rest')
-Visual.Draw(v);assert(v.fx.sand.draws==1,'pixel quads not drawn in texture mode')
--- off hides both; cycling returns to pixel
-assert(Visual.SetFxMode(v,'off')=='off' and not v.fx.texRoot.enabled)
-assert(Visual.SetFxMode(v)=='pixel' and Visual.SetFxMode(v)=='texture')
-assert(Visual.SetFxMode(v,'pixel')=='pixel')
+local sand=v.fx.sand
+assert(Visual.SetFxMode(v)=='off' and sand:Count()==0)
+assert(Visual.SetFxMode(v)=='pixel' and v.fx.sand==sand)
 Visual.Dispose(v)
 rawset(_G,'cache',oldCache)
 rawset(_G,'Material',BaseMaterial)

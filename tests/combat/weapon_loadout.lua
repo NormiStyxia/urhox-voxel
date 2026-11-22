@@ -10,11 +10,12 @@ local world=Mock.World(scene)
 local rig=Rig.New(scene,world,Mock.Nomi(scene))
 State.Configure{rig=rig}
 local saves=0
-Store.Save=function(config) saves=saves+1;assert(config.version==2 and not config.sword.parts);return true end
+Store.Save=function(config) saves=saves+1;assert(config.version==3 and not config.sword.parts);return true end
 local draft=Store.Normalize(rig.config)
 draft.sword.colors.accent=6;draft.active='bow'
 local wing=rig.entries.sword.wing
 assert(wing,'exercise real material transactions')
+assert(not rig.entries.sword.mesh.volume,'wing model should not allocate a second weapon body')
 local oldMaterial,oldCrystal=wing.material,wing.crystal
 local oldBlueprint=rig.entries.sword.mesh.blueprint
 local oldTrail=rig.trailColors.sword
@@ -51,8 +52,10 @@ oldMaterial.Clone=function()error('clone failed')end
 assert(not Loadout.Commit(rig,draft,State))
 assert(saves==0 and wing.material==oldMaterial and rig.config.sword.colors.accent==2)
 oldMaterial.Clone=clone
+rig.config.progress.ore=27 -- loot received after opening the cosmetic draft
 local committed,message,persisted=Loadout.Commit(rig,draft,State)
 assert(committed and message==nil and persisted==true)
+assert(rig.config.progress.ore==27)
 assert(saves==1 and rig.active=='bow' and State.GetWeapon()=='bow')
 assert(rig.config.sword.colors.accent==6 and wing.material~=oldMaterial)
 assert(world.created==beforeCreated and world.rebuilds==beforeBuilds,'cosmetics must not rebuild volumes')
@@ -63,4 +66,15 @@ local ok,notice,saved=Loadout.Commit(rig,nextDraft,State)
 assert(ok and notice and saved==false and saves==2 and rig.config.sword.colors.accent==5)
 State.Stop();rig:Dispose()
 assert(world.created==world.removed)
+THORN_MATERIAL_MISSING=false
+scene=Mock.Node('bow upload');world=Mock.World(scene)
+rig=Rig.New(scene,world,Mock.Nomi(scene))
+local bow=rig.entries.bow
+assert(bow.thorn and not bow.mesh.volume and #rig.bowDrawMeshes==0)
+rig:Update(0)
+assert(bow.thorn.grade==1)
+bow.thorn.failed=true
+rig:Update(0)
+assert(not bow.thorn and bow.mesh.volume and #rig.bowDrawMeshes==3)
+rig:Dispose();assert(world.created==world.removed)
 print('PASS equipment transaction: real Rig/State, preflight, second-item failure, retained-material rollback, late rejection, single save, save failure, geometry reuse')

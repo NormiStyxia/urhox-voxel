@@ -8,21 +8,14 @@ local Spawner=require('combat.enemies.Spawner')
 local Terrain=require('ruins.RuinsTerrain')
 local terrain,combat=T.Fixture()
 local b=Beetle.New(nil,nil,terrain,combat,Vector3.ZERO,'r16')
-assert(not b:GetHurtShapes()[4].enabled and not b:ApplyHit({dmg=1,part='belly'}).hit)
-for _,id in ipairs({'side_l','side_r'}) do
-    local before=b.hp; b:ApplyHit({dmg=1,part=id}); T.Near(before-b.hp,1.4)
-end
+assert(#b:GetHurtShapes()==1 and b.parts.shell.maxArmor==0,'small beetle: one zone, no armor')
 for _,dir in ipairs({Vector3(0,0,1),Vector3(0,0,-1)}) do
-    local before=b.hp; b:ApplyHit({dmg=1,part='shell',dir=dir}); T.Near(before-b.hp,.7)
+    local before=b.hp; b:ApplyHit({dmg=1,part='shell',dir=dir}); T.Near(before-b.hp,1)
 end
 b:Reset(); b.aggro=true; b:SetState('ATTACK'); b:FinishAttack()
-assert(b.poseRoll==180 and b:GetHurtShapes()[4].enabled)
-assert(b.hurtShapes[4].center.y>.5,'underside shape must turn with its body')
-local before=b.hp; b:ApplyHit({dmg=1,part='belly'}); T.Near(before-b.hp,1.4)
-b.hitStop=0; T.Tick(b,.79,combat.pos); assert(b.hurtShapes[4].enabled)
-T.Tick(b,.01,combat.pos); assert(b.state=='CHASE' and b.poseRoll==0 and not b.hurtShapes[4].enabled)
-assert(not b:ApplyHit({dmg=1,part='belly'}).hit)
-print('PASS side abdomen x1.4; shell -30% from either direction; underside only during .8s flipped recovery')
+assert(b.poseRoll==180,'recovery still flips the body for presentation')
+assert(not b:ApplyHit({dmg=1,part='belly'}).hit,'no underside window remains')
+print('PASS small beetle: one hit zone, full damage from every side, no underside window')
 
 local boss=Beast.New(nil,nil,terrain,combat,Vector3.ZERO,'rage')
 boss:ApplyHit({dmg=301,part='foreleg_l'})

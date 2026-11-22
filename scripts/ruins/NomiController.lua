@@ -20,7 +20,7 @@ local Perf=require("combat.SwingPerf")
 
 local M = {}
 
-local WALK, RUN = 4.2, 7.2
+local WALK, RUN, SPRINT = 4.2, 7.2, 10.0 -- walk / run (free) / held sprint (stamina)
 local JUMP = 6.4
 local COYOTE_TIME, JUMP_BUFFER = .12, .12
 local AIR_CONTROL = 0.35
@@ -87,7 +87,6 @@ function M.New(scene, world, spawn, spawnYaw)
     self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
     self.safePos = Vector3(spawn.x,spawn.y,spawn.z)
     self.safeT = 0
-    self.supportY,self.supportX,self.supportZ=spawn.y,spawn.x,spawn.z
     self.cam = ThirdPersonCamera.Create(scene, {
         modes = {
             normal = { distance = 4.6, offset = Vector3(0.55, 1.65, 0), fov = 55.0 },
@@ -151,24 +150,6 @@ function N:MeasureMotion(dt)
     self.actualSpeed=Vector3(self.actualVelocity.x,0,self.actualVelocity.z):Length()
     self.frameTravel=Vector3(delta.x,0,delta.z):Length()
     self.measuredPosition,self.measuredDt=p,dt
-    -- Reuse grounded physical feet, and the terrain's existing analytic height
-    -- cache. No Aim/GridHit/physics ray is issued for air-attack eligibility.
-    if self.cc.onGround then self.supportY,self.supportX,self.supportZ=p.y,p.x,p.z end
-    local y=Terrain.GroundHeight(p.x,p.z)
-    if self.cc.onGround then y=p.y
-    elseif self.supportY and (p.x-self.supportX)^2+(p.z-self.supportZ)^2<.4^2 then y=math.max(y or -math.huge,self.supportY) end
-    self.groundHeight=y
-end
-
----@param out table Borrowed record, overwritten on every read.
-function N:CombatAirState(out)
-    local p=self.node.worldPosition
-    local velocity=self.cc:GetLinearVelocity()
-    out.onGround,out.y=self.cc.onGround,p.y
-    out.height=self.groundHeight and math.max(0,p.y-self.groundHeight) or 0
-    out.invalid=self.voidReturning or self.groundHeight==nil
-    out.vx,out.vz=velocity.x,velocity.z
-    return out
 end
 
 function N:ResetJump()
@@ -223,16 +204,11 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     local moveAmount = math.min(1,dir:Length())
     local moving = dir:LengthSquared() > 0.01
     if moving then dir = dir:Normalized() end
-    local target = moving and ((run and not aiming) and RUN or (aiming and WALK * 0.6 or WALK)) or 0
-    if combat then target=moving and ((run and not aiming and (combat.scale or 1)==1) and RUN or (combat.baseSpeed or 5))*(combat.scale or 1) or 0 end
+    local runSpeed=(combat and combat.fast) and SPRINT or RUN
+    local target = moving and ((run and not aiming) and runSpeed or (aiming and WALK * 0.6 or WALK)) or 0
+    if combat then target=moving and ((run and not aiming and (combat.scale or 1)==1) and runSpeed or (combat.baseSpeed or 5))*(combat.scale or 1) or 0 end
     local onGround = cc.onGround
     local want = dir * target * moveAmount
-    if combat and combat.plungeVelocity and not onGround then
-        local plungeVelocity=combat.plungeVelocity
-        want=Vector3(plungeVelocity.x,0,plungeVelocity.z)
-        self.vel=want
-        cc:SetLinearVelocity(plungeVelocity)
-    end
     local k = onGround and (1 - math.exp(-12 * dt)) or (1 - math.exp(-12 * AIR_CONTROL * dt))
     self.vel = self.vel:Lerp(want, k)
     cc.desiredVelocity = Vector3(self.vel.x, 0, self.vel.z)
@@ -252,7 +228,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
         cc.desiredVelocity=self.vel+motion*(fraction/math.max(dt,.001))
     end
     local jumped=self:UpdateJump(dt,jump,not combat or
-        (combat.jumpAllowed~=false and (combat.scale or 1)>0 and not combat.plungeVelocity))
+        (combat.jumpAllowed~=false and (combat.scale or 1)>0))
     -- 朝向：瞄准时面朝相机方向；否则面朝移动方向
     local wantYaw = self.yaw
     if aiming then wantYaw = self.camYaw

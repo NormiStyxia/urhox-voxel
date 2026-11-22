@@ -34,7 +34,7 @@ assert(m.clip=='sword_light_1' and m.stamina.value<25 and m.stamina.denyAt>0,'no
 for stage,row in ipairs(D.Combo) do
     local clip=D.Clips[row.id];local open=clip.events[3].t*clip.dur
     assert(clip.dur-open>=.40,'stage '..stage..' keeps a visible recovery tail')
-    for _,input in ipairs({{allowed=true,axis=Vector3.RIGHT},{allowed=true,runIntent=true},
+    for _,input in ipairs({{allowed=true,axis=Vector3.RIGHT},{allowed=true,sprintIntent=true},
         {allowed=true,jump=true,onGround=true}}) do
         m=New();m.combo=stage-1;assert(m:Action('light') and m.clip==row.id)
         run(m,open-.03);assert(m.clip==row.id and not m.cancelOpen,'locked before cancel_open')

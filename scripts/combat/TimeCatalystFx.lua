@@ -1,16 +1,5 @@
--- Time catalyst surroundings, two interchangeable looks (switch with TimeCatalystFx.SetMode):
---   'pixel'   : voxel-world pixel particles (dragon.VoxelFX.WorldMotes, additive pixel sprites): star-river sand
---               comets on three orbits, drifting star sparks, a pixel clock ring + burst on every cast, trail while flying.
---   'texture' : AI-painted star-sand (assets/Textures/fx/clock_sand.png) through ClockTex.shader: two tilted rings
---               that appear only while aiming / charging. The Roman clock itself is the casting circle (TimeSigil),
---               so it is never parked on the weapon.
---   'off'     : neither (orb only).
--- Visual only. All positions follow the orb through `state`, so motion rules stay in TimeCatalystVisual.
+-- Pixel sand and sparks around the time catalyst.
 local F={}
-F.MODES={'pixel','texture','off'}
-local TEX_SHADER='model/forge-blades/ClockTex.shader'
-local SAND_TEX='Textures/fx/clock_sand.png'
-local MASK=0xFFFFFFFF
 local TAU=math.pi*2
 
 local function C(r,g,b,a) return Color(r,g,b,a or 1) end
@@ -37,134 +26,37 @@ local function Orbit(stream,angle,tighten,jitter)
     return Vector3(x,y*ct-z*st,y*st+z*ct)
 end
 
-local function MakeMaterial(texturePath)
-    local texture=cache:GetResource('Texture2D',texturePath)
-    if not texture then return nil end
-    local material=Material:new()
-    if material:SetSurfaceShader(TEX_SHADER)==false then return nil end
-    material:SetSurfaceTexture('tex',texture)
-    return material
-end
-
-local function Quad(node,half,material,mask)
-    local g=assert(node:CreateComponent('CustomGeometry'),'CustomGeometry unavailable')
-    g.viewMask=mask;g.lightMask=mask;g.zoneMask=mask;g.castShadows=false
-    g:BeginGeometry(0,TRIANGLE_LIST)
-    local function V(x,y,u,v)
-        g:DefineVertex(Vector3(x*half,y*half,0));g:DefineNormal(Vector3(0,0,-1))
-        g:DefineColor(Color(1,1,1,1));g:DefineTexCoord(Vector2(u,v))
-    end
-    V(-1,1,0,0);V(1,1,1,0);V(1,-1,1,1)
-    V(-1,1,0,0);V(1,-1,1,1);V(-1,-1,0,1)
-    g:Commit()
-    assert(g:SetMaterial(0,material)~=false,'fx material binding failed')
-    return g
-end
-
---- (Re)create the three pixel mote systems. Called at start and again every time 'pixel' is re-entered, so
---- a mode round trip always starts from fresh geometry/free lists (no stale state from the other looks).
----@param fx table
-function F.BuildPixel(fx)
+local function BuildPixel(fx)
     local VoxelFX=require('dragon.VoxelFX')
-    for _,key in ipairs({'sand','spark','burst'}) do
-        local old=fx[key]
-        if old then
-            pcall(old.Clear,old)
-            if old.node then pcall(old.node.Remove,old.node) end
-            fx[key]=nil
-        end
-    end
     fx.sand=VoxelFX.WorldMotes(fx.scene,'CatalystPixelSand',300,'square',true,fx.camera)
     fx.spark=VoxelFX.WorldMotes(fx.scene,'CatalystPixelSpark',90,'star',true,fx.camera)
     fx.burst=VoxelFX.WorldMotes(fx.scene,'CatalystPixelBurst',130,'square',true,fx.camera)
     fx.acc={0,0,0};fx.sparkAcc=0;fx.trailAcc=0
-    fx.ready.pixel=true
+    fx.ready=true
 end
 
----@param scene Node world-space parent for pixel particles
----@param orb Node the orb root (texture quads live under it and inherit its scale/orientation)
----@param camera Node? camera node for billboarded pixel quads
----@return table fx
-function F.New(scene,orb,camera)
-    local fx={mode='off',shown=false,acc={0,0,0},heads={0,TAU*.37,TAU*.71},sparkAcc=0,trailAcc=0,
-        cur={center=Vector3(0,0,0),rot=Quaternion(0,0,0),scale=1},ready={}}
-    fx.scene,fx.camera=scene,camera
-    local ok,err=pcall(F.BuildPixel,fx)
-    if not ok then print('TimeCatalystFx: pixel mode unavailable: '..tostring(err)) end
-    ok,err=pcall(function()
-        fx.sandMaterialA=assert(MakeMaterial(SAND_TEX),'sand texture/shader unavailable')
-        fx.sandMaterialB=assert(MakeMaterial(SAND_TEX),'sand texture/shader unavailable')
-        fx.sandMaterialA:SetShaderParameter('spin',Variant(.38))
-        fx.sandMaterialB:SetShaderParameter('spin',Variant(-.52))
-        fx.texRoot=orb:CreateChild('catalyst_tex_fx')
-        fx.ringA=fx.texRoot:CreateChild('sand_a')
-        fx.ringA.rotation=Quaternion(58,0,18)
-        Quad(fx.ringA,.56,fx.sandMaterialA,MASK)
-        fx.ringB=fx.texRoot:CreateChild('sand_b')
-        fx.ringB.rotation=Quaternion(-52,20,-32)
-        Quad(fx.ringB,.50,fx.sandMaterialB,MASK)
-        fx.texRoot.enabled=false
-        for _,n in ipairs({fx.ringA,fx.ringB}) do n.enabled=false end
-        fx.ready.texture=true
-    end)
-    if not ok then print('TimeCatalystFx: texture mode unavailable: '..tostring(err)) end
+function F.New(scene,camera)
+    local fx={mode='off',shown=false,heads={0,TAU*.37,TAU*.71},
+        cur={center=Vector3.ZERO,rot=Quaternion(),scale=1},scene=scene,camera=camera}
+    local ok,err=pcall(BuildPixel,fx)
+    if ok then fx.mode='pixel'
+    else
+        print('TimeCatalystFx: pixel particles unavailable: '..tostring(err))
+        F.Dispose(fx)
+    end
     return fx
 end
 
-local function SetTexEnabled(fx,on)
-    if not fx.texRoot then return end
-    fx.texRoot.enabled=on
-    -- rings are driven by Update (only while aiming / charging), so entering the mode leaves them off
-    fx.ringA.enabled=false;fx.ringB.enabled=false
-end
-
----@param fx table?
----@param mode string pixel | texture | off
----@return string applied
 function F.SetMode(fx,mode)
-    if not fx then return 'off' end
-    if mode~='pixel' and mode~='texture' then mode='off' end
-    if mode=='pixel' and not fx.ready.pixel then mode='texture' end
-    if mode=='texture' and not fx.ready.texture then mode='off' end
-    if fx.mode==mode then return mode end
-    local from=fx.mode
-    fx.mode=mode
-    SetTexEnabled(fx,mode=='texture' and fx.shown)
-    if mode~='pixel' then
-        for _,m in ipairs({fx.sand,fx.spark,fx.burst}) do if m then m:Clear() end end
-    else
-        local ok,err=pcall(F.BuildPixel,fx)
-        if not ok then
-            print('TimeCatalystFx: pixel rebuild failed: '..tostring(err))
-            fx.ready.pixel=false
-            fx.mode='off'
-            return 'off'
-        end
-    end
-    print(('TimeCatalystFx: mode %s -> %s (pixel=%s texture=%s shown=%s)'):format(from,mode,tostring(fx.ready.pixel),tostring(fx.ready.texture),tostring(fx.shown)))
-    return mode
+    fx.mode=(mode=='pixel' and fx.ready) and 'pixel' or 'off'
+    if fx.mode=='off' then F.Clear(fx) end
+    return fx.mode
 end
 
---- Orb became visible / hidden (Node enable is not recursive: texture quads need their own toggle).
----@param fx table?
----@param flag boolean
 function F.SetShown(fx,flag)
     if not fx or fx.shown==flag then return end
     fx.shown=flag
-    SetTexEnabled(fx,flag and fx.mode=='texture')
-    if not flag then
-        for _,m in ipairs({fx.sand,fx.spark,fx.burst}) do if m then m:Clear() end end
-    end
-end
-
----@param fx table?
----@return string next mode name
-function F.NextMode(fx)
-    if not fx then return 'off' end
-    for i,m in ipairs(F.MODES) do
-        if m==fx.mode then return F.SetMode(fx,F.MODES[i%#F.MODES+1]) end
-    end
-    return F.SetMode(fx,'pixel')
+    if not flag then F.Clear(fx) end
 end
 
 local function SpawnBurst(fx,s)
@@ -252,25 +144,6 @@ function F.UpdateImpl(fx,dt,s)
         end
         if s.burst then SpawnBurst(fx,s) end
         fx.sand:Update(dt);fx.spark:Update(dt);fx.burst:Update(dt)
-    elseif fx.mode=='texture' then
-        local fade=s.fade
-        local aim,charge,pulse=s.aim,s.charge,s.pulse
-        local breathe=math.min(1,.5*aim+.5*charge+pulse)
-        -- star-sand rings exist only while aiming / charging / casting; nothing parked on the weapon at rest
-        local active=(aim+charge+pulse)>.02 and fade>.01
-        if fx.ringA.enabled~=(active and fx.shown) then
-            fx.ringA.enabled=active and fx.shown;fx.ringB.enabled=active and fx.shown
-        end
-        if not active then return end
-        local sandStrength=Variant((.55+.35*aim+.25*charge)*fade)
-        fx.sandMaterialA:SetShaderParameter('strength',sandStrength)
-        fx.sandMaterialB:SetShaderParameter('strength',sandStrength)
-        fx.sandMaterialA:SetShaderParameter('breathe',Variant(breathe))
-        fx.sandMaterialB:SetShaderParameter('breathe',Variant(breathe))
-        -- rings contract toward the core while casting; dial swells slightly on the cast pulse
-        local ringScale=1-.22*math.min(1,.55*aim+.45*charge)
-        fx.ringA.scale=Vector3(ringScale,ringScale,ringScale)
-        fx.ringB.scale=Vector3(ringScale*.9,ringScale*.9,ringScale*.9)
     end
 end
 
@@ -298,9 +171,6 @@ function F.Dispose(fx)
     F.Clear(fx)
     for _,m in ipairs({fx.sand,fx.spark,fx.burst}) do
         if m and m.node then pcall(m.node.Remove,m.node) end
-    end
-    for _,mat in ipairs({fx.sandMaterialA,fx.sandMaterialB}) do
-        if mat then pcall(mat.Dispose,mat) end
     end
     fx.sand,fx.spark,fx.burst=nil,nil,nil
 end

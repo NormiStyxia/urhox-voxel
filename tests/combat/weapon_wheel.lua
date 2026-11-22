@@ -8,7 +8,7 @@ local frame,platform,locked=0,'Mac',true
 GetTime=function()return {GetFrameNumber=function()return frame end}end
 GetPlatform=function()return platform end
 local keys,buttons,presses={},{},{}
-KEY_Q,KEY_ESCAPE='Q','ESCAPE'
+KEY_TAB,KEY_ESCAPE='TAB','ESCAPE'
 MOUSEB_LEFT,MOUSEB_MIDDLE,MOUSEB_RIGHT=0,1,2
 MM_RELATIVE,MM_ABSOLUTE=1,2
 NVG_CW,NVG_CCW=2,1
@@ -133,11 +133,11 @@ Eq(Wheel.DebugLayout().outer,164,'outward unfold settles in .12s')
 local layer=overlay
 assert(Wheel.Confirm());Eq(selected[#selected],'sword')
 assert(Wheel.IsOpen() and Wheel.IsBlocked(),'fade remains visible')
-keys.Q=true;Wheel.Update(.1)
+keys.TAB=true;Wheel.Update(.1)
 assert(not Wheel.IsOpen() and Wheel.IsBlocked(),'guard is invisible')
 Eq(#root.children,1);assert(layer.destroyed);Eq(input.mouseMode,MM_RELATIVE)
-Flush();assert(Wheel.IsBlocked(),'held Q must not leak')
-keys.Q=nil;Flush();assert(not Wheel.IsBlocked());Eq(closed[#closed],'selected')
+Flush();assert(Wheel.IsBlocked(),'held Tab must not leak')
+keys.TAB=nil;Flush();assert(not Wheel.IsBlocked());Eq(closed[#closed],'selected')
 
 -- Genuine PointerEvent semantics and physical/base coordinate conversion.
 for _,metrics in ipairs({{1,1},{3,1.875},{2,2}}) do

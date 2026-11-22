@@ -5,7 +5,6 @@ local UI=require('urhox-libs/UI')
 local Draw=require('ui.PixelDraw')
 local G=require('ui.Glass')
 local Catalog=require('combat.WeaponCatalog')
-local Builder=require('combat.WeaponBuilder')
 local Store=require('combat.WeaponStore')
 local CombatState=require('combat.CombatState')
 local TouchInput=require('ui.TouchInput')
@@ -28,12 +27,10 @@ local function Shadowed(vg,text,x,y,size,color,align,alpha,spacing)
     G.Text(vg,text,x,y,size,color,align,alpha,spacing)
 end
 local CHANNEL_NAMES={primary='主色',secondary='副色',accent='点缀'}
-local WEAPON_NAMES={sword='翼剑',bow='荆棘花弓'}
-local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
+local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
 local PAD=14
 local FADE_OUT,REVEAL=.2,.3 -- seconds: to black / from black
 local ROOM_TIMEOUT=6
-local DARK_VOXEL={92,76,60}
 local MENU_FILL={16,22,40}
 local SHADE_TOP,SHADE_CLEAR,SHADE_BOTTOM={8,12,24,120},{8,12,24,0},{8,12,24,170}
 local LINE_CLEAR,LINE_SOLID={190,196,222,0},{190,196,222,150}
@@ -42,7 +39,7 @@ local CREAM_DOWN_TOP,CREAM_DOWN_BOTTOM={236,222,186},{206,180,120}
 local CREAM_LINE={150,112,50}
 local SCRIM_CLEAR,SCRIM_MID,SCRIM_SOLID={20,28,50,0},{20,28,50,140},{20,28,50,206}
 
--- The showroom is optional: a missing/broken module means the 2D side view.
+-- The showroom is optional: a missing/broken module keeps the item panel usable.
 local roomModule
 local function Room()
     if roomModule==nil then
@@ -69,7 +66,9 @@ local function Safe(callbacks)
     return terrain.IsSafeGround(position.x,position.y,position.z)==true
 end
 local function Single(config,weapon)
-    return {weapon=weapon,appearance=config[weapon].appearance,colors=config[weapon].colors}
+    if weapon=='time' then return {weapon='time'} end
+    local _,grade=Catalog.Find(Catalog.Weapons[weapon],config.progress.slots[weapon].weapon)
+    return {weapon=weapon,appearance=config[weapon].appearance,colors=config[weapon].colors,grade=grade}
 end
 local function Clamp(n,a,b) return math.max(a,math.min(b,n)) end
 local function Inside(x,y,b) return x>=b.x and y>=b.y and x<b.x+b.w and y<b.y+b.h end
@@ -125,11 +124,13 @@ end
 
 ---------------------------------------------------------------- stats
 local STAT_MAIN={
-    sword={{'attack','攻击',20,''},{'speed','速度',1.4,'×'},{'reach','范围',1.4,'m'}},
-    bow={{'draw','拉速',1.5,'×'},{'range','射程',60,'m'},{'move','移动',1,'×'}},
+    sword={{'attack','攻击',20,''},{'reach','范围',1.4,'m'}},
+    time={{'attack','碎时伤害',20,''},{'terrainRadius','破坏半径',2,'×'},{'terrainPower','破坏强度',4,''}},
+    bow={{'attack','攻击',20,''},{'draw','拉速',1.5,'×'},{'range','射程',60,'m'},{'move','移动',1,'×'}},
 }
 local STAT_MORE={
     sword={{'poise','失衡',12,''},{'armorBreak','破甲',2,'×'}},
+    time={{'poise','削韧',12,''}},
     bow={{'armorBreak','破甲',2,'×'}},
 }
 local function Number(value,unit)
@@ -156,11 +157,12 @@ end
 
 ---------------------------------------------------------------- state changes
 local Layout
-local function Rebuild(s)
-    s.blueprint=assert(Builder.Compile(Single(s.config,s.weapon)))
+local function Rebuild(s,keepModel)
+    -- Purchases commit immediately; undo/restored drafts only own colours.
+    if s.callbacks.rig then s.config.progress=s.callbacks.rig.config.progress end
+    s.blueprint={stats=Catalog.Stats(s.weapon,s.config.progress),hit=s.weapon=='sword' and Catalog.Definitions.sword.hit}
     s.statRows,s.moreRows=nil,nil
-    s.sideview=nil
-    Single3D(s)
+    if not keepModel then Single3D(s) end
 end
 local function Edit(s,action)
     s.undo={config=Copy(s.config),weapon=s.weapon}
@@ -176,7 +178,61 @@ end
 ---------------------------------------------------------------- layout
 -- Preserve the glass showroom layout; only complete weapons and cosmetic colors remain.
 local ROW_H=32
-local WEAPON_EN={sword='WING SWORD',bow='THORN BOW'}
+local CLASS_LABEL={sword='剑',bow='弓',time='法器'}
+local function ProgressButtons(s,cx,cy,cw)
+    local class=s.weapon
+    local progress=s.config.progress
+    local slot=progress.slots[class]
+    local current,tier=Catalog.Find(Catalog.Weapons[class],slot.weapon)
+    local function Row(label,action,id,disabled)
+        Add(s,action..'_'..(id or class),label,Box(cx,cy,cw,42),function()
+            if not s.callbacks.rig then return end
+            if action=='smelt' and s.confirm~=id then s.confirm=id;Layout(s);return end
+            local ok,msg=Store.Forge(s.callbacks.rig,class,action,id)
+            s.confirm=nil
+            Message(s,msg)
+            if ok then Rebuild(s,slot.weapon==s.callbacks.rig.config.progress.slots[class].weapon) end
+            Layout(s)
+        end,{kind='link',area='scroll',disabled=disabled or not s.callbacks.rig})
+        cy=cy+44
+    end
+    local level=slot.levels[current.id]
+    Row(level==Catalog.LevelCap and '武器已满级' or ('升级至 Lv.%d　·　%d 矿'):format(level+1,level),
+        'level',nil,level>=Catalog.LevelCap or progress.ore<level)
+    for i,item in ipairs(Catalog.Weapons[class]) do
+        if item.id~=current.id then
+            if slot.levels[item.id] then
+                Row('装备 '..item.name..'　Lv.'..slot.levels[item.id],'select',item.id)
+                if i==tier+1 and level>slot.levels[item.id] then
+                    local label=s.confirm==item.id and ('确认消耗'..current.name..'　·　免矿')
+                        or ('熔入%s　·　继承 Lv.%d'):format(item.name,level)
+                    Row(label,'smelt',item.id)
+                end
+            elseif i<=tier+1 then
+                local price=Catalog.CraftCost[i]
+                Row(('打造 %s　·　%d 矿'):format(item.name,price),'craft',item.id,progress.ore<price)
+                if i==tier+1 then
+                    local label=s.confirm==item.id and ('确认消耗%s　·　%d 矿'):format(current.name,price)
+                        or ('熔铸为%s　·　继承 Lv.%d'):format(item.name,level)
+                    Row(label,'smelt',item.id,progress.ore<price)
+                end
+            end
+        end
+    end
+    for _,seal in ipairs(Catalog.Imprints[class]) do
+        local rank=slot.ranks[seal.id]
+        local selected=slot.imprint==seal.id
+        Row(('%s%s　%s +%d%%'):format(selected and '已装 ' or '装配 ',seal.name,seal.label,
+            math.floor(seal.bonus*rank*100+.5)),'imprint',seal.id,selected)
+    end
+    local rank=slot.ranks[slot.imprint]
+    if rank and rank<3 then
+        local chance=Catalog.RefineChance[rank][slot.failures[slot.imprint]+1]
+        Row(('精炼 %d → %d　·　%d%%　·　1 砂'):format(rank,rank+1,chance),'refine',nil,progress.sand<1)
+        if chance<100 then Row('稳炼　·　必成　·　2 砂','guarantee',nil,progress.sand<2) end
+    end
+    return cy
+end
 Layout=function(s)
     local w,h,safe=Draw.Metrics()
     s.width,s.height=w,h
@@ -189,10 +245,10 @@ Layout=function(s)
     s.content=Box(cx,top,cw,bottom-top);s.buttons={}
     s.titlePos={x=cx,y=top+38}
     local closeX=cx+cw-36
-    for i,weapon in ipairs({'sword','bow'}) do
-        Add(s,'tab_'..weapon,weapon=='sword' and '剑' or '弓',Box(closeX-58-(2-i)*54,top+4,48,48),function()
+    for i,weapon in ipairs(Catalog.Classes) do
+        Add(s,'tab_'..weapon,CLASS_LABEL[weapon],Box(closeX-52-(3-i)*49,top+4,48,48),function()
             if s.weapon==weapon then return end
-            s.weapon=weapon;s.scroll=0;s.colorChannel=nil;s.moreOpen=false
+            s.weapon=weapon;s.confirm=nil;s.scroll=0;s.colorChannel=nil;s.moreOpen=false
             Rebuild(s);Layout(s)
         end,{kind='badge',active=s.weapon==weapon,icon=weapon})
     end
@@ -202,30 +258,33 @@ Layout=function(s)
     s.footerY,s.footerLine=fy,fy-8
     Add(s,'reset','原配色',Box(cx,fy,80,46),function()
         Edit(s,function() s.config[s.weapon]=Catalog.DefaultWeapon(s.weapon) end)
-    end,{kind='link',disabled=not Catalog.Definitions[s.weapon].tintable})
+    end,{kind='link',disabled=s.weapon~='sword'})
     Add(s,'undo','撤销',Box(cx+90,fy,52,46),function()
         if not s.undo then return end
         s.config,s.weapon=s.undo.config,s.undo.weapon;s.undo=nil
         Rebuild(s);Layout(s)
     end,{kind='link',disabled=not s.undo})
     local equipW=Clamp(cw-164,104,150)
-    Add(s,'equip','装备',Box(cx+cw-equipW,fy,equipW,46),function() M.Close() end,{kind='primary'})
+    Add(s,'equip',s.weapon=='time' and '完成' or '装备',Box(cx+cw-equipW,fy,equipW,46),function() M.Close() end,{kind='primary'})
     local vy=top+76
     local vh=math.max(1,s.footerLine-4-vy)
     s.view=Box(s.panel.x,vy,pw,vh)
     local cy=vy
     s.descPos={x=cx+cw/2,y=cy+18}
-    s.descText=s.weapon=='bow' and '荆棘与花瓣 · 原作配色' or '同类武器性能固定 · 染色仅改变外观'
+    local progress=s.config.progress
+    local slot=progress.slots[s.weapon]
+    local item,tier=Catalog.Find(Catalog.Weapons[s.weapon],slot.weapon)
+    s.descText=('强化矿 %d　·　淬炼砂 %d'):format(progress.ore,progress.sand)
     cy=cy+44;s.dividerY=cy;cy=cy+20
     s.colorCol=Box(cx,cy,cw,10)
     s.paletteBox,s.paletteTitle,s.dividerY2=nil,nil,nil
-    if Catalog.Definitions[s.weapon].tintable then
+    if s.weapon=='sword' then
         local chipW=Clamp(math.floor((cw-80)/3),50,76)
         for i,channel in ipairs(Catalog.Channels) do
             local preset=Catalog.ColorPresets[s.config[s.weapon].colors[channel]]
             Add(s,'color_'..channel,CHANNEL_NAMES[channel],Box(cx+cw-(4-i)*chipW,cy,chipW,58),function()
                 s.colorChannel=s.colorChannel~=channel and channel or nil;Layout(s)
-                if s.colorChannel then s.scroll=s.maxScroll end
+                if s.colorChannel then s.scroll=Clamp(s.paletteBox.y+s.paletteBox.h-s.view.y-s.view.h,0,s.maxScroll) end
             end,{kind='chip',area='scroll',swatch=preset.rgb,active=s.colorChannel==channel})
         end
         cy=cy+58
@@ -243,6 +302,7 @@ Layout=function(s)
             cy=cy+86
         end
     else cy=cy+58 end
+    cy=ProgressButtons(s,cx,cy,cw)
     s.contentHeight=cy-vy;s.maxScroll=math.max(0,s.contentHeight-vh);s.scroll=Clamp(s.scroll,0,s.maxScroll)
     s.statRows=s.statRows or StatRows(s,STAT_MAIN[s.weapon])
     local sx=math.max(26,safe.left+14)
@@ -253,10 +313,9 @@ Layout=function(s)
     s.attrTitle={x=sx,y=sy+12};s.attrRowsY=sy+30;s.attrRight={x=sx,w=sw}
     Add(s,'more',s.moreOpen and '收起' or '更多',Box(sx+sw-56,sy-4,60,36),function() s.moreOpen=not s.moreOpen;Layout(s) end,{kind='link',small=true})
     if s.moreOpen then s.moreBox={x=sx,y=s.attrRowsY+#s.statRows*ROW_H,w=sw,h=#s.moreRows*ROW_H} end
-    s.sideBox=Box(s.stage.x+60,s.stage.y+h*.2,math.max(1,s.stage.w-120),math.max(1,h*.52))
-    s.sideCells=s.blueprint.geometry.cells
-    s.stageTitle=WEAPON_NAMES[s.weapon];s.stageCaption=WEAPON_EN[s.weapon]
-    s.stageSub=s.weapon=='bow' and '远程 · 蓄力射击' or '近战 · 探索应敌'
+    s.stageTitle=item.name
+    s.stageCaption=(s.weapon=='time' and '法器' or Catalog.Tiers[tier])..'　Lv.'..slot.levels[item.id]
+    s.stageSub=s.weapon=='bow' and '远程 · 蓄力射击' or (s.weapon=='time' and '碎时 · 地形破坏' or '近战 · 探索应敌')
 end
 
 ---------------------------------------------------------------- pointer
@@ -340,57 +399,6 @@ local function Cancel(event)
 end
 
 ---------------------------------------------------------------- drawing
-local function ChannelColor(s,channel)
-    if channel=='dark' then return DARK_VOXEL end
-    return Catalog.ColorPresets[s.config[s.weapon].colors[channel]].rgb
-end
--- Front-most cell per (u,v), grouped by channel/slot so a whole thumbnail is a
--- handful of NanoVG fills instead of one fill per voxel. Swords read best from
--- the front (x,y); a bow's curve lives in depth, so it is shown from the side (z,y).
-local function SideLayout(cells,b,maxStep,side)
-    if b.cells==cells and b.fitW==b.w and b.fitH==b.h and b.side==side then return end
-    b.cells,b.fitW,b.fitH,b.side=cells,b.w,b.h,side
-    b.groups={}
-    if #cells==0 then return end
-    local hk,dk='x','z'
-    if side then hk,dk='z','x' end
-    local minX,minY,maxX,maxY=math.huge,math.huge,-math.huge,-math.huge
-    local front={}
-    for _,cell in ipairs(cells) do
-        local u=cell[hk]
-        minX=math.min(minX,u);maxX=math.max(maxX,u)
-        minY=math.min(minY,cell.y);maxY=math.max(maxY,cell.y)
-        local k=u..':'..cell.y
-        if not front[k] or cell[dk]>front[k][dk] then front[k]=cell end
-    end
-    local spanX,spanY=maxX-minX+1,maxY-minY+1
-    local step=math.min(b.w/spanX,b.h/spanY,maxStep or 14)
-    local ox,oy=b.x+(b.w-spanX*step)/2,b.y+(b.h-spanY*step)/2
-    b.step=step
-    local index={}
-    for _,cell in pairs(front) do
-        local key=cell.channel..'|'..tostring(cell.region)
-        local group=index[key]
-        if not group then group={channel=cell.channel,region=cell.region,rects={}};index[key]=group;b.groups[#b.groups+1]=group end
-        local rects=group.rects
-        rects[#rects+1]=ox+(cell[hk]-minX)*step
-        rects[#rects+1]=oy+(maxY-cell.y)*step
-    end
-    table.sort(b.groups,function(a,c) return (a.channel..tostring(a.region))<(c.channel..tostring(c.region)) end)
-end
-local function SidePixels(vg,s,cells,b,highlight,alpha,maxStep)
-    SideLayout(cells,b,maxStep,s.weapon=='bow')
-    local size=(b.step or 0)+.5
-    if size<=.5 then return end
-    for _,group in ipairs(b.groups) do
-        local a=(alpha or 1)*((highlight and group.region~=highlight) and .4 or 1)
-        nvgBeginPath(vg)
-        local rects=group.rects
-        for i=1,#rects,2 do nvgRect(vg,rects[i],rects[i+1],size,size) end
-        nvgFillColor(vg,G.Color(ChannelColor(s,group.channel),a))
-        nvgFill(vg)
-    end
-end
 local function Icon(vg,name,x,y)
     nvgSave(vg);nvgTranslate(vg,x,y);nvgScale(vg,.5,.5)
     Draw.Image(vg,name,0,0)
@@ -424,6 +432,7 @@ function DrawButton.badge(vg,s,b)
         G.Circle(vg,cx,cy,22,C.plate,.55+.3*a)
         G.Ring(vg,cx,cy,22,b.active and C.gold or C.line,b.active and .95 or .35,b.active and 1.6 or 1)
     end
+    if b.icon=='time' then G.Text(vg,'时',cx,cy,19,C.ivory,NVG_ALIGN_CENTER);return end
     local icon=b.icon=='sword' and 'ui/forge/icon_sword.png' or 'ui/forge/icon_bow.png'
     nvgSave(vg);nvgTranslate(vg,cx,cy);nvgRotate(vg,math.pi/4)
     local drawn=G.Picture(vg,icon,b.icon=='sword' and -6.2 or -5.2,-19,b.icon=='sword' and 12.4 or 9.8,38,.95)
@@ -458,7 +467,7 @@ function DrawButton.primary(vg,s,b)
     else
         G.Gradient(vg,bx.x,bx.y+dy,bx.w,bx.h,9,pressed and CREAM_DOWN_TOP or CREAM_TOP,pressed and CREAM_DOWN_BOTTOM or CREAM_BOTTOM,1)
     end
-    G.Text(vg,'装 备',bx.x+bx.w/2+1,bx.y+bx.h/2+dy,19,C.ink,NVG_ALIGN_CENTER,nil,3,'serif')
+    G.Text(vg,b.label,bx.x+bx.w/2+1,bx.y+bx.h/2+dy,19,C.ink,NVG_ALIGN_CENTER,nil,3,'serif')
 end
 function DrawButton.chip(vg,s,b)
     local bx=b.box
@@ -493,65 +502,11 @@ local function Attributes(vg,s)
     for _,b in ipairs(s.buttons) do if b.id=='more' then DrawButton.link(vg,s,b) end end
 end
 
-local CLOUDS={{-.38,.28,64},{.22,.18,80},{.52,.34,58}}
-local ISLETS={{-.34,.44,34},{.4,.5,26}}
-local function Backdrop(vg,s)
-    -- No 3D room: a flat 2D take on the same showroom (ruins palette) so the
-    -- fallback still looks like part of the world.
-    local st=s.stage
-    local h=s.height
-    local cx=math.floor(st.w*.5)
-    local floorY=math.floor(h*.8)
-    G.Gradient(vg,0,0,s.width,h,0,C.skyTop,C.skyLow,1)
-    for i=1,4 do G.Circle(vg,cx-st.w*.3,h*.16,22+i*16,C.ivory,.07) end
-    for _,c in ipairs(CLOUDS) do
-        local x,y,w=cx+st.w*c[1],h*c[2],c[3]
-        G.Round(vg,x,y,w,10,0,C.ivory,.85);G.Round(vg,x+10,y-8,w*.55,10,0,C.ivory,.85)
-    end
-    for _,o in ipairs(ISLETS) do
-        local x,y,w=cx+st.w*o[1],h*o[2],o[3]
-        G.Round(vg,x,y,w,6,0,C.grass,1)
-        G.Round(vg,x+3,y+6,w-6,6,0,C.stone,1)
-        G.Round(vg,x+8,y+12,w-16,6,0,C.stoneDark,1)
-        G.Round(vg,x+13,y+18,w-26,5,0,C.stoneDark,1)
-    end
-    local pillarX=st.w*.42
-    local top=h*.1
-    for sx=-1,1,2 do
-        local x=cx+sx*pillarX-12
-        G.Round(vg,x,top+34,24,floorY-top-34,0,C.marble,1)
-        G.Round(vg,x+17,top+34,7,floorY-top-34,0,C.marbleShade,1)
-        G.Round(vg,x-2,top+88,28,5,0,C.gold,1)
-        G.Round(vg,x-2,floorY-60,28,5,0,C.gold,1)
-    end
-    nvgBeginPath(vg);nvgArc(vg,cx,top+36,pillarX,math.pi,math.pi*2,2)
-    nvgStrokeColor(vg,G.Color(C.marble,1));nvgStrokeWidth(vg,16);nvgStroke(vg)
-    nvgBeginPath(vg);nvgArc(vg,cx,top+36,pillarX-11,math.pi,math.pi*2,2)
-    nvgStrokeColor(vg,G.Color(C.blueMarble,1));nvgStrokeWidth(vg,5);nvgStroke(vg)
-    G.Round(vg,cx-7,top+36-pillarX-9,14,18,0,C.gold,1)
-    G.Ellipse(vg,cx,floorY+10,st.w*.5,34,C.stoneDark,.55)
-    G.Ellipse(vg,cx,floorY+4,st.w*.42,30,C.stone,1)
-    G.Ellipse(vg,cx,floorY-4,st.w*.3,24,C.marbleShade,1)
-    G.Ellipse(vg,cx,floorY-12,st.w*.3,24,C.marble,1)
-    G.EllipseStroke(vg,cx,floorY-12,st.w*.255,19,C.gold,1,3)
-    G.Ellipse(vg,cx,floorY-14,st.w*.2,14,C.rune,1)
-    G.EllipseStroke(vg,cx,floorY-14,st.w*.13,9,C.gold,.9,1.5)
-    for sx=-1,1,2 do
-        local x=cx+sx*st.w*.34
-        G.Round(vg,x-12,floorY-10,24,8,0,C.gold,1)
-        G.Poly(vg,C.crystal,1,x-8,floorY-10,x-2,floorY-44,x+3,floorY-10)
-        G.Poly(vg,C.rune,1,x+1,floorY-10,x+8,floorY-30,x+12,floorY-10)
-    end
-    local b=s.sideBox
-    G.Ellipse(vg,cx,floorY-16,st.w*.1,7,C.gold,.28)
-    nvgSave(vg)
-    nvgTranslate(vg,b.x+b.w/2,b.y+b.h/2);nvgRotate(vg,s.weapon=='sword' and -.22 or 0);nvgTranslate(vg,-(b.x+b.w/2),-(b.y+b.h/2))
-    SidePixels(vg,s,s.sideCells,b,s.slot,1,18)
-    nvgRestore(vg)
-end
 local function Stage(vg,s)
     local st=s.stage
-    if s.fallback then Backdrop(vg,s)
+    if s.fallback then
+        G.Gradient(vg,0,0,s.width,s.height,0,C.plate,C.ink,1)
+        G.Text(vg,'模型预览暂不可用',st.x+st.w/2,st.y+st.h*.4,15,C.sub,NVG_ALIGN_CENTER)
     elseif not s.roomReady then
         G.Text(vg,'正在准备展示间…',st.x+st.w/2,st.y+st.h/2,15,C.sub,NVG_ALIGN_CENTER)
     end
@@ -565,7 +520,7 @@ local function Stage(vg,s)
     Attributes(vg,s)
     local by=s.height-s.safeBottom-22
     if s.message then Shadowed(vg,G.Fit(s.message,14,st.w-40),x,by-26,14,C.gold) end
-    if s.fallback or s.roomReady then
+    if s.roomReady and not s.fallback then
         nvgBeginPath(vg);nvgArc(vg,x+8,by,6.5,-2.6,2.6,NVG_CW or 2)
         nvgStrokeColor(vg,G.Color(C.ivory,.85));nvgStrokeWidth(vg,1.5);nvgStroke(vg)
         Shadowed(vg,'拖动旋转',x+24,by,14,C.ivory,nil,nil,1)
@@ -621,8 +576,8 @@ local function Render(vg,s)
         nvgTranslate(vg,0,-s.scroll)
         G.Text(vg,G.Fit(s.descText,13,c.w),s.descPos.x,s.descPos.y,13,C.sub,NVG_ALIGN_CENTER,nil,1)
         Ornament(vg,c.x,s.dividerY,c.w,.55)
-        G.Text(vg,s.weapon=='bow' and '固定配色' or '配色',s.colorCol.x,s.colorCol.y+16,17,C.ivory,nil,nil,3,'serif')
-        Caps(vg,s.weapon=='bow' and 'ORIGINAL' or 'DYE',s.colorCol.x,s.colorCol.y+38,10,C.dim)
+        G.Text(vg,s.weapon=='sword' and '配色' or '固定配色',s.colorCol.x,s.colorCol.y+16,17,C.ivory,nil,nil,3,'serif')
+        Caps(vg,s.weapon=='sword' and 'DYE' or 'ORIGINAL',s.colorCol.x,s.colorCol.y+38,10,C.dim)
         if s.dividerY2 then Ornament(vg,c.x,s.dividerY2,c.w,.4,false) end
         if s.paletteTitle then G.Text(vg,s.paletteTitle.text,s.paletteTitle.x+1,s.paletteTitle.y,14,C.sub,nil,nil,1) end
         for _,b in ipairs(s.buttons) do if b.area=='scroll' then DrawButton[b.kind](vg,s,b) end end
@@ -798,7 +753,8 @@ function M.Close(keepDraft)
         FinishClose(s)
         return true
     end
-    local draft=Copy(s.config);draft.active=s.weapon
+    local draft=Copy(s.config)
+    if s.weapon~='time' then draft.active=s.weapon end
     if not s.callbacks.onCommit then Message(s,'装备入口未就绪');return false end
     local ok,err,saved=s.callbacks.onCommit(draft)
     if not ok then Message(s,err or '装备未能应用，请重试');return false end

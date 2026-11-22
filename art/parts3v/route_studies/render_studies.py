@@ -10,7 +10,8 @@ OUT = Path(__file__).resolve().parent
 lua = LuaRuntime(unpack_returned_tuples=True)
 lua.globals().study_path = str(ROOT / 'scripts/?.lua') + ';'
 lua.execute('package.path=study_path..package.path')
-blades = lua.eval('require("combat.ForgeShowroomBlades")')[0]
+blades = lua.execute((OUT / 'BladeStudies.lua').read_text())
+palette_source = lua.eval('require("combat.ForgeShowroomBlades")')[0]
 
 def plain(v):
     if not hasattr(v, 'items'): return v
@@ -19,7 +20,7 @@ def plain(v):
     return {k: plain(x) for k, x in v.items()}
 
 data = {r: plain(blades.Data(r)) for r in 'AB'}
-palette = plain(blades.Palette(None))
+palette = plain(palette_source.Palette(None))
 font = '/System/Library/Fonts/Supplemental/Arial.ttf'
 S = 2
 def label(draw, xy, text, size=18):

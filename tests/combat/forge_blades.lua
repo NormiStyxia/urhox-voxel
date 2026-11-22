@@ -1,6 +1,6 @@
 -- Offline geometry checks. Shader compilation/pixels still require Web preview.
 package.path='scripts/?.lua;'..package.path
-local Blades=require('combat.ForgeShowroomBlades')
+local Blades=dofile('art/parts3v/route_studies/BladeStudies.lua')
 for _,route in ipairs({'A','B'}) do
     local d=Blades.Data(route)
     assert(d.triangles>0 and d.triangles<600 and #d.vertices%3==0)

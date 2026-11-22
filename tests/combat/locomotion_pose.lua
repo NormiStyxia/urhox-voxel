@@ -73,13 +73,3 @@ S.near(F.PhaseForLegs(18,-18,.2),.5)
 S.near(F.PhaseForLegs(-18,18,.9),0)
 S.near(F.PhaseForLegs(0,0,.7),.75)
 print('PASS first run phase fits actual rigid hips at entry amplitude and preserves nearest cycle branch')
-for frame=0,25 do
- local p=A.DebugSample('plunge_land',frame*.01)
- char.bones.root.position=Vector3(0,lift-.14,0)
- for _,name in ipairs({'leg_right','leg_left'}) do
-  local e=p[name];char.bones[name].rotation=Quaternion(e[1],e[2],e[3])
- end
- foot:Ground(.01,ground,true,true)
- for _,v in ipairs(soleVertices) do assert(char.bones[v.bone]:LocalToWorld(v.point).y>=groundY-1e-8) end
-end
-print('PASS actual shoe underside during plunge landing compensation')

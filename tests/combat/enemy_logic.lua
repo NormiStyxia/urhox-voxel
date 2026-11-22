@@ -23,14 +23,12 @@ print('PASS state transitions, 0.4 alert, 0.6 telegraph, 1.8m lunge, 0.8 recover
 
 b:Reset()
 local r=b:ApplyHit({dmg=10,part='shell',dir=Vector3(0,0,-1)})
-assert(r.hit); T.Near(b.hp,23)
-b:ApplyHit({dmg=10,part='shell',dir=Vector3(0,0,-1)})
-assert(b.parts.shell.broken and b.result.partBroken=='shell'); T.Near(b.hp,16)
-assert(not b:ApplyHit({dmg=4,part='belly'}).hit)
-b:ApplyHit({dmg=4,part='side_l'}); T.Near(b.hp,10.4)
+assert(r.hit); T.Near(b.hp,20)
+b:ApplyHit({dmg=10}); T.Near(b.hp,10)
+assert(not b.parts.shell.broken and not b.result.broke,'small enemies have no armor to break')
 b:ApplyHit({dmg=100}); assert(b.dead and combat.deaths==1 and not b:GetHurtShapes()[1].enabled)
 assert(not b:Reset()); b:ApplyHit({dmg=10}); assert(combat.deaths==1 and not b.result.hit)
-print('PASS frontal armor, part break, belly weakness, one-shot death notification, no respawn')
+print('PASS small enemy: one hit zone, no armor, one-shot death notification, no respawn')
 
 b=Beetle.New(nil,nil,terrain,combat,Vector3(47,0,0),'edge')
 assert(not b:Move(2,0)); assert(b.position.x<=47.5)

@@ -59,9 +59,8 @@ do
     Step(n,.016,true);cc.onGround=false;Step(n,.3,false)
     cc.onGround=true;Step(n,.016,false);assert(cc.nativeJumps==1)
 end
--- UI/focus locks, attack locks, plunge and safety must discard pending input.
-for _,options in ipairs({{scale=1,jumpAllowed=false},{scale=0},
-    {scale=1,plungeVelocity=Vector3(0,-9,0)}}) do
+-- UI/focus locks, attack locks and safety must discard pending input.
+for _,options in ipairs({{scale=1,jumpAllowed=false},{scale=0}}) do
     local n,cc=New(false);Step(n,.016,true)
     Step(n,.016,false,options);cc.onGround=true;Step(n,.016,false)
     assert(cc.nativeJumps==0,'blocked buffer must not launch on release')
@@ -74,4 +73,19 @@ do
     n.UpdateSafety=function()return true end;Step(n,.016,false)
     assert(n.jumpBuffer==0 and n.jumpCoyote==0)
 end
+-- Ordinary combat movement in air must leave both ascent and descent to the
+-- physics controller. Real support resets the one-shot jump for a fresh press.
+for _,hz in ipairs({30,60,120}) do
+    for _,vy in ipairs({6.4,-1,-9}) do
+        local n,cc=New(false)
+        cc.velocity=Vector3(2,vy,3)
+        for _=1,hz do Step(n,1/hz,false,{scale=1,motion=Vector3.ZERO}) end
+        S.near(cc.velocity.x,2);S.near(cc.velocity.y,vy);S.near(cc.velocity.z,3)
+        assert(cc.airLaunches==0 and cc.nativeJumps==0,'air movement must not overwrite vertical physics')
+        cc.onGround=true;Step(n,1/hz,false,{scale=1,motion=Vector3.ZERO})
+        Step(n,1/hz,true,{scale=1,motion=Vector3.ZERO})
+        assert(cc.nativeJumps==1,'ordinary landing permits the next jump')
+    end
+end
+print('PASS combat air movement preserves native ascent/descent; ordinary landing rearms jump at 30/60/120Hz')
 print('PASS jump grace: edge/expiry/buffer/one-shot/landing/locks/reset at 30/60/120Hz; native physics not simulated')

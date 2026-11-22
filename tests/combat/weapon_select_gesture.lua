@@ -112,7 +112,7 @@ moves:Cancel('test');State.FinishTransition();moves.invuln=0;env.combatInputBloc
 assert(gesture:Open(false));env.Down=function()return true end;actions(false);assert(gesture:IsOpen(),'wheel own blocker cannot trigger external interruption')
 env.Down=function()return false end;wheel.selected=State.GetWeapon();actions(false);assert(not gesture:IsOpen(),'Q release confirms even while UI blocks combatAllowed')
 wheel.blocked=false;assert(gesture:Open(false));env.input.focus=false;actions(false);assert(not gesture:IsOpen(),'lost focus interrupts before confirmation')
-print('PASS weapon selection: real Scene take/release/onCancel callbacks, pointer restore, Q hold/release, palm projection, smooth pose, hard hit, bow cancellation, lock windows, Swap target and legacy, elbow pivots')
+print('PASS weapon selection: real Scene take/release/onCancel callbacks, pointer restore, Tab hold/release, palm projection, smooth pose, hard hit, bow cancellation, lock windows, Swap target and legacy, elbow pivots')
 -- Exercise actual UI delayed retirement together with the actual Scene callbacks.
 -- Reuse only the colleague's offline UI adapter setup, without changing that file.
 local wheelTests=read('tests/combat/weapon_wheel.lua')
@@ -152,16 +152,16 @@ State.Configure{rig=rig,explicitSelection=true,aggro=function()return true end,
   if TC.cancel then TC.CancelActions()end
  end}
 env.combatInputBlocked=false
-env.KEY_Q,env.KEY_C,env.KEY_G='Q','C','G'
-local qEdge=true
-env.Press=function(key)if key=='Q' and qEdge then qEdge=false;return true end;return false end
-env.Down=function(key)return key=='Q' end
+env.KEY_TAB,env.KEY_C,env.KEY_G='TAB','C','G'
+local tabEdge=true
+env.Press=function(key)if key=='TAB' and tabEdge then tabEdge=false;return true end;return false end
+env.Down=function(key)return key=='TAB' end
 actions(true,.016)
 assert(gesture.pending and not gesture:IsOpen(),'short press must not open wheel')
 actions(true,.12);assert(not gesture:IsOpen())
 actions(true,.2)
 assert(gesture:IsOpen() and live.wheel.DebugState().selected=='time' and #live.wheel.DebugLayout().slots==3,
- 'Q opens the actual three-slot wheel from time mode')
+ 'Tab opens the actual three-slot wheel from time mode')
 State.OnEnemyAggro('guard');assert(gesture:IsOpen() and State.GetSelection()=='time')
 live.wheel.Cancel()
 local function drain()
@@ -182,10 +182,10 @@ for _,slot in ipairs({1,2,3}) do
  assert(State.GetSelection()==expected,'idle and aggro retain player selection')
 end
 assert(State.CanUseTime() and rig.pose=='hidden' and pointer:IsEnabled())
-print('PASS real Scene + three-slot wheel: explore Q, cancel, sword/bow/time, deferred close, aggro/idle, input restoration')
--- Execute the actual relative-camera routing, including the first Q-down frame
+print('PASS real Scene + three-slot wheel: explore Tab, cancel, sword/bow/time, deferred close, aggro/idle, input restoration')
+-- Execute the actual relative-camera routing, including the first Tab-down frame
 -- before the wheel is constructed, and the invisible release-guard frame.
-local cameraBlock=assert(source:match('(    if not WeaponWheel.IsBlocked%(%) and not Down%(KEY_Q%).-)\n    %-%- 龙'))
+local cameraBlock=assert(source:match('(    if not WeaponWheel.IsBlocked%(%) and not Down%(KEY_TAB%).-)\n    %-%- 龙'))
 local lookCalls,held,blocked,combat=0,false,false,true
 local ce=setmetatable({WeaponWheel={IsBlocked=function()return blocked end},
  CombatState={InCombat=function()return combat end},Down=function()return held end,
@@ -193,17 +193,17 @@ local ce=setmetatable({WeaponWheel={IsBlocked=function()return blocked end},
  mouseLocked=true,input={mouseMove={x=15,y=-5}},animPreview_={index=0},combatLookScale_=1,
  nomi_={Look=function()lookCalls=lookCalls+1 end}}, {__index=_G})
 local route=assert(load(cameraBlock,'actual wheel camera gate','t',ce))
-held=true;route();assert(lookCalls==0,'first Q-down cannot rotate camera')
+held=true;route();assert(lookCalls==0,'first Tab-down cannot rotate camera')
 held=false;blocked=true;route();assert(lookCalls==0,'selection/closing/release guard freeze camera')
 blocked=false;route();assert(lookCalls==1,'normal camera resumes')
-held=true;combat=false;route();assert(lookCalls==1,'exploration Q also owns the first camera frame')
+held=true;combat=false;route();assert(lookCalls==1,'exploration Tab also owns the first camera frame')
 held=false;route();assert(lookCalls==2,'exploration camera resumes on release')
-print('PASS actual camera gate: first Q frame, selection/fade/release latch, normal and exploration restoration')
+print('PASS actual camera gate: first Tab frame, selection/fade/release latch, normal and exploration restoration')
 -- Tap cycle uses actual SelectLoadout, Scene cleanup and animation completion.
 live.reset();moves:Cancel('test');State.FinishTransition();State.SetBusy(false)
 local function tap()
  env.combatInputBlocked=false
- qEdge=true;env.Down=function(key)return key=='Q'end
+ tabEdge=true;env.Down=function(key)return key=='TAB'end
  actions(true,.016);assert(gesture.pending and not gesture:IsOpen())
  env.Down=function()return false end
  actions(true,.05);assert(not gesture.pending and not gesture:IsOpen())
@@ -227,4 +227,4 @@ assert(not gesture:IsOpen() and State.GetSelection()=='sword','slow release of l
 assert(gesture:BeginPress());gesture:UpdatePress(.31,true,true)
 assert(gesture:IsOpen() and not gesture.pending);live.wheel.Cancel();drain()
 gesture:UpdatePress(.01,false,true);assert(State.GetSelection()=='sword','long hold never also cycles')
-print('PASS quick Q cycle, real cleanup and swap animation, cancelled pending, held threshold, no double-switch')
+print('PASS quick Tab cycle, real cleanup and swap animation, cancelled pending, held threshold, no double-switch')

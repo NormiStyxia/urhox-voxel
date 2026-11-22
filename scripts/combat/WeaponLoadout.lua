@@ -12,6 +12,7 @@ function M.Commit(rig,draft,state)
     local previous=rig and Store.Normalize(rig.config)
     if not config or not previous then return false,'装备配置无效' end
     if not state.CanSetWeapon(config.active) then return false,'暂时无法切换武器' end
+    config.progress=previous.progress -- live purchases and loot survive older cosmetic drafts
     local applied={}
     local function Rollback(reason)
         for i=#applied,1,-1 do

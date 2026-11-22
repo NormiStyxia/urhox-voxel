@@ -1,0 +1,4 @@
+<material>
+    <surfaceshader name="model/forge-blades/IronSword.shader" />
+    <parameter name="grind_variation" value="0.044" />
+</material>

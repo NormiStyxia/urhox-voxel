@@ -77,6 +77,7 @@ local EnemySpawner = require('combat.enemies.Spawner')
 local CombatHUD = require('ui.CombatHUD')
 local ForgePanel = require('ui.ForgePanel')
 local WeaponLoadout = require('combat.WeaponLoadout')
+local WeaponStore = require('combat.WeaponStore')
 local ForgeShowroom = require('combat.ForgeShowroom')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 ---@type ClothInertia?
@@ -102,7 +103,6 @@ local handWasOn_
 local combatRig_ = nil
 local timeCatalyst_ = nil -- floating star-clock orb for time (casting) mode; visual only
 local combatInputBlocked = false
-local combatNoticeAt = 0
 local touchRevision = 0
 local voidInputBlocked = false
 local Rig = require("dragon.DragonRig")
@@ -555,7 +555,6 @@ local function StartCombat()
             if not nomi_.cc.onGround then return end
             CombatMoves.EmitImpactRing(combatParticles_,hitParticleOwner_,pos,dir)
         end,
-        airState=function(out)return nomi_:CombatAirState(out) end,
         attackMotion=function(motion) return nomi_:ClipAttackMotion(motion) end,
         aimPitch=function()return nomi_.camPitch end,
         intent=function() local a=math.rad(nomi_.camYaw);return Vector3(math.sin(a),0,math.cos(a)) end,
@@ -705,7 +704,14 @@ local function StartCombat()
             if ForgePanel.IsOpen() then ForgePanel.Close(true) end
             if animPreview_.index==0 then CombatState.OnEnemyAggro(id) end
         end,
-        OnEnemyDead=function(enemy) combatMoves_.target=enemy end})
+        OnEnemyDead=function(enemy)
+            combatMoves_.target=enemy
+            local progress=combatRig_.config.progress
+            progress.ore=math.min(999999,progress.ore+3)
+            progress.sand=math.min(999999,progress.sand+2)
+            local saved=WeaponStore.Save(combatRig_.config)
+            CombatHUD.Say(saved and '强化矿 +3　淬炼砂 +2' or '已获得材料，本次保存失败',1.6)
+        end})
     M.combat={state=CombatState,moves=combatMoves_,enemies=combatEnemies_,anim=combatAnim_,arrows=combatArrows_}
     combatParticles_=combatEnemies_:GetParticlePool()
     CombatSettings.RegisterQuality('combat-presentation',function(profile)
@@ -724,12 +730,13 @@ local function AttachTouchControls()
         touchState.airborne,touchState.gliding=ctrl.loco.airborne,ctrl.state=="GLIDE"
         touchState.blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen() or WeaponWheel.IsBlocked()
         touchState.breathActive=M.stream and M.stream.active
+        touchState.skillLeft=math.max(0,(M.weaponSkillReadyAt or 0)-time_)
         touchState.noSpells=not CombatState.CanUseTime()
         touchState.readyFlash,touchState.aggro=CombatState.ReadyFlash(),CombatHasAggro()
         touchState.unifiedSelection=true
         touchState.combat,touchState.weapon=CombatState.InCombat(),CombatState.GetWeapon()
         touchState.combatCharge=combatMoves_ and combatMoves_.charge or 0
-        touchState.sprinting=foot_ and foot_:IsRunning()
+        touchState.sprinting=foot_ and foot_:IsSprinting()
         touchState.canMount=M.dragonAwake and not ride.locked and ride.mode=="free" and ride.onGround and ride:NearDragon()<3.6
         touchState.cool,touchState.cooldown,touchState.charging=caster_.cool,cooldown,caster_.charging
         touchState.charge=caster_.charging and caster_.charge or 0
@@ -777,7 +784,7 @@ function M.Start()
     Safe('GC.Start',StartSceneGC)
     voidInputBlocked=false
     combatInputBlocked=false
-    combatNoticeAt=0
+    M.weaponSkillReadyAt=0
     TouchInput.Detect()
     -- 引擎的自动点击重锁没有 UI / pending 过滤；接管一次，避免两个管理者竞争。
     if not inputTakenOver then
@@ -817,7 +824,9 @@ function M.Start()
     handMotes_=require('dragon.VoxelFX').WorldMotes(fx_.root,'CombatHandMotes',32,'square',true,nomi_:CameraNode())
     M.sigils=Sigil.New(scene_)
     caster_ = Spells.NewCaster({ world = world_, puzzles = Puzzles, scene = scene_, fx = fx_, sigils = M.sigils,
+        canCast=function(id) return CombatState.CanUseTime() and (id~='shatter' or CombatState.GetSelection()=='time') end,
         enemies=function() return CombatEnemies() end,
+        catalystStats=function() return combatRig_:GetStats('time') end,
         spellHit=function(enemy,info) return combatMoves_ and combatMoves_:SpellHit(enemy,info) or false end,
         handPos = function() return nomi_:HandPos() end,
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
@@ -1126,7 +1135,7 @@ local function ToggleTrainingDummy()
     material:SetShaderParameter('Roughness',Variant(.95))
     model:SetMaterial(material); model.castShadows=true
     trainingDummy_=CombatMoves.NewTrainingDummy(pos,node)
-    CombatHUD.Say('训练木桩 · 点按 Q 切换 / 长按 Q 选择')
+    CombatHUD.Say('训练木桩 · 点按 Tab 切换 / 长按 Tab 选择')
 end
 local function StartCombatTest()
     if combatTest_ and combatTest_.active then return end
@@ -1275,7 +1284,7 @@ local function UpdateAim(presentation)
 end
 
 local function HandleSpells(dt, aim)
-    if foot_ and foot_:IsRunning() then
+    if foot_ and foot_:IsSprinting() then
         caster_.charging,caster_.charge,caster_.castAnim=false,0,0
         TouchInput.CancelAction('shatter')
         return
@@ -1284,26 +1293,36 @@ local function HandleSpells(dt, aim)
     if animPreview_.index>0 or M.mounted or voidInputBlocked then caster_.charging,caster_.charge=false,0; return end
     if not CombatState.CanUseTime() then
         caster_.charging,caster_.charge=false,0
-        -- Q always selects a loadout; time inputs belong only to its time slot.
-        if time_>=combatNoticeAt and (Press(KEY_E) or Press(KEY_R) or Press(KEY_1) or Press(KEY_2) or Press(KEY_3)) then
-            caster_:Say(CombatState.InCombat() and '按住 Q 选择时间法器' or '当前动作结束后可施法',1.2)
-            combatNoticeAt=time_+1.2
-        end
         return
     end
     if combatInputBlocked then caster_.charging,caster_.charge=false,0; return end
     local testInput = M.fake ~= nil or M.fakePress ~= nil
-    if voidInputBlocked or M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and not testInput) then
+    if not input.focus or input.minimized or WeaponWheel.IsBlocked() or ForgePanel.IsOpen() or SettingsMenu.IsBlocked()
+        or M.debugOn or TouchControls.IsBlocked() or (not TouchInput.IsEnabled() and not pointer:IsEnabled() and not testInput) then
         caster_.charging,caster_.charge=false,0; return
     end
-    local lmb = (not TouchInput.IsEnabled() and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or Down(KEY_1) or TouchInput.Down("shatter")
-    -- A begin/end delivered together must still fire a zero-charge tap once.
-    if TouchInput.Press("shatter") and not lmb then caster_:HandleCharge(true,aim,true) end
-    caster_:HandleCharge(lmb,aim,true)
-    -- Q 统一选装备；冻结 E、回溯 R；数字键 2 / 3 保留。
-    if Press(KEY_E) or Press(KEY_2) then caster_:Cast("freeze", aim) end
-    if Press(KEY_R) or Press(KEY_3) then caster_:Cast("rewind", aim) end
+    if Press(KEY_E) then caster_:Cast('freeze',aim) end
+    if Press(KEY_R) then caster_:Cast('rewind',aim) end
+    local armed=CombatState.InCombat()
+    if Press(KEY_Q) and time_>=(M.weaponSkillReadyAt or 0) then
+        if armed then
+            if combatMoves_:Action('heavy') then M.weaponSkillReadyAt=time_+4 end
+        elseif caster_:Ready('shatter') then
+            caster_.charge=1
+            caster_:Cast('shatter',aim)
+            caster_.charging,caster_.charge=false,0
+            M.weaponSkillReadyAt=time_+4
+        end
+        return
+    end
+    if armed then caster_.charging,caster_.charge=false,0;return end
+    local held=(M.fake and M.fake.shatter) or (not TouchInput.IsEnabled() and pointer:CanAttack() and input:GetMouseButtonDown(MOUSEB_LEFT)) or TouchInput.Down('shatter')
+    if TouchInput.Press('shatter') and not held then caster_:HandleCharge(true,aim,true) end
+    caster_:HandleCharge(held,aim,true)
 end
+
+-- Keyboard walk/run toggle (Ctrl). Default is run; Shift is the faster sprint.
+M.walkMode=false
 
 function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
@@ -1315,6 +1334,10 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
     end
     nomi_:MeasureMotion(dt)
     local allowed=GameplayInputAllowed()
+    if allowed and not combatInputBlocked and (Press(KEY_LCTRL) or Press(KEY_RCTRL) or Press(KEY_CTRL)) then
+        M.walkMode=not M.walkMode
+        CombatHUD.Say(M.walkMode and '步行' or '奔跑',1.0)
+    end
     local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
     local r = (Down(KEY_D) and 1 or 0) - (Down(KEY_A) and 1 or 0)
     local tf,tr=TouchInput.MoveAxis()
@@ -1338,7 +1361,9 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             if keyHeld==nil then keyHeld=input:GetKeyDown(KEY_SHIFT) end
             local keyPress=input:GetKeyPress(KEY_SHIFT)
             if M.fakePress and M.fakePress[KEY_SHIFT] then keyPress=true;M.fakePress[KEY_SHIFT]=nil end
-            TouchInput.SampleRun(controls,keyHeld)
+            TouchInput.SampleRun(controls,keyHeld,M.walkMode)
+            -- Charging / casting slows to a walk unless the sprint key is held.
+            if (caster_.charging or caster_.castAnim>0) and not controls.sprintIntent then controls.runIntent=false end
             controls.cancelled=(keyHeld or keyPress) and input:GetKeyDown(KEY_F9) -- debug chord consumes gesture first
             controls.axis=axis
             controls.jump=allowed and not combatInputBlocked and Press(KEY_SPACE)
@@ -1374,7 +1399,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
                 or (options.explore and (caster_.charging or caster_.castAnim>0))
             options.baseSpeed=options.explore and (aiming and 4.2*.6 or 4.2) or 5
             options.sprinting=foot_ and foot_:IsRunning()
-            options.plungeVelocity=combatMoves_.plunging and combatMoves_.plungeVelocity or nil
+            options.fast=foot_ and foot_:IsSprinting()
             options.facing,options.motionChecked=combatMoves_:Facing(),combatMoves_.motionChecked
             nomi_:Move(dt,allowed and f or 0,allowed and r or 0,allowed and not combatInputBlocked and combatControls.runIntent==true,
                 combatControls.jump,
@@ -1469,18 +1494,18 @@ local function UpdateCombatActions(combatAllowed,dt)
     -- External interruptions are independent of the wheel's own blocker.
     if weaponGesture_ and weaponGesture_:IsOpen() then
         if not weaponGesture_.o.canOpen() then weaponGesture_:ForceClose('interrupted')
-        elseif not weaponGesture_.touch and not Down(KEY_Q) then weaponGesture_:Confirm() end
+        elseif not weaponGesture_.touch and not Down(KEY_TAB) then weaponGesture_:Confirm() end
         return
     end
     if weaponGesture_ and weaponGesture_.pending then
-        weaponGesture_:UpdatePress(dt,Down(KEY_Q),combatAllowed and not combatInputBlocked)
+        weaponGesture_:UpdatePress(dt,Down(KEY_TAB),combatAllowed and not combatInputBlocked)
         return
     end
     if combatAllowed and animPreview_.index==0 and not combatMoves_.dead then
-        if Press(KEY_G) or TouchInput.Press('forge') then OpenForge() end
-        if timeCatalyst_ and Press(KEY_5) then -- A/B preview of the catalyst surroundings: pixel particles / texture sheets / off
+        if Press(KEY_G) or TouchInput.Press('forge') then OpenForge();return end
+        if timeCatalyst_ and Press(KEY_5) then
             local mode=TimeCatalyst.SetFxMode(timeCatalyst_)
-            CombatHUD.Say('法器特效 · '..(({pixel='像素粒子',texture='贴图特效',off='关闭'})[mode] or tostring(mode))..'（5 切换）',1.4)
+            CombatHUD.Say('法器特效 · '..(({pixel='像素粒子',off='关闭'})[mode] or tostring(mode))..'（5 切换）',1.4)
         end
         if not combatInputBlocked and Press(KEY_C) then
             combatMoves_:SelectLoadout(CombatState.InCombat() and 'time' or CombatState.GetWeapon())
@@ -1488,7 +1513,10 @@ local function UpdateCombatActions(combatAllowed,dt)
         if not combatInputBlocked then
             local touchSwap=TouchInput.Press('swap') or TouchInput.Press('sheath')
             if touchSwap then weaponGesture_:Open(true)
-            elseif Press(KEY_Q) then weaponGesture_:BeginPress() end
+            elseif Press(KEY_TAB) then weaponGesture_:BeginPress()
+            elseif Press(KEY_1) then combatMoves_:SelectLoadout('sword')
+            elseif Press(KEY_2) then combatMoves_:SelectLoadout('bow')
+            elseif Press(KEY_3) then combatMoves_:SelectLoadout('time') end
         end
     end
 end
@@ -1584,7 +1612,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     if combatInputBlocked then
         local held=input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT)
             or TouchInput.Down('shatter') or TouchInput.Down('attack') or TouchInput.Down('heavy')
-        for _,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_SHIFT}) do held=held or Down(key) end
+        for _,key in ipairs({KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_TAB,KEY_SHIFT}) do held=held or Down(key) end
         if not held then combatInputBlocked=false end
     end
     if VoidRewind.IsActive() then Safe('FX.VoidRewind',VoidRewind.Update,dt) end
@@ -1604,8 +1632,8 @@ function Ruins_HandleUpdate(eventType, eventData)
     local tx,ty=TouchInput.ConsumeLook()
     if TouchInput.IsEnabled() and not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn and not TouchControls.IsBlocked() then nomi_:Look(tx*.14,ty*.12,combatLookScale_) end
     if M.DEBUG_PANEL and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_F10) then M.ToggleDebugPanel() end
-    if not WeaponWheel.IsBlocked() and not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_TAB) then farView = not farView end
-    if not WeaponWheel.IsBlocked() and not Down(KEY_Q)
+    if not WeaponWheel.IsBlocked() and not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Press(KEY_Z) then farView = not farView end
+    if not WeaponWheel.IsBlocked() and not Down(KEY_TAB)
         and not voidInputBlocked and not TouchInput.IsEnabled() and mouseLocked and pointer:CanLook(false) then
         local mm = input.mouseMove
         if animPreview_.index>0 then
@@ -1680,7 +1708,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     if foot_ and M.ride.mode=='free' then
         local preview=animPreview_.index>0 and CombatAnim.DebugList()[animPreview_.index].id
         Safe('Locomotion.Ground',nomi_.GroundFeet,nomi_,foot_,dt,
-            foot_.weight>0 or combatMoves_.clip=='plunge_land' or preview=='sprint_loop' or preview=='plunge_land')
+            foot_.weight>0 or preview=='sprint_loop')
     end
     if weaponGesture_ then Safe('WeaponSelect.Pose',weaponGesture_.Apply,weaponGesture_,dt) end
     if clothInertia_ and M.ride.mode=='free' then Safe('Animation.Cloth',clothInertia_.Apply,clothInertia_,dt) end
@@ -1808,7 +1836,7 @@ local function UpdateCombatCamera(dt,cn)
             local offset=combatMoves_:ShakeOffset(cn.worldRight,cn.worldUp)+(action.impact or Vector3.ZERO)
             local impactLength=offset:Length()
             if impactLength>.03 then offset=offset*(.03/impactLength) end
-            local footCamera=CombatState.Engaged() or (not Down(KEY_TAB) and not caster_.charging
+            local footCamera=CombatState.Engaged() or (not Down(KEY_Z) and not caster_.charging
                 and ((foot_ and foot_.weight>0) or (combatCamera_.sprint or 0)>0))
             if footCamera then offset=offset+action.focus-cn.worldDirection*action.distance end
             if footCamera or offset:LengthSquared()>0 then nomi_:ApplyCombatOffset(offset) end
@@ -1940,7 +1968,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     -- Update 的 aim 仍用于本帧技能输入，PostUpdate 再校准选中反馈与悬停材质。
     local aim=not M.mounted and UpdateAim() or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}
     Safe('Puzzles.Presentation',Puzzles.UpdatePresentation,dt)
-    Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime())
+    Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime(),CombatState.GetSelection()=='time')
     if combatMoves_ then Safe('HUD.Update',UpdateCombatHUD,cn,dt) end
     nomi_:EndQueryScope()
     if combatMoves_ and weaponGesture_ then Safe('WeaponSelect.Anchor',weaponGesture_.Update,weaponGesture_,dt,nomi_:Camera()) end

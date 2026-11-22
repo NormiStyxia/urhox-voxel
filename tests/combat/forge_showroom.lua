@@ -7,8 +7,9 @@ local Parts=require('combat.WeaponCatalog')
 local Showroom=require('combat.ForgeShowroom')
 local ThornBow=require('combat.ThornBowVisual')
 ThornBow.ENABLED=false -- voxel fallback path under test below; thorn bow route has its own block at the end
-assert(Showroom.GetModelRoute()=='W','startup shows the approved wing sword')
-Showroom.SetModelRoute('original') -- explicit fallback-route tests below
+local Blades=require('combat.ForgeShowroomBlades')
+local WingSword=require('combat.WingSwordVisual')
+WingSword.ENABLED=false
 local Dressing=require('combat.ForgeShowroomScene')
 local MASK=0x40000000
 local function Number(value,label)
@@ -178,7 +179,7 @@ local function Wrap(n)
     return n
 end
 local function Boot()
-    Showroom.Exit();Showroom.SetModelOverride(nil);e={nodes={},materials={},techniques={},width=844,height=390,setCalls=0}
+    Showroom.Exit();e={nodes={},materials={},techniques={},width=844,height=390,setCalls=0}
     e.scene=Wrap(Mock.Node('MainScene'));e.scene.components={{kind='Octree'}}
     e.oldCamera={fov=61,projectionOffset={x=.12,y=.2}}
     e.original={scene=e.scene,camera=e.oldCamera};e.viewport=e.original
@@ -698,51 +699,17 @@ for _,steps in ipairs({0,1,50,250}) do
 end
 print('forge_showroom detail PASS: 5cm high/10cm low, 55k/12-batch bounds, deterministic stone/AO, partial failure, budget, idle no rebuild and all resources reclaimed; MOCK ONLY')
 
-local modelPath='model/c8d2cfd2bc29455abb72b044deb16d5d/Meshes/c8d2cfd2bc29455abb72b044deb16d5d.mdl'
-for _,failure in ipairs({'none','model','bounds','material_xml','texture','component'}) do
-    Boot();nodes,components=Live();Showroom.SetModelOverride(modelPath)
-    if failure=='model' then e.modelFail=true
-    elseif failure=='bounds' then e.emptyModel=true
-    elseif failure=='material_xml' then e.modelMaterialMissing=true
-    elseif failure=='texture' then e.failResource='model/c8d2cfd2bc29455abb72b044deb16d5d/Textures/c8d2cfd2bc29455abb72b044deb16d5d_00_N.png'
-    elseif failure=='component' then e.fail='StaticModel' end
-    assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
-    local static=Shape():GetComponent('StaticModel',true)
-    if failure=='none' or failure=='material_xml' then
-        assert(static and static.model and static.material.textures[TU_DIFFUSE] and static.material.textures[TU_NORMAL])
-        assert(static.viewMask==MASK and static.lightMask==MASK and static.zoneMask==MASK)
-        Mock.Near(Spin().scale.y*1.9,1.7)
-        Showroom.DragBegin();local before=Spin().rotation.eulerAngles.y;Showroom.DragBy(80);Showroom.Update(0)
-        assert(Spin().rotation.eulerAngles.y~=before);Showroom.Home();Showroom.Update(.1)
-        e.width,e.height=390,844;Showroom.SetFocus(.3,.5);Showroom.Update(0);Mock.Near(Spin().scale.y*1.9,1.7)
-        Showroom.SetWeapon(Config('bow'));Finish();assert(not Shape():GetComponent('StaticModel',true),'bow must remain voxel')
-        Showroom.SetWeapon(Config('sword'));Finish();assert(Shape():GetComponent('StaticModel',true))
-        Showroom.SetModelOverride(nil);Finish();assert(not Shape():GetComponent('StaticModel',true),'nil must restore voxel selection')
-    else
-        assert(not static and Shape():GetComponent('CustomGeometry',true),'failed model must fall back to voxel')
-        assert(Showroom.Diagnostic():find('model_test',1,true))
-    end
-    Showroom.Exit();Showroom.Exit();Restored(nodes,components)
-end
-print('forge_showroom model override PASS: strict StaticModel/Model/texture signatures, 1.7m normalization, rotation, resize, bow exclusion, nil disable, failures and cleanup; MOCK ONLY')
-Boot();nodes,components=Live();Showroom.SetModelOverride(modelPath)
-assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'))
-graphics.GetWidth=nil -- fail after model load, before publication transfers ownership
-Showroom.Update(0);assert(Showroom.State()=='failed');Restored(nodes,components)
-print('forge_showroom model pending rollback PASS')
-
--- Route studies share the same camera/masks and cannot affect inventory/rig.
-local Blades=require('combat.ForgeShowroomBlades')
-for _,route in ipairs({'A','B','W'}) do
-    Boot();nodes,components=Live();Showroom.SetModelRoute(route);Showroom.SetFlowStrength(.7)
+WingSword.ENABLED=true
+do
+    Boot();nodes,components=Live();Showroom.SetFlowStrength(.7)
     assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
     local g=Shape():GetComponent('CustomGeometry',true)
-    local expected=Blades.Data(route)
+    local expected=Blades.Data()
     assert(#g.vertices==#expected.vertices and g.commits==1)
     assert(g.viewMask==MASK and g.lightMask==MASK and g.zoneMask==MASK)
-    Mock.Near(Spin().scale.y,1);assert(g.material.flow_strength==(route~='A' and .7 or 0))
+    Mock.Near(Spin().scale.y,1);assert(g.material.flow_strength==.7)
     for _,v in ipairs(g.vertices) do assert(v.uv and v.uv.y>=0 and v.uv.y<=1) end
-    local same=g.material;Showroom.SetFlowStrength(99);assert(same.flow_strength==(route~='A' and 2 or 0))
+    local same=g.material;Showroom.SetFlowStrength(99);assert(same.flow_strength==2)
     Showroom.SetFlowStrength(0);assert(same.flow_strength==0)
     Showroom.SetFlowStrength(.7);Showroom.SetFlowStrength(0/0);Mock.Near(Showroom.GetFlowStrength(),.7)
     for _=1,120 do Showroom.Update(1/60) end
@@ -752,22 +719,21 @@ for _,route in ipairs({'A','B','W'}) do
     local changed=Shape():GetComponent('CustomGeometry',true).material
     assert(same.disposed and changed.primary_color.r~=same.primary_color.r)
     assert(changed.secondary_color.r~=same.secondary_color.r and changed.accent_color.r~=same.accent_color.r)
-    Showroom.SetWeapon(Config('bow'));Finish();assert(not Shape():GetChild('BladeRoute'..route))
-    Showroom.SetWeapon(Config('sword'));Finish();assert(Shape():GetChild('BladeRoute'..route))
-    Showroom.SetModelRoute('original');Finish();assert(not Shape():GetChild('BladeRoute'..route))
+    Showroom.SetWeapon(Config('bow'));Finish();assert(not Shape():GetChild('WingSword'))
+    Showroom.SetWeapon(Config('sword'));Finish();assert(Shape():GetChild('WingSword'))
     Showroom.Exit();Restored(nodes,components)
 end
 for _,failure in ipairs({'material','geometry','emit','cancel','fit'}) do
-    Boot();nodes,components=Live();Showroom.SetModelRoute('B');assert(Showroom.Enter(e.scene))
+    Boot();nodes,components=Live();assert(Showroom.Enter(e.scene))
     Showroom.SetWeapon(Config('sword'))
-    if failure=='material' then e.failResource='model/forge-blades/BladeStudy.xml'
+    if failure=='material' then e.failResource='model/forge-blades/WingSword.xml'
     elseif failure=='geometry' then e.fail='CustomGeometry' end
     Showroom.Update(0);e.fail=nil
-    if failure=='cancel' then Showroom.SetModelRoute('A');Showroom.Update(0);Showroom.Exit()
+    if failure=='cancel' then Showroom.SetWeapon(Config('bow'));Showroom.Update(0);Showroom.Exit()
     elseif failure=='fit' then
         -- Fail the final Fit after native Commit, before pending ownership transfers.
         local pending=Spin():GetChild('PendingWeapon'):GetComponent('CustomGeometry',true)
-        while #pending.vertices+96<#Blades.Data('B').vertices do Showroom.Update(0) end
+        while #pending.vertices+96<#Blades.Data().vertices do Showroom.Update(0) end
         graphics.GetWidth=nil;Showroom.Update(0)
         assert(Showroom.State()=='failed');Showroom.Exit()
     else
@@ -776,39 +742,11 @@ for _,failure in ipairs({'material','geometry','emit','cancel','fit'}) do
             pending:GetComponent('CustomGeometry',true).DefineTexCoord=function()error('injected UV failure')end
         end
         Finish();assert(Showroom.IsReady() and Showroom.Diagnostic():find('blade_route',1,true))
-        assert(not Shape():GetChild('BladeRouteB'),'failed route leaves no geometry')
+        assert(not Shape():GetChild('WingSword'),'failed route leaves no geometry')
         Showroom.Exit()
     end
     Restored(nodes,components)
 end
-Boot();nodes,components=Live();assert(Showroom.GetModelRoute()=='original')
-assert(Showroom.Enter(e.scene));Showroom.SetWeapon(Config('sword'));Finish()
-Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='A')
-Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='B')
-Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='W')
-Showroom.CycleModelRoute();Finish();assert(Showroom.GetModelRoute()=='original')
-Showroom.Exit();Restored(nodes,components)
-Boot();nodes,components=Live();assert(Showroom.Enter(e.scene,{quality='low'}))
-Showroom.SetWeapon(Config('sword'));Finish()
-local oldInput,oldF6,oldF7=input,KEY_F6,KEY_F7
-rawset(_G,'KEY_F6',6);rawset(_G,'KEY_F7',7)
-local press=6
-rawset(_G,'input',{GetKeyPress=function(_,key)
-    if key==press then press=nil;return true end
-    return false
-end})
-Showroom.Update(0);Finish();assert(Showroom.GetModelRoute()=='A')
-press=6;Showroom.Update(0);Finish();assert(Showroom.GetModelRoute()=='B')
-local lowBlade=Shape():GetComponent('CustomGeometry',true)
-assert(not lowBlade.castShadows)
-press=7;Showroom.Update(0);assert(lowBlade.material.flow_strength==0)
-press=7;Showroom.Update(0);Mock.Near(lowBlade.material.flow_strength,.7)
-e.width,e.height=390,844;Showroom.SetFocus(.3,.5);Showroom.Update(0);Mock.Near(Spin().scale.y,1)
-Showroom.SetWeapon(Config('bow'));Finish();press=6;Showroom.Update(0)
-assert(Showroom.GetModelRoute()=='B','bow must not consume route hotkey')
-rawset(_G,'input',oldInput);rawset(_G,'KEY_F6',oldF6);rawset(_G,'KEY_F7',oldF7)
-Showroom.Exit();Restored(nodes,components)
-print('forge_showroom blade routes PASS: A/B/W masks, 1.7m, three colors, strengths, no reupload, bow exclusion, cancel/fallback/cleanup; MOCK ONLY')
 -- Thorn-flower bow route: bows show the generated model in the showroom; disabling it restores the voxel bow.
 do
     ThornBow.ENABLED=true
@@ -834,3 +772,14 @@ do
     Showroom.Exit();Restored(nodes,components)
     print('forge_showroom thorn bow route PASS; MOCK ONLY')
 end
+
+-- The catalyst uploads its five visible parts over multiple updates.
+Boot();nodes,components=Live();assert(Showroom.Enter(e.scene))
+Showroom.SetWeapon({weapon='time'});Finish()
+local clock=assert(Shape():GetChild('time_catalyst',true))
+assert(clock.enabled and #clock.children==5)
+for _,pivot in ipairs(clock.children) do
+    local mesh=assert(pivot:GetComponent('CustomGeometry'))
+    assert(pivot.enabled and mesh.viewMask==MASK and #mesh.vertices>0 and mesh.commits==1)
+end
+Showroom.Exit();Restored(nodes,components)

@@ -8,10 +8,10 @@
 -- 只需要往表里加条目 / 在 Cast 里套一层 modifier 处理，不用改 TimeObject。
 --
 -- 三个基础法术：
---   碎时 Shatter（左键 / 1）：时之物件 → 碎成大小不一的块（按住蓄力 1.4s → 碎成最小单元）；
+--   碎时 Shatter（法器左键）：时之物件 → 碎成大小不一的块（按住蓄力 1.4s → 碎成最小单元）；
 --        普通可破坏体素（封门乱石等）→ 引擎弹坑 + 崩落碎块。
---   冻结 Freeze（E / 2）：范围 3.5m 内正在运动的时之碎块定格 10 秒，可当平台踩。
---   回溯 Rewind（R / 3）：被瞄准的时之物件（或它的任一碎块）沿轨迹倒放、重组为完整物件。
+--   冻结 Freeze（E）：范围 3.5m 内正在运动的时之碎块定格 10 秒，可当平台踩。
+--   回溯 Rewind（R）：被瞄准的时之物件（或它的任一碎块）沿轨迹倒放、重组为完整物件。
 -- 配色：蓝为主（0.22, 0.46, 1.0），偏蓝紫（0.42, 0.34, 1.0），金色点缀（1.0, 0.74, 0.30）。
 -- ====================================================================
 
@@ -57,15 +57,17 @@ end
 -- ---------------------------------------------------------------- 法术定义
 M.SPELLS = {
     {
-        id = "shatter", name = "碎时", key = KEY_1, cooldown = 0.35, range = 40.0,
+        id = "shatter", name = "碎时", key = MOUSEB_LEFT, cooldown = 0.35, range = 40.0,
         color = M.RED, icon = "💥",
         desc = "左键：打碎时之物件 / 碎石（按住蓄力扩大破坏范围）",
         cast = function(ctx, aim, charge)
             if not aim.hit then return false, "没有目标" end
             local obj = aim.object
+            local stats=ctx.catalystStats and ctx.catalystStats()
+            local terrainRadius=M.ShatterRadius(charge)*(stats and stats.terrainRadius or 1)
             local level = (charge >= 1.0) and 3 or ((charge >= 0.5) and 2 or 1)
             local hitCount=SpellAOE(ctx,aim.pos,M.ShatterRadius(charge),{
-                dmg=8+4*charge,poise=3,armorBreak=0,pos=aim.pos,dir=aim.dir,
+                dmg=(stats and stats.attack or 8)*(1+.5*charge),poise=stats and stats.poise or 3,armorBreak=0,pos=aim.pos,dir=aim.dir,
                 material='core',tier='light',kind='time_shatter',clip='time_shatter',
                 swingId='spell:shatter:'..tostring(ctx.castSerial or 0),combo=0,heavy=false})
             if hitCount>0 then
@@ -74,11 +76,11 @@ M.SPELLS = {
             end
             if obj ~= nil then
                 if not obj.canShatter then return hitCount>0, obj.title .. "无法被打碎" end
-                local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge, radius = M.ShatterRadius(charge) })
+                local ok = obj:Shatter({ level = level, point = aim.pos, dir = aim.dir, power = 1.0 + 0.6 * charge, radius = terrainRadius })
                 if ok then
                     if ctx.fx then ctx.fx:Burst(aim.pos, "shatter", 1.0 + charge) end
-                    if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,M.ShatterRadius(charge)) end
-                    local radius=M.ShatterRadius(charge)
+                    if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,terrainRadius) end
+                    local radius=terrainRadius
                     for _,other in ipairs(ctx.puzzles.list) do
                         ---@type Vector3
                         local otherCenter = other.center
@@ -99,8 +101,8 @@ M.SPELLS = {
             -- 普通可破坏体素：引擎伤害（power 3：碎石硬度 1 能碎，古石硬度 4 打不动）
             local vol = aim.volume
             if vol ~= nil and vol.destructible then
-                local r = M.ShatterRadius(charge)
-                local removed = VoxelDamage.AtWorldPoint(ctx.world, aim.pos, r, 3.0)
+                local r = terrainRadius
+                local removed = VoxelDamage.AtWorldPoint(ctx.world, aim.pos, r, stats and stats.terrainPower or 3.0)
                 ctx.world:ApplyRadialImpulse(aim.pos, r * 1.8, 1200.0 * (1 + charge))
                 if ctx.fx then ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge) end
                 if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,r) end
@@ -112,7 +114,7 @@ M.SPELLS = {
         end,
     },
     {
-        id = "freeze", name = "冻结", key = KEY_2, cooldown = 0.6, range = 40.0,
+        id = "freeze", name = "冻结", key = KEY_E, cooldown = 0.6, range = 40.0,
         color = M.BLUE, icon = "❄",
         desc = "E：定格范围内的时之碎块 10 秒（可以踩上去）",
         cast = function(ctx, aim)
@@ -139,7 +141,7 @@ M.SPELLS = {
         end,
     },
     {
-        id = "rewind", name = "回溯", key = KEY_3, cooldown = 0.8, range = 60.0,
+        id = "rewind", name = "回溯", key = KEY_R, cooldown = 0.8, range = 60.0,
         color = M.GOLD, icon = "⏪",
         desc = "Q：让时之物件沿时间倒流，重组为原样",
         cast = function(ctx, aim)
@@ -169,7 +171,7 @@ for _, s in ipairs(M.SPELLS) do M.BY_ID[s.id] = s end
 local C = {}
 C.__index = C
 
----@param ctx table { world, puzzles, scene, fx }
+---@param ctx table { world, puzzles, scene, fx, canCast(id)? }
 function M.NewCaster(ctx)
     local self = setmetatable({}, C)
     self.ctx = ctx
@@ -188,7 +190,9 @@ function M.NewCaster(ctx)
 end
 
 function C:HandleCharge(down, aim, enabled)
-    if not enabled then self.charging,self.charge=false,0; return end
+    if not enabled or (self.ctx.canCast and not self.ctx.canCast('shatter')) then
+        self.charging,self.charge=false,0; return
+    end
     if down then
         if not self.charging and self:Ready("shatter") then self.charging,self.charge=true,0 end
     elseif self.charging then
@@ -203,6 +207,9 @@ function C:Cast(id, aim)
     ---@type table|nil
     local sp = M.BY_ID[id]
     if sp == nil or not self:Ready(id) then return false end
+    -- Enforce equipment/lifecycle permission before damage, cooldown or any
+    -- casting presentation. Input routing is not the authority for a spell.
+    if self.ctx.canCast and not self.ctx.canCast(id) then return false end
     self.castSerial=self.castSerial+1
     self.ctx.castSerial=self.castSerial
     if self.ctx.prepareCast then self.ctx.prepareCast(aim) end
@@ -225,6 +232,9 @@ function C:Say(msg, t)
 end
 
 function C:Update(dt)
+    if self.charging and self.ctx.canCast and not self.ctx.canCast('shatter') then
+        self.charging,self.charge=false,0
+    end
     for k, v in pairs(self.cool) do self.cool[k] = math.max(0, v - dt) end
     self.messageT = math.max(0, self.messageT - dt)
     if self.messageT <= 0 then self.message = nil end

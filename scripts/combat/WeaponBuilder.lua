@@ -121,6 +121,7 @@ function Builder.SetOpacity(mesh,alpha)
     local a=math.max(0,math.min(1,alpha))
     mesh.alpha=a
     mesh.node.enabled=a>0
+    if not mesh.volume then return end
     mesh.volume.material=a>=1 and mesh.opaque or mesh.fade
     if a>0 and a<1 then mesh.fade:SetShaderParameter("MatDiffColor",Variant(Color(1,1,1,a))) end
 end
@@ -129,6 +130,7 @@ end
 function Builder.Dispose(mesh)
     if not mesh or mesh.disposed then return end
     mesh.disposed=true
+    if not mesh.volume then mesh.node:Remove();return end
     -- RemoveVolume unregisters the native volume and removes its node.
     mesh.world:RemoveVolume(mesh.volume)
     mesh.opaque:Dispose()
@@ -183,31 +185,6 @@ function Builder.Build(world,parent,config,previous)
     return mesh
 end
 
---- Cooperative volume builds: ONLY in an already normally stepped world.
---- Detached RTT scenes must use BeginPreview/StepPreview below instead.
---- At most 96 cells and one native phase per step.
---- Native RebuildGeometry is indivisible; overBudget reports that Web measurement.
----@param world VoxelPhysicsWorld
----@param parent Node
----@param config table
----@param previous WeaponMesh?
----@return table
-function Builder.BeginBuild(world,parent,config,previous)
-    local copy={weapon=config.weapon,appearance=config.appearance,colors={}}
-    for k,v in pairs(config.colors) do copy.colors[k]=v end
-    return {world=world,parent=parent,config=copy,previous=previous,phase='compile',cursor=1,
-        done=false,totalMs=0,maxStepMs=0,nativeMs=0,overBudget=false,steps=0}
-end
-
----@param job table?
-function Builder.CancelBuild(job)
-    if not job or job.done then return end
-    if job.volume then job.world:RemoveVolume(job.volume);job.volume=nil end
-    if job.opaque then job.opaque:Dispose();job.opaque=nil end
-    if job.fade then job.fade:Dispose();job.fade=nil end
-    job.done,job.cancelled=true,true
-end
-
 -- The engine singleton uses instance dispatch; seconds become milliseconds.
 -- Keep this call inside Clock's pcall: sandbox/binding failures are non-fatal.
 local function ElapsedMs() return time:GetElapsedTime()*1000 end
@@ -229,79 +206,6 @@ local function Clock(job,override)
     return value
 end
 
----@param job table
----@param budgetMs number?
----@param clock? fun():number Millisecond clock; optional injectable offline clock.
----@return boolean done
----@return WeaponMesh?
----@return string?
-function Builder.StepBuild(job,budgetMs,clock)
-    if job.done then return true,job.mesh,job.error end
-    budgetMs=math.min(2,math.max(.1,budgetMs or 2))
-    local start=Clock(job,clock)
-    local phase=job.phase
-    local ok,reason=pcall(function()
-        if job.phase=='compile' then
-            job.blueprint=assert(Builder.Compile(job.config))
-            local old=job.previous
-            if old and not old.disposed and old.world==job.world and old.blueprint.geometry.key==job.blueprint.geometry.key then
-                if old.blueprint.key~=job.blueprint.key then Builder.ApplyPalette(job.world,job.config) end
-                old.blueprint=job.blueprint;old.node:SetParent(job.parent)
-                job.mesh,job.done=old,true
-            else job.phase='create' end
-        elseif job.phase=='create' then
-            local b=job.blueprint.bounds
-            job.volume=job.world:CreateVolume(b.dimensions[1],b.dimensions[2],b.dimensions[3],SIZE,Vector3.ZERO,Quaternion())
-            job.volume.destructible=false;job.volume.evictable=false
-            job.volume.collisionLayer=0;job.volume.collisionMask=0
-            job.node=job.volume:GetNode();job.node.enabled=false;job.node.temporary=true
-            job.node:SetParent(job.parent);job.node.rotation=Quaternion()
-            job.node.position=Vector3(b.min[1],b.min[2],b.min[3])
-            job.grid=job.volume:GetGrid();job.phase='materials'
-        elseif job.phase=='materials' then
-            Builder.ApplyPalette(job.world,job.config)
-            job.opaque=job.world:GetPaletteMaterial():Clone('WeaponPreviewOpaque')
-            job.opaque:SetShaderParameter('VoxelJitter',Variant(0.0))
-            job.fade=Builder.FadeMaterial(job.world,'WeaponPreviewFade')
-            job.volume.material=job.opaque;job.phase='fill'
-        elseif job.phase=='fill' then
-            local cells=job.blueprint.geometry.cells
-            local minimum=job.blueprint.bounds.gridMin
-            local last=math.min(#cells,job.cursor+95)
-            local first=job.cursor
-            while job.cursor<=last do
-                local now=Clock(job,clock)
-                -- Always advance at least one cell, even on a slow/coarse clock.
-                if job.cursor>first and start and now and now-start>=budgetMs then break end
-                local cell=cells[job.cursor]
-                local x,y,z=cell.x-minimum[1],cell.y-minimum[2],cell.z-minimum[3]
-                job.grid:SetSolid(x,y,z,true)
-                job.grid:SetVoxelMaterial(x,y,z,Builder.PaletteBase[job.config.weapon]+Builder.ChannelOffset[cell.channel])
-                job.cursor=job.cursor+1
-            end
-            if job.cursor>#cells then job.phase='geometry' end
-        elseif job.phase=='geometry' then
-            local before=Clock(job,clock)
-            job.volume:RebuildGeometry()
-            local after=Clock(job,clock)
-            job.nativeMs=before and after and after-before or 0
-            job.phase='publish'
-        else
-            local mesh={world=job.world,volume=job.volume,node=job.node,blueprint=job.blueprint,
-                opaque=job.opaque,fade=job.fade,alpha=1,disposed=false}
-            if job.previous and not job.previous.disposed then Builder.SetOpacity(mesh,job.previous.alpha);Builder.Dispose(job.previous)
-            else Builder.SetOpacity(mesh,1) end
-            job.mesh,job.done=mesh,true
-        end
-    end)
-    local finish=Clock(job,clock)
-    local elapsed=start and finish and finish-start or 0
-    job.steps=job.steps+1;job.totalMs=job.totalMs+elapsed
-    if elapsed>job.maxStepMs then job.slowestPhase=phase end
-    job.maxStepMs=math.max(job.maxStepMs,elapsed);job.overBudget=job.overBudget or elapsed>budgetMs
-    if not ok then Builder.CancelBuild(job);job.error=tostring(reason) end
-    return job.done,job.mesh,job.error
-end
 -- Render-only preview: never create a second VoxelPhysicsWorld or submit a
 -- VoxelVolume mesh job. The detached RTT scene has no physics pulse owner.
 -- Greedily merge coplanar, same-channel exposed faces; internal faces vanish.

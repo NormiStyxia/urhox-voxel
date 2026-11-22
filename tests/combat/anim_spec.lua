@@ -32,7 +32,7 @@ test("bone axis derivation",function()
     x,y,z=Mock.rotate(Quaternion(90,0,0),0,1,0);near(z,1)
 end)
 test("all active clips have complete, ordered tracks and matching event windows",function()
-    assert(#A.DebugList()==29)
+    assert(#A.DebugList()==26)
     for _,item in ipairs(A.DebugList()) do
         local c=D.Clips[item.id]
         assert(c.id==item.id and c.dur>0 and c.root and c.weapon and c.events and c.motion)
@@ -78,12 +78,12 @@ test("slow playback and accelerated playback retain exactly one hit",function()
         assert(on==1 and off==1)
     end
 end)
-test("stats speed is multiplied, timeScale and zero dt pause",function()
-    local a=new({stats={speed=1.4},timeScale=.5,quantize=false})
+test("timeScale and zero dt pause (no per-weapon speed stat)",function()
+    local a=new({timeScale=.5,quantize=false})
     local h=a:Play("sword_light_1",{speed=2,fadeIn=0})
-    a:Update(.05);near(state(a,h).t,.07)
-    a:Update(0);near(state(a,h).t,.07)
-    a.timeScale=0;a:Update(1);near(state(a,h).t,.07)
+    a:Update(.05);near(state(a,h).t,.05)
+    a:Update(0);near(state(a,h).t,.05)
+    a.timeScale=0;a:Update(1);near(state(a,h).t,.05)
     assert(#a:Poll()==0)
 end)
 test("fade weights and slerp match base-to-pose interpolation",function()
@@ -584,17 +584,17 @@ test("new spin/finisher IK and motion remain independent of frame rate",function
   end
  end
 end)
-test("plunge anticipation raises blade and descent points down without root displacement",function()
+test("removed plunge clips cannot be listed or played",function()
  for _,id in ipairs({"plunge_start","plunge_loop","plunge_land"}) do
-  local a,c=new();a:Play(id,{fadeIn=0,fadeOut=0})
-  for i=1,10 do
-   near(a:GetMotion(.01),0);Mock.reset(c);a:Apply();a:Poll()
-   local body=c.bones.body.rotation
-   local arm=c.bones.arm_right.rotation
-   local _,e=a:GetWeaponPose()
-   local blade=body*arm*a.gripRotation*Quaternion(e.x,e.y,e.z)*Vector3(0,1,0)
-   assert(id=='plunge_start' and blade.y>.85 or id~='plunge_start' and blade.y<-.70 and blade.x>.25 and blade.z>.15,'overhead anticipation / forward-downward descent')
-  end
+  assert(D.Clips[id]==nil)
+  for _,entry in ipairs(D.Order) do assert(entry~=id) end
+  for _,entry in ipairs(A.DebugList()) do assert(entry.id~=id) end
+  local a=new()
+  local handle,err=a:Play(id)
+  assert(handle==nil and err=="unknown_clip")
+  near(a:GetMotion(.1),0)
+  assert(#a:Poll()==0)
+  for _,track in ipairs(a.tracks) do assert(not track.live) end
  end
 end)
 

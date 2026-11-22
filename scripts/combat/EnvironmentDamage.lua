@@ -170,8 +170,8 @@ function E:Slice(a,b,feet,radius)
     local center=E.Cell(hit)
     if not center then self:Report('sword','invalid-cell',hit);return end
     -- Never cut an upward-facing support surface, nor the band below the feet.
-    -- Extra clearance covers the engine's ragged damage boundary. Plunge/landing
-    -- is excluded altogether by Melee; its impact ring remains cosmetic.
+    -- Extra clearance covers the engine's ragged damage boundary. Melee only
+    -- accepts the five ordinary light stages and the cross slash.
     if hit.normal.y>.55 or center.y-radius*2<feet.y+.15 then
         self:Report('sword','floor-guard',hit,center,radius);return
     end

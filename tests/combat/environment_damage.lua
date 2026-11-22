@@ -123,9 +123,11 @@ for _,fps in ipairs({30,60,120}) do
     for _,c in ipairs(calls) do assert(c.radius<=E.CUT_RADIUS and c.radius>E.LIGHT_RADIUS and c.center.y>feet.y+.15+c.radius*2) end
     for x=0,7 do for z=0,7 do assert(v:GetGrid():IsSolid(x,0,z),'floor intact')end end
     local n=#calls
-    damage:Melee(Vector3(-.4,.2,.5),Vector3(.5,.2,.5),feet,2,'plunge_land',true,1)
+    for _,id in ipairs({'plunge_start','plunge_loop','plunge_land','sword_light_6','unknown'}) do
+        damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),feet,2,id,true,1)
+    end
     damage:Melee(Vector3(-.4,1.5,.5),Vector3(.5,1.5,.5),feet,3,'sword_light_1',false,2)
-    assert(#calls==n,'plunge and inactive attack never excavate')
+    assert(#calls==n,'removed/unknown clips and inactive attacks never excavate')
 end
 reset();v=volume(Vector3.ZERO,.25,{x=4,y=4,z=4});damage=new()
 damage:Melee(Vector3(.5,1.5,.5),Vector3(.5,.2,.5),Vector3(-.8,0,.5),1,'sword_heavy_release',true,0)
