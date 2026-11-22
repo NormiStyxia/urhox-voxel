@@ -107,14 +107,14 @@ for _,class in ipairs({Beetle,Sentry,Beast}) do
         assert(enemy.visual.bones.head.rotation.angle<0,'roar head lift')
         assert(enemy.visual.phaseRing.enabled and not enemy.visual.bones.core.enabled)
         assert(enemy.visual.hitGroups['back_armor:0:0'].material.rage_glow==1)
-        enemy:ApplyHit({dmg=70,part='back_armor'}); T.Tick(enemy,.1,Vector3(0,0,3))
+        enemy:ApplyHit({dmg=70,part='back_armor',kind='arrow'}); T.Tick(enemy,.1,Vector3(0,0,3))
         assert(enemy.visual.bones.core.enabled)
     end
     enemy:Reset(); enemy:SetActive(true)
     for _,group in pairs(enemy.visual.hitGroups) do assert(not group.rage) end
     local part=class==Beetle and 'shell' or (class==Beast and 'foreleg_l' or 'body')
     local original=Vector3(enemy.position.x,enemy.position.y,enemy.position.z)
-    enemy:ApplyHit({dmg=.1,part=part,dir=Vector3(1,0,0)})
+    enemy:ApplyHit({dmg=.1,part=part,kind='arrow',dir=Vector3(1,0,0)})
     if class==Beast then T.Near(enemy.position.x,original.x) end
     for _,p in ipairs(enemy.visual.pieces) do
         if p.name==part then

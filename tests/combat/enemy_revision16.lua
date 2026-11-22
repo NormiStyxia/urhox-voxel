@@ -14,13 +14,13 @@ for _,dir in ipairs({Vector3(0,0,1),Vector3(0,0,-1)}) do
 end
 b:Reset(); b.aggro=true; b:SetState('ATTACK'); b:FinishAttack()
 assert(b.poseRoll==180,'recovery still flips the body for presentation')
-assert(not b:ApplyHit({dmg=1,part='belly'}).hit,'no underside window remains')
+assert(not b.parts.belly,'no underside window remains')
 print('PASS small beetle: one hit zone, full damage from every side, no underside window')
 
 local boss=Beast.New(nil,nil,terrain,combat,Vector3.ZERO,'rage')
 boss:ApplyHit({dmg=301,part='foreleg_l'})
 assert(boss.phase==2 and boss.parts.back_armor.armor==70 and not boss:GetHurtShapes()[5].enabled)
-assert(not boss:ApplyHit({dmg=1,part='core'}).hit)
+assert(not boss:ApplyHit({dmg=1,part='core',kind='arrow'}).hit)
 boss.hitStop=0; boss:Chase(.1,Vector3(0,0,20),20); T.Near(boss.position.z,.23)
 for i=1,3 do
     boss:SelectAttack()

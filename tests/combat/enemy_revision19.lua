@@ -31,8 +31,8 @@ for _,p in ipairs(pool.slots) do if p.active then
     T.Near(p.x,-.6+b.impact.normal.x*.02); T.Near(p.y,.3+b.impact.normal.y*.02); T.Near(p.z,b.impact.normal.z*.02)
     assert(p.material=='flash' or (p.vx>0 and p.shape=='cross' and p.ttl>=.18 and p.ttl<=.28))
 end end
-hit=b:ApplyHit({dmg=1,part='belly'})
-assert(not hit.hit and hit.part==nil and hit.material==nil and not hit.weak)
+assert(not b.parts.belly and #b:GetHurtShapes()==1)
+hit=nil
 local boss=actor(Beast)
 local r=boss:ApplyHit({dmg=1,part='foreleg_l',poise=100,pos=Vector3(-.8,.4,.7),dir=Vector3(0,0,1)})
 assert(r.staggered and not r.broke and r.material=='armor')
