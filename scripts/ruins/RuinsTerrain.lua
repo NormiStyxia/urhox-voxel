@@ -705,7 +705,8 @@ function M.BuildGrass(scene,field,prepareMaps,checkpoint)
     if field.flowers then field.terrainNode:RemoveComponent(field.flowers) end
     if field.grass then field.terrainNode:RemoveComponent(field.grass) end
     field.grass,field.flowers=nil,nil
-    field.tufts=require("ruins.GrassTufts").Build(scene,field,checkpoint)
+    local sharedMaterial=M.tufts and M.tufts.material -- atmosphere updates this scene's fallback material
+    field.tufts=require("ruins.GrassTufts").Build(scene,field,checkpoint,sharedMaterial)
 end
 
 -- 显示层顶点网格上的草地权重（0..1）

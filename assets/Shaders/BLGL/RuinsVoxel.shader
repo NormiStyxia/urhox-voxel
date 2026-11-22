@@ -21,6 +21,8 @@ uniform float wall_radius = 51.0;
 uniform vec3 meadow_origin = vec3(0.0);
 uniform float meadow_sun = 0.0;
 uniform float window_light = 1.0;
+// XYZ: world-space cross-section centre; W=1 only on private near-joint materials.
+uniform vec4 wood_center = vec4(0.0);
 // 可破坏体积被准星选中时的外轮廓光（碎时 = 红）
 uniform float hover = 0.0;
 uniform vec4 hover_color = vec4(1.0, 0.30, 0.24, 1.0);
@@ -164,12 +166,20 @@ void fragment() {
     // A single growth-ring field through the timber gives longitudinal fibres on
     // its sides and curved rings on a sawn end. The three frame axes come from
     // the voxel palette, so turning the camera never turns a plank's grain.
-    if ((idx >= 150.0 && idx <= 152.0) || (idx >= 157.0 && idx <= 159.0)) {
-        vec3 timber = wp.xyz;
-        if (idx == 157.0) { timber = wp.yzx; }
-        if (idx >= 158.0) { timber = wp.zxy; }
-        vec2 bow = vec2(sin(timber.x * 1.3), cos(timber.x * 0.83)) * 0.019;
-        vec2 radial = (fract((timber.yz + bow) / 0.75 + vec2(0.19,0.37)) - 0.5) * 0.75;
+    if (idx == 146.0 || (idx >= 150.0 && idx <= 152.0) || (idx >= 157.0 && idx <= 159.0)) {
+        vec3 timberPosition = wp - wood_center.xyz * wood_center.w;
+        vec3 timber = timberPosition.xyz;
+        // The anvil's weathered wood block (146) is a vertical stump, not a plank.
+        bool verticalWood = idx == 146.0 || idx == 157.0;
+        if (verticalWood) { timber = timberPosition.yzx; }
+        if (idx >= 158.0) { timber = timberPosition.zxy; }
+        vec2 radial = timber.yz;
+        // A draw-uniform branch keeps the two small joints continuous and centred
+        // on their actual cuts; the rest of the house retains its existing field.
+        if (wood_center.w < 0.5) {
+            vec2 bow = vec2(sin(timber.x * 1.3), cos(timber.x * 0.83)) * 0.019;
+            radial = (fract((timber.yz + bow) / 0.75 + vec2(0.19,0.37)) - 0.5) * 0.75;
+        }
         radial.y *= 0.87;
         float radius = max(length(radial), 0.0001);
         float phase = radius * 76.0 + sin(radius * 14.0);
@@ -179,7 +189,7 @@ void fragment() {
         woodRoughness = -0.077 - 0.047 * ring;
         vec2 slope = radial / radius * vec2(1.0,0.87) * cos(phase) * 0.068 * visible;
         vec3 grainNormal = vec3(0.0,slope);
-        if (idx == 157.0) { grainNormal = grainNormal.zxy; }
+        if (verticalWood) { grainNormal = grainNormal.zxy; }
         if (idx >= 158.0) { grainNormal = grainNormal.yzx; }
         grad += grainNormal - n * dot(n,grainNormal);
     }

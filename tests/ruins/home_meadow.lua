@@ -175,9 +175,11 @@ job:Cancel();job:Cancel();assert(#world.vols==1 and world.vols[1]==foreign and j
 local done,err=job:Step();assert(not done and err)
 print(('PASS native grass and flowers, %d planted mask texels (%d elevated), quality and world-space contact'):format(planted,raised))
 home.Build=function(_,root)phase='meadow';generators.meadow(root)end
+terrain.tufts={material=material()}
 for _,mode in ipairs({'unsupported','missing'}) do
     backend=mode;bladeRoots=0;counts.meadow=0
     local fallbackJob=runJob();local tufts=home.field.tufts;local total=#tufts.tiles
+    assert(tufts.material==terrain.tufts.material)
     assert(bladeRoots>5000 and counts.meadow>=6 and home.field.terrain==nil and not home.field.grass)
     for i,p in ipairs({profiles.high,profiles.medium,profiles.low,{grassDensity=0,grassDistance=24},profiles.high}) do
         quality.ApplyGrass(home.field,p)

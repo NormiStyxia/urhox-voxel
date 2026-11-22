@@ -280,7 +280,14 @@ local function porchJoint(world,x)
     join:Box(x-.3125,2.9375,3.9375,x-.375,3.0625,4.0625,cedar)
     join:Box(x+.3125,2.9375,3.9375,x+.375,3.0625,4.0625,cedar)
     join:Box(x-.1875,2.75,4.0625,x+.1875,2.875,4.25,cedar)
-    join:Finish({visual=true})
+    local volume=join:Finish({visual=true})
+    if volume and volume.material then
+        -- Only these two near-view joints own a local timber frame. Never write
+        -- its centre onto the shared size:masonry material used by other volumes.
+        local material=volume.material:Clone()
+        material:SetShaderParameter('wood_center',Variant(Vector4(H.x+x,H.base+3.03125,H.z+4,1)))
+        volume.material=material
+    end
 end
 local function house(world)
     local old=brush(world,{-22,0,6},{5,12,17},.25)
@@ -334,11 +341,13 @@ local function house(world)
     porchJoint(world,-7)
     -- Upper rooms step back from the forge and the low pond-facing porch.
     local loft=brush(world,{-14,4,5.5},{-4,14,13.75},.125)
+    local sideBands={}
     local function storey(x0,z0,x1,z1,y,h)
         loft:Box(x0,y,z0,x1,y+h,z1,P.MARBLE_B)
         loft:Carve(x0+.25,y+.25,z0+.25,x1-.25,y+h,z1-.25)
         for _,level in ipairs({y,y+h-.25}) do
             loft:Box(x0-.125,level,z0-.125,x1+.125,level+.25,z1+.125,cedar)
+            sideBands[#sideBands+1]={x0,z0,x1,z1,level}
         end
         for _,x in ipairs({x0,(x0+x1)/2,x1-.25}) do
             loft:Box(x,y,z0-.125,x+.25,y+h,z0+.125,cedarPost)
@@ -353,6 +362,16 @@ local function house(world)
     roof(loft,-9,9.5,4.375,3.375,7,2)
     storey(-11.875,8.125,-6.375,11.875,8.125,2.625)
     roof(loft,-9.125,10,3.375,2.75,10.75,2.625)
+    -- Roof infill and vertical posts overlap the floor edges. Repaint all four
+    -- horizontal beams last within the already solid grid: front/back/corners X,
+    -- left/right Z. No collision cells are added.
+    for _,band in ipairs(sideBands) do
+        local x0,z0,x1,z1,level=table.unpack(band)
+        loft:Box(x0-.125,level,z0-.125,x1+.125,level+.25,z0+.125,cedar)
+        loft:Box(x0-.125,level,z1-.125,x1+.125,level+.25,z1+.125,cedar)
+        loft:Box(x0-.125,level,z0+.125,x0+.125,level+.25,z1-.125,cedarBeamZ)
+        loft:Box(x1-.125,level,z0+.125,x1+.125,level+.25,z1-.125,cedarBeamZ)
+    end
     loft:Finish({masonry='homeWindows'})
 end
 local function banks(world)

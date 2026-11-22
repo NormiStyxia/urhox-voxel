@@ -3,7 +3,7 @@ local Draw=require('ui.PixelDraw')
 local Model=require('ui.WorldMapModel')
 local Map={}
 local layer,root,onTravel,onClose,view
-local current,selected,notice,touchMode,opened,closing,closeFrom
+local current,selected,notice,touchMode,opened,closing,closeFrom,pointed
 local pointers={}
 local ink={64,63,52}; local muted={108,98,74};local edge={155,127,84}
 local paper={232,213,167};local light={246,228,183};local line={207,184,139}
@@ -19,16 +19,16 @@ local function metrics()
     local W,H=math.floor(aw/k),math.floor(ah/k)
     return round((w+s.left-s.right-W*k)*.5/u)*u,round((h+s.top-s.bottom-H*k)*.5/u)*u,k,W,H,w,h
 end
-local function frame(W,H)
-    Model.Update(view)
+local function frame(W,H,k,cellSize)
     local top,bottom=34,H-54
-    local axis=math.abs(view.sy)*view.sp
-    local fit=math.min((W-40)/346,(bottom-top-6)/(112+182*axis))
-    local u=Draw.PixelToHUD();local _,_,k=metrics()
-    local step=math.max(u/k,math.floor(fit*k/u)*u/k)
+    local u=Draw.PixelToHUD()
+    local nominal=math.min((W-40)/346,(bottom-top-6)/112)
+    local step=math.max(u/k,math.ceil(nominal*k/u)*u/k)
+    Model.Update(view,(W-46)/step,(bottom-top-15)/step,cellSize)
     local ax,ay=Model.Anchor(view,current)
-    local ox=round(clamp(W*.5-Model.width*step*.5+view.panX,43-ax*step,W-23-ax*step))
-    local oy=round(clamp((top+bottom)*.5-Model.height*step*.5+view.panY,top+43-ay*step,bottom-5-ay*step))
+    local iconSize=32*math.max(1,round(k/u*.57))*u/k
+    local ox=round(clamp(W*.5-view.centerX*step+view.panX,26+iconSize*.5-ax*step,W-23-ax*step))
+    local oy=round(clamp((top+bottom)*.5-view.centerY*step+view.panY,top+20+iconSize-ay*step,bottom-5-ay*step))
     return ox,oy,step,top,bottom
 end
 local function screenPoint(x,y)
@@ -43,9 +43,20 @@ local function progress()
 end
 local function paperStrip(vg,H,x,width,sourceX,sourceWidth)
     local sx=width/sourceWidth
-    Draw.Save(vg);nvgIntersectScissor(vg,x,0,width,H)
-    nvgTranslate(vg,x-sourceX*sx,0);nvgScale(vg,sx*.5,H/252)
-    Draw.Image(vg,'map_scroll',0,0);Draw.Restore(vg)
+    for section=1,3 do
+        local y,sh,sy=0,10,0
+        local h=12
+        if section==2 then y,sy,sh,h=12,10,106,H-24
+        elseif section==3 then y,sy=H-12,116 end
+        local repeatCount=section==2 and math.max(1,round(h/(sh*sx))) or 1
+        for tile=0,repeatCount-1 do
+            local dy=y+round(h*tile/repeatCount)
+            local dh=y+round(h*(tile+1)/repeatCount)-dy
+            Draw.Save(vg);nvgIntersectScissor(vg,x,dy,width,dh)
+            nvgTranslate(vg,x-sourceX*sx,dy-sy*dh/sh);nvgScale(vg,sx*.5,dh/sh*.5)
+            Draw.Image(vg,'map_scroll',0,0);Draw.Restore(vg)
+        end
+    end
 end
 local function chart(vg,W,H,left,right)
     local roller=12
@@ -87,7 +98,11 @@ end
 local Layer=UI.Panel:Extend('RuinsWorldMap')
 function Layer:Render(vg)
     local x,y,k,W,H,w,h=metrics()
-    local ox,oy,step,top,bottom=frame(W,H)
+    local cellSize=1
+    for _,p in pairs(pointers) do
+        if p.target=='chart' and p.drag and not p.pair and p.mode~='pan' then cellSize=2;break end
+    end
+    local ox,oy,step,top,bottom=frame(W,H,k,cellSize)
     local openness=progress()
     local left=round((W-26)*(1-openness)*.5);local right=W-left
     Draw.Begin(vg,true);Draw.Rect(vg,0,0,w,h,Draw.colors.deep,.91*openness)
@@ -100,8 +115,9 @@ function Layer:Render(vg)
     Draw.Save(vg);nvgIntersectScissor(vg,13,top,W-26,bottom-top)
     islands(vg,ox,oy,step)
     -- The destination reticle and upright portrait have independent anchors.
-    if selected and selected~=current then
-        local a,b=Model.Anchor(view,selected);local dx,dy=round(ox+a*step),round(oy+b*step)
+    local targetId=pointed or selected
+    if targetId and targetId~=current then
+        local a,b=Model.Anchor(view,targetId);local dx,dy=round(ox+a*step),round(oy+b*step)
         for _,side in ipairs({-1,1}) do
             local ex=dx+side*6
             Draw.Rect(vg,ex,dy-3,2,7,green);Draw.Rect(vg,ex+(side==-1 and 0 or -2),dy-4,4,2,gold)
@@ -125,13 +141,13 @@ function Layer:Render(vg)
         if current==id then Draw.Rect(vg,bx+26,H-29,6,2,gold) end
     end
     Draw.Text(vg,'当前位置 · '..names[current],W-18,H-38,12,muted,NVG_ALIGN_RIGHT)
-    local help=touchMode and '单指旋转 · 双指平移 · 轻触岛屿前往' or '左拖旋转 · 右拖平移 · 点击岛屿前往'
-    Draw.Text(vg,notice or help,18,H-19,12,notice and red or muted)
+    local help=touchMode and '单指转动 · 双指平移 · 点岛前往' or '左键滑动转向 · 右键平移 · 点岛前往'
+    Draw.Text(vg,notice or help,18,H-20,12,notice and red or ink)
     Draw.Restore(vg);Draw.Restore(vg);Draw.Finish(vg)
 end
 function Map.SetNotice(text) notice=text end
 function Map.IsOpen() return layer~=nil end
-function Map.CancelPointers() pointers={} end
+function Map.CancelPointers() pointers={};pointed=nil end
 function Map.Close()
     if not layer then return end
     root:RemoveChild(layer);root,layer,view=nil,nil,nil;Map.CancelPointers()
@@ -157,7 +173,7 @@ function Map.StepClosing()
     return true
 end
 local function selectIsland(id)
-    if id then selected,notice=id,nil end
+    if id then selected,notice,pointed=id,nil,nil end
 end
 local function travel()
     if selected==current then return end
@@ -185,13 +201,14 @@ local function pan(dx,dy,W,H)
 end
 function Map.Down(id,x,y,mode)
     if pointers[id] or closing or progress()<1 then return end
-    local u,v,W,H=screenPoint(x,y)
+    local u,v,W,H,density=screenPoint(x,y)
     local t=target(u,v,W,H)
     if not t then return end
     local p={x=x,y=y,startX=x,startY=y,target=t,mode=mode}
     if t=='chart' then
-        local ox,oy,k=frame(W,H)
+        local ox,oy,k=frame(W,H,density)
         p.island=Model.Pick(view,(u-ox)/k,(v-oy)/k)
+        pointed=p.island
     end
     if mode=='touch' then
         touchMode=true
@@ -213,6 +230,7 @@ function Map.Move(id,x,y)
         p.drag=true
     end
     p.x,p.y=x,y
+    pointed=nil
     if p.target~='chart' then return end
     local _,_,k,W,H=metrics()
     if p.pair then
@@ -230,11 +248,11 @@ function Map.Up(id,x,y)
     if x then Map.Move(id,x,y) else x,y=p.x,p.y end
     pointers[id]=nil
     if p.drag or p.mode=='pan' then return end
-    local u,v,W,H=screenPoint(x,y)
+    local u,v,W,H,density=screenPoint(x,y)
     local t=target(u,v,W,H);if t~=p.target then return end
     if t=='close' then dismiss()
     elseif t=='chart' then
-        local ox,oy,k=frame(W,H)
+        local ox,oy,k=frame(W,H,density)
         local hit=Model.Pick(view,(u-ox)/k,(v-oy)/k)
         if hit and hit==p.island then selectIsland(hit);travel() end
     else selectIsland(t);travel() end

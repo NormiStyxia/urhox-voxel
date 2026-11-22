@@ -214,38 +214,56 @@ end
 local function project(v,x,y,z)
     local side=x*v.cy-z*v.sy
     local forward=x*v.sy+z*v.cy
-    return width*.5+side*scale,height*.5-(y*v.cp+forward*v.sp)*scale,y*v.sp-forward*v.cp
+    return width*.5+side*v.scale,height*.5-(y*v.cp+forward*v.sp)*v.scale,y*v.sp-forward*v.cp
 end
 function Model.Anchor(v,id)
     local a=anchors[id]
     return project(v,centers[id]+a[1],a[2],a[3])
 end
-function Model.Update(v)
-    if v.lastYaw==v.yaw and v.lastPitch==v.pitch then return end
+function Model.Update(v,limitW,limitH,cellSize)
+    cellSize=cellSize or 1
+    if v.lastYaw==v.yaw and v.lastPitch==v.pitch and v.limitW==limitW and v.limitH==limitH and v.cellSize==cellSize then return end
+    v.cellSize=cellSize
+    local cols,rows=width//cellSize,height//cellSize
+    v.scale,v.limitW,v.limitH=scale,limitW,limitH
     v.lastYaw,v.lastPitch=v.yaw,v.pitch
     v.cy,v.sy,v.cp,v.sp=cos(v.yaw),sin(v.yaw),cos(v.pitch),sin(v.pitch)
     local points,depth,ids=v.screen,v.depth,v.ids
     local pixels=v.pixels or {};v.pixels=pixels
     for k in pairs(depth) do depth[k],ids[k],pixels[k]=nil,nil,nil end
+    local x0,x1,y0,y1=width,0,height,0
     for i,p in ipairs(vertices) do
         local pt=points[i] or {};points[i]=pt
         pt[1],pt[2],pt[3]=project(v,p[1],p[2],p[3])
+        x0,x1=min(x0,pt[1]),max(x1,pt[1]);y0,y1=min(y0,pt[2]),max(y1,pt[2])
     end
-    local loX,hiX,loY,hiY=width,0,height,0
+    local zoom=limitW and min(1,limitW/(x1-x0),limitH/(y1-y0)) or 1
+    v.scale=scale*zoom
+    v.centerX=width*.5+((x0+x1-width)*.5)*zoom
+    v.centerY=height*.5+((y0+y1-height)*.5)*zoom
+    -- Keep the camera, anchors and output rectangles in full map coordinates.
+    -- During orbit each depth sample covers a 2x2 patch of that same image.
+    if zoom<1 or cellSize>1 then
+        for _,p in ipairs(points) do
+            p[1]=(width*.5+(p[1]-width*.5)*zoom)/cellSize
+            p[2]=(height*.5+(p[2]-height*.5)*zoom)/cellSize
+        end
+    end
+    local loX,hiX,loY,hiY=cols,0,rows,0
     for _,f in ipairs(faces) do
         local a,b,c=points[f[1]],points[f[2]],points[f[3]]
         local dx,dy,bx,by=b[1]-a[1],b[2]-a[2],c[1]-a[1],c[2]-a[2]
         local det=dx*by-dy*bx
         if det>.00001 then
-            local left=max(0,ceil(min(a[1],b[1],c[1])-.5));local right=min(width-1,floor(max(a[1],b[1],c[1])-.5))
-            local top=max(0,ceil(min(a[2],b[2],c[2])-.5));local bottom=min(height-1,floor(max(a[2],b[2],c[2])-.5))
+            local left=max(0,ceil(min(a[1],b[1],c[1])-.5));local right=min(cols-1,floor(max(a[1],b[1],c[1])-.5))
+            local top=max(0,ceil(min(a[2],b[2],c[2])-.5));local bottom=min(rows-1,floor(max(a[2],b[2],c[2])-.5))
             loX,hiX,loY,hiY=min(loX,left),max(hiX,right),min(loY,top),max(hiY,bottom)
             local dz,ez=b[3]-a[3],c[3]-a[3]
             local du,dv=by/det,-dy/det
             for y=top,bottom do
                 local yy,xx=y+.5-a[2],left+.5-a[1]
                 local u,vv=(xx*by-yy*bx)/det,(dx*yy-dy*xx)/det
-                local key=y*width+left
+                local key=y*cols+left
                 for _=left,right do
                     if u>=-1e-7 and vv>=-1e-7 and u+vv<=1.0000001 then
                         local z=a[3]+u*dz+vv*ez
@@ -261,12 +279,13 @@ function Model.Update(v)
     for y=loY,hiY do
         local nextRow={};local x=loX
         while x<=hiX do
-            local ink=pixels[y*width+x];local a=x
-            repeat x=x+1 until x>hiX or pixels[y*width+x]~=ink
+            local ink=pixels[y*cols+x];local a=x
+            repeat x=x+1 until x>hiX or pixels[y*cols+x]~=ink
             if ink then
-                local key=(a*width+x)*128+ink;local rect=last[key]
-                if rect then rect[4]=rect[4]+1 else
-                    local g=groups[ink] or {};groups[ink]=g;rect={a,y,x-a,1};g[#g+1]=rect
+                local key=(a*cols+x)*128+ink;local rect=last[key]
+                if rect then rect[4]=rect[4]+cellSize else
+                    local g=groups[ink] or {};groups[ink]=g
+                    rect={a*cellSize,y*cellSize,(x-a)*cellSize,cellSize};g[#g+1]=rect
                 end
                 nextRow[key]=rect
             end
@@ -277,6 +296,8 @@ function Model.Update(v)
 end
 function Model.Pick(v,x,y)
     x,y=floor(x),floor(y)
-    if x>=0 and x<width and y>=0 and y<height then return v.ids[y*width+x] end
+    if x>=0 and x<width and y>=0 and y<height and v.cellSize then
+        return v.ids[(y//v.cellSize)*(width//v.cellSize)+x//v.cellSize]
+    end
 end
 return Model

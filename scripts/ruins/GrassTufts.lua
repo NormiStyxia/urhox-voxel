@@ -11,13 +11,18 @@ local function emit(geo,x,y,z,uv,col)
     geo:DefineTexCoord(uv)
 end
 
-function M.Build(scene,field,checkpoint)
+local function tuftMaterial()
     local mat=Material:new()
     if not mat:SetSurfaceShader("Shaders/BLGL/RuinsGrassTuft.shader") then
         mat:SetTechnique(0,cache:GetResource("Technique","Techniques/PBR/PBRNoTexture.xml"))
         mat:SetShaderParameter("MatDiffColor",Variant(Color(.36,.55,.24)))
         mat.cullMode=CULL_NONE
     end
+    return mat
+end
+
+function M.Build(scene,field,checkpoint,sharedMaterial)
+    local mat=sharedMaterial or tuftMaterial()
     local root=scene:CreateChild("GrassTufts")
     local rng=Noise.Rng(5150)
     local inner=field.COURT_R and field.COURT_R+6.5 or 0
