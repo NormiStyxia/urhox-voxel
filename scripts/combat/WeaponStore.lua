@@ -5,9 +5,11 @@ local SAVE_PATH = "weapons-v1.json"
 local PENDING_PATH = SAVE_PATH..'.tmp'
 local BACKUP_PATH = SAVE_PATH..'.bak'
 local MAX_SAVE_BYTES = 16384
+-- Starting ore for previewing weapon models in the forge.
+local PREVIEW_ORE = 999
 
 local function Progress(legacy)
-    local progress={ore=0,sand=0,slots={}}
+    local progress={ore=legacy and 0 or PREVIEW_ORE,sand=0,slots={}}
     for _,class in ipairs(Catalog.Classes) do
         local items=Catalog.Weapons[class]
         local id=items[legacy and #items or 1].id

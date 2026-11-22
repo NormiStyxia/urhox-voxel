@@ -113,6 +113,8 @@ local old=Store.Load()
 assert(old.active=='bow' and old.sword.colors.primary==6)
 assert(old.progress.slots.sword.weapon=='wing' and old.progress.slots.bow.weapon=='thorn')
 local rig={config=Store.Default()}
+assert(rig.config.progress.ore==999 and rig.config.progress.sand==0)
+rig.config.progress.ore=0 -- exercise the insufficient-ore path
 local function Slot() return rig.config.progress.slots.sword end
 local function Forge(action,id,roll)
     return Store.Forge(rig,'sword',action,id,function() assert(roll);return roll end)
