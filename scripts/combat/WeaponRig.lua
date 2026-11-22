@@ -107,6 +107,9 @@ local Store=require("combat.WeaponStore")
 ---@field arrivalFresh boolean
 ---@field retiring table Reused outgoing visual snapshot; never gameplay active.
 ---@field hangForward Vector3
+---@field hangPreviousRoot Vector3
+---@field hangMotionReady boolean
+---@field hangClearance number Additional outward spacing, independent of the socket spring.
 local Rig={}
 Rig.__index=Rig
 local TRAIL_SEGMENTS=8
@@ -119,6 +122,10 @@ local REVEAL_TIME,HIDE_TIME,SWAP_HALF=.16,.12,.08
 local HOLO_OUT,HOLO_IN=.30,.40 -- wing sword projection: slower dissolve / back-socket reform
 local BACK_DEPTH=-.50 -- legacy voxel character; imported model is fitted below
 local MAX_HANG_ANGLE=math.rad(5)
+local HANG_SPEED_DEPTH=.028 -- m per actual horizontal m/s; walk .118, run .202, sprint capped at .24
+local HANG_BOW_SPEED_DEPTH=.040 -- the curved limb/string sweep needs earlier walk clearance
+local HANG_MAX_DEPTH,HANG_BOW_MAX_DEPTH=.24,.26
+local HANG_OPEN_TIME,HANG_CLOSE_TIME=.07,.30
 local function Vec(t) return Vector3(t[1],t[2],t[3]) end
 local function Clamp(n,lo,hi) return math.max(lo,math.min(hi,n)) end
 local function Delta(a,b) return (a-b+180)%360-180 end
@@ -225,7 +232,8 @@ function Rig:Init(scene,world,controller)
     self.events,self.eventOutput,self.layers,self.visualKeys={},{},{},{}
     self.hangPosition,self.hangVelocity,self.hangTarget,self.moveTarget=Vector3(),Vector3(),Vector3(),Vector3()
     self.hangRotation,self.moveRotation=Quaternion(),Quaternion()
-    self.hangForward=Vector3()
+    self.hangForward,self.hangPreviousRoot=Vector3(),Vector3()
+    self.hangMotionReady,self.hangClearance=false,0
     self.retiring={weapon=nil,elapsed=0,alpha=0,layerMask=0,bowStage=0,arrow=false,position=Vector3(),rotation=Quaternion()}
     self.hangReady=false
     self.bowDraw,self.bowStage,self.bowArrowOffset=0,0,Vector3()
@@ -692,6 +700,11 @@ function Rig:Attach(pose)
         entry.pivot:SetParent(socket)
         entry.pivot.position=Vector3.ZERO
         entry.pivot.rotation=Quaternion()
+        if pose=='back' and self.hangReady then
+            -- Arrivals and holo reform use the same moving target as normal
+            -- hanging; never snap one frame back inside the stationary socket.
+            entry.pivot.worldPosition=self.hangPosition;entry.pivot.worldRotation=self.hangRotation
+        end
     end
     self.attached=pose
 end
@@ -1020,11 +1033,45 @@ function Rig:AdvanceHolo(entry,m,t)
     end
 end
 
--- Critically damped position spring (80ms time constant), capped displacement.
+-- Sample the actor root after physics/base pose, never the animated backpack
+-- or desired velocity. Turning, camera orbit and vertical jumps have zero X/Z
+-- travel. Keep this scalar alive through swaps and hand/back transitions.
+function Rig:UpdateHangClearance(dt)
+    local node=self.controller and self.controller.node
+    if not node or dt<=0 then return end
+    local position=node.worldPosition
+    local goal=0
+    if self.hangMotionReady then
+        local old=self.hangPreviousRoot
+        local x,y,z=position.x-old.x,position.y-old.y,position.z-old.z
+        local speed=math.sqrt(x*x+z*z)/dt
+        -- Faster than any locomotion, or a large discontinuity: do not turn a
+        -- teleport/mount reset into run spacing or drag the old world spring.
+        if speed>18 or math.sqrt(x*x+y*y+z*z)>math.max(2,18*dt) then
+            self.hangClearance=0;self.hangReady=false
+        else
+            local rate=self.active=='bow' and HANG_BOW_SPEED_DEPTH or HANG_SPEED_DEPTH
+            local limit=self.active=='bow' and HANG_BOW_MAX_DEPTH or HANG_MAX_DEPTH
+            goal=math.min(limit,speed*rate)
+        end
+    end
+    self.hangPreviousRoot=CopyVec(self.hangPreviousRoot or Vector3(),position)
+    self.hangMotionReady=true
+    local depth=self.hangClearance or 0
+    local tau=goal>depth and HANG_OPEN_TIME or HANG_CLOSE_TIME
+    self.hangClearance=goal+(depth-goal)*math.exp(-dt/tau)
+end
+
+-- The small tangential spring follows the socket; the independently damped
+-- outward spacing opens promptly and closes about a beat after an actual stop.
 -- A teleport resets the spring instead of dragging a weapon across the world.
 function Rig:UpdateHang(dt)
+    self:UpdateHangClearance(dt)
     local socket=self.sockets['back_'..self.active]
-    self.hangTarget=CopyVec(self.hangTarget,socket.worldPosition)
+    self.hangForward=Rotate(self.hangForward,(self.backAnchor or self.body).worldRotation,Vector3.FORWARD)
+    local f,depth=self.hangForward,self.hangClearance or 0
+    local socketPosition=socket.worldPosition
+    self.hangTarget=SetVec(self.hangTarget,socketPosition.x-f.x*depth,socketPosition.y-f.y*depth,socketPosition.z-f.z*depth)
     local target=self.hangTarget
     target.y=target.y+(self.backAnchor and .004 or .02)*math.sin(self.visualClock*math.pi*1.2)
     self.hangTarget=target
@@ -1049,8 +1096,8 @@ function Rig:UpdateHang(dt)
         local f=self.hangForward
         local inward=(p.x-target.x)*f.x+(p.y-target.y)*f.y+(p.z-target.z)*f.z
         if self.backAnchor then
-            -- Strapped to the coat: allow a small tangential sway, but no depth
-            -- lag in either direction (which previously reopened a 12cm gap).
+            -- Keep the scalar clearance exact along the coat normal; only the
+            -- tiny tangential sway may lag, so turns cannot pull it inward.
             p=SetVec(p,p.x-f.x*inward,p.y-f.y*inward,p.z-f.z*inward)
             local normalVelocity=v.x*f.x+v.y*f.y+v.z*f.z
             v=SetVec(v,v.x-f.x*normalVelocity,v.y-f.y*normalVelocity,v.z-f.z*normalVelocity)
@@ -1397,7 +1444,7 @@ function Rig:UpdateCore(dt)
     if not self.visualActive then self.combatFx.valid=false end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
-        if self.trailEnabled then self:UpdateCharge(entry) end
+        self:DrawBands();if self.trailEnabled then self:UpdateImages(entry,dt) end
     else self:ClearTrail() end
     if self.trailEnabled then self:UpdateCharge(entry) end
 end
@@ -1525,11 +1572,21 @@ function Rig:SyncThorn(dt)
     thorn.aimK=k
     ThornVisual.SetAim(thorn,k)
 end
+-- Builder caches blueprints and shares them between rigs: a model swap must
+-- copy the blueprint, never write modelId into the cached table.
+local function WithModelId(blueprint,modelId)
+    local config,copy={},{}
+    for k,v in pairs(blueprint.config) do config[k]=v end
+    config.modelId=modelId
+    for k,v in pairs(blueprint) do copy[k]=v end
+    copy.config=config
+    return copy
+end
 function Rig:Update(dt)
     local slots=self.config.progress.slots
     if self.swordId~=slots.sword.weapon then
         self.swordId=slots.sword.weapon
-        self.entries.sword.mesh.blueprint.config.modelId=self.swordId
+        self.entries.sword.mesh.blueprint=WithModelId(self.entries.sword.mesh.blueprint,self.swordId)
         local _,grade=Catalog.Find(Catalog.Weapons.sword,self.swordId)
         self:AttachWing(self.entries.sword,self.entries.sword.mesh.blueprint)
         if self.entries.sword.authoredVisual then
@@ -1539,7 +1596,7 @@ function Rig:Update(dt)
     end
     if self.bowId~=slots.bow.weapon then
         self.bowId=slots.bow.weapon
-        self.entries.bow.mesh.blueprint.config.modelId=self.bowId
+        self.entries.bow.mesh.blueprint=WithModelId(self.entries.bow.mesh.blueprint,self.bowId)
         local _,grade=Catalog.Find(Catalog.Weapons.bow,self.bowId)
         self:AttachThorn(self.entries.bow,self.entries.bow.mesh.blueprint)
         if self.entries.bow.authoredVisual then
