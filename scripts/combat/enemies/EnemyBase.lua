@@ -533,22 +533,26 @@ end
 
 -- info/result tables are caller-owned / enemy-owned respectively; copy before retaining.
 ---@return EnemyHitResult
+-- Parts (armor, breaking, weak points) are the archery target system. Only
+-- arrows read them; melee, spells and other sources hit the body zone.
+local function ArrowHit(info) return info.kind=='arrow' or info.kind=='crystal' end
 function Base:ApplyHit(info)
     local result=self:ClearHitResult()
     if self.dead or not self.active then return result end
-    local part=self.parts[info.part or self.config.defaultPart]
+    local arrow=ArrowHit(info)
+    local part=self.parts[(arrow and info.part) or self.config.defaultPart]
     if not part or not self:PartEnabled(part.spec) then return result end
     local damage=max(0,info.dmg or 0)
     if damage==0 then return result end
     if not self.aggro then self:SetState(S.ALERT) end
     self:PrepareImpact(info,part)
-    result.hit,result.part,result.material,result.weak=true,part.spec.id,self.impact.material,part.spec.weak or false
+    result.hit,result.part,result.material,result.weak=true,part.spec.id,self.impact.material,arrow and part.spec.weak or false
     local scaled=damage*self:DamageScale(info,part)
-    if part.spec.weak then scaled=scaled*(part.spec.weakMultiplier or 1.6) end
+    if result.weak then scaled=scaled*(part.spec.weakMultiplier or 1.6) end
     if self.down then scaled=scaled*1.5 end
     self.hp=max(0,self.hp-scaled)
     if not self.boss and info.kind=='sword' then self:Knockback(info,info.combo==3 and .55 or .1) end
-    if part.maxArmor>0 and not part.broken then
+    if arrow and part.maxArmor>0 and not part.broken then
         part.armor=max(0,part.armor-damage*max(0,info.armorBreak or 1))
         if part.armor==0 then
             part.broken=true; result.partBroken=part.spec.id; result.broke=true; self:OnBreak(part.spec.id)

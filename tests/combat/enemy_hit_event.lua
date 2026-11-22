@@ -27,7 +27,7 @@ assert(a.presentedHits==1 and b.presentedHits==0 and a.particles:CountOwner(a)==
 local serial=a.particles.serial
 assert(not a:OnHitEvent(borrowed) and a.particles.serial==serial)
 assert(b:OnHitEvent(borrowed),'same swing must still present the second target')
-assert(b.presentedHits==1 and b.particles:CountOwner(b)==6 and a.particles.count==12)
+assert(b.presentedHits==1 and b.particles:CountOwner(b)==11 and a.particles.count==12)
 assert(not b:OnHitEvent(borrowed))
 assert(a.reaction.age==0 and a.reaction.part=='shell')
 borrowed.pos.x=100; borrowed.dir.z=100; borrowed.normal.x=100
