@@ -125,11 +125,11 @@ end
 ---------------------------------------------------------------- stats
 local STAT_MAIN={
     sword={{'attack','攻击',20,''},{'reach','范围',1.4,'m'}},
-    time={{'attack','碎时伤害',20,''},{'terrainRadius','破坏半径',2,'×'},{'terrainPower','破坏强度',4,''}},
-    bow={{'attack','攻击',20,''},{'draw','拉速',1.5,'×'},{'range','射程',60,'m'},{'move','移动',1,'×'}},
+    time={{'attack','碎时伤害',20,''},{'terrainRadius','破坏半径',2,'×'}},
+    bow={{'attack','攻击',20,''},{'move','移动',1,'×'}},
 }
 local STAT_MORE={
-    sword={{'poise','失衡',12,''},{'armorBreak','破甲',2,'×'}},
+    sword={{'poise','失衡',12,''}},
     time={{'poise','削韧',12,''}},
     bow={{'armorBreak','破甲',2,'×'}},
 }
@@ -141,7 +141,6 @@ local function Number(value,unit)
 end
 local function StatValue(blueprint,key)
     if key=='reach' then return blueprint.hit.length*(blueprint.stats.reach or 1) end
-    if key=='draw' then return Catalog.Definitions.bow.stats.draw/blueprint.stats.draw end
     return blueprint.stats[key] or 0
 end
 local function StatRows(s,list)
@@ -159,7 +158,10 @@ end
 local Layout
 local function Rebuild(s,keepModel)
     -- Purchases commit immediately; undo/restored drafts only own colours.
-    if s.callbacks.rig then s.config.progress=s.callbacks.rig.config.progress end
+    if s.callbacks.rig then
+        s.config.progress=s.callbacks.rig.config.progress
+        if s.weapon=='sword' or s.weapon=='bow' then s.config[s.weapon].modelId=s.config.progress.slots[s.weapon].weapon end
+    end
     s.blueprint={stats=Catalog.Stats(s.weapon,s.config.progress),hit=s.weapon=='sword' and Catalog.Definitions.sword.hit}
     s.statRows,s.moreRows=nil,nil
     if not keepModel then Single3D(s) end

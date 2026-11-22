@@ -1529,6 +1529,7 @@ function Rig:Update(dt)
     local slots=self.config.progress.slots
     if self.swordId~=slots.sword.weapon then
         self.swordId=slots.sword.weapon
+        self.entries.sword.mesh.blueprint.config.modelId=self.swordId
         local _,grade=Catalog.Find(Catalog.Weapons.sword,self.swordId)
         self:AttachWing(self.entries.sword,self.entries.sword.mesh.blueprint)
         if self.entries.sword.authoredVisual then
@@ -1538,6 +1539,7 @@ function Rig:Update(dt)
     end
     if self.bowId~=slots.bow.weapon then
         self.bowId=slots.bow.weapon
+        self.entries.bow.mesh.blueprint.config.modelId=self.bowId
         local _,grade=Catalog.Find(Catalog.Weapons.bow,self.bowId)
         self:AttachThorn(self.entries.bow,self.entries.bow.mesh.blueprint)
         if self.entries.bow.authoredVisual then

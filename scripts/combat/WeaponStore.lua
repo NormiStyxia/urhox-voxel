@@ -125,6 +125,10 @@ function Store.Forge(rig,class,action,id,random)
     else return false,'未知锻造操作' end
     if not Store.Save(config) then return false,'保存失败，材料已保留' end
     rig.config.progress=progress
+    if class=='sword' or class=='bow' then
+        rig.config[class]=Catalog.CopyAppearance(class,rig.config[class]) or rig.config[class]
+        rig.config[class].modelId=slot.weapon
+    end
     return true,message or '已保存'
 end
 
