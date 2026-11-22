@@ -57,6 +57,7 @@ env.nomi_={BeginQueryScope=function()scope=scope+1;record('begin'..scope)end,
 env.weaponGesture_={Update=function(_,dt,cam)assert(dt==.016 and cam==camera);tick('anchor')end}
 env.caster_={charge=0};env.Spells={ShatterRadius=function()return 0 end}
 env.CombatState.CanUseTime=function()return true end
+env.CombatState.GetSelection=function()return 'time'end -- FX.Sigils argument in the actual PostUpdate
 env.fx_={motesB={Draw=function()tick('b')end},motesG={Draw=function()tick('g')end}}
 env.handMotes_={Draw=function()tick('hand')end}
 assert(load(post,'actual Scene PostUpdate','t',env))()

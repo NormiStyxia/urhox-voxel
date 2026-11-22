@@ -56,32 +56,7 @@ do
  assert(Moves.EmitDustStreak(pool,owner,Vector3.ZERO,Vector3.FORWARD,function()return 0 end,1)==0 and pool.serial==serial)
 end
 print('PASS actual Scene creates run before hitch tail advances; one pooled footprint / key-event reserve preserved')
--- Real controller descent port uses existing velocity setter, not root translation.
-n.cc.onGround=false;n.cc.SetLinearVelocity=function(_,v)n.lastVertical=v end
-opts.scale=0;opts.plungeVelocity=Vector3(2,-9,1)
-n:Move(.016,-1,1,true,false,false,opts)
-S.near(n.lastVertical.y,-9);S.near(n.cc.desiredVelocity.x,2);S.near(n.cc.desiredVelocity.z,1)
-local airCode=assert(source:match('(function N:MeasureMotion%b().-)\nend'))..'\nend\n'
- ..assert(source:match('(function N:CombatAirState%b().-)\nend'))..'\nend'
-local groundQueries=0;env.Terrain.GroundHeight=function()groundQueries=groundQueries+1;return 0 end
-assert(load(airCode,'actual cached air state','t',env))()
-n.cc.GetLinearVelocity=function()return Vector3(2,-18,1)end
-n.node.worldPosition=Vector3(0,2,0);n:MeasureMotion(.016)
-local out={};local q=groundQueries
-for _=1,100 do assert(n:CombatAirState(out)==out);S.near(out.height,2);assert(not out.invalid)end
-assert(groundQueries==q,'eligibility reuses current frame height; no additional ground query/ray')
-n.cc.onGround=true;n.node.worldPosition=Vector3(0,1,0);n:MeasureMotion(.016);S.near(n:CombatAirState(out).height,0)
-n.cc.onGround=false;n.node.worldPosition=Vector3(0,1.5,0);n:MeasureMotion(.016);S.near(n:CombatAirState(out).height,.5)
-n.voidReturning=true;assert(n:CombatAirState(out).invalid)
-print('PASS actual CC consumes authored velocity, locked horizontal inertia, cached physical/terrain support and void rejection')
-
--- Airborne over a bridge keeps nearby physical support; a real landing is never
--- rejected merely because the terrain heightmap has no island under the bridge.
-env.Terrain.GroundHeight=function()return nil end
-n.voidReturning=false;n.cc.onGround=true;n.node.worldPosition=Vector3(3,4,5);n:MeasureMotion(.016)
-assert(not n:CombatAirState(out).invalid);S.near(out.height,0)
-n.cc.onGround=false;n.node.worldPosition=Vector3(3,5,5);n:MeasureMotion(.016);S.near(n:CombatAirState(out).height,1)
-n.node.worldPosition=Vector3(4,5,5);n:MeasureMotion(.016);assert(n:CombatAirState(out).invalid)
+-- Plunge descent and air-eligibility checks were removed with the down-attack; not tested here.
 -- Ring emission borrows only the prebuilt slots and respects the shared pool.
 do
  local Moves=require('combat.CombatMoves')

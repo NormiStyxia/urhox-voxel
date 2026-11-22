@@ -1,5 +1,6 @@
 -- Fixed twelve-slot arrow pool. Swept contact is ordered against world geometry.
 local Hit=require('combat.Hit')
+local Catalog=require('combat.WeaponCatalog')
 ---@class CombatProjectilePool
 ---@field opts table
 ---@field pool table[]
@@ -47,7 +48,7 @@ function P:Fire(origin,dir,charge,stats,tip)
     local direction=Vector3(rotated.x,rotated.y,rotated.z):Normalized()
     self.serial=self.serial+1
     p.active,p.serial,p.pos,p.vel=true,self.serial,origin,direction*speed
-    p.distance,p.range,p.embedded,p.age=0,stats.range or 64,false,0
+    p.distance,p.range,p.embedded,p.age=0,64,false,0
     p.elapsed,p.accumulator,p.fullSpeed,p.attack,p.power=0,0,fullSpeed,stats.attack or 8,power
     p.critical,p.renderPos,p.previousPos=full,origin,origin
     p.drawU,p.impactSpeed=charge,nil
@@ -57,6 +58,7 @@ function P:Fire(origin,dir,charge,stats,tip)
     p.attached,p.part,p.bone,p.localPos,p.localDir=nil,nil,nil,nil,nil
     p.damage,p.poise=damage(p,speed),(stats.poise or 6)*(.4+.6*power)
     p.full=full
+    p.passive=stats.passive
     p.tier=full and 'full' or (charge>=.5 and 'mid' or 'weak')
     p.pierce,p.kind=math.max(0,stats.pierce or 0),(stats.crystalRadius or 0)>0 and 'crystal' or 'arrow'
     for enemy in pairs(p.hit) do p.hit[enemy]=nil end
@@ -111,6 +113,8 @@ function P:Step(p,dt)
             p.damage=damage(p,impactVel:Length())
             local info=p.info
             info.dmg,info.poise,info.armorBreak=p.damage,p.poise,p.armorBreak
+            local dm,pm=Catalog.Passive(p.passive,{full=p.full,unaware=not enemy.aggro})
+            info.dmg,info.poise=info.dmg*dm,info.poise*pm
             info.part,info.kind,info.tier,info.clip=contact.shape.id,p.kind,p.tier,'bow_release'
             info.pos,info.dir,info.source,info.full=contact.pos,impactVel:Normalized(),'player',p.full
             info.critical,info.knockback=p.critical,p.critical and .16 or .08
@@ -233,7 +237,7 @@ function P.Predict(p,origin,dir,u,stats,now,low,budget,cast,enemies)
         p.origin,p.direction,p.u,p.pos=origin,dir,u,origin
         p.vel=dir*(60*P.Power(u))
         p.elapsed,p.distance,p.count=0,0,0
-        p.range,p.limit=stats.range or 64,low and 12 or 24
+        p.range,p.limit=64,low and 12 or 24
         p.nextAt=now+(low and .2 or 1/15)
     end
     local used=0

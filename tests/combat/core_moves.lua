@@ -41,9 +41,9 @@ local function Bow()
     m=New(); State.SetBusy(false); State.SetWeapon('bow'); State.Update(.5); State.Activity(true)
 end
 Bow(); local before=shots
-Tick(.01,{heavy=true}); for i=1,33 do Tick(.02) end
+Tick(.01,{heavy=true}); for i=1,45 do Tick(.02) end
 assert(shots==before,'automatic crystal cannot fire before full charge cost')
-for i=1,5 do Tick(.02) end
+for i=1,10 do Tick(.02) end
 assert(shots==before+1 and lastShot.crystal and lastShot.charge>=1,'auto heavy fires one full crystal')
 for i=1,45 do Tick(.02) end
 assert(shots==before+1,'automatic heavy never repeats without another press')
@@ -70,12 +70,9 @@ Tick(.18); assert(not m:CanCancel(),'swap first .2 is not cancellable')
 Tick(.03); assert(m:CanCancel(),'swap cancel follows animation event')
 m=New(); assert(m:Swap()); Tick(.41)
 assert(State.GetWeapon()=='bow' and State.TransitionRemaining()==0 and not m.clip,'weapon_ready completes swap')
--- Long press: the cross slash fires by itself at HEAVY_HOLD, no release and no charge levels.
-m=New(); Tick(.01,{attack=true}); assert(m.clip=='sword_heavy_charge')
-for i=1,17 do Tick(.02,{attack=true}) end
-assert(m.clip=='sword_heavy_charge' and not m.fullCharged,'still winding up before HEAVY_HOLD')
-for i=1,3 do Tick(.02,{attack=true}) end
-assert(m.clip=='sword_heavy_release' and m.charge==0,'holding fires the cross slash without releasing')
+-- Sword heavy is Q only: attack is always a light stage; Q fires the cross slash at once.
+m=New(); Tick(.01,{attack=true}); assert(m.clip and m.clip:find('sword_light_',1,true),'attack stays a light stage')
+m=New(); assert(m:Action('heavy') and m.clip=='sword_heavy_release','Q fires the cross slash directly')
 S.near(m.stamina.value,m.stamina.max-25,1e-6)
 Tick(.02); assert(m.clip=='sword_heavy_release','release after firing changes nothing')
 m=New(); m:Play('getup'); Tick(.46)
@@ -279,16 +276,11 @@ end
 do
     m=New();local arcCalls=0
     rig.ShowContactArc=function(_,zone)arcCalls=arcCalls+1;S.near(zone.radius,1.8);assert(zone.angle==120)end
-    m:Play('sword_light_1');m.anim:Update(.28);m:Events()
+    m:Play('sword_light_1');m.anim:Update(.34);m:Events()
     assert(m.hitPending and not m.hitOpen,'hitch crosses on/off')
     local before=count;m:AfterPose();m:AfterPose()
     assert(arcCalls==1 and count==before+1,'one visible arc and one hit, unchanged broadphase/reach/dedupe')
     rig.ShowContactArc=nil
-    m=New();local full=0
-    m.o.audio={Play=function(cue)if cue=='sword_full' then full=full+1 end end}
-    m:Play('sword_heavy_charge');m.anim:Update(1.1);m:Events();m:Events()
-    m.anim:Update(.5);m:Events()
-    assert(full==0 and not m.fullCharged,'long-press windup has no charge levels or full cue')
 end
 print('PASS R8 profiles 40/40/80/100ms, complete pooled event overwrite/consumer, bounded groups, local punch, low-FPS visible contact fallback, no sword charge levels')
 do
@@ -317,7 +309,7 @@ do
     local result=H.Apply(beetle,input)
     assert(result.resolved and beetle.presentedHits==0)
     owner:Feedback(beetle,input,result,result.weak,false)
-    assert(beetle.presentedHits==1 and beetle.particles:CountOwner(beetle)==6)
+    assert(beetle.presentedHits==1 and beetle.particles:CountOwner(beetle)==11,'armor contact: 8 chips + 3 hit_red flash')
     assert(owner.eventPool[owner.eventWrite].presentationConsumed and not beetle:OnHitEvent(owner.eventPool[owner.eventWrite]))
     input.dmg,input.swingId=10000,22
     result=H.Apply(beetle,input);assert(result.killed)
@@ -340,7 +332,7 @@ do
    ApplyHit=function(_,info)damage=info.dmg;counted=counted+1;return {hit=true}end}
   m.o.enemies=function()return {target}end
   m.o.feedback=function(e)event={profile=e.profileId,stop=e.stop,poise=e.poise}end
-  Tick(clip.phases.active[1]+.01);m:AfterPose();m:AfterPose()
+  Tick((clip.phases.active[1]+.01)/.9);m:AfterPose();m:AfterPose() -- sword light clock runs at .90
   assert(counted==1 and event.profile==row.profile);S.near(damage,10*row.damage)
   S.near(event.poise,6*row.poise);S.near(event.stop,stage==5 and .09 or (stage==4 and .06 or .04))
   local zone=C.MeleeZone(row.id,Vector3.ZERO,Vector3.FORWARD,1,false)
@@ -354,7 +346,7 @@ do
   end
   assert(m:Action('heavy') and m.clip=='sword_heavy_release')
  end
- m=New();m.combo=4;assert(m:Action('light'));Tick(.47)
+ m=New();m.combo=4;assert(m:Action('light'));Tick(.56) -- past hit_off at .46 (sword clock .90)
  local untilTime=m.comboCooldownUntil;assert(untilTime and not m:Action('light'))
  for _=1,33 do Tick(.01);assert(not m:Action('light')) end
  while m.age<untilTime+1e-6 or m.clip do Tick(.01) end

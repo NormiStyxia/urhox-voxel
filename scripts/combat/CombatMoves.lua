@@ -4,6 +4,7 @@ local Hit=require('combat.Hit')
 local Perf=require('combat.SwingPerf')
 local Data=require('combat.AnimClips')
 local Stamina=require('combat.Stamina')
+local Catalog=require('combat.WeaponCatalog')
 local COMBO=Data.Combo
 -- Only authored ordinary sword attacks can open a melee damage window.
 local function IsMeleeAttack(id)
@@ -41,9 +42,6 @@ end
 local C={}; C.__index=C
 C.COMBO_LENGTH=Data.ComboLength
 local BUFFER=.160
--- Holding attack this long fires the cross slash at once (no charge levels).
-local HEAVY_HOLD=.40
-C.HEAVY_HOLD=HEAVY_HOLD
 local RING_EVENT={material='stone',kind='dust'}
 -- Immutable after module initialization. Special outcomes inherit the source
 -- stop; a weak point/kill does not silently upgrade the approved 40/80ms.
@@ -194,7 +192,7 @@ function C:Play(id,fadeIn,entryFrom)
     if self.bowCancelHandle then self.anim:Stop(self.bowCancelHandle,0);self.bowCancelHandle=nil end
     local stats=self.rig:GetStats()
     -- Sword attacks use a slightly slower clock so the anticipation and weight transfer read clearly.
-    local speed=(id:find('sword_light_',1,true) or id=='sword_heavy_release' or id=='sword_heavy_charge') and .90 or 1
+    local speed=(id:find('sword_light_',1,true) or id=='sword_heavy_release') and .90 or 1
     local params=self.playParams
     for k in pairs(params) do params[k]=nil end
     params.weaponInHand=self:WeaponInHand() and 1 or 0
@@ -315,14 +313,18 @@ function C:BowParameters(pitch)
     end
     return self.state.GetWeapon()=='bow' and self.charge or 0,math.max(-35,math.min(35,pitch or 0))
 end
+-- Wind passive: the first hit within one second after a sprint ends.
+function C:WindReady()
+    return self.sprintEndAt~=nil and not self.windUsed and self.age-self.sprintEndAt<=1
+end
 function C:CanCancel()
-    return not self.clip or self.cancelOpen or self.clip=='sword_heavy_charge'
+    return not self.clip or self.cancelOpen
         or self.clip=='bow_hold' or self.clip=='bow_draw' or self.clip=='sword_draw' or self.clip=='sword_sheath'
         or self.clip=='bow_equip' or self.clip=='bow_sheath'
 end
 function C:Facing()
     if self.clip=='bow_release' then return self.bowPoseFacing end
-    return self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release' or self.clip=='sword_heavy_charge') and self.moveDir or nil
+    return self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') and self.moveDir or nil
 end
 function C:Action(kind,axis,entryFrom)
     if self.dead then return false,'dead' end
@@ -368,7 +370,6 @@ function C:Action(kind,axis,entryFrom)
     elseif kind=='heavy' and self.stamina:Spend('heavy') then
         self.autoFire=false; self.combo=0
         return self:Play('sword_heavy_release') and self:LimitLunge('sword_heavy_release')
-    elseif kind=='hold' then self.hold,self.charge,self.fullCharged=0,0,false; return self:Play('sword_heavy_charge')
     else
         -- Light stage; also the fallback when a cross slash cannot be paid for.
         if self.comboUntil and self.age>self.comboUntil then self.combo=0 end
@@ -398,13 +399,7 @@ function C:LimitLunge(id)
     return true
 end
 function C:Release()
-    if self.clip=='sword_heavy_charge' then
-        local heavy=self.hold>=HEAVY_HOLD-1e-8 -- gesture classification, not a damage window
-        self.holdSource=nil;self.releaseFull=false
-        local entryFrom=not heavy and self.handle or nil
-        self.anim:Stop(self.handle,entryFrom and .08 or 0); self.clip=nil
-        self:Action(heavy and 'heavy' or 'light',nil,entryFrom)
-    elseif self.clip=='bow_hold' or self.clip=='bow_draw' then
+    if self.clip=='bow_hold' or self.clip=='bow_draw' then
         local power=(self.charge*self.charge+2*self.charge)/3
         if power<.1 or not self:WeaponInHand() then
             self:Cancel('weak-release');return
@@ -675,6 +670,9 @@ function C:Update(dt,controls)
     self.shakeAge=self.shakeAge+dt
     local inCombat=self.state.InCombat()
     self.stamina:Update(dt,inCombat,foot~=nil and foot:IsSprinting())
+    local sprinting=foot~=nil and foot:IsSprinting()
+    if self.sprintingLast and not sprinting then self.sprintEndAt,self.windUsed=self.age,false end
+    self.sprintingLast=sprinting
     -- Exhausted: the fast sprint is refused until the bar recovers; the
     -- character keeps running at the normal pace (Genshin behaviour).
     if controls.sprintIntent and not self.stamina:CanSprint() then
@@ -705,28 +703,14 @@ function C:Update(dt,controls)
             self.holdSource=nil
         end
         if (attack and not self.lastAttack) or controls.attackTap then
-            self.buffer=(self.state.GetWeapon()=='bow' or (not self.clip and attack)) and 'hold' or 'light'
+            self.buffer=self.state.GetWeapon()=='bow' and 'hold' or 'light'
             self.bufferAt,self.bufferUntil=self.age,self.age+BUFFER
             self.holdSource='attack'
-            self.pressAt,self.pressHeavy=self.age,false
-        end
-        -- Mid-combo long press: queue the cross slash after the current stage.
-        if swordHeavy and attack and self.pressAt and not self.pressHeavy and self.age-self.pressAt>=HEAVY_HOLD-1e-8
-            and self.clip and self.clip:find('sword_light_',1,true) then
-            self.pressHeavy=true
-            self.buffer,self.bufferAt,self.bufferUntil='heavy',self.age,self.age+1.2
         end
         self:ConsumeBuffer(controls.axis)
-        if self.clip=='sword_heavy_charge' or (self.clip=='sword_draw' and self.pending=='hold') then
-            self.hold=self.hold+dt
-            -- No charge levels: holding long enough fires the cross slash at once.
-            if self.clip=='sword_heavy_charge' and attack and self.hold>=HEAVY_HOLD-1e-8 then
-                self.pressHeavy=true;self:Release()
-            end
-        end
         if self.clip=='bow_hold' or self.clip=='bow_draw' then
             self.drawElapsed=self.drawElapsed+dt
-            local drawDuration=self.rig:GetStats().draw or 1
+            local drawDuration=1 -- fixed full-draw time; not a per-weapon stat
             self.charge=self.drawElapsed+1e-9>=drawDuration and 1 or self.drawElapsed/drawDuration
             self.power=(self.charge*self.charge+2*self.charge)/3
             self.anim:SetParam('p',self.charge)
@@ -831,7 +815,6 @@ end
 function C:MoveScale()
     if self.dead or self.suspended or self.clip=='getup' or self.clip=='death' then return 0 end
     if self.clip and (self.clip:find('hit_',1,true) or self.clip=='knockdown') then return 0 end
-    if self.clip=='sword_heavy_charge' then return .4 end
     if self.clip=='bow_hold' or self.clip=='bow_draw' then return self.rig:GetStats().move or .5 end
     if self.clip and (self.clip:find('sword_light_',1,true) or self.clip=='sword_heavy_release') then return 0 end
     return 1
@@ -923,9 +906,13 @@ function C:AfterPose()
         if not self.damaged[key] and Hit.Visible(position+Vector3(0,.9,0),contact.pos,self.o.cast) then
             local heavy=self.hitClip=='sword_heavy_release'
             local stage=COMBO[self.combo] or COMBO[1]
-            local info={dmg=(stats.attack or 10)*(heavy and 1.3 or stage.damage),
-                poise=(stats.poise or 6)*(heavy and 1.6 or stage.poise),
-                armorBreak=(stats.armorBreak or 1)*(heavy and self.releaseFull and 1.5 or 1),knockback=stage.knockback,
+            local fresh=self:WindReady()
+            if fresh and stats.passive=='wind' then self.windUsed=true end
+            local dm,pm=Catalog.Passive(stats.passive,{combo=self.combo,staggered=enemy.state=='STAGGER',
+                unaware=not enemy.aggro,sprintFresh=fresh})
+            local info={dmg=(stats.attack or 10)*(heavy and 1.3 or stage.damage)*dm,
+                poise=(stats.poise or 6)*(heavy and 1.6 or stage.poise)*pm,
+                knockback=stage.knockback,
                 part=part,material=contact.shape.material or 'soft',normal=contact.normal,
                 deferPresentation=type(enemy.OnHitEvent)=='function',full=heavy and self.releaseFull==true,
                 swingId='sword:'..self.swingSerial,tier=heavy and 'heavy' or stage.tier,kind='sword',clip=self.hitClip,pos=contact.pos,dir=direction,source='player',heavy=heavy,combo=self.combo}

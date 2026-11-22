@@ -65,8 +65,8 @@ local SETS = {
 local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','轻推摇杆步行 · 推到底奔跑 · 按住【冲】冲刺耗体力','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
-local FOOT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='forge'},{name='skill',icon='shatter',label='碎时'},{name='farview'},{name='fastTime',icon='clock'}}
-local COMBAT_TOP={{name='menu',icon='menu'},{name='freeze',label='冻结'},{name='rewind',label='回溯'},{name='skill',icon='sword',label='武技'},{name='forge'},{name='farview'}}
+local FOOT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='forge'},{name='skill',icon='shatter',label='碎时'},{name='farview'},{name='fastTime',icon='clock'},{name='worldMap',label='地图'}}
+local COMBAT_TOP={{name='menu',icon='menu'},{name='freeze',label='冻结'},{name='rewind',label='回溯'},{name='skill',icon='sword',label='武技'},{name='forge'},{name='farview'},{name='worldMap',label='地图'}}
 local function TopButtons()
     if current=='combat' then return COMBAT_TOP end
     if current=='foot' then return FOOT_TOP end
@@ -129,6 +129,7 @@ local function Position(b,top,index)
     local x,y
     if top then x,y=width-safe.right-52-(index-1)*72,safe.top+52
     else x,y=width-safe.right-20+b.x,height-safe.bottom-20+b.y end
+    if top and b.name=="worldMap" and x<safe.left+52 then x,y=safe.left+52,safe.top+124 end
     local half=(b.size or 64)/2
     local minX=math.ceil((safe.left+20+half)/2)*2
     local minY=math.ceil((safe.top+20+half)/2)*2
@@ -156,6 +157,8 @@ end
 function M.BeginTouch(id,x,y)
     Input.OnTouch(); M.Sync()
     Settings.TouchDetected()
+    local map=package.loaded['ui.WorldMap']
+    if map and map.IsOpen() then map.Click(x,y);return end
     if SettingsMenu.IsOpen() then SettingsMenu.Click(x,y); return end
     if SettingsMenu.IsBlocked() then return end
     if not Input.IsEnabled() or state.blocked or owners[id] then return end
@@ -164,7 +167,8 @@ function M.BeginTouch(id,x,y)
     if M.menuOpen then M.menuOpen=false; Cancel(); owners[id]={kind='retired'}; return end
     for i,b in ipairs(TopButtons()) do
         if Hit(b,x,y,true,i) then
-            if b.name=='menu' then Cancel(); M.menuOpen=not SettingsMenu.Open(); owners[id]={kind='retired'}
+            if b.name=='worldMap' and M.onMap then M.onMap();return
+            elseif b.name=='menu' then Cancel(); M.menuOpen=not SettingsMenu.Open(); owners[id]={kind='retired'}
             elseif not Disabled(b) and not buttons[b.name] then buttons[b.name]=id; owners[id]={kind='button',name=b.name}; Input.Set(b.name,true) end
             return
         end
@@ -292,7 +296,9 @@ local function RenderControls(self,vg)
     for i,b in ipairs(TopButtons()) do
         local x,y=Position(b,true,i)
         local down=Input.Down(b.name)
+        if b.name=='worldMap' then Draw.Text(vg,'地图',x,y,12,Draw.colors.bright,NVG_ALIGN_CENTER) else
         Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,Disabled(b),b.name=='skill' and state.skillLeft or nil,4)
+        end
     end
     if M.menuOpen then
         local w=math.min(420,width-safe.left-safe.right-40)

@@ -18,6 +18,7 @@
 local VoxelFX = require("dragon.VoxelFX")
 local VoxelDamage = require("ruins.VoxelDamage")
 local Hit = require("combat.Hit")
+local Catalog = require("combat.WeaponCatalog")
 
 local M = {}
 M.CHARGE_SECONDS = 1.4
@@ -67,7 +68,7 @@ M.SPELLS = {
             local terrainRadius=M.ShatterRadius(charge)*(stats and stats.terrainRadius or 1)
             local level = (charge >= 1.0) and 3 or ((charge >= 0.5) and 2 or 1)
             local hitCount=SpellAOE(ctx,aim.pos,M.ShatterRadius(charge),{
-                dmg=(stats and stats.attack or 8)*(1+.5*charge),poise=stats and stats.poise or 3,armorBreak=0,pos=aim.pos,dir=aim.dir,
+                dmg=(stats and stats.attack or 8)*(1+.5*charge)*Catalog.Passive(stats and stats.passive,{shatter=true}),poise=stats and stats.poise or 3,armorBreak=0,pos=aim.pos,dir=aim.dir,
                 material='core',tier='light',kind='time_shatter',clip='time_shatter',
                 swingId='spell:shatter:'..tostring(ctx.castSerial or 0),combo=0,heavy=false})
             if hitCount>0 then
@@ -102,7 +103,7 @@ M.SPELLS = {
             local vol = aim.volume
             if vol ~= nil and vol.destructible then
                 local r = terrainRadius
-                local removed = VoxelDamage.AtWorldPoint(ctx.world, aim.pos, r, stats and stats.terrainPower or 3.0)
+                local removed = VoxelDamage.AtWorldPoint(ctx.world, aim.pos, r, 3.0)
                 ctx.world:ApplyRadialImpulse(aim.pos, r * 1.8, 1200.0 * (1 + charge))
                 if ctx.fx then ctx.fx:Burst(aim.pos, "shatter", 0.8 + charge) end
                 if ctx.sigils then ctx.sigils:Pulse(aim.pos,aim.normal or Vector3.UP,M.SHATTER_COLOR,r) end

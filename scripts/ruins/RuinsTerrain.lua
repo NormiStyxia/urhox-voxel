@@ -108,6 +108,7 @@ function M.EdgeDistance(x, z)
 end
 ---@return boolean
 function M.HasGround(x, z, margin)
+    if M.home and M.home.Contains(x,z) then return M.home.Ground(x,z,margin) end
     return M.EdgeDistance(x,z) >= (margin or 0)
 end
 
@@ -160,11 +161,13 @@ function M.CapHeight(h)
 end
 ---@return number
 function M.Height(x,z)
+    if M.home and M.home.Contains(x,z) then return M.home.Ground(x,z) and M.home.Height(x,z) or M.VOID_Y end
     if not M.HasGround(x,z) then return M.VOID_Y end
     return SurfaceHeight(x,z)
 end
 ---@return number|nil
 function M.GroundHeight(x,z)
+    if M.home and M.home.Contains(x,z) then return M.home.Ground(x,z) and M.home.Height(x,z) or nil end
     if M.HasGround(x,z) then return SurfaceHeight(x,z) end
     return nil
 end
@@ -197,12 +200,14 @@ end
 -- 仅永久岛面可记录安全点：排除崖缘、台阶、墙顶和活动碎片。
 ---@return boolean
 function M.IsSafeGround(x,y,z)
+    if M.home and M.home.Contains(x,z) then return M.home.Safe(x,y,z) end
     if not M.HasGround(x,z,M.ISLAND.safeMargin) or M.InStairFootprint(x,z) then return false end
     return abs(y-SurfaceHeight(x,z)) < .45
 end
 
 -- 碰撞层顶面高度（0.5m 量化，略偏向下取：宁可脚陷进草里一点，也不要悬空）
 function M.CollideHeight(x, z, height)
+    if M.home and M.home.Contains(x,z) then return M.Height(x,z) end
     if not M.HasGround(x,z) then return M.VOID_Y end
     -- 0.5m 粗网格的台阶前沿比石阶偏半格，叠上去会给胶囊两套立面/内部边。
     -- 脚印边界对齐粗网格；地基仍存在，破坏/回溯后不凭空生成上塔的隐藏坡道。

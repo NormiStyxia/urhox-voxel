@@ -66,8 +66,8 @@ assert(a.partBroken=='foreleg_l' and not boss.down and boss.pendingTrip and boss
 boss:Stagger(3,true)
 local old=boss.hp; boss:ApplyHit({dmg=10,part='foreleg_r',kind='arrow'}); T.Near(old-boss.hp,15)
 boss:Reset(); boss:ApplyHit({dmg=70,part='back_armor',kind='arrow'}); assert(boss.parts.back_armor.broken)
-old=boss.hp; boss:ApplyHit({dmg=10,part='core'}); T.Near(old-boss.hp,16)
-boss:Reset(); boss:ApplyHit({dmg=1,poise=100,part='head'}); assert(boss.down and boss.staggerDuration==3)
+old=boss.hp; boss:ApplyHit({dmg=10,part='core',kind='arrow'}); T.Near(old-boss.hp,16)
+boss:Reset(); boss:ApplyHit({dmg=1,poise=100,part='head',kind='arrow'}); assert(boss.down and boss.staggerDuration==3)
 T.Near(boss.hp,598.4) -- head weak point, independently of the later down multiplier
 boss:Reset(); boss:ApplyHit({dmg=301,part='head'}); assert(boss.phase==2 and not boss.parts.back_armor.broken)
 T.Tick(boss,1.2,combat.pos); assert(boss.rageDone)

@@ -52,7 +52,7 @@ local function intersects(a,b,box)
 end
 local failures,frames=0,0
 for _,fade in ipairs({0,.08}) do
-for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light_4','sword_light_5','sword_heavy_charge','sword_heavy_release','stance_combat_sword','combo_early','combo_late'}) do
+for _,id in ipairs({'sword_light_1','sword_light_2','sword_light_3','sword_light_4','sword_light_5','sword_heavy_release','stance_combat_sword','combo_early','combo_late'}) do
  local character=Mock.character();local base={}
  for name,node in pairs(character.bones) do
   local p=pivots[name]

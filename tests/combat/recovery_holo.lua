@@ -14,43 +14,43 @@ end
 local function run(m,seconds,controls)
     for _=1,math.ceil(seconds/.01) do m:Update(.01,controls or {allowed=true}) end
 end
--- 1) Sword heavy is a long press of attack: no right button, no charge levels.
+-- 1) Attack is always a light stage; right button does nothing for the sword.
 local m=New()
 run(m,.6,{allowed=true,heavy=true});assert(m.clip==nil,'right button does nothing for the sword')
-m=New();m:Update(.01,{allowed=true,attack=true});assert(m.clip=='sword_heavy_charge','press starts the windup')
+m=New();m:Update(.01,{allowed=true,attack=true});assert(m.clip=='sword_light_1','press is a light stage')
 run(m,.15,{allowed=true,attack=true});m:Update(.01,{allowed=true,attack=false})
 assert(m.clip=='sword_light_1','short press is a light attack')
-m=New();m:Update(.01,{allowed=true,attack=true});run(m,.42,{allowed=true,attack=true})
-assert(m.clip=='sword_heavy_release','holding fires the cross slash without a release')
--- Mid-combo long press queues the cross slash after the current stage.
+-- Holding attack never upgrades to the cross slash; Q does (checked above in the stamina section).
 m=New();m:Update(.01,{allowed=true,attackTap=true});assert(m.clip=='sword_light_1')
-m:Update(.01,{allowed=true,attack=true});run(m,.30,{allowed=true,attack=true})
-assert(m.clip=='sword_light_1' and m.buffer~='heavy','not yet a long press')
-run(m,.12,{allowed=true,attack=true});assert(m.clip=='sword_heavy_release','long press cuts into the cross slash at the cancel window')
--- Stamina: an unaffordable cross slash falls back to a light stage.
-m=New();m.stamina.value=10;m:Update(.01,{allowed=true,attack=true});run(m,.42,{allowed=true,attack=true})
-assert(m.clip=='sword_light_1' and m.stamina.value<25 and m.stamina.denyAt>0,'no stamina, no cross slash (bar flashes)')
+run(m,.42,{allowed=true,attack=true});assert(m.clip~='sword_heavy_release','held attack stays a light stage')
+-- Stamina: an unaffordable Q cross slash falls back to a light stage.
+m=New();m.stamina.value=10;m:Action('heavy')
+assert(m.clip=='sword_light_1' and m.stamina.value==10 and m.stamina.denyAt==m.stamina.clock,'no stamina, no cross slash (bar flashes)')
 -- 2) Recovery is inertia: idle plays it out, any intent ends it.
+-- CombatMoves.Play runs sword light clips at a .90 clock, so clip-time windows
+-- are converted to real seconds before driving Update.
+local SWORD_CLOCK=.90
 for stage,row in ipairs(D.Combo) do
     local clip=D.Clips[row.id];local open=clip.events[3].t*clip.dur
+    local realOpen=open/SWORD_CLOCK
     assert(clip.dur-open>=.40,'stage '..stage..' keeps a visible recovery tail')
     for _,input in ipairs({{allowed=true,axis=Vector3.RIGHT},{allowed=true,sprintIntent=true},
         {allowed=true,jump=true,onGround=true}}) do
         m=New();m.combo=stage-1;assert(m:Action('light') and m.clip==row.id)
-        run(m,open-.03);assert(m.clip==row.id and not m.cancelOpen,'locked before cancel_open')
+        run(m,realOpen-.03);assert(m.clip==row.id and not m.cancelOpen,'locked before cancel_open')
         m:Update(.01,{allowed=true,axis=Vector3.RIGHT})
         if not input.jump then assert(m.clip==row.id,'movement cannot cut the strike itself') end
         run(m,.04)
         m:Update(.01,input);assert(m.clip==nil and m:MoveScale()==1,'intent ends recovery at once')
     end
-    m=New();m.combo=stage-1;assert(m:Action('light'));run(m,open+.02)
+    m=New();m.combo=stage-1;assert(m:Action('light'));run(m,realOpen+.02)
     assert(m.clip==row.id,'idle keeps the follow-through')
     if stage<#D.Combo then
         m:Update(.01,{allowed=true,attackTap=true});assert(m.clip==D.Combo[stage+1].id,'next stage cuts recovery')
     end
 end
 -- Moving out of recovery keeps the chain; jumping resets it.
-m=New();assert(m:Action('light'));run(m,.35);m:Update(.01,{allowed=true,axis=Vector3.RIGHT})
+m=New();assert(m:Action('light'));run(m,.42);m:Update(.01,{allowed=true,axis=Vector3.RIGHT}) -- past cancel_open (.35 clip-s)
 assert(m.clip==nil and m.combo==1);run(m,.10);assert(m:Action('light') and m.clip=='sword_light_2')
 -- 3) 收招与持剑站姿必须用同一低位握点，攻击层淡出不能再把手抬平。
 local function tipDown(id)
@@ -81,7 +81,7 @@ for _,fps in ipairs({30,60,120}) do
     for stage=1,#D.Combo-1 do
         local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
         m=New();m.anim=anim;m.combo=stage-1
-        assert(m:Action('light'));run(m,D.Clips[m.clip].events[3].t*D.Clips[m.clip].dur+.01)
+        assert(m:Action('light'));run(m,D.Clips[m.clip].events[3].t*D.Clips[m.clip].dur/SWORD_CLOCK+.01)
         render(anim,character)
         local old=m.handle;local source=track(anim,old)
         local hand=source.ik.arm_right.applied
@@ -93,7 +93,7 @@ for _,fps in ipairs({30,60,120}) do
         assert(fresh.entry.enabled,'entry inheritance enabled on actual combo route')
         assert(distance(fresh.entry.hand,hand)<1e-7,'entry stores rendered grip, not authored oversized target')
         assert(distance(fresh.entry.blade,blade)<1e-7,'entry stores displayed blade direction')
-        assert(source.fadeOut==fresh.fadeIn and fresh.fadeIn==.08,'matched fade avoids base-pose leak')
+        assert(not source.live and source.weight==0 and fresh.fadeIn==0,'entry snapshot replaces the outgoing fade: no second blend, no base-pose leak')
         anim:Update(0);render(anim,character)
         assert(rotationDistance(character.bones.body.rotation,body)<1e-5,'no body reset at entry')
         assert(rotationDistance(character.bones.arm_right.rotation,arm)<1e-5,'no arm reset at entry')
@@ -104,26 +104,26 @@ for _,fps in ipairs({30,60,120}) do
         -- 预备段最终接回原 windup，进入命中弧后与独立播放完全一致。
         local id=m.clip;local contact=D.Clips[id].phases.active[1]+.02
         local freshTime=fresh.t
-        m:Update(contact-freshTime,{allowed=true});render(anim,character)
+        m:Update((contact-freshTime)/SWORD_CLOCK,{allowed=true});render(anim,character) -- clip time, not wall time
         local standalone=S.anim.character();local expected=A.New(standalone,nil,{quantize=false})
-        expected:Play(id,{fadeIn=0});expected:Update(contact);render(expected,standalone)
+        expected:Play('stance_combat_sword',{fadeIn=0});expected:Play(id,{fadeIn=0});expected:Update(contact);render(expected,standalone) -- same low stance as the live rig
         assert(rotationDistance(character.bones.arm_right.rotation,standalone.bones.arm_right.rotation)<1e-5,'authored strike unchanged')
         assert(rotationDistance(character.bones.body.rotation,standalone.bones.body.rotation)<1e-5,'authored torso contact unchanged')
     end
 end
 -- 低位 stance 已有剑向时，极小的出招权重不能立刻抢走整个剑向。
-for _,id in ipairs({'sword_light_1','sword_heavy_charge'}) do
+for _,id in ipairs({'sword_light_1','sword_heavy_release'}) do
     local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
     anim:Play(stance.id,{fadeIn=0});anim:Update(.1);render(anim,character)
     local before=anim.bladeDirection
     anim:Play(id,{fadeIn=.08});anim:Update(.000001);render(anim,character)
     assert(distance(anim.bladeDirection,before)<.001,'tiny entry weight must not snap blade from guard')
 end
--- 首刀短按的抬剑识别姿态也平滑交给轻击；长按交叉斩保持原输入。
+-- 左键短按/长按都是单段轻击（无蓄力前摇可继承），按住不会替换成别的段。
 local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})
 m=New();m.anim=anim;m:Update(.01,{allowed=true,attack=true});run(m,.12,{allowed=true,attack=true})
 render(anim,character);local charge=m.handle;m:Update(.01,{allowed=true,attack=false})
-assert(m.clip=='sword_light_1' and track(anim,m.handle).entry.enabled and track(anim,charge).stopping,'short tap inherits windup')
+assert(m.clip=='sword_light_1' and m.handle==charge and not track(anim,charge).stopping,'short tap is one light stage; no charge windup to inherit')
 -- 持械基础层即使每帧仍写前举角，收招后也必须留在低位，而不是图中的平举。
 for _,row in ipairs(D.Combo) do
     local character=S.anim.character();local anim=A.New(character,nil,{quantize=false})

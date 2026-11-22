@@ -86,5 +86,5 @@ for _=1,180 do
     State.Update(1/60);input(1/60,aim);c:Update(1/60);moves:AfterPose()
     assert(State.GetSelection()=='sword' and not c.charging and c.castAnim==0)
 end
-assert(heavy and effects.casts==before,'3s held mouse fires sword cross slash without any time spell')
-print('PASS actual Scene + Moves + Caster: continuous 3s left hold stays sword and fires cross slash, zero time casts')
+assert(effects.casts==before,'held mouse fires no time spell')
+print('PASS actual Scene + Moves + Caster: continuous 3s left hold stays sword, zero time casts')

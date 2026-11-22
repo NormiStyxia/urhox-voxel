@@ -154,7 +154,7 @@ local ga=a.visual.hitGroups['foreleg_l:0:0']
 local gb=b.visual.hitGroups['foreleg_l:0:0']
 assert(ga.material~=gb.material and ga.material~=template)
 for i=1,100 do
-    a:ApplyHit({dmg=.01,part='foreleg_l',heavy=i%2==0,dir=Vector3(1,0,0)})
+    a:ApplyHit({dmg=.01,part='foreleg_l',heavy=i%2==0,kind='arrow',dir=Vector3(1,0,0)})
     assert(ga.material.hit_flash==(i%2==0 and 1 or .85))
     assert(gb.material.hit_flash==0 and a.visual.hitGroups['foreleg_r:0:0'].material.hit_flash==0)
     local held=a.hitStop

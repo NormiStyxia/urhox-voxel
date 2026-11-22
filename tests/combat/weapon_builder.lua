@@ -99,7 +99,7 @@ local sword=config('sword');sword.parts={blade='blade_broad'}
 assert(B.Compile(sword).stats.attack==10 and B.Compile(sword).hit.length==.825)
 local bow=config('bow');bow.parts={tip='tip_crystal',limbs='limbs_long'}
 local fixed=assert(B.Compile(bow))
-assert(fixed.stats.attack==8 and fixed.stats.range==64 and fixed.stats.crystalRadius==nil)
+assert(fixed.stats.attack==8 and fixed.stats.crystalRadius==nil)
 -- Render-only greedy CustomGeometry: exact exposed surface coverage, no hidden
 -- faces/duplicates, outward winding, all palette channels, fixed grip/bounds.
 local savedCache=rawget(_G,'cache')

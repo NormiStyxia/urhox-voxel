@@ -50,7 +50,7 @@ local reentrant={GetHurtShapes=function()return {shape}end,
 player=C.New{anim=A.New(S.anim.character(),nil),state=State,rig=rig,
  position=function()return Vector3.ZERO end,forward=function()return Vector3.FORWARD end,enemies=function()return {reentrant}end}
 for _=1,2 do
- player.hitstop=0;player:Play('sword_light_1');player:Update(.17,{allowed=true});player:AfterPose();player:AfterPose()
+ player.hitstop=0;player:Play('sword_light_1');player:Update(.22,{allowed=true});player:AfterPose();player:AfterPose()
 end
 assert(settled==2 and saved[1]~=saved[2] and saved[1].dmg==10)
 print('PASS reentrant AfterPose cannot corrupt borrowed contacts; retained info remains independent')

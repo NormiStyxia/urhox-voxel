@@ -35,7 +35,7 @@ local m=new();assert(m:Action('light'));assert(forward.z==1 and m.hitForward.z==
 local z,_,active=m:StrikeZones();assert(z and not active and z.forward.z==1)
 local cached=z
 a.position=Vector3(3,0,0);forward=Vector3.RIGHT
-m:Update(.17,{allowed=true,axis=Vector3.RIGHT});position=position+m.motion
+m:Update(.23,{allowed=true,axis=Vector3.RIGHT});position=position+m.motion
 z,_,active=m:StrikeZones();assert(z==cached and active and z.forward.z==1 and m.motion.x==0 and calls==1,'action never reselects or bends')
 local boundary=Vector3.ZERO
 for i=0,24 do

@@ -324,8 +324,9 @@ function R:UpdateMounted(dt)
         end
     end
     -- 场地边界：走到边缘就停
-    if not L.airborne and (math.abs(L.pos.x) > ARENA - 2 or math.abs(L.pos.z) > ARENA - 2) then
-        L.pos = Vector3(Clamp(L.pos.x, -ARENA + 2, ARENA - 2), L.pos.y, Clamp(L.pos.z, -ARENA + 2, ARENA - 2))
+    local cx,cz=L.arenaX or 0,L.arenaZ or 0
+    if not L.airborne and (math.abs(L.pos.x-cx) > ARENA - 2 or math.abs(L.pos.z-cz) > ARENA - 2) then
+        L.pos = Vector3(Clamp(L.pos.x, cx-ARENA+2, cx+ARENA-2), L.pos.y, Clamp(L.pos.z, cz-ARENA+2, cz+ARENA-2))
     end
     self.nomi:Update(dt, { moveSpeed = 0, onGround = true })
     self:SeatPose()

@@ -27,7 +27,7 @@ for i=1,3 do
     assert(boss.attack.telegraph>=Beast.Config.attacks[i].telegraph*.85)
     assert(boss.attack.recover<Beast.Config.attacks[i].recover)
 end
-boss:Reset(); boss:ApplyHit({dmg=56,armorBreak=1.25,part='back_armor',poise=7})
+boss:Reset(); boss:ApplyHit({dmg=56,armorBreak=1.25,part='back_armor',poise=7,kind='arrow'})
 assert(boss.parts.back_armor.broken and boss.hp==544 and boss.poise==7)
 assert(boss:GetHurtShapes()[5].enabled and boss.phase==1)
 print('PASS rage speed +15%, shorter recovery, independent armor; armorBreak scales armor without scaling HP/poise')

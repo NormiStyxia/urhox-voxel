@@ -402,13 +402,14 @@ function N:ReturnFromVoid()
     if self.onVoidReturn then self.onVoidReturn(safe) end
 end
 
--- Debug-only caller supplies a terrain- and building-validated permanent point.
+-- Fast travel and debug transfer share a controller/camera reset.
 function N:TeleportForCombatDebug(pos,yaw)
     if not Terrain.IsSafeGround(pos.x,pos.y,pos.z) then return false end
     self:ResetJump()
     self.cc.desiredVelocity=Vector3.ZERO
     self.cc:SetLinearVelocity(Vector3.ZERO)
     self.cc:Teleport(pos)
+    self.measuredPosition,self.actualVelocity,self.frameTravel=pos,Vector3.ZERO,0
     self.vel=Vector3.ZERO; self.speed,self.safeT,self.onGround=0,0,false
     self.safePos=Vector3(pos.x,pos.y,pos.z)
     self.yaw,self.camYaw,self.camPitch=yaw,yaw,12
@@ -417,6 +418,8 @@ function N:TeleportForCombatDebug(pos,yaw)
     self:UpdateCamera(1,'normal',self.node)
     return true
 end
+
+N.TeleportToSafeGround=N.TeleportForCombatDebug
 
 function N:GroundFeet(foot,dt,active)
     if not self.soleGroundPort then

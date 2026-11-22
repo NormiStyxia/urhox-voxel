@@ -29,16 +29,18 @@ local pool=b.particles
 assert(pool.count==11)
 for _,p in ipairs(pool.slots) do if p.active then
     T.Near(p.x,-.6+b.impact.normal.x*.02); T.Near(p.y,.3+b.impact.normal.y*.02); T.Near(p.z,b.impact.normal.z*.02)
-    assert(p.material=='flash' or (p.vx>0 and p.shape=='cross' and p.ttl>=.18 and p.ttl<=.28))
+    local n=b.impact.normal
+    assert(p.material=='flash' or (p.material=='hit_red' and p.shape=='cross' and p.ttl>=.16 and p.ttl<=.2)
+        or (p.shape=='spark' and p.ttl>=.15 and p.ttl<=.25 and math.abs(p.vx*n.x+p.vy*n.y+p.vz*n.z)<1e-6))
 end end
 assert(not b.parts.belly and #b:GetHurtShapes()==1)
 hit=nil
 local boss=actor(Beast)
-local r=boss:ApplyHit({dmg=1,part='foreleg_l',poise=100,pos=Vector3(-.8,.4,.7),dir=Vector3(0,0,1)})
+local r=boss:ApplyHit({dmg=1,part='foreleg_l',poise=100,pos=Vector3(-.8,.4,.7),dir=Vector3(0,0,1),kind='arrow'})
 assert(r.staggered and not r.broke and r.material=='armor')
-boss:Reset(); r=boss:ApplyHit({dmg=40,part='foreleg_l'})
+boss:Reset(); r=boss:ApplyHit({dmg=40,part='foreleg_l',kind='arrow'})
 assert(r.broke and r.partBroken=='foreleg_l' and not r.staggered)
-r=boss:ApplyHit({dmg=10000,part='head'})
+r=boss:ApplyHit({dmg=10000,part='head',kind='arrow'})
 assert(r.killed and r.broke and not r.staggered)
 local sentry=actor(Sentry); sentry:BeginAttack()
 r=sentry:ApplyHit({dmg=1,part='stone_1',kind='sword',pos=Vector3(0,1,0),dir=Vector3(1,0,0)})
@@ -51,21 +53,22 @@ local function emit(expected)
     assert(pool:Emit(b,fx)==expected)
     for _,p in ipairs(pool.slots) do if p.active then T.Near(p.x,4); T.Near(p.y,fx.kind=='death' and 5 or 5.02); T.Near(p.z,6) end end
 end
-emit(6)
-for _,p in ipairs(pool.slots) do if p.active and p.material~='flash' then assert(p.shape=='cube' and p.sx>=.04 and p.sx<=.08 and p.ttl>=.18 and p.ttl<=.30) end end
-fx.material='armor'; emit(8)
-for _,p in ipairs(pool.slots) do if p.active and p.material~='flash' then
+-- Contact hits add 3 hit_red flash chips on top of the base profile; a killed kernel adds none.
+emit(9)
+for _,p in ipairs(pool.slots) do if p.active and p.material~='flash' and p.material~='hit_red' then assert(p.shape=='cube' and p.sx>=.04 and p.sx<=.08 and p.ttl>=.18 and p.ttl<=.30) end end
+fx.material='armor'; emit(11)
+for _,p in ipairs(pool.slots) do if p.active and p.material~='flash' and p.material~='hit_red' then
     assert(p.shape=='spark' and p.sy<p.sz/5 and p.ttl>=.15 and p.ttl<=.25)
     local speed=math.sqrt(p.vx^2+p.vy^2+p.vz^2); assert(speed>=1.5 and speed<=3)
     T.Near(p.vy,0) -- tangent to supplied up normal
 end end
-fx.tier='heavy'; emit(11)
+fx.tier='heavy'; emit(14)
 local flashes=0
 for _,p in ipairs(pool.slots) do if p.active and p.material=='flash' then flashes=flashes+1; T.Near(p.ttl,.06) end end
-assert(flashes==1); pool:UpdateOwner(b,.06); assert(pool.count==10)
-fx.tier='light'; fx.weak=true; emit(6)
-fx.broke=true; emit(12)
-for _,p in ipairs(pool.slots) do if p.active and p.material~='flash' then assert(p.shape=='plate' and p.vy>0 and p.priority==2) end end
+assert(flashes==1); pool:UpdateOwner(b,.06); assert(pool.count==13)
+fx.tier='light'; fx.weak=true; emit(9)
+fx.broke=true; emit(15)
+for _,p in ipairs(pool.slots) do if p.active and p.material~='flash' and p.material~='hit_red' then assert(p.shape=='plate' and p.vy>0 and p.priority==2) end end
 fx.broke=false; fx.weak=false; fx.kind='death'; emit(12)
 pool:ClearOwner(b); local realBoss=b.boss; b.boss=true; emit(24); b.boss=realBoss
 fx.kind='hit'; fx.material='soft'; pool:ClearOwner(b)
@@ -73,8 +76,8 @@ for _=1,20 do pool:Emit(b,fx) end
 assert(pool.count<=64 and pool:GetStats().cubeCount<=40)
 fx.material='armor'; for _=1,10 do pool:Emit(b,fx) end
 assert(pool.count==64,'contact kernels can use key-event slots, decoration cannot')
-fx.broke=true; assert(pool:Emit(b,fx)==12 and pool.count==64)
-assert(pool:Emit(b,fx)==12 and pool.count==64 and pool.evicted>0)
+fx.broke=true; assert(pool:Emit(b,fx)==15 and pool.count==64)
+assert(pool:Emit(b,fx)==15 and pool.count==64 and pool.evicted>0)
 local snapshot=pool:GetStats(); assert(snapshot==pool:GetStats() and snapshot.reserved==16 and snapshot.count<=64)
 pool:SetLimit(32); assert(pool.count<=32 and pool:GetStats().capacity==32)
 pool:ClearOwner(b); fx.broke=false; fx.material='soft'
@@ -120,7 +123,7 @@ print('PASS local recoil real-time decay; death .12 hold/.25 fragments/1.1 clear
 
 for _,broken in ipairs({false,true}) do
     boss=actor(Beast); log=events(boss)
-    if broken then boss:ApplyHit({dmg=70,part='back_armor'}) end
+    if broken then boss:ApplyHit({dmg=70,part='back_armor',kind='arrow'}) end
     boss:ApplyHit({dmg=301,part='foreleg_l'})
     assert(boss.phase==2 and boss.ragePending and not boss:StartAttack())
     boss.particles:ClearOwner(boss)

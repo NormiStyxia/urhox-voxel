@@ -96,7 +96,7 @@ print('PASS projectile realDt and rage exception do not restart or freeze on ord
 
 b=make(Beetle); local pool=b.particles
 local fx={pos=Vector3.ZERO,dir=Vector3.FORWARD,normal=Vector3.UP,material='soft',tier='light'}
-for _,item in ipairs({{'soft','light',6},{'armor','light',8},{'armor','heavy',11}}) do
+for _,item in ipairs({{'soft','light',9},{'armor','light',11},{'armor','heavy',14}}) do -- base + 3 hit_red flash chips
     pool:ClearOwner(b); fx.material,fx.tier=item[1],item[2]
     assert(pool:Emit(b,fx)==item[3])
     assert(pool.slots[1].material=='flash' and pool.slots[1].priority==1)
@@ -120,7 +120,7 @@ print('PASS first-slot kernel, exact total counts, priority1/2/3 reserve, evicti
 pool:ClearOwner(b); fx.killed=true
 for _=1,64 do assert(pool:Emit(b,fx)==1) end
 fx.killed=false; fx.broke=true
-assert(pool:Emit(b,fx)==11,'denied priority1 kernel must not block higher priority armor chips')
+assert(pool:Emit(b,fx)==14,'denied priority1 kernel must not block higher priority armor chips') -- 15 total, kernel denied
 pool:ClearOwner(b); fx.broke=false; fx.kind='phase'
 pool:Emit(b,fx)
 fx.kind='hit'; fx.broke=true

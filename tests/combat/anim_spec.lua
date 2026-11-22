@@ -32,7 +32,7 @@ test("bone axis derivation",function()
     x,y,z=Mock.rotate(Quaternion(90,0,0),0,1,0);near(z,1)
 end)
 test("all active clips have complete, ordered tracks and matching event windows",function()
-    assert(#A.DebugList()==26)
+    assert(#A.DebugList()==25)
     for _,item in ipairs(A.DebugList()) do
         local c=D.Clips[item.id]
         assert(c.id==item.id and c.dur>0 and c.root and c.weapon and c.events and c.motion)
@@ -122,7 +122,7 @@ test("same-layer crossfade does not leak the base pose",function()
     sameRotation(c.bones.body.rotation,Quaternion(6,0,0));near(c.bones.root.position.y,.96)
 end)
 test("stop closes active windows and never emits future fire",function()
-    local a=new();local h=a:Play("sword_light_1");a:Update(.18);a:Poll();a:Stop(h,.1)
+    local a=new();local h=a:Play("sword_light_1");a:Update(.2);a:Poll();a:Stop(h,.1)
     assert(names(a:Poll())=="hit_off,clip_cancelled,")
     a:Update(1);assert(#a:Poll()==0)
     h=a:Play("bow_release");a:Stop(h,0);a:Update(.5)
@@ -130,21 +130,15 @@ test("stop closes active windows and never emits future fire",function()
 end)
 test("stop removes unconsumed hit_on without losing pending hit_off",function()
     local a=new();local h=a:Play("sword_light_1");a:Update(.18);a:Poll()
-    a:Update(.15);a:Stop(h,0)
+    a:Update(.18);a:Stop(h,0)
     assert(names(a:Poll())=="hit_off,cancel_close,clip_cancelled,")
-    h=a:Play("sword_light_1");a:Update(.18);a:Stop(h,0)
+    h=a:Play("sword_light_1");a:Update(.3);a:Stop(h,0)
     assert(names(a:Poll())=="hit_off,clip_cancelled,")
 end)
 test("replay and stale handles",function()
     local a=new();local h=a:Play("bow_release");a:Update(.3);a:Poll()
     local nextHandle=a:Play("bow_release");assert(nextHandle~=h);a:Stop(h,0)
     a:Update(0);assert(names(a:Poll())=="fire,")
-end)
-test("long-press windup has no charge levels and holds its pose",function()
-    local a=new();a:Play("sword_heavy_charge")
-    a:Update(9);assert(#a:Poll()==0,"no charge_full event");a:Update(9);assert(#a:Poll()==0)
-    local pose=A.DebugSample("sword_heavy_charge",9)
-    near(pose.body[2],38)
 end)
 test("bow parameter drives arm, clamps, and full fires once per play",function()
     local a,c=new();a:Play("bow_hold",{fadeIn=0,params={p=0}});a:Update(0);a:Apply()
@@ -159,7 +153,8 @@ end)
 test("quantized anticipation but continuous active and monotonic recovery",function()
     local a=new({quantize=true});local h=a:Play("sword_light_1",{fadeIn=0})
     a:Update(.10);near(state(a,h).sample*.80,.10)
-    a:Update(.07);near(state(a,h).sample*.80,.17);assert(a:Phase()=="active")
+    a:Update(.07);near(state(a,h).sample*.80,.17);assert(a:Phase()=="anticipation")
+    a:Update(.05);near(state(a,h).sample*.80,.22);assert(a:Phase()=="active")
     a:Update(.12);assert(state(a,h).sample*.80>=.26);assert(a:Phase()=="recovery")
 end)
 test("motion totals independent of speed, fades and timestep",function()
@@ -244,16 +239,22 @@ test("six attack landmarks, torso .02s ahead and head compensates",function()
             near((c.keys.arm_right[i][1]-c.keys.body[i][1])*c.dur,.02)
             near(c.keys.head[i][1],c.keys.body[i][1])
         end
-        assert(c.keys.head[2][2][2]*c.keys.body[2][2][2]<0)
+        local opposed=false
+        for i=2,5 do
+            local product=c.keys.head[i][2][2]*c.keys.body[i][2][2]
+            assert(product<=0,id.." head turns with torso")
+            opposed=opposed or product<0
+        end
+        assert(opposed,id.." head compensates a nonzero torso yaw")
     end
     local c=D.Clips.sword_light_1
-    for i,t in ipairs({0,.114,.19,.25,.29,.80}) do near(c.keys.arm_right[i][1]*c.dur,t) end
+    for i,t in ipairs({0,.114,.19,.25,.35,.80}) do near(c.keys.arm_right[i][1]*c.dur,t) end
 end)
 test("finisher commits the torso and hips to the downward strike",function()
     local c=D.Clips.sword_light_5
     assert(c.keys.body[4][2][1]>=42,'finisher torso folds forward at contact')
     assert(c.keys.body[5][2][1]>=36,'finisher stays folded through follow-through')
-    assert(c.root[4][2]<-.15 and c.root[5][2]<-.12,'finisher hips drop on impact')
+    assert(c.root[5][2]<-.15 and c.root[6][2]<-.12,'finisher hips drop on impact')
     assert(c.keys.leg_left[4][2][1]<=-28 and c.keys.leg_right[4][2][1]>=18,'both legs brace the landing')
     local contact=A.DebugSample('sword_light_5',c.phases.active[1]+.01)
     local settle=A.DebugSample('sword_light_5',.70)
@@ -320,11 +321,11 @@ test("afterimages maintain .04s deadlines at 30 and 60fps",function()
     end
 end)
 test("afterimages are sword-only, expire during hitstop, cancel clears",function()
-    local a,c=new();a:Play("sword_light_1",{fadeIn=0});a:Update(.17);a:Apply()
+    local a,c=new();a:Play("sword_light_1",{fadeIn=0});a:Update(.2);a:Apply()
     assert(#a:GetAfterimages()==1)
     a.timeScale=0;a:Update(.11);Mock.reset(c);a:Apply();assert(#a:GetAfterimages()==0)
     a:Stop(nil,0);a:Poll();a.timeScale=1
-    local h=a:Play("sword_light_1",{fadeIn=0});a:Update(.17);Mock.reset(c);a:Apply()
+    local h=a:Play("sword_light_1",{fadeIn=0});a:Update(.2);Mock.reset(c);a:Apply()
     assert(#a:GetAfterimages()==1);a:Stop(h,0);assert(#a:GetAfterimages()==0)
     a:Play("bow_release");a:Update(.1);Mock.reset(c);a:Apply();assert(#a:GetAfterimages()==0)
 end)
@@ -390,9 +391,9 @@ local function distance(a,b)
 end
 test("path endpoints, explicit arc sweep, windup and overshoot",function()
     local cases={
-        {"sword_light_1",.19,.29,{.62,1.55,.05},{-.40,.85,.70},150,.55},
-        {"sword_light_2",.20,.30,{-.40,.80,.65},{.62,1.60,.30},-140,.45},
-        {"sword_light_3",.21,.33,{.70,1.20,-.20},{-.70,1.10,.35},200,1.6}}
+        {"sword_light_1",.19,.26,{.62,1.55,.05},{-.40,.85,.70},150,.55},
+        {"sword_light_2",.20,.27,{-.40,.80,.65},{.62,1.60,.30},-140,.45},
+        {"sword_light_3",.21,.30,{.70,1.20,-.20},{-.70,1.10,.35},200,1.6}}
     for _,v in ipairs(cases) do
         local c=D.Clips[v[1]];local path=c.handPath.arm_right
         near(path.amplitude,v[6]);near(path.windup,.12);near(path.overshoot,.08)
@@ -409,7 +410,7 @@ test("path endpoints, explicit arc sweep, windup and overshoot",function()
     assert(a2[1]<-.3 and b2[1]>.3 and a2[2]>b2[2]+.3,"second diagonal")
 end)
 test("all IK samples remain finite and hit the rigid arm sphere",function()
-    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release","sword_heavy_charge","bow_draw","bow_hold","bow_release"}) do
+    for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_heavy_release","bow_draw","bow_hold","bow_release"}) do
         local dur=D.Clips[id].dur
         for i=0,120 do
             local pose=A.DebugSample(id,dur*i/120,{p=i/120,aimPitch=35})

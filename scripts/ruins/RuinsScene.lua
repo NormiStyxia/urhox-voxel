@@ -27,6 +27,10 @@ local HUD = require("ruins.RuinsHUD")
 local VoidRewind = require("ruins.VoidRewind")
 local TouchInput = require("ui.TouchInput")
 local TouchControls = require("ui.TouchControls")
+local HomeIsland = require("ruins.HomeIsland")
+local WorldMap = require("ui.WorldMap")
+local PixelDraw = require("ui.PixelDraw")
+local lastRuinsLanding,homeJob
 local SettingsMenu = require("ui.SettingsMenu")
 local PerformanceHUD = require("ui.PerformanceHUD")
 local DebugLog = require("ruins.DebugLog")
@@ -213,6 +217,10 @@ local OBJECTIVES = {
 }
 
 local function RefreshObjective()
+    if M.region=="home" then
+        HUD.SetObjective("家园小岛", "屋前锻造炉 · G 锻造　　M 打开地图")
+        return
+    end
     local o = OBJECTIVES[stage_]
     if o == nil then return end
     local n = 0
@@ -285,7 +293,7 @@ local function SetupLighting()
 end
 
 local function GameplayInputAllowed()
-    return not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn
+    return not WorldMap.IsOpen() and not WeaponWheel.IsBlocked() and not voidInputBlocked and not M.debugOn
         and not TouchControls.IsBlocked() and input.focus and not input.minimized
         and (TouchInput.IsEnabled() or pointer:IsEnabled() or M.fake~=nil)
 end
@@ -505,9 +513,10 @@ local function CombatHasAggro()
     return false
 end
 local function CanOpenForge()
-    if not nomi_ or not M.ride or M.ride.mode~='free' or CombatState.Engaged() or CombatHasAggro()
+    if WorldMap.IsOpen() or not nomi_ or not M.ride or M.ride.mode~='free' or CombatState.Engaged() or CombatHasAggro()
         or combatMoves_.dead or voidInputBlocked or SettingsMenu.IsBlocked() or animPreview_.index>0 then return false end
     local p=nomi_:Position()
+    if M.region=="home" then return nomi_.cc.onGround and HomeIsland.NearForge(p) end
     return nomi_.cc.onGround and Terrain.IsSafeGround(p.x,p.y,p.z)
 end
 local function OpenForge()
@@ -516,7 +525,7 @@ local function OpenForge()
         print(('Forge: refused reason=blocked mode=%s onGround=%s combat=%s aggro=%s dead=%s'):format(
             tostring(M.ride and M.ride.mode),tostring(nomi_ and nomi_.cc.onGround),tostring(CombatState.Engaged()),
             tostring(CombatHasAggro()),tostring(combatMoves_.dead)))
-        caster_:Say(CombatState.Engaged() and '战斗中无法锻造' or '请在安全地面、脱离警戒后锻造',1.2); return
+        caster_:Say(CombatState.Engaged() and '战斗中无法锻造' or (M.region=='home' and '走近屋前的锻造炉' or '请在安全地面、脱离警戒后锻造'),1.2); return
     end
     -- Bind the exact live module's read-only getter; no package.loaded key or
     -- separately maintained HUD state is required for the primary route.
@@ -570,7 +579,7 @@ local function StartCombat()
             local hit=combatRig_:GetHit()
             local cn=nomi_:CameraNode()
             local a=snapshot and snapshot.cameraOrigin or cn.worldPosition
-            local b=a+(snapshot and snapshot.cameraDirection or cn.worldDirection)*(stats.range or 64)
+            local b=a+(snapshot and snapshot.cameraDirection or cn.worldDirection)*64
             local wall=CombatCast(a,b)
             local contacts=CombatHit.Query(CombatEnemies(),a,b,0,nil,bowFireHits,bowFirePool)
             local reach=wall or 1
@@ -720,6 +729,63 @@ local function StartCombat()
         CombatAudio.SetQuality(combatLowQuality_ and 'low' or 'mid')
     end)
 end
+local function TravelToRegion(region)
+    if M.ride.mode~='free' then return false,'先下龙，再启程' end
+    if CombatHasAggro() or CombatState.Engaged() or combatMoves_.dead then return false,'脱离战斗后可启程' end
+    if voidInputBlocked or not nomi_.cc.onGround then return false,'请先回到地面' end
+    local destination,yaw
+    if region=='home' then
+        if not Terrain.home then
+            homeJob=homeJob or HomeIsland.BeginBuild(world_,scene_)
+            return false,'正在展开家园小岛…'
+        end
+        destination=Vector3(HomeIsland.x+5,HomeIsland.base+.1,HomeIsland.z-12)
+        yaw=-28
+        lastRuinsLanding=nomi_.safePos
+    else
+        destination=lastRuinsLanding or M.SPAWN
+        yaw=0
+    end
+    if not nomi_:TeleportToSafeGround(destination,yaw) then return false,'此落点暂不可用' end
+    nomi_.fallbackPos=region=='home' and destination or M.SPAWN
+    M.ride.pos=destination
+    M.ride.vy,M.ride.speed=0,0
+    if M.dragonAwake then
+        local nest=region=='home' and Vector3(HomeIsland.x+12,HomeIsland.base+1.75,HomeIsland.z+3) or M.DRAGON_POS
+        M.ctrl.loco.arenaX=region=='home' and HomeIsland.x or 0
+        M.ctrl.loco.arenaZ=region=='home' and HomeIsland.z or 0
+        M.ctrl:Teleport(nest,M.DRAGON_YAW)
+        M.ride.wander.center=nest
+        M.ride.aiOff=region=='home' or not M.settled
+        M.ctrl.input.move,M.ctrl.input.turn=0,0
+        if M.ctrl.state=='WALK' then M.ctrl:Request('IDLE') end
+    end
+    combatArrows_:Clear()
+    M.region=region
+    RefreshObjective()
+    return true
+end
+local function AdvanceHomeTravel()
+    local done,err=homeJob:Step()
+    if err then
+        homeJob=nil
+        print('HomeIsland build failed: '..tostring(err));WorldMap.SetNotice('载入中断，点家园重试')
+    elseif done then
+        homeJob=nil;Terrain.home=HomeIsland
+        local ok,why=TravelToRegion('home')
+        if ok then WorldMap.Close() else WorldMap.SetNotice(why) end
+    end
+end
+local function OpenWorldMap()
+    if M.debugOn or voidInputBlocked or combatMoves_.dead or SettingsMenu.IsBlocked() or ForgePanel.IsOpen()
+        or WeaponWheel.IsBlocked() or animPreview_.index>0 then return end
+    if weaponGesture_ then weaponGesture_:ForceClose('map') end
+    TouchControls.Cancel();pointer:SetBlocked(true);drag.buttons=0
+    WorldMap.Open(HUD.root,M.region,TravelToRegion,function()
+        if homeJob then homeJob:Cancel();homeJob=nil end
+        TouchControls.Cancel();combatInputBlocked=true;pointer:SetBlocked(false);pointer:Release('map-close');pointer:Resume()
+    end)
+end
 local function AttachTouchControls()
     local touchState={}
     local cooldown = {}
@@ -728,7 +794,7 @@ local function AttachTouchControls()
         local ride,ctrl=M.ride,M.ctrl
         touchState.mounted,touchState.mounting=ride.mode~="free",ride.mode=="mounting"
         touchState.airborne,touchState.gliding=ctrl.loco.airborne,ctrl.state=="GLIDE"
-        touchState.blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen() or WeaponWheel.IsBlocked()
+        touchState.blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen() or WeaponWheel.IsBlocked() or WorldMap.IsOpen()
         touchState.breathActive=M.stream and M.stream.active
         touchState.skillLeft=math.max(0,(M.weaponSkillReadyAt or 0)-time_)
         touchState.noSpells=not CombatState.CanUseTime()
@@ -753,6 +819,7 @@ local function AttachTouchControls()
         caster_.charging,caster_.charge=false,0
         if M.stream then M.stream:Stop(true) end
     end)
+    TouchControls.onMap=OpenWorldMap
     VoidRewind.Attach(HUD.root)
     DebugLog.RegisterProbe('Ruins',function()
         local pieces=0
@@ -773,6 +840,7 @@ end
 -- ---------------------------------------------------------------- 启动
 function M.Start()
     if scene_ then M.Stop() end
+    M.region,lastRuinsLanding,Terrain.home='ruins',nil,nil
     time_,stage_,farView=0,'gate',false
     M.mounted,M.roared,M.spread,M.settled,M.wakeT=false,false,false,false,0
     M.gateHover,M.gateHoverTarget,M.lastGateHover=0,0,nil
@@ -902,7 +970,7 @@ function M.Start()
     HUD.Build(Spells.SPELLS)
     AttachTouchControls()
     SetStage("gate")
-    HUD.SetHint(resumeHint .. "  ·  F10 设置 · H 隐藏说明")
+    HUD.SetHint(resumeHint .. "  ·  M 地图 · F10 设置 · H 隐藏说明")
     if M.DEBUG_PANEL then M.ToggleDebugPanel() end
 
     SubscribeToEvent("BeginFrame", "Ruins_HandleGCBeginFrame")
@@ -953,6 +1021,12 @@ function M.ApplyCamera() end
 ---@param eventType string
 ---@param eventData MouseButtonDownEventData
 function Ruins_HandleMouseDown(eventType, eventData)
+    if WorldMap.IsOpen() then
+        if not TouchInput.IsEnabled() and eventData:GetInt('Button')==MOUSEB_LEFT then
+            local k=PixelDraw.PixelToHUD();WorldMap.Click(eventData:GetInt('X')*k,eventData:GetInt('Y')*k)
+        end
+        return
+    end
     if (weaponGesture_ and WeaponWheel.IsBlocked()) or voidInputBlocked or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or TouchInput.IsEnabled() then return end
     local button = eventData:GetInt("Button")
     if button ~= MOUSEB_LEFT and button ~= MOUSEB_RIGHT and button ~= MOUSEB_MIDDLE then return end
@@ -970,6 +1044,7 @@ end
 ---@param eventType string
 ---@param eventData MouseMoveEventData
 function Ruins_HandleMouseMove(eventType, eventData)
+    if WorldMap.IsOpen() then return end
     if (weaponGesture_ and WeaponWheel.IsBlocked()) or voidInputBlocked or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or TouchInput.IsEnabled() then return end
     if mouseLocked or M.debugOn or nomi_ == nil or drag.buttons == 0 then return end
     local x, y = eventData:GetInt("X"), eventData:GetInt("Y")
@@ -989,6 +1064,7 @@ end
 ---@param eventType string
 ---@param eventData MouseButtonUpEventData
 function Ruins_HandleMouseUp(eventType, eventData)
+    if WorldMap.IsOpen() then return end
     if (weaponGesture_ and WeaponWheel.IsBlocked()) or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() then return end
     if TouchInput.IsEnabled() then return end
     local button = eventData:GetInt("Button")
@@ -1012,6 +1088,15 @@ end
 function Ruins_HandleKeyDown(eventType, eventData)
     if combatTest_ and combatTest_.active and eventData:GetInt('Key')~=KEY_F11 then
         Safe('Debug.F11Stop',combatTest_.Stop,combatTest_,'key') -- deliberately continue dispatching the original key
+    end
+    local mapKey=eventData:GetInt('Key')
+    if WorldMap.IsOpen() then
+        if not eventData:GetBool('Repeat') then WorldMap.Key(mapKey) end
+        return
+    end
+    if mapKey==KEY_M then
+        if not eventData:GetBool('Repeat') then OpenWorldMap() end
+        return
     end
     if weaponGesture_ and WeaponWheel.IsBlocked() and eventData:GetInt("Key")~=KEY_F10 then return end
     if ForgePanel.IsOpen() then return end -- ForgePanel owns Escape and its release latch.
@@ -1609,6 +1694,11 @@ function Ruins_HandleUpdate(eventType, eventData)
     local dt = eventData["TimeStep"]:GetFloat()
     time_ = time_ + dt
     Safe('Touch.Update',TouchControls.Update,dt)
+    if WorldMap.IsOpen() then
+        if voidInputBlocked or combatMoves_.dead then WorldMap.Close()
+        elseif homeJob then AdvanceHomeTravel();return
+        else return end
+    end
     if combatInputBlocked then
         local held=input:GetMouseButtonDown(MOUSEB_LEFT) or input:GetMouseButtonDown(MOUSEB_RIGHT)
             or TouchInput.Down('shatter') or TouchInput.Down('attack') or TouchInput.Down('heavy')
@@ -1690,7 +1780,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         if M.wakeT > 10.0 and M.spread and not M.settled then
             M.settled = true
             ctrl:Request("IDLE")
-            M.ride.aiOff = false
+            M.ride.aiOff = M.region=='home'
         end
     end
     Safe('Dragon.SleepPose',ApplySleepPose,dt)
@@ -1987,6 +2077,7 @@ function M.Stop()
     if ForgeShowroom then ForgeShowroom.Exit() end -- teardown between panel fades
     if M.atmosphere then M.atmosphere:Stop() end
     DebugLog.RegisterProbe('Ruins',nil)
+    WorldMap.Close(); TouchControls.onMap=nil; Terrain.home=nil
     SettingsMenu.Stop()
     PerformanceHUD.Stop()
     CombatState.Stop()

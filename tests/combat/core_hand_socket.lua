@@ -33,7 +33,7 @@ local function read(path)local f=assert(io.open(path));local s=f:read('*a');f:cl
 local function near(a,b)assert((a-b):Length()<1e-8,tostring(a)..' ~= '..tostring(b))end
 local B=require('game.BlockCharacter')
 local source=read('scripts/ruins/NomiController.lua')
-local init=assert(source:match('(    self.nomi = BlockCharacter.CreateVoxel.-)\n    local cc ='))
+local init=assert(source:match('(    self.nomi = .-)\n    local cc ='))
 assert(not init:find('CreateChild',1,true) and not init:find('socket.position',1,true),'caller must not own/move palm')
 local N={}
 local hand=assert(source:match('(function N:HandPos%(%).-\nend)'))

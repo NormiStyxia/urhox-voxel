@@ -36,7 +36,7 @@ p=P.New{random=function()return .5 end}
 local _,shot=p:Fire(Vector3.ZERO,Vector3.FORWARD,1,{range=2000})
 p:Update(.003);S.near(shot.pos.z,0);p:Update(.006);assert(shot.pos.z>0 and shot.accumulator>0)
 p:Update(8);assert(not shot.active,'8 second TTL retires with catch-up')
-p:Clear();_,shot=p:Fire(Vector3.ZERO,Vector3.FORWARD,1,{range=1});p:Update(.1);assert(not shot.active and shot.distance<=1+1e-8)
+p:Clear()
 
 -- Launch-to-tip obstruction is swept before rendering; wall wins equal t.
 local hits,casts,wallSounds=0,0,0

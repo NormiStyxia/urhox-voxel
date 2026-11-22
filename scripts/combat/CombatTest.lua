@@ -107,9 +107,8 @@ function T:Input(dt,allowed)
         if self.phase==require('combat.AnimClips').ComboLength and not neutral.attackTap and not m.clip and t>.2 then self:Finish(); self:Next() end
     elseif s.id:find('heavy_',1,true)==1 then
         if not self.released then
-            neutral.attack=true
-            -- Long press fires by itself; let go once the cross slash is playing.
-            if m.clip=='sword_heavy_release' then neutral.attack=false; self.released=true end
+            -- Sword heavy is Q: one press fires the cross slash.
+            self.released=true; m:Action('heavy')
         elseif not m.clip then self:Finish(); self:Next() end
     else
         if not self.released then

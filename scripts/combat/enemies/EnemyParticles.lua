@@ -136,7 +136,8 @@ function Pool:Emit(owner,info)
     if dust then count=6 elseif phase then count=10 end
     if contact and info.killed then count=1 end
     local priority=death and 3 or (broken and 2 or 0)
-    local hitFlash=contact and not death and info.kind~='dust'
+    -- A killed contact is exactly one kernel: no extra hit_red chips on top of it.
+    local hitFlash=contact and not death and info.kind~='dust' and not info.killed
     if hitFlash then count=count+3 end
     local direction=info.impactDir or info.dir -- visual slash direction never changes gameplay knock
     local dx,dy,dz=direction.x,direction.y,direction.z

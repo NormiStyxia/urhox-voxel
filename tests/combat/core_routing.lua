@@ -155,7 +155,7 @@ print('PASS independent ray exclusion for main weapon/trail/sword+bow images/cha
 -- F11 interruption must leave the original key available to its normal handler.
 local keyBody=assert(source:match('(function Ruins_HandleKeyDown.-)\nend'))..'\nend'
 local stoppedTest,resumed=0,0
-local keyEnv=setmetatable({Safe=function(_,fn,...)return pcall(fn,...)end,combatTest_={active=true,Stop=function()stoppedTest=stoppedTest+1 end},
+local keyEnv=setmetatable({WorldMap={IsOpen=function()return false end},Safe=function(_,fn,...)return pcall(fn,...)end,combatTest_={active=true,Stop=function()stoppedTest=stoppedTest+1 end},
  KEY_F11=111,KEY_W=119,KEY_F10=110,KEY_ESCAPE=27,KEY_E=101,KEY_Q=113,KEY_A=97,KEY_S=115,KEY_D=100,
  ForgePanel={IsOpen=function()return false end},SettingsMenu={IsOpen=function()return false end,IsBlocked=function()return false end},
  TouchInput={IsEnabled=function()return false end},pointer={Resume=function()resumed=resumed+1 end},M={}}, {__index=_G})

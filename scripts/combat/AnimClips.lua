@@ -238,16 +238,6 @@ for _,row in ipairs(LIGHT) do
     -- Long recovery melts into the combat stance instead of snapping at the end.
     C.Clips[row.id].fadeOut=RECOVERY_FADE
 end
-add { -- Long-press windup: blade lifts over the right shoulder, no charge levels.
-    -- Holding attack HEAVY_HOLD (.40s) fires the cross slash straight from this pose.
-    id="sword_heavy_charge",dur=.50,layer=L.ATTACK,weaponType="sword",loop=true,loopFrom=.9,
-    keys={body=k({6,0,0},{-6,30,0},{-8,38,0},{-8,38,0},.45,.8),
-        arm_right=k({-65,0,12},{-130,30,50},{-160,35,60},{-160,35,60},.45,.8),
-        arm_left=k({0,0,-8},{-50,10,-20},{-90,15,-15},{-90,15,-15},.45,.8),
-        leg_right=k({0,0,0},{-28,0,5},{-38,0,5},{-38,0,5},.45,.8),
-        leg_left=k({0,0,0},{-20,0,-5},{-28,0,-5},{-28,0,-5},.45,.8)},
-    root={{0,-.04},{.45,-.12},{.8,-.15},{1,-.15}},
-}
 -- Cross slash (交叉连斩): forehand diagonal (upper right -> lower left), the
 -- wrist rolls back over the left shoulder, backhand diagonal (upper left ->
 -- lower right). Two hit windows; the ribbons cross into an X.
@@ -440,7 +430,7 @@ local function preservePose(c)
         c.keys[name]=copy
     end
 end
-for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release","sword_heavy_charge"}) do
+for _,id in ipairs({"sword_light_1","sword_light_2","sword_light_3","sword_light_4","sword_light_5","sword_heavy_release"}) do
     preservePose(C.Clips[id])
 end
 -- Arc paths (body-aligned metres, feet at y=0). Contact/ending are seconds.
@@ -540,10 +530,6 @@ for id,lean in pairs(LEAN) do
     -- Torso drives into contact quickly (outCubic) instead of a symmetric ease.
     c.keys.body[4][3]="outCubic"
 end
-C.Clips.sword_heavy_charge.handPath={arm_right={space="body_feet",segments={
-    bez(0,1,{.35,1.05,.30},{.65,1.55,-.20},{.70,1.45,-.35},"inQuad")}}}
-
-C.Clips.sword_heavy_charge.bladePath={mode="radial",origin={0,1.05,0},side="arm_right"}
 
 -- 攻击层淡出后仍保持低位握剑，不能交回基础层的前举持械姿势。
 local swordStance=C.Clips.stance_combat_sword

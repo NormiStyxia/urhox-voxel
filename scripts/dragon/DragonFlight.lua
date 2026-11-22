@@ -38,7 +38,7 @@ function M.EdgeSpeed(L)
     local a=math.rad(L.travelYaw or L.yaw)
     local dx,dz=math.sin(a),math.cos(a)
     local cap=1e6
-    for _,axis in ipairs({{L.pos.x,dx},{L.pos.z,dz}}) do
+    for _,axis in ipairs({{L.pos.x-(L.arenaX or 0),dx},{L.pos.z-(L.arenaZ or 0),dz}}) do
         local pos,dir=axis[1],axis[2]
         if math.abs(dir)>0.001 then
             local distance=(M.AIR_EDGE-4-(dir>0 and pos or -pos))/math.abs(dir)
