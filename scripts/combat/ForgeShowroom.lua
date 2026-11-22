@@ -442,13 +442,15 @@ local function BuildStep(s,dt)
         end
         if single.weapon=='sword' and (single.modelId=='iron' or single.modelId=='warden') then
             local Visual=single.modelId=='iron' and IronVisual or WardenVisual
-            local visual,err=Visual.New(s.pendingRoot,Catalog.Definitions.sword.visualTip,single.colors)
+            local visual,err=Visual.New(s.pendingRoot,nil,single.colors)
             if visual then
                 local data=require(single.modelId=='iron' and 'combat.models.IronSword' or 'combat.models.WardenSword')
-                s.bladeJob={authoredVisual=visual,authored=Visual,node=visual.node,blueprint={bounds=data.bounds},step=function(job)
-                    if not visual.ready then Visual.Step(visual) end
-                    return visual.ready
+                s.bladeJob={authoredVisual=visual,authored=Visual,node=visual.node,blueprint={bounds=data.bounds},step=function()
+                    local done,reason=Visual.Step(visual)
+                    if done==nil then error(reason) end
+                    return done
                 end}
+                Isolate(s,'geometry',visual.geometry)
                 return
             end
             ReportFailure(s,'Update',err)
