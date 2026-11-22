@@ -459,6 +459,11 @@ local ARM_SIDES = { "right", "left" }
 -- Preserve sparse timestamps and constants, with endpoint holding like BB.
 function M.SampleAnimationChannel(frames, time, fallback, headYaw)
     if frames == nil or #frames == 0 then return fallback, fallback, fallback end
+    -- Constant tracks need no key search or interpolation.
+    if #frames == 1 then
+        local key = frames[1]
+        return AnimationValue(key[2], headYaw or 0), AnimationValue(key[3], headYaw or 0), AnimationValue(key[4], headYaw or 0)
+    end
     local first, last = frames[1], frames[#frames]
     local a, b = first, first
     if time >= last[1] then

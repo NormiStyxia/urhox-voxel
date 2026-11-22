@@ -70,6 +70,13 @@ CLAUDE.md
 /.codex
 /.opencode
 
+
+
+# Maker 默认忽略规则（自动补充；平台内容不应提交）
+
+# Maker 默认忽略规则（自动补充；平台内容不应提交）
+/.cache/
+
 # >>> TapTap Maker AI dev kit (local only) >>>
 .DS_Store
 .agents\skills\custom-lobby/
@@ -77,6 +84,7 @@ CLAUDE.md
 .agents\skills\materials/
 .agents\skills\nvg-resolution-mode/
 .agents\skills\online-system-notification/
+.agents\skills\particles/
 .agents\skills\run-lua-validate/
 .agents\skills\setup-achievements/
 .agents\skills\setup-ads/
@@ -86,6 +94,8 @@ CLAUDE.md
 .agents\skills\ui-astroon/
 .agents\skills\ui-brawlforge/
 .agents\skills\ui-pixelforge/
+.agents\skills\ui-split/
+.agents\skills\ui-t3-arena/
 .claude/
 .cli/
 .emmylua/
@@ -102,8 +112,3 @@ templates/
 tools/
 urhox-libs/
 # <<< TapTap Maker AI dev kit (local only) <<<
-
-# Maker 默认忽略规则（自动补充；平台内容不应提交）
-
-# Maker 默认忽略规则（自动补充；平台内容不应提交）
-/.cache/

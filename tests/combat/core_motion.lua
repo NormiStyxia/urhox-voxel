@@ -77,10 +77,10 @@ local rotation=setmetatable({}, {__mul=function(_,v) return v end})
 local cameraEnv=setmetatable({N=CameraN,Ray=function(origin,direction) return {origin=origin,direction=direction} end,Quaternion=function() return rotation end},{__index=_G})
 assert(load(cameraBody,'actual combat camera framing','t',cameraEnv))()
 local cameraNode={position=Vector3(0,0,-5)}
-local cameraStub={SetMode=function(self,mode) self.mode=mode end,SetTransitionSpeed=function(self,speed) self.speed=speed end,
+local cameraStub={_currentOffset=Vector3(.55,1.65,0),SetMode=function(self,mode) self.mode=mode end,SetTransitionSpeed=function(self,speed) self.speed=speed end,
  GetNode=function() return cameraNode end,
  Update=function(_,dt,target) cameraNode.position=target.position+Vector3(.55,1.65,-5) end}
-local camN=setmetatable({cam=cameraStub,node={worldPosition=Vector3.ZERO},camTarget={position=Vector3.ZERO},camYaw=0,camPitch=12,
+local camN=setmetatable({cc={onGround=true},cam=cameraStub,node={worldPosition=Vector3.ZERO},camTarget={position=Vector3.ZERO},camYaw=0,camPitch=12,
  world={RaycastSingle=function() return {hit=false} end},GridHit=function() return {hit=false} end,
  CameraNode=function() return cameraNode end},{__index=CameraN})
 camN:SetCombatCamera(Vector3(0,0,10),true,true,false)
@@ -96,3 +96,14 @@ S.near((cameraNode.position-camN.combatCameraOrigin):Length(),1.7)
 camN.combatLookQuiet=.25;camN:UpdateCamera(.1,'combat',camN.node)
 assert(camN.combatFocusOffset.z<3,'live player look suppresses target reframing')
 print('PASS actual camera 70:30 framing, manual input priority, independent follow/offset, final obstruction guard')
+
+-- Voxel walls must contract the arm on contact and release it over time.
+camN.world.RaycastSingle=function() return {hit=true,distance=1.3} end
+camN:UpdateCamera(1/60,'normal',camN.node)
+local function armLength() return (cameraNode.position-camN.combatCameraOrigin):Length() end
+S.near(armLength(),1)
+camN.world.RaycastSingle=function() return {hit=false} end
+camN:UpdateCamera(1/60,'normal',camN.node)
+assert(armLength()>1 and armLength()<2,'no pop on first clear frame')
+for i=1,120 do camN:UpdateCamera(1/60,'normal',camN.node) end
+assert(armLength()>4.99,'recover full boom after obstruction')

@@ -209,7 +209,10 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     if combat then target=moving and ((run and not aiming and (combat.scale or 1)==1) and runSpeed or (combat.baseSpeed or 5))*(combat.scale or 1) or 0 end
     local onGround = cc.onGround
     local want = dir * target * moveAmount
-    local k = onGround and (1 - math.exp(-12 * dt)) or (1 - math.exp(-12 * AIR_CONTROL * dt))
+    -- Brake promptly on release or reversal, with softer acceleration from rest.
+    local response = moving and 12 or 18
+    if moving and self.vel:DotProduct(want) < 0 then response = 16 end
+    local k = 1 - math.exp(-response * (onGround and 1 or AIR_CONTROL) * dt)
     self.vel = self.vel:Lerp(want, k)
     cc.desiredVelocity = Vector3(self.vel.x, 0, self.vel.z)
     if combat then
@@ -220,7 +223,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
         local length=motion:Length()
         local p=self.node.worldPosition
         local fraction=1
-        local steps=combat.motionChecked and 0 or math.max(1,math.ceil(length/.12))
+        local steps=combat.motionChecked and 0 or math.ceil(length/.12)
         for i=1,steps do
             local q=p+motion*(i/steps)
             if not Terrain.HasGround(q.x,q.z,.4) then fraction=(i-1)/steps; break end
@@ -232,11 +235,16 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     -- 朝向：瞄准时面朝相机方向；否则面朝移动方向
     local wantYaw = self.yaw
     if aiming then wantYaw = self.camYaw
-    elseif moving then wantYaw = math.deg(math.atan(dir.x, dir.z)) end
+    elseif moving and self.vel:LengthSquared() > .01 then
+        wantYaw = math.deg(math.atan(self.vel.x, self.vel.z))
+    end
     if combat and combat.facing then wantYaw=math.deg(math.atan(combat.facing.x,combat.facing.z)) end
-    if combat and combat.sprinting then
-        self.yaw=self.yaw+Clamp(WrapDeg(wantYaw-self.yaw),-540*dt,540*dt)
-    else self.yaw = self.yaw + WrapDeg(wantYaw - self.yaw) * (1 - math.exp(-14 * dt)) end
+    local turn = WrapDeg(wantYaw - self.yaw) * (1 - math.exp(-14 * dt))
+    if not aiming and not (combat and combat.facing) then
+        local limit = (combat and combat.sprinting and 540 or 720) * dt
+        turn = Clamp(turn, -limit, limit)
+    end
+    self.yaw = self.yaw + turn
     self.node.rotation = Quaternion(self.yaw, Vector3.UP)
     self.speed = Vector3(self.vel.x, 0, self.vel.z):Length()
     self.onGround = onGround and not jumped
@@ -479,23 +487,30 @@ function N:UpdateCamera(dt, mode, followNode)
     self.combatFocusOffset=(self.combatFocusOffset or Vector3.ZERO):Lerp(focus,1-math.exp(-dt/.25))
     if fighting then p=p+self.combatFocusOffset end
     local cur = self.camTarget.position
-    local k = 1 - math.exp(-14 * dt)
-    local ny = cur.y + (p.y - cur.y) * (1 - math.exp(-8 * dt))
+    -- Track lateral input closely. Give the animated saddle and stair steps
+    -- more vertical damping than an airborne player needs.
+    local mounted = mode == "mounted"
+    local k = 1 - math.exp(-(mounted and 11 or 20) * dt)
+    local verticalRate = mounted and 4 or (self.cc.onGround and 8 or 13)
+    local ny = cur.y + (p.y - cur.y) * (1 - math.exp(-verticalRate * dt))
     self.camTarget.position = Vector3(cur.x + (p.x - cur.x) * k, ny, cur.z + (p.z - cur.z) * k)
     self.cam:Update(dt, self.camTarget, self.camYaw, self.camPitch)
     -- 体素世界里的相机防穿墙（库只查 Bullet PhysicsWorld，这里补一条体素射线）
     local cn = self.cam:GetNode()
-    local aimPoint = self.camTarget.position + Quaternion(self.camYaw, Vector3.UP) * ((mode == "aim") and Vector3(0.75, 1.6, 0) or Vector3(0.55, 1.65, 0))
-    if fighting and mode:find('Bow',1,true) then aimPoint=self.camTarget.position+Quaternion(self.camYaw,Vector3.UP)*Vector3(1.35,1.55,0) end
-    self.combatCameraOrigin=aimPoint
-    if mode == "mounted" then aimPoint = self.camTarget.position + Vector3(0, 3.2, 0) end
-    local d = cn.position - aimPoint
-    local len = d:Length()
-    if len > 0.3 then
-        local hit = self.world:RaycastSingle(Ray(aimPoint, d * (1.0 / len)), len)
-        if hit.hit and hit.distance < len then
-            cn.position = aimPoint + d * (math.max(0.4, hit.distance - 0.3) / len)
-        end
+    -- Use the library's interpolated shoulder pivot even during mode changes.
+    local aimPoint = self.camTarget.position + Quaternion(self.camYaw, Vector3.UP) * self.cam._currentOffset
+    self.combatCameraOrigin = aimPoint
+    local arm = cn.position - aimPoint
+    local length = arm:Length()
+    if length > .001 then
+        local direction = arm / length
+        local hit = self.world:RaycastSingle(Ray(aimPoint, direction), length)
+        local clearance = hit.hit and math.max(0, hit.distance - .3) or length
+        -- Contract immediately. Keep only the obstruction correction as state,
+        -- so an unobstructed zoom still follows the camera mode exactly.
+        local obstruction = math.max(0, length - clearance)
+        self.cameraObstruction = math.max(obstruction, (self.cameraObstruction or 0) * math.exp(-8 * dt))
+        cn.position = aimPoint + direction * math.max(0, length - self.cameraObstruction)
     end
 end
 
