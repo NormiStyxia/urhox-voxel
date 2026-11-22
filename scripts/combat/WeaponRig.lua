@@ -3,6 +3,10 @@
 local Builder=require("combat.WeaponBuilder")
 local WingVisual=require("combat.WingSwordVisual")
 local ThornVisual=require("combat.ThornBowVisual")
+local IronVisual=require("combat.IronSwordVisual")
+local WardenVisual=require("combat.WardenSwordVisual")
+local HunterVisual=require("combat.HunterBowVisual")
+local SilverVisual=require("combat.SilverBowVisual")
 local Catalog=require("combat.WeaponCatalog")
 local Store=require("combat.WeaponStore")
 
@@ -151,7 +155,7 @@ local function ScaleSword(node,minimum)
 end
 local function Distance(a,b) local x,y,z=a.x-b.x,a.y-b.y,a.z-b.z;return math.sqrt(x*x+y*y+z*z) end
 local function Single(config,weapon)
-    return {weapon=weapon,appearance=config[weapon].appearance,colors=config[weapon].colors}
+    return {weapon=weapon,appearance=config[weapon].appearance,modelId=config[weapon].modelId,colors=config[weapon].colors}
 end
 
 -- The high-detail model only needs pose/opacity state. Allocate a fallback
@@ -263,14 +267,14 @@ function Rig:Init(scene,world,controller)
         local stateNode=pivot:CreateChild('weapon_pose_'..weapon)
         stateNode.temporary=true
         stateNode.enabled=false
-        local entry={pivot=pivot,mesh={node=stateNode,blueprint=blueprint,alpha=0}}
+        local entry={pivot=pivot,mesh={node=stateNode,blueprint=blueprint,alpha=0},modelId=blueprint.config.modelId}
         self.entries[weapon]=entry
-        if weapon=='sword' then self:AttachWing(entry)
+        if weapon=='sword' then self:AttachWing(entry,blueprint)
         else
             self.bowHalfHeight=Catalog.Definitions.bow.halfHeight
-            self:AttachThorn(entry)
+            self:AttachThorn(entry,blueprint)
         end
-        if entry.wing or entry.thorn then Builder.ApplyPalette(world,blueprint.config)
+        if entry.wing or entry.thorn or entry.authored then Builder.ApplyPalette(world,blueprint.config)
         else BuildFallback(self,entry) end
     end
     self.combatFx=require("combat.CombatFx").New(scene,world)
@@ -914,6 +918,7 @@ function Rig:ApplyAppearance(config,deferred)
         Builder.ApplyPalette(self.world,blueprint.config)
         if entry.wing then wing=WingVisual.Recolor(entry.wing,blueprint.config.colors,true) end
         entry.mesh.blueprint=blueprint
+        if weapon=='sword' then self:AttachWing(entry,blueprint) else self:AttachThorn(entry,blueprint) end
         self.config[weapon]=Catalog.CopyAppearance(weapon,blueprint.config)
         self:PrepareTrailColor(weapon)
         if weapon==self.active then self:UpdateTrailColor() end
@@ -1403,6 +1408,16 @@ end
 ---@param blueprint table? freshly compiled blueprint (Apply) else entry.mesh.blueprint
 function Rig:AttachWing(entry,blueprint)
     blueprint=blueprint or entry.mesh.blueprint
+    local modelId=blueprint.config and blueprint.config.modelId
+    if modelId=='iron' or modelId=='warden' then
+        if entry.authored and entry.authoredId==modelId then return end
+        if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil end
+        local visual,err=(modelId=='iron' and IronVisual or WardenVisual).New(entry.pivot,Catalog.Definitions.sword.visualTip,blueprint.config.colors)
+        if not visual then print('WeaponRig: '..modelId..' sword unavailable, voxel sword kept: '..tostring(err));return end
+        entry.authored=(modelId=='iron' and IronVisual or WardenVisual);entry.authoredVisual=visual;entry.authoredId=modelId
+        return
+    end
+    if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil;entry.authoredVisual=nil end
     local tipY=Catalog.Definitions.sword.visualTip
     local colors=blueprint.config and blueprint.config.colors
     if entry.wing and math.abs((entry.wingTip or 0)-tipY)>1e-6 then
@@ -1429,6 +1444,12 @@ end
 ---@param dt number?
 function Rig:SyncWing(dt)
     local entry=self.entries.sword
+    if entry and entry.authoredVisual then
+        local visual=entry.authoredVisual
+        if not visual.ready then entry.authored.Step(visual) end
+        entry.authored.SetVisible(visual,self.active=='sword' and entry.mesh.alpha>=.5)
+        return
+    end
     if not (entry and entry.wing) then return end
     if self.transition and self.transition.holo and self.active=='sword' then
         WingVisual.SetVisible(entry.wing,self.holoSolid==true)
@@ -1447,8 +1468,19 @@ end
 --- Thorn-flower bow visual (ThornBowVisual): replaces the voxel bow's look in hand and on the back.
 --- Nock, draw stages, arrows and the drawn string keep using the voxel blueprint.
 ---@param entry table bow entry
-function Rig:AttachThorn(entry)
+function Rig:AttachThorn(entry,blueprint)
     if not entry then return end
+    blueprint=blueprint or entry.mesh.blueprint
+    local modelId=blueprint.config and blueprint.config.modelId
+    if modelId=='field' or modelId=='silver' then
+        if entry.authored and entry.authoredId==modelId then return end
+        if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil end
+        local visual,err=(modelId=='field' and HunterVisual or SilverVisual).New(entry.pivot,Catalog.Definitions.bow.halfHeight)
+        if not visual then print('WeaponRig: '..modelId..' bow unavailable, voxel bow kept: '..tostring(err));return end
+        entry.authored=(modelId=='field' and HunterVisual or SilverVisual);entry.authoredVisual=visual;entry.authoredId=modelId
+        return
+    end
+    if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil;entry.authoredVisual=nil end
     local half=self.bowHalfHeight
     if not half then return end
     if entry.thorn and math.abs((entry.thornHalf or 0)-half)>1e-6 then
@@ -1467,6 +1499,12 @@ end
 ---@param dt number?
 function Rig:SyncThorn(dt)
     local entry=self.entries.bow
+    if entry and entry.authoredVisual then
+        local visual=entry.authoredVisual
+        if not visual.ready then entry.authored.Step(visual) end
+        entry.authored.SetVisible(visual,self.active=='bow' and entry.mesh.alpha>=.5)
+        return
+    end
     local thorn=entry and entry.thorn
     if not thorn then return end
     if not thorn.ready then ThornVisual.Step(thorn) end
@@ -1492,12 +1530,19 @@ function Rig:Update(dt)
     if self.swordId~=slots.sword.weapon then
         self.swordId=slots.sword.weapon
         local _,grade=Catalog.Find(Catalog.Weapons.sword,self.swordId)
-        WingVisual.SetGrade(self.entries.sword.wing,grade)
+        self:AttachWing(self.entries.sword,self.entries.sword.mesh.blueprint)
+        if self.entries.sword.authoredVisual then
+            local colors=self.config.sword.colors
+            self.entries.sword.authored.Recolor(self.entries.sword.authoredVisual,colors)
+        else WingVisual.SetGrade(self.entries.sword.wing,grade) end
     end
     if self.bowId~=slots.bow.weapon then
         self.bowId=slots.bow.weapon
         local _,grade=Catalog.Find(Catalog.Weapons.bow,self.bowId)
-        ThornVisual.SetGrade(self.entries.bow.thorn,grade)
+        self:AttachThorn(self.entries.bow,self.entries.bow.mesh.blueprint)
+        if self.entries.bow.authoredVisual then
+            if self.entries.bow.authored.Recolor then self.entries.bow.authored.Recolor(self.entries.bow.authoredVisual,self.config.bow.colors) end
+        else ThornVisual.SetGrade(self.entries.bow.thorn,grade) end
     end
     self:UpdateCore(dt)
     self:SyncWing(dt)
@@ -1520,7 +1565,11 @@ function Rig:Dispose()
     for _,image in ipairs(self.bowImages) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,particle in ipairs(self.particles) do self.world:RemoveVolume(particle.volume);particle.material:Dispose() end
     for _,flash in pairs(self.flashes) do self.world:RemoveVolume(flash.volume);flash.material:Dispose() end
-    for _,entry in pairs(self.entries) do WingVisual.Dispose(entry.wing);entry.wing=nil;ThornVisual.Dispose(entry.thorn);entry.thorn=nil;Builder.Dispose(entry.mesh); entry.pivot:Remove() end
+    for _,entry in pairs(self.entries) do
+        WingVisual.Dispose(entry.wing);entry.wing=nil;ThornVisual.Dispose(entry.thorn);entry.thorn=nil
+        if entry.authored and entry.authoredVisual then entry.authored.Dispose(entry.authoredVisual);entry.authoredVisual=nil end
+        Builder.Dispose(entry.mesh); entry.pivot:Remove()
+    end
     self.sockets.back_sword:Remove()
     self.sockets.back_bow:Remove()
     -- Both palms are shared character-owned nodes: never delete, move or reset

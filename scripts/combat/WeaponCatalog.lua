@@ -59,7 +59,7 @@ function M.DefaultWeapon(weapon)
     local definition=assert(M.Definitions[weapon],'unknown weapon')
     local colors={}
     for _,channel in ipairs(M.Channels) do colors[channel]=definition.colors[channel] end
-    return {appearance=definition.appearance,colors=colors}
+    return {appearance=definition.appearance,modelId=weapon=='sword' and 'wing' or weapon=='bow' and 'thorn' or 'clock',colors=colors}
 end
 function M.ValidateWeapon(weapon,config)
     local definition=M.Definitions[weapon]
@@ -74,6 +74,7 @@ end
 function M.CopyAppearance(weapon,config)
     if not M.ValidateWeapon(weapon,config) then return nil end
     local result=M.DefaultWeapon(weapon)
+    result.modelId=config.modelId or result.modelId
     if M.Definitions[weapon].tintable then
         for _,channel in ipairs(M.Channels) do result.colors[channel]=config.colors[channel] end
     end

@@ -5,6 +5,7 @@ local M={}
 local function Single(config,weapon)
     local appearance=Catalog.CopyAppearance(weapon,config[weapon])
     appearance.weapon=weapon
+    appearance.modelId=config[weapon].modelId
     return appearance
 end
 function M.Commit(rig,draft,state)

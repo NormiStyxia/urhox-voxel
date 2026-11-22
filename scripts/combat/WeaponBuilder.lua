@@ -62,7 +62,7 @@ function Builder.Compile(config)
     local normalized=Catalog.CopyAppearance(config.weapon,config)
     if not normalized then return nil,"invalid weapon appearance" end
     normalized.weapon=config.weapon
-    local ids={config.weapon,normalized.appearance}
+    local ids={config.weapon,normalized.appearance,normalized.modelId or ''}
     for _,channel in ipairs(Catalog.Channels) do ids[#ids+1]=tostring(normalized.colors[channel]) end
     local key=table.concat(ids,"|")
     if blueprintCache[key] then return blueprintCache[key] end

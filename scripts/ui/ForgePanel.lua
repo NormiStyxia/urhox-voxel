@@ -68,7 +68,7 @@ end
 local function Single(config,weapon)
     if weapon=='time' then return {weapon='time'} end
     local _,grade=Catalog.Find(Catalog.Weapons[weapon],config.progress.slots[weapon].weapon)
-    return {weapon=weapon,appearance=config[weapon].appearance,colors=config[weapon].colors,grade=grade}
+    return {weapon=weapon,appearance=config[weapon].appearance,modelId=config[weapon].modelId,colors=config[weapon].colors,grade=grade}
 end
 local function Clamp(n,a,b) return math.max(a,math.min(b,n)) end
 local function Inside(x,y,b) return x>=b.x and y>=b.y and x<b.x+b.w and y<b.y+b.h end

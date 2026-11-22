@@ -27,6 +27,10 @@ local Blades=require('combat.ForgeShowroomBlades')
 local Catalyst=require('combat.TimeCatalystVisual')
 local WingSword=require('combat.WingSwordVisual')
 local ThornBow=require('combat.ThornBowVisual')
+local IronVisual=require('combat.IronSwordVisual')
+local WardenVisual=require('combat.WardenSwordVisual')
+local HunterVisual=require('combat.HunterBowVisual')
+local SilverVisual=require('combat.SilverBowVisual')
 local flowStrength=.7
 local M={}
 local MASK=0x40000000
@@ -115,6 +119,7 @@ local function DisposeMesh(s,mesh)
     if mesh.catalyst then CleanupFunction(s,'TimeCatalystVisual.Dispose',Catalyst.Dispose,mesh.catalyst)
     elseif mesh.thorn then CleanupFunction(s,'ThornBowVisual.DisposeShowroom',ThornBow.DisposeShowroom,mesh)
     elseif mesh.wingSword then CleanupFunction(s,'ForgeShowroomBlades.Dispose',Blades.Dispose,mesh)
+    elseif mesh.authoredVisual then CleanupFunction(s,'AuthoredWeapon.Dispose',mesh.authored.Dispose,mesh.authoredVisual)
     else CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,mesh) end
 end
 local function Cancel(s)
@@ -400,7 +405,7 @@ local function Weapon(s,single)
     s.stage,s.api,s.apiType='weapon','SetWeapon.config',type(single)
     assert(type(single)=='table' and (single.weapon=='sword' or single.weapon=='bow' or single.weapon=='time'),'invalid weapon config')
     -- Snapshot caller's draft, since BeginPreview is deferred until Update.
-    local copy={weapon=single.weapon,appearance=single.appearance,grade=single.grade or 3,colors={}}
+    local copy={weapon=single.weapon,appearance=single.appearance,modelId=single.modelId,grade=single.grade or 3,colors={}}
     for k,v in pairs(single.colors or {}) do copy.colors[k]=v end
     Cancel(s);s.selection=copy;s.pending=copy;s.buildAge=0;state=BUILDING
 end
@@ -434,6 +439,28 @@ local function BuildStep(s,dt)
         if single.weapon=='time' then
             s.bladeJob=assert(Catalyst.BeginShowroom(s.pendingRoot,MASK))
             return
+        end
+        if single.weapon=='sword' and (single.modelId=='iron' or single.modelId=='warden') then
+            local Visual=single.modelId=='iron' and IronVisual or WardenVisual
+            local visual,err=Visual.New(s.pendingRoot,Catalog.Definitions.sword.visualTip,single.colors)
+            if visual then
+                local data=require(single.modelId=='iron' and 'combat.models.IronSword' or 'combat.models.WardenSword')
+                s.bladeJob={authoredVisual=visual,authored=Visual,node=visual.node,blueprint={bounds=data.bounds},step=function(job)
+                    if not visual.ready then Visual.Step(visual) end
+                    return visual.ready
+                end}
+                return
+            end
+            ReportFailure(s,'Update',err)
+        end
+        if single.weapon=='bow' and (single.modelId=='field' or single.modelId=='silver') then
+            local Visual=single.modelId=='field' and HunterVisual or SilverVisual
+            local job,err=Visual.BeginShowroom(s.pendingRoot,MASK,s.low)
+            if job then
+                s.bladeJob=job
+                return
+            end
+            ReportFailure(s,'Update',err)
         end
         if single.weapon=='sword' and WingSword.ENABLED then
             s.stage,s.api,s.apiType='blade_route','ForgeShowroomBlades.Begin','function'

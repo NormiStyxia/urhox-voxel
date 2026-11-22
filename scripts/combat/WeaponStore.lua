@@ -67,6 +67,9 @@ function Store.Normalize(config,allowLegacy)
         if config.version==1 then entry={appearance=Catalog.Definitions[weapon].appearance,colors=entry.colors} end
         result[weapon]=Catalog.CopyAppearance(weapon,entry)
         if not result[weapon] then return nil end
+        -- The selected inventory item chooses the authored high-detail visual.
+        -- Keep the legacy appearance field for voxel/fallback compilation.
+        result[weapon].modelId=progress.slots[weapon].weapon
     end
     return result
 end
