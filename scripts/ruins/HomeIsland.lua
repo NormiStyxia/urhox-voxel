@@ -2,7 +2,7 @@
 local Brush = require('ruins.VoxelBrush')
 local Noise = require('ruins.Noise')
 local P = require('ruins.RuinsPalette').P
-local H = { x = 720, z = 0, base = 6 }
+local H = { x = 720, z = 0, base = 6, planarReflectionEnabled = true }
 local abs, floor, sin, cos, sqrt = math.abs, math.floor, math.sin, math.cos, math.sqrt
 local oak, amber, cedar, slate, ember, flame = 150,151,152,153,154,155
 local window = 156
@@ -10,8 +10,13 @@ local window = 156
 local cedarPost, oakPlankZ, cedarBeamZ = 157,158,159
 local WATER_LEVEL = -.375
 local WATER_VIEW = 0x10000000
+local MIRROR_VIEW = 0x08000000
 local mirror
-local mirrorTiers={high={640,24},medium={448,16},low={288,10}}
+local mirrorTiers={
+    high={size=640,hz=24,idleSeconds=.5,moveMetres=.025},
+    medium={size=448,hz=16,idleSeconds=.5,moveMetres=.025},
+    low={size=288,hz=6,idleSeconds=2,moveMetres=.10},
+}
 local function pattern(x,z)
     return sin(x*.49 + z*.17) + .65*cos(z*.81-x*.23)
 end
@@ -76,18 +81,20 @@ function H.ReleaseReflection()
     if not mirror then return end
     if mirror.surface then mirror.surface:SetNumViewports(0) end
     if H.spring then
-        H.spring:SetShaderParameter('mirror_ready',Variant(0.0))
+        H.spring:SetShaderParameter('mirror_weight',Variant(0.0))
         if mirror.bindingAttempted then H.spring:SetSurfaceTexture('mirror_color',nil) end
     end
     if mirror.node then mirror.node:Remove() end
+    if mirror.skybox then mirror.skybox.viewMask=mirror.skybox.viewMask | MIRROR_VIEW end
     if mirror.texture then mirror.texture:Dispose() end
     mirror=nil
 end
 
-local function createReflection(r,scene,w,h)
+local function createReflection(r,scene,skybox,w,h)
     r.texture=Texture2D:new()
     r.texture:SetNumLevels(1)
-    if not r.texture:SetSize(w,h,Graphics:GetRGBAFormat(),TEXTURE_RENDERTARGET) then return false end
+    r.texture:SetSRGB(false)
+    if not r.texture:SetSize(w,h,Graphics:GetRGBAFloat16Format(),TEXTURE_RENDERTARGET) then return false end
     r.texture:SetFilterMode(FILTER_BILINEAR)
     r.texture:SetAddressMode(COORD_U,ADDRESS_CLAMP)
     r.texture:SetAddressMode(COORD_V,ADDRESS_CLAMP)
@@ -101,7 +108,13 @@ local function createReflection(r,scene,w,h)
     camera.useClipping=true
     camera.clipPlane=Plane(Vector3.UP,Vector3(H.x,H.base+WATER_LEVEL-.06,H.z))
     camera.autoAspectRatio=false
-    camera.viewOverrideFlags=VO_DISABLE_SHADOWS
+    -- A single reserved bit selects ordinary world drawables. Sky stays in the
+    -- Zone's time-sliced cube; transparent black represents a miss in this view.
+    camera.viewMask=MIRROR_VIEW
+    if skybox and (skybox.viewMask & MIRROR_VIEW)~=0 then
+        r.skybox=skybox
+        skybox.viewMask=skybox.viewMask & ~MIRROR_VIEW
+    end
     r.view=Viewport:new(scene,camera)
     r.view.drawDebug=false
     local forward=cache:GetResource('XMLFile','RenderPaths/Forward.xml')
@@ -113,9 +126,12 @@ local function createReflection(r,scene,w,h)
     local hasBase=false
     for i=path:GetNumCommands()-1,0,-1 do
         local cmd=path:GetCommand(i)
-        if cmd.type==CMD_SCENEPASS and cmd.pass=='base' then
+        if cmd.type==CMD_CLEAR then
+            cmd.useFogColor=false
+            cmd.clearColor=Color(0,0,0,0)
+        elseif cmd.type==CMD_SCENEPASS and cmd.pass=='base' then
             hasBase=true
-        elseif cmd.type~=CMD_CLEAR and cmd.type~=CMD_FORWARDLIGHTS then
+        elseif cmd.type~=CMD_FORWARDLIGHTS then
             path:RemoveCommand(i)
         end
     end
@@ -126,56 +142,78 @@ local function createReflection(r,scene,w,h)
     return H.spring:SetSurfaceTexture('mirror_color',r.texture)
 end
 
--- Run after the final gameplay-camera pose. The shader reprojects to the saved
--- capture pose between updates, so a 10 Hz reflection does not swim with the HUD.
-function H.UpdateReflection(dt,scene,source,tier)
+-- On the banks, aim the capture at the pool independently of camera yaw. A
+-- stationary player can turn right around using the same projective texture.
+function H.UpdateReflection(dt,scene,source,tier,skybox)
     if not H.spring then return end
+    if not H.planarReflectionEnabled then H.ReleaseReflection(); return end
     if not H.poolBounds then
         H.poolBounds=BoundingBox(Vector3(H.x-18.5,H.base+WATER_LEVEL-.08,H.z-21),
             Vector3(H.x+5,H.base+WATER_LEVEL+.08,H.z+2.5))
     end
     local node=source.node
     local pos=node.worldPosition
-    if pos.y<=H.base+WATER_LEVEL or (pos.x-H.x)^2+(pos.z-H.z)^2>110^2
-        or source.frustum:IsInsideFast(H.poolBounds)==OUTSIDE then return end
+    local islandDistance=sqrt((pos.x-H.x)^2+(pos.z-H.z)^2)
+    if pos.y<=H.base+WATER_LEVEL or islandDistance>110 or source.viewMask & MIRROR_VIEW==0
+        or source.frustum:IsInsideFast(H.poolBounds)==OUTSIDE then
+        if mirror and mirror.queued then
+            mirror.queued,mirror.weight,mirror.elapsed=false,0,1
+            H.spring:SetShaderParameter('mirror_weight',Variant(0.0))
+        end
+        return
+    end
     local profile=mirrorTiers[tier] or mirrorTiers.medium
     local sw,sh=graphics:GetWidth(),graphics:GetHeight()
     if sw<=0 or sh<=0 then return end
-    local scale=math.min(.5,profile[1]/math.max(sw,sh))
+    local scale=math.min(.5,profile.size/math.max(sw,sh))
     local w,h=math.max(1,floor(sw*scale+.5)),math.max(1,floor(sh*scale+.5))
     if not mirror or mirror.w~=w or mirror.h~=h then
         H.ReleaseReflection()
-        mirror={w=w,h=h,elapsed=1}
-        local ok,ready=pcall(createReflection,mirror,scene,w,h)
+        mirror={w=w,h=h,elapsed=1,weight=0}
+        local ok,ready=pcall(createReflection,mirror,scene,skybox,w,h)
         if not ok or not ready then
             H.ReleaseReflection()
             mirror={w=w,h=h,failed=true}
-            print('HomeSpring: planar reflection unavailable; using screen-space reflection ('..tostring(ready)..')')
+            print('HomeSpring: local reflection unavailable; using Zone environment ('..tostring(ready)..')')
         end
     end
     local r=mirror
     if r.failed then return end
-    if r.queued and not r.ready then
-        H.spring:SetShaderParameter('mirror_ready',Variant(1.0))
-        r.ready=true
+    if r.queued and r.weight<1 then
+        r.weight=math.min(1,r.weight+dt/.22)
+        H.spring:SetShaderParameter('mirror_weight',Variant(r.weight))
     end
     r.elapsed=r.elapsed+dt
-    local interval=1/profile[2]
+    local interval=1/profile.hz
     if r.elapsed<interval then return end
+    local centre=Vector3(H.x-7.5,H.base+WATER_LEVEL,H.z-5.25)
+    local distance=sqrt((pos.x-centre.x)^2+(pos.z-centre.z)^2)
+    local aim=math.max(0,math.min(1,(distance-5)/6))
+    aim=aim*aim*(3-2*aim)
+    local direction=aim==1 and (centre-pos):Normalized() or node.worldDirection
+    -- Refresh still views for changing foliage and light. On low, wait up to
+    -- two seconds and ignore small movements of the camera between captures.
+    if r.queued and r.elapsed<profile.idleSeconds and (pos-r.eye):LengthSquared()<profile.moveMetres^2
+        and direction:DotProduct(r.forward)>.9998 and source.fov==r.fov and source.zoom==r.zoom then return end
     r.elapsed=r.elapsed%interval
     local c=r.camera
     r.node:SetWorldTransform(pos,node.worldRotation)
-    c.viewMask=source.viewMask & ~WATER_VIEW
-    c.fov,c.zoom,c.aspectRatio=source.fov,source.zoom/1.22,sw/sh
-    c.nearClip,c.farClip=source.nearClip,math.min(145,source.farClip)
+    if aim>0 then
+        r.node:SetWorldDirection((centre-pos):Normalized())
+        if aim<1 then r.node.worldRotation=node.worldRotation:Slerp(r.node.worldRotation,aim) end
+    end
+    c.viewOverrideFlags=source.viewOverrideFlags
+    -- Keep a guard band around the near shore even as waves displace the sample.
+    c.fov,c.zoom,c.aspectRatio=source.fov,source.zoom/(1.36+.39*aim),sw/sh
+    c.nearClip,c.farClip=source.nearClip,math.min(145,source.farClip,(pos-centre):Length()+38)
     c.lodBias=.8
     local sy=.5*c.zoom/math.tan(math.rad(c.fov)*.5)
     H.spring:SetShaderParameter('mirror_eye',Variant(Vector4(pos.x,pos.y,pos.z,H.base+WATER_LEVEL)))
-    H.spring:SetShaderParameter('mirror_right',Variant(node.worldRight*(sy/c.aspectRatio)))
-    H.spring:SetShaderParameter('mirror_up',Variant(node.worldUp*(-sy)))
-    H.spring:SetShaderParameter('mirror_forward',Variant(node.worldDirection))
+    H.spring:SetShaderParameter('mirror_right',Variant(r.node.worldRight*(sy/c.aspectRatio)))
+    H.spring:SetShaderParameter('mirror_up',Variant(r.node.worldUp*(-sy)))
+    H.spring:SetShaderParameter('mirror_forward',Variant(r.node.worldDirection))
     r.surface:QueueUpdate()
-    r.queued=true
+    r.queued,r.eye,r.forward,r.fov,r.zoom=true,pos,direction,source.fov,source.zoom
 end
 
 function H.Stop()
@@ -183,7 +221,7 @@ function H.Stop()
     H.poolBounds=nil
     H.ClearRipples()
     H.spring,H.hearth,H.field,H.housing,H.meadowMaterial=nil,nil,nil,nil,nil
-    H.lastDay,H.lastDusk,H.lastNight=nil,nil,nil
+    H.lastDay,H.lastDusk,H.lastNight,H.zoneFallback=nil,nil,nil,nil
 end
 
 local function updateWater(dt,feet)
@@ -226,12 +264,30 @@ local function updateWater(dt,feet)
     wet=true
 end
 
+local function linearChannel(srgb)
+    if srgb<=.04045 then return srgb/12.92 end
+    return ((srgb+.055)/1.055)^2.4
+end
+
 function H.Update(dt,feet,dn)
     if H.spring then updateWater(dt,feet) end
     local day,dusk,night=floor(dn.day*128+.5)/128,floor(dn.dusk*128+.5)/128,floor(dn.nightK*128+.5)/128
-    if day==H.lastDay and dusk==H.lastDusk and night==H.lastNight then return end
+    local zone=dn.zone
+    local target=(dn.capture.ready or zone.envSpecTexture) and 0 or 1
+    local fallback=target
+    if H.zoneFallback then
+        local step=math.min(dt/.32,1)
+        fallback=math.max(H.zoneFallback-step,math.min(target,H.zoneFallback+step))
+    end
+    if day==H.lastDay and dusk==H.lastDusk and night==H.lastNight and fallback==H.zoneFallback then return end
     H.lastDay,H.lastDusk,H.lastNight=day,dusk,night
-    if H.spring then H.spring:SetShaderParameter('sky_phase',Variant(Vector3(day,dusk,night))) end
+    H.zoneFallback=fallback
+    if H.spring then
+        local color=zone.fogColor
+        local intensity=zone.envTextureSpecIntensity or 1
+        H.spring:SetShaderParameter('zone_fallback',Variant(Vector4(linearChannel(color.r)*intensity,
+            linearChannel(color.g)*intensity,linearChannel(color.b)*intensity,fallback)))
+    end
     if H.meadowMaterial then H.meadowMaterial:SetShaderParameter('meadow_sun',Variant(day*(1-night))) end
     if H.housing then H.housing:SetShaderParameter('window_light',Variant(.035+.42*(1-day)+.28*night)) end
     if H.hearth then H.hearth.brightness=.78+.34*(1-day) end

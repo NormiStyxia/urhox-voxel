@@ -2085,7 +2085,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     nomi_:BeginQueryScope()
     if combatMoves_ then Safe('Camera.Combat',UpdateCombatCamera,dt,cn) end
     if M.region=='home' and not ForgeShowroom.Active() and not WorldMap.IsOpen() then
-        HomeIsland.UpdateReflection(dt,scene_,nomi_:Camera(),CombatSettings.GetProfile().quality)
+        HomeIsland.UpdateReflection(dt,scene_,nomi_:Camera(),CombatSettings.GetProfile().quality,M.dayNight.sky.skybox)
     end
     -- 展示准星必须读取最终相机；不能把上一帧射线的结果画在当前帧视角。
     -- Update 的 aim 仍用于本帧技能输入，PostUpdate 再校准选中反馈与悬停材质。
