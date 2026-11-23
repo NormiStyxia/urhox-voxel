@@ -29,7 +29,7 @@
     <Emitter emitterName="Flame">
         <Required material="Effects/Forge/FireAdd.material" screenAlignment="Square" emitterDuration="1" emitterLoops="0"/>
         <Spawn>
-            <Rate type="Constant" constant="36"/>
+            <Rate type="Constant" constant="48"/>
         </Spawn>
         <Modules>
             <Module type="Lifetime">
@@ -39,10 +39,10 @@
                 <StartLocation type="Uniform" min="-0.8 0 -0.35" max="0.8 0.05 0.35"/>
             </Module>
             <Module type="Velocity">
-                <StartVelocity type="Uniform" min="-0.12 0.6 -0.25" max="0.12 1.1 0.05"/>
+                <StartVelocity type="Uniform" min="-0.12 0.7 -0.3" max="0.12 1.3 0.05"/>
             </Module>
             <Module type="Size">
-                <StartSize type="Uniform" min="0.3 0.3 0.3" max="0.5 0.5 0.5"/>
+                <StartSize type="Uniform" min="0.4 0.4 0.4" max="0.65 0.65 0.65"/>
             </Module>
             <Module type="SizeMultiplyLife">
                 <LifeMultiplier type="ConstantCurve">

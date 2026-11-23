@@ -51,6 +51,12 @@ local VIEWS = {
         { name = "home_pond_dusk", hour = 17.8, pos = Vector3(HX - 2, HB + 1.8, -16), look = Vector3(HX - 9, HB, -2) },
         { name = "home_night", hour = 21.5, pos = Vector3(HX + 5, HB + 2.2, -13), look = Vector3(HX - 2, HB + 2, 6) },
     },
+    forge = {
+        { name = "house_forge", stage = 3, hour = 15, pos = Vector3(HX - 14.5, HB + 2.6, -1.5), look = Vector3(HX - 19, HB + 1.4, 5.5) },
+        { name = "house_forge_n", stage = 3, hour = 21.5, pos = Vector3(HX - 15.5, HB + 2.2, -0.5), look = Vector3(HX - 19, HB + 1.2, 5.5) },
+        { name = "house_aerial", stage = 3, hour = 15, pos = Vector3(HX + 16, HB + 15, -24), look = Vector3(HX - 3, HB + 4, 6) },
+        { name = "house_stair", stage = 3, hour = 15, pos = Vector3(HX + 9, HB + 7, 23), look = Vector3(HX - 3, HB + 5, 13) },
+    },
     house = {
         { name = "house_aerial", stage = 3, hour = 15, pos = Vector3(HX + 16, HB + 15, -24), look = Vector3(HX - 3, HB + 4, 6) },
         { name = "house_front", stage = 3, hour = 15, pos = Vector3(HX - 8.5, HB + 4, -12), look = Vector3(HX - 8.5, HB + 6, 10) },

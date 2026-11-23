@@ -1127,7 +1127,8 @@ local function forge(world,old)
         local outer=(dx/1.5)^2+(dy/1.25)^2
         if inner>=1 and outer<=1 then
             if abs(dx)<.1875 then return P.HOME_COPING end
-            return floor(math.atan(dy,dx)*7)%2==0 and P.HOME_ARCH or P.HOME_HEARTH
+            -- Nine voussoirs, alternating warm and pale stone.
+            return floor(math.atan(dy,dx)*9/math.pi)%2==0 and P.HOME_ARCH or P.HOME_COPING
         end
     end)
     b:Box(cx-.1875,2.5,z0-.25,cx+.1875,2.875,z0,P.HOME_COPING)
@@ -1138,15 +1139,6 @@ local function forge(world,old)
         local x=cx-.875+(i*.6180%1)*1.75
         local z=z0+.375+((i*.4142)%1)*1.625
         b:Box(x,.75,z,x+.125+(i%2)*.125,.875,z+.125,i%3==0 and flame or ember)
-    end
-    -- Iron bands with rivets round the oven, clear of the arch.
-    for _,y in ipairs({.875,2.125}) do
-        b:Shape(cx-1.875,y,z0-.125,cx+1.875,y+.125,z1+.125,function(x,_,z)
-            local outside=abs(x-cx)>1.75 or z<z0 or z>z1
-            if not outside then return end
-            if z<z0 and abs(x-cx)<1.625 then return end
-            return slate
-        end)
     end
     -- Corbelled hood, stepped shoulders and a banded, tapering chimney with a cap.
     b:Box(cx-2,2.75,z0-.25,cx+2,2.875,z1+.25,P.HOME_COPING)
@@ -1164,8 +1156,9 @@ local function forge(world,old)
     b:Box(bx0+.125,0,bz0+.125,bx0+.25,.5,bz0+.25,cedarPost)
     b:Box(bx1-.25,0,bz1-.25,bx1-.125,.5,bz1-.125,cedarPost)
     b:Box(bx0,.5,bz0,bx1,.625,bz1,oak)
+    -- Pleated leather wedge, thin at the nozzle.
     b:Shape(bx0,.625,bz0+.125,bx1,1.125,bz1-.125,function(x,y)
-        if y<.625+.5*(x-bx0)/(bx1-bx0) then return amber end
+        if y<.625+.5*(x-bx0)/(bx1-bx0) then return floor(x*8)%2==0 and amber or cedar end
     end)
     b:Box(bx0,1.125,bz0,bx1,1.25,bz1,oak)
     b:Box(cx+1.5,.75,z0+1.25,bx0,.875,z0+1.5,slate)
