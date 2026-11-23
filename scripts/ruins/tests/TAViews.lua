@@ -66,6 +66,7 @@ local function BuildHome()
     end
     print("TAViews: home built " .. tostring(done) .. " " .. tostring(err))
     Terrain.home = Home
+    require("ruins.RenderBudget").Apply(game.scene)
     game.region = "home"
     homeBuilt = true
     -- 主循环用诺米位置驱动家园更新与云跟随；把隐藏的诺米放到家园中央。

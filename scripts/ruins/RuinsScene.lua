@@ -16,6 +16,8 @@ local Brush = require("ruins.VoxelBrush")
 local DayNight = require("ruins.DayNight")
 local SkyAtmosphere = require("ruins.SkyAtmosphere")
 local LightQuality = require("ruins.LightQuality")
+local RenderBudget = require("ruins.RenderBudget")
+local GroundContact = require("ruins.GroundContact")
 local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
 local Puzzles = require("ruins.RuinsPuzzles")
@@ -289,6 +291,7 @@ local function SetupLighting()
             if masonry=="homeMasonry" then m:SetShaderParameter("dressed_stone_draw",Variant(1.0)) end
             if masonry=="homeWindows" then m:SetShaderParameter("home_house_draw",Variant(1.0)) end
             vmats[key] = m
+            GroundContact.Register(m)
         end
         -- Rebind on cache hits as well when a cancelled home build is retried.
         if masonry=="homeWindows" then HomeIsland.BindWindowMaterial(m) end
@@ -803,6 +806,7 @@ local function AdvanceHomeTravel()
         print('HomeIsland build failed: '..tostring(err));WorldMap.SetNotice('载入中断，点家园重试')
     elseif done then
         homeJob=nil;Terrain.home=HomeIsland
+        RenderBudget.Apply(scene_) -- 家园新建的体积/树木同样限制阴影与绘制距离
         local ok,why=TravelToRegion('home')
         if ok then WorldMap.Close() else WorldMap.SetNotice(why) end
     end
@@ -908,6 +912,7 @@ function M.Start()
     end
     pointer:Release("start")
     local t0 = GetTime():GetElapsedTime()
+    GroundContact.Reset()
     scene_ = Scene()
     scene_:CreateComponent("Octree")
     scene_:CreateComponent("DebugRenderer")
@@ -928,11 +933,13 @@ function M.Start()
     M.atmosphere:SetPillarLayout(Build,Terrain.RING_Y) -- intact/broken layout now known
     Puzzles.Build(world_, scene_)
     -- 碎石堆独立材质也要接收霜冻等全局材质参数
-    if Puzzles.gateMaterial ~= nil then M.surfaceMaterials.gateRubble = Puzzles.gateMaterial end
+    if Puzzles.gateMaterial ~= nil then M.surfaceMaterials.gateRubble = Puzzles.gateMaterial; GroundContact.Register(Puzzles.gateMaterial) end
     world_:OptimizeBroadPhase()
     Puzzles.On(OnPuzzle)
 
     nomi_ = Nomi.New(scene_, world_, M.SPAWN, 0)
+    -- 环境光专用天空只给 SkyLightCapture 看，主相机排除它。
+    nomi_:Camera().viewMask = nomi_:Camera().viewMask & ~DayNight.IBL_VIEW
     if not ForgeShowroom.Active() then renderer:SetViewport(0, Viewport:new(scene_, nomi_:Camera())) end
     fx_ = Spells.NewFX(scene_, nomi_:CameraNode())
     handMotes_=require('dragon.VoxelFX').WorldMotes(fx_.root,'CombatHandMotes',32,'square',true,nomi_:CameraNode())
