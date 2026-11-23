@@ -118,7 +118,8 @@ for _,tier in ipairs({{'low',288,152,6,2},{'medium',448,237,16,.5},{'high',640,3
     assert(cam.viewMask==mirrorBit and cam.viewMask & waterBit==0 and sky.viewMask & mirrorBit==0 and sky.viewMask & 1==1)
     assert(cam.useReflection and cam.reflectionPlane.point.y==5.625 and cam.useClipping and math.abs(cam.clipPlane.point.y-5.565)<1e-7)
     local clear=path:GetCommand(0)
-    assert(path:GetNumCommands()==3 and clear.useFogColor==false and clear.clearColor.a==0 and cam.viewOverrideFlags==source.viewOverrideFlags)
+    assert(path:GetNumCommands()==3 and clear.useFogColor==false and clear.clearColor.a==0)
+    assert(source.viewOverrideFlags==5 and cam.viewOverrideFlags==(source.viewOverrideFlags | 2))
     q0=queued
     for _=1,480 do update(name) end
     local stationary=queued-q0; assert(math.abs(stationary-4/idle)<=1)
