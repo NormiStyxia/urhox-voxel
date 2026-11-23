@@ -5,8 +5,8 @@ local Map={}
 local layer,root,onTravel,onClose,view
 local current,selected,notice,touchMode,opened,closing,closeFrom,pointed
 local pointers={}
-local ink={64,63,52}; local muted={108,98,74};local edge={155,127,84}
-local paper={232,213,167};local light={246,228,183};local line={207,184,139}
+local ink={49,62,68}; local muted={86,100,98};local edge={137,151,143}
+local paper={226,226,207};local light={250,244,222};local line={183,192,180}
 local green={46,82,75};local gold={215,177,102};local red={134,69,52}
 local names={ruins='时之遗迹',home='家园小岛'}
 local ids={'ruins','home'}
@@ -26,7 +26,7 @@ local function frame(W,H,k,cellSize)
     local step=math.max(u/k,math.ceil(nominal*k/u)*u/k)
     Model.Update(view,(W-46)/step,(bottom-top-15)/step,cellSize)
     local ax,ay=Model.Anchor(view,current)
-    local iconSize=32*math.max(1,round(k/u*.57))*u/k
+    local iconSize=48*math.max(1,round(k/u*.57))*u/k
     local ox=round(clamp(W*.5-view.centerX*step+view.panX,26+iconSize*.5-ax*step,W-23-ax*step))
     local oy=round(clamp((top+bottom)*.5-view.centerY*step+view.panY,top+20+iconSize-ay*step,bottom-5-ay*step))
     return ox,oy,step,top,bottom
@@ -126,12 +126,19 @@ function Layer:Render(vg)
     end
     local a,b=Model.Anchor(view,current);local ax,ay=round(ox+a*step),round(oy+b*step)
     local density=k/Draw.PixelToHUD();local iconK=math.max(1,round(density*.57))/density
-    local iconSize=32*iconK
-    -- Offset the portrait from the ground feature with a stepped leader.
-    local px,py=ax-12,ay-19
-    for i=0,12 do Draw.Rect(vg,ax-i,ay-i,2,2,ink) end
-    Draw.Rect(vg,ax-4,ay-1,6,2,ink);Draw.Rect(vg,ax,ay-4,2,5,ink)
-    Draw.Rect(vg,px,py,2,9,ink)
+    local iconSize=48*iconK
+    -- Nest the red and ochre silhouettes on the same texel grid as the landing.
+    local px,py=ax,ay-13
+    local shadow,rim,fill={82,49,53},{247,200,98},{199,60,62}
+    Draw.Rect(vg,ax-3,ay-14,7,8,shadow)
+    Draw.Rect(vg,ax-2,ay-13,5,8,rim)
+    Draw.Rect(vg,ax-1,ay-12,3,8,fill)
+    for row=0,6 do
+        local half=6-row
+        Draw.Rect(vg,ax-half,ay-6+row,half*2+1,1,shadow)
+        if half>=1 then Draw.Rect(vg,ax-half+1,ay-6+row,half*2-1,1,rim) end
+        if half>=3 then Draw.Rect(vg,ax-half+2,ay-6+row,half*2-3,1,fill) end
+    end
     Draw.Save(vg);nvgTranslate(vg,px-iconSize*.5,py-iconSize);nvgScale(vg,iconK*.5,iconK*.5)
     Draw.Image(vg,'map_nomi',0,0);Draw.Restore(vg)
     Draw.Restore(vg)

@@ -14,16 +14,22 @@ local function vertex(x,y,z)
     return #vertices
 end
 local ramps = {
-    grass={'435a43','647748','869358','aab670'}, grass2={'535e42','77864e','9aab60','bcbd79'},
-    moss={'484e40','696e4c','8f916c','b3ab7a'}, rock={'393d43','53545a','736e6d','968b7b'},
-    shale={'343b41','4a5053','606465','807f75'}, ochre={'574a45','776456','96816a','b59d79'},
-    stone={'535963','767e80','a1a7a2','d6cfb2'}, chalk={'646866','959784','c0bba3','e6dcbd'},
+    grass={'294e44','527a40','83a64d','a9c567'}, grass2={'344e42','648143','92af54','b6c96b'},
+    moss={'484e40','696e4c','8f916c','b3ab7a'}, rock={'333648','535366','777889','a49996'},
+    shale={'2a2f42','47495d','646578','858293'}, ochre={'574a45','776456','96816a','b59d79'},
+    stone={'444d64','758298','a6abb1','d2cfbd'}, chalk={'526178','8a96a4','d6d4be','f3ead1'},
     bronze={'5a493a','8b6943','b39157','e0be7d'}, wood={'443c39','665040','866447','ab8256'},
     plaster={'6a6251','9c9277','c8ba92','e6d6aa'}, tile={'533b3c','804a41','a85e49','cf8058'},
     pine={'2b4541','395c4d','517259','789363'}, leaf={'405642','617849','839858','a8b96f'},
-    pool={'355c64','427d7f','589b98','7bb8a6'}, foam={'638c8c','7fb4ac','a4cfc1','c6dbbe'},
+    pool={'27546c','367f92','60a9af','92c8c2'}, foam={'638c8c','7fb4ac','a4cfc1','c6dbbe'},
     dark={'323939','454c49','59605a','73796b'}, lamp={'9c6841','c68a4c','e1ad64','ffe1a2'},
-    teal={'325b62','447984','649b9d','8dc5b6'},
+    honey={'714622','ae7028','dfa038','f8c654'},
+    sunleaf={'9a6026','ce8b32','f4bd47','ffe17d'},
+    weathered={'514c59','77676a','a59283','c2af92'},
+    turf={'345342','49683c','739947','98ae53'},
+    masonryJoint={'677487','89949d','a2aaab','b4b8b1'},
+    lichen={'384e44','5f8545','8eb75d','c8cf80'},
+    teal={'22496e','386d9b','62a0cd','96cbe4'},
 }
 local materials={}
 for name,ramp in pairs(ramps) do
@@ -34,6 +40,8 @@ for name,ramp in pairs(ramps) do
     end
     materials[name]=shades
 end
+local outline=#colours+1
+colours[outline]={48,55,73}
 Model.colours=colours
 -- Winding points outward. Face lighting is fixed to the model's world space.
 local function face(a,b,c,mat)
@@ -77,11 +85,46 @@ local function disc(x,y,z,rx,rz,h,n,mat,top)
     local center=vertex(x,y+h,z)
     for i=1,n do face(center,b[i%n+1],b[i],top or mat) end
 end
-local function rockIsland(rx,rz,seed)
+-- Build individual fault blocks around a recessed core. Consecutive crowns share
+-- the coastline; their angled shoulders and broken toes part below the soil lip.
+local function cliffBlocks(rx,rz,seed)
+    local count=15
+    for i=1,count do
+        local a=(i-1)*2*pi/count
+        local delta=2*pi/count
+        local function shelf(y,k,spread,lean)
+            local front,back={},{}
+            for j=1,3 do
+                local angle=a+(j-2)*delta*spread+lean
+                local shore=1+.06*sin(3*angle+seed)+.035*cos(7*angle-seed)
+                local r=k*shore+(j==2 and .04 or 0)
+                local dy=(sin(3*a+.7*j)*.20+cos(7*a)*.13)
+                front[j]=vertex(rx*r*cos(angle),y+dy,rz*r*sin(angle))
+                back[j]=vertex(rx*(r-.16)*cos(angle),y+dy+.12,rz*(r-.16)*sin(angle))
+            end
+            return {front[1],front[2],front[3],back[3],back[2],back[1]}
+        end
+        local drop=.55+.45*sin(a*5+.9)
+        local top=shelf(-.64,.98,.48,0)
+        local ledge=shelf(-1.45-.50*drop,1.0,.48,.015)
+        local knee=shelf(-2.55-1.2*drop,.90,.44,-.035)
+        local toe=shelf(-3.1-2.5*drop,.81,.21,-.065)
+        local seam=shelf(-1.64-.50*drop,.965,.47,.01)
+        join(ledge,top,i%5==0 and 'rock' or 'weathered')
+        join(seam,ledge,'shale')
+        join(knee,seam,'rock');join(toe,knee,'shale')
+        quad(top[1],top[6],top[5],top[2],'ochre');quad(top[2],top[5],top[4],top[3],'ochre')
+    end
+end
+local function rockIsland(rx,rz,seed,brokenCliffs)
     local n=30
     local levels={{-5.95,.22,'shale'},{-4.25,.70,'shale'},{-3.25,.84,'rock'},
         {-2.86,.89,'ochre'},{-2.24,.91,'shale'},{-1.12,.97,'rock'},
         {-.76,.995,'ochre'},{-.26,.99,'rock'},{0,1,'grass'}}
+    if brokenCliffs then
+        levels={{-5.25,.24,'shale'},{-3.9,.59,'shale'},{-2.05,.76,'rock'},
+            {-.95,.93,'ochre'},{-.36,.995,'ochre'},{0,1,'turf'}}
+    end
     local prev
     for j,level in ipairs(levels) do
         local y,k,mat=table.unpack(level)
@@ -100,6 +143,7 @@ local function rockIsland(rx,rz,seed)
         quad(prev[i],inner[i],inner[j],prev[j],i%5==1 and 'grass2' or 'grass')
         face(center,inner[j],inner[i],'grass')
     end
+    if brokenCliffs then cliffBlocks(rx,rz,seed);return end
     -- Basalt buttresses and lighter seams break up the outer cliff strata.
     for i=1,16 do
         local a=i*2*pi/16+.14
@@ -121,34 +165,93 @@ local function pine(x,z,h)
         for i=1,#ring do face(ring[i],tip,ring[i%#ring+1],j==2 and 'leaf' or 'pine') end
     end
 end
-local function ruins()
-    rockIsland(7.35,6.05,1.3)
-    -- Split annular stone galleries leave the broken southern approach open.
-    for i=0,27 do
-        local a=i*2*pi/28
-        if i~=20 and i~=21 then
-            local x,z=4.35*cos(a),3.85*sin(a)
-            box(x,.05,z,1.13,.28,.92,i%4==0 and 'moss' or 'stone',a+pi/2)
-            if i%2==0 then
-                local h=(i>=1 and i<=12) and (2.25+i%3*.3) or (.54+i%4*.35)
-                box(x,.3,z,.81,.24,.8,'chalk',a)
-                box(x,.54,z,.52,h,.55,'stone',a)
-                box(x,h+.54,z,.81,.26,.78,'chalk',a)
-                if i>=2 and i<=10 then
-                    local mid=a+pi/14
-                    box(4.35*cos(mid),3.09,3.85*sin(mid),2.03,.48,.77,'chalk',mid+pi/2)
-                end
-            end
+local function crown(x,y,z,r,mat,seed)
+    local low=rim(x,y,z,r*.75,r*.71,8,.17,seed)
+    local mid=rim(x,y+r*.48,z,r,r*.92,8,.13,seed)
+    local cap=rim(x-r*.12,y+r,z,r*.56,r*.53,8,.13,seed)
+    join(low,mid,mat);join(mid,cap,mat)
+    local apex=vertex(x-r*.18,y+r*1.18,z)
+    for i=1,8 do face(apex,cap[i%8+1],cap[i],mat) end
+end
+-- Crown groups grow from the tips of the same forked trunk in every view.
+local function oldTree(x,z,h)
+    local function section(dx,y,dz,r)
+        return rim(x+h*dx,h*y,z+h*dz,h*r,h*r*.87,6,.11,1.2)
+    end
+    local root=section(0,.01,0,.14)
+    local fork=section(-.035,.36,.015,.084)
+    join(root,fork,'wood');join(fork,section(.04,.87,.04,.042),'wood')
+    for _,limb in ipairs({{-.31,.60,-.08,.25},{.27,.51,-.06,.21},
+        {.05,.64,.28,.24},{-.24,.86,.13,.19},{.25,.78,.12,.23},{-.03,.96,-.04,.28}}) do
+        local dx,y,dz,r=table.unpack(limb)
+        local elbow=section(dx*.63,y-.16,dz*.68,.053)
+        join(fork,elbow,'wood');join(elbow,section(dx,y+.10,dz,.028),'wood')
+        local lx,ly,lz=x+h*dx,h*y,z+h*dz
+        -- A shaded skirt below each crown, with offsets at the lit shoulder.
+        crown(lx,ly,lz,h*r,'honey',y*11)
+        crown(lx-h*r*.48,ly+h*r*.37,lz-h*r*.18,h*r*.69,'sunleaf',dx*12)
+        crown(lx+h*r*.56,ly+h*r*.18,lz-h*r*.45,h*r*.56,'honey',dz*9)
+        crown(lx+h*r*.13,ly+h*r*.68,lz-h*r*.43,h*r*.45,'sunleaf',y*8)
+    end
+    for i=1,7 do
+        local a=i*2.4
+        box(x+cos(a)*h*.16,.045,z+sin(a)*h*.17,.18,.045,.12,i%3==0 and 'sunleaf' or 'honey',a)
+    end
+end
+-- Stagger the flagstones and leave a breach through both courses.
+local function flagRing(inner,outer,y,segments,stagger)
+    local function point(radius,a) return vertex(radius*cos(a),y,radius*.90*sin(a)) end
+    for i=0,segments-1 do
+        local a=(i+stagger)*2*pi/segments
+        if a<5.65 or a>5.91 then
+            local b=a+2*pi/segments-.050
+            quad(point(inner,a),point(inner,b),point(outer,b),point(outer,a),'chalk')
         end
     end
-    disc(0,.04,0,2.75,2.7,.27,24,'stone','chalk');disc(0,.31,0,2.31,2.26,.07,24,'bronze','wood')
-    disc(0,.38,0,2.12,2.08,.06,24,'stone','stone');disc(0,.44,0,1.15,1.14,.1,12,'bronze','chalk')
-    -- A stepped plinth and an upright hourglass cut a recognisable silhouette.
-    box(0,.53,0,1.35,.32,1.35,'chalk');box(0,.85,0,1.12,.2,1.12,'bronze')
-    local belt=rim(0,2,0,.24,.24,4,0,0)
-    join(rim(0,1.05,0,.58,.58,4,0,0),belt,'teal');join(belt,rim(0,2.94,0,.58,.58,4,0,0),'teal')
-    box(0,2.94,0,1.25,.21,1.25,'bronze')
-    for _,x in ipairs({-.6,.6}) do box(x,1.04,.27,.12,1.92,.12,'bronze') end
+end
+-- Continuous stone faces give the portal one legible light plane and one reveal.
+local function portal(x,z,angle)
+    local ca,sa=cos(angle),sin(angle)
+    local function point(u,y,d) return vertex(x+u*ca-d*sa,y,z+u*sa+d*ca) end
+    local inner,outer=1.04,1.54
+    local spring=1.7
+    local previous
+    for step=-1,13 do
+        local a=min(12,max(0,step))*pi/12
+        local base=(step==-1 or step==13) and .04 or spring
+        local function ringPoint(radius,d) return point(radius*cos(a),base+radius*sin(a),d) end
+        local row={ringPoint(outer,-.33),ringPoint(inner,-.33),ringPoint(inner,.33),ringPoint(outer,.33)}
+        if previous then
+            for i=1,4 do
+                local j=i%4+1
+                quad(previous[i],previous[j],row[j],row[i],i==2 and 'stone' or 'chalk')
+            end
+        end
+        previous=row
+    end
+end
+local function ruins()
+    rockIsland(7.35,6.05,1.3,true)
+    -- Follow the curved gallery with continuous coping stones and a southern gate.
+    for i=0,27 do
+        local a=i*2*pi/28
+        if i~=20 and i~=21 and (i<9 or i>13) then
+            local x,z=4.75*cos(a),4.20*sin(a)
+            local high=i>=2 and i<=9
+            local h=high and 1.20 or .67
+            box(x,.04,z,1.12,h,.56,'stone',pi/2-a)
+            box(x,h+.04,z,1.12,.22,.68,'chalk',pi/2-a)
+            if i%7==0 then box(x,.04,z,.55,h+.55,.78,'chalk',pi/2-a) end
+        end
+    end
+    portal(-4.08,1.89,1.0)
+    disc(0,.04,0,3.98,3.59,.21,40,'stone','masonryJoint')
+    flagRing(2.88,3.95,.27,16,0);flagRing(1.95,2.77,.28,12,.5)
+    disc(0,.28,0,1.92,1.74,.08,32,'stone','teal')
+    for i,r in ipairs({1.86,1.43,.96}) do
+        box(0,.36+i*.03,0,r,.03,r,i==2 and 'teal' or 'chalk',pi/4)
+    end
+    box(0,.49,0,.57,.03,.57,'teal',pi/4)
     -- Separate cantilevers, exposed snapped ends and masonry piers.
     for i=0,6 do
         if i~=4 then box(0,.09,-2.8-i*.56,1.4,.28,.54,'chalk') end
@@ -157,7 +260,9 @@ local function ruins()
         box(x,-1.65,-5.92,.43,2.05,.65,'stone');box(x,.37,-4.04,.24,.67,1.98,'moss')
         box(x,.37,-6.03,.33,.68,.56,'stone')
     end
-    for _,p in ipairs({{-5,1.3,2.6},{-4.5,3,2},{3.9,3.2,2.2},{4.95,2.1,2.8},{-5.6,-1.1,1.5}}) do pine(table.unpack(p)) end
+    for _,p in ipairs({{-5,1.3,2.6},{-4.5,3,2},{-5.6,-1.1,1.5}}) do pine(table.unpack(p)) end
+    oldTree(4.60,2.72,4.55)
+    for _,p in ipairs({{-5,-2,.68},{-4.3,-3.2,.47},{2.4,-4.55,.55},{5.5,.6,.70}}) do crown(p[1],.04,p[2],p[3],'lichen',p[1]) end
 end
 local function roof(x,y,z,w,d,h)
     local a,b,c,e=vertex(x-w,y,z-d),vertex(x+w,y,z-d),vertex(x+w,y,z+d),vertex(x-w,y,z+d)
@@ -201,6 +306,8 @@ local function home()
     roof(x,.99,z-1.48,2.3,.48,.4)
     for j=-2,2 do box(x+j*.89,.12,z-1.77,.13,.88,.13,'wood') end
     for _,p in ipairs({{-5.3,1,2.8},{-4.9,2.75,3.5},{.3,3.6,2.5},{5.26,2.1,2.3},{5.73,-.9,1.6},{-5.8,-1.1,1.8}}) do pine(table.unpack(p)) end
+    oldTree(.7,3.8,2.75)
+    for j=0,4 do box(-1.96,.24,-.82-j*.23,.81,.10,.20,'wood') end
     for i=1,8 do box(-1.35+i*.46,.055,-.08-.34*i,.46,.06,.25,'moss',.22) end
 end
 
@@ -271,6 +378,18 @@ function Model.Update(v,limitW,limitH,cellSize)
                     end
                     key,u,vv=key+1,u+du,vv+dv
                 end
+            end
+        end
+    end
+    -- Apply ink inside the silhouette: every outlined pixel still picks its owner.
+    local gap=1.35*cellSize
+    for y=loY,hiY do
+        local first=y*cols+loX
+        for k=first,first+hiX-loX do
+            local z=depth[k]
+            if z and (not depth[k-1] or not depth[k-cols] or not depth[k+1] or not depth[k+cols]
+                or z-depth[k+1]>gap or z-depth[k+cols]>gap) then
+                pixels[k]=outline
             end
         end
     end

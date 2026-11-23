@@ -70,12 +70,12 @@ local function getDisplay()
         spans[#spans+1]={left,top,left+w*m.sx,top+h*m.sy}
         meshRect(vg,x,y,w,h)
     end
-    draw.Rect=function(vg,x,y,w,h,...)
-        if w==2 and h==5 then arrow={x=m.x+x*m.sx,y=m.y+(y+4)*m.sy,k=m.sx} end
-        rect(vg,x,y,w,h,...)
+    draw.Rect=function(vg,x,y,w,h,col,...)
+        if w==1 and h==1 and col[1]==82 and col[2]==49 then arrow={x=m.x+x*m.sx,y=m.y+y*m.sy,k=m.sx} end
+        rect(vg,x,y,w,h,col,...)
     end
     draw.Image=function(vg,name,x,y,...)
-        if name=='map_nomi' then avatar={cx=m.x+(x+32)*m.sx,bottom=m.y+(y+64)*m.sy,sx=m.sx,sy=m.sy} end
+        if name=='map_nomi' then avatar={cx=m.x+(x+48)*m.sx,bottom=m.y+(y+96)*m.sy,sx=m.sx,sy=m.sy} end
         image(vg,name,x,y,...)
     end
     root.layer:Render(1)
@@ -85,7 +85,7 @@ local function getDisplay()
     tx,ty,sc=mesh.x,mesh.y,mesh.sx;assert(sc>0 and sc==mesh.sy)
     local ax,ay=model.Anchor(view,M.region)
     assert(math.abs(arrow.x-tx-ax*sc)<=arrow.k*.51 and math.abs(arrow.y-ty-ay*sc)<=arrow.k*.51,'arrow misses displayed landing')
-    assert(avatar.sx==avatar.sy and avatar.sy>0 and math.abs(avatar.cx-arrow.x+12*arrow.k)<.01 and math.abs(avatar.bottom-arrow.y+19*arrow.k)<.01,'portrait misses leader')
+    assert(avatar.sx==avatar.sy and avatar.sy>0 and math.abs(avatar.cx-arrow.x)<.01 and math.abs(avatar.bottom-arrow.y+13*arrow.k)<.01,'portrait misses leader')
 end
 local function location(id)
     getDisplay();local x,y=model.Anchor(view,id)
