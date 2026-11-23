@@ -24,6 +24,7 @@ local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
 local TimeObject = require("ruins.TimeObject")
 local VoxelDamage = require("ruins.VoxelDamage")
+local StructuralSupport = require("ruins.StructuralSupport")
 local P = Pal.P
 
 local M = {}
@@ -35,6 +36,8 @@ M.objects = {}      -- 全部时之物件（按 id）
 M.list = {}
 M.steps = {}        -- 进度：gate / bridge / key / stele1..4 / awake
 M.events = {}       -- 回调：fn(name, data)
+M.severed = {}      -- 最近的结构断裂记录，供后续解谜读取（按发生顺序）
+M.lastSevered = nil
 
 function M.On(fn) M.events[#M.events + 1] = fn end
 local function Emit(name, data)
@@ -610,14 +613,41 @@ end
 ---@param eventType string
 ---@param eventData VoxelDamagedEventData
 local function GateDamaged(eventType, eventData)
-    VoxelDamage.Observe(M.world, eventData)
+    local world = M.world
+    if world == nil then return end
+    VoxelDamage.Observe(world, eventData)
+    if eventData:GetInt("Removed") > 0 then StructuralSupport.Queue(eventData:GetPtr("Volume")) end
     InvalidateGate(eventData:GetPtr("Volume"), eventData:GetVector3("Position"))
 end
 
 ---@param eventType string
 ---@param eventData VoxelSeveredEventData
-local function GateSevered(eventType, eventData)
-    if eventData:GetPtr("Volume") == M.gateRubble then gateDirty = true end
+local function Severed(eventType, eventData)
+    local parent = eventData:GetPtr("Volume")
+    local fragment = eventData:GetPtr("Fragment")
+    local anchored = eventData:GetBool("Anchored")
+    local fragmentNode = fragment ~= nil and fragment:GetNode() or nil
+    local parentObject = TimeObject.FindByVolume(parent)
+    local record = {
+        objectId = parentObject ~= nil and parentObject.id or nil,
+        volumeId = parent ~= nil and parent.volumeId or 0,
+        fragmentId = fragment ~= nil and fragment.volumeId or 0,
+        voxels = eventData:GetInt("Voxels"),
+        anchored = anchored,
+        position = fragmentNode ~= nil and fragmentNode.worldPosition or nil,
+    }
+    -- 只保留最近一小段事件，给后续解谜/机关读取结构断裂结果，避免
+    -- 保存 Volume userdata 把已经脱离世界的节点继续保活。
+    M.severed[#M.severed + 1] = record
+    if #M.severed > 32 then table.remove(M.severed, 1) end
+    M.lastSevered = record
+    if not anchored and fragment ~= nil then
+        fragment:SetGravityFactor(1.0)
+        fragment:SetUseGravity(true)
+        fragment:Activate()
+    end
+    InvalidateGate(parent, record.position)
+    Emit("severed", record)
 end
 
 function M.CheckGate()
@@ -649,6 +679,7 @@ end
 -- This module owns puzzle volumes and its two sender-specific subscriptions.
 -- The parent scene owns all other static scenery.
 function M.Stop()
+    StructuralSupport.Reset()
     if M.world then
         UnsubscribeFromEvent(M.world,'VoxelDamaged')
         UnsubscribeFromEvent(M.world,'VoxelSevered')
@@ -667,6 +698,7 @@ function M.Stop()
     if M.keyNode then M.keyNode:Remove() end
     if M.gateMaterial then M.gateMaterial:Dispose() end
     M.objects,M.list,M.steps,M.events={},{},{},{}
+    M.severed,M.lastSevered={},nil
     M.world,M.boulder,M.steles,M.keyNode,M.gateMaterial=nil,nil,nil,nil,nil
     M.gateRubbleSolid0,M.STAIR_SLOTS=nil,nil
     gateClock,gateNextCheck,gateNextRescan,gateDirty=0,0,0,true
@@ -679,7 +711,7 @@ function M.Build(world, scene)
     M.world = world
     gateClock, gateNextCheck, gateNextRescan, gateDirty = 0, 0, 0, true
     SubscribeToEvent(world, "VoxelDamaged", GateDamaged)
-    SubscribeToEvent(world, "VoxelSevered", GateSevered)
+    SubscribeToEvent(world, "VoxelSevered", Severed)
     BuildGateRubble(world)
     BuildBridge(world, scene)
     BuildBoulderTower(world, scene)
@@ -725,7 +757,18 @@ local function UpdateStairStones(dt)
     end
 end
 
+function M.UpdateStructuralSupport()
+    for _, record in ipairs(StructuralSupport.Update(M.world)) do
+        M.severed[#M.severed + 1] = record
+        if #M.severed > 32 then table.remove(M.severed, 1) end
+        M.lastSevered = record
+        gateDirty = true
+        Emit("severed", record)
+    end
+end
+
 function M.Update(dt,deferPresentation)
+    M.UpdateStructuralSupport()
     gateClock = gateClock + dt
     UpdateStairStones(dt)
     for _, o in ipairs(M.list) do o:Update(dt,deferPresentation) end

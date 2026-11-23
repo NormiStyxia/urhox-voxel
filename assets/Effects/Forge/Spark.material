@@ -1,0 +1,5 @@
+<material>
+    <surfaceshader name="Shaders/BLGL/ParticleFireSoft.shader"/>
+    <parameter name="edge_noise" value="0"/>
+    <parameter name="core_power" value="2.4"/>
+</material>

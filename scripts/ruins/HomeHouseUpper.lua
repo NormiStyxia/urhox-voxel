@@ -15,10 +15,10 @@ local SPLIT = -7              -- west wing X0..SPLIT, east terrace SPLIT..X1
 local F2, F3 = 5.75, 9.75     -- second-storey base, third-storey / terrace base
 local CZ = (Z0+Z1)/2
 local WEST_CX = (X0+SPLIT)/2
-local KNEE = F3+2.5           -- west attic wall top
-local GABLE_HALF, GABLE_EAVE, GABLE_RISE = 5, KNEE-.375, 4
+local KNEE = F3+3.25           -- west attic wall top; the upper door keeps a full head above the player
+local GABLE_HALF, GABLE_EAVE, GABLE_RISE = 5, KNEE-.375, 4.5
 -- Outer stair: 0.375 m risers and treads; the terrace's back rail opens west of STAIR_GAP.
-local RISE, TREAD = .375, .375
+local RISE, TREAD = .375, .5
 local STAIR_GAP = X1+.5-math.floor((F3-12*RISE)/RISE)*TREAD+.25
 Upper.Footprint = { x0=X0, x1=X1, z0=Z0, z1=Z1, split=SPLIT, second=F2, third=F3 }
 
@@ -28,7 +28,7 @@ local step = .125
 -- cells for exposed frames without fine-subdividing the whole house.
 local detailStep, trimStep = .0625, .03125
 local woodX, woodY, woodZ, oakX, oakZ = 152,157,159,150,158
-local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
+local abs, floor, ceil, min, max, sqrt = math.abs, math.floor, math.ceil, math.min, math.max, math.sqrt
 
 -- Upper wall fill is deliberately a small, shared surface vocabulary: mostly
 -- plaster, with sparse exposed blocks only on the outer wall skin. Interior
@@ -70,7 +70,7 @@ window('third',WEST_CX,Z0,0,-1,F3+3.75,1.0,.875)
 window('third',WEST_CX,Z1,0,1,F3+.75,1.875,1.75)
 for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
-local terraceDoor={z0=CZ-.625,z1=CZ+.625,top=F3+2.375}
+local terraceDoor={z0=CZ-.625,z1=CZ+.625,bottom=F3+.25,top=F3+3.0}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -244,19 +244,19 @@ local function tileRoof(b,acrossX,center,depth,u0,u1,eave,rise)
         local v1=min(depth,v0+.375)
         local y=eave+floor((1-v1/depth)*rise/step+.5)*step
         for _,sign in ipairs({-1,1}) do
-            local outer=center+sign*v1
-            local inner=center+sign*max(0,v0-.125)
-            -- The roof carrier is a single 0.125 m beam. Tile overlap supplies
-            -- the visible second layer above it.
-            box(u0,y,outer,u1,y+.125,inner,ridgeMat)
+            -- A deep carrier overlaps the adjacent course and reaches under the tile
+            -- roll. Every outside edge is consequently backed by solid roof material.
+            local outer=center+sign*(v1+.1875)
+            local inner=center+sign*max(0,v0-.25)
+            box(u0,y-.125,outer,u1,y+.3125,inner,ridgeMat)
             local index=0
             local start=u0-(row%2)*.25
             while start<u1 do
                 local lo,hi=max(u0,start),min(u1,start+.625)
                 local mat=(index+row*3)%5==1 and P.HOME_CLAY_LIGHT or P.HOME_CLAY
                 if hi>lo then
-                    box(lo,y+.125,outer,hi,y+.25,inner,mat)
-                    if hi-lo>=.25 then box(lo,y+.25,outer,lo+step,y+.375,inner,mat) end
+                    box(lo,y+.1875,outer,hi,y+.3125,inner,mat)
+                    if hi-lo>=.25 then box(lo,y+.3125,outer,lo+step,y+.4375,inner,mat) end
                 end
                 index=index+1;start=start+.625
             end
@@ -324,10 +324,11 @@ local function westAttic(b)
         for _,z in ipairs({Z0+.0625,CZ,Z1-.0625}) do b:Box(x-.0625,F3,z-.0625,x+.0625,KNEE,z+.0625,woodY) end
     end
     for _,w in ipairs(Upper.Windows) do if w.group=='third' then drawWindow(b,w) end end
-    -- Terrace door: opening, timber jambs and a glazed transom.
-    b:Carve(x1-.375,F3+.25,terraceDoor.z0,x1,terraceDoor.top,terraceDoor.z1)
+    -- Terrace door: a tall, reachable opening with a substantial lintel and a
+    -- clear route from the upper stair landing.
+    b:Carve(x1-.375,terraceDoor.bottom,terraceDoor.z0,x1,terraceDoor.top,terraceDoor.z1)
     for _,z in ipairs({terraceDoor.z0-.125,terraceDoor.z1}) do
-        b:Box(x1-.375,F3+.25,z,x1+.0625,terraceDoor.top+.125,z+.125,woodY)
+        b:Box(x1-.375,terraceDoor.bottom,z,x1+.0625,terraceDoor.top+.125,z+.125,woodY)
     end
     b:Box(x1-.375,terraceDoor.top,terraceDoor.z0-.125,x1+.0625,terraceDoor.top+.125,terraceDoor.z1+.125,woodZ)
     tileRoof(b,true,WEST_CX,GABLE_HALF,Z0-.75,Z1+.75,GABLE_EAVE,GABLE_RISE)
@@ -430,52 +431,59 @@ end
 local function outerStair(b)
     local lane0,lane1=X1+.5,X1+1.875            -- flight A, along the east wall
     local back0,back1=Z1+.5,Z1+1.875            -- flight B, along the back wall
-    local startZ=Z1-12*TREAD
-    local landA=12*RISE
-    local flightB=floor((F3-landA)/RISE)
-    local landB=landA+flightB*RISE
-    local endX=lane0-flightB*TREAD
+    local nA,nB=15,11
+    local startZ=Z0+.5
+    local landA=nA*RISE
+    local endX=lane0-nB*TREAD
+    local landB=landA+nB*RISE
     local stone,slab=P.HOME_ASHLAR,P.HOME_COPING
-    local function tread(x0,y,z0,x1,z1,alongX)
-        b:Box(x0,y-.25,z0,x1,y,z1,slab)
-        b:Box(x0,y-.375,z0,x1,y-.25,z1,stone)
-        -- Outer rail post and stepped cap.
-        if alongX then
-            b:Box(x0,y,back1-.125,x0+.125,y+.875,back1,woodY)
-            b:Box(x0,y+.875,back1-.1875,x1,y+1.0,back1,woodX)
-        else
-            b:Box(lane1-.125,y,z0,lane1,y+.875,z0+.125,woodY)
-            b:Box(lane1-.1875,y+.875,z0,lane1,y+1.0,z1,woodZ)
-        end
+    -- Solid, flush risers share their edges. Filling to the ground prevents
+    -- the controller from catching on the old floating tread lips.
+    for i=1,nA do
+        local z0=startZ+(i-1)*TREAD
+        local z1=z0+TREAD
+        local y=i*RISE
+        b:Box(lane0,0,z0,lane1,y,z1,stone)
+        b:Box(lane0,y-.125,z0,lane1,y,z1,slab)
     end
-    for i=1,12 do
-        local z=startZ+(i-1)*TREAD
-        tread(lane0,i*RISE,z,lane1,z+TREAD,false)
-        if i%4==2 then
-            -- Knee bracket from the wall into the tread underside.
-            for k=0,3 do b:Box(X1,i*RISE-.75-k*.125,z+.125,X1+.25+k*.125+.25,i*RISE-.625-k*.125,z+.25,woodX) end
-        end
+    for i=1,nB do
+        local x1=lane0-(i-1)*TREAD
+        local x0=x1-TREAD
+        local y=landA+i*RISE
+        b:Box(x0,0,back0,x1,y,back1,stone)
+        b:Box(x0,y-.125,back0,x1,y,back1,slab)
     end
-    for i=1,flightB do
-        local x=lane0-i*TREAD
-        tread(x,landA+i*RISE,back0,x+TREAD,back1,true)
-        if i%4==2 then
-            for k=0,3 do b:Box(x+.125,landA+i*RISE-.75-k*.125,Z1,x+.25,landA+i*RISE-.625-k*.125,Z1+.25+k*.125+.25,woodZ) end
-        end
-    end
-    -- Corner pier landing, then the upper pier landing which bridges onto the deck.
     b:Box(lane0,0,Z1,lane1,landA,back1,stone)
-    b:Box(lane0-.125,landA-.25,Z1-.125,lane1+.125,landA,back1+.125,slab)
-    b:Box(endX-1.5,0,back0,endX,landB-.25,back1,stone)
-    b:Box(endX-1.625,landB-.25,Z1,endX+.125,landB,back1+.125,slab)
-    for y=1.0,landB-1.0,1.25 do
-        b:Box(endX-1.625,y,back0-.125,endX+.125,y+.125,back1+.125,P.HOME_PLINTH)
+    b:Box(lane0-.125,landA-.125,Z1-.125,lane1+.125,landA,back1+.125,slab)
+    b:Box(endX-1.5,0,back0,endX,landB,back1,stone)
+    b:Box(endX-1.625,landB-.125,Z1,endX+.125,landB,back1+.125,slab)
+
+    -- Continuous sloped rails follow each flight; short vertical balusters keep
+    -- the handrail joined to the stair instead of producing broken stair-step caps.
+    local function dist(px,py,ax,ay,bx,by)
+        local dx,dy=bx-ax,by-ay
+        local q=((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy)
+        q=max(0,min(1,q))
+        local rx,ry=px-(ax+q*dx),py-(ay+q*dy)
+        return sqrt(rx*rx+ry*ry)
     end
-    -- Rails on the open sides of both landings.
-    b:Box(lane1-.1875,landA,Z1,lane1,landA+1.0,back1,woodZ)
-    b:Box(lane0,landA,back1-.1875,lane1,landA+1.0,back1,woodX)
-    b:Box(endX-1.625,landB,back1-.1875,endX,landB+1.0,back1,woodX)
-    b:Box(endX-1.625,landB,Z1,endX-1.4375,landB+1.0,back1,woodZ)
+    local rail=.10
+    b:Shape(lane1+.0,.55,startZ-.1,lane1+.2,landA+1.35,Z1+.1,function(_,y,z)
+        if dist(z,y,startZ-.05,.95,Z1+.05,landA+1.0)<=rail then return woodX end
+    end)
+    b:Shape(endX-1.65,.55,back1-.1,lane0+.1,landB+1.35,back1+.1,function(x,y)
+        if dist(x,y,endX-.05,landB+1.0,lane0+.05,landA+1.0)<=rail then return woodX end
+    end)
+    b:Box(lane1-.1,landA+.95,Z1,lane1+.2,landA+1.05,back1+.1,woodX)
+    b:Box(endX-1.65,landB+.95,back1-.1,endX+.1,landB+1.05,back1+.1,woodX)
+    for i=0,nA,2 do
+        local z=startZ+i*TREAD
+        b:Box(lane1-.0625,i*RISE+.35,z-.0625,lane1+.0625,i*RISE+1.0,z+.0625,woodY)
+    end
+    for i=0,nB,2 do
+        local x=lane0-i*TREAD
+        b:Box(x-.0625,landA+i*RISE+.35,back1-.0625,x+.0625,landA+i*RISE+1.0,back1+.0625,woodY)
+    end
 end
 function Upper.Build(brush,finish)
     local second=brush({X0-.25,F2,Z0-1},{X1+.25,F3,Z1+.5},step)
@@ -498,7 +506,7 @@ function Upper.Build(brush,finish)
     local hoist=brush({-1.5,5.25+HOIST_Y,7.5},{2.25,F3,9.5},step)
     eastHoist(hoist)
     finish('terrace',hoist,{masonry='homeWindows'})
-    local stair=brush({SPLIT-1.5,0,Z1-4.75},{X1+2.0,F3+1.25,Z1+2.0},step)
+    local stair=brush({SPLIT-1.5,0,Z0-.5},{X1+2.0,F3+1.25,Z1+2.0},step)
     outerStair(stair)
     finish('terrace',stair,{masonry='homeWindows'})
     makeDetails(brush,finish,'third',{X0-.5,F3-.5,Z0-1.0},{SPLIT+.5,GABLE_EAVE+GABLE_RISE-.5,Z1+.45},function(frame)

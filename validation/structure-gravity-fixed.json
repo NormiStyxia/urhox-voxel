@@ -1,0 +1,113 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 49898,
+    "frames_completed": 12,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 332.685ms (threshold: 100ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-24 02_38_12_440][115] ERROR: Execute Lua string failed: [string \"/workspace/scripts/ruins/tests/StructureGravi...\"]:85: [string \"/workspace/scripts/ruins/tests/StructureGravi...\"]:38: attempt to call a nil value (field 'UpdateStructuralSupport')",
+                    "frame": 5
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2273,
+            "component_count": 3513,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 47,
+            "hash": 676219048,
+            "frame_time_ms": 44607.7265625
+        },
+        {
+            "frame": 6,
+            "phase": "run",
+            "nodes": 23,
+            "components": 47,
+            "hash": 3260449863,
+            "frame_time_ms": 23.729000091552736
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 47,
+            "hash": 4107831248,
+            "frame_time_ms": 58.404998779296878
+        },
+        {
+            "frame": 12,
+            "phase": "run",
+            "nodes": 23,
+            "components": 47,
+            "hash": 614896869,
+            "frame_time_ms": 23.402000427246095
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 332.68499755859377,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 9,
+        "ProceduralSky": 2,
+        "Skybox": 2,
+        "CustomGeometry": 2160,
+        "VoxelVolume": 667,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 167,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 12,
+        "ParticleEmitter": 4,
+        "SoundSource3D": 6,
+        "VoxelChunkDrawable": 30,
+        "SoundSource": 4
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 1,
+        "resource_errors": 0,
+        "engine_errors": 1,
+        "total_errors": 2
+    }
+}

@@ -53,12 +53,14 @@ assert(D.Volume(world,target,{},.05,3)==1)
 -- the bridge is reached through the existing subscription, not a replacement.
 local f=assert(io.open('scripts/ruins/RuinsPuzzles.lua'));local source=f:read('*a');f:close()
 local handler=assert(source:match('(local function GateDamaged.-)\nend'))..'\nend\nreturn GateDamaged'
-local invalidations=0
-local env=setmetatable({VoxelDamage=D,M={world=world},InvalidateGate=function()invalidations=invalidations+1 end},{__index=_G})
+local invalidations,queued=0,0
+local env=setmetatable({VoxelDamage=D,M={world=world},StructuralSupport={Queue=function(v)
+    assert(v==target,'support check receives the damaged volume');queued=queued+1
+end},InvalidateGate=function()invalidations=invalidations+1 end},{__index=_G})
 local gate=assert(load(handler,'gate damage bridge','t',env))()
 world.ApplyDamage=function(_,v)
     gate('VoxelDamaged',{GetPtr=function()return v end,GetInt=function()return 1 end,GetVector3=function()return {} end})
     return 0
 end
-assert(D.Volume(world,target,{},.05,3)==1 and invalidations==1)
+assert(D.Volume(world,target,{},.05,3)==1 and invalidations==1 and queued==1)
 print('PASS voxel result: world/target isolation, nested calls/errors, multi-volume, no stale reads, real gate bridge')

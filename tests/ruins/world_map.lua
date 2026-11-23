@@ -35,6 +35,8 @@ MOUSEB_LEFT,MOUSEB_RIGHT=1,4
 local held,restored=false,0
 env.pointer.SetBlocked=function(_,b) held=b end
 env.pointer.Resume=function() restored=restored+1 end
+env.OnFoot=function() return not M.ride or M.ride.mode=='free' end
+env.Training={blocked=function()return false end,leave=noop}
 local fn=assert(source:match('(local function TravelToRegion.-)local function AttachTouchControls'))
 local handlers={fn,'step=AdvanceHomeTravel'}
 for _,name in ipairs({'KeyDown','MouseDown','MouseMove','MouseUp'}) do
