@@ -153,8 +153,14 @@ function H.UpdateReflection(dt,scene,source,tier,skybox)
     end
     local node=source.node
     local pos=node.worldPosition
-    local islandDistance=sqrt((pos.x-H.x)^2+(pos.z-H.z)^2)
-    if pos.y<=H.base+WATER_LEVEL or islandDistance>110 or source.viewMask & MIRROR_VIEW==0
+    local beyondRange=(pos.x-H.x)^2+(pos.z-H.z)^2>110^2
+    if mirror then
+        -- A failed allocation follows the same lifetime as a live capture.
+        -- Crossing back inside resets the grace period even with the pool offscreen.
+        mirror.farSeconds=beyondRange and ((mirror.farSeconds or 0)+dt) or 0
+        if mirror.farSeconds>=1 then H.ReleaseReflection(); return end
+    end
+    if pos.y<=H.base+WATER_LEVEL or beyondRange or source.viewMask & MIRROR_VIEW==0
         or source.frustum:IsInsideFast(H.poolBounds)==OUTSIDE then
         if mirror and mirror.queued then
             mirror.queued,mirror.weight,mirror.elapsed=false,0,1

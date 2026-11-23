@@ -157,5 +157,45 @@ source.node.worldPosition=Vector3(centre.x,5.5,centre.z); before=queued; update(
 source.node.worldPosition=Vector3(centre.x,8,-24); source.viewMask=1; update('low',3); assert(queued==before); source.viewMask=0xffffffff
 home.planarReflectionEnabled=false; update('low'); released()
 home.planarReflectionEnabled=true; width,height=810,1440; update('low'); assert(current.w==162 and current.h==288)
-home.ReleaseReflection(); released(); update('low'); home.Stop(); home.Stop(); released()
+home.ReleaseReflection(); released()
+
+local nearby=Vector3(centre.x,8,-24)
+local atLimit=Vector3(home.x+110,8,home.z)
+local far=Vector3(home.x+110.01,8,home.z)
+local function at(pos,inView,dt)
+    source.node.worldPosition=pos; visible=inView; update('low',dt)
+end
+local function checkVisibleReturn()
+    local allocations,captures=allocated,queued
+    at(nearby,false,2); assert(allocated==allocations and queued==captures)
+    at(nearby,true,1/60)
+    assert(allocated==allocations+1 and queued==captures+1 and material.mirror_color==current)
+    assert(material.mirror_weight==0)
+    update('low',.05); assert(material.mirror_weight>0 and material.mirror_weight<1)
+    update('low',.17); assert(material.mirror_weight==1)
+end
+
+checkVisibleReturn()
+local original,allocations,captures=current,allocated,queued
+at(nearby,false,3); at(Vector3(centre.x,5,centre.z),true,3)
+for _=1,4 do at(far,false,.75); at(atLimit,false,.05) end
+at(nearby,true,.10)
+assert(material.mirror_color==original and not original.disposed and allocated==allocations and queued==captures+1)
+captures=queued
+at(far,true,.75); at(far,false,.1875); assert(material.mirror_color==original and not original.disposed)
+at(far,false,.0625); released(); assert(original.disposed and queued==captures)
+at(far,true,5); assert(allocated==allocations and queued==captures)
+checkVisibleReturn(); assert(current~=original)
+print('PASS 3 s out of view, 3 s underwater and four 110 m boundary crossings reused one RTT; 0.9375 s far retained it, 1.0000 s released it, visible return rebuilt and faded in')
+
+home.ReleaseReflection(); failure='bind'; at(nearby,true,.1); released()
+failure=nil; allocations=allocated; captures=queued
+at(nearby,true,3); at(far,true,.875); at(atLimit,false,.125); at(far,true,.5); at(nearby,true,2)
+assert(allocated==allocations and queued==captures and material.mirror_weight==0)
+at(far,false,.5); at(Vector3(far.x,5,far.z),false,.5); at(far,true,3); released()
+assert(allocated==allocations and queued==captures)
+checkVisibleReturn()
+print('PASS same-size failure stayed cached inside the range and through boundary jitter; a continuous 1 s exit cleared it and visible return recovered once at the same resolution')
+
+home.Stop(); home.Stop(); released()
 print(('PASS frustum, waterline, view mask, fade, A/B switch, portrait, re-entry and repeated Stop; %d textures allocated/disposed, %d nodes created/removed'):format(allocated,created))
