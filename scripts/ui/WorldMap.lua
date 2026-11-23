@@ -19,12 +19,12 @@ local function metrics()
     local W,H=math.floor(aw/k),math.floor(ah/k)
     return round((w+s.left-s.right-W*k)*.5/u)*u,round((h+s.top-s.bottom-H*k)*.5/u)*u,k,W,H,w,h
 end
-local function frame(W,H,k,cellSize)
+local function frame(W,H,k)
     local top,bottom=34,H-54
     local u=Draw.PixelToHUD()
     local nominal=math.min((W-40)/346,(bottom-top-6)/112)
     local step=math.max(u/k,math.ceil(nominal*k/u)*u/k)
-    Model.Update(view,(W-46)/step,(bottom-top-15)/step,cellSize)
+    Model.Update(view,(W-46)/step,(bottom-top-15)/step)
     local ax,ay=Model.Anchor(view,current)
     local iconSize=48*math.max(1,round(k/u*.57))*u/k
     local ox=round(clamp(W*.5-view.centerX*step+view.panX,26+iconSize*.5-ax*step,W-23-ax*step))
@@ -98,11 +98,7 @@ end
 local Layer=UI.Panel:Extend('RuinsWorldMap')
 function Layer:Render(vg)
     local x,y,k,W,H,w,h=metrics()
-    local cellSize=1
-    for _,p in pairs(pointers) do
-        if p.target=='chart' and p.drag and not p.pair and p.mode~='pan' then cellSize=2;break end
-    end
-    local ox,oy,step,top,bottom=frame(W,H,k,cellSize)
+    local ox,oy,step,top,bottom=frame(W,H,k)
     local openness=progress()
     local left=round((W-26)*(1-openness)*.5);local right=W-left
     Draw.Begin(vg,true);Draw.Rect(vg,0,0,w,h,Draw.colors.deep,.91*openness)

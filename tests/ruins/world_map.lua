@@ -120,9 +120,9 @@ local function checkEdge()
 end
 checkEdge()
 local old=view.yaw;mouse('Down',1,160,180);mouse('Move',1,510,180)
-getDisplay();assert(view.cellSize==2);local dragX,dragY,dragScale=tx,ty,sc
+getDisplay();assert(view.cellSize==1);local dragGroups=view.groups;local dragX,dragY,dragScale=tx,ty,sc
 mouse('Up',1,510,180);getDisplay()
-assert(view.cellSize==1 and tx==dragX and ty==dragY and sc==dragScale,'mouse release changed the camera transform')
+assert(view.cellSize==1 and view.groups==dragGroups and tx==dragX and ty==dragY and sc==dragScale,'mouse release changed the camera transform')
 assert(math.abs(view.yaw-old)>2.9 and builds==0);shot('02-back');assert(model.Anchor(view,'home')<model.Anchor(view,'ruins'))
 print('PASS mouse orbit exposes back; island order reverses')
 local oldX,oldY=view.panX,view.panY
@@ -141,9 +141,9 @@ local function touchEvent(name,id,x,y)
     _G['RuinsTouch_'..name](nil,{GetInt=function(_,key)return ({TouchID=id,X=x,Y=y})[key] end})
 end
 local before=view.yaw;touchEvent('Begin',7,410,200);touchEvent('Move',7,450,210)
-getDisplay();assert(view.cellSize==2);local touchYaw=view.yaw
+getDisplay();assert(view.cellSize==1);local touchGroups=view.groups;local touchYaw=view.yaw
 touchEvent('End',7,450,210);getDisplay()
-assert(view.cellSize==1 and view.yaw==touchYaw and view.yaw~=before and M.region=='home')
+assert(view.cellSize==1 and view.groups==touchGroups and view.yaw==touchYaw and view.yaw~=before and M.region=='home')
 local yaw=view.yaw;oldX,oldY=view.panX,view.panY
 touchEvent('Begin',1,250,170);touchEvent('Begin',2,350,170);touchEvent('Move',1,280,182);touchEvent('Move',2,380,182);touchEvent('End',2,380,182);touchEvent('End',1,280,182)
 assert(view.yaw==yaw and view.panX>oldX and view.panY>oldY and M.region=='home');shot('06-touch')

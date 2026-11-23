@@ -107,8 +107,8 @@ local function cliffBlocks(rx,rz,seed)
         local drop=.55+.45*sin(a*5+.9)
         local top=shelf(-.64,.98,.48,0)
         local ledge=shelf(-1.45-.50*drop,1.0,.48,.015)
-        local knee=shelf(-2.55-1.2*drop,.90,.44,-.035)
-        local toe=shelf(-3.1-2.5*drop,.81,.21,-.065)
+        local knee=shelf(-1.95-.46*drop,.87,.44,-.035)
+        local toe=shelf(-2.55-.73*drop,.76,.29,-.065)
         local seam=shelf(-1.64-.50*drop,.965,.47,.01)
         join(ledge,top,i%5==0 and 'rock' or 'weathered')
         join(seam,ledge,'shale')
@@ -118,22 +118,32 @@ local function cliffBlocks(rx,rz,seed)
 end
 local function rockIsland(rx,rz,seed,brokenCliffs)
     local n=30
-    local levels={{-5.95,.22,'shale'},{-4.25,.70,'shale'},{-3.25,.84,'rock'},
-        {-2.86,.89,'ochre'},{-2.24,.91,'shale'},{-1.12,.97,'rock'},
-        {-.76,.995,'ochre'},{-.26,.99,'rock'},{0,1,'grass'}}
-    if brokenCliffs then
-        levels={{-5.25,.24,'shale'},{-3.9,.59,'shale'},{-2.05,.76,'rock'},
-            {-.95,.93,'ochre'},{-.36,.995,'ochre'},{0,1,'turf'}}
-    end
+    -- The wide shelves fracture at the edge; their deeper beds converge on
+    -- a single stone keel. Home has a softer, slightly offset foundation.
+    local levels=brokenCliffs and {
+        {-5.55,.23,'shale'},{-4.5,.47,'rock'},{-3.22,.70,'shale'},
+        {-1.85,.83,'rock'},{-.90,.95,'ochre'},{-.36,.995,'ochre'},{0,1,'turf'}
+    } or {
+        {-4.95,.22,'shale'},{-3.9,.48,'shale'},{-2.64,.73,'rock'},
+        {-2.34,.79,'ochre'},{-1.45,.90,'rock'},{-.81,.98,'weathered'},
+        {-.39,.99,'ochre'},{0,1,'turf'}
+    }
+    local keelX=brokenCliffs and .10 or .56
+    local keelZ=brokenCliffs and -.55 or -.31
+    local tip=vertex(keelX,brokenCliffs and -7.22 or -6.13,keelZ)
     local prev
     for j,level in ipairs(levels) do
         local y,k,mat=table.unpack(level)
-        local ring=rim(.35*(1-k),y,0,rx*k,rz*k,n,.11,seed+.15*(j-1))
+        local ring=rim(keelX*(1-k),y,keelZ*(1-k),rx*k,rz*k,n,.11,seed+.15*(j-1))
         for i,id in ipairs(ring) do
-            local a=i*2*pi/n
-            if j<#levels then vertices[id][2]=y+(sin(5*a+seed)*.8+cos(9*a)*.35)*(1-.65*k) end
+            local a=(i-1)*2*pi/n
+            if j<#levels then
+                vertices[id][2]=y+(.38*sin(3*a+seed)+.19*cos(7*a))*min(1,k*2)
+            end
+            local nextId=ring[i%n+1]
+            if not prev then face(tip,id,nextId,'shale') end
         end
-        if prev then join(prev,ring,mat,j<6 and 'shale' or nil) end
+        if prev then join(prev,ring,mat) end
         prev=ring
     end
     local inner=rim(0,.03,0,rx*.78,rz*.78,n,.08,seed)
@@ -144,25 +154,30 @@ local function rockIsland(rx,rz,seed,brokenCliffs)
         face(center,inner[j],inner[i],'grass')
     end
     if brokenCliffs then cliffBlocks(rx,rz,seed);return end
-    -- Basalt buttresses and lighter seams break up the outer cliff strata.
-    for i=1,16 do
-        local a=i*2*pi/16+.14
-        local k=.91+.04*sin(i*2.34)
-        local x,z=rx*k*cos(a),rz*k*sin(a)
-        local foot=-3.75-.72*sin(i*2.1+seed)
-        local lower=rim(x*.92,foot,z*.92,.30,.28,5,.14,i)
-        local middle=rim(x,foot+1.25,z,.54,.48,5,.14,i)
-        local upper=rim(x,-.53-.33*sin(i*1.3),z,.38,.36,5,.14,i)
-        join(lower,middle,'shale');join(middle,upper,i%4==1 and 'moss' or 'rock')
+    -- Outcrops follow the dipping beds, with moss only along the damp cap.
+    for i=1,10 do
+        local a=i*2*pi/10+.14
+        local x,z=rx*cos(a),rz*sin(a)
+        local foot=-3.27-.45*sin(i*2.1+seed)
+        local lower=rim(x*.64,foot,z*.64,.32,.28,5,.14,i)
+        local middle=rim(x*.87,-1.77,z*.87,.70,.57,5,.14,i)
+        local upper=rim(x*.93,-.53-.21*sin(i*1.3),z*.93,.46,.40,5,.14,i)
+        join(lower,middle,'shale');join(middle,upper,i%4==1 and 'moss' or 'weathered')
     end
 end
 local function pine(x,z,h)
-    box(x,0,z,h*.12,h*.35,h*.12,'wood')
+    local foot=rim(x,.01,z,h*.105,h*.09,5,.08,0)
+    local stem=rim(x+h*.025,h*.68,z,h*.033,h*.033,5,.08,0)
+    join(foot,stem,'wood')
     for j=0,2 do
-        local r=h*(.31-j*.065)
-        local ring=rim(x,h*(.22+j*.22),z,r,r,7,.06,j)
-        local tip=vertex(x,h*(.68+j*.19),z)
-        for i=1,#ring do face(ring[i],tip,ring[i%#ring+1],j==2 and 'leaf' or 'pine') end
+        local r=h*(.31-j*.077)
+        local cx=x+h*.026*j
+        local bottom=h*(.28+j*.24)
+        local lower=rim(cx,bottom,z,r*.71,r*.66,7,.14,j)
+        local skirt=rim(cx,bottom+h*.07,z,r,r*.93,7,.14,j)
+        local tip=vertex(cx+h*.033,bottom+h*(.41-j*.035),z)
+        join(lower,skirt,'pine')
+        for i=1,#skirt do face(skirt[i],tip,skirt[i%#skirt+1],j==2 and 'leaf' or 'pine') end
     end
 end
 local function crown(x,y,z,r,mat,seed)
@@ -178,14 +193,22 @@ local function oldTree(x,z,h)
     local function section(dx,y,dz,r)
         return rim(x+h*dx,h*y,z+h*dz,h*r,h*r*.87,6,.11,1.2)
     end
-    local root=section(0,.01,0,.14)
-    local fork=section(-.035,.36,.015,.084)
-    join(root,fork,'wood');join(fork,section(.04,.87,.04,.042),'wood')
-    for _,limb in ipairs({{-.31,.60,-.08,.25},{.27,.51,-.06,.21},
-        {.05,.64,.28,.24},{-.24,.86,.13,.19},{.25,.78,.12,.23},{-.03,.96,-.04,.28}}) do
-        local dx,y,dz,r=table.unpack(limb)
-        local elbow=section(dx*.63,y-.16,dz*.68,.053)
-        join(fork,elbow,'wood');join(elbow,section(dx,y+.10,dz,.028),'wood')
+    local root=section(0,.01,0,.108)
+    local crook=section(-.065,.26,.008,.089)
+    local fork=section(-.025,.48,.016,.067)
+    local leader=section(.072,.66,-.02,.044)
+    join(root,crook,'wood');join(crook,fork,'wood');join(fork,leader,'wood')
+    for i=1,4 do
+        local a=i*pi*.5+.36
+        local base=section(.16*cos(a),.012,.16*sin(a),.050)
+        join(base,crook,'wood')
+    end
+    for _,limb in ipairs({{crook,-.36,.65,-.10,.23},{fork,.33,.65,-.08,.21},
+        {crook,.08,.72,.31,.22},{fork,-.24,.89,.14,.20},{leader,.27,.92,.12,.22},
+        {leader,-.045,1.03,-.05,.28}}) do
+        local start,dx,y,dz,r=table.unpack(limb)
+        local elbow=section(dx*.78,y-.19,dz*.72,.040)
+        join(start,elbow,'wood');join(elbow,section(dx,y+.09,dz,.025),'wood')
         local lx,ly,lz=x+h*dx,h*y,z+h*dz
         -- A shaded skirt below each crown, with offsets at the lit shoulder.
         crown(lx,ly,lz,h*r,'honey',y*11)
@@ -305,8 +328,8 @@ local function home()
     box(x+1.23,1.85,z+.59,.46,1.55,.5,'stone');box(x+1.23,3.34,z+.59,.57,.21,.61,'chalk')
     roof(x,.99,z-1.48,2.3,.48,.4)
     for j=-2,2 do box(x+j*.89,.12,z-1.77,.13,.88,.13,'wood') end
-    for _,p in ipairs({{-5.3,1,2.8},{-4.9,2.75,3.5},{.3,3.6,2.5},{5.26,2.1,2.3},{5.73,-.9,1.6},{-5.8,-1.1,1.8}}) do pine(table.unpack(p)) end
-    oldTree(.7,3.8,2.75)
+    for _,p in ipairs({{-5.3,1,2.8},{-4.9,2.75,3.5},{.14,3.97,1.96},{5.26,2.1,2.3},{5.73,-.9,1.6},{-5.8,-1.1,1.8}}) do pine(table.unpack(p)) end
+    oldTree(1.30,3.59,3.55)
     for j=0,4 do box(-1.96,.24,-.82-j*.23,.81,.10,.20,'wood') end
     for i=1,8 do box(-1.35+i*.46,.055,-.08-.34*i,.46,.06,.25,'moss',.22) end
 end
@@ -316,7 +339,7 @@ function Model.New()
         island,offset='ruins',centers.ruins;ruins()
         island,offset='home',centers.home;home()
     end
-    return {yaw=-.12,pitch=.67,panX=0,panY=0,groups={},ids={},depth={},screen={}}
+    return {yaw=-.12,pitch=.46,panX=0,panY=0,groups={},ids={},depth={},screen={}}
 end
 local function project(v,x,y,z)
     local side=x*v.cy-z*v.sy
@@ -349,7 +372,6 @@ function Model.Update(v,limitW,limitH,cellSize)
     v.centerX=width*.5+((x0+x1-width)*.5)*zoom
     v.centerY=height*.5+((y0+y1-height)*.5)*zoom
     -- Keep the camera, anchors and output rectangles in full map coordinates.
-    -- During orbit each depth sample covers a 2x2 patch of that same image.
     if zoom<1 or cellSize>1 then
         for _,p in ipairs(points) do
             p[1]=(width*.5+(p[1]-width*.5)*zoom)/cellSize
@@ -366,17 +388,28 @@ function Model.Update(v,limitW,limitH,cellSize)
             local top=max(0,ceil(min(a[2],b[2],c[2])-.5));local bottom=min(rows-1,floor(max(a[2],b[2],c[2])-.5))
             loX,hiX,loY,hiY=min(loX,left),max(hiX,right),min(loY,top),max(hiY,bottom)
             local dz,ez=b[3]-a[3],c[3]-a[3]
-            local du,dv=by/det,-dy/det
+            local dzdx=(dz*by-ez*dy)/det
+            local dzdy=(ez*dx-dz*bx)/det
+            -- Walk only the covered interval of each row. Long, thin branches
+            -- and cliff facets otherwise test most of their bounding box twice.
+            local high,mid,low=a,b,c
+            if high[2]>mid[2] then high,mid=mid,high end
+            if mid[2]>low[2] then mid,low=low,mid end
+            if high[2]>mid[2] then high,mid=mid,high end
+            local long=(low[1]-high[1])/(low[2]-high[2])
+            local upper=mid[2]>high[2] and (mid[1]-high[1])/(mid[2]-high[2]) or 0
+            local lower=low[2]>mid[2] and (low[1]-mid[1])/(low[2]-mid[2]) or 0
+            local colour,owner=f[4],f[5]
             for y=top,bottom do
-                local yy,xx=y+.5-a[2],left+.5-a[1]
-                local u,vv=(xx*by-yy*bx)/det,(dx*yy-dy*xx)/det
-                local key=y*cols+left
-                for _=left,right do
-                    if u>=-1e-7 and vv>=-1e-7 and u+vv<=1.0000001 then
-                        local z=a[3]+u*dz+vv*ez
-                        if not depth[key] or z>depth[key] then depth[key],pixels[key],ids[key]=z,f[4],f[5] end
-                    end
-                    key,u,vv=key+1,u+du,vv+dv
+                local sample=y+.5
+                local xA=high[1]+(sample-high[2])*long
+                local xB=sample<mid[2] and high[1]+(sample-high[2])*upper or mid[1]+(sample-mid[2])*lower
+                if xA>xB then xA,xB=xB,xA end
+                local first=max(left,ceil(xA-.5000001));local last=min(right,floor(xB-.4999999))
+                local z=a[3]+(first+.5-a[1])*dzdx+(sample-a[2])*dzdy
+                for key=y*cols+first,y*cols+last do
+                    if not depth[key] or z>depth[key] then depth[key],pixels[key],ids[key]=z,colour,owner end
+                    z=z+dzdx
                 end
             end
         end
