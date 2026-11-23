@@ -431,8 +431,11 @@ end
 ---@param mat Material
 local function BuildIslandMesh(scene,mat)
     local c,N=M.CELL,math.floor(M.HALF*2/M.CELL)
-    local CH=24
+    -- 48 格（24m）一块：岩壳不投影，128 块 → 约 36 块，主视角少约 70 个批次；
+    -- 单块最多约 1.2 万顶点，仍低于 Web 单网格 65535 的上限（下方会打印最大块）。
+    local CH=48
     local triangles,chunks=0,0
+    local chunkTris,maxChunkTris=0,0
     local function Land(i,k)
         return M.heightMap[i] and M.heightMap[i][k]~=nil and M.heightMap[i][k]~=M.VOID_Y
     end
@@ -515,6 +518,7 @@ local function BuildIslandMesh(scene,mat)
                 geom:DefineColor(Color(soil or 0,0,0,1))
             end
             triangles=triangles+1
+            chunkTris=chunkTris+1
         end
         local function Quad(a,b,d,e,soil,rockFace) Tri(a,b,d,soil,rockFace); Tri(a,d,e,soil,rockFace) end
         -- 平坦岛内每 4m 合并顶面；底面使用带全部边界点的扇形，避免 T 接缝。
@@ -589,10 +593,11 @@ local function BuildIslandMesh(scene,mat)
             end
         end end end
         if geom then geom:Commit(); geom:SetMaterial(mat) end
+        maxChunkTris=max(maxChunkTris,chunkTris); chunkTris=0
     end end
     end -- 两遍几何枚举结束；只有第二遍分配 CustomGeometry
     M.meshStats={triangles=triangles,chunks=chunks}
-    print(string.format("RuinsTerrain: island shell %d triangles / %d chunks",triangles,chunks))
+    print(string.format("RuinsTerrain: island shell %d triangles / %d chunks (largest %d vertices)",triangles,chunks,maxChunkTris*3))
 end
 
 ---@param splat Texture2D

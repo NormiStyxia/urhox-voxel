@@ -23,6 +23,11 @@ local VIEWS = {
         { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
         { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
     },
+    rim = {
+        { name = "overview_noon", hour = 11, pos = Vector3(55, 42, -85), look = Vector3(0, 0, 0) },
+        { name = "rim_close", hour = 14, pos = Vector3(-62, R + 6, -48), look = Vector3(-48, R - 1, -30) },
+        { name = "cliff_noon", hour = 13, pos = Vector3(70, -4, -95), look = Vector3(0, -6, -20) },
+    },
     detail = {
         { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
         { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
