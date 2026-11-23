@@ -51,6 +51,7 @@ local function fixture(owner)
             for x=i,ii do for y=j,jj do for z=k,kk do if v.cells[key(x,y,z)]then self:SetVoxelMaterial(x,y,z,id)end end end end
         end
         function grid:GetSolidCount()return v.count end
+        function grid:IsSolid(i,j,k)return v.cells[key(i,j,k)]~=nil end
         function v:GetGrid()return grid end
         function v:SetCollidable(value)self.collidable=value end
         function v:RebuildGeometry()end
@@ -112,6 +113,15 @@ assert(main:At(1.125,.375,5.125)==146,'anvil base palette/shape changed')
 assert(main.material==cache['0.125:homeWindows'] and loft.material==main.material and home.housing==main.material)
 assert(main.material.params.wood_center==nil,'private centre leaked into windows/house')
 print('PASS both storeys, all four perimeter beam axes and unchanged anvil/window material binding')
+local function localCell(v,key)
+    local i,j,k=key//(v.ny*v.nz),(key//v.nz)%v.ny,key%v.nz
+    return v.pos.x-home.x+(i+.5)*v.s,v.pos.y-home.base+(j+.5)*v.s,v.pos.z-home.z+(k+.5)*v.s
+end
+for k in pairs(main.cells)do
+    local x,y,z=localCell(main,k)
+    assert(not loft:At(x,y,z) and not world.volumes[1]:At(x,y,z),'main roof intersects loft or arch')
+end
+print('PASS each main-roof voxel has a single owner across house grids')
 if TIMBER_BASELINE then
     local before=assert(load(read(TIMBER_BASELINE),'house before fix'))()
     local old=fixture(before)
@@ -120,8 +130,16 @@ if TIMBER_BASELINE then
         local b=world.volumes[i]
         assert(a.nx==b.nx and a.ny==b.ny and a.nz==b.nz and a.s==b.s)
         assert(a.pos.x==b.pos.x and a.pos.y==b.pos.y and a.pos.z==b.pos.z)
-        assert(a.collidable==b.collidable and a.collisionMask==b.collisionMask and a.count==b.count)
-        for key in pairs(a.cells)do assert(b.cells[key],'removed occupied cell')end
+        assert(a.collidable==b.collidable and a.collisionMask==b.collisionMask)
+        -- A removed duplicate still has to be solid in another structural grid or the ground.
+        for key in pairs(a.cells)do if not b.cells[key] then
+            local x,y,z=localCell(a,key)
+            local supported=home.Ground(home.x+x,home.z+z) and home.base+y<home.Height(home.x+x,home.z+z)
+            for _,v in ipairs(world.volumes)do
+                if v.collidable and v:At(x,y,z) then supported=true;break end
+            end
+            assert(supported,'removed an exterior cell')
+        end end
         for key in pairs(b.cells)do assert(a.cells[key],'added occupied cell')end
         print('PASS baseline occupancy/collision',i,b.count,'cells; no geometry/volume growth')
     end

@@ -148,6 +148,7 @@ print(('PASS 2 structural entrance pillars and 4 visual trims/joints; %d added d
 local field=home.field
 local height,mask=field.terrain.heightMap,field.splat.data
 assert(height.w==129 and mask.w==128 and field.splat.filter==FILTER_NEAREST and field.terrain.viewMask==0)
+assert(field.terrain.visible==false and field.terrain.castShadows==false and field.terrain.occluder==false)
 local planted,raised=0,0
 for row=0,127 do for col=0,127 do
     local w=mask.p[row*128+col]>>24

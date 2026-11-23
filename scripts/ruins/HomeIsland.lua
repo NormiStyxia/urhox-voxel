@@ -9,6 +9,9 @@ local window = 156
 -- Axial grain survives greedy meshing because the palette ID stays on each face.
 local cedarPost, oakPlankZ, cedarBeamZ = 157,158,159
 local WATER_LEVEL = -.375
+local WATER_VIEW = 0x10000000
+local mirror
+local mirrorTiers={high={640,24},medium={448,16},low={288,10}}
 local function pattern(x,z)
     return sin(x*.49 + z*.17) + .65*cos(z*.81-x*.23)
 end
@@ -69,7 +72,115 @@ function H.ClearRipples()
     nextSlot,wet,lastX,lastZ,stepTime,travel=1,false,nil,nil,0,0
 end
 
+function H.ReleaseReflection()
+    if not mirror then return end
+    if mirror.surface then mirror.surface:SetNumViewports(0) end
+    if H.spring then
+        H.spring:SetShaderParameter('mirror_ready',Variant(0.0))
+        if mirror.bindingAttempted then H.spring:SetSurfaceTexture('mirror_color',nil) end
+    end
+    if mirror.node then mirror.node:Remove() end
+    if mirror.texture then mirror.texture:Dispose() end
+    mirror=nil
+end
+
+local function createReflection(r,scene,w,h)
+    r.texture=Texture2D:new()
+    r.texture:SetNumLevels(1)
+    if not r.texture:SetSize(w,h,Graphics:GetRGBAFormat(),TEXTURE_RENDERTARGET) then return false end
+    r.texture:SetFilterMode(FILTER_BILINEAR)
+    r.texture:SetAddressMode(COORD_U,ADDRESS_CLAMP)
+    r.texture:SetAddressMode(COORD_V,ADDRESS_CLAMP)
+    r.surface=r.texture:GetRenderSurface()
+    if not r.surface then return false end
+    r.node=scene:CreateChild('HomeSpringMirror')
+    local camera=r.node:CreateComponent('Camera')
+    r.camera=camera
+    camera.useReflection=true
+    camera.reflectionPlane=Plane(Vector3.UP,Vector3(H.x,H.base+WATER_LEVEL,H.z))
+    camera.useClipping=true
+    camera.clipPlane=Plane(Vector3.UP,Vector3(H.x,H.base+WATER_LEVEL-.06,H.z))
+    camera.autoAspectRatio=false
+    camera.viewOverrideFlags=VO_DISABLE_SHADOWS
+    r.view=Viewport:new(scene,camera)
+    r.view.drawDebug=false
+    local forward=cache:GetResource('XMLFile','RenderPaths/Forward.xml')
+    if not forward then return false end
+    r.view:SetRenderPath(forward)
+    -- Opaque and alpha-tested voxel/leaf geometry plus actual local lights.
+    -- Exclude transparent passes (including their scene-colour copies) and post FX.
+    local path=r.view:GetRenderPath()
+    local hasBase=false
+    for i=path:GetNumCommands()-1,0,-1 do
+        local cmd=path:GetCommand(i)
+        if cmd.type==CMD_SCENEPASS and cmd.pass=='base' then
+            hasBase=true
+        elseif cmd.type~=CMD_CLEAR and cmd.type~=CMD_FORWARDLIGHTS then
+            path:RemoveCommand(i)
+        end
+    end
+    if not hasBase then return false end
+    r.surface:SetUpdateMode(SURFACE_MANUALUPDATE)
+    r.surface:SetViewport(0,r.view)
+    r.bindingAttempted=true
+    return H.spring:SetSurfaceTexture('mirror_color',r.texture)
+end
+
+-- Run after the final gameplay-camera pose. The shader reprojects to the saved
+-- capture pose between updates, so a 10 Hz reflection does not swim with the HUD.
+function H.UpdateReflection(dt,scene,source,tier)
+    if not H.spring then return end
+    if not H.poolBounds then
+        H.poolBounds=BoundingBox(Vector3(H.x-18.5,H.base+WATER_LEVEL-.08,H.z-21),
+            Vector3(H.x+5,H.base+WATER_LEVEL+.08,H.z+2.5))
+    end
+    local node=source.node
+    local pos=node.worldPosition
+    if pos.y<=H.base+WATER_LEVEL or (pos.x-H.x)^2+(pos.z-H.z)^2>110^2
+        or source.frustum:IsInsideFast(H.poolBounds)==OUTSIDE then return end
+    local profile=mirrorTiers[tier] or mirrorTiers.medium
+    local sw,sh=graphics:GetWidth(),graphics:GetHeight()
+    if sw<=0 or sh<=0 then return end
+    local scale=math.min(.5,profile[1]/math.max(sw,sh))
+    local w,h=math.max(1,floor(sw*scale+.5)),math.max(1,floor(sh*scale+.5))
+    if not mirror or mirror.w~=w or mirror.h~=h then
+        H.ReleaseReflection()
+        mirror={w=w,h=h,elapsed=1}
+        local ok,ready=pcall(createReflection,mirror,scene,w,h)
+        if not ok or not ready then
+            H.ReleaseReflection()
+            mirror={w=w,h=h,failed=true}
+            print('HomeSpring: planar reflection unavailable; using screen-space reflection ('..tostring(ready)..')')
+        end
+    end
+    local r=mirror
+    if r.failed then return end
+    if r.queued and not r.ready then
+        H.spring:SetShaderParameter('mirror_ready',Variant(1.0))
+        r.ready=true
+    end
+    r.elapsed=r.elapsed+dt
+    local interval=1/profile[2]
+    if r.elapsed<interval then return end
+    r.elapsed=r.elapsed%interval
+    local c=r.camera
+    r.node:SetWorldTransform(pos,node.worldRotation)
+    c.viewMask=source.viewMask & ~WATER_VIEW
+    c.fov,c.zoom,c.aspectRatio=source.fov,source.zoom/1.22,sw/sh
+    c.nearClip,c.farClip=source.nearClip,math.min(145,source.farClip)
+    c.lodBias=.8
+    local sy=.5*c.zoom/math.tan(math.rad(c.fov)*.5)
+    H.spring:SetShaderParameter('mirror_eye',Variant(Vector4(pos.x,pos.y,pos.z,H.base+WATER_LEVEL)))
+    H.spring:SetShaderParameter('mirror_right',Variant(node.worldRight*(sy/c.aspectRatio)))
+    H.spring:SetShaderParameter('mirror_up',Variant(node.worldUp*(-sy)))
+    H.spring:SetShaderParameter('mirror_forward',Variant(node.worldDirection))
+    r.surface:QueueUpdate()
+    r.queued=true
+end
+
 function H.Stop()
+    H.ReleaseReflection()
+    H.poolBounds=nil
     H.ClearRipples()
     H.spring,H.hearth,H.field,H.housing,H.meadowMaterial=nil,nil,nil,nil,nil
     H.lastDay,H.lastDusk,H.lastNight=nil,nil,nil
@@ -147,6 +258,49 @@ end
 local function rockFloor(x,z,d)
     local rim=1.15+1.05*pattern(x*.51,z*.51)
     return math.max(-18,math.min(-2.5,floor((-3.5-rim-d*1.45)*2)*.5))
+end
+
+-- A bank rock may straddle both the fine turf and the coarser cliff below -2 m.
+-- Keep only the rock cells outside their respective occupied columns. The union
+-- stays identical, but the waterline and cliff no longer have two coplanar skins.
+local function clearColumnRange(b,i,k,low,high)
+    local j0,j1=b:Range(low,high,2)
+    if j0<=j1 then b.grid:FillBox(i,j0,k,i,j1,k,false) end
+end
+local function trimGround(b)
+    for i=0,b.nx-1 do for k=0,b.nz-1 do
+        local x,_,z=b:Center(i,0,k)
+        if edge(x,z)>0 then clearColumnRange(b,i,k,-2,top(x,z)) end
+        if b.lmin[2]<-2 then
+            local cx,cz=(floor(x*2)+.5)*.5,(floor(z*2)+.5)*.5
+            local d=edge(cx,cz)
+            if d>0 then clearColumnRange(b,i,k,rockFloor(cx,cz,d),-2) end
+        end
+    end end
+end
+
+-- Both brushes are aligned to island-local axes. The owning grid is the same
+-- size or coarser, so each occupied vertical run can be removed in one box.
+local function trimCovered(b,owner)
+    local s=owner.s
+    local ix0,ix1=owner:Range(b.lmin[1],b.lmin[1]+b.nx*b.s,1)
+    local iy0,iy1=owner:Range(b.lmin[2],b.lmin[2]+b.ny*b.s,2)
+    local iz0,iz1=owner:Range(b.lmin[3],b.lmin[3]+b.nz*b.s,3)
+    for i=ix0,ix1 do
+        if activeJob and (i-ix0)%16==0 then coroutine.yield() end
+        for k=iz0,iz1 do
+            local x,z=owner.lmin[1]+i*s,owner.lmin[3]+k*s
+            local start=nil
+            for j=iy0,iy1+1 do
+                if j<=iy1 and owner.grid:IsSolid(i,j,k) then
+                    start=start or j
+                elseif start then
+                    b:Carve(x,owner.lmin[2]+start*s,z,x+s,owner.lmin[2]+j*s,z+s)
+                    start=nil
+                end
+            end
+        end
+    end
 end
 
 local function terrain(world)
@@ -293,6 +447,7 @@ local function house(world)
     local old=brush(world,{-22,0,6},{5,12,17},.25)
     arch(old,-9.5,13.5,6,5,5.25); arch(old,-18,9,2.8,3.25,3.1)
     for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{-1,15,4.5}}) do column(old,p[1],p[2],0,p[3]) end
+    trimGround(old)
     old:Finish({masonry='ashlar'})
     local b=brush(world,{-18,0,3},{4,9,14},.125)
     b:Box(-16.25,0,4,-1,.375,12,P.STONE_C)
@@ -336,7 +491,6 @@ local function house(world)
     b:Box(-.625,2.875,7,3,3.25,10.125,P.STONE_A); b:Box(.5,3.25,8.5,1.75,5.25,9.75,P.STONE_D)
     b:Box(.625,0,4.625,1.625,.75,5.625,P.WOOD); b:Box(.375,.75,4.5,1.875,1,5.75,slate)
     b:Box(.875,1,4.875,1.375,1.375,5.5,slate); b:Box(.125,1.375,4.75,2.125,1.625,5.625,slate)
-    b:Finish({masonry='homeWindows'})
     porchJoint(world,-12.25)
     porchJoint(world,-7)
     -- Upper rooms step back from the forge and the low pond-facing porch.
@@ -372,6 +526,10 @@ local function house(world)
         loft:Box(x0-.125,level,z0+.125,x0+.125,level+.25,z1-.125,cedarBeamZ)
         loft:Box(x1-.125,level,z0+.125,x1+.125,level+.25,z1-.125,cedarBeamZ)
     end
+    trimCovered(loft,old)
+    trimCovered(b,old)
+    trimCovered(b,loft)
+    b:Finish({masonry='homeWindows'})
     loft:Finish({masonry='homeWindows'})
 end
 local function banks(world)
@@ -404,6 +562,9 @@ local function banks(world)
             b:Box(x-wide,h,z-.5,x+wide,h+.25,z+.5,broken and P.STONE_MOSS or P.MARBLE_B)
         end
     end
+    trimGround(b)
+    -- The western edge of the launch paving crosses one surviving pond pillar.
+    b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z) if pad(x,z)<=8.55 then return false end end)
     b:Finish()
 end
 local function trees(world,scene)
@@ -423,6 +584,8 @@ local function water(scene)
     local node=scene:CreateChild('HomeSpring')
     node.position=Vector3(H.x,H.base,H.z)
     local g=node:CreateComponent('CustomGeometry')
+    -- Both the pool and the waterfall are excluded from their own render target.
+    g.viewMask=WATER_VIEW
     g:BeginGeometry(0,TRIANGLE_LIST)
     local function quad(a,b,c,d,fall)
         for _,v in ipairs({a,b,c,a,c,d}) do
@@ -490,12 +653,14 @@ local function shoreDetails(world)
                     end
                 end
             end
+            trimGround(b)
             b:Finish({visual=true})
         end
     end
     -- Submerged steps at the eastern bank lead onto the lane. Each rise fits the capsule step height.
     local stairs=brush(world,{-1,-1.5,-7},{4,.75,-3},.25)
     for i=0,5 do stairs:Box(-1+i*.65,-1.5,-6.25,-.25+i*.65,-1.25+i*.25,-4,P.STONE_MOSS) end
+    trimGround(stairs)
     stairs:Finish()
 end
 function H.GrassAt(wx,wz)
@@ -543,7 +708,10 @@ local function meadowMaps(field)
     local t=field.terrain
     t.patchSize=16
     t.spacing=Vector3(spacing,1/32,spacing)
-    t.smoothing=false;t.castShadows=false;t.viewMask=0;t.heightMap=height
+    t.smoothing=false;t.heightMap=height
+    -- The generated patches coincide with flat turf. Keep the height data for the
+    -- sibling GrassFields, but omit the sampler mesh from all colour and shadow passes.
+    t.visible=false;t.castShadows=false;t.viewMask=0;t.occluder=false
     local mask=Texture2D:new();mask:SetNumLevels(1);mask:SetData(coverage,true)
     mask:SetFilterMode(FILTER_NEAREST)
     mask:SetAddressMode(COORD_U,ADDRESS_CLAMP);mask:SetAddressMode(COORD_V,ADDRESS_CLAMP)

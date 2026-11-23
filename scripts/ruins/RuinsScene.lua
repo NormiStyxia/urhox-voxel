@@ -753,6 +753,7 @@ local function TravelToRegion(region)
     end
     if not nomi_:TeleportToSafeGround(destination,yaw) then return false,'此落点暂不可用' end
     HomeIsland.ClearRipples()
+    if region~='home' then HomeIsland.ReleaseReflection() end
     nomi_.fallbackPos=region=='home' and destination or M.SPAWN
     M.ride.pos=destination
     M.ride.vy,M.ride.speed=0,0
@@ -2083,6 +2084,9 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     if combatMoves_ then SwingPerf.Invalidate() end
     nomi_:BeginQueryScope()
     if combatMoves_ then Safe('Camera.Combat',UpdateCombatCamera,dt,cn) end
+    if M.region=='home' and not ForgeShowroom.Active() and not WorldMap.IsOpen() then
+        HomeIsland.UpdateReflection(dt,scene_,nomi_:Camera(),CombatSettings.GetProfile().quality)
+    end
     -- 展示准星必须读取最终相机；不能把上一帧射线的结果画在当前帧视角。
     -- Update 的 aim 仍用于本帧技能输入，PostUpdate 再校准选中反馈与悬停材质。
     local aim=not M.mounted and UpdateAim() or {hit=false,far=nomi_:HandPos()+nomi_.node.worldDirection*60}

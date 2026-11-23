@@ -1,7 +1,7 @@
 // RuinsLeafCard.shader — 树冠叶片卡（MC 高清材质包风格的像素叶，alpha 镂空）
 //
 // 每张卡是一个四边形，几十张交叉叠成一个叶团。要点：
-//   • 贴图最近点采样 + mip：像素叶边缘清楚，远处不闪
+//   • 每级 mip 内过滤颜色和镂空覆盖率，风摆时不会跳到相邻整颗纹素
 //   • 颜色由贴图亮度重映射到 leaf_dark → leaf_light 渐变（同一张图做绿叶 / 金叶）
 //   • 光照法线用"叶团外法线"（CustomGeometry 里写好的），整个树冠像一个体积那样明暗过渡，
 //     不会每张卡各亮各的；外层 / 顶部再提亮，内层压暗（顶点色 r = 深度遮蔽）
@@ -9,7 +9,7 @@
 shader_type spatial;
 render_mode shading_model_pbr, cull_disabled;
 
-uniform sampler2D leaf_tex : filter_nearest_mipmap, repeat_disable;
+uniform sampler2D leaf_tex : filter_linear_mipmap, repeat_disable;
 uniform vec3 leaf_dark = vec3(0.10, 0.22, 0.07);
 uniform vec3 leaf_light = vec3(0.56, 0.74, 0.26);
 uniform vec3 daynight_tint = vec3(1.0);
