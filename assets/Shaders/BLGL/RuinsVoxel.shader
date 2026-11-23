@@ -201,6 +201,19 @@ void fragment() {
         float patina = smoothstep(0.57, 0.78, veins);
         base = mix(base, base * vec3(0.80, 0.82, 0.86), patina * 0.30 * marble);
     }
+    // 苔石槽位只给出"可能长苔"的区域；真正的苔斑在石面上按噪声生长，
+    // 朝上的面、砌缝更容易积苔，块状区域的直边被打散成不规则斑块，不再像迷彩色块。
+    float mossK = 0.0;
+    if (idx == 104.0 && dressed_stone_draw < 0.5 && COLOR.g < 0.5) {
+        float mossPatch = n3(wp * 1.6 + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
+        float growth = mossPatch + max(n.y, 0.0) * 0.22 - max(-n.y, 0.0) * 0.18 + jointK * 0.25;
+        mossK = smoothstep(0.44, 0.60, growth);
+        vec3 bare = srgb_to_linear(vec3(0.74, 0.72, 0.67));
+        vec3 moss = srgb_to_linear(mix(vec3(0.27, 0.35, 0.15), vec3(0.45, 0.52, 0.24), smoothstep(0.3, 0.8, pores)));
+        // 苔边一圈略深的潮湿石面，让斑块从石头里"长出来"。
+        float damp = smoothstep(0.34, 0.46, growth) * (1.0 - mossK);
+        base = mix(bare * (1.0 - 0.16 * damp), moss, mossK);
+    }
     if (mineral > 0.0 && surfaceFade > 0.0) {
         shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
     }
@@ -329,7 +342,7 @@ void fragment() {
         emiK*=window_light*(.2+.65*max(n.y,0.0)+.22*(1.0-abs(n.y)));
     }
     ALBEDO = base * shade * daynight_tint;
-    ROUGHNESS = clamp(pbr.r + homeRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
+    ROUGHNESS = clamp(pbr.r + homeRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + 0.04 * mossK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
