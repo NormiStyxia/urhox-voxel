@@ -61,6 +61,17 @@ function M.New(scene, world, spawn, spawnYaw)
     self.node = scene:CreateChild("Nomi")
     self.node.worldPosition = spawn
     self.nomi = USE_YSM_TRIAL and BlockCharacter.Create(self.node, NomiYSMData) or BlockCharacter.CreateVoxel(self.node, NomiVoxelData, BlockCharacter.SLENDER)
+    -- 眼睑、瞳孔、衣摆流苏等小件（半径 < 12cm）在 0.06m/纹素的近级联阴影里不到 2 个纹素，
+    -- 影子看不出来，却每个单独占一次阴影批次（约 57 个，−104 批次/帧）。躯干、四肢、头发照常投影。
+    local smallCasters = 0
+    for _, geom in ipairs(self.node:GetComponents("CustomGeometry", true)) do
+        local d = geom --[[@as Drawable]]
+        if d.castShadows and d.worldBoundingBox.size:Length() * 0.5 < 0.12 then
+            d.castShadows = false
+            smallCasters = smallCasters + 1
+        end
+    end
+    print("NomiController: " .. smallCasters .. " small parts no longer cast shadows")
     -- Spells and held equipment share the hand locator supplied by the character.
     self.castSocket = assert(self.nomi:HandSocket("right"), "Nomi right palm is unavailable")
     local cc = self.node:CreateComponent("VoxelCharacterController")

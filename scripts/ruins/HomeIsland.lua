@@ -321,7 +321,7 @@ function H.RefreshWindowLights(stage)
     end
     -- Clear panes carry a faint warm room glow at dusk and night.
     if windows.glass then
-        windows.glass:SetShaderParameter('MatEmissiveColor',Variant(Color(1.0*glow,.58*glow,.27*glow)))
+        windows.glass:SetShaderParameter('MatEmissiveColor',Variant(Color(2.4*glow,1.4*glow,.65*glow)))
     end
     local previous
     for i=1,2 do

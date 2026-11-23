@@ -557,16 +557,35 @@ local function BuildIslandMesh(scene,mat)
             else
             local a,b,d,e=V(i,k,top[i][k]),V(i,k+1,top[i][k+1]),V(i+1,k+1,top[i+1][k+1]),V(i+1,k,top[i+1][k])
             local aa,bb,dd,ee=V(i,k,bottom[i][k]),V(i,k+1,bottom[i][k+1]),V(i+1,k+1,bottom[i+1][k+1]),V(i+1,k,bottom[i+1][k])
-            Quad(a,b,d,e); Quad(aa,ee,dd,bb,nil,true)
             local function Edge(v,w,vb,wb)
                 local vs=v-Vector3(0,M.SoilDepth(v.x,v.z),0)
                 local ws=w-Vector3(0,M.SoilDepth(w.x,w.z),0)
                 Quad(w,v,vs,ws,1); Quad(ws,vs,vb,wb,nil,true)
             end
-            if not Land(i-1,k) then Edge(a,b,aa,bb) end
-            if not Land(i,k+1) then Edge(b,d,bb,dd) end
-            if not Land(i+1,k) then Edge(d,e,dd,ee) end
-            if not Land(i,k-1) then Edge(e,a,ee,aa) end
+            -- 岸线外凸角切 45°：0.5m 方格的岸线远看是一圈锯齿，切掉两侧都临空的角，
+            -- 45° 台阶变成直斜边，长台阶只在拐点处出现短斜边。碰撞仍按 0.5m 格（差一个 0.35m 角）。
+            -- 循环顺序 a→b→d→e；边 j 从 L[j] 到 L[j+1]，nb[j] 为该边外侧格是否有地。
+            local L,LB={a,b,d,e},{aa,bb,dd,ee}
+            local nb={Land(i-1,k),Land(i,k+1),Land(i+1,k),Land(i,k-1)}
+            local diag={Land(i-1,k-1),Land(i-1,k+1),Land(i+1,k+1),Land(i+1,k-1)}
+            local cut=nil
+            for j=1,4 do
+                local p,n2,n3=(j+2)%4+1,j%4+1,(j+1)%4+1
+                if not nb[p] and not nb[j] and nb[n2] and nb[n3] and not diag[j] then cut=j end
+            end
+            if cut then
+                local j=cut
+                local nx,op,pv=L[j%4+1],L[(j+1)%4+1],L[(j+2)%4+1]
+                local nxb,opb,pvb=LB[j%4+1],LB[(j+1)%4+1],LB[(j+2)%4+1]
+                Tri(nx,op,pv); Tri(pvb,opb,nxb,nil,true)
+                Edge(pv,nx,pvb,nxb)
+            else
+            Quad(a,b,d,e); Quad(aa,ee,dd,bb,nil,true)
+            if not nb[1] then Edge(a,b,aa,bb) end
+            if not nb[2] then Edge(b,d,bb,dd) end
+            if not nb[3] then Edge(d,e,dd,ee) end
+            if not nb[4] then Edge(e,a,ee,aa) end
+            end
             end
         end end end
         if geom then geom:Commit(); geom:SetMaterial(mat) end
