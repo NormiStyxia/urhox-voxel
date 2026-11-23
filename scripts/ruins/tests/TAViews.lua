@@ -41,7 +41,8 @@ if set == "all" then
     for _, v in ipairs(VIEWS.home) do views[#views + 1] = v end
 end
 views = views or VIEWS.ruins
-local WAIT = tonumber((function() for _, a in ipairs(GetArguments()) do local w = a:match("^%-ta%-wait=(%d+)$"); if w then return w end end end)()) or 14
+local WAIT = 14
+for _, a in ipairs(GetArguments()) do local w = a:match("^%-ta%-wait=(%d+)$"); if w then WAIT = math.tointeger(tonumber(w)) or 14 end end
 local index, wait, pendingName = 0, 0, nil
 local frame = 0
 local homeBuilt = false
