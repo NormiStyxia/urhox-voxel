@@ -21,6 +21,14 @@ local VIEWS = {
         { name = "court_night", hour = 22, pos = Vector3(-12, R + 3.5, -24), look = Vector3(0, 1.5, 4) },
         { name = "cliff_noon", hour = 13, pos = Vector3(70, -4, -95), look = Vector3(0, -6, -20) },
         { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
+        { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
+    },
+    detail = {
+        { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
+        { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
+        { name = "gate_noon", hour = 12, pos = Vector3(4, R + 2.2, -74), look = Vector3(0, R + 1, -40) },
+        { name = "overview_noon", hour = 11, pos = Vector3(55, 42, -85), look = Vector3(0, 0, 0) },
+        { name = "court_noon", hour = 12, pos = Vector3(-12, R + 3.5, -24), look = Vector3(0, 1.5, 4) },
     },
     night = {
         { name = "n_court_night", hour = 22, pos = Vector3(-12, R + 3.5, -24), look = Vector3(0, 1.5, 4) },

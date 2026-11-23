@@ -6,21 +6,26 @@ local stepIndex, wait = 0, 0
 local base = nil
 
 local steps = {
-    { name = "baseline", fn = function() end },
+    { name = "settle", fn = function() end },
+    { name = "current", fn = function() end },
     { name = "noShadows", fn = function() game.sun.castShadows = false end, undo = function() game.sun.castShadows = true end },
-    { name = "grassComp", fn = function()
+    { name = "noGrass", fn = function()
         local T = require("ruins.RuinsTerrain")
         if T.grass then T.grass.enabled = false end
         if T.flowers then T.flowers.enabled = false end
-        print("Census: grass native=" .. tostring(T.grass ~= nil) .. " tufts=" .. tostring(T.tufts ~= nil))
     end, undo = function()
         local T = require("ruins.RuinsTerrain")
         if T.grass then T.grass.enabled = true end
         if T.flowers then T.flowers.enabled = true end
     end },
-    { name = "baseline2", fn = function() end },
-    { name = "budget", fn = function() require("ruins.RenderBudget").Apply(game.scene) end },
-    { name = "temporal", fn = function() game.sun.temporalShadows = true; game.sun.temporalShadowIntervals = Vector4(1, 2, 4, 8) end },
+    { name = "grass55", fn = function()
+        local T = require("ruins.RuinsTerrain")
+        if T.grass then T.grass.viewDistance = 55 end
+    end, undo = function()
+        local T = require("ruins.RuinsTerrain")
+        if T.grass then T.grass.viewDistance = 48 end
+    end },
+    { name = "current2", fn = function() end },
     { name = "far", fn = function() game.farCam = true end, undo = function() game.farCam = false end },
 }
 
@@ -51,7 +56,7 @@ function Census_PostUpdate(eventType, eventData)
     local s = steps[stepIndex]
     if not s then return end
     s.fn()
-    wait = 4
+    wait = 30
 end
 
 V.atFrame(4, function()

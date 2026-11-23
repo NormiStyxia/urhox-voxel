@@ -242,10 +242,14 @@ void fragment() {
             float arris = smoothstep(0.04, 0.09, seam) * (1.0 - smoothstep(0.09, 0.16, seam));
             path *= 1.0 + arris * 0.07 * detailFade;
             path = mix(path * 0.50, path, smoothstep(0.02, 0.06, seam));
-            float cracked = step(0.86, hash2(slabCell + 3.0)) * detailFade;
+            float crackHash = hash2(slabCell + 3.0);
+            float cracked = step(0.91, crackHash) * detailFade;
             if (cracked > 0.0) {
-                float line = abs(slabF.x - 0.5 + (slabF.y - 0.5) * (slabHue - 0.5) * 1.4 + (fine - 0.5) * 0.10);
-                path *= 1.0 - (1.0 - smoothstep(0.008, 0.03 + footprint, line)) * 0.38 * cracked;
+                // 走向随石板不同（横、竖、斜），线身带轻微抖动，不是一排同向的直线。
+                vec2 q = slabF - 0.5;
+                vec2 dir = crackHash > 0.955 ? vec2(1.0, (slabHue - 0.5) * 1.6) : vec2((slabHue - 0.5) * 1.6, 1.0);
+                float line = abs(dot(q, normalize(dir.yx * vec2(1.0, -1.0))) + (fine - 0.5) * 0.12);
+                path *= 1.0 - (1.0 - smoothstep(0.006, 0.024 + footprint, line)) * 0.28 * cracked;
             }
             // 缝里长草：越靠路边越多。
             float seamGrass = max(smoothstep(0.55, 0.85, mid) * 0.5, (1.0 - smoothstep(0.53, 0.75, pathRaw)) * 0.75);

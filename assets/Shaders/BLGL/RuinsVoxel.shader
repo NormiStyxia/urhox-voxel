@@ -279,15 +279,31 @@ void fragment() {
     // 苔石槽位只给出"可能长苔"的区域；真正的苔斑在石面上按噪声生长，
     // 朝上的面、砌缝更容易积苔，块状区域的直边被打散成不规则斑块，不再像迷彩色块。
     float mossK = 0.0;
-    if (idx == 104.0 && dressed_stone_draw < 0.5 && COLOR.g < 0.5) {
-        float mossPatch = n3(wp * 1.6 + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
-        float growth = mossPatch + max(n.y, 0.0) * 0.22 - max(-n.y, 0.0) * 0.18 + jointK * 0.25;
-        mossK = smoothstep(0.44, 0.60, growth);
-        vec3 bare = srgb_to_linear(vec3(0.74, 0.72, 0.67));
-        vec3 moss = srgb_to_linear(mix(vec3(0.27, 0.35, 0.15), vec3(0.45, 0.52, 0.24), smoothstep(0.3, 0.8, pores)));
-        // 苔边一圈略深的潮湿石面，让斑块从石头里"长出来"。
-        float damp = smoothstep(0.34, 0.46, growth) * (1.0 - mossK);
-        base = mix(bare * (1.0 - 0.16 * damp), moss, mossK);
+    float mossField = 0.0;
+    if (dressed_stone_draw < 0.5 && COLOR.g < 0.5 && idx >= 99.5 && idx <= 104.5) {
+        // 一个连续的世界空间生长场，苔石槽位只是把它抬高。槽位边界本身不画出来：
+        // 块内只有一部分长苔，块外紧邻的普通石面也有零星苔点，体素块的直角轮廓被打散。
+        // 竖直墙面上噪声沿 Y 拉长，形成顺着雨水往下淌的苔痕。
+        vec3 mp = wp * vec3(1.6, mix(0.75, 1.6, abs(n.y)), 1.6);
+        mossField = n3(mp + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
+        float growth = mossField + max(n.y, 0.0) * 0.20 - max(-n.y, 0.0) * 0.20 + jointK * 0.22
+            + (idx == 104.0 ? 0.0 : -0.30);
+        mossK = smoothstep(0.50, 0.64, growth);
+        if (idx == 104.0) {
+            vec3 bare = srgb_to_linear(vec3(0.74, 0.72, 0.67));
+            float damp = smoothstep(0.38, 0.50, growth) * (1.0 - mossK);
+            base = mix(base, bare * (1.0 - 0.14 * damp), 0.85);
+        }
+        if (mossK > 0.0) {
+            // 苔色：朝上受光的苔偏黄绿、垂面与背阴处偏深橄榄；块内色调变化走低频，不做像素噪点。
+            float tone = smoothstep(0.25, 0.85, n3(wp * 2.3 + 5.0));
+            vec3 mossShade = mix(vec3(0.24, 0.31, 0.14), vec3(0.33, 0.40, 0.17), tone);
+            vec3 mossSun = mix(vec3(0.40, 0.47, 0.20), vec3(0.52, 0.55, 0.25), tone);
+            vec3 moss = srgb_to_linear(mix(mossShade, mossSun, smoothstep(0.2, 0.9, n.y)));
+            // 苔层边缘变薄、透出石色。
+            float thick = smoothstep(0.0, 0.6, mossK);
+            base = mix(base, moss, mossK * (0.55 + 0.45 * thick));
+        }
     }
     if (mineral > 0.0 && surfaceFade > 0.0) {
         shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
