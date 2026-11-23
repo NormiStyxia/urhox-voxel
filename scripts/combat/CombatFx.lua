@@ -344,8 +344,7 @@ function F:Update(dt)
     for _,s in ipairs(self.ghosts) do ageSlot(self,s,dt) end
 end
 local function clearPool(pool)
-    -- show/ageSlot own both flags. Inactive slots are already hidden; repeated
-    -- swap/cancel teardown must not write every pooled node through the binding.
+    -- show/ageSlot 同步维护活跃与可见状态；空槽已隐藏，重复取消无需再写原生节点。
     for _,s in ipairs(pool) do
         if s.active then s.active=false;s.node.enabled=false end
     end
