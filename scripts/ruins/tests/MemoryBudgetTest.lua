@@ -26,5 +26,17 @@ V.atFrame(3, function()
         local item = largest[i]
         print(string.format("MemoryBudgetTest: mesh rank=%d vertices=%d cells=%d dims=%s name=%s", i, item.vertices, item.cells, item.dims, item.name))
     end
+    local treeVertices, trees = 0, 0
+    for _, node in ipairs(game.scene:GetChildrenWithName("Tree", true)) do
+        trees = trees + 1
+        for _, part in ipairs(node:GetComponents("StaticModel", true)) do
+            local geometry = part.model:GetGeometry(0, 0)
+            treeVertices = treeVertices + geometry.vertexCount
+        end
+        for _, part in ipairs(node:GetComponents("CustomGeometry", true)) do
+            treeVertices = treeVertices + part:GetNumVertices(0)
+        end
+    end
+    print(string.format("MemoryBudgetTest: trees=%d treeVertices=%d", trees, treeVertices))
     print("MemoryBudgetTest: dda=" .. game.world:GetDdaStatsString())
 end)

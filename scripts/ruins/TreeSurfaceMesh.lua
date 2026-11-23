@@ -95,14 +95,8 @@ function M.Build(grid, parent, name, palette, material)
         end
     end
     mesh:Commit()
-    local model = Model:new()
-    assert(mesh:FillModel(model), "树木外壳模型转换失败：" .. name)
-    -- 最终只留 StaticModel，不让 CustomGeometry 的 CPU 顶点副本与模型长期共存。
-    mesh:Clear()
-    mesh:Remove()
-    mesh:Dispose()
-    local drawable = node:CreateComponent("StaticModel")
-    drawable.model, drawable.material, drawable.castShadows = model, material, true
+    mesh:SetMaterial(material)
+    mesh.castShadows = true
     return quads, covered
 end
 return M
