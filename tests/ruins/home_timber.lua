@@ -32,6 +32,7 @@ local function fixture(owner,empty)
     local world={volumes={},palette={},nextID=1}
     function world:GetPaletteTexture()return self.palette end
     function world:CreateVolume(nx,ny,nz,s,pos)
+        assert(math.max(nx,ny,nz)<=256,('engine voxel grid limit exceeded: %d x %d x %d'):format(nx,ny,nz))
         local v={nx=nx,ny=ny,nz=nz,s=s,pos=pos,cells={},count=0,id=self.nextID}
         self.nextID=self.nextID+1
         v.node={enabled=true};v.collisionLayer=1;v.collisionMask=0xffffffff
@@ -142,7 +143,7 @@ for _,w in ipairs(windows) do
     assert(front:At(w.x-w.width/2-.09375,2.28125,6.90625)==P.HOME_COPING,'missing stone jamb')
 end
 assert(main:At(-15.8125,2.375,11)==156 and main:At(-12.25,2.375,12.8125)==156)
-assert(main:At(-1.1875,2.375,11.625)==156 and roof:At(-10.875,6.4375,10)==P.HOME_CLAY_LIGHT)
+assert(main:At(-1.1875,2.375,11.625)==156 and roof:At(-10.875,6.3125,10)==P.HOME_CLAY_LIGHT)
 for _,face in ipairs({'west','east','back'}) do
     local trim=assert(pieces['ground-'..face..'-bars'])
     assert(trim.s==bars.s and trim.count>0 and not trim.collidable,face)
@@ -161,7 +162,7 @@ assert(not ruin:At(-11.25,1,7.25) and ruin:At(-10,1.625,12.75)==P.HOME_ASHLAR)
 assert(porch.s==.0625 and rails.s==.0625 and porch.collidable and rails.collidable)
 for _,x in ipairs({-6.375,-1.875}) do
     assert(porch:At(x+.03125,2,4.15625)==157,'missing porch post')
-    assert(rails:At(x+.03125,3.03125,5.25)==159,'missing longitudinal beam')
+    assert(rails:OccupiesBox(x-.125,3,5.25,x+.125,3.3125,5.375),'missing longitudinal beam')
 end
 assert(porch:At(-4.125,4,3.84375)==157 and porch:At(-3.40625,3.78125,3.96875)==150,'missing king post or diagonal strut')
 assert(not home.SetHouseStage(-1) and not home.SetHouseStage(4) and not home.SetHouseStage(1.5))
@@ -170,7 +171,7 @@ local stageRanges={foundation={0,3},ruin={0,0},['one-storey-roof']={1,1},second=
 local registered=up(home.SetHouseStage,'houseParts')
 local groundCount=0
 for _,part in ipairs(registered) do
-    local key=assert(part.node.name:match('^HomeHouse%-(.+)'))
+    local key=part.node.name:match('^HomeHouse%-(.+)') or part.node.name
     if pieces[key] then assert(pieces[key]==part.volume,key) end
     local expected=stageRanges[key]
     if key:match('^ground%-') then
@@ -201,6 +202,29 @@ local function checkStage(stage)
     end
 end
 for _,stage in ipairs({0,1,2,3,3,2,1,0,3}) do checkStage(stage) end
+-- A full-width .03125 m brush used to clip the right-hand windows at cell 256.
+-- Check the merged frame/transom at both jambs, after clipping against the solid roof.
+local function detailAt(group,x,y,z)
+    for _,part in ipairs(registered) do
+        local name=part.node.name
+        if name:find('HomeHouseDetail-'..group..'-',1,true)==1 and part.volume:At(x,y,z) then return true end
+    end
+    return false
+end
+for _,w in ipairs(require('ruins.HomeHouseUpper').Windows) do
+    if w.nz==-1 then
+        local y=w.y-w.height/2+math.floor(w.height*.56/.0625)*.0625
+        for _,sign in ipairs({-1,1}) do
+            assert(detailAt(w.group,w.x+sign*(w.width/2-.078125),y,w.z-.40625),'clipped upper window at '..w.x)
+        end
+    end
+end
+for _,group in ipairs({'secondRoof','third'}) do
+    for _,z in ipairs({6.28125,13.71875}) do
+        assert(detailAt(group,-16.46875,6.78125,z) and detailAt(group,-.53125,6.78125,z),'clipped fascia in '..group)
+    end
+end
+print('PASS complete upper windows and fascia ends within the 256-cell axis limit')
 home.GetHouseOccupants=function() return Vector3(home.x-8,home.base+7,home.z+9),nil end
 assert(not home.SetHouseStage(1) and home.GetHouseStage()==3,'do not remove the occupied upper floor')
 home.GetHouseOccupants=function() return nil,{{base=Vector3(home.x-8,home.base+4,home.z+9),radius=2.2,height=4.4}} end

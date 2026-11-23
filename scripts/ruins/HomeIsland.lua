@@ -12,6 +12,9 @@ local cedarPost, oakPlankZ, cedarBeamZ = 157,158,159
 local WATER_LEVEL = -.375
 local WATER_VIEW = 0x10000000
 local MIRROR_VIEW = 0x08000000
+-- The mirror keeps direct sun lighting but must not prepare the sun shadow map.
+-- The generated Lua metadata leaves this enum nil; UrhoXRuntime registers 2.
+local MIRROR_VIEW_FLAGS = rawget(_G, 'VO_DISABLE_SHADOWS') or 2
 local mirror
 local mirrorTiers={
     high={size=640,hz=24,idleSeconds=.5,moveMetres=.025},
@@ -209,7 +212,11 @@ function H.UpdateReflection(dt,scene,source,tier,skybox)
         r.node:SetWorldDirection((centre-pos):Normalized())
         if aim<1 then r.node.worldRotation=node.worldRotation:Slerp(r.node.worldRotation,aim) end
     end
-    c.viewOverrideFlags=source.viewOverrideFlags
+    -- A queued reflection is a second scene view. Reusing the main flags here
+    -- makes its Forward/base pass prepare the directional shadow map again and
+    -- lets the view order move the map under the primary camera. Keep direct
+    -- illumination in the reflection while excluding only shadow-map work.
+    c.viewOverrideFlags=(source.viewOverrideFlags or 0) | MIRROR_VIEW_FLAGS
     -- Keep a guard band around the near shore even as waves displace the sample.
     c.fov,c.zoom,c.aspectRatio=source.fov,source.zoom/(1.36+.39*aim),sw/sh
     c.nearClip,c.farClip=source.nearClip,math.min(145,source.farClip,(pos-centre):Length()+38)

@@ -9,6 +9,26 @@ local detailStep, trimStep = .0625, .03125
 local woodX, woodY, woodZ, oakX, oakZ, glass = 152,157,159,150,158,156
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
+-- Upper wall fill is deliberately a small, shared surface vocabulary: mostly
+-- plaster, with sparse exposed blocks only on the outer wall skin. Interior
+-- cells remain plaster so this never changes collision or window carving.
+local function upperWallMaterial(x,y,z)
+    local skin = x <= -15.875 or x >= -1.125 or z <= 7.125 or z >= 12.875
+    if not skin then return P.HOME_PLASTER end
+    local along = (abs(z-7.0) < .25 or abs(z-13.0) < .25) and x or z
+    local row = floor((y-3.75)/.75)
+    local col = floor((along+16.0)/1.5)
+    -- Keep weathered reveals below the windows and at two gable corners;
+    -- arbitrary rectangular patches behind glazing would never be visible.
+    if z<=7.125 then
+        local sillPatch = y>3.875 and y<4.5 and
+            (abs(x+13.875)<.625-(y-3.875)*.25 or abs(x+5.875)<.5-(y-3.875)*.2)
+        local gablePatch = y>7.5 and y<8.375 and abs(x+10.8125)<.375-(y-7.5)*.14
+        if sillPatch or gablePatch then return P.HOME_EXPOSED end
+    elseif row>=0 and ((col+row*3)%17)==4 then return P.HOME_EXPOSED end
+    return P.HOME_PLASTER
+end
+
 local function window(group, faceX, faceZ, nx, nz, bottom, width, height, flowers)
     local w = { group=group, x=faceX-nx*.3125, z=faceZ-nz*.3125, y=bottom+height/2,
         nx=nx, nz=nz, width=width, height=height, flowers=flowers }
@@ -124,22 +144,62 @@ local function makeUpperDetails(brush,finish,name,group,withFrontMullions)
     end
     finish(group,frame,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-frames'})
     if not withFrontMullions then return end
-    -- Only the pond-facing row receives a .03125 m pass. Its brush is limited to
-    -- the glazing strips, never the complete upper-storey volume.
-    local front=brush({-16.5,4.35,6.8},{-.5,9.75,7.5},trimStep)
-    for _,w in ipairs(Upper.Windows) do
-        if w.group==group and w.nz==-1 then drawWindowFrame(front,w,true) end
+    -- Every front window has its own plane, including the projecting attic gable.
+    for i,w in ipairs(Upper.Windows) do
+        if w.group==group and w.nz==-1 then
+            local half=w.width/2+.125
+            local sill=w.y-w.height/2
+            local front=brush({w.x-half,sill-.375,w.z-.4375},{w.x+half,sill+w.height,w.z-.375},trimStep)
+            drawWindowFrame(front,w,true)
+            finish(group,front,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-mullions-'..i})
+        end
     end
-    finish(group,front,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-mullions'})
 end
 
 local function makeRoofDetails(brush,finish,name)
-    local eaves=brush({-16.75,6.55,6.2},{-.25,7.25,13.8},detailStep)
-    -- Fine fascia strips sit one cell outside the two long eaves. The roof
-    -- carriers and tiles remain in the parent .125 m volume.
-    eaves:Box(-16.5,6.75,6.25,-.5,6.8125,6.3125,woodX)
-    eaves:Box(-16.5,6.75,13.6875,-.5,6.8125,13.75,woodX)
-    finish(name,eaves,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-eaves'})
+    -- Each 16 m fascia is exactly 256 cells long. Separate the parallel strips
+    -- so neither the overhang margins nor the empty roof interior need a grid.
+    for i,z in ipairs({6.25,13.6875}) do
+        local loZ,hiZ=z-.1875,z+.1875
+        if z==6.25 then loZ,hiZ=6.0,7.25 end
+        local eave=brush({-16.5,6.0,loZ},{-.5,7.25,hiZ},detailStep)
+        eave:Box(-16.5,6.75,z,-.5,6.8125,z+detailStep,woodX)
+
+        -- Six wall bays carry real medieval knee brackets. Their anchor, seat,
+        -- diagonal knee, beam head and rafter tail occupy distinct depth bands
+        -- so the support relationship reads from front, low underside and side.
+        -- Collision remains in the coarse floor/roof brushes.
+        if z==6.25 then
+            local supports={-16,-13,-10,-7,-4,-1}
+            local beam=.125
+            for _,x in ipairs(supports) do
+                -- Wall-side post and shoulder plate.
+                eave:Box(x-beam/2,6.125,6.9375,x+beam/2,6.625,7.125,woodY)
+                eave:Box(x-.1875,6.4375,6.875,x+.1875,6.5625,7.125,oakZ)
+
+                -- Projecting seat and square beam head, 0.75 m ahead of wall.
+                eave:Box(x-.125,6.625,6.25,x+.125,6.8125,7.0,woodX)
+                eave:Box(x-.1875,6.5625,6.125,x+.1875,6.75,6.3125,oakX)
+
+                -- Sloped brace in the Y/Z plane on the 0.0625 m detail grid.
+                local y0,z0=6.125,6.9375
+                local dy,dz=.625,-.625
+                local len2=dy*dy+dz*dz
+                eave:Shape(x-.0625,y0,6.25,x+.0625,y0+dy,z0,function(_,y,pz)
+                    local t=((y-y0)*dy+(pz-z0)*dz)/len2
+                    if t<0 or t>1 then return end
+                    local py,zz=y0+t*dy,z0+t*dz
+                    if (y-py)^2+(pz-zz)^2<=.0625*.0625 then return woodY end
+                end)
+
+                -- Rafter tail and exposed tenon/pin at the front fascia.
+                eave:Box(x-.0625,6.75,6.0625,x+.0625,6.875,6.6875,woodX)
+                eave:Box(x-.125,6.6875,6.0625,x+.125,6.8125,6.25,oakX)
+                eave:Box(x-.0625,6.8125,6.21875,x+.0625,6.875,6.28125,oakZ)
+            end
+        end
+        finish(name,eave,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-eaves-'..i})
+    end
 end
 
 local function ring(b,y,height)
@@ -147,21 +207,13 @@ local function ring(b,y,height)
     for _,x in ipairs({-16,-1}) do b:Box(x-.0625,y,7.0625,x+.0625,y+height,12.9375,woodZ) end
 end
 local function secondFloor(b)
-    b:Box(-16,3.75,7,-1,6.75,13,P.MARBLE_B)
+    b:Shape(-16,3.75,7,-1,6.75,13,upperWallMaterial)
     b:Carve(-15.625,4,7.375,-1.375,6.75,12.625)
     b:Box(-15.625,3.875,7.375,-1.375,4,12.625,oakZ)
     ring(b,3.75,.125); ring(b,6.5,.125)
     for _,z in ipairs({7,13}) do
         for x=-16,-1,3 do
             b:Box(x-.0625,4,z-.0625,x+.0625,6.5,z+.0625,woodY)
-            for _,sign in ipairs({-1,1}) do
-                if x+sign*.625>-16 and x+sign*.625< -1 then
-                    for i=0,3 do
-                        local at=x+sign*(i+1)*step
-                        b:Box(at-step/2,6.0+i*step,z-.0625,at+step/2,6.125+i*step,z+.0625,woodY)
-                    end
-                end
-            end
         end
     end
     for _,x in ipairs({-16,-1}) do b:Box(x-.0625,4,9.9375,x+.0625,6.5,10.0625,woodY) end
@@ -215,7 +267,7 @@ local function longRoof(b,rise)
             if y<top then
                 if top-y<.25 then return woodZ end
                 if abs(z-10)<.125 then return woodY end
-                return P.MARBLE_B
+                return upperWallMaterial(x,y,z)
             end
         end)
     end
@@ -231,7 +283,7 @@ local function crossGable(b,cx,half,z0,z1,base,eave,rise)
     -- forward overhang that would pass in front of the windows.
     b:Carve(cx-half,base,z0-.375,cx+half,eave+rise,z1)
     for _,x in ipairs({cx-half,cx+half-.375}) do
-        b:Box(x,base,z0,x+.375,eave,z1,P.MARBLE_B)
+        b:Box(x,base,z0,x+.375,eave,z1,P.HOME_PLASTER)
         b:Box(x,eave-.25,z0,x+.375,eave,z1,woodZ)
         for at=z0+.125,z1-.125,1.875 do b:Box(x,base,at,x+.375,eave-.25,at+.25,woodY) end
     end
@@ -239,7 +291,7 @@ local function crossGable(b,cx,half,z0,z1,base,eave,rise)
         b:Shape(cx-half,base,z,cx+half,eave+rise,z+.375,function(x,y)
             local top=eave+rise*(1-abs(x-cx)/(half+.375))
             if y<top then
-                return P.MARBLE_B
+                return upperWallMaterial(x,y,z)
             end
         end)
         b:Box(cx-half,base,z,cx+half,base+.25,z+.375,woodX)

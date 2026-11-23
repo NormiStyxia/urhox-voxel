@@ -95,6 +95,14 @@ void fragment() {
 
     vec3 n = normalize(NORMAL);
     vec3 wp = VERTEX;
+    // Derivatives are evaluated before any house/material branch so the Web
+    // quad stays coherent when upper-wall patches fade with footprint.
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    float footprint = max(length(dpdx), length(dpdy));
+    float houseWallSeam = 0.0;
+    float houseWallPatch = 0.0;
+    float houseWallRoughness = 0.0;
+    float houseWallAO = 1.0;
     if (home_house_draw > 0.5 && (idx==105.0 || idx==106.0)) {
         float blockTint = h31(floor(wp * vec3(1.15, 2.4, 1.15) + vec3(idx)));
         vec3 warmStone = srgb_to_linear(vec3(0.63, 0.60, 0.54));
@@ -102,8 +110,6 @@ void fragment() {
         base *= 0.91 + blockTint * 0.15;
         homeRoughness = 0.76 - pbr.r;
     }
-    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
-    float footprint = max(length(dpdx), length(dpdy));
     float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
     float detailFade = 1.0 - smoothstep(0.08, 0.30, footprint);
     float surfaceFade = 1.0 - smoothstep(0.04, 0.16, footprint);
@@ -130,6 +136,72 @@ void fragment() {
     float det = dot(dpdx, r1);
     vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
 
+    // Exclusive palette selection supplied by HomeHouseUpper. Reuse the
+    // existing low-frequency fields: no new texture reads or noise octaves.
+    if (home_house_draw > 0.5 && (idx==240.0 || idx==241.0)) {
+        vec3 p = wp-home_stone_origin;
+        bool frontFace = abs(n.z)>abs(n.x);
+        vec3 tangent = frontFace ? vec3(1,0,0) : vec3(0,0,1);
+        float along = frontFace ? p.x : p.z;
+        float facing = 1.0-smoothstep(0.50,0.70,abs(n.y));
+        float nearWall = 1.0-smoothstep(0.035,0.16,footprint);
+        float blockFade = 1.0-smoothstep(0.12,0.35,footprint);
+        float spread = max(0.001,footprint*0.5);
+        // Follow the actual timber bays, not an all-over plaster brick grid.
+        float frameU = frontFace ? mod(p.x+16.0+1.5,3.0)-1.5 : p.z-10.0;
+        float frameV = abs(p.y-3.875)<abs(p.y-6.5) ? p.y-3.875 : p.y-6.5;
+        if (p.y>=6.75) {
+            float cx = p.x < -11.25 ? -13.75 : (p.x > -5.75 ? -3.25 : -8.5);
+            bool central = cx== -8.5;
+            frameU = frontFace ? p.x-cx : p.z-10.0;
+            float baseY = central ? 7.25 : 7.5;
+            float headY = central ? 8.625 : 8.25;
+            frameV = abs(p.y-baseY)<abs(p.y-headY) ? p.y-baseY : p.y-headY;
+        }
+        float edgeU = abs(frameU)-0.0625;
+        float edgeV = abs(frameV)-0.0625;
+        float frameEdge = min(edgeU,edgeV);
+        float frameSeam = (1.0-smoothstep(0.0,0.045+spread,max(0.0,frameEdge)))
+            *0.045/(0.045+spread)*nearWall*facing;
+        vec3 frameSlope = edgeU<edgeV ? tangent*sign(frameU) : vec3(0,sign(frameV),0);
+        grad += frameSlope*0.045*frameSeam;
+
+        houseWallPatch = idx==241.0 ? facing : 0.0;
+        if (idx==241.0 && p.z<7.5 && frontFace) {
+            vec2 chipUV = p.y>6.75 ? (p.xy-vec2(-10.8125,7.9375))/vec2(0.375,0.50)
+                : vec2(min(abs(p.x+13.875)/0.66,abs(p.x+5.875)/0.53),(p.y-4.125)/0.42);
+            float chippedEdge = length(chipUV)+(veins-0.5)*0.30;
+            houseWallPatch *= 1.0-smoothstep(0.65,1.0,chippedEdge);
+        }
+        if (idx==241.0) {
+            base = mix(srgb_to_linear(vec3(0.73,0.71,0.68)),base,houseWallPatch);
+            homeRoughness = mix(0.86,pbr.r,houseWallPatch)-pbr.r;
+        }
+        vec2 cell = vec2(along/0.625,p.y/0.375);
+        cell.x += mod(floor(cell.y),2.0)*0.5;
+        vec2 f = fract(cell)-0.5;
+        vec2 edges = (vec2(0.5)-abs(f))*vec2(0.625,0.375);
+        float joint = (1.0-smoothstep(0.003,0.015+spread,min(edges.x,edges.y)))
+            *0.012/(0.012+spread)*nearWall*houseWallPatch;
+        vec3 jointSlope = edges.x<edges.y ? tangent*sign(f.x) : vec3(0,sign(f.y),0);
+        grad -= jointSlope*joint*0.11;
+        float blockTint = h31(vec3(floor(cell),241.0));
+        base *= 1.0+(g-0.5)*0.10+(blockTint-0.5)*0.12*houseWallPatch*blockFade;
+        houseWallSeam = frameSeam*0.7+joint*1.5;
+        houseWallRoughness = (veins-0.5)*0.055+0.035*joint;
+        houseWallAO = 1.0-max(frameSeam*0.13,joint*0.16);
+        // Broad, shallow trowel undulation; analytic slope avoids conditional
+        // derivatives and fades before it becomes subpixel grain.
+        float phaseU = along*5.1+p.y*0.8;
+        float phaseV = p.y*4.3-along*0.6;
+        // Meter-scale plaster passes survive normal play distance; the patch
+        // transitions stay continuous rather than adding granular speckle.
+        float trowel = sin(phaseU+veins*1.8)*sin(phaseV+g*2.0);
+        base *= 1.0+trowel*0.065*blockFade*(1.0-houseWallPatch);
+        grad += (tangent*cos(phaseU)*0.025+vec3(0,cos(phaseV)*0.018,0))
+            *nearWall*facing*(1.0-houseWallPatch*0.45);
+    }
+
     // Only a draw-uniform switch may guard the masonry derivatives. Do not add stone/LOD here.
     float horizontal = 0.0;
     float aa = 0.001;
@@ -145,6 +217,8 @@ void fragment() {
     float shade = 1.0 + (g - 0.5) * 2.0 * grime;
     // 朝下的面略暗、朝上的面略亮（积尘 / 背光）
     shade *= 1.0 + n.y * 0.05;
+    // Upper plaster joints are shallow value breaks, never black outlines.
+    shade *= 1.0 - 0.11 * houseWallSeam;
 
     // 体素格内坐标：关闭 jitter/bevel 时不做其专用计算。
     if (!dressed && (jitter != 0.0 || bevel != 0.0)) {
@@ -329,7 +403,7 @@ void fragment() {
         emiK*=window_light*(.2+.65*max(n.y,0.0)+.22*(1.0-abs(n.y)));
     }
     ALBEDO = base * shade * daynight_tint;
-    ROUGHNESS = clamp(pbr.r + homeRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
+    ROUGHNESS = clamp(pbr.r + homeRoughness + houseWallRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
@@ -347,7 +421,7 @@ void fragment() {
         ALBEDO = mix(ALBEDO, ALBEDO * 0.75 + hover_color.rgb * 0.25, hover);
         EMISSION += hover_color.rgb * (0.35 + fres * 2.4) * hover;
     }
-    AO=min(ruins_contact_ao(VERTEX,n,jointK,CAMERA_POSITION_WORLD),1.0-max(dressedOcclusion,0.19*dressedJoint));
+    AO=min(houseWallAO,min(ruins_contact_ao(VERTEX,n,jointK,CAMERA_POSITION_WORLD),1.0-max(dressedOcclusion,0.19*dressedJoint)));
     if (meadow_origin.x > 0.0 && idx >= 115.0 && idx <= 118.0) {
         vec2 lawn = wp.xz-meadow_origin.xz;
         float canopy = min(length(lawn-vec2(-20.5,.5)),length(lawn-vec2(-17.0,-10.0)));

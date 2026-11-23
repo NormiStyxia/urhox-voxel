@@ -40,6 +40,8 @@ local P = {
     HOME_ASHLAR = 192, HOME_COPING = 193, HOME_PLINTH = 194, HOME_PAVING = 195,
     HOME_HEARTH = 196, HOME_ARCH = 197,
     HOME_CLAY = 198, HOME_CLAY_LIGHT = 199,
+    -- Upper-storey plaster and sparse exposed masonry; home_house_draw only.
+    HOME_PLASTER = 240, HOME_EXPOSED = 241,
 }
 M.P = P
 
@@ -56,6 +58,8 @@ local DEF = {
     { P.HOME_ARCH, { 0.64, 0.58, 0.49 }, 6.0, 0.82 },
     { P.HOME_CLAY, { 0.57, 0.26, 0.13 }, 6.0, 0.87 },
     { P.HOME_CLAY_LIGHT, { 0.68, 0.35, 0.18 }, 6.0, 0.81 },
+    { P.HOME_PLASTER, { 0.73, 0.71, 0.68 }, 50.0, 0.86 },
+    { P.HOME_EXPOSED, { 0.58, 0.57, 0.54 }, 6.0, 0.82 },
     { P.STONE_A, { 0.86, 0.86, 0.84 }, 4.0, 0.9 },
     { P.STONE_B, { 0.82, 0.82, 0.81 }, 4.0, 0.9 },
     { P.STONE_C, { 0.74, 0.75, 0.75 }, 4.0, 0.92 },
