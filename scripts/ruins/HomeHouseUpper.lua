@@ -334,7 +334,7 @@ local function westAttic(b)
     b:Box(terraceDoor.x0-.125,terraceDoor.bottom,Z1-.375,terraceDoor.x0,terraceDoor.top+.125,Z1+.0625,woodY)
     b:Box(terraceDoor.x1,terraceDoor.bottom,Z1-.375,terraceDoor.x1+.125,terraceDoor.top+.125,Z1+.0625,woodY)
     b:Box(terraceDoor.x0-.125,terraceDoor.top,Z1-.375,terraceDoor.x1+.125,terraceDoor.top+.125,Z1+.0625,woodZ)
-    b:Box(terraceDoor.x0+.125,terraceDoor.bottom,Z1-.25,terraceDoor.x1-.125,terraceDoor.top-.125,Z1-.1875,window)
+    b:Box(terraceDoor.x0+.125,terraceDoor.bottom,Z1-.25,terraceDoor.x1-.125,terraceDoor.top-.125,Z1-.1875,P.HOME_WINDOW_REVEAL)
     tileRoof(b,true,WEST_CX,GABLE_HALF,Z0-.75,Z1+.75,GABLE_EAVE,GABLE_RISE)
     stack(b,X0+1.75,Z1-1.75,F3,gableTop(X0+1.75)+1.75)
 end

@@ -160,7 +160,7 @@ local function Blueprints()
 end
 
 function M.Open(rigOrCallbacks)
-    if session then return session.phase~='closing' and session.phase~='closed_reveal' end
+    if session then return session.phase~='closing' end
     local callbacks=rigOrCallbacks or {}
     if callbacks.ApplyAppearance then callbacks={rig=callbacks} end
     local root=UI.GetRoot()
@@ -248,7 +248,8 @@ function M.Close(immediate)
     local s=session
     if not s then return true end
     if immediate or not Safe(s.callbacks) then Finish(s)
-    elseif s.phase~='closing' and s.phase~='closed_reveal' then
+    elseif s.phase~='closing' then
+        s.closeFrom=Openness(s)
         s.phase,s.phaseTime,s.pointer='closing',0,nil
         TouchInput.Clear()
     end
