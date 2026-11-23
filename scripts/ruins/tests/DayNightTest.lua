@@ -7,7 +7,7 @@ local scene_ = nil
 local dayNight_ = nil
 
 local function Fixture(hour)
-    local capture = { supported = true, capturing = false, requests = 0 }
+    local capture = { supported = true, capturing = false, requests = 0, minCaptureInterval = 0.5 }
     function capture:RequestCapture() self.requests = self.requests + 1 end
     local state = { hour = hour, speed = 1 / 120, fast = false,
         captureElapsed = 0, capturePending = true, capture = capture, applied = 0 }
@@ -69,8 +69,9 @@ local function CheckLighting()
         maxDistance = math.max(maxDistance, distance)
         previous = current
     end
-    V.assert(changed == 600 and maxDistance < 0.001,
-        "原生灯光方向连续移动，无6秒台阶式位移")
+    -- 10 秒约转 1.25°：按 0.08° 小台阶更新（阴影不再每帧重新栅格化），没有大跳变。
+    V.assert(changed >= 8 and changed <= 30 and maxDistance < 0.003,
+        "原生灯光方向按小台阶转动，台阶之间静止，无6秒式大跳变")
     V.assert(actual.capture.updateMode == SKY_CAPTURE_MANUAL
         and actual.capture.resolution == 64 and actual.capture.timeSliced,
         "环境捕获使用64像素、分帧、手动节流预算")

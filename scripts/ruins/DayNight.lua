@@ -33,6 +33,7 @@ if not logOK then DebugLog=nil end
 ---@field nightMoon number
 ---@field nightIBL number
 ---@field contactAO RuinsContactAO|nil
+---@field lightDir Vector3|nil 方向光当前实际朝向（按小台阶转动，见 Apply）
 local M = {}
 M.__index = M
 
@@ -55,6 +56,9 @@ local MOON = Color(0.76, 0.82, 0.97)
 -- 用可见天空的蓝灰天底做漫反射会让墙脚、拱底、阴影面整体发蓝。
 local IBL_DESAT_DAY, IBL_DESAT_NIGHT = 0.38, 0.30
 local BOUNCE_DAY, BOUNCE_DUSK, BOUNCE_NIGHT = Color(0.44, 0.43, 0.34), Color(0.50, 0.38, 0.27), Color(0.12, 0.13, 0.16)
+-- 方向光每转过约 0.08°（单位向量弦长 0.0014）才更新一次：常速约 0.6 秒一次，
+-- 10m 高的投影物影子端点每次移动约 1.5cm。
+local LIGHT_TICK = math.rad(0.08)
 M.IBL_VIEW = 0x04000000 -- 与家园水面 0x10000000、镜像 0x08000000 互不重叠
 
 ---@param c Color
@@ -117,6 +121,7 @@ end
 
 function M:SetHour(h)
     self.hour = h % 24
+    self.lightDir = nil -- a jump in time snaps the light straight to the new hour
     self:Apply()
     self.capturePending = true
 end
@@ -194,7 +199,16 @@ function M:Apply()
     local m = (h + 12.0 - 6.0) / 12.0 * math.pi
     local moonDir=Vector3(-math.cos(m)*0.7,-0.75,-0.45):Normalized()
     -- One continuous dusk handover: no colour/direction jump at elev=-.06.
-    self.sunNode.direction=sunDir:Lerp(moonDir,nightK):Normalized()
+    -- Every turn of the light re-rasterises the shadow map on a rotated texel grid,
+    -- so a sun creeping a few thousandths of a degree per frame makes every shadow
+    -- edge on the ground crawl and flicker (worst under the house's eaves and frames).
+    -- The light therefore turns in small ticks (~1 shadow texel for a 10 m caster)
+    -- and stays exactly still in between; colours and brightness stay continuous.
+    local lightDir=sunDir:Lerp(moonDir,nightK):Normalized()
+    if self.lightDir==nil or (lightDir-self.lightDir):Length()>=LIGHT_TICK then
+        self.lightDir=lightDir
+        self.sunNode.direction=lightDir
+    end
     local warm=SUN_RED:Lerp(SUN_GOLD,SmoothStep(-0.02,0.18,elev)):Lerp(SUN_DAY,SmoothStep(0.18,0.55,elev))
     sun.color=warm:Lerp(MOON,nightK)
     -- True solar direction/tint for sky clouds; the light node turns into the moon at night.
