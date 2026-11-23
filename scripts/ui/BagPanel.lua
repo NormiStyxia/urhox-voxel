@@ -37,10 +37,34 @@ local STATS = {
     armorBreak = '破甲', move = '拉弓移速', terrainRadius = '破坏范围',
 }
 
-local COLS, ROWS = 2, 3
-local PAGE_SIZE = COLS * ROWS
-local GRID_X, GRID_Y, CARD_W, CARD_H, COL_GAP, ROW_GAP = 20, 54, 93, 36, 4, 4
+local COLS = 2
+local GRID_X, CARD_W, COL_GAP = 20, 93, 4
 local RX, RW = 220, 140
+
+local function GetLayout(scale)
+    if scale < 1.4 then
+        -- Compact touch-safe layout for narrow/small screens (e.g. 568x320, 390x844):
+        -- 2x2 grid (4/page) keeps every control >= 28dp without overlapping hitboxes.
+        return {
+            compact = true, rows = 2, pageSize = 4,
+            tabY = 10, tabH = 28, tabPad = 0,
+            frameT = 39, frameB = 197,
+            filterY = 40, filterH = 28, filterPad = 0,
+            gridY = 71, cardH = 42, rowGap = 4,
+            pagerY = 163, pagerH = 30, pagerPad = 0,
+            detailTop = 40,
+        }
+    end
+    return {
+        compact = false, rows = 3, pageSize = 6,
+        tabY = 11, tabH = 18, tabPad = 1,
+        frameT = 31, frameB = 195,
+        filterY = 33, filterH = 18, filterPad = 1,
+        gridY = 55, cardH = 34, rowGap = 3,
+        pagerY = 168, pagerH = 22, pagerPad = 1,
+        detailTop = 35,
+    }
+end
 
 local function GetMaterialCatalog()
     local ok, mod = pcall(require, 'combat.MaterialCatalog')
@@ -115,22 +139,20 @@ local function AddHit(s, id, x, y, w, h, action, pad)
     s.buttons[#s.buttons + 1] = { id = id, x = x - p, y = y - p, w = w + p * 2, h = h + p * 2, action = action }
 end
 
-local function Button(vg, s, id, x, y, w, h, label, active, action, disabled, color, focused)
+local function Button(vg, s, id, x, y, w, h, label, active, action, disabled, color, pad)
     local fill = active and (color or P.green) or (disabled and P.paperDeep or P.paper)
-    local border = focused and P.gold or (active and fill or (disabled and P.paperDeep or P.edge))
+    local border = active and fill or (disabled and P.paperDeep or P.edge)
     Rect(vg, x, y, w, h, border)
     Rect(vg, x + 1, y + 1, w - 2, h - 2, fill)
     local textColor = active and P.light or (disabled and P.edge or (color or P.ink))
     Center(vg, label, x + w * .5, y + h * .5, textColor, 6)
-    if action and not disabled then AddHit(s, id, x, y, w, h, action, 1) end
+    if action and not disabled then AddHit(s, id, x, y, w, h, action, pad or 0) end
 end
 
--- Crisp 20x20 pixel weapon sprites (zero mesh compilation / per-frame rasterization).
 local function DrawWeaponSprite(vg, id, class, x, y)
     if class == 'sword' then
         local blade = id == 'wing' and P.wing or (id == 'warden' and P.muted or P.steel)
         local guard = id == 'iron' and P.edge or P.gold
-        -- Diagonal 20x20 sword with dark pixel outline
         for i = 0, 9 do
             local px, py = x + 14 - i, y + 3 + i
             Rect(vg, px - 1, py - 1, 4, 4, P.outline)
@@ -159,7 +181,6 @@ local function DrawWeaponSprite(vg, id, class, x, y)
             Rect(vg, x + 13, y + 6, 2, 2, P.gold); Rect(vg, x + 13, y + 12, 2, 2, P.gold)
         end
     else
-        -- Clock catalyst: outer blue-gold ring + glowing core sphere
         Rect(vg, x + 4, y + 2, 12, 16, P.outline)
         Rect(vg, x + 2, y + 4, 16, 12, P.outline)
         Rect(vg, x + 5, y + 3, 10, 14, P.blue)
@@ -184,46 +205,27 @@ local function DrawItemIcon(vg, item, x, y)
     end
 end
 
--- Extensible category registry.
 local categories = {}
 
-local function MaterialFilters()
-    local list = { { id = 'all', name = '全部' } }
-    local mc = GetMaterialCatalog()
-    if mc and type(mc.Items) == 'table' then
-        local seen = {}
-        for _, item in ipairs(mc.Items) do
-            local cat = item.category or item.kind or item.group
-            if type(cat) == 'string' and cat ~= '' and not seen[cat] then
-                seen[cat] = true
-                list[#list + 1] = { id = cat, name = item.categoryLabel or cat }
-            end
-        end
-    end
-    return list
-end
-
-local function CollectMaterials(progress, filterId)
+local function CollectMaterials(progress)
     local out = {}
     local mc = GetMaterialCatalog()
     if not mc or type(mc.Items) ~= 'table' then return out end
     for _, item in ipairs(mc.Items) do
         local count = mc.Count and (mc.Count(progress, item.id) or 0)
             or (progress.materials and progress.materials[item.id]) or 0
-        local cat = item.category or item.kind or item.group or 'all'
-        if count > 0 and (filterId == 'all' or cat == filterId) then
+        if count > 0 then
             out[#out + 1] = {
                 key = 'mat:' .. tostring(item.id),
                 kind = 'material',
                 id = item.id,
                 name = item.name or tostring(item.id),
-                subtitle = item.categoryLabel or item.category or '材料',
-                description = item.description or '遗迹探索与锻造可用材料。',
+                subtitle = item.subtitle or '材料',
+                description = item.description or '',
                 iconPath = item.icon or '',
                 count = count,
                 equipped = false,
                 canAction = false,
-                actionLabel = '锻造与强化材料',
                 raw = item,
             }
         end
@@ -270,7 +272,10 @@ local function CollectWeapons(progress, filterId, bag)
                             equipped = equipped,
                             canAction = not equipped and bag ~= nil and bag.equip ~= nil,
                             actionLabel = equipped and '当前已装备' or '装备武器',
-                            action = function() return bag and bag.equip and bag.equip(captureClass, captureId) or false, '暂不可换装' end,
+                            action = function()
+                                if bag and bag.equip then return bag.equip(captureClass, captureId) end
+                                return false, '暂不可换装'
+                            end,
                             raw = item,
                         }
                     end
@@ -316,7 +321,10 @@ local function CollectImprints(progress, filterId, bag)
                             canAction = not equipped and bag ~= nil and bag.equipImprint ~= nil,
                             actionLabel = equipped and ('已装 · ' .. CLASS_NAMES[class])
                                 or (bag and bag.equipImprint and ('装配 · ' .. CLASS_NAMES[class]) or '前往锻造台装配'),
-                            action = function() return bag and bag.equipImprint and bag.equipImprint(captureClass, captureId) or false, '暂不可装配时印' end,
+                            action = function()
+                                if bag and bag.equipImprint then return bag.equipImprint(captureClass, captureId) end
+                                return false, '暂不可装配时印'
+                            end,
                             raw = seal,
                         }
                     end
@@ -336,7 +344,9 @@ function M.RegisterCategory(def)
 end
 
 M.Categories = categories
-M.RegisterCategory({ id = 'materials', name = '材料', filters = MaterialFilters, collect = CollectMaterials,
+M.RegisterCategory({ id = 'materials', name = '材料',
+    filters = function() return { { id = 'all', name = '全部' } } end,
+    collect = CollectMaterials,
     emptyTitle = '暂无材料', emptyHint = '采集遗迹矿木或击败敌人后可在此查看材料。' })
 M.RegisterCategory({ id = 'weapons', name = '武器', filters = function() return WEAPON_FILTERS end, collect = CollectWeapons,
     emptyTitle = '暂无此类武器', emptyHint = '可在锻造台打造新武器后在此切换装备。' })
@@ -344,7 +354,7 @@ M.RegisterCategory({ id = 'imprints', name = '石印', filters = function() retu
     emptyTitle = '暂无此类石印', emptyHint = '击败遗迹敌人获得石印后可在此查看并装配。' })
 
 local state = {
-    categoryIndex = 1, filterId = 'all', page = 1, focusPos = 1,
+    categoryIndex = 1, filterId = 'all', page = 1, focusPos = 1, pageSize = 6,
     selectedKey = nil, notice = nil, noticeOk = true, openedAt = nil,
     buttons = {}, items = {}, pages = 1, filters = {},
 }
@@ -368,7 +378,9 @@ local function CurrentCategory()
     return categories[state.categoryIndex]
 end
 
-local function SyncData(bag)
+local function SyncData(bag, pageSize)
+    pageSize = pageSize or state.pageSize or 6
+    state.pageSize = pageSize
     local cat = CurrentCategory()
     local filters = cat.filters and cat.filters() or { { id = 'all', name = '全部' } }
     local validFilter = false
@@ -381,7 +393,7 @@ local function SyncData(bag)
     state.items = items
 
     local total = #items
-    local pages = math.max(1, math.ceil(total / PAGE_SIZE))
+    local pages = math.max(1, math.ceil(total / pageSize))
     state.pages = pages
     state.page = Clamp(state.page, 1, pages)
 
@@ -389,15 +401,15 @@ local function SyncData(bag)
         local foundIndex
         for idx, item in ipairs(items) do if item.key == state.selectedKey then foundIndex = idx; break end end
         if foundIndex then
-            state.page = math.floor((foundIndex - 1) / PAGE_SIZE) + 1
-            state.focusPos = foundIndex - (state.page - 1) * PAGE_SIZE
+            state.page = math.floor((foundIndex - 1) / pageSize) + 1
+            state.focusPos = foundIndex - (state.page - 1) * pageSize
         else
             state.selectedKey = nil
         end
     end
 
-    local startIdx = (state.page - 1) * PAGE_SIZE + 1
-    local endIdx = math.min(total, state.page * PAGE_SIZE)
+    local startIdx = (state.page - 1) * pageSize + 1
+    local endIdx = math.min(total, state.page * pageSize)
     local pageCount = math.max(0, endIdx - startIdx + 1)
     if pageCount == 0 then
         state.focusPos, state.selectedKey = 1, nil
@@ -417,7 +429,7 @@ local function SelectFilter(filterId)
 end
 local function SelectPage(p)
     state.page, state.focusPos = Clamp(p, 1, state.pages), 1
-    local idx = (state.page - 1) * PAGE_SIZE + 1
+    local idx = (state.page - 1) * (state.pageSize or 6) + 1
     state.selectedKey = state.items[idx] and state.items[idx].key or nil
 end
 local function ActivateSelected(bag)
@@ -429,53 +441,56 @@ local function ActivateSelected(bag)
     return ok
 end
 
-local function DrawEmptyState(vg, cat)
-    Rect(vg, GRID_X + 2, GRID_Y + 6, 186, 102, P.edge)
-    Rect(vg, GRID_X + 3, GRID_Y + 7, 184, 100, P.paper)
-    local cx, cy = GRID_X + 95, GRID_Y + 42
+local function DrawEmptyState(vg, cat, L)
+    local boxH = L.rows * L.cardH + (L.rows - 1) * L.rowGap
+    Rect(vg, GRID_X + 2, L.gridY + 2, 186, boxH - 4, P.edge)
+    Rect(vg, GRID_X + 3, L.gridY + 3, 184, boxH - 6, P.paper)
+    local cx, cy = GRID_X + 95, L.gridY + math.floor(boxH * .38)
     Rect(vg, GRID_X + 12, cy, 166, 1, P.survey)
-    Rect(vg, cx, GRID_Y + 14, 1, 86, P.survey)
+    Rect(vg, cx, L.gridY + 10, 1, boxH - 20, P.survey)
     Rect(vg, cx - 10, cy - 8, 20, 16, P.edge)
     Rect(vg, cx - 9, cy - 7, 18, 14, P.paperDeep)
     Rect(vg, cx - 6, cy - 4, 12, 2, P.muted)
     Rect(vg, cx - 2, cy - 4, 4, 4, P.gold)
-    Center(vg, cat.emptyTitle or '暂无物品', cx, GRID_Y + 70, P.ink, 6)
+    Center(vg, cat.emptyTitle or '暂无物品', cx, cy + 24, P.ink, 6)
     for i, line in ipairs(WrapText(vg, cat.emptyHint or '探索遗迹后可在此查看。', 164, 5, 2)) do
-        Center(vg, line, cx, GRID_Y + 83 + (i - 1) * 9, P.muted, 5)
+        Center(vg, line, cx, cy + 36 + (i - 1) * 9, P.muted, 5)
     end
 end
 
-local function DrawCard(vg, item, x, y, selected)
-    Rect(vg, x, y, CARD_W, CARD_H, selected and P.ink or (item.equipped and P.green or P.edge))
-    Rect(vg, x + 1, y + 1, CARD_W - 2, CARD_H - 2, selected and P.light or P.paper)
+local function DrawCard(vg, item, x, y, h, selected)
+    Rect(vg, x, y, CARD_W, h, selected and P.ink or (item.equipped and P.green or P.edge))
+    Rect(vg, x + 1, y + 1, CARD_W - 2, h - 2, selected and P.light or P.paper)
     if selected then
         Rect(vg, x + 1, y + 1, CARD_W - 2, 1, P.gold)
-        Rect(vg, x + 1, y + CARD_H - 2, CARD_W - 2, 1, P.gold)
+        Rect(vg, x + 1, y + h - 2, CARD_W - 2, 1, P.gold)
         Rect(vg, x, y, 3, 2, P.gold); Rect(vg, x + CARD_W - 3, y, 3, 2, P.gold)
-        Rect(vg, x, y + CARD_H - 2, 3, 2, P.gold); Rect(vg, x + CARD_W - 3, y + CARD_H - 2, 3, 2, P.gold)
+        Rect(vg, x, y + h - 2, 3, 2, P.gold); Rect(vg, x + CARD_W - 3, y + h - 2, 3, 2, P.gold)
     elseif item.equipped then
-        Rect(vg, x + 1, y + 1, 2, CARD_H - 2, P.green)
+        Rect(vg, x + 1, y + 1, 2, h - 2, P.green)
     end
-    Rect(vg, x + 4, y + 7, 22, 22, P.line)
-    Rect(vg, x + 5, y + 8, 20, 20, P.paperDeep)
-    DrawItemIcon(vg, item, x + 5, y + 8)
+    local iconY = y + math.floor((h - 20) * .5)
+    Rect(vg, x + 4, iconY - 1, 22, 22, P.line)
+    Rect(vg, x + 5, iconY, 20, 20, P.paperDeep)
+    DrawItemIcon(vg, item, x + 5, iconY)
     local textX, textRight = x + 30, x + CARD_W - 4
-    Text(vg, FitText(vg, item.name, textRight - textX, 6), textX, y + 12, P.ink, NVG_ALIGN_LEFT, 6)
+    local y1 = y + math.floor(h * .34)
+    local y2 = y + math.floor(h * .71)
+    Text(vg, FitText(vg, item.name, textRight - textX, 6), textX, y1, P.ink, NVG_ALIGN_LEFT, 6)
     if item.kind == 'material' then
-        Text(vg, '×' .. tostring(item.count), textX, y + 25, P.blue, NVG_ALIGN_LEFT, 6)
-        Right(vg, FitText(vg, item.subtitle or '材料', 34, 5), textRight, y + 25, P.muted, 5)
+        Text(vg, '×' .. tostring(item.count), textX, y2, P.blue, NVG_ALIGN_LEFT, 6)
     elseif item.kind == 'weapon' then
-        Text(vg, ('Lv.%d/%d'):format(item.level or 1, Catalog.LevelCap), textX, y + 25, P.rank, NVG_ALIGN_LEFT, 5)
-        Right(vg, item.equipped and '已装' or '背包', textRight, y + 25, item.equipped and P.green or P.muted, 5)
+        Text(vg, ('Lv.%d/%d'):format(item.level or 1, Catalog.LevelCap), textX, y2, P.rank, NVG_ALIGN_LEFT, 5)
+        Right(vg, item.equipped and '已装' or '背包', textRight, y2, item.equipped and P.green or P.muted, 5)
     elseif item.kind == 'imprint' then
-        Text(vg, (item.roleName or '') .. ' ' .. (ROMAN[item.rank or 1] or 'I'), textX, y + 25, item.roleColor or P.blue, NVG_ALIGN_LEFT, 5)
-        Right(vg, item.equipped and '已装' or ('×' .. tostring(item.count)), textRight, y + 25, item.equipped and P.green or P.muted, 5)
+        Text(vg, (item.roleName or '') .. ' ' .. (ROMAN[item.rank or 1] or 'I'), textX, y2, item.roleColor or P.blue, NVG_ALIGN_LEFT, 5)
+        Right(vg, item.equipped and '已装' or ('×' .. tostring(item.count)), textRight, y2, item.equipped and P.green or P.muted, 5)
     else
-        Text(vg, '×' .. tostring(item.count or 1), textX, y + 25, P.blue, NVG_ALIGN_LEFT, 5)
+        Text(vg, '×' .. tostring(item.count or 1), textX, y2, P.blue, NVG_ALIGN_LEFT, 5)
     end
 end
 
-local function DrawDetail(vg, s, item, bag)
+local function DrawDetail(vg, s, item, bag, L)
     if not item then
         Center(vg, '未选中物品', RX + RW * .5, 88, P.muted, 6)
         for i, line in ipairs(WrapText(vg, '在左侧选择分类或翻页查看已收集的材料、武器与石印。', RW - 8, 5, 4)) do
@@ -483,55 +498,60 @@ local function DrawDetail(vg, s, item, bag)
         end
         return
     end
-    Rect(vg, RX, 35, 26, 26, P.edge); Rect(vg, RX + 1, 36, 24, 24, P.paper)
-    DrawItemIcon(vg, item, RX + 3, 38)
-    Text(vg, FitText(vg, item.name, RW - 32, 6), RX + 30, 42, P.ink, NVG_ALIGN_LEFT, 6)
-    Text(vg, FitText(vg, item.subtitle or '', RW - 32, 5), RX + 30, 54, item.roleColor or P.muted, NVG_ALIGN_LEFT, 5)
-    Line(vg, RX, 65, RW)
+    local top = L.detailTop
+    Rect(vg, RX, top, 26, 26, P.edge); Rect(vg, RX + 1, top + 1, 24, 24, P.paper)
+    DrawItemIcon(vg, item, RX + 3, top + 3)
+    Text(vg, FitText(vg, item.name, RW - 32, 6), RX + 30, top + 7, P.ink, NVG_ALIGN_LEFT, 6)
+    Text(vg, FitText(vg, item.subtitle or '', RW - 32, 5), RX + 30, top + 19, item.roleColor or P.muted, NVG_ALIGN_LEFT, 5)
+    Line(vg, RX, top + 30, RW)
+    local row1 = top + 39
+    local row2 = top + 51
     if item.kind == 'material' then
-        Text(vg, '持有数量', RX, 74, P.muted); Right(vg, '×' .. tostring(item.count), RX + RW, 74, P.blue)
-        Text(vg, '存放位置', RX, 86, P.muted, NVG_ALIGN_LEFT, 5); Right(vg, '行囊背包', RX + RW, 86, P.ink, 5)
-        Line(vg, RX, 93, RW)
-        for i, line in ipairs(WrapText(vg, item.description, RW, 6, 5)) do Text(vg, line, RX, 103 + (i - 1) * 11, P.ink) end
+        Text(vg, '持有数量', RX, row1, P.muted); Right(vg, '×' .. tostring(item.count), RX + RW, row1, P.blue)
+        Line(vg, RX, top + 48, RW)
+        local maxLines = L.compact and 5 or 7
+        for i, line in ipairs(WrapText(vg, item.description, RW, 6, maxLines)) do
+            Text(vg, line, RX, top + 58 + (i - 1) * 11, P.ink)
+        end
+        return
     elseif item.kind == 'weapon' then
-        Text(vg, '基础攻击', RX, 74, P.muted); Right(vg, ('%.1f'):format(item.attack or 0), RX + RW, 74, P.ink)
-        Text(vg, '固有词条', RX, 86, P.muted, NVG_ALIGN_LEFT, 5); Right(vg, item.subStat or '-', RX + RW, 86, P.blue, 5)
-        Line(vg, RX, 93, RW)
-        for i, line in ipairs(WrapText(vg, item.description, RW, 5, 5)) do
-            Text(vg, line, RX, 102 + (i - 1) * 10, i == 1 and P.rank or P.ink, NVG_ALIGN_LEFT, 5)
+        Text(vg, '基础攻击', RX, row1, P.muted); Right(vg, ('%.1f'):format(item.attack or 0), RX + RW, row1, P.ink)
+        Text(vg, '固有词条', RX, row2, P.muted, NVG_ALIGN_LEFT, 5); Right(vg, item.subStat or '-', RX + RW, row2, P.blue, 5)
+        Line(vg, RX, top + 58, RW)
+        local maxLines = L.compact and 4 or 5
+        for i, line in ipairs(WrapText(vg, item.description, RW, 5, maxLines)) do
+            Text(vg, line, RX, top + 67 + (i - 1) * 10, i == 1 and P.rank or P.ink, NVG_ALIGN_LEFT, 5)
         end
     elseif item.kind == 'imprint' then
-        Text(vg, '持有数量', RX, 74, P.muted)
-        Right(vg, ('×%d（闲置 %d）'):format(item.count, item.idleCount or 0), RX + RW, 74, P.blue, 5)
-        Text(vg, '词条加成', RX, 86, P.muted, NVG_ALIGN_LEFT, 5)
-        Right(vg, item.benefit or '-', RX + RW, 86, item.roleColor or P.green, 5)
-        Line(vg, RX, 93, RW)
-        for i, line in ipairs(WrapText(vg, item.description, RW, 5, 5)) do
-            Text(vg, line, RX, 102 + (i - 1) * 10, P.ink, NVG_ALIGN_LEFT, 5)
+        Text(vg, '持有数量', RX, row1, P.muted)
+        Right(vg, ('×%d（闲置 %d）'):format(item.count, item.idleCount or 0), RX + RW, row1, P.blue, 5)
+        Text(vg, '词条加成', RX, row2, P.muted, NVG_ALIGN_LEFT, 5)
+        Right(vg, item.benefit or '-', RX + RW, row2, item.roleColor or P.green, 5)
+        Line(vg, RX, top + 58, RW)
+        local maxLines = L.compact and 4 or 5
+        for i, line in ipairs(WrapText(vg, item.description, RW, 5, maxLines)) do
+            Text(vg, line, RX, top + 67 + (i - 1) * 10, P.ink, NVG_ALIGN_LEFT, 5)
         end
     end
     if state.notice then
-        Text(vg, FitText(vg, state.notice, RW, 5), RX, 165, state.noticeOk and P.green or P.red, NVG_ALIGN_LEFT, 5)
+        Text(vg, FitText(vg, state.notice, RW, 5), RX, L.pagerY - 8, state.noticeOk and P.green or P.red, NVG_ALIGN_LEFT, 5)
     end
-    if item.kind == 'weapon' or item.kind == 'imprint' then
-        local actionable = item.canAction == true
-        Button(vg, s, 'detail_action', RX, 172, RW, 20, item.actionLabel or '操作',
-            actionable, function() ActivateSelected(bag) end, not actionable, (actionable or item.equipped) and P.green or nil)
-    else
-        Button(vg, s, 'detail_info', RX, 172, RW, 20, item.actionLabel or '材料详情', false, nil, true)
-    end
+    local actionable = item.canAction == true
+    Button(vg, s, 'detail_action', RX, L.pagerY, RW, L.pagerH, item.actionLabel or '操作',
+        actionable, function() ActivateSelected(bag) end, not actionable, (actionable or item.equipped) and P.green or nil, L.pagerPad)
 end
 
 function M.Render(vg, opts)
     opts = opts or {}
     local bag = opts.bag
     local x, y, scale, W, H = Draw.ScrollMetrics()
+    local L = GetLayout(scale)
     local elapsed = state.openedAt and math.max(0, GetTime():GetElapsedTime() - state.openedAt) or 1
     local openness = Draw.ScrollProgress(elapsed, false)
     local left, right = Draw.ScrollBounds(W, openness)
 
     state.buttons = {}
-    local cat, filters, items, startIdx, endIdx, selectedItem = SyncData(bag)
+    local cat, filters, items, startIdx, endIdx, selectedItem = SyncData(bag, L.pageSize)
 
     Draw.Begin(vg, true)
     if openness > 0 then
@@ -541,54 +561,59 @@ function M.Render(vg, opts)
         Draw.Save(vg)
         nvgIntersectScissor(vg, left + 12, 0, math.max(0, right - left - 24), H)
 
-        local l, r, t, b = 17, W - 17, 31, H - 19
+        local l, r, t, b = 17, W - 17, L.frameT, L.frameB
         Rect(vg, l, t, r - l + 1, 1, P.edge); Rect(vg, l, b, r - l + 1, 1, P.edge)
         Rect(vg, l, t, 1, b - t, P.edge); Rect(vg, r, t, 1, b - t, P.edge)
-        Rect(vg, 214, t + 3, 1, b - t - 6, P.line)
-        Rect(vg, 19, 20, 7, 1, P.edge); Rect(vg, 22, 17, 1, 7, P.edge); Rect(vg, 21, 19, 3, 3, P.gold)
-        Text(vg, '行囊背包', 31, 20)
+        Rect(vg, 214, t + 2, 1, b - t - 4, P.line)
+        local titleY = L.tabY + math.floor(L.tabH * .5)
+        Rect(vg, 19, titleY, 7, 1, P.edge); Rect(vg, 22, titleY - 3, 1, 7, P.edge); Rect(vg, 21, titleY - 1, 3, 3, P.gold)
+        Text(vg, '行囊背包', 31, titleY)
 
         local tabW = math.min(40, math.floor((192 - (#categories - 1) * 4) / math.max(1, #categories)))
         for i, c in ipairs(categories) do
-            Button(vg, state, 'cat_' .. c.id, 82 + (i - 1) * (tabW + 4), 11, tabW, 17, c.name,
-                i == state.categoryIndex, function() SelectCategory(i) end)
+            Button(vg, state, 'cat_' .. c.id, 82 + (i - 1) * (tabW + 4), L.tabY, tabW, L.tabH, c.name,
+                i == state.categoryIndex, function() SelectCategory(i) end, false, nil, L.tabPad)
         end
-        if opts.onSettings then Button(vg, state, 'to_settings', 278, 11, 36, 17, '设置', false, opts.onSettings) end
-        Button(vg, state, 'close', 318, 11, 44, 17, '关闭 ×', false, opts.onClose)
+        if opts.onSettings then
+            Button(vg, state, 'to_settings', 278, L.tabY, 36, L.tabH, '设置', false, opts.onSettings, false, nil, L.tabPad)
+        end
+        Button(vg, state, 'close', 318, L.tabY, 44, L.tabH, '关闭 ×', false, opts.onClose, false, nil, L.tabPad)
 
         local fx, filterW = GRID_X, #filters > 4 and 28 or 34
+        if L.compact then filterW = #filters > 4 and 28 or 36 end
+        local filterGap = L.compact and 2 or 3
         for _, f in ipairs(filters) do
             if fx + filterW <= 178 then
                 local fid = f.id
-                Button(vg, state, 'filter_' .. fid, fx, 33, filterW, 17, FitText(vg, f.name, filterW - 4, 5),
-                    state.filterId == fid, function() SelectFilter(fid) end)
-                fx = fx + filterW + 3
+                Button(vg, state, 'filter_' .. fid, fx, L.filterY, filterW, L.filterH, FitText(vg, f.name, filterW - 4, 5),
+                    state.filterId == fid, function() SelectFilter(fid) end, false, nil, L.filterPad)
+                fx = fx + filterW + filterGap
             end
         end
-        Right(vg, ('共%d项'):format(#items), GRID_X + 190, 42, P.muted, 5)
+        Right(vg, ('共%d项'):format(#items), GRID_X + 190, L.filterY + math.floor(L.filterH * .5), P.muted, 5)
 
         if #items == 0 then
-            DrawEmptyState(vg, cat)
+            DrawEmptyState(vg, cat, L)
         else
             for idx = startIdx, endIdx do
                 local pos = idx - startIdx + 1
                 local cx = GRID_X + ((pos - 1) % COLS) * (CARD_W + COL_GAP)
-                local cy = GRID_Y + math.floor((pos - 1) / COLS) * (CARD_H + ROW_GAP)
+                local cy = L.gridY + math.floor((pos - 1) / COLS) * (L.cardH + L.rowGap)
                 local item = items[idx]
-                DrawCard(vg, item, cx, cy, pos == state.focusPos)
-                AddHit(state, 'card_' .. pos, cx, cy, CARD_W, CARD_H, function()
+                DrawCard(vg, item, cx, cy, L.cardH, pos == state.focusPos)
+                AddHit(state, 'card_' .. pos, cx, cy, CARD_W, L.cardH, function()
                     state.focusPos, state.selectedKey, state.notice = pos, item.key, nil
                 end, 0)
             end
         end
 
-        Button(vg, state, 'prev_page', GRID_X, 172, 56, 20, '◀ 上页', false,
-            function() SelectPage(state.page - 1) end, state.page <= 1)
-        Center(vg, ('%d / %d'):format(state.page, state.pages), GRID_X + 95, 182, P.ink, 6)
-        Button(vg, state, 'next_page', GRID_X + 134, 172, 56, 20, '下页 ▶', false,
-            function() SelectPage(state.page + 1) end, state.page >= state.pages)
+        Button(vg, state, 'prev_page', GRID_X, L.pagerY, 58, L.pagerH, '◀ 上页', false,
+            function() SelectPage(state.page - 1) end, state.page <= 1, nil, L.pagerPad)
+        Center(vg, ('%d / %d'):format(state.page, state.pages), GRID_X + 95, L.pagerY + math.floor(L.pagerH * .5), P.ink, 6)
+        Button(vg, state, 'next_page', GRID_X + 132, L.pagerY, 58, L.pagerH, '下页 ▶', false,
+            function() SelectPage(state.page + 1) end, state.page >= state.pages, nil, L.pagerPad)
 
-        DrawDetail(vg, state, selectedItem, bag)
+        DrawDetail(vg, state, selectedItem, bag, L)
         Center(vg, TouchInput.IsEnabled()
             and '点选页签与物品卡 · 左右翻页 · 右侧操作'
             or '方向键/WASD 选格 · Q/E 切类 · [ ] 翻页 · Enter 装备 · Esc 关闭', W * .5, 200, P.muted, 5)
@@ -624,6 +649,7 @@ function M.Key(key, repeatKey, opts)
     local bag = opts.bag
     local _, _, items, startIdx, endIdx = SyncData(bag)
     local pageCount = math.max(0, endIdx - startIdx + 1)
+    local pageSize = state.pageSize or 6
     if key == KEY_ESCAPE or (key == KEY_B and not repeatKey) then
         if not repeatKey and opts.onClose then opts.onClose() end
         return true
@@ -658,8 +684,8 @@ function M.Key(key, repeatKey, opts)
             ActivateSelected(bag); return true
         end
         if nextGlobal then
-            state.page = math.floor((nextGlobal - 1) / PAGE_SIZE) + 1
-            state.focusPos = nextGlobal - (state.page - 1) * PAGE_SIZE
+            state.page = math.floor((nextGlobal - 1) / pageSize) + 1
+            state.focusPos = nextGlobal - (state.page - 1) * pageSize
             state.selectedKey, state.notice = items[nextGlobal].key, nil
             return true
         end
