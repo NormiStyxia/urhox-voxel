@@ -88,6 +88,13 @@ local function chartBorder(vg,W,H)
         Draw.Rect(vg,x,y,w+1,1,color);Draw.Rect(vg,x,y+h,w+1,1,color)
         Draw.Rect(vg,x,y,1,h,color);Draw.Rect(vg,x+w,y,1,h,color)
     end
+    -- Keep the illustrated cloud and curl motifs from the reference scroll.
+    -- They sit on the clean paper surface and do not restore the paper grain.
+    stamp(vg,l+4,t+4,0,171,91,40);stamp(vg,r-95,t+4,94,171,91,40)
+    stamp(vg,l+4,b-43,0,214,91,40);stamp(vg,r-95,b-43,94,214,91,40)
+    stamp(vg,r-108,t-8,0,128,85,30)
+    stamp(vg,l+1,b-34,90,128,58,37)
+    stamp(vg,r-24,b-round((b-t)*.32),152,128,27,8)
 end
 local function chart(vg,W,H,left,right)
     local roller=12
