@@ -17,6 +17,9 @@ local CZ = (Z0+Z1)/2
 local WEST_CX = (X0+SPLIT)/2
 local KNEE = F3+2.5           -- west attic wall top
 local GABLE_HALF, GABLE_EAVE, GABLE_RISE = 5, KNEE-.375, 4
+-- Outer stair: 0.375 m risers and treads; the terrace's back rail opens west of STAIR_GAP.
+local RISE, TREAD = .375, .375
+local STAIR_GAP = X1+.5-math.floor((F3-12*RISE)/RISE)*TREAD+.25
 Upper.Footprint = { x0=X0, x1=X1, z0=Z0, z1=Z1, split=SPLIT, second=F2, third=F3 }
 
 local windowLamps={second={},third={}}
@@ -24,7 +27,7 @@ local step = .125
 -- The shell stays on a 0.125 m grid. Local detail brushes below use smaller
 -- cells for exposed frames without fine-subdividing the whole house.
 local detailStep, trimStep = .0625, .03125
-local woodX, woodY, woodZ, oakX, oakZ, glass = 152,157,159,150,158,156
+local woodX, woodY, woodZ, oakX, oakZ = 152,157,159,150,158
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
 -- Upper wall fill is deliberately a small, shared surface vocabulary: mostly
@@ -69,8 +72,8 @@ for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
 local terraceDoor={z0=CZ-.625,z1=CZ+.625,top=F3+2.375}
 
--- All window details are written in a local tangent/outward basis. The glass is one
--- cell thick, recessed two cells behind the wall, with a clear reveal and glazing bars.
+-- All window details are written in a local tangent/outward basis. The opening is
+-- recessed two cells behind the wall, with a clear reveal and glazing bars.
 local function drawWindow(b,w)
     local tx,tz = abs(w.nz),abs(w.nx)
     local function box(a,y0,d,c,y1,e,mat)
@@ -79,8 +82,8 @@ local function drawWindow(b,w)
     end
     local h=w.width/2
     local sill,head=w.y-w.height/2,w.y+w.height/2
+    -- The opening stays clear: HomeIsland hangs a transparent pane at d=0.
     box(-h,sill,-.0625,h,head,.4375,false)
-    box(-h,sill,-.0625,h,head,.0625,glass)
     box(-h,sill,.0625,h,sill+step,.1875,P.HOME_WINDOW_REVEAL)
     box(-h,head-step,.0625,h,head,.1875,P.HOME_WINDOW_REVEAL)
 end
@@ -424,7 +427,6 @@ end
 -- at the rear corner, a second flight west along the back wall to a pier landing
 -- that bridges onto the terrace. Treads are slabs on wall brackets, open beneath,
 -- so the hall windows behind stay clear. Risers 0.375 m fit the 0.55 m step height.
-local RISE, TREAD = .375, .375
 local function outerStair(b)
     local lane0,lane1=X1+.5,X1+1.875            -- flight A, along the east wall
     local back0,back1=Z1+.5,Z1+1.875            -- flight B, along the back wall
@@ -475,9 +477,6 @@ local function outerStair(b)
     b:Box(endX-1.625,landB,back1-.1875,endX,landB+1.0,back1,woodX)
     b:Box(endX-1.625,landB,Z1,endX-1.4375,landB+1.0,back1,woodZ)
 end
--- Back rail of the terrace starts east of the stair landing.
-STAIR_GAP=X1+.5-floor((F3-12*RISE)/RISE)*TREAD+.25
-
 function Upper.Build(brush,finish)
     local second=brush({X0-.25,F2,Z0-1},{X1+.25,F3,Z1+.5},step)
     secondFloor(second)

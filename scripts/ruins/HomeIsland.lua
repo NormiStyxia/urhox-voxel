@@ -315,8 +315,13 @@ end
 
 function H.RefreshWindowLights(stage)
     windows.stage=stage
+    local glow=windows.active and stage>0 and windows.dimmer or 0.0
     for m in pairs(windows.materials) do
-        m:SetShaderParameter('window_light',Variant(windows.active and stage>0 and windows.dimmer or 0.0))
+        m:SetShaderParameter('window_light',Variant(glow))
+    end
+    -- Clear panes carry a faint warm room glow at dusk and night.
+    if windows.glass then
+        windows.glass:SetShaderParameter('MatEmissiveColor',Variant(Color(1.0*glow,.58*glow,.27*glow)))
     end
     local previous
     for i=1,2 do
@@ -368,7 +373,7 @@ function H.Stop()
     H.ClearRipples()
     H.SetWindowLightingActive(false)
     for _,lamp in ipairs(windows.lamps) do lamp.node:Remove() end
-    windows.sockets,windows.lamps,windows.materials={},{},{}
+    windows.sockets,windows.lamps,windows.materials,windows.glass={},{},{},nil
     windows.stage,windows.active,windows.budget,windows.dimmer,windows.spill=0,false,2,0,0
     if H.meadowMaterial then H.meadowMaterial:SetSurfaceTexture('splat_map',nil) end
     H.spring,H.hearth,H.field,H.housing,H.meadowMaterial=nil,nil,nil,nil,nil
@@ -707,30 +712,29 @@ local function fallenHouse(ctx)
     end
     ctx.finish('ruin',b,0,0,{masonry='homeWindows'})
 end
-local function archedWindow(b,along,face,normal,side)
+local function archedWindow(b,along,face,normal,side,spring)
     -- u spans the opening; depth increases toward the inside of each wall.
     local function box(u,y,d,uu,yy,dd,mat)
         local a,c=face-normal*d,face-normal*dd
         if side then b:Box(a,y,along+u,c,yy,along+uu,mat) else b:Box(along+u,y,a,along+uu,yy,c,mat) end
     end
-    box(-.875,1.25,0,.875,3.375,.375,false)
+    box(-.875,1.25,0,.875,spring+.875,.375,false)
     -- Elliptical crown over straight jambs. Frame, inset glazing and crossbars have separate depths.
     local function arch(px,py,pz)
         local dx=abs((side and pz or px)-along)
         local depth=(face-(side and px or pz))*normal
-        local dy=math.max(0,py-2.5)
+        local dy=math.max(0,py-spring)
         local outer=dx*dx+dy*dy/.875^2
         local inner=(dx/.75)^2+(dy/.625)^2
         if inner<1 and py>1.5 then
-            if depth>=.125 and depth<.25 then return window end
             return false
         elseif outer<=1 then
             return P.HOME_COPING
         elseif depth>=0 then return P.HOME_ASHLAR end
     end
     local outer,inner=face+normal*.125,face-normal*.375
-    if side then b:Shape(outer,1.25,along-1,inner,3.5,along+1,arch)
-    else b:Shape(along-1,1.25,outer,along+1,3.5,inner,arch) end
+    if side then b:Shape(outer,1.25,along-1,inner,spring+1,along+1,arch)
+    else b:Shape(along-1,1.25,outer,along+1,spring+1,inner,arch) end
     box(-1.125,1.25,-.25,1.125,1.5,.25,P.HOME_PLINTH)
     box(-.75,1.375,0,.75,1.5,.125,P.HOME_WINDOW_REVEAL)
 end
@@ -738,9 +742,9 @@ end
 -- The three window axes sit at 7%, 21% and 43% of that span. The shallow
 -- 1/16 m front wall meets the 1/8 m side walls at Z=7.375.
 local frontWindows={
-    {x=-14.9375,r=.375,sill=1.375,spring=3.125,rise=.375,panes=2},
-    {x=-12.875,r=.6875,sill=1.3125,spring=3.0625,rise=.5625,panes=4},
-    {x=-9.625,r=.5,sill=1.375,spring=3.0625,rise=.4375,panes=3},
+    {x=-14.9375,r=.375,sill=1.375,spring=3.875,rise=.375,panes=2},
+    {x=-12.875,r=.6875,sill=1.3125,spring=3.8125,rise=.5625,panes=4},
+    {x=-9.625,r=.5,sill=1.375,spring=3.8125,rise=.4375,panes=3},
 }
 local doorX=-4.625
 -- The ground hall is 4 m floor to ceiling for furnishing; the upper storeys
@@ -760,11 +764,12 @@ local function frontWindow(b,w)
             local wedge=floor(math.atan(dy/w.rise,u/w.r)*9/math.pi)
             return dy>0 and wedge%3==1 and P.HOME_ASHLAR or P.HOME_COPING
         end
-        -- Bare reveal at the front, wood sash and a separate recessed glass plane.
+        -- Bare reveal at the front and a wood sash; the opening itself stays clear
+        -- for the transparent pane hung at z=7.28 (houseGlass).
         if z<7.125 or z>=7.3125 then return false end
         local frame=(u/(w.r-cell))^2+(dy/(w.rise-cell))^2>=1 or y<w.sill+cell
         if frame then return cedarPost end
-        return z>=7.25 and window or false
+        return false
     end)
     b:Box(w.x-w.r-.1875,w.sill-.125,6.75,w.x+w.r+.1875,w.sill,7.25,P.HOME_COPING)
     b:Box(w.x-w.r,w.sill,7,w.x+w.r,w.sill+.0625,7.125,P.HOME_WINDOW_REVEAL)
@@ -977,14 +982,15 @@ end
 
 -- Hall windows along the deepened side and rear walls (east ones clear the oven).
 local westWindows,eastWindows,backWindows={10.75,13.25},{11.5,13.5},{-13,-8.5,-4}
+local SIDE_SPRING=3.25
 local function firstStorey(ctx)
     local Z1=HOUSE.z1
     local b=ctx.brush({-16.5,.75,3.375},{-.75,WALL_TOP,Z1+.25},.125)
     b:Box(-16,.75,7.375,-1,WALL_TOP,Z1,P.HOME_ASHLAR)
     b:Carve(-15.625,.75,7.375,-1.375,WALL_TOP,Z1-.375)
-    for _,z in ipairs(westWindows) do archedWindow(b,z,-16,-1,true) end
-    for _,z in ipairs(eastWindows) do archedWindow(b,z,-1,1,true) end
-    for _,x in ipairs(backWindows) do archedWindow(b,x,Z1,1,false) end
+    for _,z in ipairs(westWindows) do archedWindow(b,z,-16,-1,true,SIDE_SPRING) end
+    for _,z in ipairs(eastWindows) do archedWindow(b,z,-1,1,true,SIDE_SPRING) end
+    for _,x in ipairs(backWindows) do archedWindow(b,x,Z1,1,false,SIDE_SPRING) end
     b:Box(-16,WALL_TOP-.25,7,-1,WALL_TOP,7.375,P.HOME_ASHLAR)
     local ridge=-4.125
     for _,x in ipairs({-6.375,-1.875}) do
@@ -1001,7 +1007,7 @@ local function firstStorey(ctx)
     windowBars(ctx,'ground-front-bars',frontWindows,7,-1,false,.25)
     local function sideWindows(list)
         local out={}
-        for i,x in ipairs(list) do out[i]={x=x,r=.75,sill=1.5,spring=2.5,rise=.625,panes=3} end
+        for i,x in ipairs(list) do out[i]={x=x,r=.75,sill=1.5,spring=SIDE_SPRING,rise=.625,panes=3} end
         return out
     end
     windowBars(ctx,'ground-west-bars',sideWindows(westWindows),-16,-1,true,.125)
@@ -1027,6 +1033,52 @@ local function singleRoof(ctx)
     b:Box(cx-.5,c0+.75,cz2-.5,cx+.5,c0+.875,cz2+.5,P.HOME_COPING)
     b:Carve(cx-.125,c0+.5,cz2-.125,cx+.125,c0+.875,cz2+.125)
     ctx.finish('one-storey-roof',b,1,1,{masonry='homeWindows'})
+end
+
+-- Transparent window panes. The voxel openings are left clear; each pane is a thin
+-- box with an alpha PBR material, staged with the storey it belongs to and lit
+-- warm at night through RefreshWindowLights. Panes never cast shadows, so sunlight
+-- falls into the hall through the windows.
+local function houseGlass(scene)
+    local root=scene:CreateChild('HomeHouseGlass')
+    root.position=Vector3(H.x,H.base,H.z)
+    local m=Material:new()
+    m:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTextureAlpha.xml'))
+    m:SetShaderParameter('MatDiffColor',Variant(Color(.80,.90,.95,.14)))
+    m:SetShaderParameter('Metallic',Variant(0.0))
+    m:SetShaderParameter('Roughness',Variant(.06))
+    m:SetShaderParameter('MatEmissiveColor',Variant(Color(0,0,0)))
+    windows.glass=m
+    local model=cache:GetResource('Model','Models/Box.mdl')
+    local stages={ground={1,3},second={2,3},third={3,3}}
+    local groups={}
+    local function pane(group,x,y,z,width,height,alongX)
+        local node=groups[group]
+        if not node then
+            node=root:CreateChild('HomeHouseGlass-'..group)
+            groups[group]=node
+            local entry={node=node,first=stages[group][1],last=stages[group][2],mask=0}
+            houseParts[#houseParts+1]=entry
+            enableHousePart(entry,inStage(entry,houseStage))
+        end
+        local n=node:CreateChild('Pane')
+        n.position=Vector3(x,y,z)
+        n.scale=alongX and Vector3(width,height,.02) or Vector3(.02,height,width)
+        local sm=n:CreateComponent('StaticModel')
+        sm.model=model; sm:SetMaterial(m); sm.castShadows=false
+    end
+    for _,w in ipairs(Upper.Windows) do
+        pane(w.group,w.x,w.y,w.z,w.width,w.height,w.nx==0)
+    end
+    for _,w in ipairs(frontWindows) do
+        local top=w.spring+w.rise
+        pane('ground',w.x,(w.sill+top)/2,7.28125,2*w.r,top-w.sill,true)
+    end
+    local top=SIDE_SPRING+.625
+    for _,z in ipairs(westWindows) do pane('ground',-16+.1875,(1.5+top)/2,z,1.5,top-1.5,false) end
+    for _,z in ipairs(eastWindows) do pane('ground',-1-.1875,(1.5+top)/2,z,1.5,top-1.5,false) end
+    for _,x in ipairs(backWindows) do pane('ground',x,(1.5+top)/2,HOUSE.z1-.1875,1.5,top-1.5,true) end
+    H.RefreshWindowLights(houseStage)
 end
 
 local function house(world,scene)
@@ -1074,7 +1126,7 @@ local function house(world,scene)
         trimCovered(part,b)
         -- Earlier permanent pieces own their cells, including the porch where the roof returns.
         for _,p in ipairs(houseParts) do
-            if p.first<=first and last<=p.last then trimCovered(part,p.brush) end
+            if p.brush and p.first<=first and last<=p.last then trimCovered(part,p.brush) end
         end
         local v=part:Finish(options)
         if not v then return end
@@ -1098,11 +1150,12 @@ local function house(world,scene)
     local structure={IsSolidLocal=function(_,x,y,z)
         if b:IsSolidLocal(x,y,z) then return true end
         for _,p in ipairs(houseParts) do
-            if p.brush:IsSolidLocal(x,y,z) then return true end
+            if p.brush and p.brush:IsSolidLocal(x,y,z) then return true end
         end
         return false
     end}
     trimColumns(world,old,columns,structure)
+    if scene then houseGlass(scene) end
     houseReady=true
     H.RefreshWindowLights(houseStage)
 end
