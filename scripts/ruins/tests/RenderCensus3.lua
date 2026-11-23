@@ -18,11 +18,28 @@ local steps = {
         local n, cast = 0, 0
         NomiDrawables(function(d) n = n + 1; if d.castShadows then cast = cast + 1 end end)
         print(string.format("Census3: nomi drawables=%d casters=%d", n, cast))
+        local hist = {}
+        NomiDrawables(function(d)
+            local r = d.worldBoundingBox.size:Length() * 0.5
+            local key = r < 0.03 and "a<3cm" or r < 0.06 and "b<6cm" or r < 0.12 and "c<12cm" or r < 0.25 and "d<25cm" or "e>=25cm"
+            local h = hist[key] or { n = 0, cast = 0, names = {} }
+            h.n = h.n + 1
+            if d.castShadows then h.cast = h.cast + 1 end
+            if #h.names < 8 then h.names[#h.names + 1] = d.node.name end
+            hist[key] = h
+        end)
+        for _, k in ipairs({ "a<3cm", "b<6cm", "c<12cm", "d<25cm", "e>=25cm" }) do
+            local h = hist[k] or { n = 0, cast = 0, names = {} }
+            print(string.format("Census3: nomi radius %-7s n=%3d cast=%3d e.g. %s", k, h.n, h.cast, table.concat(h.names, ",")))
+        end
         print(string.format("Census3: occlusion maxTris=%d buffer=%d threshold=%.3f",
             renderer.maxOccluderTriangles, renderer.occlusionBufferSize, renderer.occluderSizeThreshold))
     end },
-    { name = "nomiNoShadow", fn = function()
-        NomiDrawables(function(d) if d.castShadows then nomiCasters[#nomiCasters + 1] = d; d.castShadows = false end end)
+    { name = "nomiSmallNoShadow", fn = function()
+        NomiDrawables(function(d)
+            if d.castShadows and d.worldBoundingBox.size:Length() * 0.5 < 0.12 then nomiCasters[#nomiCasters + 1] = d; d.castShadows = false end
+        end)
+        print("Census3: small nomi casters disabled " .. #nomiCasters)
     end, undo = function() for _, d in ipairs(nomiCasters) do d.castShadows = true end end },
     { name = "occlusionOn", fn = function()
         orig.tris = renderer.maxOccluderTriangles
