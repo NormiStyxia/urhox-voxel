@@ -23,6 +23,16 @@ local VIEWS = {
         { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
         { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
     },
+    rim = {
+        { name = "overview_noon", hour = 11, pos = Vector3(55, 42, -85), look = Vector3(0, 0, 0) },
+        { name = "rim_close", hour = 14, pos = Vector3(-62, R + 6, -48), look = Vector3(-48, R - 1, -30) },
+        { name = "cliff_noon", hour = 13, pos = Vector3(70, -4, -95), look = Vector3(0, -6, -20) },
+    },
+    r3 = {
+        { name = "overview_noon", hour = 11, pos = Vector3(55, 42, -85), look = Vector3(0, 0, 0) },
+        { name = "court_night", hour = 22, pos = Vector3(-12, R + 3.5, -24), look = Vector3(0, 1.5, 4) },
+        { name = "home_night", hour = 21.5, pos = Vector3(HX + 5, HB + 2.2, -13), look = Vector3(HX - 2, HB + 2, 6) },
+    },
     detail = {
         { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
         { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
@@ -42,10 +52,16 @@ local VIEWS = {
         { name = "home_night", hour = 21.5, pos = Vector3(HX + 5, HB + 2.2, -13), look = Vector3(HX - 2, HB + 2, 6) },
     },
     house = {
-        { name = "house_front2", stage = 2, hour = 15, pos = Vector3(HX - 8.5, HB + 3.2, -9), look = Vector3(HX - 8.5, HB + 4.2, 10) },
-        { name = "house_front", stage = 3, hour = 15, pos = Vector3(HX - 8.5, HB + 3.2, -9), look = Vector3(HX - 8.5, HB + 4.2, 10) },
-        { name = "house_corner", stage = 3, hour = 10, pos = Vector3(HX + 7, HB + 2.5, -6), look = Vector3(HX - 8, HB + 4, 10) },
-        { name = "house_inside", stage = 3, hour = 15, pos = Vector3(HX - 1.9, HB + 2.4, 10.2), look = Vector3(HX - 15, HB + 1.8, 9.5) },
+        { name = "house_aerial", stage = 3, hour = 15, pos = Vector3(HX + 16, HB + 15, -24), look = Vector3(HX - 3, HB + 4, 6) },
+        { name = "house_front", stage = 3, hour = 15, pos = Vector3(HX - 8.5, HB + 4, -12), look = Vector3(HX - 8.5, HB + 6, 10) },
+        { name = "house_front2", stage = 2, hour = 15, pos = Vector3(HX - 8.5, HB + 4, -12), look = Vector3(HX - 8.5, HB + 6, 10) },
+        { name = "house_corner", stage = 3, hour = 10, pos = Vector3(HX + 7, HB + 3.5, -8), look = Vector3(HX - 8, HB + 6, 10) },
+        { name = "house_back", stage = 3, hour = 15, pos = Vector3(HX + 4, HB + 9, 26), look = Vector3(HX - 8, HB + 5, 10) },
+        { name = "house_stair", stage = 3, hour = 15, pos = Vector3(HX + 9, HB + 7, 23), look = Vector3(HX - 3, HB + 5, 13) },
+        { name = "house_glass", stage = 3, hour = 16, pos = Vector3(HX - 11, HB + 2.2, 2.5), look = Vector3(HX - 13, HB + 2.4, 10) },
+        { name = "house_night", stage = 3, hour = 21.5, pos = Vector3(HX - 8.5, HB + 4, -12), look = Vector3(HX - 8.5, HB + 6, 10) },
+        { name = "house_front1", stage = 1, hour = 15, pos = Vector3(HX + 7, HB + 3.5, -8), look = Vector3(HX - 8, HB + 4, 10) },
+        { name = "house_inside", stage = 3, hour = 15, pos = Vector3(HX - 1.9, HB + 2.6, 14), look = Vector3(HX - 15, HB + 1.6, 8) },
     },
 }
 local views = VIEWS[set]
