@@ -246,11 +246,14 @@ void fragment() {
     // 环墙采用 1.5m × 0.75m 砌石，浅缝无几何挖槽。
     float masonry = step(0.5, masonry_mode) * stone * (1.0 - smoothstep(0.55, 0.85, abs(n.y)));
     float jointK = 0.0;
+    // 每块砌石的随机值（苔石槽位按它给裸石配色，融进周围的 A/B/C 石块）。
+    float blockHash = h31(floor(wp * vec3(1.0, 2.0, 1.0)));
     if (masonry > 0.0 && detailFade > 0.0) {
         float blockScale = masonry_mode > 1.5 ? 1.5 : 1.0;
         float row = floor(wp.y * 2.0 / blockScale);
         vec2 blockUV = vec2(horizontal / blockScale + mod(row, 2.0) * 0.5, wp.y * 2.0 / blockScale);
         vec2 blockF = fract(blockUV);
+        blockHash = h31(vec3(floor(blockUV), 7.0));
         vec2 distances = min(blockF, vec2(1.0) - blockF) * vec2(1.0, 0.5) * blockScale;
         float jointDistance = min(distances.x, distances.y);
         float joint = 1.0 - smoothstep(0.008, 0.018 + aa, jointDistance);
@@ -286,13 +289,13 @@ void fragment() {
         // 竖直墙面上噪声沿 Y 拉长，形成顺着雨水往下淌的苔痕。
         vec3 mp = wp * vec3(1.6, mix(0.75, 1.6, abs(n.y)), 1.6);
         mossField = n3(mp + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
-        float growth = mossField + max(n.y, 0.0) * 0.20 - max(-n.y, 0.0) * 0.20 + jointK * 0.22
-            + (idx == 104.0 ? 0.0 : -0.30);
+        float growth = mossField + max(n.y, 0.0) * 0.20 - max(-n.y, 0.0) * 0.20
+            + (idx == 104.0 ? jointK * 0.22 : jointK * 0.10 - 0.30);
         mossK = smoothstep(0.50, 0.64, growth);
         if (idx == 104.0) {
-            vec3 bare = srgb_to_linear(vec3(0.74, 0.72, 0.67));
+            vec3 bare = srgb_to_linear(mix(vec3(0.79, 0.76, 0.70), vec3(0.72, 0.72, 0.69), blockHash));
             float damp = smoothstep(0.38, 0.50, growth) * (1.0 - mossK);
-            base = mix(base, bare * (1.0 - 0.14 * damp), 0.85);
+            base = bare * (1.0 - 0.14 * damp);
         }
         if (mossK > 0.0) {
             // 苔色：朝上受光的苔偏黄绿、垂面与背阴处偏深橄榄；块内色调变化走低频，不做像素噪点。

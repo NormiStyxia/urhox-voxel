@@ -41,6 +41,12 @@ local VIEWS = {
         { name = "home_pond_dusk", hour = 17.8, pos = Vector3(HX - 2, HB + 1.8, -16), look = Vector3(HX - 9, HB, -2) },
         { name = "home_night", hour = 21.5, pos = Vector3(HX + 5, HB + 2.2, -13), look = Vector3(HX - 2, HB + 2, 6) },
     },
+    house = {
+        { name = "house_front2", stage = 2, hour = 15, pos = Vector3(HX - 8.5, HB + 3.2, -9), look = Vector3(HX - 8.5, HB + 4.2, 10) },
+        { name = "house_front", stage = 3, hour = 15, pos = Vector3(HX - 8.5, HB + 3.2, -9), look = Vector3(HX - 8.5, HB + 4.2, 10) },
+        { name = "house_corner", stage = 3, hour = 10, pos = Vector3(HX + 7, HB + 2.5, -6), look = Vector3(HX - 8, HB + 4, 10) },
+        { name = "house_inside", stage = 3, hour = 15, pos = Vector3(HX - 1.9, HB + 2.4, 10.2), look = Vector3(HX - 15, HB + 1.8, 9.5) },
+    },
 }
 local views = VIEWS[set]
 if set == "all" then
@@ -100,10 +106,11 @@ function TAViews_PostUpdate(eventType, eventData)
         index = index + 1
         v = views[index]
         if v == nil then return end
-        if v.name:find("^home") then BuildHome() end
+        if v.name:find("^home") or v.name:find("^house") then BuildHome() end
         wait = WAIT
         game.dayNight.lockHour = v.hour
         game.dayNight:SetHour(v.hour)
+        if v.stage then print("TAViews: stage", require("ruins.HomeIsland").SetHouseStage(v.stage)) end
         print(string.format("TAViews: view %s hour %.1f frame %d", v.name, v.hour, frame))
     end
     Apply(v)

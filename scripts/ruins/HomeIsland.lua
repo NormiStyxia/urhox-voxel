@@ -717,11 +717,15 @@ end
 -- The three window axes sit at 7%, 21% and 43% of that span. The shallow
 -- 1/16 m front wall meets the 1/8 m side walls at Z=7.375.
 local frontWindows={
-    {x=-14.9375,r=.375,sill=1.375,spring=2.625,rise=.375,panes=2},
-    {x=-12.875,r=.6875,sill=1.3125,spring=2.5625,rise=.5625,panes=4},
-    {x=-9.625,r=.5,sill=1.375,spring=2.5625,rise=.4375,panes=3},
+    {x=-14.9375,r=.375,sill=1.375,spring=3.125,rise=.375,panes=2},
+    {x=-12.875,r=.6875,sill=1.3125,spring=3.0625,rise=.5625,panes=4},
+    {x=-9.625,r=.5,sill=1.375,spring=3.0625,rise=.4375,panes=3},
 }
 local doorX=-4.625
+-- The ground hall stands one metre taller than the original 3 m storey: about
+-- 4.1 m of clear height for furnishing. Everything above it rides on GROUND_LIFT.
+local GROUND_LIFT=1.0
+local WALL_TOP=3.75+GROUND_LIFT
 local function frontWindow(b,w)
     local cell=.0625
     local trim=.125
@@ -772,8 +776,8 @@ local function planter(b,x,y,width)
 end
 
 local function frontWall(ctx)
-    local b=ctx.brush({-16,.75,6.375},{-1,3.5,7.375},.0625)
-    b:Box(-16,.75,7,-1,3.5,7.375,P.HOME_ASHLAR)
+    local b=ctx.brush({-16,.75,6.375},{-1,WALL_TOP-.25,7.375},.0625)
+    b:Box(-16,.75,7,-1,WALL_TOP-.25,7.375,P.HOME_ASHLAR)
     for _,w in ipairs(frontWindows) do frontWindow(b,w) end
     -- The voussoirs, darker inner jamb and inset arched transom have separate depths.
     b:Shape(doorX-1.375,.75,6.875,doorX+1.375,3.5,7.375,function(x,y,z)
@@ -791,7 +795,7 @@ local function frontWall(ctx)
         return false
     end)
     for _,x in ipairs({-15.875,-11,-7.875,-1.25}) do
-        b:Box(x,.875,6.9375,x+.1875,3.5,7.0625,cedarPost)
+        b:Box(x,.875,6.9375,x+.1875,WALL_TOP-.25,7.0625,cedarPost)
         b:Box(x-.0625,.75,6.875,x+.25,1.0625,7.125,P.HOME_PLINTH)
     end
     for _,x in ipairs({-13.9375,-11.6875,-8.6875,-6.1875,-3.0625}) do wallLantern(b,x,2.1875) end
@@ -816,7 +820,9 @@ local function windowBars(ctx,name,windows,face,normal,side,inset)
     local lo,hi=math.min(near,far),math.max(near,far)
     local left,right=windows[1].x-windows[1].r,windows[#windows].x+windows[#windows].r
     local function coords(u,y,d) return side and {d,y,u} or {u,y,d} end
-    local b=ctx.brush(coords(left,1.3125,lo),coords(right,3.125,hi),cell)
+    local head=0
+    for _,w in ipairs(windows) do head=math.max(head,w.spring+w.rise) end
+    local b=ctx.brush(coords(left,1.3125,lo),coords(right,head,hi),cell)
     for _,w in ipairs(windows) do
         local function lattice(x,y,z)
             local u=(side and z or x)-w.x
@@ -894,14 +900,68 @@ local function porchTimber(ctx,ridge)
     ctx.finish('ground-porch-rails',rails,1,3,{masonry='homeWindows'})
 end
 
+-- Stone skin that gives the tall ground hall a footing and a real seat for the
+-- upper storeys: a skirting course, interlocking corner quoins, and below the
+-- first-floor ring a stepped corbel table carrying a projecting cap. Distances
+-- are measured outside the -16..-1 by 7..13 footprint, so the courses wrap the
+-- corners. Collision stays with the coarse walls; these strips only render.
+local function storeyBelt(ctx)
+    local T=WALL_TOP
+    local porch=-4.125
+    local function corbelAt(along,start,span)
+        if along<start or along>start+span then return false end
+        local r=(along-start)%.75
+        return r<.125 or r>.625
+    end
+    local function skin(x,y,z,quoins)
+        local dx,dz=math.max(-16-x,x+1,0),math.max(7-z,z-13,0)
+        local d=math.max(dx,dz)
+        if d<=0 then return end
+        local h=y-T
+        if h>=-.125 then return d<.375 and P.HOME_COPING or nil end
+        if h>=-.375 then return d<.25 and P.HOME_PLINTH or nil end
+        if h>=-.4375 then return d<.1875 and P.HOME_COPING or nil end
+        if h>=-.875 then
+            local corbel
+            if dx==0 then corbel=corbelAt(x,-15.625,14.25) and (z>13 or abs(x-porch)>3.25)
+            elseif dz==0 then corbel=corbelAt(z,7.375,5.25) end
+            if not corbel then return end
+            if h>=-.625 then return d<.25 and P.HOME_COPING or nil end
+            if h>=-.8125 then return d<.1875 and P.HOME_COPING or nil end
+            return d<.125 and P.HOME_PLINTH or nil
+        end
+        if not quoins then return end
+        if y<1.125 then return d<.1875 and P.HOME_PLINTH or nil end
+        if d>=.125 then return end
+        -- Long and short stones alternate per course and swap between the two faces.
+        local course=floor((y-.75)/.3125)
+        local onSide=dz==0
+        local long=(course%2==0)==onSide
+        local fromCorner=onSide and math.min(z-7,13-z) or math.min(x+16,-1-x)
+        if fromCorner<(long and .625 or .375) then return P.HOME_COPING end
+    end
+    local strips={
+        {{-16.5,T-.875,6.5},{-.5,T,7},false},
+        {{-16.5,.75,13},{-.5,T,13.5},true},
+        {{-16.5,.75,7},{-16,T,13},true},
+        {{-1,.75,7},{-.5,T,13},true},
+    }
+    for i,s in ipairs(strips) do
+        local lo,hi,quoins=s[1],s[2],s[3]
+        local b=ctx.brush(lo,hi,.0625)
+        b:Shape(lo[1],lo[2],lo[3],hi[1],hi[2],hi[3],function(x,y,z) return skin(x,y,z,quoins) end)
+        ctx.finish('ground-belt-'..i,b,1,3,{visual=true,masonry='homeWindows'})
+    end
+end
+
 local function firstStorey(ctx)
-    local b=ctx.brush({-16.5,.75,3.375},{-.75,5.125,13.25},.125)
-    b:Box(-16,.75,7.375,-1,3.75,13,P.HOME_ASHLAR)
-    b:Carve(-15.625,.75,7.375,-1.375,3.75,12.625)
+    local b=ctx.brush({-16.5,.75,3.375},{-.75,WALL_TOP,13.25},.125)
+    b:Box(-16,.75,7.375,-1,WALL_TOP,13,P.HOME_ASHLAR)
+    b:Carve(-15.625,.75,7.375,-1.375,WALL_TOP,12.625)
     archedWindow(b,10.75,-16,-1,true)
     archedWindow(b,11.375,-1,1,true)
     for _,x in ipairs({-12.5,-7}) do archedWindow(b,x,13,1,false) end
-    b:Box(-16,3.5,6.875,-1,3.75,7.375,cedar)
+    b:Box(-16,WALL_TOP-.25,7,-1,WALL_TOP,7.375,P.HOME_ASHLAR)
     local ridge=-4.125
     for _,x in ipairs({-6.375,-1.875}) do
         b:Box(x-.3125,.75,4,x+.3125,1.125,4.625,P.HOME_PLINTH)
@@ -919,18 +979,20 @@ local function firstStorey(ctx)
     windowBars(ctx,'ground-west-bars',{sideWindow(10.75)},-16,-1,true,.125)
     windowBars(ctx,'ground-east-bars',{sideWindow(11.375)},-1,1,true,.125)
     windowBars(ctx,'ground-back-bars',{sideWindow(-12.5),sideWindow(-7)},13,1,false,.125)
+    storeyBelt(ctx)
 end
 local function singleRoof(ctx)
-    local b=ctx.brush({-16.75,3.625,6.25},{-.25,6.5,13.75},.125)
-    tiledRoof(b,-8.5,10,8,3.625,3.875,2.5,false)
+    local L=GROUND_LIFT
+    local b=ctx.brush({-16.75,3.625+L,6.25},{-.25,6.5+L,13.75},.125)
+    tiledRoof(b,-8.5,10,8,3.625,3.875+L,2.5,false)
     for _,x in ipairs({-16,-1.25}) do
-        b:Shape(x,3.75,7,x+.25,6.125,13,function(_,y,z)
-            if y<=6.125-abs(z-10)*.69 then return abs(z-10)<.13 and cedarPost or P.STONE_A end
+        b:Shape(x,WALL_TOP,7,x+.25,6.125+L,13,function(_,y,z)
+            if y<=6.125+L-abs(z-10)*.69 then return abs(z-10)<.13 and cedarPost or P.STONE_A end
         end)
     end
-    b:Box(-12.5,4.625,10.75,-11.75,6.375,11.5,P.HOME_ASHLAR)
-    b:Box(-12.625,6.375,10.625,-11.625,6.5,11.625,P.HOME_COPING)
-    b:Carve(-12.25,6.125,11,-12,6.5,11.25)
+    b:Box(-12.5,4.625+L,10.75,-11.75,6.375+L,11.5,P.HOME_ASHLAR)
+    b:Box(-12.625,6.375+L,10.625,-11.625,6.5+L,11.625,P.HOME_COPING)
+    b:Carve(-12.25,6.125+L,11,-12,6.5+L,11.25)
     ctx.finish('one-storey-roof',b,1,1,{masonry='homeWindows'})
 end
 
@@ -999,7 +1061,7 @@ local function house(world,scene)
     upper.Build(ctx.brush,function(name,part,options)
         local ages=groups[name]
         ctx.finish(name,part,ages[1],ages[2],options)
-    end)
+    end,GROUND_LIFT)
     local structure={IsSolidLocal=function(_,x,y,z)
         if b:IsSolidLocal(x,y,z) then return true end
         for _,p in ipairs(houseParts) do

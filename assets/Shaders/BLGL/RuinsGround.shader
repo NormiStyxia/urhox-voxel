@@ -229,6 +229,21 @@ void fragment() {
             // 泥地边缘（贴着草的一圈）土更湿更深，边界清楚但不生硬。
             float rim = smoothstep(0.42, 0.55, dirtRaw) * (1.0 - smoothstep(0.58, 0.78, dirtRaw));
             dirt *= 1.0 - rim * 0.16 * (1.0 - sand);
+            // 岛缘竖直土层：上面那些 xz 噪声在竖面上会拉成竖条（像一排木栅），
+            // 竖面改用沿水平方向 + 高度的土层：顶部腐殖土更深，夹浅色黏土层与细根线。
+            float soilWall = soilLip * (1.0 - smoothstep(0.35, 0.70, abs(n.y)));
+            if (soilWall > 0.0) {
+                float along = wp.z * weights.x + wp.x * weights.z + (wp.x + wp.z) * 0.5 * weights.y;
+                float layer = wp.y * 3.2 + vnoise(vec2(along * 0.45, 3.0)) * 1.4;
+                float clay = smoothstep(0.55, 0.85, vnoise(vec2(layer, along * 0.08)));
+                vec3 soil = dirt_color * (0.80 + 0.28 * vnoise(vec2(along * 0.9, wp.y * 6.0)));
+                soil = mix(soil, vec3(0.50, 0.42, 0.32), clay * 0.55);
+                float rootT = abs(fract(along * 1.7 + wp.y * 0.6 + vnoise(vec2(along * 3.0, wp.y * 4.0)) * 0.8) - 0.5);
+                float roots = smoothstep(0.445, 0.49, rootT) * smoothstep(0.5, 0.7, vnoise(vec2(along * 0.5, wp.y * 0.8 + 13.0)));
+                soil *= 1.0 - roots * 0.22 * detailFade;
+                soil *= 0.90 + (chips - 0.5) * 0.25 * detailFade;
+                dirt = mix(dirt, soil, soilWall);
+            }
             col = mix(col, dirt, wDirt);
         }
 

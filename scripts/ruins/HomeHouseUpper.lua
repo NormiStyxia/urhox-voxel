@@ -330,7 +330,36 @@ local function eastHoist(b)
     end)
 end
 
-function Upper.Build(brush,finish)
+-- Everything above is drawn on the original storey heights. `lift` raises the
+-- whole upper house by a grid-aligned amount when the ground floor grows taller:
+-- each brush is allocated higher and every draw call / shape query is shifted.
+local function liftedBrushes(brush,finish,lift)
+    if lift==0 then return brush,finish end
+    local function make(lo,hi,size)
+        local b=brush({lo[1],lo[2]+lift,lo[3]},{hi[1],hi[2]+lift,hi[3]},size)
+        local p={real=b}
+        function p:Box(x0,y0,z0,x1,y1,z1,mat) b:Box(x0,y0+lift,z0,x1,y1+lift,z1,mat) end
+        function p:Carve(x0,y0,z0,x1,y1,z1) b:Carve(x0,y0+lift,z0,x1,y1+lift,z1) end
+        function p:Shape(x0,y0,z0,x1,y1,z1,fn)
+            b:Shape(x0,y0+lift,z0,x1,y1+lift,z1,function(x,y,z,i,j,k) return fn(x,y-lift,z,i,j,k) end)
+        end
+        return p
+    end
+    local function done(name,p,options)
+        if options.windowLamps then
+            local lamps={}
+            for i,s in ipairs(options.windowLamps) do
+                lamps[i]={x=s.x,y=s.y+lift,z=s.z,nx=s.nx,nz=s.nz,priority=s.priority}
+            end
+            options.windowLamps=lamps
+        end
+        finish(name,p.real,options)
+    end
+    return make,done
+end
+
+function Upper.Build(brush,finish,lift)
+    brush,finish=liftedBrushes(brush,finish,lift or 0)
     local second=brush({-16.25,3.75,6},{-.75,6.75,13.5},step)
     secondFloor(second)
     finish('second',second,{masonry='homeWindows',windowLamps=windowLamps.second})
