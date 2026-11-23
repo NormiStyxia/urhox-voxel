@@ -25,6 +25,7 @@ local builds,clears,pin,enemy,gateChecks=0,0,{},false,0
 local homePort=setmetatable({BeginBuild=function()builds=builds+1;return {Step=function()return true end} end},{__index=home})
 local M={region='ruins',SPAWN=spawn,ride={mode='free',wander={}},dragonAwake=true,ctrl={loco={},input={},Teleport=function(_,pos)pin=pos end}}
 local env=setmetatable({M=M,HomeIsland=homePort,Terrain=terrain,WorldMap=map,PixelDraw=draw,
+   CombatSettings=require('ruins.GameSettings'),
    HUD={root=root},TouchControls={Cancel=noop},pointer={SetBlocked=noop,Resume=noop,Release=noop},drag={},
    nomi_=ctl,CombatHasAggro=function()gateChecks=gateChecks+1;return enemy end,CombatState={Engaged=function()return false end},
    RefreshObjective=noop, combatArrows_={Clear=function()clears=clears+1 end},animPreview_={index=0},combatMoves_={},

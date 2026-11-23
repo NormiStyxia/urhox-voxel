@@ -23,7 +23,7 @@ uniform vec3 home_stone_origin = vec3(0.0);
 uniform float dressed_stone_draw = 0.0;
 uniform vec3 meadow_origin = vec3(0.0);
 uniform float meadow_sun = 0.0;
-uniform float window_light = 1.0;
+uniform float window_light = 0.0;
 // XYZ: world-space cross-section centre; W=1 only on private near-joint materials.
 uniform vec4 wood_center = vec4(0.0);
 // 可破坏体积被准星选中时的外轮廓光（碎时 = 红）
@@ -299,8 +299,23 @@ void fragment() {
     }
     NORMAL = normalize(n - clamp(grad, vec3(-0.22), vec3(0.22)) * surfaceFade);
     float emiK = emi.a;
-    // Home glass has its own palette entry. Coals, flames and rune slots keep their emission.
-    if (abs(idx-156.0)<.5) { emiK*=window_light; }
+    // The recessed pane receives transmitted room light. Its broad variation
+    // stays legible across the pond, while the wood mullions keep their own PBR.
+    if (idx==156.0) {
+        vec3 eyeRay=normalize(CAMERA_POSITION_WORLD-wp);
+        float facing=abs(dot(n,eyeRay));
+        vec3 behind=wp-eyeRay*(.14/max(facing,.34));
+        float along=abs(n.z)>abs(n.x) ? behind.x : behind.z;
+        float room=.5+.5*cos(along*1.73+behind.y*.71);
+        float amber=.5+.5*sin(behind.y*2.25-along*.52);
+        base*=.72+.28*room;
+        emi.rgb=mix(vec3(1.0,.55,.27),vec3(1.0,.84,.53),.22*room+.56*amber);
+        emiK*=window_light*(.53+.47*room)*(.78+.22*facing);
+    } else if (idx==99.0) {
+        // Warm bounce is limited to the assigned inner strip: top of the sill
+        // and jambs catch more light than the outward face and underside.
+        emiK*=window_light*(.2+.65*max(n.y,0.0)+.22*(1.0-abs(n.y)));
+    }
     ALBEDO = base * shade * daynight_tint;
     ROUGHNESS = clamp(pbr.r + woodRoughness + dressedRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;

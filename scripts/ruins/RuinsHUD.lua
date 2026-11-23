@@ -160,7 +160,7 @@ function Layer:Update(dt)
     if input:GetKeyPress(KEY_H) and not Touch.IsEnabled() then help=not help end
 end
 local function RenderHUD(self,vg)
-    if ForgeHidden() then return end
+    if ForgeHidden() or (M.house and M.house.open) then return end
     Draw.Begin(vg,true) -- 全屏准星不继承父 UI 动画的局部变换。
     local w,h,s=Draw.Metrics()
     local touch=Touch.IsEnabled()
@@ -260,6 +260,104 @@ function Layer:Render(vg)
     CombatState.Isolated('HUD.Render',CombatState.PerfCall,'hudRebuild',RenderHUD,self,vg)
     Draw.Unwind(vg,depth)
 end
+-- The panel shares the HUD coordinate system with raw mouse and touch events.
+local HouseLayer=UI.Panel:Extend('HomeHouseControls')
+local stages={[0]='废墟','一层','两层','三层'}
+local panelInk={37,55,56};local panelPaper={236,226,197};local brass={181,148,88}
+local function houseLayout()
+    local w,h,s=Draw.Metrics()
+    local safeW,safeH=w-s.left-s.right,h-s.top-s.bottom
+    local width,height=math.min(264,safeW-20),math.min(222,safeH-12)
+    return s.left+16,Draw.Snap(s.top+safeH*.47),Draw.Snap(w-s.right-width-10),
+        Draw.Snap(s.top+(safeH-height)*.5),width,height
+end
+local function inBox(x,y,l,t,w,h) return x>=l and x<l+w and y>=t and y<t+h end
+local function houseTarget(self,x,y)
+    local lx,ly,l,t,w,h=houseLayout()
+    if not self.open then
+        if inBox(x,y,lx,ly,108,42) then return 'open' end
+        return
+    end
+    if inBox(x,y,l+w-66,t+4,62,40) then return 'close' end
+    local bw=math.floor((w-32)/2);local bh=math.floor((h-99)/2)
+    for n=0,3 do
+        if inBox(x,y,l+12+n%2*(bw+8),t+61+n//2*(bh+6),bw,bh) then return n end
+    end
+end
+function HouseLayer:Close()
+    self.contact=nil
+    if self.open then self.open=false;self.port.changed(false) end
+end
+function HouseLayer:Activate(action)
+    if action=='close' then self:Close();return end
+    if not self.port.available() then self:Close();return end
+    if action=='open' then self.open=true;self.message=nil;self.port.changed(true);return end
+    if stages[action]==nil then return end
+    if self.port.get()==action then self.message='已是'..stages[action];return end
+    local ok,why=self.port.set(action)
+    if ok then
+        self.message='已切换至'..stages[self.port.get()]
+    else
+        -- The HUD font subset contains 将要. Use it for the occupancy response.
+        self.message=type(why)=='string' and why~='' and why:gsub('即将','将要') or '暂不可切换，请稍后再试'
+    end
+end
+function HouseLayer:Key(key,repeatKey)
+    if not self.open and (key~=KEY_J or not self.port.available()) then return false end
+    if repeatKey then return true end
+    if key==KEY_J then self:Activate(self.open and 'close' or 'open')
+    elseif key==KEY_ESCAPE then self:Close()
+    elseif key>=KEY_0 and key<=KEY_3 then self:Activate(key-KEY_0) end
+    return true
+end
+function HouseLayer:Down(id,x,y)
+    if not self.open and not self.port.available() then return false end
+    local action=houseTarget(self,x,y)
+    if not action and not self.open then return false end
+    if not self.contact then self.contact={id=id,x=x,y=y,action=action} end
+    return true
+end
+function HouseLayer:Move(id,x,y)
+    local p=self.contact
+    if p and p.id==id and (x-p.x)^2+(y-p.y)^2>36 then p.action=nil end
+end
+function HouseLayer:Up(id,x,y)
+    local p=self.contact
+    if not p or p.id~=id then return self.open end
+    self.contact=nil
+    if p.action~=nil and (x-p.x)^2+(y-p.y)^2<=36 and p.action==houseTarget(self,x,y) then self:Activate(p.action) end
+    return true
+end
+function HouseLayer:Render(vg)
+    if not self.port.available() then return end
+    local lx,ly,l,t,w,h=houseLayout()
+    Draw.Begin(vg,true)
+    if not self.open then
+        Draw.Rect(vg,lx,ly,108,42,panelInk,.94);Draw.Rect(vg,lx,ly,3,42,brass)
+        Draw.Text(vg,Touch.IsEnabled() and '家园房屋' or '家园房屋  J',lx+54,ly+21,12,C.paper,NVG_ALIGN_CENTER)
+    else
+        local current=self.port.get()
+        Draw.Rect(vg,l+3,t+4,w,h,C.deep,.55);Draw.Rect(vg,l,t,w,h,brass)
+        Draw.Rect(vg,l+2,t+2,w-4,h-4,panelPaper);Draw.Rect(vg,l+2,t+2,w-4,39,panelInk)
+        Draw.Text(vg,'家园房屋',l+14,t+21,24,C.paper);Draw.Text(vg,'返回 ×',l+w-12,t+21,12,C.paper,NVG_ALIGN_RIGHT)
+        Draw.Text(vg,'当前 · '..(stages[current] or '等待中'),l+14,t+50,12,C.brown)
+        local bw=math.floor((w-32)/2);local bh=math.floor((h-99)/2)
+        for n=0,3 do
+            local x,y=l+12+n%2*(bw+8),t+61+n//2*(bh+6)
+            Draw.Rect(vg,x,y,bw,bh,n==current and panelInk or brass)
+            Draw.Rect(vg,x+1,y+1,bw-2,bh-2,n==current and panelInk or panelPaper)
+            Draw.Text(vg,stages[n],x+bw*.5,y+bh*.5,24,n==current and C.paper or C.brown,NVG_ALIGN_CENTER)
+            if not Touch.IsEnabled() then Draw.Text(vg,tostring(n),x+6,y+9,12,n==current and C.gold or C.brown) end
+        end
+        Draw.Text(vg,self.message or (Touch.IsEnabled() and '点选房屋状态' or '按 0-3 切换 · Esc 返回'),l+14,t+h-15,12,C.brown)
+    end
+    Draw.Finish(vg)
+end
+function M.AttachHouse(port)
+    local panel=HouseLayer{position='absolute',left=0,top=0,width='100%',height='100%',pointerEvents='none'}
+    panel.port=port;M.root:AddChild(panel);M.house=panel;return panel
+end
+
 function M.Build(spells)
     headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}
     objectiveLayout={}
@@ -302,6 +400,7 @@ function M.IsCrossVisible() return crossVisible end
 function M.UpdateSlots(c,q) cool,charge=c or EMPTY,q or 0 end
 function M.IsPointerOverUI() return UI.IsPointerOverUI() end
 function M.Stop()
+    M.house=nil
     headingCache,titleCache,objectiveCache,hintCache,messageCache,clockCache={},{},{},{},{},{}
     objectiveLayout={}
     Draw.Release(); UI.Shutdown(); ready=false

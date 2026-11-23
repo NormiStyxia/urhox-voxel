@@ -218,7 +218,7 @@ local OBJECTIVES = {
 
 local function RefreshObjective()
     if M.region=="home" then
-        HUD.SetObjective("家园小岛", "屋前锻造炉 · G 锻造　　M 打开地图")
+        HUD.SetObjective("家园小岛", "J 家园房屋　 G 锻造　 M 地图")
         return
     end
     local o = OBJECTIVES[stage_]
@@ -288,7 +288,7 @@ local function SetupLighting()
             vmats[key] = m
         end
         -- Rebind on cache hits as well when a cancelled home build is retried.
-        if masonry=="homeWindows" then HomeIsland.housing=m end
+        if masonry=="homeWindows" then HomeIsland.BindWindowMaterial(m) end
         return m
     end
     -- 法阵灯：龙庭中央的蓝色点光（苏醒时变亮）
@@ -523,6 +523,7 @@ local function CombatHasAggro()
     return false
 end
 local function CanOpenForge()
+    if M.housePanel and M.housePanel.open then return false end
     if WorldMap.IsOpen() or not nomi_ or not M.ride or M.ride.mode~='free' or CombatState.Engaged() or CombatHasAggro()
         or combatMoves_.dead or voidInputBlocked or SettingsMenu.IsBlocked() or animPreview_.index>0 then return false end
     local p=nomi_:Position()
@@ -646,6 +647,7 @@ local function StartCombat()
         selection=CombatState.GetSelection,
         select=function(id) return combatMoves_:SelectLoadout(id) end,
         canOpen=function()
+            if M.housePanel and M.housePanel.open then return false end
             local clip=combatMoves_.clip
             return M.ride.mode=='free' and not combatMoves_.dead
                 and not voidInputBlocked and not M.debugOn and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked()
@@ -746,6 +748,17 @@ local function TravelToRegion(region)
     local destination,yaw
     if region=='home' then
         if not Terrain.home then
+            HomeIsland.GetHouseOccupants=function()
+                local root=M.rig.root.worldPosition
+                local bounds={{base=root,radius=.65*M.rig.size,height=.2}}
+                local rotation=Quaternion(M.ctrl.loco.yaw,Vector3.UP)
+                for _,ball in ipairs(M.dragonWorld.hull) do
+                    local center=root+rotation*ball.offset
+                    bounds[#bounds+1]={base=Vector3(center.x,center.y-ball.radius,center.z),
+                        radius=ball.radius,height=2*ball.radius}
+                end
+                return nomi_:Position(),bounds
+            end
             homeJob=homeJob or HomeIsland.BeginBuild(world_,scene_,M.dayNight)
             return false,'正在展开家园小岛…'
         end
@@ -758,7 +771,10 @@ local function TravelToRegion(region)
     end
     if not nomi_:TeleportToSafeGround(destination,yaw) then return false,'此落点暂不可用' end
     HomeIsland.ClearRipples()
-    if region~='home' then HomeIsland.ReleaseReflection() end
+    if region~='home' then
+        HomeIsland.SetWindowLightingActive(false)
+        HomeIsland.ReleaseReflection()
+    end
     nomi_.fallbackPos=region=='home' and destination or M.SPAWN
     M.ride.pos=destination
     M.ride.vy,M.ride.speed=0,0
@@ -789,6 +805,7 @@ local function AdvanceHomeTravel()
     end
 end
 local function OpenWorldMap()
+    if M.housePanel and M.housePanel.open then return end
     if M.debugOn or voidInputBlocked or combatMoves_.dead or SettingsMenu.IsBlocked() or ForgePanel.IsOpen()
         or WeaponWheel.IsBlocked() or animPreview_.index>0 then return end
     if weaponGesture_ then weaponGesture_:ForceClose('map') end
@@ -807,6 +824,7 @@ local function AttachTouchControls()
         touchState.mounted,touchState.mounting=ride.mode~="free",ride.mode=="mounting"
         touchState.airborne,touchState.gliding=ctrl.loco.airborne,ctrl.state=="GLIDE"
         touchState.blocked=M.debugOn or voidInputBlocked or ForgePanel.IsOpen() or WeaponWheel.IsBlocked() or WorldMap.IsOpen()
+            or (M.housePanel and M.housePanel.open)
         touchState.breathActive=M.stream and M.stream.active
         touchState.skillLeft=math.max(0,(M.weaponSkillReadyAt or 0)-time_)
         touchState.noSpells=not CombatState.CanUseTime()
@@ -832,6 +850,19 @@ local function AttachTouchControls()
         if M.stream then M.stream:Stop(true) end
     end)
     TouchControls.onMap=OpenWorldMap
+    M.housePanel=HUD.AttachHouse({get=HomeIsland.GetHouseStage,set=HomeIsland.SetHouseStage,
+        available=function()
+            return M.region=='home' and M.ride.mode=='free' and not combatMoves_.dead and not voidInputBlocked
+                and not M.debugOn and not WorldMap.IsOpen() and not SettingsMenu.IsBlocked()
+                and not ForgePanel.IsOpen() and not WeaponWheel.IsBlocked() and animPreview_.index==0
+        end,
+        changed=function(open)
+            TouchControls.Cancel();drag.buttons=0;combatInputBlocked=true
+            if open and weaponGesture_ then weaponGesture_:ForceClose('house') end
+            pointer:SetBlocked(open or voidInputBlocked or M.debugOn or SettingsMenu.IsBlocked() or ForgePanel.IsOpen() or WorldMap.IsOpen() or WeaponWheel.IsBlocked())
+            if not open then pointer:Release('house-close');pointer:Resume() end
+        end})
+    TouchControls.housePanel=M.housePanel
     VoidRewind.Attach(HUD.root)
     DebugLog.RegisterProbe('Ruins',function()
         local pieces=0
@@ -1033,6 +1064,11 @@ function M.ApplyCamera() end
 ---@param eventType string
 ---@param eventData MouseButtonDownEventData
 function Ruins_HandleMouseDown(eventType, eventData)
+    if M.housePanel and (M.housePanel.open or not mouseLocked) and not TouchInput.IsEnabled() then
+        local k=PixelDraw.PixelToHUD()
+        if eventData:GetInt('Button')==MOUSEB_LEFT and M.housePanel:Down('mouse',eventData:GetInt('X')*k,eventData:GetInt('Y')*k) then return end
+        if M.housePanel.open then return end
+    end
     if WorldMap.IsOpen() then
         local button=eventData:GetInt('Button')
         if not TouchInput.IsEnabled() and (button==MOUSEB_LEFT or button==MOUSEB_RIGHT) then
@@ -1058,6 +1094,9 @@ end
 ---@param eventType string
 ---@param eventData MouseMoveEventData
 function Ruins_HandleMouseMove(eventType, eventData)
+    if M.housePanel and (M.housePanel.open or M.housePanel.contact) then
+        local k=PixelDraw.PixelToHUD();M.housePanel:Move('mouse',eventData:GetInt('X')*k,eventData:GetInt('Y')*k);return
+    end
     if WorldMap.IsOpen() then
         if not TouchInput.IsEnabled() then
             local k=PixelDraw.PixelToHUD()
@@ -1085,6 +1124,11 @@ end
 ---@param eventType string
 ---@param eventData MouseButtonUpEventData
 function Ruins_HandleMouseUp(eventType, eventData)
+    if M.housePanel and not TouchInput.IsEnabled() then
+        local k=PixelDraw.PixelToHUD()
+        if eventData:GetInt('Button')==MOUSEB_LEFT and M.housePanel:Up('mouse',eventData:GetInt('X')*k,eventData:GetInt('Y')*k) then return end
+        if M.housePanel.open then return end
+    end
     if WorldMap.IsOpen() then
         if not TouchInput.IsEnabled() then
             local k=PixelDraw.PixelToHUD()
@@ -1117,6 +1161,7 @@ function Ruins_HandleKeyDown(eventType, eventData)
         Safe('Debug.F11Stop',combatTest_.Stop,combatTest_,'key') -- deliberately continue dispatching the original key
     end
     local mapKey=eventData:GetInt('Key')
+    if M.housePanel and (M.housePanel.open or mapKey==KEY_J) and M.housePanel:Key(mapKey,eventData:GetBool('Repeat')) then return end
     if WorldMap.IsOpen() then
         if not eventData:GetBool('Repeat') then WorldMap.Key(mapKey) end
         return
@@ -1147,6 +1192,7 @@ end
 ---@param eventData InputFocusEventData
 function Ruins_HandleInputFocus(eventType, eventData)
     if not eventData:GetBool("Focus") or eventData:GetBool("Minimized") then
+        if M.housePanel then M.housePanel:Close() end
         if WorldMap.IsOpen() then WorldMap.CancelPointers() end
         if combatTest_ and combatTest_.active then Safe('Debug.F11Stop',combatTest_.Stop,combatTest_,'focus') end
         combatInputBlocked=true
@@ -1722,6 +1768,10 @@ function Ruins_HandleUpdate(eventType, eventData)
     local dt = eventData["TimeStep"]:GetFloat()
     time_ = time_ + dt
     Safe('Touch.Update',TouchControls.Update,dt)
+    if M.housePanel and (M.housePanel.open or M.housePanel.contact) then
+        if not M.housePanel.port.available() then M.housePanel:Close()
+        else return end
+    end
     if WorldMap.IsOpen() then
         if voidInputBlocked or combatMoves_.dead then WorldMap.Close()
         elseif WorldMap.StepClosing() then return
@@ -1872,6 +1922,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     Terrain.SetInteractor(1, dragonPos, dragonRadius)
     if Terrain.home then
         local walking=M.region=='home' and M.ride.mode=='free' and not voidInputBlocked
+        HomeIsland.SetWindowLightingActive(M.region=='home',CombatSettings.GetProfile().quality)
         HomeIsland.Update(dt,walking and playerFeet or nil,dn)
     end
     Build.UpdateFloaters(time_, 1.0)
@@ -2107,6 +2158,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
 end
 
 function M.Stop()
+    if M.housePanel then M.housePanel:Close();M.housePanel=nil;TouchControls.housePanel=nil end
     if weaponGesture_ then weaponGesture_:ForceClose('stop'); weaponGesture_=nil end
     if combatTest_ and combatTest_.active then combatTest_:Stop('stop') end
     combatTest_=nil
@@ -2118,7 +2170,7 @@ function M.Stop()
     DebugLog.RegisterProbe('Ruins',nil)
     WorldMap.Close(); TouchControls.onMap=nil
     if homeJob then homeJob:Cancel();homeJob=nil end
-    HomeIsland.Stop(); Terrain.home=nil; lastRuinsLanding=nil
+    HomeIsland.Stop(); HomeIsland.GetHouseOccupants=nil; Terrain.home=nil; lastRuinsLanding=nil
     SettingsMenu.Stop()
     PerformanceHUD.Stop()
     CombatState.Stop()

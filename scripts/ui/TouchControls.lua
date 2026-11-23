@@ -74,6 +74,7 @@ local function TopButtons()
 end
 local function Clamp(v,a,b) return math.max(a,math.min(b,v)) end
 local function Cancel()
+    if M.housePanel then M.housePanel.contact=nil end
     local map=package.loaded['ui.WorldMap']
     if map and map.IsOpen() then map.CancelPointers() end
     owners,buttons={},{}
@@ -165,6 +166,7 @@ function M.BeginTouch(id,x,y)
     end
     if SettingsMenu.IsOpen() then SettingsMenu.Click(x,y); return end
     if SettingsMenu.IsBlocked() then return end
+    if M.housePanel and M.housePanel:Down(id,x,y) then owners[id]={kind='house',x=x,y=y};return end
     if not Input.IsEnabled() or state.blocked or owners[id] then return end
     idle=0
     -- Help is modal; all fingers are consumed until dismissed.
@@ -197,6 +199,11 @@ end
 function M.MoveTouch(id,x,y)
     local o=owners[id]
     if not o then return end
+    if o.kind=='house' then
+        o.x,o.y=x,y
+        if M.housePanel then M.housePanel:Move(id,x,y) end
+        return
+    end
     idle=0
     if o.kind=='map' then
         local map=package.loaded['ui.WorldMap']
@@ -221,7 +228,9 @@ end
 function M.EndTouch(id,x,y)
     local o=owners[id]
     if not o then return end
-    if o.kind=='map' then
+    if o.kind=='house' then
+        if M.housePanel then M.housePanel:Up(id,x or o.x,y or o.y) end
+    elseif o.kind=='map' then
         local map=package.loaded['ui.WorldMap']
         if map and map.IsOpen() then map.Up(id,x,y) end
     elseif o.kind=='joy' then

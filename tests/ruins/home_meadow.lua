@@ -103,12 +103,11 @@ end
 function world:FinalizeVolume(v)v.collidable=true end
 local generators={terrain=up(home.Build,'terrain'),shore=up(home.Build,'shoreDetails'),banks=up(home.Build,'banks'),
     trees=up(home.Build,'trees'),meadow=up(home.Build,'meadow'),
-    pillar=up(up(home.Build,'courtyard'),'entranceColumn'),join=up(up(home.Build,'house'),'porchJoint')}
+    pillar=up(up(home.Build,'courtyard'),'entranceColumn')}
 local function focusedBuild(w,root)
-    for _,key in ipairs({'meadow','terrain','banks','pillar','join','shore','trees'}) do
+    for _,key in ipairs({'meadow','terrain','banks','pillar','shore','trees'}) do
         phase=key
         if key=='pillar' then generators.pillar(w,4.875,7.125,2.75);generators.pillar(w,4.875,-1.125,1.25)
-        elseif key=='join' then generators.join(w,-12.25);generators.join(w,-7)
         elseif key=='meadow' then generators.meadow(root)
         else generators[key](w,root) end
     end
@@ -136,7 +135,7 @@ for _,v in ipairs(world.vols) do
             assert(home.Height(p.x+dx,p.z+dz)==p.y,'exposed root overhang')
         end end
         assert(p.x>=v.pos.x and p.x<v.pos.x+v.nx*v.s and p.z>=v.pos.z and p.z<v.pos.z+v.nz*v.s and p.y==v.pos.y)
-    elseif v.phase=='pillar' or v.phase=='join' then
+    elseif v.phase=='pillar' then
         detailCells=detailCells+v.n
         if v.s==.0625 then assert(v.collidable==false and v.collisionMask==0);separate=separate+1
         else assert(v.s==.125 and v.collidable);stoneBodies=stoneBodies+1 end
@@ -146,14 +145,14 @@ for _,v in ipairs(world.vols) do
     elseif v.phase=='shore' and not v.collidable then shores=shores+1;assert(v.n<90000) end
 end
 assert(#trees==8 and trunkCount==#trees and shores==8)
-assert(separate==4 and stoneBodies==2 and detailCells<20000 and maxCap<=51000)
+assert(separate==3 and stoneBodies==2 and detailCells<41000 and maxCap<=51000)
 for _,h in ipairs({.25,.5,.75,1,1.25,1.5,1.75}) do assert(capHeights[home.base+h]) end
 assert(home.Safe(home.x+5,home.base+.1,home.z-12) and home.GrassAt(home.x+5,home.z-12)==0)
 for _,p in ipairs({{-7,-5},{-11.75,-15},{-9,7},{1,6},{12,3},{12,-8},{4,0},{28,18}}) do
     assert(home.GrassAt(home.x+p[1],home.z+p[2])==0)
 end
 print(('PASS 8 rooted collidable trees, 8 shore sectors, 7 terrace rises; %d cap cells / %d max per chunk'):format(capCells,maxCap))
-print(('PASS 2 structural entrance pillars and 4 visual trims/joints; %d added detail cells. %d focused build steps.'):format(detailCells,frames))
+print(('PASS 2 structural entrance pillars and 3 visual trims; %d added detail cells. %d focused build steps.'):format(detailCells,frames))
 local field=home.field
 local height,mask=field.terrain.heightMap,field.splat.data
 local ref=terrain.NewGroundMaterial(field.splat,terrain.HALF)

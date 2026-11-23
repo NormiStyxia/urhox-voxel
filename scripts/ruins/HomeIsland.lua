@@ -223,10 +223,139 @@ function H.UpdateReflection(dt,scene,source,tier,skybox)
     r.queued,r.eye,r.forward,r.fov,r.zoom=true,pos,direction,source.fov,source.zoom
 end
 
+local houseStage=0
+local houseParts
+local houseReady=false
+local function inStage(p,n) return n>=p.first and n<=p.last end
+local function enableHousePart(p,on)
+    if p.on==on then return end
+    if p.volume then
+        -- Jolt uses the live filters; IsCollidable alone only governs adoption on load.
+        p.volume.collisionMask=on and p.mask or 0
+        p.volume.collisionLayer=on and p.layer or 0
+    end
+    p.node.enabled=on
+    p.on=on
+end
+local function occupiesPart(p,pos,r,height)
+    if not pos or not p.brush or p.mask==0 then return false end
+    local b=p.brush
+    local x,y,z=pos.x-H.x,pos.y-H.base,pos.z-H.z
+    r=r+b.s*.5
+    local i0,i1=b:Range(x-r,x+r,1)
+    local j0,j1=b:Range(y-.20,y+height+.10,2)
+    local k0,k1=b:Range(z-r,z+r,3)
+    for i=i0,i1 do for k=k0,k1 do for j=j0,j1 do
+        if b.grid:IsSolid(i,j,k) then return true end
+    end end end
+    return false
+end
+function H.GetHouseStage() return houseStage end
+function H.SetHouseStage(stage)
+    if type(stage)~='number' or stage%1~=0 or stage<0 or stage>3 then return false,'无效房屋阶段' end
+    if stage==houseStage then return true end
+    if houseParts and not houseReady then return false,'请等待家园展开' end
+    if houseReady then
+        local walker,dragonBounds
+        if H.GetHouseOccupants then walker,dragonBounds=H.GetHouseOccupants() end
+        for _,p in ipairs(houseParts) do
+            if p.on~=inStage(p,stage) then
+                local blocked=occupiesPart(p,walker,.5,1.85)
+                for _,bounds in ipairs(dragonBounds or {}) do
+                    if occupiesPart(p,bounds.base,bounds.radius,bounds.height) then blocked=true;break end
+                end
+                if blocked then return false,'请先离开即将变化的墙、楼板或屋顶' end
+            end
+        end
+    end
+    houseStage=stage
+    for _,p in ipairs(houseParts or {}) do enableHousePart(p,inStage(p,stage)) end
+    H.RefreshWindowLights(stage)
+    return true
+end
+
+-- A staged part contributes its sockets on creation. Two short, down-facing
+-- cones cover the nearest sills; the recessed panes carry the light at pond distance.
+local windows={sockets={},lamps={},materials={},stage=0,active=false,budget=2,dimmer=0,spill=0}
+
+function H.BindWindowMaterial(material)
+    H.housing=material
+    if not windows.materials[material] then
+        windows.materials[material]=true
+        material:SetShaderParameter('window_light',Variant(windows.active and windows.stage>0 and windows.dimmer or 0.0))
+    end
+end
+
+local function chooseWindowLamp(previous)
+    local best
+    for _,s in ipairs(windows.sockets) do
+        if s~=previous and windows.stage>=s.first and windows.stage<=s.last then
+            -- Give the first lamp to the inhabited ground floor and the other
+            -- to the highest visible storey. Priority breaks ties on that floor.
+            if not best or (s.first==best.first and s.priority<best.priority)
+                or (previous and s.first>best.first) or (not previous and s.first<best.first) then best=s end
+        end
+    end
+    return best
+end
+
+function H.RefreshWindowLights(stage)
+    windows.stage=stage
+    for m in pairs(windows.materials) do
+        m:SetShaderParameter('window_light',Variant(windows.active and stage>0 and windows.dimmer or 0.0))
+    end
+    local previous
+    for i=1,2 do
+        local socket
+        if windows.active and stage>0 and i<=windows.budget and windows.spill>0 then socket=chooseWindowLamp(previous) end
+        local lamp=windows.lamps[i]
+        if socket then
+            if not lamp then
+                local node=socket.root:CreateChild('HomeWindowLight'..i)
+                local light=node:CreateComponent('Light')
+                light.lightType=LIGHT_SPOT; light.fov=54; light.range=1.05
+                light.drawDistance=28; light.fadeDistance=19; light.specularIntensity=.08
+                light.castShadows=false; light.affectVolumetricFog=false; light.volumetricFogIntensity=0
+                lamp={node=node,light=light}; windows.lamps[i]=lamp
+            end
+            if lamp.socket~=socket then
+                local nx,nz=socket.nx,socket.nz
+                lamp.node.worldPosition=Vector3(H.x+socket.x-.125*nx,H.base+socket.y+.13,H.z+socket.z-.125*nz)
+                lamp.node:SetWorldDirection(Vector3(.28*nx,-1,.28*nz):Normalized())
+                lamp.light.color=socket.first==1 and Color(1,.69,.38) or Color(1,.60,.32)
+                lamp.socket=socket
+            end
+            lamp.light.brightness=windows.spill
+            lamp.node.enabled=true
+            previous=socket
+        elseif lamp then lamp.node.enabled=false end
+    end
+end
+
+function H.RegisterWindowLamps(root,sockets,first,last)
+    for _,s in ipairs(sockets) do
+        windows.sockets[#windows.sockets+1]={root=root,first=first,last=last,x=s.x,y=s.y,z=s.z,
+            nx=s.nx or 0,nz=s.nz or ((s.nx or 0)==0 and -1 or 0),priority=s.priority or 1}
+    end
+    H.RefreshWindowLights(windows.stage)
+end
+
+function H.SetWindowLightingActive(on,quality)
+    local budget=quality and (quality=='low' and 1 or 2) or windows.budget
+    if on==windows.active and budget==windows.budget then return end
+    windows.active,windows.budget=on,budget
+    H.RefreshWindowLights(windows.stage)
+end
+
 function H.Stop()
+    houseParts,houseReady=nil,false
     H.ReleaseReflection()
     H.poolBounds=nil
     H.ClearRipples()
+    H.SetWindowLightingActive(false)
+    for _,lamp in ipairs(windows.lamps) do lamp.node:Remove() end
+    windows.sockets,windows.lamps,windows.materials={},{},{}
+    windows.stage,windows.active,windows.budget,windows.dimmer,windows.spill=0,false,2,0,0
     if H.meadowMaterial then H.meadowMaterial:SetSurfaceTexture('splat_map',nil) end
     H.spring,H.hearth,H.field,H.housing,H.meadowMaterial=nil,nil,nil,nil,nil
     H.lastDay,H.lastDusk,H.lastNight,H.zoneFallback=nil,nil,nil,nil
@@ -297,7 +426,12 @@ function H.Update(dt,feet,dn)
             linearChannel(color.g)*intensity,linearChannel(color.b)*intensity,fallback)))
     end
     if H.meadowMaterial then H.meadowMaterial:SetShaderParameter('meadow_sun',Variant(day*(1-night))) end
-    if H.housing then H.housing:SetShaderParameter('window_light',Variant(.035+.42*(1-day)+.28*night)) end
+    local dimmer=.035+.39*(1-day)+.10*dusk*(1-night)+.32*night
+    local spill=1.15*math.max(0,1-day-.16)*(.65+.35*night)
+    if dimmer~=windows.dimmer or spill~=windows.spill then
+        windows.dimmer,windows.spill=dimmer,spill
+        H.RefreshWindowLights(windows.stage)
+    end
     if H.hearth then H.hearth.brightness=.78+.34*(1-day) end
 end
 
@@ -353,6 +487,7 @@ local function trimCovered(b,owner)
     local ix0,ix1=owner:Range(b.lmin[1],b.lmin[1]+b.nx*b.s,1)
     local iy0,iy1=owner:Range(b.lmin[2],b.lmin[2]+b.ny*b.s,2)
     local iz0,iz1=owner:Range(b.lmin[3],b.lmin[3]+b.nz*b.s,3)
+    if ix0>ix1 or iy0>iy1 or iz0>iz1 then return end
     for i=ix0,ix1 do
         if activeJob and (i-ix0)%16==0 then coroutine.yield() end
         for k=iz0,iz1 do
@@ -411,14 +546,64 @@ local function terrain(world)
         cap:Finish({masonry='meadow'})
     end end
 end
-local function column(b,x,z,y,h,dressed)
-    b:Box(x-.75,y,z-.75,x+.75,y+.5,z+.75,dressed and P.HOME_PLINTH or P.STONE_C)
-    b:Box(x-.5,y+.5,z-.5,x+.5,y+h,z+.5,dressed and P.HOME_ASHLAR or P.MARBLE_B)
-    b:Box(x-.125,y+.9,z-.625,x+.125,y+h-.35,z-.5,dressed and P.HOME_PLINTH or P.MARBLE_BLUE)
-    b:Box(x-.625,y+h-.5,z-.625,x+.625,y+h-.25,z+.625,dressed and P.HOME_PLINTH or P.GOLD_DARK)
-    b:Box(x-.75,y+h-.25,z-.75,x+.75,y+h+.25,z+.75,dressed and P.HOME_COPING or P.MARBLE_A)
+-- The coarse solids still own collision. Only the exposed outside courses use the fine grid.
+local function columnTrim(world,owner,x,z,y,h,building)
+    local s=owner.s
+    -- A circular placement can land between grid lines. Use the actual cap faces on each axis.
+    local function capEdges(center,axis)
+        local origin=owner.lmin[axis]
+        local first=math.ceil((center-.75-origin)/s-.5-1e-6)
+        local last=floor((center+.75-origin)/s-.5+1e-6)
+        return origin+first*s,origin+(last+1)*s
+    end
+    local x0,x1=capEdges(x,1)
+    local z0,z1=capEdges(z,3)
+    local cap=y+h+.25
+    local foot=math.max(y,top(x,z),pad(x,z)<=8.55 and 1.75 or y)
+    local function detailBrush(bottom,ceiling)
+        return brush(world,{x0-.125,bottom,z0-.125},{x1+.125,ceiling,z1+.125},.0625)
+    end
+    local function courses(trim,level,bands)
+        for _,band in ipairs(bands) do
+            local offset,mat=band[3],band[4]
+            trim:Shape(x0-offset,level+band[1],z0-offset,x1+offset,level+band[2],z1+offset,function(px,py,pz)
+                if owner:IsSolidLocal(px,py,pz) or py<top(px,pz) then return end
+                local dx,dz=floor(px*4)*.25+.125,floor(pz*4)*.25+.125
+                if py>=1.5 and py<1.75 and pad(dx,dz)<=8.55 then return end
+                -- Keep the sheared face of the south relic and the openings of both old arches.
+                if building and (pz<owner.lmin[3] or building:IsSolidLocal(px,py,pz)) then return end
+                return mat
+            end)
+        end
+    end
+    -- Short exposed shafts use a shallower neck and one compact detail volume.
+    -- On high columns the two thin brushes avoid allocating the empty span of the shaft.
+    local exposed=cap-foot
+    local short=exposed<=1.5
+    local capital=detailBrush(short and foot or cap-.5625,cap+.0625)
+    if exposed>=.875 then
+        local base=short and capital or detailBrush(foot,foot+.4375)
+        courses(base,foot,{{0,.125,.125,P.HOME_PLINTH},{.125,.1875,.0625,P.HOME_COPING},
+            {.1875,.3125,-.0625,P.HOME_PLINTH},{.3125,.375,0,P.HOME_COPING},
+            {.375,.4375,-.125,P.HOME_PLINTH}})
+        if not short then base:Finish({visual=true,masonry='homeMasonry'}) end
+    end
+    courses(capital,cap,{{short and -.5 or -.5625,-.4375,-.0625,P.HOME_PLINTH},
+        {-.4375,-.375,.0625,P.HOME_COPING},{-.1875,-.0625,.0625,P.HOME_COPING},
+        {0,.0625,-.0625,P.HOME_COPING}})
+    capital:Finish({visual=true,masonry='homeMasonry'})
 end
--- The two surviving columns at the west entrance can be inspected at walking distance.
+local function column(b,columns,x,z,y,h)
+    b:Box(x-.75,y,z-.75,x+.75,y+.5,z+.75,P.HOME_PLINTH)
+    b:Box(x-.5,y+.5,z-.5,x+.5,y+h,z+.5,P.HOME_ASHLAR)
+    b:Box(x-.125,y+.9,z-.625,x+.125,y+h-.35,z-.5,P.HOME_PLINTH)
+    b:Box(x-.625,y+h-.5,z-.625,x+.625,y+h-.25,z+.625,P.HOME_PLINTH)
+    b:Box(x-.75,y+h-.25,z-.75,x+.75,y+h+.25,z+.75,P.HOME_COPING)
+    columns[#columns+1]={x,z,y,h}
+end
+local function trimColumns(world,b,columns,building)
+    for _,p in ipairs(columns) do columnTrim(world,b,p[1],p[2],p[3],p[4],building) end
+end
 local function entranceColumn(world,x,z,h)
     local y=1.5
     local b=brush(world,{x-.75,y,z-.75},{x+.75,y+h+.25,z+.75},.125)
@@ -430,32 +615,25 @@ local function entranceColumn(world,x,z,h)
     b:Box(x-.625,y+h-.25,z-.625,x+.625,y+h,z+.625,P.HOME_PLINTH)
     b:Box(x-.75,y+h,z-.75,x+.75,y+h+.25,z+.75,P.HOME_COPING)
     b:Finish({masonry='homeMasonry'})
-    -- Narrow mouldings around the plinth leave the shadow recess between the two courses open.
-    local trim=brush(world,{x-.8125,y+.3125,z-.8125},{x+.8125,y+.6875,z+.8125},.0625)
-    for _,band in ipairs({{.3125,.375,.8125,.75,P.HOME_COPING},{.50,.5625,.6875,.625,P.HOME_ASHLAR},
-        {.625,.6875,.5625,.50,P.HOME_COPING}}) do
-        local lo,hi,outer,inner,mat=table.unpack(band)
-        trim:Shape(x-outer,y+lo,z-outer,x+outer,y+hi,z+outer,function(px,_,pz)
-            if math.max(abs(px-x),abs(pz-z))>=inner then return mat end
-        end)
-    end
-    trim:Finish({visual=true,masonry='homeMasonry'})
+    columnTrim(world,b,x,z,y,h)
 end
 local function courtyard(world)
+    local columns={}
     local b=brush(world,{2,1, -7},{22,6,13},.25)
     b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z)
         if pad(x,z)<=8.55 then return P.HOME_PAVING end
     end)
     for i=0,11 do
         local a=i*math.pi/6
-        if i~=9 and i~=6 and i~=5 and i~=7 then column(b,12+8.3*cos(a),3+8.3*sin(a),1.5,i%4==1 and 2.75 or 1.25,true) end
+        if i~=9 and i~=6 and i~=5 and i~=7 then column(b,columns,12+8.3*cos(a),3+8.3*sin(a),1.5,i%4==1 and 2.75 or 1.25) end
     end
     b:Finish({masonry='homeMasonry'})
+    trimColumns(world,b,columns)
     entranceColumn(world,4.875,7.125,2.75)
     entranceColumn(world,4.875,-1.125,1.25)
 end
-local function arch(b,x,z,w,spring,rise)
-    for _,side in ipairs({-1,1}) do column(b,x+side*w,z,0,spring) end
+local function arch(b,columns,x,z,w,spring,rise)
+    for _,side in ipairs({-1,1}) do column(b,columns,x+side*w,z,0,spring) end
     b:Shape(x-w-1,spring-.5,z-.625,x+w+1,spring+rise+1.25,z+.625,function(px,y,pz)
         local dx,dy=(px-x)/w,(y-spring)/rise
         local r=sqrt(dx*dx+dy*dy)
@@ -465,86 +643,143 @@ local function arch(b,x,z,w,spring,rise)
         end
     end)
 end
-local function roof(b,cx,cz,w,d,eave,rise)
-    -- Shingle courses overlap towards the eaves. Gable ends sit behind the fascia.
-    local rows=floor(d/.375)
-    for n=0,rows-1 do
-        local z=n*.375; local y=eave+floor((1-z/d)*rise*8)/8
-        for _,side in ipairs({-1,1}) do
-            local line=cz+side*z
-            b:Box(cx-w,y-.25,line-.25,cx+w,y,line+.25,cedar)
-            for j=0,math.ceil(2*w/1.125) do
-                local start=cx-w+j*1.125-(n%2)*.5
-                local lo,hi=math.max(cx-w,start),math.min(cx+w,start+1)
-                if hi>lo then b:Box(lo,y,line-.25,hi,y+.125,line+.25,(j+n)%5==1 and amber or oak) end
-            end
+-- Reuse the upper storeys' staggered clay tiles, raised rolls and capped ridge.
+local function tiledRoof(b,cx,cz,halfRidge,halfRun,eave,rise,frontGable)
+    local along=frontGable and cz or cx
+    require('ruins.HomeHouseUpper').TileRoof(b,frontGable,frontGable and cx or cz,halfRun,
+        along-halfRidge,along+halfRidge,eave-.25,rise)
+end
+local function houseBase(ctx)
+    local b=ctx.brush({-16.5,0,3.5},{-.75,.75,13.25},.125)
+    b:Box(-16.25,0,6.75,-.75,.625,13.25,P.HOME_PLINTH)
+    b:Box(-16.125,.625,6.875,-.875,.75,13.125,P.HOME_PAVING)
+    b:Box(-7,0,4,-1.5,.625,7,P.HOME_PLINTH)
+    b:Box(-7,.625,4,-1.5,.75,7,P.HOME_PAVING)
+    b:Box(-5.625,0,3.5,-2.875,.25,4,P.HOME_COPING)
+    b:Box(-5.625,.25,3.75,-2.875,.5,4,P.HOME_COPING)
+    ctx.finish('foundation',b,0,3,{masonry='homeMasonry'})
+end
+local function fallenHouse(ctx)
+    local b=ctx.brush({-16,.75,6.875},{-1,3.25,13},.25)
+    -- Rear and side walls survive in broad courses. The collapsed frontage has gaps down to the slab.
+    for _,p in ipairs({{-16,12.5,-12,13,2.00},{-12,12.5,-9.5,13,1.75},{-9.5,12.5,-8,13,1.50},
+        {-8,12.5,-2.5,13,1.75},{-2.5,12.5,-1,13,2.00},{-16,8.5,-15.5,10,1.25},{-16,10,-15.5,12.5,1.75},
+        {-1.5,10,-1,12.5,1.50},{-1.5,9,-1,10,1.00},{-16,7,-13,7.5,1.25},{-13,7,-12,7.5,1.00},
+        {-10.5,7,-8.75,7.5,1.00},{-8.75,7,-7.75,7.5,1.25},{-2.5,7,-1,7.5,1.00}}) do
+        b:Box(p[1],.75,p[2],p[3],p[5],p[4],P.HOME_ASHLAR)
+    end
+    for i,p in ipairs({{-15.75,7.25,1.75},{-8.5,7.25,1.50},{-1.5,12.5,2.25},{-12,12.5,2.25}}) do
+        b:Box(p[1]-.25,.75,p[2]-.25,p[1]+.5,p[3],p[2]+.5,P.HOME_ASHLAR)
+        b:Box(p[1]-.25,p[3],p[2]-.25,p[1]+.5,p[3]+.25,p[2]+.5,i==4 and P.STONE_MOSS or P.HOME_COPING)
+    end
+    for i,p in ipairs({{-14.5,7.75},{-13.75,8.25},{-11.5,7.75},{-10.75,8},{-8.75,11.5},
+        {-7.25,12},{-6.75,11.5},{-3.5,11.75},{-2.5,9.5},{-14.75,11.75}}) do
+        b:Box(p[1],.75,p[2],p[1]+(i%3+1)*.25,1,p[2]+.5,i%4==1 and P.STONE_MOSS or P.STONE_C)
+        if i%3==1 then b:Box(p[1],1,p[2],p[1]+.25,1.25,p[2]+.25,P.LEAF_C) end
+    end
+    ctx.finish('ruin',b,0,0,{masonry='homeWindows'})
+end
+local function archedWindow(b,along,face,normal,side)
+    -- u spans the opening; depth increases toward the inside of each wall.
+    local function box(u,y,d,uu,yy,dd,mat)
+        local a,c=face-normal*d,face-normal*dd
+        if side then b:Box(a,y,along+u,c,yy,along+uu,mat) else b:Box(along+u,y,a,along+uu,yy,c,mat) end
+    end
+    box(-.875,1.25,0,.875,3.375,.375,false)
+    -- Elliptical crown over straight jambs. Frame, inset glazing and crossbars have separate depths.
+    local function arch(px,py,pz)
+        local dx=abs((side and pz or px)-along)
+        local depth=(face-(side and px or pz))*normal
+        local dy=math.max(0,py-2.5)
+        local outer=dx*dx+dy*dy/.875^2
+        local inner=(dx/.75)^2+(dy/.625)^2
+        if inner<1 and py>1.5 then
+            if depth>=.125 and depth<.25 then return window end
+            if depth>=0 and (dx<.086 or abs(py-2.125)<.08 or abs(py-2.625)<.08) then return cedarPost end
+        elseif outer<=1 then
+            return P.HOME_COPING
+        elseif depth>=0 then return P.HOME_ASHLAR end
+    end
+    local outer,inner=face+normal*.125,face-normal*.375
+    if side then b:Shape(outer,1.25,along-1,inner,3.5,along+1,arch)
+    else b:Shape(along-1,1.25,outer,along+1,3.5,inner,arch) end
+    box(-1.125,1.25,-.25,1.125,1.5,.25,P.HOME_PLINTH)
+    box(-.75,1.375,0,.75,1.5,.125,P.HOME_WINDOW_REVEAL)
+end
+local function firstStorey(ctx)
+    local b=ctx.brush({-16.5,.75,3.375},{-.75,5.125,13.25},.125)
+    b:Box(-16,.75,7,-1,3.75,13,P.HOME_ASHLAR)
+    b:Carve(-15.625,.75,7.375,-1.375,3.75,12.625)
+    b:Carve(-5.375,.75,7,-3.125,3.25,7.375)
+    for _,x in ipairs({-13.875,-10.375,-7.75}) do archedWindow(b,x,7,-1,false) end
+    archedWindow(b,10.75,-16,-1,true)
+    archedWindow(b,11.375,-1,1,true)
+    for _,x in ipairs({-12.5,-7}) do archedWindow(b,x,13,1,false) end
+    for _,x in ipairs({-15.875,-12.125,-8.875,-6,-2.75,-1.375}) do
+        b:Box(x,.75,6.875,x+.25,3.75,7.125,cedarPost)
+        b:Box(x-.125,.75,6.75,x+.375,1.25,7.125,P.HOME_PLINTH)
+    end
+    b:Box(-16,3.5,6.875,-1,3.75,7.25,cedar)
+    for _,cx in ipairs({-13.875,-10.375}) do
+        b:Box(cx-.875,.75,6.25,cx+.875,1,6.875,P.HOME_PLINTH)
+        for i=-3,3 do
+            local xx=cx+i*.25
+            local h=i%3==1 and 1.375 or 1.25
+            b:Box(xx-.125,1,6.375,xx+.125,h,6.75,i%3==0 and P.LEAF_C or P.LEAF_A)
+            if i%2==0 then b:Box(xx-.125,h,6.5,xx,h+.125,6.625,i%4==0 and P.FLOWER_Y or P.FLOWER_W) end
         end
     end
-    b:Box(cx-w-.125,eave+rise,cz-.25,cx+w+.125,eave+rise+.25,cz+.25,cedar)
-    for _,sign in ipairs({-1,1}) do
-        local endX=cx+sign*(w-.55)
-        b:Shape(endX-.15,eave-.5,cz-d+.5,endX+.15,eave+rise,cz+d-.5,function(_,y,z)
-            if y<eave+rise*(1-abs(z-cz)/d) then return oak end
+    -- The right-hand open porch and its cross-gable stay when the next storey is added.
+    for _,x in ipairs({-6.375,-2.125}) do
+        b:Box(x-.375,.75,4.125,x+.375,1.125,4.875,P.HOME_PLINTH)
+        b:Box(x-.25,1.125,4.25,x+.25,1.375,4.75,P.HOME_COPING)
+        b:Box(x-.1875,1.375,4.25,x+.1875,3.125,4.625,cedarPost)
+        b:Box(x-.375,2.75,4.125,x+.375,3.125,4.75,oak)
+        b:Box(x-.1875,2.875,4.25,x+.1875,3.125,7,cedarBeamZ)
+        local toward=x< -4.25 and 1 or -1
+        for j=0,5 do
+            local xx=x+toward*j*.125
+            b:Box(xx-.125,2.25+j*.125,4.25,xx+.125,2.5+j*.125,4.5,cedar)
+        end
+    end
+    b:Box(-6.75,2.875,4.125,-1.75,3.125,4.5,cedar)
+    tiledRoof(b,-4.25,5.3125,1.8125,2.625,3.125,1.875,true)
+    for i=-18,18 do
+        local x=-4.25+i*.125
+        local y=4.75-abs(i)*.078125
+        b:Box(x-.0625,y-.25,3.625,x+.0625,y,3.875,cedar)
+    end
+    b:Box(-4.375,3.0,3.625,-4.125,4.75,3.875,cedarPost)
+    for _,x in ipairs({-5.625,-2.875}) do
+        b:Box(x-.125,2.25,6.625,x+.125,2.75,6.875,cedarPost)
+        b:Box(x-.1875,2.375,6.375,x+.1875,2.625,6.625,window)
+        b:Box(x-.25,2.625,6.375,x+.25,2.75,6.75,slate)
+    end
+    ctx.finish('ground-floor',b,1,3,{masonry='homeWindows',windowLamps={
+        {x=-10.375,y=2.0,z=7,nz=-1,priority=1},{x=-13.875,y=2.0,z=7,nz=-1,priority=2}}})
+end
+local function singleRoof(ctx)
+    local b=ctx.brush({-16.75,3.625,6.25},{-.25,6.5,13.75},.125)
+    tiledRoof(b,-8.5,10,8,3.625,3.875,2.5,false)
+    for _,x in ipairs({-16,-1.25}) do
+        b:Shape(x,3.75,7,x+.25,6.125,13,function(_,y,z)
+            if y<=6.125-abs(z-10)*.69 then return abs(z-10)<.13 and cedarPost or P.STONE_A end
         end)
     end
+    b:Box(-12.5,4.625,10.75,-11.75,6.375,11.5,P.HOME_ASHLAR)
+    b:Box(-12.625,6.375,10.625,-11.625,6.5,11.625,P.HOME_COPING)
+    b:Carve(-12.25,6.125,11,-12,6.5,11.25)
+    ctx.finish('one-storey-roof',b,1,1,{masonry='homeWindows'})
 end
-local function porchJoint(world,x)
-    -- The post cap starts at z=4.125. A shouldered beam enters it from the pond side.
-    local join=brush(world,{x-.4375,2.6875,3.75},{x+.4375,3.25,4.25},.0625)
-    join:Box(x-.3125,2.875,3.875,x+.3125,3.1875,4.125,oak)
-    join:Box(x-.1875,2.9375,3.75,x+.1875,3.125,3.875,oakPlankZ)
-    join:Box(x-.3125,2.9375,3.9375,x-.375,3.0625,4.0625,cedar)
-    join:Box(x+.3125,2.9375,3.9375,x+.375,3.0625,4.0625,cedar)
-    join:Box(x-.1875,2.75,4.0625,x+.1875,2.875,4.25,cedar)
-    local volume=join:Finish({visual=true})
-    if volume and volume.material then
-        -- Only these two near-view joints own a local timber frame. Never write
-        -- its centre onto the shared size:masonry material used by other volumes.
-        local material=volume.material:Clone()
-        material:SetShaderParameter('wood_center',Variant(Vector4(H.x+x,H.base+3.03125,H.z+4,1)))
-        volume.material=material
-    end
-end
-local function house(world)
+
+local function house(world,scene)
     local old=brush(world,{-22,0,6},{5,12,17},.25)
-    arch(old,-9.5,13.5,6,5,5.25); arch(old,-18,9,2.8,3.25,3.1)
-    for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{-1,15,4.5}}) do column(old,p[1],p[2],0,p[3]) end
+    local columns={}
+    arch(old,columns,-9.5,13.5,6,5,5.25); arch(old,columns,-18,9,2.8,3.25,3.1)
+    for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{-1,15,4.5}}) do column(old,columns,p[1],p[2],0,p[3]) end
     trimGround(old)
     old:Finish({masonry='ashlar'})
-    local b=brush(world,{-18,0,3},{4,9,14},.125)
-    b:Box(-16.25,0,4,-1,.375,12,P.STONE_C)
-    b:Box(-16,.375,7,-1.5,4.25,12,P.STONE_B)
-    b:Box(-15.75,.5,7.375,-1.875,4,11.625,false)
-    b:Carve(-10,.375,6.875,-8,3.25,7.5)
-    for i=0,39 do b:Box(-16+i*.375,.375,4,-15.6375+i*.375,.5,7.375,i%7==2 and cedarBeamZ or oakPlankZ) end
-    for _,x in ipairs({-15.5,-12.25,-7,-2}) do
-        b:Box(x-.1875,.5,4.25,x+.1875,3.25,4.625,cedarPost)
-        b:Box(x-.375,2.875,4.125,x+.375,3.375,4.75,oak)
-        b:Box(x-.125,2.5,4.75,x+.125,3,5,P.GOLD_DARK)
-        b:Box(x-.25,2.125,4.75,x+.25,2.5,5.25,window)
-    end
-    for _,x in ipairs({-14,-5.5,-3}) do
-        b:Box(x-1,1.25,6.75,x+1,3.25,7,cedar)
-        b:Box(x-.75,1.5,6.625,x+.75,3,6.75,window)
-        b:Box(x-.125,1.5,6.5,x+.125,3,6.625,cedarPost)
-        b:Box(x-.75,2.125,6.5,x+.75,2.25,6.625,oak)
-    end
-    roof(b,-14.5,9.5,2.875,3.375,4.15,2.5)
-    roof(b,-3.5,9.75,3.25,3.25,4.0,1.75)
-    roof(b,-9,5.75,7.75,2,3.2,1)
-    -- A cross-gable dormer faces the pond. Its lit window breaks the long roof slope.
-    b:Box(-9.75,4.5,6.65,-6.75,6.25,9.5,cedar)
-    b:Box(-9.25,4.875,6.5,-7.25,6,6.75,window)
-    b:Box(-8.375,4.875,6.375,-8.125,6,6.5,cedarPost)
-    for row=0,14 do
-        local x=row*.125;local y=7.5-row*.10
-        for _,sign in ipairs({-1,1}) do
-            local at=-8.25+x*sign
-            b:Box(at-.125,y-.25,6.125,at+.125,y,9.875,row%4==2 and cedarBeamZ or oakPlankZ)
-            b:Box(at-.125,y-.375,6,at+.125,y-.125,6.25,cedar)
-        end
-    end
-    b:Box(-13,4,10,-12,7.75,11,P.STONE_D); b:Box(-13.25,7.5,9.75,-11.75,8,11.25,P.MARBLE_B)
+    local b=brush(world,{-.625,0,4.5},{3,5.25,10.125},.125)
     -- Stone oven with a recessed vaulted mouth, coals and an iron anvil.
     b:Box(-.5,0,7.125,2.875,2.875,10,P.HOME_HEARTH)
     -- The voussoirs continue three voxels into the reveal; the original opening trims their inner edge.
@@ -558,46 +793,9 @@ local function house(world)
     b:Box(-.625,2.875,7,3,3.25,10.125,P.HOME_COPING); b:Box(.5,3.25,8.5,1.75,5.25,9.75,P.HOME_HEARTH)
     b:Box(.625,0,4.625,1.625,.75,5.625,P.WOOD); b:Box(.375,.75,4.5,1.875,1,5.75,slate)
     b:Box(.875,1,4.875,1.375,1.375,5.5,slate); b:Box(.125,1.375,4.75,2.125,1.625,5.625,slate)
-    porchJoint(world,-12.25)
-    porchJoint(world,-7)
-    -- Upper rooms step back from the forge and the low pond-facing porch.
-    local loft=brush(world,{-14,4,5.5},{-4,14,13.75},.125)
-    local sideBands={}
-    local function storey(x0,z0,x1,z1,y,h)
-        loft:Box(x0,y,z0,x1,y+h,z1,P.MARBLE_B)
-        loft:Carve(x0+.25,y+.25,z0+.25,x1-.25,y+h,z1-.25)
-        for _,level in ipairs({y,y+h-.25}) do
-            loft:Box(x0-.125,level,z0-.125,x1+.125,level+.25,z1+.125,cedar)
-            sideBands[#sideBands+1]={x0,z0,x1,z1,level}
-        end
-        for _,x in ipairs({x0,(x0+x1)/2,x1-.25}) do
-            loft:Box(x,y,z0-.125,x+.25,y+h,z0+.125,cedarPost)
-        end
-        for _,x in ipairs({x0+.875,x1-1.75}) do
-            loft:Box(x-.125,y+.625,z0-.25,x+.875,y+2,z0,oak)
-            loft:Box(x,y+.875,z0-.375,x+.75,y+1.875,z0-.25,window)
-            loft:Box(x+.25,y+.875,z0-.5,x+.375,y+1.875,z0-.375,cedarPost)
-        end
-    end
-    storey(-12.75,7,-5.25,12,4,3)
-    roof(loft,-9,9.5,4.375,3.375,7,2)
-    storey(-11.875,8.125,-6.375,11.875,8.125,2.625)
-    roof(loft,-9.125,10,3.375,2.75,10.75,2.625)
-    -- Roof infill and vertical posts overlap the floor edges. Repaint all four
-    -- horizontal beams last within the already solid grid: front/back/corners X,
-    -- left/right Z. No collision cells are added.
-    for _,band in ipairs(sideBands) do
-        local x0,z0,x1,z1,level=table.unpack(band)
-        loft:Box(x0-.125,level,z0-.125,x1+.125,level+.25,z0+.125,cedar)
-        loft:Box(x0-.125,level,z1-.125,x1+.125,level+.25,z1+.125,cedar)
-        loft:Box(x0-.125,level,z0+.125,x0+.125,level+.25,z1-.125,cedarBeamZ)
-        loft:Box(x1-.125,level,z0+.125,x1+.125,level+.25,z1-.125,cedarBeamZ)
-    end
-    trimCovered(loft,old)
+    trimGround(b)
     trimCovered(b,old)
-    trimCovered(b,loft)
     b:Finish({masonry='homeWindows'})
-    loft:Finish({masonry='homeWindows'})
     -- Project the cut stone face one fine cell, and the keystone two. Read the finished opening
     -- so the lip cannot bridge a stair in the vaulted reveal or change the solid furnace.
     local lip=brush(world,{-.5,1.375,7},{2.875,2.875,7.125},.0625)
@@ -609,6 +807,47 @@ local function house(world)
         end
     end)
     lip:Finish({visual=true,masonry='homeMasonry'})
+    houseParts={}
+    houseReady=false
+    local ctx={brush=function(lo,hi,size) return brush(world,lo,hi,size) end}
+    function ctx.finish(name,part,first,last,options)
+        trimGround(part)
+        trimCovered(part,old)
+        trimCovered(part,b)
+        -- Earlier permanent pieces own their cells, including the porch where the roof returns.
+        for _,p in ipairs(houseParts) do
+            if p.first<=first and last<=p.last then trimCovered(part,p.brush) end
+        end
+        local v=part:Finish(options)
+        if not v then return end
+        local node=v:GetNode()
+        node.name='HomeHouse-'..name
+        local entry={volume=v,node=node,brush=part,first=first,last=last,mask=v.collisionMask,layer=v.collisionLayer}
+        houseParts[#houseParts+1]=entry
+        enableHousePart(entry,inStage(entry,houseStage))
+        if options.windowLamps and scene then H.RegisterWindowLamps(scene,options.windowLamps,first,last) end
+        return v
+    end
+    houseBase(ctx)
+    fallenHouse(ctx)
+    firstStorey(ctx)
+    singleRoof(ctx)
+    local upper=require('ruins.HomeHouseUpper')
+    local groups={second={2,3},secondRoof={2,2},third={3,3}}
+    upper.Build(ctx.brush,function(name,part,options)
+        local ages=groups[name]
+        ctx.finish(name,part,ages[1],ages[2],options)
+    end)
+    local structure={IsSolidLocal=function(_,x,y,z)
+        if b:IsSolidLocal(x,y,z) then return true end
+        for _,p in ipairs(houseParts) do
+            if p.brush:IsSolidLocal(x,y,z) then return true end
+        end
+        return false
+    end}
+    trimColumns(world,old,columns,structure)
+    houseReady=true
+    H.RefreshWindowLights(houseStage)
 end
 local function banks(world)
     local b=brush(world,{-21,-1.5,-19},{5,5,4},.25)
@@ -627,7 +866,8 @@ local function banks(world)
     for _,z in ipairs({1.5,-2.5,-5.75}) do for _,x in ipairs({-5.25,-3}) do
         b:Box(x-.25,-1.5,z-.25,x+.25,.875,z+.25,cedarPost)
     end end
-    for _,p in ipairs({{-18,-7,2.75},{-14,-13,1.5},{2,-8,2.0},{4,2,3}}) do column(b,p[1],p[2],0,p[3],true) end
+    local columns={}
+    for _,p in ipairs({{-18,-7,2.75},{-14,-13,1.5},{2,-8,2.0},{4,2,3}}) do column(b,columns,p[1],p[2],0,p[3]) end
     -- Terraced front parapet follows the pond lip, with an open spillway and stair entrance.
     for i=0,31 do
         local a=math.pi+i*math.pi/31
@@ -644,16 +884,7 @@ local function banks(world)
     -- The western edge of the launch paving crosses one surviving pond pillar.
     b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z) if pad(x,z)<=8.55 then return false end end)
     b:Finish()
-    -- The east pond shaft emerges through paving at 1.75 m. Dress this exposed foot and
-    -- the underside of its cap with the same 1/16 m profiles as the entrance columns.
-    local mould=brush(world,{3.1875,1.75,1.1875},{4.8125,2.8125,2.8125},.0625)
-    for _,band in ipairs({{1.75,1.8125,.6875},{1.8125,1.875,.625},{2.4375,2.5,.625},{2.75,2.8125,.8125}}) do
-        local lo,hi,r=table.unpack(band)
-        mould:Shape(4-r,lo,2-r,4+r,hi,2+r,function(x,y,z)
-            if not b:IsSolidLocal(x,y,z) then return P.HOME_COPING end
-        end)
-    end
-    mould:Finish({visual=true,masonry='homeMasonry'})
+    trimColumns(world,b,columns)
 end
 local function trees(world,scene)
     local foliage=require('ruins.RuinsTrees')
@@ -843,16 +1074,16 @@ local function meadow(scene)
 end
 function H.Build(world,scene,dayNight)
     for _,entry in ipairs({{oak,.54,.35,.19},{amber,.68,.46,.25},{cedar,.37,.24,.16},
-        {slate,.24,.28,.30},{ember,.93,.32,.09},{flame,1,.73,.30},{window,.53,.36,.22},
+        {slate,.24,.28,.30},{ember,.93,.32,.09},{flame,1,.73,.30},{window,.34,.41,.43},
         {cedarPost,.37,.24,.16},{oakPlankZ,.54,.35,.19},{cedarBeamZ,.37,.24,.16}}) do
         local id,r,g,b=table.unpack(entry)
         world:SetPaletteEntry(id,Color(r,g,b),50)
         local glow=Color(0,0,0,0)
         if id==ember or id==flame then glow=Color(r,g,b,id==flame and 1.6 or 1) end
         if id==window then glow=Color(1,.65,.30,1) end
-        world:SetPaletteEntryPBR(id,id==window and .42 or .86,id==slate and .65 or 0,.4,glow)
+        world:SetPaletteEntryPBR(id,id==window and .27 or .86,id==slate and .65 or 0,.4,glow)
     end
-    meadow(scene); terrain(world); courtyard(world); house(world); banks(world); trees(world,scene); shoreDetails(world); water(scene)
+    meadow(scene); terrain(world); courtyard(world); house(world,scene); banks(world); trees(world,scene); shoreDetails(world); water(scene)
     local fire=scene:CreateChild('HomeForgeFire'); fire.position=Vector3(H.x+1.15,H.base+1.65,H.z+7.5)
     local light=fire:CreateComponent('Light'); light.lightType=LIGHT_POINT
     light.color=Color(1,.53,.21); light.range=5; light.brightness=.78
@@ -863,6 +1094,7 @@ end
 -- Build one bounded brush per update. Record only our volumes for interruption/retry.
 function H.BeginBuild(world,scene,dayNight)
     local job={ids={},root=scene:CreateChild('HomeIslandScenery')}
+    houseParts,houseReady={},false
     local thread=coroutine.create(function() H.Build(world,job.root,dayNight) end)
     function job:Cancel()
         if self.cancelled then return end
