@@ -25,7 +25,9 @@ local terrain=require('ruins.RuinsTerrain')
 local quality=require('ruins.SceneQuality')
 local profiles=require('ruins.GameSettings').PROFILES
 local function material()
-    return {SetSurfaceShader=function()return true end,SetShaderParameter=noop,Clone=function()return material()end}
+    return {SetSurfaceShader=function(m,path)m.shader=path;return true end,
+        SetShaderParameter=function(m,key,value)m[key]=value end,
+        SetSurfaceTexture=function(m,key,tex)m[key]=tex;return true end,Clone=function()return material()end}
 end
 Material={new=material};cache={GetResource=function()return nil end}
 local function image()
@@ -64,6 +66,11 @@ local function newNode(name)
     return node
 end
 local world={vols={},nextID=1}
+function world:GetPaletteTexture() return self end
+local brush=require('ruins.VoxelBrush')
+local src=assert(io.open('scripts/ruins/RuinsScene.lua'));local sceneCode=src:read('*a');src:close()
+local cacheEnv=setmetatable({M={},world_=world,Brush=brush,HomeIsland=home,Terrain=terrain},{__index=_G})
+assert(load(assert(sceneCode:match('(local vmats = {}.-)    %-%- 法阵灯')),'scene materials','t',cacheEnv))()
 function world:GetVolumeCount()return #self.vols end
 function world:GetVolume(i)return self.vols[i+1] end
 function world:RemoveVolume(v)
@@ -98,7 +105,7 @@ local generators={terrain=up(home.Build,'terrain'),shore=up(home.Build,'shoreDet
     trees=up(home.Build,'trees'),meadow=up(home.Build,'meadow'),
     pillar=up(up(home.Build,'courtyard'),'entranceColumn'),join=up(up(home.Build,'house'),'porchJoint')}
 local function focusedBuild(w,root)
-    for _,key in ipairs({'terrain','banks','pillar','join','shore','trees','meadow'}) do
+    for _,key in ipairs({'meadow','terrain','banks','pillar','join','shore','trees'}) do
         phase=key
         if key=='pillar' then generators.pillar(w,4.875,7.125,2.75);generators.pillar(w,4.875,-1.125,1.25)
         elseif key=='join' then generators.join(w,-12.25);generators.join(w,-7)
@@ -133,7 +140,9 @@ for _,v in ipairs(world.vols) do
         detailCells=detailCells+v.n
         if v.s==.0625 then assert(v.collidable==false and v.collisionMask==0);separate=separate+1
         else assert(v.s==.125 and v.collidable);stoneBodies=stoneBodies+1 end
-    elseif v.phase=='terrain' and v.s==.25 then capCells=capCells+v.n;maxCap=math.max(maxCap,v.n)
+    elseif v.phase=='terrain' and v.s==.25 then
+        assert(v.collidable and v.material==home.meadowMaterial,'visible collision caps must carry the meadow material')
+        capCells=capCells+v.n;maxCap=math.max(maxCap,v.n)
     elseif v.phase=='shore' and not v.collidable then shores=shores+1;assert(v.n<90000) end
 end
 assert(#trees==8 and trunkCount==#trees and shores==8)
@@ -147,32 +156,55 @@ print(('PASS 8 rooted collidable trees, 8 shore sectors, 7 terrace rises; %d cap
 print(('PASS 2 structural entrance pillars and 4 visual trims/joints; %d added detail cells. %d focused build steps.'):format(detailCells,frames))
 local field=home.field
 local height,mask=field.terrain.heightMap,field.splat.data
-assert(height.w==129 and mask.w==128 and field.splat.filter==FILTER_NEAREST and field.terrain.viewMask==0)
+local ref=terrain.NewGroundMaterial(field.splat,terrain.HALF)
+local mat=home.meadowMaterial
+assert(mat.shader=='Shaders/BLGL/RuinsGround.shader' and ref.shader==mat.shader and not ref.ground_frame)
+assert(mat.splat_map==field.grass.densityMap and mat.splat_map==field.flowers.densityMap and mat.splat_map==field.splat)
+assert(mat.ground_frame[1]==home.x and mat.ground_frame[2]==home.base and mat.ground_frame[3]==home.z and mat.ground_frame[4]==1)
+assert(mat.world_half==32 and height.w==257 and mask.w==256 and field.splat.filter==FILTER_NEAREST and field.terrain.viewMask==0)
 assert(field.terrain.visible==false and field.terrain.castShadows==false and field.terrain.occluder==false)
-local planted,raised=0,0
-for row=0,127 do for col=0,127 do
-    local w=mask.p[row*128+col]>>24
+local function pixel(x,z)
+    return mask.p[math.floor((32-z)*4)*mask.w+math.floor((x+32)*4)]
+end
+assert(pixel(4.125,-5.125)&255==255 and pixel(4.125,-5.125)>>24==0,'north orientation/path mask')
+assert((pixel(6.125,-5.125)>>8)&255>=140,'missing 1.2 m dirt shoulder alongside path')
+assert(pixel(12.125,3.125)>>16==255 and pixel(-6.375,-5.125)>>24==0,'platform/pond mask')
+local planted,raised,sparse,dense,dirtSpots=0,0,0,0,0
+for row=0,mask.w-1 do for col=0,mask.w-1 do
+    local p=mask.p[row*mask.w+col]
+    local w,dirt=p>>24,(p>>8)&255
     if w>0 then
-        local h=height.p[row*129+col]/32+field.terrainNode.position.y
-        assert(height.p[row*129+col+1]==height.p[row*129+col] and height.p[(row+1)*129+col]==height.p[row*129+col]
-            and height.p[(row+1)*129+col+1]==height.p[row*129+col])
-        for _,dx in ipairs({.125,.375}) do for _,dz in ipairs({.125,.375}) do
-            local x,z=home.x-32+col*.5+dx,home.z+32-row*.5-dz
+        local stride=height.w
+        local v=height.p[row*stride+col]
+        local h=v/32+field.terrainNode.position.y
+        assert(height.p[row*stride+col+1]==v and height.p[(row+1)*stride+col]==v and height.p[(row+1)*stride+col+1]==v)
+        local cx,cz=-32+(col+.5)*.25,32-(row+.5)*.25
+        local d=terrain.DirtPatch(cx,cz)
+        if dirt~=math.floor(d*255+.5) then assert(dirt==140 and d<.55);d=.55 end
+        assert(w==math.floor(terrain.MeadowDensity(cx,cz,d)*255+.5))
+        for _,dx in ipairs({.01,.24}) do for _,dz in ipairs({.01,.24}) do
+            local x,z=home.x-32+col*.25+dx,home.z+32-row*.25-dz
             assert(home.Height(x,z)==h,'native grass floats')
         end end
         planted=planted+1;if h>home.base then raised=raised+1 end
+        if w<192 then sparse=sparse+1 end
+        if w>245 then dense=dense+1 end
+        if dirt>0 then dirtSpots=dirtSpots+1 end
     end
 end end
-assert(raised>100 and planted>1000 and counts.meadow>=9)
+assert(raised>400 and planted>4000 and counts.meadow>=9 and sparse>0 and dense>0 and dirtSpots>0)
+print(('PASS common turf shader, full RGBA mask; %d sparse, %d dense, %d planted dirt-transition texels'):format(sparse,dense,dirtSpots))
 terrain.home=home;terrain.grass={enabled=true,SetInteractor=field.grass.SetInteractor}
 for _,p in ipairs({profiles.low,profiles.medium,profiles.high,{grassDensity=0,grassDistance=24},profiles.medium}) do
     quality.ApplyGrass(field,p)
+    assert(mat.splat_map==field.splat,'ground disappeared on quality switch')
     assert(field.grass.density==110*p.grassDensity and field.grass.viewDistance==p.grassDistance and field.grass.enabled==(p.grassDensity>0))
     assert(field.flowers.density==2.5*p.grassDensity and field.flowers.enabled==field.grass.enabled)
 end
 local pos=Vector3(home.x,home.base,2);terrain.SetInteractor(1,pos,2.2)
 assert(terrain.grass.pos==pos and field.grass.pos==pos and field.flowers.radius==2.2)
 job:Cancel();job:Cancel();assert(#world.vols==1 and world.vols[1]==foreign and job.root.removed and home.field==nil)
+assert(mat.splat_map==nil and home.meadowMaterial==nil)
 local done,err=job:Step();assert(not done and err)
 print(('PASS native grass and flowers, %d planted mask texels (%d elevated), quality and world-space contact'):format(planted,raised))
 home.Build=function(_,root)phase='meadow';generators.meadow(root)end
@@ -180,6 +212,8 @@ terrain.tufts={material=material()}
 for _,mode in ipairs({'unsupported','missing'}) do
     backend=mode;bladeRoots=0;counts.meadow=0
     local fallbackJob=runJob();local tufts=home.field.tufts;local total=#tufts.tiles
+    assert(home.meadowMaterial.shader==ref.shader and home.meadowMaterial.splat_map==home.field.splat)
+    for i,p in pairs(mask.p) do assert(home.field.splat.data.p[i]==p,'fallback ground mask changed') end
     assert(tufts.material==terrain.tufts.material)
     assert(bladeRoots>5000 and counts.meadow>=6 and home.field.terrain==nil and not home.field.grass)
     for i,p in ipairs({profiles.high,profiles.medium,profiles.low,{grassDensity=0,grassDistance=24},profiles.high}) do

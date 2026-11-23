@@ -353,6 +353,20 @@ local function BuildCollision(world)
 end
 
 -- ---------------------------------------------------------------- 显示层（Terrain + 草）
+-- Metre-scale fields shared by both islands; paths and shore exclusions are site-specific.
+function M.DirtPatch(x,z,pathAt)
+    local dirt = Smooth(0.68, 0.8, Noise.Fbm2(x * 0.09, z * 0.09, 3, 81))
+    if pathAt and (pathAt(x-1.2,z) or pathAt(x+1.2,z) or pathAt(x,z-1.2) or pathAt(x,z+1.2)) then
+        return max(dirt,0.55)
+    end
+    return dirt
+end
+
+function M.MeadowDensity(x,z,dirt)
+    local patch = Smooth(0.25, 0.55, Noise.Fbm2(x * 0.2, z * 0.2, 2, 83))
+    return (1 - dirt * 0.85) * (0.55 + 0.45 * patch)
+end
+
 -- 控制图：R 铺石路  G 泥土  B 强制岩面  A 草地密度（GrassField 读 A）
 -- 像素 (px, py) ↔ 世界 x = -HALF + px * 0.5，z = +HALF - py * 0.5（第 0 行是 +Z 北侧，同 Terrain UV）
 local function BuildSplat(VH, NV)
@@ -379,23 +393,17 @@ local function BuildSplat(VH, NV)
             local path = M.IsPath(x, z) and 1.0 or 0.0
             local court = r < M.COURT_R + 0.2 or M.InStair(x, z)
             -- 泥土：路边、峡谷底、零星斑块
-            local dirt = Smooth(0.68, 0.8, Noise.Fbm2(x * 0.09, z * 0.09, 3, 81))
+            local dirt = M.DirtPatch(x,z,path < 0.5 and M.IsPath or nil)
             if h < M.RAVINE_Y + 2.5 then dirt = max(dirt, 0.75) end
-            if path < 0.5 then
-                for _, d in ipairs({ { 1.2, 0 }, { -1.2, 0 }, { 0, 1.2 }, { 0, -1.2 } }) do
-                    if M.IsPath(x + d[1], z + d[2]) then dirt = max(dirt, 0.55) end
-                end
-            end
             local rock = Smooth(0.9, 1.4, slope)
             if h > M.SNOW_Y then rock = max(rock, 0.3) end
             local grass = 1.0
             if court or path > 0.5 then grass = 0 end
             grass = grass * (1 - Smooth(0.55, 0.85, slope))
-            grass = grass * (1 - dirt * 0.85)
             if h < M.RAVINE_Y + 2.5 then grass = grass * 0.35 end
             if h > M.SNOW_Y - 2 then grass = grass * Smooth(M.SNOW_Y, M.SNOW_Y - 2, h) end
             -- 稀疏处带一点随机空斑（草甸不是均匀地毯）
-            grass = grass * (0.55 + 0.45 * Smooth(0.25, 0.55, Noise.Fbm2(x * 0.2, z * 0.2, 2, 83)))
+            grass = grass * M.MeadowDensity(x,z,dirt)
             grass = max(0, min(1, grass))
             if not M.HasGround(x,z,1.25) then grass=0 end
             GW[i][k] = grass
@@ -561,6 +569,26 @@ local function BuildIslandMesh(scene,mat)
     print(string.format("RuinsTerrain: island shell %d triangles / %d chunks",triangles,chunks))
 end
 
+---@param splat Texture2D
+---@param half number
+---@param voxelFrame Vector4?
+---@return Material
+function M.NewGroundMaterial(splat,half,voxelFrame)
+    local mat = Material:new()
+    if mat:SetSurfaceShader("Shaders/BLGL/RuinsGround.shader") then
+        mat:SetSurfaceTexture("splat_map", splat)
+        mat:SetShaderParameter("world_half", Variant(half))
+        mat:SetShaderParameter("snow_y", Variant(M.SNOW_Y))
+        mat:SetShaderParameter("deep_y", Variant(M.RAVINE_Y + 2.0))
+        if voxelFrame then mat:SetShaderParameter("ground_frame", Variant(voxelFrame)) end
+    else
+        print("RuinsTerrain: RuinsGround.shader failed, using PBRNoTexture")
+        mat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
+        mat:SetShaderParameter("MatDiffColor", Variant(Color(0.35, 0.5, 0.25)))
+    end
+    return mat
+end
+
 ---@param scene Scene
 local function BuildVisual(scene)
     local t0 = os.clock()
@@ -604,17 +632,7 @@ local function BuildVisual(scene)
 
     local splat = BuildSplat(VH, NV)
     M.splat = splat
-    local mat = Material:new()
-    if mat:SetSurfaceShader("Shaders/BLGL/RuinsGround.shader") then
-        mat:SetSurfaceTexture("splat_map", splat)
-        mat:SetShaderParameter("world_half", Variant(M.HALF))
-        mat:SetShaderParameter("snow_y", Variant(M.SNOW_Y))
-        mat:SetShaderParameter("deep_y", Variant(M.RAVINE_Y + 2.0))
-    else
-        print("RuinsTerrain: RuinsGround.shader failed, using PBRNoTexture")
-        mat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
-        mat:SetShaderParameter("MatDiffColor", Variant(Color(0.35, 0.5, 0.25)))
-    end
+    local mat = M.NewGroundMaterial(splat,M.HALF)
     t.material = mat
     BuildIslandMesh(scene,mat)
     M.groundMaterial = mat

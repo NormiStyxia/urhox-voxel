@@ -58,6 +58,9 @@ uniform vec3 rock_warm = vec3(0.62, 0.56, 0.47);
 uniform vec3 deep_color = vec3(0.34, 0.35, 0.37);
 uniform float deep_y = -11.5;
 uniform float world_half = 84.0;
+// XYZ is the island origin in metres. W selects voxel palette IDs in COLOR.r (shells store soil weight).
+uniform vec4 ground_frame = vec4(0.0);
+uniform float meadow_sun = 0.0;
 uniform float snow_y = 31.0;
 uniform vec3 snow_color = vec3(0.93, 0.94, 0.97);
 
@@ -117,7 +120,7 @@ vec3 srgb_to_linear(vec3 c) {
 }
 
 void fragment() {
-    vec3 wp = VERTEX;
+    vec3 wp = VERTEX - ground_frame.xyz;
     vec3 n = normalize(NORMAL);
     vec3 weights = pow(abs(n), vec3(4.0));
     weights /= max(weights.x + weights.y + weights.z, 0.0001);
@@ -146,6 +149,19 @@ void fragment() {
     float wRock = max(sp.b, smoothstep(0.28, 0.45, slope + (fine - 0.5) * 0.06));
     // IslandShell 顶点 R 标记最上方薄土断缘。
     float soilLip = COLOR.r;
+    float sand = 0.0;
+    float canopyCover = 0.0;
+    if (ground_frame.w > 0.5) {
+        float id = floor(COLOR.r * 255.0 + 0.5);
+        bool turf = id >= 115.0 && id <= 118.0;
+        sand = id == 125.0 ? 1.0 : 0.0;
+        soilLip = (id == 119.0 || id == 120.0 || (turf && n.y < 0.5)) ? 1.0 : sand;
+        if (turf && n.y > 0.5) {
+            float canopy = min(length(wp.xz-vec2(-20.5,0.5)),length(wp.xz-vec2(-17.0,-10.0)));
+            canopy = min(canopy,min(length(wp.xz-vec2(0.0,-13.0)),length(wp.xz-vec2(19.0,-5.0))));
+            canopyCover = 1.0-smoothstep(0.65,4.2,min(canopy,length(wp.xz-vec2(5.0,13.5))));
+        }
+    }
     wRock *= 1.0 - soilLip;
     float wPath = sp.r * (1.0 - wRock) * (1.0 - soilLip);
     float wDirt = max(sp.g, soilLip) * (1.0 - wRock) * (1.0 - wPath);
@@ -164,7 +180,7 @@ void fragment() {
         // ---- 泥土 / 碎石：被铺石或岩壁完全覆盖时跳过。
         if (wDirt > 0.0 && wPath < 1.0) {
             float pebble = smoothstep(0.63, 0.76, chips);
-            vec3 dirt = dirt_color * (0.85 + mid * 0.3);
+            vec3 dirt = mix(dirt_color,vec3(0.80,0.74,0.60),sand) * (0.85 + mid * 0.3);
             dirt *= 1.0 + (chips - 0.5) * 0.34 * detailFade + (grain - 0.5) * 0.18 * grainFade;
             dirt = mix(dirt, path_color * 0.72, pebble * 0.38 * detailFade);
             col = mix(col, dirt, wDirt);
@@ -243,7 +259,12 @@ void fragment() {
     }
     // Explicit LOD only, after unrelated ground derivatives/frost.
     if (cloud_shadow_strength>0.0 && n.y>0.35) {
-        ALBEDO*=mix(vec3(1.0),cloud_illumination(wp),smoothstep(0.35,0.75,n.y));
+        ALBEDO*=mix(vec3(1.0),cloud_illumination(VERTEX),smoothstep(0.35,0.75,n.y));
     }
     AO=ruins_contact_ao(VERTEX,n,0.0,CAMERA_POSITION_WORLD);
+    if (canopyCover > 0.0) {
+        float sunPatch = smoothstep(0.37,0.67,vnoise(wp.xz*0.63+vec2(TIME*0.055,0.0)));
+        ALBEDO *= mix(vec3(1.0),mix(vec3(0.83,0.91,0.97),vec3(1.14,1.10,0.99),sunPatch),canopyCover*meadow_sun);
+        AO *= 1.0-0.22*canopyCover;
+    }
 }

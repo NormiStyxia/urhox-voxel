@@ -1,6 +1,7 @@
 -- Positions below are in island-local metres, looking north from the waterfall.
 local Brush = require('ruins.VoxelBrush')
 local Noise = require('ruins.Noise')
+local Terrain = require('ruins.RuinsTerrain')
 local P = require('ruins.RuinsPalette').P
 local H = { x = 720, z = 0, base = 6, planarReflectionEnabled = true }
 local abs, floor, sin, cos, sqrt = math.abs, math.floor, math.sin, math.cos, math.sqrt
@@ -226,6 +227,7 @@ function H.Stop()
     H.ReleaseReflection()
     H.poolBounds=nil
     H.ClearRipples()
+    if H.meadowMaterial then H.meadowMaterial:SetSurfaceTexture('splat_map',nil) end
     H.spring,H.hearth,H.field,H.housing,H.meadowMaterial=nil,nil,nil,nil,nil
     H.lastDay,H.lastDusk,H.lastNight,H.zoneFallback=nil,nil,nil,nil
 end
@@ -305,11 +307,14 @@ local function brush(world,lo,hi,s)
     if activeJob then activeJob.ids[b.volume:GetVolumeId()]=true end
     return b
 end
+local function lawnPath(x,z)
+    return pool(x,z)<1.22 or abs(z-4)<1.35 and x<8 and x>-18 or abs(x-4)<1.3 and abs(z)<10
+end
 local function lawnMaterial(x,z,h)
     local patch=pattern(x*.65,z*.65)+.36*pattern(x*1.8,z*1.8)
     if h<0 then return patch>0 and P.SAND or P.STONE_MOSS end
     if pad(x,z)<8.85 or (x>9 and x<15 and z>-10 and z<0) then return P.STONE_B end
-    if pool(x,z)<1.22 or abs(z-4)<1.35 and x<8 and x>-18 or abs(x-4)<1.3 and abs(z)<10 then
+    if lawnPath(x,z) then
         return patch>0 and P.PATH or P.PATH_B
     end
     if patch>1.45 then return P.GRASS_D end
@@ -725,59 +730,70 @@ local function shoreDetails(world)
     trimGround(stairs)
     stairs:Finish()
 end
+local function meadowClearance(x,z,shore)
+    return shore<.65 or pool(x,z)<1.55 or pad(x,z)<9.2 or abs(x+11.75)<2.1 and z< -6
+        or x>-18 and x<3.5 and z>3 and z<13 or abs(x-4)<1.6 and abs(z)<11
+        or x>8.5 and x<15.5 and z>-11 and z<2 or abs(z-4)<1.7 and x>-19 and x<9
+        or (x-5)^2+(z+12)^2<1.7^2
+end
+
+local function meadowWeights(x,z,h)
+    local shore=edge(x,z)
+    if shore<=0 then return 0,0,0,0 end
+    local skin=lawnMaterial(x,z,h)
+    if skin==P.PATH or skin==P.PATH_B then return 1,0,0,0 end
+    if skin==P.STONE_B or skin==P.STONE_MOSS then return 0,0,1,0 end
+    if skin==P.SAND then return 0,1,0,0 end
+    local dirt=Terrain.DirtPatch(x,z,lawnPath)
+    if meadowClearance(x,z,shore) then return 0,dirt,0,0 end
+    return 0,dirt,0,Terrain.MeadowDensity(x,z,dirt)
+end
+
 function H.GrassAt(wx,wz)
     local x,z=wx-H.x,wz-H.z
-    if edge(x,z)<.65 or pool(x,z)<1.55 or pad(x,z)<9.2 or abs(x+11.75)<2.1 and z< -6 then return 0 end
-    if x>-18 and x<3.5 and z>3 and z<13 or abs(x-4)<1.6 and abs(z)<11
-        or x>8.5 and x<15.5 and z>-11 and z<2 or abs(z-4)<1.7 and x>-19 and x<9
-        or (x-5)^2+(z+12)^2<1.7^2 then return 0 end
-    local patch=pattern(x*.55,z*.55)+.3*pattern(x*1.3,z*1.3)
-    return math.min(.95,math.max(.08,.55+.24*patch))
+    local _,_,_,grass=meadowWeights(x,z,top(x,z))
+    return grass
 end
 
 local function yieldBuild()
     if activeJob then coroutine.yield() end
 end
 
-local function meadowMaps(field)
-    local cells,spacing=128,.5
+local MEADOW_HALF, MEADOW_STEP = 32, .25
+local function meadowMaps()
+    local spacing=MEADOW_STEP
+    local cells=math.floor(MEADOW_HALF*2/spacing)
     local height,coverage=Image:new(),Image:new()
     height:SetSize(cells+1,cells+1,3)
     coverage:SetSize(cells,cells,4)
     local previous={}
     for row=0,cells do
-        if row%16==0 then yieldBuild() end
+        if row%8==0 then yieldBuild() end
         -- Terrain vertices span [-32,32]. Each mask texel owns the quad between four vertices.
-        local z=32-row*spacing
+        local z=MEADOW_HALF-row*spacing
         local current={}
         for col=0,cells do
-            local x=col*spacing-32
+            local x=col*spacing-MEADOW_HALF
             local h=top(x,z)
             current[col]=h
             height:SetPixelInt(col,row,floor((h+2)*32))
             if row>0 and col>0 then
-                local cx,cz=x-.25,z+.25
-                local w=H.GrassAt(H.x+cx,H.z+cz)
-                if w>0 and (h~=current[col-1] or h~=previous[col] or h~=previous[col-1]
-                    or h~=top(cx-.125,cz-.125) or h~=top(cx+.125,cz-.125)
-                    or h~=top(cx-.125,cz+.125) or h~=top(cx+.125,cz+.125)) then w=0 end
-                coverage:SetPixelInt(col-1,row-1,floor(w*255+.5)<<24)
+                local cx,cz=x-spacing*.5,z+spacing*.5
+                local tread=top(cx,cz)
+                local path,dirt,rock,w=meadowWeights(cx,cz,tread)
+                -- A density texel fits exactly one cap voxel. Interpolation must stay on that tread.
+                if h~=tread or h~=current[col-1] or h~=previous[col] or h~=previous[col-1] then w=0 end
+                coverage:SetPixelInt(col-1,row-1,(path*255) | (floor(dirt*255+.5)<<8)
+                    | ((rock*255)<<16) | (floor(w*255+.5)<<24))
             end
         end
         previous=current
     end
     yieldBuild()
-    local t=field.terrain
-    t.patchSize=16
-    t.spacing=Vector3(spacing,1/32,spacing)
-    t.smoothing=false;t.heightMap=height
-    -- The generated patches coincide with flat turf. Keep the height data for the
-    -- sibling GrassFields, but omit the sampler mesh from all colour and shadow passes.
-    t.visible=false;t.castShadows=false;t.viewMask=0;t.occluder=false
     local mask=Texture2D:new();mask:SetNumLevels(1);mask:SetData(coverage,true)
     mask:SetFilterMode(FILTER_NEAREST)
     mask:SetAddressMode(COORD_U,ADDRESS_CLAMP);mask:SetAddressMode(COORD_V,ADDRESS_CLAMP)
-    field.splat=mask
+    return height,mask
 end
 
 local function meadow(scene)
@@ -785,12 +801,21 @@ local function meadow(scene)
     local node=scene:CreateChild('HomeGrassHeight')
     node.position=Vector3(H.x,H.base-2,H.z)
     local field={x=H.x,z=H.z,grassExtent=30,terrainNode=node,GrassAt=H.GrassAt,Height=H.Height,HasGround=H.Ground}
+    local height,mask=meadowMaps()
+    field.splat=mask
+    H.meadowMaterial=Terrain.NewGroundMaterial(mask,MEADOW_HALF,Vector4(H.x,H.base,H.z,1))
     field.terrain=node:CreateComponent('Terrain')
-    field.terrain.viewMask=0
-    require('ruins.RuinsTerrain').BuildGrass(scene,field,meadowMaps,yieldBuild)
+    local t=field.terrain
+    -- Only native GrassField needs the height patches; the collidable caps own the visible surface.
+    t.visible=false;t.castShadows=false;t.viewMask=0;t.occluder=false
+    Terrain.BuildGrass(scene,field,function()
+        t.patchSize=32
+        t.spacing=Vector3(MEADOW_STEP,1/32,MEADOW_STEP)
+        t.smoothing=false;t.heightMap=height
+    end,yieldBuild)
     if not field.grass then
         node:Remove()
-        field.terrain,field.terrainNode,field.splat=nil,nil,nil
+        field.terrain,field.terrainNode=nil,nil
     end
     require('ruins.SceneQuality').ApplyGrass(field,require('ruins.GameSettings').GetProfile())
     H.field=field
@@ -806,7 +831,7 @@ function H.Build(world,scene,dayNight)
         if id==window then glow=Color(1,.65,.30,1) end
         world:SetPaletteEntryPBR(id,id==window and .42 or .86,id==slate and .65 or 0,.4,glow)
     end
-    terrain(world); courtyard(world); house(world); banks(world); trees(world,scene); meadow(scene); shoreDetails(world); water(scene)
+    meadow(scene); terrain(world); courtyard(world); house(world); banks(world); trees(world,scene); shoreDetails(world); water(scene)
     local fire=scene:CreateChild('HomeForgeFire'); fire.position=Vector3(H.x+1.15,H.base+1.65,H.z+7.5)
     local light=fire:CreateComponent('Light'); light.lightType=LIGHT_POINT
     light.color=Color(1,.53,.21); light.range=5; light.brightness=.78

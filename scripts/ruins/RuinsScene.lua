@@ -266,6 +266,10 @@ local function SetupLighting()
     M.surfaceMaterials = vmats
     Brush.materialFor = function(size, masonry)
         local key = tostring(size) .. ":" .. (masonry or "plain")
+        if masonry == "meadow" then
+            vmats[key] = HomeIsland.meadowMaterial
+            return vmats[key]
+        end
         local m = vmats[key]
         if m == nil then
             m = Material:new()
@@ -278,11 +282,9 @@ local function SetupLighting()
             m:SetShaderParameter("voxel_size", Variant(size))
             m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
             m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
-            if masonry=="meadow" then m:SetShaderParameter("meadow_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z))) end
             vmats[key] = m
         end
         -- Rebind on cache hits as well when a cancelled home build is retried.
-        if masonry=="meadow" then HomeIsland.meadowMaterial=m end
         if masonry=="homeWindows" then HomeIsland.housing=m end
         return m
     end
@@ -1850,7 +1852,8 @@ function Ruins_HandleUpdate(eventType, eventData)
     dn.fast = not voidInputBlocked and not SettingsMenu.IsBlocked() and not ForgePanel.IsOpen() and Down(KEY_T)
     Safe('Sky.DayNight',dn.Update,dn,dt)
     if M.atmosphere.active then
-        Safe('Sky.Atmosphere',M.atmosphere.Update,M.atmosphere,dt,M.mounted and M.rig.root.worldPosition or nomi_.node.worldPosition,Terrain.groundMaterial)
+        local ground=M.region=='home' and HomeIsland.meadowMaterial or Terrain.groundMaterial
+        Safe('Sky.Atmosphere',M.atmosphere.Update,M.atmosphere,dt,M.mounted and M.rig.root.worldPosition or nomi_.node.worldPosition,ground)
     end
     local clockMinute,clockPhase=math.floor(dn.hour*60),dn:PhaseName()
     if hudClockMinute~=clockMinute or hudClockPhase~=clockPhase then

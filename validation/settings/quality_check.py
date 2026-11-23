@@ -2,9 +2,9 @@ exec(open('validation/settings/check.py').read())
 # Native math constructors only; retain this test's settings subscription mock.
 lua.execute(Path('validation/sky-fx/check.lua').read_text().split('local web,',1)[0])
 lua.execute(r'''
-local children={}; for i=1,16 do children[i]={enabled=true} end
+local tiles={}; for i=1,16 do tiles[i]={node={enabled=true},drawable={}} end
 local terrain=require('ruins.RuinsTerrain')
-terrain.grass,terrain.flowers,terrain.tufts={enabled=true},{enabled=true},{root={GetChildren=function() return children end}}
+terrain.grass,terrain.flowers,terrain.tufts={enabled=true},{enabled=true},{root={},tiles=tiles}
 terrain.groundMaterial={params={},SetShaderParameter=function(s,k,v)s.params[k]=v end}
 renderer={}; BLOOM_MODE_LEGACY=1; BLOOM_MODE_UE=3
 Variant=function(x) return x end
@@ -22,7 +22,7 @@ S.Set('quality','medium')
 assert(host.sun.castShadows and host.sun.shadowCascade[2]==65 and host.sun.shadowCascade[3]==0)
 assert(terrain.grass.density==55 and terrain.flowers.density==1.25 and host.zone.bloomMode==1 and host.zone.bloomWeight==0)
 assert(host.dayNight.capture.resolution==32 and host.dayNight.capture.minCaptureInterval==2 and host.dayNight.capturePending)
-local active=0; for _,node in ipairs(children) do if node.enabled then active=active+1 end end; assert(active==8)
+local active=0; for _,tile in ipairs(tiles) do if tile.node.enabled then active=active+1 end end; assert(active==8)
 S.Set('quality','low'); assert(not host.sun.castShadows and terrain.grass.density==27.5)
 assert(terrain.groundMaterial.params.contact_ao_strength==0)
 S.Set('grass','off'); assert(not terrain.grass.enabled and not terrain.flowers.enabled and not terrain.tufts.root.enabled)
