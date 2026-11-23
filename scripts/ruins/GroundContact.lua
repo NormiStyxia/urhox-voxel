@@ -1,7 +1,8 @@
 -- GroundContact.lua — 体素建筑的落地遮蔽（RuinsGroundContact.shaderinc 的数据端）。
 --
 -- 把岛面可见高度烘成一张 16 位小贴图（R 高位、G 低位），体素材质按世界坐标查表：
--- 竖直面在离地 0.9m 内、朝下的面在离地 1m 内衰减间接光。遗迹岛（a）用地形可见高度
+-- 竖直面在离地 0.9m 内、朝下的面在离地 1m 内衰减间接光；同一高度值还驱动墙脚的
+-- 返潮带、溅泥与根部苔（反照率，直射光下同样可见）。遗迹岛（a）用地形可见高度
 -- 1m 网格；家园（b）用家园地面 0.5m 网格。建一次贴图，没有每帧开销。
 -- 材质登记为弱引用；档位只写一个 float。
 local M = {}
@@ -11,6 +12,8 @@ local materials = setmetatable({}, { __mode = "k" })
 ---@type table<string, {texture: Texture2D, frame: Vector4, range: Vector4}>
 local regions = {}
 local strength = 0.0
+-- 墙脚返潮/溅泥/根部苔的反照率强度（RuinsVoxel.shader）。与落地遮蔽共用同一次高度查表。
+local weather = 1.0
 
 ---@param material Material
 local function BindRegions(material)
@@ -20,6 +23,7 @@ local function BindRegions(material)
         material:SetShaderParameter("ground_range_" .. slot, Variant(r.range))
     end
     material:SetShaderParameter("ground_contact_strength", Variant(strength))
+    material:SetShaderParameter("ground_weather_strength", Variant(weather))
 end
 
 ---@param material Material|nil
@@ -78,6 +82,15 @@ function M.SetStrength(value)
     strength = value
     local v = Variant(strength)
     for material in pairs(materials) do material:SetShaderParameter("ground_contact_strength", v) end
+end
+
+---@param value number
+function M.SetWeather(value)
+    value = math.max(0, math.min(1, value or 0))
+    if value == weather then return end
+    weather = value
+    local v = Variant(weather)
+    for material in pairs(materials) do material:SetShaderParameter("ground_weather_strength", v) end
 end
 
 -- 场景停止时释放贴图与引用；下一次 Start 重新登记。

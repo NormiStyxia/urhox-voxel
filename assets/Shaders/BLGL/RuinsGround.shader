@@ -65,7 +65,7 @@ uniform float snow_y = 31.0;
 uniform vec3 snow_color = vec3(0.93, 0.94, 0.97);
 // GrassField 可见距离（x=开始淡出，y=完全消失）。超出后地面直接呈现草冠色，
 // 近处草根下的压暗随之退去，避免草叶消失处出现一圈深色接缝。x>=y 表示没有原生草。
-uniform vec2 grass_far = vec2(46.0, 55.0);
+uniform vec2 grass_far = vec2(39.0, 48.0);
 uniform vec3 grass_canopy = vec3(0.36, 0.48, 0.19);
 
 float hash2(vec2 p) {
@@ -167,30 +167,52 @@ void fragment() {
         }
     }
     wRock *= 1.0 - soilLip;
+    // 铺石板格：先求出，路边按整块石板缺损（不是按像素抖动）。
+    vec2 slabUV = wp.xz * 1.15;
+    vec2 slabCell = floor(slabUV + vec2(0.0, floor(slabUV.x) * 0.5));
+    vec2 slabF = fract(slabUV + vec2(0.0, floor(slabUV.x) * 0.5));
+    float slab = hash2(slabCell);
     float wPath = sp.r * (1.0 - wRock) * (1.0 - soilLip);
     float wDirt = max(sp.g, soilLip) * (1.0 - wRock) * (1.0 - wPath);
     float edgeN = (mid - 0.5) * 0.5;
-    // 控制图是 0.5m 双线性，直接阈值会得到一圈模糊的软边。叠加米级与厘米级噪声
-    // 再收窄过渡带：泥地边缘变成被草啃出的不规则齿边，铺石边缘带少量缺角。
-    float edgeFine = (fine - 0.5) * 0.30 + (chips - 0.5) * 0.22 * detailFade;
-    wPath = smoothstep(0.42, 0.58, wPath + edgeN * 0.6 + edgeFine * 0.45);
-    wDirt = smoothstep(0.40, 0.60, wDirt + edgeN + edgeFine);
+    // 控制图是 0.5m 双线性，直接阈值会得到一圈模糊的软边。过渡形状由米级"啃边"噪声决定
+    // （0.6–1.2m 的凹凸瓣），厘米级只做很轻的碎边，避免远看像像素抖动。
+    float lobe = vnoise(wp.xz * 0.85 + 21.0);
+    float edgeFine = (lobe - 0.5) * 0.34 + (fine - 0.5) * 0.12 + (chips - 0.5) * 0.06 * detailFade;
+    // 路边：同一块石板整块保留或整块缺失，缺口处露出泥土与草。
+    float pathRaw = wPath + edgeN * 0.6 + (slab - 0.5) * 0.32 + edgeFine * 0.25;
+    wPath = smoothstep(0.47, 0.53, pathRaw);
+    float dirtRaw = wDirt + edgeN + edgeFine;
+    wDirt = smoothstep(0.42, 0.58, dirtRaw);
+    // 泥地外缘一圈被踩秃、发黄的草（0.5–1m 宽），草→秃草→湿泥，而不是绿色直接切到棕色。
+    float worn = smoothstep(0.18, 0.44, dirtRaw) * (1.0 - wDirt);
+    worn = max(worn, smoothstep(0.20, 0.47, pathRaw) * (1.0 - wPath) * 0.8);
     vec3 col = vec3(0.0);
     float camDist = length(VERTEX - CAMERA_POSITION_WORLD);
     float canopyK = grass_far.y > grass_far.x ? smoothstep(grass_far.x, grass_far.y, camDist) : 1.0;
+    float dryField = fbm(wp.xz * 0.06 + 40.0);
     // All branches below are derivative-free. Exact zero/one tests preserve blend boundaries.
     if (wRock < 1.0) {
         // ---- 草地：铺石缝里也用到草色，不仅是裸露草地。
         vec3 grass = mix(grass_dark, grass_light, clamp(big * 1.1 + mid * 0.35 - 0.25, 0.0, 1.0));
-        grass = mix(grass, grass_dry, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.55);
+        // 30–60m 尺度的冷暖色相漂移：向阳的黄绿草坡与背阴的蓝绿草坡，草甸不再是一整片均匀的绿。
+        float hue = vnoise(wp.xz * 0.021 + 5.0);
+        grass *= mix(vec3(1.06, 1.02, 0.80), vec3(0.88, 0.98, 1.06), smoothstep(0.25, 0.75, hue));
+        grass = mix(grass, grass_dry, smoothstep(0.62, 0.78, dryField) * 0.55);
         grass *= 0.88 + fine * 0.22;
         // 远景草冠：没有草叶的距离上，地面要呈现"从上往下看草丛"的颜色，
         // 带 1–3m 的团簇明暗，而不是草根下的深色泥土。
         if (canopyK > 0.0) {
             float clumps = vnoise(wp.xz * 0.55) * 0.6 + vnoise(wp.xz * 1.7 + 9.0) * 0.4;
             vec3 canopy = grass_canopy * (0.80 + clumps * 0.36) * (0.92 + big * 0.16);
-            canopy = mix(canopy, grass_dry * 0.95, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.45);
+            canopy *= mix(vec3(1.05, 1.02, 0.84), vec3(0.90, 0.98, 1.05), smoothstep(0.25, 0.75, hue));
+            canopy = mix(canopy, grass_dry * 0.95, smoothstep(0.62, 0.78, dryField) * 0.45);
             grass = mix(grass, canopy, canopyK);
+        }
+        // 踩秃的草：更黄、更灰，夹着土色。
+        if (worn > 0.0) {
+            vec3 trampled = mix(grass_dry * 0.92, dirt_color * 1.25, 0.35 + 0.35 * smoothstep(0.4, 0.7, chips));
+            grass = mix(grass, trampled, worn * 0.65);
         }
         col = grass;
 
@@ -198,21 +220,36 @@ void fragment() {
         if (wDirt > 0.0 && wPath < 1.0) {
             float pebble = smoothstep(0.63, 0.76, chips);
             vec3 dirt = mix(dirt_color,vec3(0.80,0.74,0.60),sand) * (0.85 + mid * 0.3);
+            // 低频的湿土深斑与偏红/偏灰的土色变化。
+            float dampSoil = smoothstep(0.45, 0.75, lobe * 0.6 + big * 0.4);
+            dirt *= mix(vec3(1.0), vec3(0.78, 0.76, 0.74), dampSoil * (1.0 - sand));
+            dirt = mix(dirt, dirt * vec3(1.08, 0.96, 0.88), smoothstep(0.55, 0.8, hash2(floor(wp.xz * 0.35))) * 0.5);
             dirt *= 1.0 + (chips - 0.5) * 0.34 * detailFade + (grain - 0.5) * 0.18 * grainFade;
             dirt = mix(dirt, path_color * 0.72, pebble * 0.38 * detailFade);
+            // 泥地边缘（贴着草的一圈）土更湿更深，边界清楚但不生硬。
+            float rim = smoothstep(0.42, 0.55, dirtRaw) * (1.0 - smoothstep(0.58, 0.78, dirtRaw));
+            dirt *= 1.0 - rim * 0.16 * (1.0 - sand);
             col = mix(col, dirt, wDirt);
         }
 
-        // ---- 铺石路：保留原石板、窄缝及缝内草色。
+        // ---- 铺石路：每块石板有自己的冷暖与磨损，块边磨圆提亮，个别石板开裂。
         if (wPath > 0.0) {
-            vec2 pc = wp.xz * 1.15;
-            vec2 cell = floor(pc + vec2(0.0, floor(pc.x) * 0.5));
-            vec2 f = fract(pc + vec2(0.0, floor(pc.x) * 0.5));
-            float seam = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
-            float slab = hash2(cell);
-            vec3 path = path_color * (0.84 + slab * 0.26) * (0.92 + fine * 0.12);
-            path = mix(path * 0.55, path, smoothstep(0.02, 0.07, seam));
-            path = mix(path, grass * 0.9, smoothstep(0.55, 0.85, mid) * 0.5 * (1.0 - smoothstep(0.03, 0.09, seam)));
+            float seam = min(min(slabF.x, 1.0 - slabF.x), min(slabF.y, 1.0 - slabF.y));
+            float slabHue = hash2(slabCell + 7.0);
+            vec3 path = path_color * (0.86 + slab * 0.22) * (0.92 + fine * 0.12);
+            path *= mix(vec3(1.04, 1.0, 0.93), vec3(0.95, 0.98, 1.03), slabHue);
+            // 被踩得发亮的石板中部 vs 边缘的磨圆高光带，缝里是深色泥。
+            float arris = smoothstep(0.04, 0.09, seam) * (1.0 - smoothstep(0.09, 0.16, seam));
+            path *= 1.0 + arris * 0.07 * detailFade;
+            path = mix(path * 0.50, path, smoothstep(0.02, 0.06, seam));
+            float cracked = step(0.86, hash2(slabCell + 3.0)) * detailFade;
+            if (cracked > 0.0) {
+                float line = abs(slabF.x - 0.5 + (slabF.y - 0.5) * (slabHue - 0.5) * 1.4 + (fine - 0.5) * 0.10);
+                path *= 1.0 - (1.0 - smoothstep(0.008, 0.03 + footprint, line)) * 0.38 * cracked;
+            }
+            // 缝里长草：越靠路边越多。
+            float seamGrass = max(smoothstep(0.55, 0.85, mid) * 0.5, (1.0 - smoothstep(0.53, 0.75, pathRaw)) * 0.75);
+            path = mix(path, grass * 0.9, seamGrass * (1.0 - smoothstep(0.03, 0.09, seam)));
             col = mix(col, path, wPath);
         }
     }

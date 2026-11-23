@@ -404,6 +404,13 @@ local function BuildSplat(VH, NV)
             if h > M.SNOW_Y - 2 then grass = grass * Smooth(M.SNOW_Y, M.SNOW_Y - 2, h) end
             -- 稀疏处带一点随机空斑（草甸不是均匀地毯）
             grass = grass * M.MeadowDensity(x,z,dirt)
+            -- 外城墙脚（墙基半宽 1.3m）外 0.7m 的滴水带：檐下雨水冲刷，只剩碎石泥土、草很稀。
+            -- 建筑因此"坐"进地面；也少生成一圈贴墙的草叶。
+            local wallFoot = 1 - Smooth(1.45, 2.3, abs(r - M.WALL_R))
+            if wallFoot > 0 and path < 0.5 then
+                dirt = max(dirt, wallFoot * 0.9)
+                grass = grass * (1 - wallFoot * 0.85)
+            end
             grass = max(0, min(1, grass))
             if not M.HasGround(x,z,1.25) then grass=0 end
             GW[i][k] = grass
@@ -674,7 +681,7 @@ local function nativeGrass(field,prepareMaps)
     grass.clumpSize = 0.7
     grass.lean = 0.45
     grass.maxSlope = 42
-    grass.viewDistance = 55
+    grass.viewDistance = 48
     grass.densityFalloffDistance = 16
     grass.castShadows = false
     grass.windDirection = Vector2(1, 0.35)
