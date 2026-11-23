@@ -10,7 +10,9 @@ local paper={226,226,207};local light={250,244,222};local line={183,192,180}
 local green={46,82,75};local gold={215,177,102};local red={134,69,52}
 local names={ruins='时之遗迹',home='家园小岛'}
 local ids={'ruins','home'}
-local mapFontSize=8
+-- The Maker 1920px preview scales the logical map several times. 5px keeps
+-- the labels at the same visual density as the 6px single-file reference.
+local mapFontSize=5
 local function round(n) return math.floor(n+.5) end
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 local function metrics()
