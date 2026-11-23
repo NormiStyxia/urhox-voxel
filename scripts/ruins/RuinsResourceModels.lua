@@ -130,6 +130,7 @@ local function quarry(base,stock)
 end
 
 local sites={timber=tree,crystal_ore=mine,stone=quarry}
+local markerY={timber=3.24,crystal_ore=1.94,stone=1.24}
 function M.Site(root,id,mats,spent)
     local base=mesh(root,'Remainder',mats.matte,true)
     local stock,canopy
@@ -139,7 +140,14 @@ function M.Site(root,id,mats,spent)
     end
     sites[id](base,stock)
     base:Commit()
-    if stock then stock:Commit() end
+    if stock then
+        stock:Commit()
+        local marker=mesh(canopy,'GatherMark',mats.beam,false)
+        local y=markerY[id]
+        solid(marker,4,0,0,0,{{y,.012,.012},{y+.12,.085,.085},{y+.24,.012,.012}},
+            id=='crystal_ore' and C.light or C.honey)
+        marker:Commit()
+    end
     return canopy
 end
 

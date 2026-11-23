@@ -199,3 +199,70 @@ end
 assert(Forge('level','wing') and Store.Load().progress.slots.sword.levels.wing==4)
 assert(opened==closed)
 print('weapon_store: real unlocks, three slots, 18 drops, draft isolation, fodder, pity, smelt and interrupted publish PASS')
+
+local Materials=require('combat.MaterialCatalog')
+local preMaterials=Store.Default()
+preMaterials.progress.materials,preMaterials.progress.trainingClaims,preMaterials.progress.siteClaims=nil,nil,nil
+preMaterials.progress.ore,preMaterials.progress.sand=47,26
+disk['weapons-v1.json']=cjson.encode(preMaterials)
+rig.config=Store.Load()
+assert(Materials.Count(rig.config.progress,'wood_resin')==0 and Materials.Count(rig.config.progress,'ore')==47)
+local imprintCursor=rig.config.progress.imprintDrops
+fault='publish'
+assert(not Store.AddMaterial(rig,'wood_resin',1,'wood_spirit'))
+assert(not next(rig.config.progress.materials) and not next(rig.config.progress.trainingClaims))
+fault=''
+assert(Store.AddMaterial(rig,'wood_resin',1,'wood_spirit'))
+assert(Store.AddMaterial(rig,'timber',2,nil,'site:court_log'))
+assert(Store.AddMaterial(rig,'crystal_ore',1,nil,'site:court_vein'))
+assert(not Store.AddMaterial(rig,'crystal_ore',2,nil,'site:south_vein'))
+assert(not Store.AddMaterial(rig,'ore',1))
+rig.config=Store.Load()
+assert(rig.config.progress.imprintDrops==imprintCursor and Materials.Count(rig.config.progress,'sand')==26)
+assert(not Store.AddMaterial(rig,'wood_resin',1,'wood_spirit'))
+assert(not Store.AddMaterial(rig,'timber',2,nil,'site:court_log'))
+assert(Store.AddMaterial(rig,'wood_resin',1))
+assert(Forge('level','iron'))
+assert(Store.RewardKill(rig))
+rig.config=Store.Load()
+assert(Materials.Count(rig.config.progress,'ore')==49 and Materials.Count(rig.config.progress,'sand')==28)
+assert(Materials.Count(rig.config.progress,'wood_resin')==2 and Materials.Count(rig.config.progress,'timber')==2)
+assert(Materials.Count(rig.config.progress,'crystal_ore')==1)
+assert(rig.config.progress.siteClaims['site:court_vein'] and rig.config.progress.trainingClaims.wood_spirit)
+print('weapon_store: materials migration, inventory and source receipts, retry, and forge integration PASS')
+
+local cloudDisk, readCallback, writeCallback, writeCount
+GetPlatform=function() return 'Web' end
+fileSystem.HasPersistentFS=function() return false end
+clientCloud={userId=1001}
+function clientCloud:Get(key,callbacks) assert(key=='weapons_v1');readCallback=callbacks end
+function clientCloud:Set(key,raw,callbacks)
+    assert(key=='weapons_v1' and not writeCallback)
+    writeCount=(writeCount or 0)+1
+    writeCallback=function(fail)
+        writeCallback=nil
+        if fail then callbacks.error() else cloudDisk=raw;callbacks.ok() end
+    end
+end
+local boots=0
+local function Ready() boots=boots+1;rig.config=Store.Load() end
+Store.Prepare(Ready);assert(boots==0)
+readCallback.ok({weapons_v1=cjson.encode(rig.config)})
+assert(boots==1 and rig.config.progress.materials.wood_resin==2)
+assert(Store.AddMaterial(rig,'wood_resin',1))
+Store.Update(0);assert(writeCallback and writeCount==1)
+assert(Store.AddMaterial(rig,'wood_resin',1))
+Store.Update(0);assert(writeCount==1,'wait for the previous cloud write')
+writeCallback(true);Store.Update(1);assert(writeCount==1)
+Store.Update(4);assert(writeCount==2);writeCallback(false)
+Store.Stop();disk={}
+Store.Prepare(Ready);readCallback.ok({weapons_v1=cloudDisk})
+assert(boots==2 and rig.config.progress.materials.wood_resin==4,'reload the most recent count')
+assert(rig.config.progress.trainingClaims.wood_spirit and rig.config.progress.siteClaims['site:court_vein'])
+Store.Stop();Store.Prepare(Ready);Store.Update(4.1)
+assert(boots==3)
+readCallback.ok({weapons_v1=cloudDisk});assert(boots==3,'ignore a late cloud baseline')
+assert(Store.AddMaterial(rig,'timber',1));Store.Update(10)
+assert(writeCount==2,'an unconfirmed baseline must not overwrite saved cloud progress')
+Store.Stop()
+print('weapon_store: Web cloud fallback snapshot, sequential retry, reload and safe timeout PASS (SDK double)')

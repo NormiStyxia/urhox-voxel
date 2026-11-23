@@ -131,6 +131,7 @@ Breath.Register(Controller)
 local M = {trainingMode=true}
 local Station=require('ruins.TrainingStation')
 local Training={position=Vector3(0,.5,0)} -- BuildAltar is .5 m above the court at the origin.
+local Resources={world=require('ruins.RuinsResources'),prompt=require('ui.MaterialPrompt'),catalog=require('combat.MaterialCatalog')}
 local function OnFoot() return not M.ride or M.ride.mode=='free' end
 
 -- Explicit frame hooks; the pacing service owns GC state and restores it on Stop.
@@ -349,6 +350,7 @@ local function SetupDragon()
     ride.node = nomi_.node
     ride.controlsEnabled = function() return GameplayInputAllowed()
         and not (combatMoves_ and combatMoves_.dead) and animPreview_.index==0 end
+    ride.canMountInput=function() return not Resources.consumed and not Resources.nearest() end
     ride.onNotice = function(text) caster_:Say(text) end
     ride.onMount = function()
         nomi_:ResetJump()
@@ -576,6 +578,48 @@ function Training.blocked()
     return Training.release or (M.trainingStation and M.trainingStation:IsOpen()) or false
 end
 
+function Resources.available()
+    return Resources.live and M.region=='ruins' and OnFoot() and nomi_.cc.onGround and not combatMoves_.dead
+        and input.focus and not input.minimized and not voidInputBlocked and not VoidRewind.IsActive()
+        and not Training.blocked() and not M.debugOn and animPreview_.index==0
+        and not WorldMap.IsOpen() and not ForgePanel.IsOpen() and not WeaponWheel.IsBlocked()
+        and not SettingsMenu.IsBlocked() and not TouchControls.menuOpen and not (M.housePanel and M.housePanel.open)
+end
+
+function Resources.nearest()
+    if Resources.available() then return Resources.live:Nearest(nomi_:Position()) end
+end
+
+function Resources.interact(target)
+    if not target or not Resources.available() then return end
+    Resources.consumed=true
+    local ok,message=Resources.live:Claim(target.id,nomi_:Position(),function(item)
+        return WeaponStore.AddMaterial(combatRig_,item.itemId,item.count,item.trainingKind,
+            item.source=='site' and item.key or nil)
+    end)
+    if ok then
+        Resources.prompt.Clear()
+        CombatHUD.Say(('%s +%d'):format(target.name,target.count),1.6)
+        DebugLog.Log('Ruins','Material pickup %s x%d from %s',target.itemId,target.count,target.id)
+    elseif message then CombatHUD.Say(message,1.7) end
+end
+
+function Resources.present(cameraNode)
+    local target=Resources.nearest()
+    if not target then Resources.prompt.Clear(); return end
+    local offset=target.source=='drop' and .45 or 1.15
+    Resources.prompt.Set(target,Resources.catalog.ById[target.itemId],target.verb,
+        target.position+Vector3(0,offset,0),nomi_:Camera(),cameraNode)
+end
+
+function Resources.attach()
+    TouchControls.onGatherHit=function(x,y)
+        if Resources.available() then return Resources.prompt.Hit(x,y) end
+    end
+    TouchControls.onGather=Resources.interact
+    Resources.prompt.Attach(HUD.root,Resources.available)
+end
+
 function Training.near()
     if not M.trainingStation or M.region~='ruins' or not input.focus or input.minimized or not OnFoot()
         or voidInputBlocked or M.debugOn or combatMoves_.dead or animPreview_.index>0
@@ -604,7 +648,7 @@ end
 function Training.update()
     local station=M.trainingStation
     if not station then return false end
-    station:SetNear(Training.near())
+    station:SetNear(Training.near() and (station:IsOpen() or not Resources.nearest()))
     if station:IsOpen() then return true end
     if not Training.release then return false end
     -- Retire the UI gesture through its final release frame, including keyboard row shortcuts.
@@ -837,9 +881,10 @@ local function StartCombat()
             if animPreview_.index==0 then CombatState.OnEnemyAggro(id) end
         end,
         OnEnemyDead=function(enemy)
+            local drop=Resources.live and Resources.live:SpawnDrop(enemy.kind,enemy.position,nomi_.safePos)
             if M.trainingMode then
                 Training.clearTarget()
-                CombatHUD.Say('训练完成，可回木桩再选对手',1.6)
+                CombatHUD.Say(drop and '训练完成，靠近拾取素材' or '训练完成，可回木桩再选对手',1.6)
                 return
             end
             combatMoves_.target=enemy
@@ -1016,6 +1061,11 @@ local function AttachTouchControls()
             local ok,message=WeaponStore.Forge(combatRig_,class,'select',id)
             return ok,ok and '已装备' or message
         end,
+        equipImprint=function(class,id)
+            if not CanOpenWeaponBag() then return false,'请脱离警戒后换装' end
+            local ok,message=WeaponStore.Forge(combatRig_,class,'imprint',id)
+            return ok,ok and '已装备' or message
+        end,
     })
 end
 
@@ -1089,6 +1139,13 @@ function M.Start()
         handPos = function() return nomi_:HandPos() end,
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
+    Resources.live=Resources.world.New(scene_,world_,{training=M.trainingMode,cast=CombatCast,
+        wasClaimed=function(key,kind)
+            local progress=combatRig_.config.progress
+            if kind then return progress.trainingClaims[kind] end
+            return progress.siteClaims[key]
+        end})
+    world_:OptimizeBroadPhase()
     do
         local catalyst,err=TimeCatalyst.New(scene_,nomi_:CameraNode())
         if catalyst then timeCatalyst_=catalyst
@@ -1164,6 +1221,7 @@ function M.Start()
     nomi_.aimMask = 0xffffffff & ~2
     HUD.Build(Spells.SPELLS)
     AttachTouchControls()
+    Resources.attach()
     if M.trainingMode then
         M.trainingStation=Station.New(scene_,Training.position,Training.select,Training.clear)
         M.trainingStation.onOpenChanged=Training.openChanged
@@ -1202,6 +1260,7 @@ function M.ToggleDebugPanel()
     else
         HUD.Build(Spells.SPELLS)
         AttachTouchControls()
+        Resources.attach()
         RefreshObjective()
         HUD.SetHint(resumeHint)
     end
@@ -1318,12 +1377,18 @@ end
 ---@param eventData KeyDownEventData
 function Ruins_HandleKeyDown(eventType, eventData)
     local mapKey=eventData:GetInt('Key')
+    local repeated=eventData:GetBool('Repeat')
     local station=M.trainingStation
     if station then
-        if station:HandleKey(mapKey,eventData:GetBool('Repeat')) or Training.release then return end
-        if mapKey==KEY_F and not TouchInput.IsEnabled() and Training.near() then
-            station:SetNear(true)
-            if not eventData:GetBool('Repeat') then station:Interact() end
+        if station:HandleKey(mapKey,repeated) or Training.blocked() then return end
+    end
+    if mapKey==KEY_F and not TouchInput.IsEnabled() then
+        local target=Resources.nearest()
+        if target then
+            if not repeated then Resources.interact(target) end
+            return
+        elseif station and Training.near() then
+            if not repeated then station:SetNear(true);station:Interact() end
             return
         end
     end
@@ -1346,13 +1411,16 @@ function Ruins_HandleKeyDown(eventType, eventData)
         if not eventData:GetBool("Repeat") and not voidInputBlocked then SettingsMenu.Toggle() end
         return
     end
-    if menuKey==KEY_ESCAPE and SettingsMenu.IsOpen() then SettingsMenu.Close(); return end
     if menuKey==KEY_B and OnFoot() then
         if eventData:GetBool('Repeat') then return end
         if SettingsMenu.IsBagOpen() then SettingsMenu.Close()
         elseif not SettingsMenu.IsBlocked() and not SettingsMenu.Open('bag') then
             CombatHUD.Say('请脱离警戒并回到地面，再打开背包',1.5)
         end
+        return
+    end
+    if SettingsMenu.IsOpen() then
+        SettingsMenu.Key(menuKey,repeated)
         return
     end
     if SettingsMenu.IsBlocked() then return end
@@ -1370,6 +1438,7 @@ end
 function Ruins_HandleInputFocus(eventType, eventData)
     if not eventData:GetBool("Focus") or eventData:GetBool("Minimized") then
         if M.trainingStation then M.trainingStation:SetNear(false) end
+        Resources.prompt.Clear()
         if M.housePanel then M.housePanel:Close() end
         if WorldMap.IsOpen() then WorldMap.CancelPointers() end
         if combatTest_ and combatTest_.active then Safe('Debug.F11Stop',combatTest_.Stop,combatTest_,'focus') end
@@ -1998,6 +2067,7 @@ function Ruins_HandleUpdate(eventType, eventData)
         M.ride.externalGround = nomi_.cc.onGround
         Safe('Dragon.Ride',M.ride.Update,M.ride,dt,nomi_.camYaw)
     end
+    Resources.consumed=false
     -- Observe mounting in the same Update before rendering; do not clear the
     -- touch mount edge before DragonRide consumes it.
     Safe('Combat.MountState',CombatState.SetMounted,not OnFoot())
@@ -2319,7 +2389,7 @@ local function UpdateCombatHUD(cn,dt)
 end
 
 function Ruins_HandlePostUpdate(eventType, eventData)
-    if Training.blocked() then return end
+    if Training.blocked() then Resources.prompt.Clear(); return end
     local dt = eventData["TimeStep"]:GetFloat()
     nomi_:BeginQueryScope()
     Safe('Camera.Base',UpdateBaseCamera,dt)
@@ -2339,6 +2409,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     Safe('Puzzles.Presentation',Puzzles.UpdatePresentation,dt)
     Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime(),CombatState.GetSelection()=='time')
     if combatMoves_ then Safe('HUD.Update',UpdateCombatHUD,cn,dt) end
+    Safe('HUD.Material',Resources.present,cn)
     nomi_:EndQueryScope()
     if combatMoves_ and weaponGesture_ then Safe('WeaponSelect.Anchor',weaponGesture_.Update,weaponGesture_,dt,nomi_:Camera()) end
     Safe('FX.MotesB',fx_.motesB.Draw,fx_.motesB); Safe('FX.MotesG',fx_.motesG.Draw,fx_.motesG)
@@ -2349,6 +2420,9 @@ end
 function M.Stop()
     if M.trainingStation then M.trainingStation:Destroy(); M.trainingStation=nil end
     Training.release=false
+    Resources.prompt.Clear();Resources.consumed=false
+    if Resources.live then Resources.live:Destroy();Resources.live=nil end
+    TouchControls.onGatherHit,TouchControls.onGather=nil,nil
     if M.housePanel then M.housePanel:Close();M.housePanel=nil;TouchControls.housePanel=nil end
     if weaponGesture_ then weaponGesture_:ForceClose('stop'); weaponGesture_=nil end
     if combatTest_ and combatTest_.active then combatTest_:Stop('stop') end

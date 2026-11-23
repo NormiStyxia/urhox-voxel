@@ -7,16 +7,25 @@
 local RuinsScene = require("ruins.RuinsScene")
 local Settings = require("ruins.GameSettings")
 local SceneQuality = require("ruins.SceneQuality")
+local WeaponStore = require("combat.WeaponStore")
+local saveNode
 
 function Start()
     Settings.Load()
     -- 去掉跟随头顶的环境浮光；手部与施法粒子使用独立系统，保持不变。
     Settings.Set("floatingMotes", false)
-    RuinsScene.Start()
-    SceneQuality.Attach(RuinsScene)
+    saveNode=Node()
+    local receiver=saveNode:CreateScriptObject('LuaScriptObject')
+    receiver:SubscribeToEvent('Update',function(_,_,data) WeaponStore.Update(data:GetFloat('TimeStep')) end)
+    WeaponStore.Prepare(function()
+        RuinsScene.Start()
+        SceneQuality.Attach(RuinsScene)
+    end)
 end
 
 function Stop()
+    WeaponStore.Stop()
+    if saveNode then saveNode:Remove();saveNode=nil end
     Settings.Stop()
     RuinsScene.Stop()
 end

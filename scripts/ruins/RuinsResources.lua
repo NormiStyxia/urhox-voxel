@@ -11,15 +11,6 @@ local Models=require('ruins.RuinsResourceModels')
 local R={}
 R.__index=R
 
--- Fixed keys survive site reorderings. The court stations flank the starting
--- view and clear both training spawns (+/-7,-2), the altar and the dragon.
-local sites={
-    {'court_log','timber',-8.8,4.6}, {'court_vein','crystal_ore',8.6,5.2},
-    {'court_quarry','stone',-11,-7.4},
-    {'south_log','timber',-4.6,-58.4}, {'south_vein','crystal_ore',4.8,-56.8},
-    {'east_log','timber',32.4,4.5}, {'west_vein','crystal_ore',-14.2,-28.2},
-    {'east_quarry','stone',31.2,10.8},
-}
 local verbs={timber='伐木',crystal_ore='采矿',stone='采石'}
 local mask=0xffffffff & ~2 -- same environment mask as the walking controller
 local down=Vector3(0,-1,0)
@@ -122,7 +113,7 @@ local function claimed(self,key,trainingKind)
 end
 
 local function addSite(self,def)
-    local site,itemId,x,z=table.unpack(def)
+    local site,itemId,count,x,z=table.unpack(def)
     local pos=landing(self,Vector3(x,0,z),nil,.8,1.0)
     if not pos then
         print('RuinsResources: no walkable ground for '..site)
@@ -133,7 +124,7 @@ local function addSite(self,def)
     local node=self.root:CreateChild(site)
     node.position=pos
     local timber=itemId=='timber'
-    local item={id=key,key=key,source='site',itemId=itemId,count=1,position=pos,node=node,spent=spent}
+    local item={id=key,key=key,source='site',itemId=itemId,count=count,position=pos,node=node,spent=spent}
     item.stock=Models.Site(node,itemId,self.materials,spent)
     local baseHeight=timber and 2 or 1
     item.baseCollider=collider(self.world,pos,timber and 2 or 4,baseHeight,0)
@@ -148,7 +139,7 @@ function R.New(scene,world,options)
     local self=setmetatable({root=scene:CreateChild('RuinsResources'),world=world,
         training=options.training==true,cast=options.cast,wasClaimed=options.wasClaimed,
         materials=Models.Materials(),entries={},receipts={},nextId=0},R)
-    for _,def in ipairs(sites) do addSite(self,def) end
+    for _,def in ipairs(Catalog.Sites) do addSite(self,def) end
     return self
 end
 
@@ -198,7 +189,7 @@ local function target(item,dist)
     local name=Catalog.ById[item.itemId].name
     local verb=item.source=='site' and verbs[item.itemId] or '拾取'
     return {id=item.id,key=item.key,itemId=item.itemId,count=item.count,source=item.source,trainingKind=item.trainingKind,
-        position=item.position,name=name,prompt=verb..' · '..name,distance=math.sqrt(dist)}
+        position=item.position,name=name,verb=verb,distance=math.sqrt(dist)}
 end
 
 local function inRange(item,feet)

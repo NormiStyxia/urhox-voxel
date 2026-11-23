@@ -1,5 +1,6 @@
--- File/cjson sandbox persistence. Web refresh clears the engine's in-memory save.
+-- File/cjson persistence shared by combat, the forge and the backpack.
 local Catalog = require("combat.WeaponCatalog")
+local Materials = require("combat.MaterialCatalog")
 local Store = {}
 local SAVE_PATH = "weapons-v1.json"
 local PENDING_PATH = SAVE_PATH..'.tmp'
@@ -7,6 +8,8 @@ local BACKUP_PATH = SAVE_PATH..'.bak'
 local MAX_SAVE_BYTES = 16384
 local MAX_COUNT = 999999
 local REWARD_ORE, REWARD_SAND = 3, 2
+local CLOUD_KEY = 'weapons_v1'
+local webSave
 local starters, dropOrder, imprintById, imprintClass = {}, {}, {}, {}
 for _,class in ipairs(Catalog.Classes) do
     local byRole={}
@@ -26,7 +29,7 @@ for _,class in ipairs(Catalog.Classes) do
 end
 
 local function Progress(legacy)
-    local progress={ore=legacy and 0 or 3,sand=1,imprintDrops=0,slots={}}
+    local progress={ore=legacy and 0 or 3,sand=1,imprintDrops=0,slots={},materials={},trainingClaims={},siteClaims={}}
     for _,class in ipairs(Catalog.Classes) do
         local items=Catalog.Weapons[class]
         local id=items[legacy and #items or 1].id
@@ -59,7 +62,24 @@ local function ReadProgress(source)
     local cursor=source.imprintDrops
     if cursor==nil then cursor=0 end
     if not Integer(cursor,0,#dropOrder-1) then return nil end
-    local result={ore=source.ore,sand=source.sand,imprintDrops=cursor,slots={}}
+    local result={ore=source.ore,sand=source.sand,imprintDrops=cursor,slots={},materials={},trainingClaims={},siteClaims={}}
+    -- Existing v3 saves predate materials. Preserve the equipment even when
+    -- an inventory field contains an obsolete or malformed entry.
+    if type(source.materials)=='table' then
+        for id,count in pairs(source.materials) do
+            if Materials.IsGathered(id) and Integer(count,1,MAX_COUNT) then result.materials[id]=count end
+        end
+    end
+    if type(source.trainingClaims)=='table' then
+        for kind in pairs(Materials.EnemyDrops) do
+            if source.trainingClaims[kind]==true then result.trainingClaims[kind]=true end
+        end
+    end
+    if type(source.siteClaims)=='table' then
+        for key in pairs(Materials.SiteByKey) do
+            if source.siteClaims[key]==true then result.siteClaims[key]=true end
+        end
+    end
     for _,class in ipairs(Catalog.Classes) do
         local slot=source.slots[class]
         if type(slot)~='table' or type(slot.levels)~='table' or type(slot.ranks)~='table' or type(slot.failures)~='table' then return nil end
@@ -235,6 +255,31 @@ function Store.Forge(rig,class,action,id,option,random)
     return ok,reason or message
 end
 
+function Store.AddMaterial(rig,id,count,trainingKind,siteKey)
+    if not Materials.IsGathered(id) or not Integer(count,1,MAX_COUNT) then
+        return false,'材料无效'
+    end
+    local config=Store.Normalize(rig.config)
+    if not config then return false,'装备配置无效' end
+    local progress=config.progress
+    if trainingKind then
+        local drop=Materials.EnemyDrops[trainingKind]
+        if not drop or drop.id~=id or drop.count~=count or progress.trainingClaims[trainingKind] then
+            return false,'这份训练素材已领取'
+        end
+        progress.trainingClaims[trainingKind]=true
+    elseif siteKey then
+        local site=Materials.SiteByKey[siteKey]
+        if not site or site[2]~=id or site[3]~=count or progress.siteClaims[siteKey] then
+            return false,'此处已经采集'
+        end
+        progress.siteClaims[siteKey]=true
+    end
+    if (progress.materials[id] or 0)+count>MAX_COUNT then return false,'材料已达堆叠上限' end
+    progress.materials[id]=(progress.materials[id] or 0)+count
+    return Store.Commit(rig,config)
+end
+
 function Store.RewardKill(rig)
     local config=Store.Normalize(rig.config)
     if not config then return false,'装备配置无效' end
@@ -261,27 +306,90 @@ local function Close(file)
     if file then pcall(function() file:Close() end) end
 end
 
+-- Some Web hosts implement permanent savedata. Use the documented player cloud
+-- on other Web hosts with a signed-in player. Guest previews still have File
+-- for the current run. Wait for a confirmed cloud read before mirroring any
+-- write, so a connection problem can never replace a player's old cloud save.
+function Store.Prepare(onReady)
+    webSave=nil
+    if not GetPlatform or GetPlatform()~='Web' or not clientCloud then onReady();return end
+    local hasFS,persistent=pcall(function() return fileSystem:HasPersistentFS() end)
+    if hasFS and persistent then onReady();return end
+    local hasUser,user=pcall(function() return clientCloud.userId end)
+    if not hasUser or not user or tostring(user)=='' or tostring(user)=='0' then onReady();return end
+    local state={ready=onReady,readLeft=4,retry=0}
+    webSave=state
+    local function finish(enabled,snapshot)
+        if webSave~=state or not state.ready then return end
+        local ready=state.ready
+        state.ready,state.enabled,state.snapshot=nil,enabled,snapshot
+        ready()
+    end
+    state.timeout=function() finish(false) end
+    local ok=pcall(clientCloud.Get,clientCloud,CLOUD_KEY,{
+        ok=function(values)
+            local raw=values and values[CLOUD_KEY]
+            if raw==nil then finish(true);return end
+            if type(raw)~='string' or #raw>MAX_SAVE_BYTES then finish(false);return end
+            local decoded,value=pcall(cjson.decode,raw)
+            local config=decoded and Store.Normalize(value,true) or nil
+            finish(config~=nil,config)
+        end,
+        error=function() finish(false) end,
+        timeout=function() finish(false) end,
+    })
+    if not ok then finish(false) end
+end
+
+function Store.Update(dt)
+    local state=webSave
+    if not state then return end
+    if state.ready then
+        state.readLeft=state.readLeft-dt
+        if state.readLeft<=0 then state.timeout() end
+        return
+    end
+    if not state.pending or state.writing then return end
+    state.retry=state.retry-dt
+    if state.retry>0 then return end
+    local raw=state.pending
+    state.pending,state.writing=nil,true
+    local function failed()
+        if webSave~=state then return end
+        state.writing,state.pending,state.retry=false,state.pending or raw,4
+    end
+    local ok=pcall(clientCloud.Set,clientCloud,CLOUD_KEY,raw,{
+        ok=function() if webSave==state then state.writing=false end end,
+        error=failed,timeout=failed,
+    })
+    if not ok then failed() end
+end
+
+function Store.Stop()
+    webSave=nil
+end
+
 ---@return table
 function Store.Load()
-    ---@type File?
-    local file = nil
-    local ok, result = pcall(function()
-        -- 首次进入没有存档：先判断存在，避免引擎对不存在的文件打印 ERROR（Could not open file）。
-        local path=SAVE_PATH
-        if not fileSystem:FileExists(path) then
-            if not fileSystem:FileExists(BACKUP_PATH) then return nil end
-            path=BACKUP_PATH
-        end
-        file = File(path, FILE_READ)
-        if not file or not file:IsOpen() then return nil end
-        if file:GetSize()>MAX_SAVE_BYTES then return nil end
-        local raw = file:ReadString()
-        if type(raw)~="string" or #raw>MAX_SAVE_BYTES then return nil end
-        return Store.Normalize(cjson.decode(raw),true)
-    end)
-    Close(file)
-    if ok and result then return result end
-    return Store.Default()
+    if webSave and webSave.snapshot then
+        local config=webSave.snapshot
+        webSave.snapshot=nil
+        return config
+    end
+    local function Read(path)
+        local file
+        local ok, result = pcall(function()
+            if not fileSystem:FileExists(path) then return nil end
+            file = File(path, FILE_READ)
+            if not file or not file:IsOpen() or file:GetSize()>MAX_SAVE_BYTES then return nil end
+            local raw = file:ReadString()
+            if type(raw)~="string" or #raw>MAX_SAVE_BYTES then return nil end
+            return Store.Normalize(cjson.decode(raw),true)
+        end)
+        Close(file)
+        if ok then return result end
+    end
+    return Read(SAVE_PATH) or Read(BACKUP_PATH) or Store.Default()
 end
 
 ---@param config table
@@ -305,7 +413,9 @@ function Store.Save(config)
             if fileSystem:FileExists(BACKUP_PATH) and not fileSystem:Delete(BACKUP_PATH) then return false end
             if not fileSystem:Rename(SAVE_PATH,BACKUP_PATH) then return false end
         end
-        return fileSystem:Rename(PENDING_PATH,SAVE_PATH)
+        if not fileSystem:Rename(PENDING_PATH,SAVE_PATH) then return false end
+        if webSave and webSave.enabled then webSave.pending=raw;webSave.retry=0 end
+        return true
     end)
     Close(file)
     return ok and result==true

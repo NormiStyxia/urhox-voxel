@@ -55,6 +55,7 @@ local function LerpAngle(a, b, t) return a + WrapDeg(b - a) * t end
 ---@field rig DragonRig
 ---@field node Node
 ---@field controlsEnabled fun():boolean
+---@field canMountInput (fun():boolean)?
 ---@field resolveDismount fun():Vector3?,string?
 ---@field onNotice fun(text:string)
 ---@field onMount fun()|nil
@@ -455,7 +456,7 @@ function R:Update(dt, camYaw)
         if self:NearDragon() < MOUNT_RANGE * math.max(0.6, size) and self.onGround then
             if self.rideable then
                 self.hint = TouchInput.IsEnabled() and "靠近龙，点【上龙】" or "按 F 骑上龙背"
-                if Press(KEY_F) then self:Mount() end
+                if Press(KEY_F) and (not self.canMountInput or self.canMountInput()) then self:Mount() end
             else
                 self.hint = "幼龙还太小，骑不了——它会一直跟着你"
             end

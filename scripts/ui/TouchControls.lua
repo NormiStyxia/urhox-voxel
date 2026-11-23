@@ -171,6 +171,8 @@ function M.BeginTouch(id,x,y)
     idle=0
     -- Help is modal; all fingers are consumed until dismissed.
     if M.menuOpen then M.menuOpen=false; Cancel(); owners[id]={kind='retired'}; return end
+    local target=M.onGatherHit and M.onGatherHit(x,y)
+    if target then owners[id]={kind='gather',target=target.id}; return end
     for i,b in ipairs(TopButtons()) do
         if Hit(b,x,y,true,i) then
             if b.name=='worldMap' and M.onMap then M.onMap();return
@@ -230,6 +232,9 @@ function M.EndTouch(id,x,y)
     if not o then return end
     if o.kind=='house' then
         if M.housePanel then M.housePanel:Up(id,x or o.x,y or o.y) end
+    elseif o.kind=='gather' then
+        local target=x and y and M.onGatherHit and M.onGatherHit(x,y)
+        if target and target.id==o.target and M.onGather then M.onGather(target) end
     elseif o.kind=='map' then
         local map=package.loaded['ui.WorldMap']
         if map and map.IsOpen() then map.Up(id,x,y) end
