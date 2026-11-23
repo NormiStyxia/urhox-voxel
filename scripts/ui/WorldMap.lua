@@ -10,6 +10,7 @@ local paper={226,226,207};local light={250,244,222};local line={183,192,180}
 local green={46,82,75};local gold={215,177,102};local red={134,69,52}
 local names={ruins='时之遗迹',home='家园小岛'}
 local ids={'ruins','home'}
+local mapFontSize=8
 local function round(n) return math.floor(n+.5) end
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 local function metrics()
@@ -42,6 +43,13 @@ local function progress()
     return t*t*(3-2*t)
 end
 local function paperStrip(vg,H,x,width,sourceX,sourceWidth)
+    -- The chart face follows the clean paper used by the pixel preview.
+    -- Keep the illustrated scroll edges, but do not repeat their paper grain
+    -- across the map board.
+    if sourceX==12 then
+        Draw.Rect(vg,x,0,width,H,{239,236,224})
+        return
+    end
     local sx=width/sourceWidth
     for section=1,3 do
         local y,sh,sy=0,10,0
@@ -80,11 +88,6 @@ local function chartBorder(vg,W,H)
         Draw.Rect(vg,x,y,w+1,1,color);Draw.Rect(vg,x,y+h,w+1,1,color)
         Draw.Rect(vg,x,y,1,h,color);Draw.Rect(vg,x+w,y,1,h,color)
     end
-    stamp(vg,l+4,t+4,0,171,91,40);stamp(vg,r-95,t+4,94,171,91,40)
-    stamp(vg,l+4,b-43,0,214,91,40);stamp(vg,r-95,b-43,94,214,91,40)
-    stamp(vg,r-108,t-8,0,128,85,30)
-    stamp(vg,l+1,b-34,90,128,58,37)
-    stamp(vg,r-24,b-round((b-t)*.32),152,128,27,8)
 end
 local function chart(vg,W,H,left,right)
     local roller=12
@@ -117,7 +120,7 @@ end
 local function button(vg,x,y,w,h,text,active)
     Draw.Rect(vg,x,y,w,h,active and green or edge)
     Draw.Rect(vg,x+1,y+1,w-2,h-2,active and green or paper)
-    Draw.Text(vg,text,x+w*.5,y+h*.5,12,active and light or ink,NVG_ALIGN_CENTER)
+    Draw.Text(vg,text,x+w*.5,y+h*.5,mapFontSize,active and light or ink,NVG_ALIGN_CENTER)
 end
 local Layer=UI.Panel:Extend('RuinsWorldMap')
 function Layer:Render(vg)
@@ -130,8 +133,8 @@ function Layer:Render(vg)
     chart(vg,W,H,left,right)
     Draw.Save(vg);nvgIntersectScissor(vg,left+12,0,math.max(0,right-left-24),H)
     compass(vg,23,21)
-    Draw.Text(vg,'群岛航图',35,21,12,ink)
-    Draw.Text(vg,'关闭 ×',W-19,21,12,ink,NVG_ALIGN_RIGHT)
+    Draw.Text(vg,'群岛航图',35,21,mapFontSize,ink)
+    Draw.Text(vg,'关闭 ×',W-19,21,mapFontSize,ink,NVG_ALIGN_RIGHT)
     Draw.Save(vg);nvgIntersectScissor(vg,13,top,W-26,bottom-top)
     islands(vg,ox,oy,step)
     -- The destination reticle and upright portrait have independent anchors.
@@ -167,9 +170,9 @@ function Layer:Render(vg)
         button(vg,bx,H-48,58,20,names[id],selected==id)
         if current==id then Draw.Rect(vg,bx+26,H-29,6,2,gold) end
     end
-    Draw.Text(vg,'当前位置 · '..names[current],W-18,H-38,12,muted,NVG_ALIGN_RIGHT)
+    Draw.Text(vg,'当前位置 · '..names[current],W-18,H-38,mapFontSize,muted,NVG_ALIGN_RIGHT)
     local help=touchMode and '单指转动 · 双指平移 · 点岛前往' or '左键滑动转向 · 右键平移 · 点岛前往'
-    Draw.Text(vg,notice or help,18,H-20,12,notice and red or ink)
+    Draw.Text(vg,notice or help,18,H-20,mapFontSize,notice and red or ink)
     Draw.Restore(vg);Draw.Restore(vg);Draw.Finish(vg)
 end
 function Map.SetNotice(text) notice=text end

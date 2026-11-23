@@ -174,7 +174,10 @@ local function Font(vg,size)
         c.font=nvgCreateFont(vg,'ruins-pixel','Fonts/ArkPixel-12px-zh_hans.ttf')
         if c.font<0 then return false end
     end
-    nvgFontFaceId(vg,c.font); nvgFontSize(vg,size==24 and 24 or 12)
+    nvgFontFaceId(vg,c.font)
+    -- Keep the map's small ArkPixel labels crisp while preserving the
+    -- existing large HUD call sites that pass 24.
+    nvgFontSize(vg,size or 12)
     nvgFontBlur(vg,0); nvgTextLetterSpacing(vg,0)
     return true
 end
