@@ -1,0 +1,115 @@
+{
+    "version": 2,
+    "script": "ui/tests/ScrollPanels.lua",
+    "result": "FAIL",
+    "duration_ms": 9624,
+    "frames_completed": 125,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 164.747ms (threshold: 100ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 104.304ms (threshold: 100ms)",
+                    "frame": 9
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 137.587ms (threshold: 100ms)",
+                    "frame": 53
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 185.357ms (threshold: 100ms)",
+                    "frame": 122
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 109.987ms (threshold: 100ms)",
+                    "frame": 123
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 132.496ms (threshold: 100ms)",
+                    "frame": 124
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2,
+            "component_count": 2,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 361.88299560546877
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 48.91699981689453
+        },
+        {
+            "frame": 62,
+            "phase": "run",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 39.27399826049805
+        },
+        {
+            "frame": 125,
+            "phase": "run",
+            "nodes": 2,
+            "components": 2,
+            "hash": 3459026726,
+            "frame_time_ms": 79.58899688720703
+        }
+    ],
+    "scene_stalled": true,
+    "max_frame_time_ms": 185.35699462890626,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "Camera": 1
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 6,
+        "total_errors": 6
+    }
+}

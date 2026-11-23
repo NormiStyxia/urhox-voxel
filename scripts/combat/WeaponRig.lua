@@ -873,7 +873,7 @@ function Rig:SetActive(weapon)
     self.visualState,self.hangReady='hidden',false
     self.attached="hidden"
     self.swingOffset,self.swingEuler=Vector3.ZERO,Vector3.ZERO
-    -- StopCombatVisual already cleared trails before changing the active entry.
+    -- 切换前 StopCombatVisual 已清空拖尾，无需重复处理。
     self:UpdateTrailColor()
     self:HideWeapon(weapon)
     -- Swapping stows the new weapon; the combat owner may then request hand.

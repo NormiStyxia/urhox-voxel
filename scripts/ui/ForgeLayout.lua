@@ -194,6 +194,7 @@ local function Drawer(vg,s,materials)
             s.filter,s.scroll=filter[1],0
         end)
     end
+    ---@type {seal: table, class: string, count: integer, rank: integer}[]
     local filtered={}
     for _,mat in ipairs(materials) do if s.filter=='all' or s.filter==mat.class then filtered[#filtered+1]=mat end end
     local maxScroll=math.max(0,#filtered-3)

@@ -137,7 +137,7 @@ function M.Rect(vg,x,y,w,h,c,alpha)
 end
 local scrollTexture='ui/forge/panel.png'
 local scrollPaper={234,231,216}
-function M.ScrollPaper(vg,w,h,left,right)
+function M.ScrollPaper(vg,w,h,left,right,printed)
     -- Full texture includes the fixed weapon panel's printed artwork.
     if left==nil then
         if not M.ImagePixels(vg,scrollTexture,0,0) then M.Rect(vg,0,0,w,h,scrollPaper) end
@@ -148,12 +148,17 @@ function M.ScrollPaper(vg,w,h,left,right)
     local roller,rim,inner=12,10,356
     M.Save(vg)
     nvgIntersectScissor(vg,left+roller,0,right-left-2*roller,h)
-    for x=roller,w-roller-1,inner do
-        local span=math.min(inner,w-roller-x)
-        M.ImagePixels(vg,scrollTexture,x,0,roller,0,span,rim)
-        M.ImagePixels(vg,scrollTexture,x,h-rim,roller,204,span,rim)
+    if printed then
+        -- 锻造保留原底图，只裁开纸面，不压缩印刷图案。
+        if not M.ImagePixels(vg,scrollTexture,0,0) then M.Rect(vg,roller,0,w-2*roller,h,scrollPaper) end
+    else
+        for x=roller,w-roller-1,inner do
+            local span=math.min(inner,w-roller-x)
+            M.ImagePixels(vg,scrollTexture,x,0,roller,0,span,rim)
+            M.ImagePixels(vg,scrollTexture,x,h-rim,roller,204,span,rim)
+        end
+        M.Rect(vg,roller,rim,w-2*roller,h-2*rim,scrollPaper)
     end
-    M.Rect(vg,roller,rim,w-2*roller,h-2*rim,scrollPaper)
     M.Restore(vg)
     for side=1,2 do
         local x,sx=left,0

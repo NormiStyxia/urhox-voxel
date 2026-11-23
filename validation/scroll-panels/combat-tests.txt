@@ -1,0 +1,1881 @@
+PASS NestWeaver: scissor and travelling silk, lock/dodge/jump/wall, interrupt/reset, recoil/death
+PASS sweep: 120 degree / 2.25m locked cone, misses flank, rear and radius, one 15 damage hit
+PASS slam: ring travels to 3.6m, one 21 damage hit, jump and exit evade, .2s updates cover wavefront
+PASS interruption, shoulder/chest recoil, stone chips, one death callback, crystal lands last and all 9 parts rest on ground
+PASS RuinConstruct: projectile, locked beam, dodge, cover, recoil, death and cleanup
+TimeWraith: swept fan, flank blink, annular hit/miss, safe rollback, interrupts and ordered death passed
+PASS WoodSpirit: headbutt and pounce hit once, locked sidestep, wall stop, recovery, reset, disable, delayed leaf recoil and one death release
+EnemyHitMaterial: palette bank=0 domain=0 original=mock_palette_material shader=Shaders/BLGL/EnemyVoxelHit.shader hit_flash=true (GPU compile/visibility requires Web)
+MODEL-PIVOT WoodSpirit    rest=ok pose=ok parts=8
+MODEL-VISUAL WoodSpirit    parts=8 created=8 rebuilt=8 stable
+MODEL-PIVOT NestWeaver    rest=ok pose=ok parts=15
+MODEL-VISUAL NestWeaver    parts=15 created=15 rebuilt=15 stable
+MODEL-PIVOT RockColossus  rest=ok pose=ok parts=9
+MODEL-VISUAL RockColossus  parts=9 created=9 rebuilt=9 stable
+MODEL-PIVOT RuinConstruct rest=ok pose=ok parts=9
+MODEL-VISUAL RuinConstruct parts=9 created=9 rebuilt=9 stable
+MODEL-PIVOT TimeWraith    rest=ok pose=ok parts=13
+MODEL-VISUAL TimeWraith    parts=13 created=13 rebuilt=13 stable
+BOSS-ALIVE WoodSpirit    spawn=(-22.0,8.0) bossDist=37.3m active=yes selected=yes
+BOSS-ALIVE NestWeaver    spawn=(23.0,7.0) bossDist=24.1m active=yes selected=yes
+BOSS-ALIVE RockColossus  spawn=(0.0,-16.0) bossDist=44.4m active=yes selected=yes
+BOSS-ALIVE RuinConstruct spawn=(-13.0,24.0) bossDist=23.2m active=yes selected=yes
+BOSS-ALIVE TimeWraith    spawn=(30.0,7.0) bossDist=28.5m active=yes selected=yes
+PASS five actors: config/model/posePart, hit+evade, freeze/no sneaky hit, one death/drop, no rebuild, Spawner entry
+PASS real pose/socket sword OBB clearance frames=1554 blade=0.20625..1.03125
+PASS bone axis derivation
+PASS all active clips have complete, ordered tracks and matching event windows
+PASS events survive a large timestep in order and fire once
+PASS events at zero and exact boundary
+PASS slow playback and accelerated playback retain exactly one hit
+PASS timeScale and zero dt pause (no per-weapon speed stat)
+PASS fade weights and slerp match base-to-pose interpolation
+PASS automatic recovery fade reaches zero
+PASS priority covers stance and cancels offensive tracks
+PASS same-layer replacement fades old pose, cancels old events
+PASS same-layer crossfade does not leak the base pose
+PASS stop closes active windows and never emits future fire
+PASS stop removes unconsumed hit_on without losing pending hit_off
+PASS replay and stale handles
+PASS bow parameter drives arm, clamps, and full fires once per play
+PASS quantized anticipation but continuous active and monotonic recovery
+PASS motion totals independent of speed, fades and timestep
+PASS cancel stops subsequent motion
+PASS Apply fallback, explicit dt avoids double advancement
+PASS uncontrolled bones untouched and root offset does not accumulate
+PASS cross slash torso swings left then right, never a full turn
+PASS weapon pose and state buffers reuse tables
+PASS death/knockdown hold until explicit replacement; stop all clears
+PASS invalid inputs do not mutate live animation
+PASS R1 move timings and cancel windows are authored once
+PASS six attack landmarks, torso .02s ahead and head compensates
+PASS finisher commits the torso and hips to the downward strike
+PASS 20Hz option and continuous root position
+PASS getup protection outlives pose and does not block new attacks
+PASS getup event tail on large delta and explicit stop closes it
+PASS protection clocks keep advancing through pose hitstop
+PASS bow minimum draw, full threshold, and shot recovery boundary
+PASS afterimages maintain .04s deadlines at 30 and 60fps
+PASS afterimages are sword-only, expire during hitstop, cancel clears
+PASS equipment clips appear in DebugList with source and target equipment
+PASS bow equip and sheath traverse the shoulder and deliver attachment once
+PASS swap stows at .18, opens cancellation at .20, readies at .40
+PASS swap can be cancelled after gate without late attachment or damage
+PASS swap large-frame event order and head/torso lead
+PASS path endpoints, explicit arc sweep, windup and overshoot
+PASS all IK samples remain finite and hit the rigid arm sphere
+PASS IK uses actual character socket bind vector and allocates no result tables per Apply
+PASS hitstop holds IK contact pose and weapon direction without drift
+PASS blade compensation follows desired direction through real Rig composition
+PASS bow faces target, aims within 35 degrees, and draws toward chin
+PASS path fallback and exact shoulder-target degeneracy stay valid
+PASS path rotations stay continuous across shoulder and behind-back crossings
+PASS half-moon finisher plants the landed grip for .06 seconds
+PASS legacy fallback supports clips without separate legacy keys
+PASS free-facing attacks leave controller heading and horizontal position untouched
+PASS attack leg keys stay available for authoring while runtime preserves gait legs
+PASS bow hand blade and gaze share aim under torso tremor and arbitrary facing
+PASS bow release holds left aim for .08s then relaxes; cancel does not twist torso
+PASS new spin/finisher IK and motion remain independent of frame rate
+PASS removed plunge clips cannot be listed or played
+PASS attack preserves locomotion legs and adds body turn over base pose
+[CombatAudio] 空间音源不可用，改为平面播放并按距离衰减。
+PASS CombatAudio: 2069 assertions (Lua 5.4)
+PASS R8 sword_full reused sample, .8 pitch, -6dB cue and independent key; same-frame material/core+heavy layering retained
+PASS R9 reused run_step sample, -14dB cue, no new preload or runtime resources
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: arrow cancel focus
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit enemy part=body dmg=8.00 poise=0.00
+PASS R7 formula/minimum/once-only RNG/pool, analytic 30/60fps, TTL/range, initial wall sweep, prediction budget/alignment, full clock/snapshot/cancel, target-only stop
+FAIL tests/combat/bow_r7.lua [string "actual bow HUD wiring"]:41: attempt to perform arithmetic on a nil value (global 'bowAssistScale')
+stack traceback:
+	[string "<python>"]:129: in main chunk
+	[string "<python>"]:128: in local 'ticks'
+	[string "actual bow HUD wiring"]:41: in upvalue 'update'
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS R7 shared full-arrow cells,12 pooled arrows,continuous nock/stages/string endpoints,full cue/cancel,tip-pivot shake,zero hot volume/grid work
+PASS R7 actual left-before-right IK nock coverage at u0/.65/.9/1 and pitch +/-35, <3cm
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS core_camera: idle/F3/no drift, bow reset/full-once, real lunge clipping, shared ground streak, F7 orbit preservation
+PASS Rig arrival-only sound/flash, aimPitch/bow draw ports, reticle centre unchanged
+PASS F7 P toggles/reseeks same frame, disabled outside preview, continuous bow p and legacy diagnostics isolation
+PASS R8 low quality suppresses impact action only, bow zoom preserved; Scene clamps hit+land before independent follow movement
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel menu
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel focus
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel touchcancel
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel swap
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel exit
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel death
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: arrow cancel mount
+PASS free-facing: intent selection/filter/turn snapshot, shared region samples, physical lunge clipping, bow zoom start/disable/all cancel reasons
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: clip bow_release finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel focus
+PASS W4 actual release/cancel first-frame and entire recovery snapshot p/pitch; no cancelled shot
+PASS static Time receiver preserved in isolation clock
+FAIL tests/combat/core_free_facing.lua [string "actual Scene zoom composition"]:4: attempt to call a nil value (global 'OnFoot')
+stack traceback:
+	[string "<python>"]:113: in main chunk
+	[string "actual Scene zoom composition"]:4: in local 'update'
+PASS GC: incremental110/300, budget8, >12ms skip, once/frame, debug1Hz, toggle/restore, unloaded/disabled guards
+BlockCharacter: built voxel character, 16 bones, 4168 quads, 8079 slope tris
+FAIL tests/combat/core_hand_socket.lua [string "actual Nomi palm construction"]:5: attempt to call a nil value (method 'GetComponents')
+stack traceback:
+	[string "<python>"]:45: in main chunk
+	[string "actual Nomi palm construction"]:5: in main chunk
+PASS analytic start-inside, tangent, degenerate, behind, finite damage, result ownership, wall occlusion
+FAIL tests/combat/core_isolation.lua [string "actual Scene PostUpdate"]:2: attempt to index a nil value (global 'Training')
+stack traceback:
+	[string "<python>"]:66: in main chunk
+	[string "actual Scene PostUpdate"]:2: in field 'Ruins_HandlePostUpdate'
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit test part=body dmg=10.00 poise=6.00
+PASS core_melee_zone: real F9 geometry vs missing blade, all light/heavy hits at 10/30/60FPS, walls/dedup/weakpart/contact, sector/height/range/capsule/translation
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit test part=core dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+PASS nearest weak shape feeds unchanged HitEvent; body/armor overlaps and spin/slam union settle once
+PASS actual Nomi Move: gap sweep/no teleport, jump blocked during attack, ordinary run 7.2m/s with attack scaling, bow slow walk
+PASS debug teleport rejects unsafe ground, clears velocity, sets safe fallback and snaps camera
+PASS slide full-footprint edge guard, slope/height/wall probes <=.10m and <=.02m refinement
+PASS actual camera 70:30 framing, manual input priority, independent follow/offset, final obstruction guard
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: player hit dmg=10.00 hp=90.00
+Combat: clip hit_light start
+Combat: clip hit_light finish
+Combat: state COMBAT_ACTIVE->EXPLORE death
+Combat: clip death start
+Combat: player respawn hp=100
+Combat: clip getup start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: clip bow_release finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel touchcancel
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel menu
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel focus
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel death
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel mount
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel swap
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel mode
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: arrow cancel weak-release
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel menu
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip weapon_swap_sword_to_bow start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: clip weapon_swap_sword_to_bow start
+Combat: clip weapon_swap_sword_to_bow finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip getup start
+Combat: clip getup finish
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: hit training_dummy part=body dmg=18.00 poise=0.00
+PASS debug active-frame seek/backstep, real-anchor safety rejection, dummy reset/numbers, hand FX atomic off
+PASS actual Scene F7 pause/focus frames suppress Apply fallback; loop display clock matches pose
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: hit enemy part=shell dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: hit enemy part=shell dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel touchcancel
+PASS unified hit event, material audio, group max/no restart, ordinary arrow no shake, full weak arrow, bounded groups, full once/cancel sound
+PASS HP .12 hold/.25 catchup without continuous-hit postponement; 2dp reticle contraction and .10 weak tail
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: hit enemy part=head dmg=20.00 poise=12.00
+PASS weak core +2dB tier, heavy extra layer shares same hitId and preserves event tier
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: arrow cancel touchcancel
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: clip bow_release finish
+PASS cold nil bow handle: no retry, safe cancellation, release still fires once
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+PASS R8 profiles 40/40/80/100ms, complete pooled event overwrite/consumer, bounded groups, local punch, low-FPS visible contact fallback, no sword charge levels
+R8 Feedback+Shake mock gross allocation 0.00 B/iteration; 8 events/32 groups fixed. Excludes existing info/result snapshots, audio handles and native userdata.
+PASS R8 actual Hit.Apply -> Moves.Feedback -> EnemyBase.OnHitEvent, one kernel on kill, copied profile contract and no double presentation
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: hit enemy part=body dmg=8.50 poise=9.60
+Combat: clip sword_light_4 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: hit enemy part=body dmg=8.50 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: hit enemy part=body dmg=19.00 poise=13.80
+Combat: clip sword_light_5 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: clip sword_light_5 finish
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS five-stage data, exact damage/poise/stop/zones/dedupe, heavy branches, finisher .35s lock, timeout reset
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: player hit dmg=5.00 hp=95.00
+Combat: clip hit_light start
+PASS removed landing attack: heights/input, no forced velocity/cost/radial hit/feedback/lock, interrupts and stale events
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+PASS PixelDraw: identical tiled rect/UV contract, transform balance, moving/resize cache, fresh tint dedup, context lifetime
+Isolated error: HUD.test [string "<python>"]:56: injected HUD failure
+PASS isolated HUD draw restores parent NVG state after nested save failure
+PASS actual F7 enter/exit, number/E/Q exclusive routing, held-key exit guard, normal keyboard/touch puzzle restore
+PASS crystal weak/mid/full tiers, resolved weak damage, piercing isolation, multiplier slot reset
+PASS pool capacity/reuse, full penetration cap, wall ordering/embed expiry, parabolic integration
+PASS body arrow attachment motion/removal, group identity/material and clean pool reuse
+PASS arrow wall pooled impact emitted once
+FAIL tests/combat/core_routing.lua [string "Scene forge disposal prefix"]:3: attempt to index a nil value (global 'Training')
+stack traceback:
+	[string "<python>"]:111: in main chunk
+	[string "Scene forge disposal prefix"]:3: in field 'Stop'
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_1 finish
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 finish
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 finish
+Combat: clip sword_light_4 start
+Combat: hit training_dummy part=body dmg=8.50 poise=9.60
+Combat: clip sword_light_4 finish
+Combat: clip sword_light_5 start
+Combat: hit training_dummy part=body dmg=19.00 poise=13.80
+Combat: clip sword_light_5 finish
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit training_dummy part=body dmg=2.20 poise=2.93
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit training_dummy part=body dmg=6.73 poise=4.02
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit training_dummy part=body dmg=17.96 poise=6.00
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_1 finish
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 finish
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 finish
+Combat: clip sword_light_4 start
+Combat: hit training_dummy part=body dmg=8.50 poise=9.60
+Combat: clip sword_light_4 finish
+Combat: clip sword_light_5 start
+Combat: hit training_dummy part=body dmg=19.00 poise=13.80
+Combat: clip sword_light_5 finish
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit training_dummy part=body dmg=2.59 poise=3.03
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit training_dummy part=body dmg=7.24 poise=4.15
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: hit training_dummy part=body dmg=17.96 poise=6.00
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: clip sword_light_2 start
+Combat: clip sword_light_2 finish
+Combat: clip sword_light_3 start
+Combat: clip sword_light_3 finish
+Combat: clip sword_light_4 start
+Combat: clip sword_light_4 finish
+Combat: clip sword_light_5 start
+Combat: clip sword_light_5 finish
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE weapon
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip bow_draw start
+Combat: clip bow_hold start
+Combat: clip bow_release start
+Combat: clip bow_release finish
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+core_selftest PASS: actual input/event/settlement observations, missing-hit failure, abort cleanup, F7 params
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE quiet
+Combat: state EXPLORE->COMBAT_IDLE aggro
+Combat: state COMBAT_IDLE->EXPLORE quiet
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->EXPLORE quiet
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->EXPLORE mount
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE aggro
+Combat: state COMBAT_IDLE->EXPLORE mount
+PASS core_state: visibility, draw/attack gate, 0.4s recovery grace/back, 6s quiet/aggro/hit, 1s spell delay, mount/death, swap, cancellation
+PASS bounded event logs: actual state changes only, duplicate guard and 48 lines/sec ceiling
+Combat: state EXPLORE->COMBAT_IDLE loadout
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE loadout
+PASS armed vs engaged: explicit selection stays armed without engagement; attack/hit/aggro engage for 6s; unarmed never engaged
+FAIL tests/combat/core_stow.lua [string "actual Scene base armed routing"]:1: attempt to call a nil value (global 'OnFoot')
+stack traceback:
+	[string "<python>"]:92: in main chunk
+	[string "actual Scene base armed routing"]:1: in main chunk
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS 50 actual Moves/State/Rig switches: 0 Build/Compile/CreateVolume/grid-write/rebuild delta
+FAIL tests/combat/core_touch.lua [string "<python>"]:66: Scene preserves full modal input gate
+stack traceback:
+	[string "<python>"]:66: in main chunk
+	[C]: in function 'assert'
+boss HUD+Touch 600 frames: 294.266 KB total / 0.490 KB per frame / 119.0 fills per frame
+PASS real Render preview overlay enter/exit, retained message/hint/buttons; touch unchanged
+HUD: hidden by forge (layer=RuinsHUD)
+HUD: hidden by forge (layer=RuinsHUD)
+HUD: hidden by forge (layer=CombatHUD)
+HUD: hidden by forge (layer=CombatHUD)
+HUD: hidden by forge (layer=CombatHUD)
+HUD: hidden by forge (layer=CombatHUD)
+HUD: hidden by forge (layer=TouchControls)
+HUD: hidden by forge (layer=TouchControls)
+HUD: hidden by forge (layer=PerformanceHUD)
+HUD: hidden by forge (layer=PerformanceHUD)
+HUD: hidden by forge (layer=RuinsHUD)
+HUD: hidden by forge (layer=CombatHUD)
+HUD: hidden by forge (layer=TouchControls)
+HUD: hidden by forge (layer=PerformanceHUD)
+HUD: hidden by forge (layer=RuinsHUD)
+HUD: hidden by forge (layer=CombatHUD)
+HUD: hidden by forge (layer=TouchControls)
+HUD: hidden by forge (layer=PerformanceHUD)
+FAIL tests/combat/core_ui_alloc.lua [string "<python>"]:164: actual opening/revealing/open/closing/finish visibility contract
+stack traceback:
+	[string "<python>"]:164: in main chunk
+	[C]: in function 'assert'
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_2 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_light_3 start
+Combat: hit training_dummy part=body dmg=10.00 poise=6.00
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: clip sword_heavy_release start
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: hit training_dummy part=body dmg=13.00 poise=9.60
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: clip sword_heavy_release start
+Combat: clip sword_heavy_release start
+PASS native Vector3 boundary: 40 real Action->animation->zone->LOS->Apply matrices; actual F11 prepare aligns body/camera; all light/heavy damages; translated range samples
+PASS deferred settlement: no immediate particles/reaction; sweep presents each target once; duplicate event ignored; borrowed vectors copied
+PASS default/explicit legacy behavior; previous reaction preserved until handoff; mismatched events and reset cannot consume a token
+PASS armor/HP/poise settlement before presentation; one armor burst replaces heavy particles; shared HitEvent tier drives recoil
+PASS deferred death copies all retained scalars/vectors; no immediate burst; delayed 24 fragments/die and single victory remain enemy-owned
+PASS deflection supports deferred and legacy paths without caster reaction or duplicate chips; enemy_hit_event complete
+PASS state transitions, 0.4 alert, 0.6 telegraph, 1.8m lunge, 0.8 recovery, one hit
+PASS small enemy: one hit zone, no armor, one-shot death notification, no respawn
+PASS swept edge/footprint/gap checks and bounded movement work
+PASS sentry 0.9 telegraph, 12m/s pooled projectile, sword interception, ranged damage, retreat
+PASS five parts, hidden core, leg break/down 3s, down x1.5, core x1.6, poise, phase two
+PASS charge/pillar stun 2.5s, 120 degree sweep exclusion, jump-over stomp
+PASS sweep/stomp positive damage cases also require completed telegraphs
+PASS sculpt moss_beetle voxels=1104 pieces=22
+PASS sculpt stone_sentry voxels=523 pieces=12
+PASS sculpt stone_beast voxels=2760 pieces=24
+PASS enemy_logic complete
+PASS independent HP/armor/poise; 3s delay then 10/s; HP-only hits do not delay recovery
+PASS no poise stacking while down, stand clears poise, 1.5s real-time immunity
+PASS leg break schedules next charge-end 1s stumble once; early back break; phase never substitutes armor break
+PASS one pillar stun per charge; ordinary Boss hits zero knockback, poise break moves safely
+PASS four melee actors share two tokens; recovery/stagger/death/deactivation release without leaks
+PASS last 0.18s locks aim, active attacks never turn, emitted stone velocities never home
+PASS 30/60fps timing; inhale/whoosh cues synchronize with body pose and ground warning
+PASS hit-stop consumes exact partial-frame time at 30/60fps
+PASS small beetle: one hit zone, full damage from every side, no underside window
+PASS rage speed +15%, shorter recovery, independent armor; armorBreak scales armor without scaling HP/poise
+PASS swept body interior, off-center gap, knockback and sentry retreat truncate before unsupported footprint
+PASS encounter composition; Boss/minor isolation including projectile cleanup; defeated Boss cannot reactivate
+PASS shared 64-slot hit/death pool saturates/reuses/cleans; stats reuse snapshots and label unmeasured GPU/frame counters
+PASS material metadata, compatible enriched hit result, reset scratch result, correct deflection material
+PASS directed profiles, counts/lifetimes, tangent sparks, heavy flash, weak crosses, armor normals, 32/64 reserve/preemption
+PASS 30/60fps rigid fall/get-up, hurt-shape rotation, one landing cue, two windup cues including danger lock
+PASS local recoil real-time decay; death .12 hold/.25 fragments/1.1 clear; delayed single die cue
+PASS one 1.2s rage sequence, .45 roar/shake, no automatic armor break, broken-only chips, fresh warning, stagger priority, final victory
+PASS 30/60fps rage/death cue deadlines and shared-pool performance snapshot; enemy_revision19 complete
+PASS exact stop split, 30/60/120fps pose freeze, real flash clock, full 120ms recoil after stop
+PASS cubic incremental knock .1/.1/.55, Boss zero/.6, fixed record and terrain/wall/pillar truncation
+PASS killed immediate kernel, death pose respects stop, single .25 burst, real-time cleanup deadline
+PASS projectile realDt and rage exception do not restart or freeze on ordinary hit
+PASS first-slot kernel, exact total counts, priority1/2/3 reserve, eviction and lost-kernel statistics
+PASS kernel denial retains armor priority and knock motion is not cancelled by attack travel
+PLACEMENT moss_w1 -27.650 6.000 -12.000
+PLACEMENT moss_w2 -29.150 6.000 -14.000
+PLACEMENT sentry_w -26.150 6.000 -10.000
+PLACEMENT moss_e1 27.650 6.000 -12.000
+PLACEMENT moss_e2 26.150 6.000 -14.000
+PLACEMENT sentry_e 29.150 6.000 -10.000
+PLACEMENT stone_beast 10.000 6.000 27.255
+EnemySpawner: unsafe placement skipped: moss_w1
+EnemySpawner: unsafe placement skipped: moss_w2
+EnemySpawner: unsafe placement skipped: sentry_w
+EnemySpawner: unsafe placement skipped: moss_e1
+EnemySpawner: unsafe placement skipped: moss_e2
+EnemySpawner: unsafe placement skipped: sentry_e
+EnemySpawner: unsafe placement skipped: stone_beast
+PASS terrain-verified placement, spawn/bridge/dragon exclusion, four AI cap, survivor reset/no revival
+PASS enemy_spawner complete
+PASS enemy training: empty arena, five swaps, same-model reopen, lethal cleanup, stable table and particle release
+EnemyHitMaterial: 模板/调色板纹理绑定失败；保留原材质和白核/姿态反馈，请在 Web 检查 EnemyVoxelHit.shader 编译日志
+EnemyHitMaterial: palette bank=0 domain=0 original=mock_palette_material shader=Shaders/BLGL/EnemyVoxelHit.shader hit_flash=false (GPU compile/visibility requires Web)
+PASS visual API mock: no physics/finalize, warnings/phase effects, wall stopping, complete idempotent cleanup
+PASS arrow exact cell: size/rotation/scale, masks, protected/time objects, hardness, stale cells
+PASS sword strip/budgets/duplicates/30-120Hz/ground/landing/occlusion
+PASS embedded blade: same-volume exposed contact, distance bound, different-volume wall, floor and embedded observer guards
+PASS arrow flight/initial sweep/occlusion/retirement and read-only prediction
+PASS Scene reads held blade only
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_1 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: clip sword_light_2 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: clip sword_light_3 finish
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS real attack events: five stages/heavy/windup/recovery/cancel/reentrant cancellation/low FPS
+PASS bounded stage diagnostics: deduplication, real return value, no mutation on rejects, failing sink isolation
+PASS native-zero compatibility: arrow retires, sword feedback, protected wall still embeds, diagnostic keeps raw value
+PASS wide-cut volume comparison: sword=89 shatter=98 heavy=107 widths=3.7/4.6 calls=7/9
+PASS low horizontal strip envelope=1: first=97 fifth=119 continuous core cells=66/90
+PASS low horizontal strip envelope=2: first=346 fifth=536 continuous core cells=66/90
+PASS continuous strip: lower finisher, exact lateral width, floor/overhead/wall guards, bounded queries and synchronous owner removal
+FX 600-frame stopped-GC delta 70.379 KiB; created nodes 0
+FX steady 600-frame stopped-GC delta 1.250 KiB
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS fixed 30 impact/24 arc/12 ghost slots, forward ground strike, 360 coverage, lifetime/geometry budget, no hot vectors/nodes
+PASS slash ribbon: subdivided crescent, bright tip/transparent hilt, fades out, fixed node, crossed strokes stay separate
+PASS shock burst: expanding ring/wall/petals, finisher offset, fade-out, fixed pool
+forge_blades A PASS triangles=178 vertices=534 boxes=1 vertex_bytes=19224 bounds=0.24x1.70x0.15
+forge_blades B PASS triangles=396 vertices=1188 boxes=33 vertex_bytes=42768 bounds=0.24x1.70x0.14
+Forge showroom: ready
+PASS showroom mesh/material	iron	6486
+Forge showroom: ready
+PASS showroom mesh/material	field	7020
+Forge showroom: ready
+PASS showroom mesh/material	warden	6510
+Forge showroom: ready
+PASS showroom mesh/material	silver	7890
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+Forge showroom: ready
+PASS showroom mesh/material	wing	2754
+Forge showroom: ready
+PASS showroom mesh/material	thorn	18960
+forge_showroom binding signatures PASS: assert multi-return regression, numeric methods/properties, geometry types/arity, colon self
+Forge showroom: ready
+Forge showroom: ready
+Forge showroom: ready
+Forge showroom: ready
+weapon occupancy min/max=0.55343798198214/0.58184815180484 max_weapon_triangles=632.0
+ForgeShowroom: enter failed stage=root error=[string "<python>"]:115: injected child error origin=Enter api=Node:CreateChild api_type=function mask=1073741824 last_mask=4026531839 masks_saved=4 viewport_acquired=true switched=false root=false camera=false state=building geometry_stage=nil
+ForgeShowroom: enter failed stage=zone error=scripts/combat/ForgeShowroom.lua:370: showroom Zone missing origin=Enter api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4026531839 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: enter failed stage=camera error=scripts/combat/ForgeShowroom.lua:380: showroom Camera missing origin=Enter api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: enter failed stage=viewport error=[string "<python>"]:195: partial switch failure origin=Enter api=renderer:SetViewport api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=nil
+ForgeShowroom: update failed stage=geometry error=[string "<python>"]:433: injected mesh failure origin=Update api=WeaponBuilder.StepPreview api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=quads
+ForgeShowroom: update failed stage=geometry error=scripts/combat/ForgeShowroom.lua:511: mesh build timeout origin=Update api=WeaponBuilder.StepPreview api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=quads
+Forge showroom: ready
+forge_showroom PASS: 72 configs, viewport/masks rollback, atomic rebuild/cancel, fit, drag/home, timeout/errors, lifecycle; MOCK ONLY
+forge_showroom diagnostics PASS: missing bindings, stages, single-line errors, Enter/Update/SetWeapon, 10s dedup and recovery; MOCK ONLY
+Forge showroom: ready
+ForgeShowroom: update failed stage=dof error=scripts/combat/ForgeShowroom.lua:304: DepthOfField unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=dof error=missing API DepthOfField:SetMaxBlur (nil) origin=Update api=DepthOfField:SetMaxBlur api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=dof error=missing API DepthOfField:SetFocalRange (nil) origin=Update api=DepthOfField:SetFocalRange api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+forge_showroom DOF PASS: camera-local scope, strict signatures, nil/method/focus fallback, haze and cleanup; MOCK ONLY
+Forge showroom: ready
+Forge showroom: ready
+ForgeShowroom: update failed stage=tonemap error=missing API Zone:SetTonemapMode (nil) origin=Update api=Zone:SetTonemapMode api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=bloom error=missing API Zone:SetBloomWeight (nil) origin=Update api=Zone:SetBloomWeight api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=vignette error=missing API Zone:SetVignetteTexture (nil) origin=Update api=Zone:SetVignetteTexture api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=volumetric error=missing API Zone:SetVolumetricFogDensity (nil) origin=Update api=Zone:SetVolumetricFogDensity api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=light.WarmKey error=scripts/combat/ForgeShowroom.lua:244: Light component unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: update failed stage=light.CoolRim error=scripts/combat/ForgeShowroom.lua:244: Light component unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: update failed stage=light.CrystalLeft error=scripts/combat/ForgeShowroom.lua:244: Light component unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: update failed stage=light.CrystalRight error=scripts/combat/ForgeShowroom.lua:244: Light component unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: update failed stage=light.CompassGold error=scripts/combat/ForgeShowroom.lua:244: Light component unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+ForgeShowroom: update failed stage=light.WeaponSoftKey error=scripts/combat/ForgeShowroom.lua:244: Light component unavailable origin=Update api=Node:CreateComponent api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=shadow error=scripts/combat/ForgeShowroom.lua:261: attempt to call a nil value (global 'CascadeParameters') origin=Update api=shadow api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=vignette error=scripts/combat/ForgeShowroom.lua:232: built-in vignette texture unavailable origin=Update api=cache:GetResource api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=false root=true camera=false state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=weapon_material error=[string "<python>"]:207: injected shader parameter Metallic origin=Update api=weapon_material api_type=function mask=1073741824 last_mask=1073741824 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=publish
+Forge showroom: ready
+Forge showroom: ready
+forge_showroom light/post PASS: high 6/1 lights/shadows; low 2/0, strict setters, isolation, all optional fallbacks, material retry, teardown; MOCK ONLY
+dressing high seed=71115 batches=12 triangles=49648 vertex_bytes=4170432 frames=20347 max_ops=128 joints=27615 chips=322 cracks=408 moss=734 ao=91755 signature=1169431454
+dressing high seed=71115 batches=12 triangles=49648 vertex_bytes=4170432 frames=20347 max_ops=128 joints=27615 chips=322 cracks=408 moss=734 ao=91755 signature=1169431454
+dressing high seed=71116 batches=12 triangles=49250 vertex_bytes=4137000 frames=20295 max_ops=128 joints=27651 chips=306 cracks=424 moss=522 ao=85326 signature=1957296081
+dressing low seed=71115 batches=7 triangles=21056 vertex_bytes=1768704 frames=3106 max_ops=128 joints=0 chips=0 cracks=0 moss=0 ao=0 signature=2117778821
+dressing low seed=71115 batches=6 triangles=17668 vertex_bytes=1484112 frames=2825 max_ops=128 joints=0 chips=0 cracks=0 moss=0 ao=0 signature=785337562
+dressing low seed=71115 batches=6 triangles=20052 vertex_bytes=1684368 frames=3069 max_ops=128 joints=0 chips=0 cracks=0 moss=0 ao=0 signature=1779489376
+dressing low seed=71115 batches=6 triangles=13322 vertex_bytes=1119048 frames=2283 max_ops=128 joints=0 chips=0 cracks=0 moss=0 ao=0 signature=1898802827
+forge_showroom detail PASS: 5cm high/10cm low, 55k/12-batch bounds, deterministic stone/AO, partial failure, budget, idle no rebuild and all resources reclaimed; MOCK ONLY
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+Forge showroom: ready
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+Forge showroom: ready
+Forge showroom: ready
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+Forge showroom: ready
+ForgeShowroom: update failed stage=blade_route error=scripts/combat/ForgeShowroomBlades.lua:79: blade material unavailable origin=Update api=ForgeShowroomBlades.Begin api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=blade_route error=scripts/combat/ForgeShowroomBlades.lua:86: CustomGeometry unavailable origin=Update api=ForgeShowroomBlades.Begin api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+ForgeShowroom: update failed stage=blade_route error=[string "<python>"]:764: injected UV failure origin=Update api=ForgeShowroomBlades.Step api_type=function mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+ForgeShowroom: update failed stage=camera error=missing API graphics:GetWidth (nil) origin=Update api=graphics:GetWidth api_type=nil mask=1073741824 last_mask=4294967295 masks_saved=4 viewport_acquired=true switched=true root=true camera=true state=building geometry_stage=nil
+Forge showroom: ready
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+Forge showroom: ready
+Forge showroom: ready
+forge_showroom thorn bow route PASS; MOCK ONLY
+WeaponOrbitGrains: catalyst unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+TimeCatalystFx: pixel particles unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+Forge showroom: ready
+forge_wing_sword PASS triangles=918 vertex_bytes=99144 grip=64 metal=388 core=80 gem=24 blade=182 wingReach L0.250 R0.251
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: jump cancels sword_light_1
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: jump cancels sword_light_1
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: jump cancels sword_light_1
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: jump cancels sword_light_2
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: jump cancels sword_light_2
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: jump cancels sword_light_2
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: jump cancels sword_light_3
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: jump cancels sword_light_3
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: jump cancels sword_light_3
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: jump cancels sword_light_4
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: jump cancels sword_light_4
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: jump cancels sword_light_4
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: jump cancels sword_light_5
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: jump cancels sword_light_5
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: jump cancels sword_light_5
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_heavy_release start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS jump cancels all five light stages at start/active/recovery; heavy stays committed; airborne light uses ordinary rules
+PASS combat air movement preserves native ascent/descent; ordinary landing rearms jump at 30/60/120Hz
+PASS jump grace: edge/expiry/buffer/one-shot/landing/locks/reset at 30/60/120Hz; native physics not simulated
+PASS explicit selection: three slots, aggro, idle, same slot, charge cancel, authored locks, hit/mount/death gates
+PASS mobile rewind maps to R, never Q
+PASS Scene preserves time-slot hit reaction without auto-equipping a weapon
+PASS actual Scene creates run before hitch tail advances; one pooled footprint / key-event reserve preserved
+PASS bridge/void support cache and 100 landing rings reuse the same particle slots
+FAIL tests/combat/locomotion_input.lua tests/combat/core_touch.lua:66: Scene preserves full modal input gate
+stack traceback:
+	[C]: in function 'assert'
+	tests/combat/core_touch.lua:66: in main chunk
+	[C]: in function 'dofile'
+	[string "<python>"]:1: in main chunk
+PASS first run phase fits actual rigid hips at entry amplitude and preserves nearest cycle branch
+Combat: state EXPLORE->COMBAT_IDLE hit
+Combat: player hit dmg=10.00 hp=90.00
+Combat: clip hit_light start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: player hit dmg=10.00 hp=90.00
+Combat: clip hit_light start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS ordinary held run both modes, release/gates/air, no immunity, attack priority, stable pose buffers
+R10 QueryZone one-contact mock KB/call allocating=2.3920 pooled=2.0795 saved=0.3125 (Vector3 mocked as Lua tables; NOT native frame heap)
+PASS pool identities stable; retained external Hit.Apply info/result stay independent
+PASS Grid slab rejection, negative-boundary DDA, exact ray/mask/distance/scope invalidation, 4096-cell optional cap, gameplay fallback preserved
+R10 Grid 100 disjoint bounds: VoxelRaycastResult allocations 100 -> 0; DDA cells 0 -> 0
+R10 motion 0.04m before ground=18 wall=24 total=42 after ground=18 wall=24 total=42
+R10 motion 0.15m before ground=27 wall=48 total=75 after ground=27 wall=24 total=51
+R10 motion 0.30m before ground=36 wall=72 total=108 after ground=36 wall=24 total=60
+R10 motion 0.70m before ground=72 wall=168 total=240 after ground=72 wall=24 total=96
+PASS 9-point footprint/<=.10m segments/wall binary/slope/step/void parity; eight-substep cap and lossless debt
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS actual Moves motion debt, hitstop freeze, cancellation clears outstanding impulse
+R10 HUD sword_light_1 active=false visibilityCalls=4 maxRays=8
+R10 HUD sword_light_1 active=true visibilityCalls=8 maxRays=16
+R10 HUD sword_heavy_release active=false visibilityCalls=4 maxRays=8
+R10 HUD sword_heavy_release active=true visibilityCalls=8 maxRays=16
+PASS pooled QueryZone, per-target skip, independent stones, read-only shape reuse, <=16 HUD rays/frame
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: hit enemy part=body dmg=10.00 poise=6.00
+PASS reentrant AfterPose cannot corrupt borrowed contacts; retained info remains independent
+PASS actual Scene LOS same-ray sharing, camera/mask/revision invalidation, void rejection and sixteen-ray hard ceiling
+PASS default-on/disable, correct static versus elapsed clocks, >=8ms threshold, <=2 lines/s, rollback sample discard
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: move cancels sword_light_1
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: move cancels sword_light_1
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: jump cancels sword_light_1
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: move cancels sword_light_2
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: move cancels sword_light_2
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: jump cancels sword_light_2
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: move cancels sword_light_3
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: move cancels sword_light_3
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: jump cancels sword_light_3
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: clip sword_light_4 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: move cancels sword_light_4
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: move cancels sword_light_4
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: jump cancels sword_light_4
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: clip sword_light_5 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: move cancels sword_light_5
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: move cancels sword_light_5
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: jump cancels sword_light_5
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_5 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: move cancels sword_light_1
+Combat: clip sword_light_2 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: clip sword_light_4 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: clip sword_light_5 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: clip sword_light_4 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: clip sword_light_5 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+Combat: clip sword_light_2 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_2 start
+Combat: clip sword_light_3 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_3 start
+Combat: clip sword_light_4 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_4 start
+Combat: clip sword_light_5 start
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: ./tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: ./tests/combat/weapon_mock.lua:211: assertion failed!
+PASS long-press cross slash, cancellable recovery, low guard rest, hologram stow/draw in place
+RuinsPuzzles: built 1 time objects in 0.00s
+RuinsPuzzles: built 1 time objects in 0.00s
+PASS scene lifecycle: Build/Build/Stop/Stop in one VM, subscriptions, callbacks, progress, owned volume disposal, cached terrain/scenery references
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+Combat: clip sword_light_1 start
+PASS stamina: sprint drain/exhaust lock/regen delay, cross slash cost, removed cost has no side effects, exhausted air light
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+ThornBowVisual: build failed, voxel bow kept: [string "<python>"]:57: injected upload failure
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+thorn_bow OK tris=6320
+thorn_bow_asset OK: cache, validation, closure, fallback, recovery
+PASS caster ownership: sword/bow 3s hold and direct Cast rejected without effects; E/R, time charge and interruptions preserved
+PASS actual Scene + Moves + Caster: continuous 3s left hold stays sword, zero time casts
+time_catalyst OK tris=2659
+PASS time sigil routing: sword/bow reject shatter and passive/stale circles; E/R feedback and time charge preserved
+PASS voxel result: world/target isolation, nested calls/errors, multi-volume, no stale reads, real gate bridge
+PASS weapon affix: sub-stats change one number, removed stats gone, passives gated by condition, wind window
+PASS equipped imprint effects reach melee zones, arrow damage and armor break, draw movement, and shatter damage, poise and terrain radius
+Bow top: +Z target; X left -> right; G grip, W string, B bow back
++0.09 .BBB
++0.06 BBBB
++0.03 BBBB
++0.00 BGB.
+-0.03 BBB.
+-0.06 .W..
+-Z shooter; arrow at +X, direction +Z
+weapon_builder: PASS (72 volume+greedy preview combinations, exact surface/color coverage, winding, bounds, cancellation, cache)
+weapon_data: fixed class stats/hit, appearance isolation, original bow palette PASS
+weapon_forge: safe area, drag, three slots, materials, upgrade, smelt, and teardown PASS
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS hang clearance: 20/30/60/120/240Hz opening and delayed closing agree
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS hang input isolation: blocked intent, pure turn, camera, vertical jump, pause, teleport; imported and legacy rigs
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS hang target ownership: swap, hand held position, stow arrival, holo reform and moving turn
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS native Vector3 value semantics: root sampling, target offset and decay write back correctly
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS equipment transaction: real Rig/State, preflight, second-item failure, retained-material rollback, late rejection, single save, save failure, geometry reuse
+PASS six connected closed poses; max centre error 3.14e-16 m; 32 stepped changes and 208 held frames
+PASS two opposite tilted loops, continuous pixel meshes, shared material, period, counter-rotation, masks, holster and disposal
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+weapon_rig shared palms: PASS (legacy and zero-elbow hit/snapshot equality, bent forearm routing, owned-child-only idempotent cleanup)
+weapon_rig: PASS (bow axes/draw/nock, timed reveal/flight/stow/dissolve, event drain, spring/float, visual-only sword scale, pooled FX)
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS R8 essentialHit at low quality, 40/60ms white, .8/1.5 degree mesh-only impulse, stop+50ms reset, 4-band contact sample, 100-hit pool stability, hidden clears
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+PASS wing sword visual: pivot-attached, pose/active gating, voxel mesh hidden, recolour/rebuild on Apply, dispose, fallback + kill switch
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+FAIL tests/combat/weapon_select_gesture.lua [string "actual Scene weapon selection callbacks"]:9: attempt to index a nil value (global 'Training')
+stack traceback:
+	[string "actual Scene weapon selection callbacks"]:9: in field 'canOpen'
+	./scripts/combat/WeaponSelectGesture.lua:79: in function 'combat.WeaponSelectGesture.Open'
+	[string "<python>"]:60: in main chunk
+weapon_store: PASS (round trip, isolation, 7 invalid schemas, I/O failures, closed handles)
+weapon_store: real unlocks, three slots, 18 drops, draft isolation, fodder, pity, smelt and interrupted publish PASS
+weapon_store_missing PASS
+VoxelFX: CatalystPixelSpark uses world-space quads, capacity=90
+VoxelFX: CatalystPixelBurst uses world-space quads, capacity=130
+VoxelFX: immediate expiry uses world-space quads, capacity=2
+PASS real VoxelFX empty/live/expiry/reuse and time-catalyst deferred clear: no empty Commit/Draw, no residual particles
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	iron	6486	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	field	7020	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	wing	2754	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	thorn	18960	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	warden	6510	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	silver	7890	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	iron	6486	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	field	7020	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->EXPLORE stop
+PASS equipped smelt saves once and rebinds the model immediately, failed save preserves the live model
+WeaponRig: bow charge grains unavailable: [string "<python>"]:192: injected backend unavailable
+Combat: state EXPLORE->COMBAT_IDLE manual
+WeaponRig: warden sword unavailable, voxel sword kept: scripts/combat/WardenSwordVisual.lua:38: missing WardenSword
+WeaponRig: silver upload failed: [string "<python>"]:206: injected geometry upload failure
+Combat: state COMBAT_IDLE->EXPLORE stop
+PASS missing pixel backend, missing sword material, failed bow upload, fallback and re-equip; volumes released
+weapon_wheel: geometry, DPI, pointer, selection, guard, teardown, drawing PASS
+PASS visible PC cursor, 3-slot targeting, reduced gain, boundary hysteresis, opening-frame delta
+wrote /tmp/thornbow-export-kivhe44_/mesh.json: body=6320, crystal=128, string=20 triangles
+81 Lua suites + export reproducibility; 10 failed
