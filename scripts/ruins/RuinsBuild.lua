@@ -267,7 +267,8 @@ local function BuildColonnade(world)
     for qd = 0, 3 do
         local x0, x1 = (qd % 2 == 0) and -R - 2 or 0, (qd % 2 == 0) and 0 or R + 2
         local z0, z1 = (qd < 2) and -R - 2 or 0, (qd < 2) and 0 or R + 2
-        local b = Brush.New(world, { min = { x0, baseY, z0 }, max = { x1, baseY + H + 2.5, z1 }, size = 0.25 })
+        -- 梁只占顶部四层，不能从地面分配九米高的全空网格。
+        local b = Brush.New(world, { min = { x0, baseY + H + 1.0, z0 }, max = { x1, baseY + H + 2.0, z1 }, size = 0.25 })
         -- 横梁：相邻两根都完整时连一段梁（弧形，沿圆周）
         b:Shape(x0, baseY + H + 0.9, z0, x1, baseY + H + 1.9, z1, function(x, y, z)
             local r = sqrt(x * x + z * z)

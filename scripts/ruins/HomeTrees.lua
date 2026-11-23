@@ -1,6 +1,7 @@
 -- 家园与遗迹共用的实体体素树：方粒叶簇、封闭枝干、根部外扩。
 -- 先在统一格点上合并体积，再将外层色块合并为两个模型；没有叶片卡或透明贴图。
 local Noise = require("ruins.Noise")
+local SurfaceMesh = require("ruins.TreeSurfaceMesh")
 local M = {}
 ---@type Material|nil
 local leafMaterial_
@@ -87,23 +88,19 @@ local LEAVES = {
       Color(.76,.59,.23), Color(.85,.68,.30), Color(.91,.77,.39), Color(.95,.84,.51) },
 }
 
--- 只保留外层格，沿三个方向合并连续同色格，最后由原生几何接口合批。
--- 每个盒子都是封闭的六面实体，避免手写面绕序导致从外面看见背面的空心感。
+-- 只保留外露表面，沿面合并连续同色格；外壳仍完整封闭，不改变实体轮廓。
 ---@param parent Node
 ---@param name string
 ---@param palette Color[]
 ---@param material Material
 ---@return integer
 function Grid:Build(parent, name, palette, material)
-    ---@type table<string, boolean>
-    local visible = {}
     local cells = self.cells
     for _, c in ipairs(self.order) do
         local x, y, z = c.x, c.y, c.z
         if not cells[key(x-1,y,z)] or not cells[key(x+1,y,z)]
             or not cells[key(x,y-1,z)] or not cells[key(x,y+1,z)]
             or not cells[key(x,y,z-1)] or not cells[key(x,y,z+1)] then
-            visible[key(x,y,z)] = true
             if name=="Leaves" then
                 -- 叶簇上方和斜上方的占据格决定遮蔽，量化三级以保留合批能力。
                 local covered=0
@@ -118,59 +115,9 @@ function Grid:Build(parent, name, palette, material)
             end
         end
     end
-    table.sort(self.order, function(a, b)
-        if a.y ~= b.y then return a.y < b.y end
-        if a.z ~= b.z then return a.z < b.z end
-        return a.x < b.x
-    end)
-    ---@type ProceduralGeometry[]
-    local parts = {}
-    local s = self.size
-    local function same(x,y,z,tone,ao)
-        local k=key(x,y,z)
-        local c=cells[k]
-        return visible[k] and c and c.tone==tone and c.ao==ao
-    end
-    for _, c in ipairs(self.order) do
-        local x, y, z = c.x, c.y, c.z
-        if visible[key(x,y,z)] then
-            local width,depth,height = 1,1,1
-            while same(x+width,y,z,c.tone,c.ao) do width=width+1 end
-            while true do
-                local full=true
-                for i=0,width-1 do
-                    if not same(x+i,y,z+depth,c.tone,c.ao) then full=false; break end
-                end
-                if not full then break end
-                depth=depth+1
-            end
-            while true do
-                local full=true
-                for j=0,depth-1 do
-                    for i=0,width-1 do
-                        if not same(x+i,y+height,z+j,c.tone,c.ao) then full=false; break end
-                    end
-                    if not full then break end
-                end
-                if not full then break end
-                height=height+1
-            end
-            for k=0,height-1 do for j=0,depth-1 do for i=0,width-1 do
-                visible[key(x+i,y+k,z+j)] = nil
-            end end end
-            local tint=assert(palette[c.tone])
-            parts[#parts+1] = BoxGeometry(width*s,height*s,depth*s)
-                :Translate((x+width*.5)*s,(y+height*.5)*s,(z+depth*.5)*s)
-                :SetVertexColor(Color(tint.r,tint.g,tint.b,c.ao/255))
-        end
-    end
-    local node = parent:CreateChild(name)
-    local drawable = node:CreateComponent("StaticModel")
-    local merged = assert(MergeGeometries(parts, false), "家园树木几何合并失败：" .. name)
-    drawable.model = merged:ToModel()
-    drawable.material = material
-    drawable.castShadows = true
-    return #parts
+    -- 仅输出真正朝外的面，颜色/AO/格点保持不变；不再为每簇复制完整六面盒。
+    local quads = SurfaceMesh.Build(self, parent, name, palette, material)
+    return quads
 end
 
 -- 树皮明暗沿竖向成小段延续，几何脊线与颜色共同构成树皮质感。
@@ -350,7 +297,7 @@ function M.Tree(parent,x,gy,z,o)
     local barkParts=wood:Build(root,"Bark",BARK,material)
     local palette=assert(LEAVES[o.gold and 3 or (seed%2+1)])
     local leafParts=leaves:Build(root,"Leaves",palette,leafMaterial_)
-    print(string.format("HomeTrees: seed=%d gold=%s wood=%d leaf=%d boxes=%d, 2 drawables",
+    print(string.format("HomeTrees: seed=%d gold=%s wood=%d leaf=%d surfaceQuads=%d, 2 drawables",
         seed,tostring(o.gold),#wood.order,#leaves.order,barkParts+leafParts))
     return root
 end
