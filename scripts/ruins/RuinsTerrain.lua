@@ -569,7 +569,10 @@ local function BuildIslandMesh(scene,mat)
             -- 岸线外凸角切 45°：0.5m 方格的岸线远看是一圈锯齿，切掉两侧都临空的角，
             -- 45° 台阶变成直斜边，长台阶只在拐点处出现短斜边。碰撞仍按 0.5m 格（差一个 0.35m 角）。
             -- 循环顺序 a→b→d→e；边 j 从 L[j] 到 L[j+1]，nb[j] 为该边外侧格是否有地。
-            local L,LB={a,b,d,e},{aa,bb,dd,ee}
+            ---@type Vector3[]
+            local L={a,b,d,e}
+            ---@type Vector3[]
+            local LB={aa,bb,dd,ee}
             local nb={Land(i-1,k),Land(i,k+1),Land(i+1,k),Land(i,k-1)}
             local diag={Land(i-1,k-1),Land(i-1,k+1),Land(i+1,k+1),Land(i+1,k-1)}
             local cut=nil
