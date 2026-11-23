@@ -8,6 +8,17 @@ local MAX_SAVE_BYTES = 16384
 -- Starting ore for previewing weapon models in the forge.
 local PREVIEW_ORE = 999
 
+local function UnlockPreviewWeapons(progress)
+    for _,class in ipairs(Catalog.Classes) do
+        local levels=progress.slots[class].levels
+        for _,item in ipairs(Catalog.Weapons[class]) do
+            levels[item.id]=levels[item.id] or 1
+        end
+    end
+    progress.previewWeaponsGranted=true
+    return progress
+end
+
 local function Progress(legacy)
     local progress={ore=legacy and 0 or PREVIEW_ORE,sand=0,slots={}}
     for _,class in ipairs(Catalog.Classes) do
@@ -20,7 +31,7 @@ local function Progress(legacy)
         end
         progress.slots[class]=slot
     end
-    return progress
+    return UnlockPreviewWeapons(progress)
 end
 
 function Store.Default()
@@ -51,6 +62,8 @@ local function ReadProgress(source)
         if copy.imprint~='' and not copy.ranks[copy.imprint] then return nil end
         result.slots[class]=copy
     end
+    if source.previewWeaponsGranted~=true then return UnlockPreviewWeapons(result) end
+    result.previewWeaponsGranted=true
     return result
 end
 

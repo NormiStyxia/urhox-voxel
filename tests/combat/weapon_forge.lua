@@ -280,6 +280,15 @@ assert(room.entered==room.exited and not next(eventHandlers))
 print('weapon_forge: cosmetics, original bow, safety/drafts, failure, layout, fallback, teardown PASS')
 
 local rig={config=Store.Default()}
+rig.config.progress.ore=0
+s=OpenReady({rig=rig})
+Click('select_wing');assert(s.stageTitle=='翼剑')
+Click('select_warden');assert(s.stageTitle=='守门长剑')
+Click('select_iron');Click('tab_bow');Click('select_thorn');Click('select_silver')
+assert(s.stageTitle=='银枝弓' and rig.config.progress.ore==0)
+Click('select_field');Click('tab_sword');Click('equip');Tick(80)
+-- Keep testing the paid smelting path with an unowned target.
+rig.config.progress.slots.sword.levels.warden=nil
 rig.config.progress.ore,rig.config.progress.sand=9,2
 s=OpenReady({rig=rig})
 Click('level_sword');Click('imprint_edge');Click('guarantee_sword')

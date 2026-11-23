@@ -115,6 +115,24 @@ assert(old.progress.slots.sword.weapon=='wing' and old.progress.slots.bow.weapon
 local rig={config=Store.Default()}
 assert(rig.config.progress.ore==999 and rig.config.progress.sand==0)
 rig.config.progress.ore=0 -- exercise the insufficient-ore path
+for _,class in ipairs(Parts.Classes) do
+    for _,item in ipairs(Parts.Weapons[class]) do
+        assert(rig.config.progress.slots[class].levels[item.id]==1)
+        assert(Store.Forge(rig,class,'select',item.id))
+    end
+end
+local partial=Store.Default()
+partial.progress.previewWeaponsGranted=nil
+partial.progress.ore=0
+partial.progress.slots.sword.levels={iron=3}
+disk['weapons-v1.json']=cjson.encode(partial)
+rig.config=Store.Load()
+assert(rig.config.progress.slots.sword.levels.iron==3 and rig.config.progress.slots.sword.levels.wing==1)
+assert(Store.Forge(rig,'sword','select','wing') and rig.config.progress.ore==0)
+-- Exercise crafting on an inventory with missing items.
+rig.config=Store.Default()
+rig.config.progress.ore=0
+rig.config.progress.slots.sword.levels={iron=1}
 local function Slot() return rig.config.progress.slots.sword end
 local function Forge(action,id,roll)
     return Store.Forge(rig,'sword',action,id,function() assert(roll);return roll end)
