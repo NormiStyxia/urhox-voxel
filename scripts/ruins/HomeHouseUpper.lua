@@ -11,7 +11,8 @@ local Upper = { Windows = {} }
 -- Shared footprint. The ground floor (HomeIsland) builds its walls on the same box.
 local X0, X1, Z0, Z1 = -16, -1, 7, 15
 local SPLIT = -7              -- west wing X0..SPLIT, east terrace SPLIT..X1
-local F2, F3 = 4.75, 8.25     -- second-storey base, third-storey / terrace base
+-- The ground hall is 5 m floor to ceiling, the second storey 4 m.
+local F2, F3 = 5.75, 9.75     -- second-storey base, third-storey / terrace base
 local CZ = (Z0+Z1)/2
 local WEST_CX = (X0+SPLIT)/2
 local KNEE = F3+2.5           -- west attic wall top
@@ -48,7 +49,7 @@ local function window(group, faceX, faceZ, nx, nz, bottom, width, height, flower
     return w
 end
 -- Second storey: the bay rhythm of the timber frame, three bays per side.
-local secondSill, secondHeight = F2+1.0, 1.75
+local secondSill, secondHeight = F2+1.0, 2.25
 for _,x in ipairs({-14.5,-11.5,-8.5,-5.5,-2.5}) do
     local w=window('second',x,Z0,0,-1,secondSill,1.875,secondHeight,true)
     if x==-8.5 then windowLamps.second[1]={x=x,y=secondSill+.5,z=Z0,nx=0,nz=-1} end
@@ -377,25 +378,27 @@ local function terrace(b)
         end
     end
     rail(x0+.25,x1,Z0+.0625,true)
-    rail(x0+.25,x1,Z1-.0625,true)
+    -- The rear rail stops short of the attic wall: the outer stair lands there.
+    rail(STAIR_GAP,x1,Z1-.0625,true)
     rail(Z0+.25,Z1-.25,x1-.0625,false)
-    -- Potted bay trees in the inner corners and a planter along the attic wall.
-    for _,z in ipairs({Z0+.875,Z1-.875}) do
-        local x=x0+.875
+    -- Potted bay trees and a planter keep clear of the path from the stair to the door.
+    for _,c in ipairs({{x0+.875,Z0+.875},{x1-.875,Z1-.875}}) do
+        local x,z=c[1],c[2]
         b:Box(x-.3125,F3+.25,z-.3125,x+.3125,F3+.75,z+.3125,P.HOME_PLINTH)
         b:Box(x-.0625,F3+.75,z-.0625,x+.0625,F3+1.25,z+.0625,P.BARK)
         b:Box(x-.375,F3+1.25,z-.375,x+.375,F3+1.875,z+.375,P.LEAF_A)
         b:Box(x-.25,F3+1.875,z-.25,x+.25,F3+2.125,z+.25,P.LEAF_C)
     end
-    b:Box(x0+.125,F3+.25,CZ+1.0,x0+.625,F3+.625,Z1-1.5,oakX)
-    for z=CZ+1.125,Z1-1.625,.25 do
-        b:Box(x0+.1875,F3+.625,z,x0+.5625,F3+.8125,z+.1875,(floor(z*4)%3==1) and P.LEAF_A or P.LEAF_C)
+    b:Box(x1-.75,F3+.25,CZ-1.0,x1-.25,F3+.625,CZ+1.0,oakX)
+    for z=CZ-.875,CZ+.75,.25 do
+        b:Box(x1-.6875,F3+.625,z,x1-.3125,F3+.8125,z+.1875,(floor(z*4)%3==1) and P.LEAF_A or P.LEAF_C)
     end
 end
 
 -- Hoist on the east gable, hanging just under the terrace deck.
+local HOIST_Y=F3-7.75
 local function eastHoist(b)
-    local oy=.5
+    local oy=HOIST_Y
     local cx,cy,z=1,6.375+oy,7.75
     for _,at in ipairs({8,9}) do
         b:Box(-1.25,7.5+oy,at,1.5,7.75+oy,at+.25,woodX)
@@ -417,6 +420,64 @@ local function eastHoist(b)
     end)
 end
 
+-- Outer stair hung on the house: one flight up the east wall, a stone pier landing
+-- at the rear corner, a second flight west along the back wall to a pier landing
+-- that bridges onto the terrace. Treads are slabs on wall brackets, open beneath,
+-- so the hall windows behind stay clear. Risers 0.375 m fit the 0.55 m step height.
+local RISE, TREAD = .375, .375
+local function outerStair(b)
+    local lane0,lane1=X1+.5,X1+1.875            -- flight A, along the east wall
+    local back0,back1=Z1+.5,Z1+1.875            -- flight B, along the back wall
+    local startZ=Z1-12*TREAD
+    local landA=12*RISE
+    local flightB=floor((F3-landA)/RISE)
+    local landB=landA+flightB*RISE
+    local endX=lane0-flightB*TREAD
+    local stone,slab=P.HOME_ASHLAR,P.HOME_COPING
+    local function tread(x0,y,z0,x1,z1,alongX)
+        b:Box(x0,y-.25,z0,x1,y,z1,slab)
+        b:Box(x0,y-.375,z0,x1,y-.25,z1,stone)
+        -- Outer rail post and stepped cap.
+        if alongX then
+            b:Box(x0,y,back1-.125,x0+.125,y+.875,back1,woodY)
+            b:Box(x0,y+.875,back1-.1875,x1,y+1.0,back1,woodX)
+        else
+            b:Box(lane1-.125,y,z0,lane1,y+.875,z0+.125,woodY)
+            b:Box(lane1-.1875,y+.875,z0,lane1,y+1.0,z1,woodZ)
+        end
+    end
+    for i=1,12 do
+        local z=startZ+(i-1)*TREAD
+        tread(lane0,i*RISE,z,lane1,z+TREAD,false)
+        if i%4==2 then
+            -- Knee bracket from the wall into the tread underside.
+            for k=0,3 do b:Box(X1,i*RISE-.75-k*.125,z+.125,X1+.25+k*.125+.25,i*RISE-.625-k*.125,z+.25,woodX) end
+        end
+    end
+    for i=1,flightB do
+        local x=lane0-i*TREAD
+        tread(x,landA+i*RISE,back0,x+TREAD,back1,true)
+        if i%4==2 then
+            for k=0,3 do b:Box(x+.125,landA+i*RISE-.75-k*.125,Z1,x+.25,landA+i*RISE-.625-k*.125,Z1+.25+k*.125+.25,woodZ) end
+        end
+    end
+    -- Corner pier landing, then the upper pier landing which bridges onto the deck.
+    b:Box(lane0,0,Z1,lane1,landA,back1,stone)
+    b:Box(lane0-.125,landA-.25,Z1-.125,lane1+.125,landA,back1+.125,slab)
+    b:Box(endX-1.5,0,back0,endX,landB-.25,back1,stone)
+    b:Box(endX-1.625,landB-.25,Z1,endX+.125,landB,back1+.125,slab)
+    for y=1.0,landB-1.0,1.25 do
+        b:Box(endX-1.625,y,back0-.125,endX+.125,y+.125,back1+.125,P.HOME_PLINTH)
+    end
+    -- Rails on the open sides of both landings.
+    b:Box(lane1-.1875,landA,Z1,lane1,landA+1.0,back1,woodZ)
+    b:Box(lane0,landA,back1-.1875,lane1,landA+1.0,back1,woodX)
+    b:Box(endX-1.625,landB,back1-.1875,endX,landB+1.0,back1,woodX)
+    b:Box(endX-1.625,landB,Z1,endX-1.4375,landB+1.0,back1,woodZ)
+end
+-- Back rail of the terrace starts east of the stair landing.
+STAIR_GAP=X1+.5-floor((F3-12*RISE)/RISE)*TREAD+.25
+
 function Upper.Build(brush,finish)
     local second=brush({X0-.25,F2,Z0-1},{X1+.25,F3,Z1+.5},step)
     secondFloor(second)
@@ -435,9 +496,12 @@ function Upper.Build(brush,finish)
     local deck=brush({SPLIT,F3,Z0-.5},{X1+.5,F3+2.25,Z1+.5},step)
     terrace(deck)
     finish('terrace',deck,{masonry='homeWindows'})
-    local hoist=brush({-1.5,5.75,7.5},{2.25,8.25,9.5},step)
+    local hoist=brush({-1.5,5.25+HOIST_Y,7.5},{2.25,F3,9.5},step)
     eastHoist(hoist)
     finish('terrace',hoist,{masonry='homeWindows'})
+    local stair=brush({SPLIT-1.5,0,Z1-4.75},{X1+2.0,F3+1.25,Z1+2.0},step)
+    outerStair(stair)
+    finish('terrace',stair,{masonry='homeWindows'})
     makeDetails(brush,finish,'third',{X0-.5,F3-.5,Z0-1.0},{SPLIT+.5,GABLE_EAVE+GABLE_RISE-.5,Z1+.45},function(frame)
         gableTimber(frame,Z0,true,1.5)
         gableTimber(frame,Z1,false,1.125)
