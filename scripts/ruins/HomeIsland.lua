@@ -1218,6 +1218,7 @@ local function meadow(scene)
     local height,mask=meadowMaps()
     field.splat=mask
     H.meadowMaterial=Terrain.NewGroundMaterial(mask,MEADOW_HALF,Vector4(H.x,H.base,H.z,1))
+    field.meadowMaterial=H.meadowMaterial -- SceneQuality.ApplyGrass matches its far canopy to the grass fade
     field.terrain=node:CreateComponent('Terrain')
     local t=field.terrain
     -- Only native GrassField needs the height patches; the collidable caps own the visible surface.
