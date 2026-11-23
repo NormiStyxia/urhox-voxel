@@ -285,6 +285,7 @@ local function SetupLighting()
             -- Home stone palette slots may share a bank/entrance/house volume with other surfaces.
             m:SetShaderParameter("home_stone_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z)))
             if masonry=="homeMasonry" then m:SetShaderParameter("dressed_stone_draw",Variant(1.0)) end
+            if masonry=="homeWindows" then m:SetShaderParameter("home_house_draw",Variant(1.0)) end
             vmats[key] = m
         end
         -- Rebind on cache hits as well when a cancelled home build is retried.

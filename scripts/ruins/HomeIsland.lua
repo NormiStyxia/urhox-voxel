@@ -695,7 +695,7 @@ local function archedWindow(b,along,face,normal,side)
         local inner=(dx/.75)^2+(dy/.625)^2
         if inner<1 and py>1.5 then
             if depth>=.125 and depth<.25 then return window end
-            if depth>=0 and (dx<.086 or abs(py-2.125)<.08 or abs(py-2.625)<.08) then return cedarPost end
+            return false
         elseif outer<=1 then
             return P.HOME_COPING
         elseif depth>=0 then return P.HOME_ASHLAR end
@@ -706,57 +706,212 @@ local function archedWindow(b,along,face,normal,side)
     box(-1.125,1.25,-.25,1.125,1.5,.25,P.HOME_PLINTH)
     box(-.75,1.375,0,.75,1.5,.125,P.HOME_WINDOW_REVEAL)
 end
+-- Pond elevation, scaled between the two outside wall faces (15 m).
+-- The three window axes sit at 7%, 21% and 43% of that span. The shallow
+-- 1/16 m front wall meets the 1/8 m side walls at Z=7.375.
+local frontWindows={
+    {x=-14.9375,r=.375,sill=1.375,spring=2.625,rise=.375,panes=2},
+    {x=-12.875,r=.6875,sill=1.3125,spring=2.5625,rise=.5625,panes=4},
+    {x=-9.625,r=.5,sill=1.375,spring=2.5625,rise=.4375,panes=3},
+}
+local doorX=-4.625
+local function frontWindow(b,w)
+    local cell=.0625
+    local trim=.125
+    local topY=w.spring+w.rise
+    b:Shape(w.x-w.r-trim,w.sill,6.875,w.x+w.r+trim,topY+trim,7.375,function(x,y,z)
+        local u=x-w.x
+        local dy=math.max(0,y-w.spring)
+        local outer=(u/(w.r+trim))^2+(dy/(w.rise+trim))^2
+        if outer>1 then return end
+        local inner=(u/w.r)^2+(dy/w.rise)^2
+        if inner>=1 then
+            local wedge=floor(math.atan(dy/w.rise,u/w.r)*9/math.pi)
+            return dy>0 and wedge%3==1 and P.HOME_ASHLAR or P.HOME_COPING
+        end
+        -- Bare reveal at the front, wood sash and a separate recessed glass plane.
+        if z<7.125 or z>=7.3125 then return false end
+        local frame=(u/(w.r-cell))^2+(dy/(w.rise-cell))^2>=1 or y<w.sill+cell
+        if frame then return cedarPost end
+        return z>=7.25 and window or false
+    end)
+    b:Box(w.x-w.r-.1875,w.sill-.125,6.75,w.x+w.r+.1875,w.sill,7.25,P.HOME_COPING)
+    b:Box(w.x-w.r,w.sill,7,w.x+w.r,w.sill+.0625,7.125,P.HOME_WINDOW_REVEAL)
+end
+
+local function wallLantern(b,x,y)
+    b:Box(x-.0625,y,6.875,x+.0625,y+.375,7,slate)
+    b:Box(x-.0625,y+.25,6.6875,x+.0625,y+.3125,6.9375,slate)
+    b:Box(x-.1875,y+.1875,6.5,x+.1875,y+.25,6.8125,slate)
+    b:Box(x-.125,y-.125,6.5625,x+.125,y+.1875,6.75,window)
+    for _,edgeX in ipairs({x-.125,x+.0625}) do
+        b:Box(edgeX,y-.125,6.5625,edgeX+.0625,y+.1875,6.625,P.GOLD_DARK)
+    end
+    b:Box(x-.125,y-.1875,6.5625,x+.125,y-.125,6.75,slate)
+    b:Box(x-.0625,y-.25,6.625,x+.0625,y-.1875,6.6875,P.GOLD_DARK)
+end
+
+local function planter(b,x,y,width)
+    local left,right=x-width/2,x+width/2
+    b:Box(left,y,6.4375,right,y+.25,6.875,oak)
+    b:Box(left-.0625,y+.1875,6.375,right+.0625,y+.3125,6.9375,cedar)
+    for i=0,floor(width/.25)-1 do
+        local stem=left+.125+i*.25
+        local z=6.5+(i%3)*.0625
+        local h=y+.4375+(i*2%3)*.0625
+        b:Box(stem-.125,y+.3125,z-.0625,stem+.125,h,z+.125,i%3==1 and P.LEAF_C or P.LEAF_A)
+        if i%3~=1 then b:Box(stem-.0625,h,z,stem+.0625,h+.0625,z+.125,i%2==0 and P.FLOWER_W or P.FLOWER_B) end
+    end
+end
+
+local function frontWall(ctx)
+    local b=ctx.brush({-16,.75,6.375},{-1,3.5,7.375},.0625)
+    b:Box(-16,.75,7,-1,3.5,7.375,P.HOME_ASHLAR)
+    for _,w in ipairs(frontWindows) do frontWindow(b,w) end
+    -- The voussoirs, darker inner jamb and inset arched transom have separate depths.
+    b:Shape(doorX-1.375,.75,6.875,doorX+1.375,3.5,7.375,function(x,y,z)
+        local u=x-doorX
+        local dy=math.max(0,y-2.75)
+        if (u/1.375)^2+(dy/.75)^2>1 then return end
+        if (u/1.1875)^2+(dy/.5625)^2>=1 then return P.HOME_COPING end
+        if z<7.125 then return false end
+        if abs(u)>=1.125 or (y>=2.875 and y<3) then return cedar end
+        if y>=3 then
+            if z>=7.3125 or z<7.1875 then return false end
+            if abs(u)<.0625 or abs(abs(u)-(y-2.875)*1.2)<.045 then return cedarPost end
+            return z>=7.25 and window or false
+        end
+        return false
+    end)
+    for _,x in ipairs({-15.875,-11,-7.875,-1.25}) do
+        b:Box(x,.875,6.9375,x+.1875,3.5,7.0625,cedarPost)
+        b:Box(x-.0625,.75,6.875,x+.25,1.0625,7.125,P.HOME_PLINTH)
+    end
+    for _,x in ipairs({-13.9375,-11.6875,-8.6875,-6.1875,-3.0625}) do wallLantern(b,x,2.1875) end
+    -- Iron brackets anchor the wide window box. Low beds further along sit on the plinth.
+    for _,x in ipairs({-13.4375,-12.3125}) do
+        b:Box(x-.0625,.875,6.5,x+.0625,1.0625,7,P.GOLD_DARK)
+    end
+    planter(b,-12.875,1.0625,1.625)
+    for _,bed in ipairs({{-15.125,1},{-10.875,1},{-7.375,1},{-2.125,.75}}) do
+        local x,width=bed[1],bed[2]
+        b:Box(x-width/2,.75,6.75,x+width/2,.875,7,P.HOME_PLINTH)
+        planter(b,x,.875,width)
+    end
+    ctx.finish('ground-front',b,1,3,{masonry='homeWindows'})
+end
+
+-- Each strip is two 1/32 m cells deep, directly in front of its glass.
+-- Group coplanar windows while keeping the longest brush below 255 cells.
+local function windowBars(ctx,name,windows,face,normal,side,inset)
+    local cell=.03125
+    local near,far=face-normal*(inset-2*cell),face-normal*inset
+    local lo,hi=math.min(near,far),math.max(near,far)
+    local left,right=windows[1].x-windows[1].r,windows[#windows].x+windows[#windows].r
+    local function coords(u,y,d) return side and {d,y,u} or {u,y,d} end
+    local b=ctx.brush(coords(left,1.3125,lo),coords(right,3.125,hi),cell)
+    for _,w in ipairs(windows) do
+        local function lattice(x,y,z)
+            local u=(side and z or x)-w.x
+            local dy=math.max(0,y-w.spring)
+            if (u/w.r)^2+(dy/w.rise)^2>=1 then return end
+            local pane=(u+w.r)*w.panes/(2*w.r)
+            local bar=floor(pane+.5)
+            local barX=-w.r+bar*2*w.r/w.panes
+            local halfWidth=(w.panes==4 and bar==2) and cell or cell/2
+            if bar>0 and bar<w.panes and u>=barX-halfWidth and u<barX+halfWidth then return cedarPost end
+            if (y>=w.sill+.5 and y<w.sill+.5+cell) or (y>=w.spring and y<w.spring+2*cell) then return cedar end
+            if dy>0 and abs(abs(u)-dy*.82)<cell*.6 then return oak end
+        end
+        local a=coords(w.x-w.r,w.sill,lo)
+        local c=coords(w.x+w.r,w.spring+w.rise,hi)
+        b:Shape(a[1],a[2],a[3],c[1],c[2],c[3],lattice)
+    end
+    ctx.finish(name,b,1,3,{visual=true,masonry='homeWindows'})
+end
+
+local function porchDoors(ctx)
+    -- Open leaves have individual tight brushes. The panel beads, rails and
+    -- panes have separate depths within each grid, leaving a clear centre.
+    local cell=.03125
+    local alongX=.40625
+    local alongZ=sqrt(1-alongX^2)
+    for _,sign in ipairs({-1,1}) do
+        local hinge=doorX-sign*1.125
+        local tip=hinge+sign*.46875
+        local left,right=math.min(hinge,tip)-.125,math.max(hinge,tip)+.125
+        local b=ctx.brush({left,.75,7.25},{right,2.875,8.5625},cell)
+        b:Box(hinge-.09375,.75,7.25,hinge+.09375,2.875,7.53125,cedarPost)
+        b:Shape(left,.78125,7.375,right,2.875,8.5625,function(x,y,z)
+            local dx,dz=(x-hinge)*sign,z-7.4375
+            local u,d=dx*alongX+dz*alongZ,dx*alongZ-dz*alongX
+            if u<0 or u>1.125 or abs(d)>.09375 then return end
+            if d>.0625 and u>.9375 and u<1.03125 and y>=1.5625 and y<1.6875 then return P.GOLD_DARK end
+            local low=y<1.6875
+            local bottom,topY=low and .9375 or 1.8125,low and 1.5625 or 2.6875
+            local edge=math.min(u-.125,1-u,y-bottom,topY-y)
+            if edge<0 then return abs(d)<=.0625 and cedar or nil end
+            if edge<cell then return oak end
+            if low then return abs(d)<=cell and oak or nil end
+            if abs(u-.5625)<cell/2 or (y>=2.25 and y<2.25+cell) then return abs(d)<=.0625 and cedarPost or nil end
+            return abs(d)<=cell and window or nil
+        end)
+        ctx.finish(sign==1 and 'ground-door-left' or 'ground-door-right',b,1,3,{masonry='homeWindows'})
+    end
+end
+
+local function porchTimber(ctx,ridge)
+    local b=ctx.brush({ridge-2.875,1.25,3.625},{ridge+2.875,4.875,4.5},.0625)
+    for _,x in ipairs({ridge-2.25,ridge+2.25}) do
+        b:Box(x-.125,1.25,4.125,x+.125,3,4.375,cedarPost)
+        b:Box(x-.1875,2.875,4.0625,x+.1875,3.0625,4.4375,oak)
+        b:Box(x-.125,3,3.75,x+.125,3.3125,4.5,cedarBeamZ)
+        -- Through-tenon with a narrowed shoulder and a pin standing proud of its end grain.
+        b:Box(x-.0625,3.0625,3.6875,x+.0625,3.1875,3.75,oakPlankZ)
+        b:Box(x,3.0625,3.625,x+.0625,3.125,3.6875,P.WOOD)
+    end
+    b:Box(ridge-2.5625,3.0625,3.8125,ridge+2.5625,3.3125,4.125,cedar)
+    b:Box(ridge-.125,3.1875,3.75,ridge+.125,4.8125,3.9375,cedarPost)
+    b:Box(ridge-.125,3.0625,3.6875,ridge+.125,3.25,3.8125,oak)
+    b:Shape(ridge-2.875,2.375,3.75,ridge+2.875,4.875,4.3125,function(x,y,z)
+        local u=abs(x-ridge)
+        if z<3.9375 and abs(y-(4.75-.61*u))<.109375 then return cedar end
+        if z>=3.9375 and z<4.0625 and u<=1.125 and abs(y-(3.25+.76*u))<.078125 then return oak end
+        if z>=4.125 and u>=1.375 and u<=2.25 and abs(y-(3.25-.88*(u-1.375)))<.09375 then return cedar end
+    end)
+    ctx.finish('ground-porch-frame',b,1,3,{masonry='homeWindows'})
+    local rails=ctx.brush({ridge-2.375,3,4.5},{ridge+2.375,3.3125,7.125},.0625)
+    for _,x in ipairs({ridge-2.25,ridge+2.25}) do
+        rails:Box(x-.125,3,4.5,x+.125,3.3125,7.125,cedarBeamZ)
+    end
+    ctx.finish('ground-porch-rails',rails,1,3,{masonry='homeWindows'})
+end
+
 local function firstStorey(ctx)
     local b=ctx.brush({-16.5,.75,3.375},{-.75,5.125,13.25},.125)
-    b:Box(-16,.75,7,-1,3.75,13,P.HOME_ASHLAR)
+    b:Box(-16,.75,7.375,-1,3.75,13,P.HOME_ASHLAR)
     b:Carve(-15.625,.75,7.375,-1.375,3.75,12.625)
-    b:Carve(-5.375,.75,7,-3.125,3.25,7.375)
-    for _,x in ipairs({-13.875,-10.375,-7.75}) do archedWindow(b,x,7,-1,false) end
     archedWindow(b,10.75,-16,-1,true)
     archedWindow(b,11.375,-1,1,true)
     for _,x in ipairs({-12.5,-7}) do archedWindow(b,x,13,1,false) end
-    for _,x in ipairs({-15.875,-12.125,-8.875,-6,-2.75,-1.375}) do
-        b:Box(x,.75,6.875,x+.25,3.75,7.125,cedarPost)
-        b:Box(x-.125,.75,6.75,x+.375,1.25,7.125,P.HOME_PLINTH)
+    b:Box(-16,3.5,6.875,-1,3.75,7.375,cedar)
+    local ridge=-4.125
+    for _,x in ipairs({-6.375,-1.875}) do
+        b:Box(x-.3125,.75,4,x+.3125,1.125,4.625,P.HOME_PLINTH)
+        b:Box(x-.25,1.125,4,x+.25,1.25,4.625,P.HOME_COPING)
     end
-    b:Box(-16,3.5,6.875,-1,3.75,7.25,cedar)
-    for _,cx in ipairs({-13.875,-10.375}) do
-        b:Box(cx-.875,.75,6.25,cx+.875,1,6.875,P.HOME_PLINTH)
-        for i=-3,3 do
-            local xx=cx+i*.25
-            local h=i%3==1 and 1.375 or 1.25
-            b:Box(xx-.125,1,6.375,xx+.125,h,6.75,i%3==0 and P.LEAF_C or P.LEAF_A)
-            if i%2==0 then b:Box(xx-.125,h,6.5,xx,h+.125,6.625,i%4==0 and P.FLOWER_Y or P.FLOWER_W) end
-        end
-    end
-    -- The right-hand open porch and its cross-gable stay when the next storey is added.
-    for _,x in ipairs({-6.375,-2.125}) do
-        b:Box(x-.375,.75,4.125,x+.375,1.125,4.875,P.HOME_PLINTH)
-        b:Box(x-.25,1.125,4.25,x+.25,1.375,4.75,P.HOME_COPING)
-        b:Box(x-.1875,1.375,4.25,x+.1875,3.125,4.625,cedarPost)
-        b:Box(x-.375,2.75,4.125,x+.375,3.125,4.75,oak)
-        b:Box(x-.1875,2.875,4.25,x+.1875,3.125,7,cedarBeamZ)
-        local toward=x< -4.25 and 1 or -1
-        for j=0,5 do
-            local xx=x+toward*j*.125
-            b:Box(xx-.125,2.25+j*.125,4.25,xx+.125,2.5+j*.125,4.5,cedar)
-        end
-    end
-    b:Box(-6.75,2.875,4.125,-1.75,3.125,4.5,cedar)
-    tiledRoof(b,-4.25,5.3125,1.8125,2.625,3.125,1.875,true)
-    for i=-18,18 do
-        local x=-4.25+i*.125
-        local y=4.75-abs(i)*.078125
-        b:Box(x-.0625,y-.25,3.625,x+.0625,y,3.875,cedar)
-    end
-    b:Box(-4.375,3.0,3.625,-4.125,4.75,3.875,cedarPost)
-    for _,x in ipairs({-5.625,-2.875}) do
-        b:Box(x-.125,2.25,6.625,x+.125,2.75,6.875,cedarPost)
-        b:Box(x-.1875,2.375,6.375,x+.1875,2.625,6.625,window)
-        b:Box(x-.25,2.625,6.375,x+.25,2.75,6.75,slate)
-    end
+    tiledRoof(b,ridge,5.3125,1.8125,2.875,3.125,1.875,true)
     ctx.finish('ground-floor',b,1,3,{masonry='homeWindows',windowLamps={
-        {x=-10.375,y=2.0,z=7,nz=-1,priority=1},{x=-13.875,y=2.0,z=7,nz=-1,priority=2}}})
+        {x=frontWindows[2].x,y=1.875,z=7,nz=-1,priority=1},
+        {x=frontWindows[3].x,y=1.875,z=7,nz=-1,priority=2}}})
+    frontWall(ctx)
+    porchTimber(ctx,ridge)
+    porchDoors(ctx)
+    windowBars(ctx,'ground-front-bars',frontWindows,7,-1,false,.25)
+    local function sideWindow(x) return {x=x,r=.75,sill=1.5,spring=2.5,rise=.625,panes=3} end
+    windowBars(ctx,'ground-west-bars',{sideWindow(10.75)},-16,-1,true,.125)
+    windowBars(ctx,'ground-east-bars',{sideWindow(11.375)},-1,1,true,.125)
+    windowBars(ctx,'ground-back-bars',{sideWindow(-12.5),sideWindow(-7)},13,1,false,.125)
 end
 local function singleRoof(ctx)
     local b=ctx.brush({-16.75,3.625,6.25},{-.25,6.5,13.75},.125)
@@ -821,7 +976,7 @@ local function house(world,scene)
         local v=part:Finish(options)
         if not v then return end
         local node=v:GetNode()
-        node.name='HomeHouse-'..name
+        node.name=options.nodeName or ('HomeHouse-'..name)
         local entry={volume=v,node=node,brush=part,first=first,last=last,mask=v.collisionMask,layer=v.collisionLayer}
         houseParts[#houseParts+1]=entry
         enableHousePart(entry,inStage(entry,houseStage))
@@ -1073,15 +1228,21 @@ local function meadow(scene)
     H.field=field
 end
 function H.Build(world,scene,dayNight)
-    for _,entry in ipairs({{oak,.54,.35,.19},{amber,.68,.46,.25},{cedar,.37,.24,.16},
-        {slate,.24,.28,.30},{ember,.93,.32,.09},{flame,1,.73,.30},{window,.34,.41,.43},
-        {cedarPost,.37,.24,.16},{oakPlankZ,.54,.35,.19},{cedarBeamZ,.37,.24,.16}}) do
-        local id,r,g,b=table.unpack(entry)
+    for _,entry in ipairs({
+        -- Deep walnut frame, warm mid-tone trim, and a muted blue-grey pane.
+        {oak,.31,.18,.10,.72,0,.36}, {amber,.46,.25,.11,.68,0,.38},
+        {cedar,.25,.13,.065,.77,0,.34}, {slate,.22,.24,.24,.64,.65,.45},
+        {ember,.93,.32,.09,.83,0,.30}, {flame,1,.73,.30,.34,0,.34},
+        {window,.36,.43,.45,.24,0,.52},
+        {cedarPost,.28,.15,.08,.75,0,.34}, {oakPlankZ,.34,.20,.10,.70,0,.36},
+        {cedarBeamZ,.25,.13,.065,.77,0,.34},
+    }) do
+        local id,r,g,b,roughness,metallic,specular=table.unpack(entry)
         world:SetPaletteEntry(id,Color(r,g,b),50)
         local glow=Color(0,0,0,0)
         if id==ember or id==flame then glow=Color(r,g,b,id==flame and 1.6 or 1) end
         if id==window then glow=Color(1,.65,.30,1) end
-        world:SetPaletteEntryPBR(id,id==window and .27 or .86,id==slate and .65 or 0,.4,glow)
+        world:SetPaletteEntryPBR(id,roughness,metallic,specular,glow)
     end
     meadow(scene); terrain(world); courtyard(world); house(world,scene); banks(world); trees(world,scene); shoreDetails(world); water(scene)
     local fire=scene:CreateChild('HomeForgeFire'); fire.position=Vector3(H.x+1.15,H.base+1.65,H.z+7.5)

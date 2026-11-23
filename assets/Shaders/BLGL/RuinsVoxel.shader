@@ -21,6 +21,9 @@ uniform float wall_radius = 51.0;
 uniform vec3 home_stone_origin = vec3(0.0);
 // Only opaque, non-destructible volumes made entirely from home limestone set this flag.
 uniform float dressed_stone_draw = 0.0;
+// Windows volumes also carry the upper-storey marble slots. This flag remaps
+// those shared slots to the house's warm dry-stone finish without touching ruins.
+uniform float home_house_draw = 0.0;
 uniform vec3 meadow_origin = vec3(0.0);
 uniform float meadow_sun = 0.0;
 uniform float window_light = 0.0;
@@ -83,6 +86,7 @@ void fragment() {
     vec4 pbr = texture(palette_tex, voxel_palette_uv(idx, VOXEL_PALETTE_PBR));
     vec4 emi = vec4(0.0);
     vec3 base = albedo;
+    float homeRoughness = 0.0;
     if (dressed_stone_draw<0.5) {
         vec3 cut = srgb_to_linear(texture(palette_tex, voxel_palette_uv(idx, VOXEL_PALETTE_CUT)).rgb);
         emi = texture(palette_tex, voxel_palette_uv(idx, VOXEL_PALETTE_EMISSIVE));
@@ -91,6 +95,13 @@ void fragment() {
 
     vec3 n = normalize(NORMAL);
     vec3 wp = VERTEX;
+    if (home_house_draw > 0.5 && (idx==105.0 || idx==106.0)) {
+        float blockTint = h31(floor(wp * vec3(1.15, 2.4, 1.15) + vec3(idx)));
+        vec3 warmStone = srgb_to_linear(vec3(0.63, 0.60, 0.54));
+        base = mix(base, warmStone, 0.92);
+        base *= 0.91 + blockTint * 0.15;
+        homeRoughness = 0.76 - pbr.r;
+    }
     vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
     float footprint = max(length(dpdx), length(dpdy));
     float grainFade = 1.0 - smoothstep(0.025, 0.12, footprint);
@@ -288,10 +299,11 @@ void fragment() {
         float radius = max(length(radial), 0.0001);
         float phase = radius * 76.0 + sin(radius * 14.0);
         float visible = 1.0 - smoothstep(0.014, 0.065, footprint);
-        float ring = sin(phase) * visible;
-        shade *= 1.0 + 0.15 * ring;
-        woodRoughness = -0.077 - 0.047 * ring;
-        vec2 slope = radial / radius * vec2(1.0,0.87) * cos(phase) * 0.068 * visible;
+        float fineTimber = smoothstep(0.03125, 0.125, voxel_size);
+        float ring = sin(phase) * visible * mix(0.30, 1.0, fineTimber);
+        shade *= 1.0 + 0.10 * ring;
+        woodRoughness = -0.045 - 0.030 * ring;
+        vec2 slope = radial / radius * vec2(1.0,0.87) * cos(phase) * 0.045 * visible * mix(0.35, 1.0, fineTimber);
         vec3 grainNormal = vec3(0.0,slope);
         if (verticalWood) { grainNormal = grainNormal.zxy; }
         if (idx >= 158.0) { grainNormal = grainNormal.yzx; }
@@ -317,7 +329,7 @@ void fragment() {
         emiK*=window_light*(.2+.65*max(n.y,0.0)+.22*(1.0-abs(n.y)));
     }
     ALBEDO = base * shade * daynight_tint;
-    ROUGHNESS = clamp(pbr.r + woodRoughness + dressedRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
+    ROUGHNESS = clamp(pbr.r + homeRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;

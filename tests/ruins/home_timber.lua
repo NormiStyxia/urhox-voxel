@@ -1,5 +1,5 @@
 -- Real house/brush generation with recorded voxel occupancy and isolated materials.
--- This does not compile SurfaceShader or render pixels; optional baseline is a saved Lua source.
+-- Static world ports keep stage visibility, collision filters and volume identities observable.
 package.path='scripts/?.lua;'..package.path
 local V={};V.__index=V
 Vector3=setmetatable({},{__call=function(_,x,y,z)return setmetatable({x=x,y=y,z=z},V)end})
@@ -61,11 +61,26 @@ local function fixture(owner,empty)
         function grid:IsSolid(i,j,k)return v.cells[key(i,j,k)]~=nil end
         function v:GetGrid()return grid end
         function v:SetCollidable(value)self.collidable=value end
-        function v:RebuildGeometry()end
+        v.rebuilds=0
+        function v:RebuildGeometry()self.rebuilds=self.rebuilds+1 end
         function v:At(x,y,z)
             local i,j,k=math.floor((owner.x+x-pos.x)/s),math.floor((owner.base+y-pos.y)/s),math.floor((owner.z+z-pos.z)/s)
             if i<0 or j<0 or k<0 or i>=nx or j>=ny or k>=nz then return end
             return self.cells[key(i,j,k)]
+        end
+        -- Island-local, half-open bounds. Faces touching the floor or lintel are allowed.
+        function v:OccupiesBox(x0,y0,z0,x1,y1,z1)
+            local function range(lo,hi,origin,n)
+                return math.max(0,math.floor((lo-origin)/s)),math.min(n-1,math.ceil((hi-origin)/s)-1)
+            end
+            local i0,i1=range(x0,x1,pos.x-owner.x,nx)
+            local j0,j1=range(y0,y1,pos.y-owner.base,ny)
+            local k0,k1=range(z0,z1,pos.z-owner.z,nz)
+            if i1<i0 or j1<j0 or k1<k0 then return false end
+            for i=i0,i1 do for j=j0,j1 do for k=k0,k1 do
+                if self.cells[key(i,j,k)] then return true end
+            end end end
+            return false
         end
         world.volumes[#world.volumes+1]=v
         return v
@@ -90,38 +105,112 @@ local houseEnd=#world.volumes
 local pieces={}
 for _,v in ipairs(world.volumes) do
     local key=(v.node.name or ''):match('^HomeHouse%-(.+)')
-    if key then assert(not pieces[key]);pieces[key]=v end
+    if key and (key:match('^ground%-') or key=='foundation' or key=='ruin' or key=='one-storey-roof') then
+        assert(not pieces[key],key);pieces[key]=v
+    end
 end
 local foundation,main,roof,ruin=pieces.foundation,pieces['ground-floor'],pieces['one-storey-roof'],pieces.ruin
-local second,third=pieces.second,pieces.third
 local P=require('ruins.RuinsPalette').P
+local front=assert(pieces['ground-front'])
+local bars=assert(pieces['ground-front-bars'])
+local porch=assert(pieces['ground-porch-frame'])
+local rails=assert(pieces['ground-porch-rails'])
 assert(home.GetHouseStage()==0 and foundation.node.enabled and ruin.node.enabled and not main.node.enabled)
-assert(foundation:At(-4.25,.625,4.25) and not main:At(-4.25,1.75,7.25) and not main:At(-8.5,2.5,9))
-assert(main:At(-13.625,2.375,7.1875)==156 and main:At(-13.875,2.375,7.0625)==157)
+assert(foundation:At(-4.625,.6875,4.25) and not main:At(-8.5,2.5,9))
+assert(front.s==.0625 and bars.s==.03125 and not bars.collidable)
+
+-- Take a row through clear glass, between horizontal rails. Measure contiguous
+-- timber runs in the plane ahead of the pane, from the actual occupied cells.
+local windows={{x=-14.9375,width=.75,bars={1}}, {x=-12.875,width=1.375,bars={1,2,1}},
+    {x=-9.625,width=1,bars={1,1}}}
+for _,w in ipairs(windows) do
+    local left=w.x-w.width/2
+    local runs,glass,width={},0,0
+    for i=0,w.width/bars.s-1 do
+        local x=left+(i+.5)*bars.s
+        if front:At(x,2.28125,7.28125)==156 then glass=glass+1 end
+        assert(not main:At(x,2.28125,7.203125),'old front wall crosses the new glazing')
+        local mat=bars:At(x,2.28125,7.203125)
+        if mat then
+            assert(mat==157 and not front:At(x,2.28125,7.203125),'glazing bar overlaps front wall')
+            width=width+1
+        elseif width>0 then runs[#runs+1]=width;width=0 end
+    end
+    if width>0 then runs[#runs+1]=width end
+    assert(glass*bars.s==w.width-2*front.s,'incorrect recessed glass span at '..w.x)
+    assert(table.concat(runs,',')==table.concat(w.bars,','),'incorrect glazing bar widths at '..w.x)
+    assert(front:At(w.x-w.width/2-.09375,2.28125,6.90625)==P.HOME_COPING,'missing stone jamb')
+end
 assert(main:At(-15.8125,2.375,11)==156 and main:At(-12.25,2.375,12.8125)==156)
 assert(main:At(-1.1875,2.375,11.625)==156 and roof:At(-10.875,6.4375,10)==P.HOME_CLAY_LIGHT)
-assert(not ruin:At(-11.25,1,7.25) and ruin:At(-10,1.625,12.75)==P.HOME_ASHLAR)
-assert(main:At(-6.375,2.0,4.375)==157 and main:At(-4.25,4.125,3.6875)==157)
-assert(not home.SetHouseStage(-1) and not home.SetHouseStage(4) and not home.SetHouseStage(1.5))
-for _,stage in ipairs({1,2,3,2,1,0,3}) do
-    assert(home.SetHouseStage(stage));assert(home.GetHouseStage()==stage)
-    local visible={foundation=true,ruin=stage==0,['ground-floor']=stage>=1,['one-storey-roof']=stage==1,
-        second=stage>=2,secondRoof=stage==2,third=stage==3}
-    for k,v in pairs(pieces) do
-        assert(v.node.enabled==visible[k],k)
-        assert(v.collisionMask==(visible[k] and 0xffffffff or 0) and v.collisionLayer==(visible[k] and 1 or 0),k)
-    end
-    assert(#world.volumes==houseEnd and foundation==pieces.foundation and main==pieces['ground-floor'] and second==pieces.second)
+for _,face in ipairs({'west','east','back'}) do
+    local trim=assert(pieces['ground-'..face..'-bars'])
+    assert(trim.s==bars.s and trim.count>0 and not trim.collidable,face)
 end
+for _,side in ipairs({'left','right'}) do
+    local leaf=assert(pieces['ground-door-'..side])
+    local materials={}
+    for _,mat in pairs(leaf.cells) do materials[mat]=true end
+    assert(leaf.s==.03125 and leaf.collidable and materials[156] and materials[150] and materials[P.GOLD_DARK],side)
+    local hinge=side=='left' and -5.75 or -3.5
+    local insideJamb=hinge+(side=='left' and .046875 or -.046875)
+    assert(leaf:At(insideJamb,1.375,7.34375)==157,side..' jamb')
+    assert(leaf:OccupiesBox(hinge-.5625,1,8,hinge+.5625,2.5,8.5),side..' door must extend into the room')
+end
+assert(not ruin:At(-11.25,1,7.25) and ruin:At(-10,1.625,12.75)==P.HOME_ASHLAR)
+assert(porch.s==.0625 and rails.s==.0625 and porch.collidable and rails.collidable)
+for _,x in ipairs({-6.375,-1.875}) do
+    assert(porch:At(x+.03125,2,4.15625)==157,'missing porch post')
+    assert(rails:At(x+.03125,3.03125,5.25)==159,'missing longitudinal beam')
+end
+assert(porch:At(-4.125,4,3.84375)==157 and porch:At(-3.40625,3.78125,3.96875)==150,'missing king post or diagonal strut')
+assert(not home.SetHouseStage(-1) and not home.SetHouseStage(4) and not home.SetHouseStage(1.5))
+
+local stageRanges={foundation={0,3},ruin={0,0},['one-storey-roof']={1,1},second={2,3},secondRoof={2,2},third={3,3}}
+local registered=up(home.SetHouseStage,'houseParts')
+local groundCount=0
+for _,part in ipairs(registered) do
+    local key=assert(part.node.name:match('^HomeHouse%-(.+)'))
+    if pieces[key] then assert(pieces[key]==part.volume,key) end
+    local expected=stageRanges[key]
+    if key:match('^ground%-') then
+        expected={1,3};groundCount=groundCount+1
+        assert(part.volume.collidable==(key:match('%-bars$')==nil),key..' collision type')
+    end
+    if expected then assert(part.first==expected[1] and part.last==expected[2],key..' stage range') end
+end
+local original={}
+for i,v in ipairs(world.volumes) do original[i]={volume=v,rebuilds=v.rebuilds} end
+local nextID=world.nextID
+local function checkStage(stage)
+    assert(home.SetHouseStage(stage));assert(home.GetHouseStage()==stage)
+    for _,part in ipairs(registered) do
+        local v=part.volume
+        local visible=stage>=part.first and stage<=part.last
+        assert(v.node.enabled==visible,v.node.name)
+        assert(v.collisionMask==(visible and v.collidable and 0xffffffff or 0),v.node.name..' mask')
+        assert(v.collisionLayer==(visible and 1 or 0),v.node.name..' layer')
+    end
+    assert(#world.volumes==houseEnd and world.nextID==nextID,'stage switching allocated volumes')
+    for i,v in ipairs(world.volumes) do
+        assert(v==original[i].volume and v.rebuilds==original[i].rebuilds,'stage switching replaced or rebuilt a volume')
+        -- Sweep a full 1.125 m wide, 2.125 m high box from the porch into the room.
+        if stage>=1 and v.node.enabled and v.collidable then
+            assert(not v:OccupiesBox(-5.1875,.75,4,-4.0625,2.875,9.25),'door passage blocked by '..(v.node.name or 'scenery'))
+        end
+    end
+end
+for _,stage in ipairs({0,1,2,3,3,2,1,0,3}) do checkStage(stage) end
 home.GetHouseOccupants=function() return Vector3(home.x-8,home.base+7,home.z+9),nil end
 assert(not home.SetHouseStage(1) and home.GetHouseStage()==3,'do not remove the occupied upper floor')
 home.GetHouseOccupants=function() return nil,{{base=Vector3(home.x-8,home.base+4,home.z+9),radius=2.2,height=4.4}} end
 assert(not home.SetHouseStage(0),'do not close a structure through a dragon')
 home.GetHouseOccupants=nil
-assert(home.SetHouseStage(0) and not roof.node.enabled and not third.node.enabled)
+checkStage(0)
+assert(not roof.node.enabled)
 local forge,lip=world.volumes[2],world.volumes[3]
 assert(forge:At(1.125,.375,5.125)==146 and lip:At(1.21875,2.65625,7.03125)==197)
-print('PASS seven persistent house groups; stages, jumps, downgrades, masks, isolated forge, hollow room, door, arched glass, gable, and occupied-floor/dragon veto')
+print(('PASS %d persistent ground-floor parts across stages 1–3; measured panes, bars, door passage, truss, masks and instance reuse'):format(groundCount))
 local function localCell(v,key)
     local i,j,k=key//(v.ny*v.nz),(key//v.nz)%v.ny,key%v.nz
     return v.pos.x-home.x+(i+.5)*v.s,v.pos.y-home.base+(j+.5)*v.s,v.pos.z-home.z+(k+.5)*v.s
@@ -147,7 +236,7 @@ local function checkColumn(x,z,cap,footVisible)
     for _,v in ipairs(world.volumes) do
         local cx=v.pos.x-home.x+v.nx*v.s*.5
         local cz=v.pos.z-home.z+v.nz*v.s*.5
-        if v.s==.0625 and math.abs(cx-x)<.26 and math.abs(cz-z)<.26 then
+        if not v.node.name and v.s==.0625 and math.abs(cx-x)<.26 and math.abs(cz-z)<.26 then
             assert(not v.collidable and v.collisionMask==0)
             for key,mat in pairs(v.cells) do
                 local _,y=localCell(v,key)
@@ -193,9 +282,12 @@ interrupted:Cancel();interrupted:Cancel()
 assert(interrupted.root.removed and #retryWorld.volumes==1 and retryWorld.volumes[1]==foreign)
 for _,v in ipairs(interruptedVolumes) do assert(v.disposed and v.node.disposed) end
 local retry=home.BeginBuild(retryWorld,scene)
-local steps=0
+local steps,stalled,lastID=0,0,retryWorld.nextID
 repeat
-    local done,err=retry:Step();assert(not err,err);steps=steps+1;assert(steps<500)
+    local done,err=retry:Step();assert(not err,err);steps=steps+1
+    stalled=lastID==retryWorld.nextID and stalled+1 or 0
+    assert(stalled<500,'house build stopped progressing within a single brush')
+    lastID=retryWorld.nextID
 until done
 assert(home.GetHouseStage()==0)
 local restored={}
@@ -203,7 +295,7 @@ for _,v in ipairs(retryWorld.volumes) do if v.node.name then restored[v.node.nam
 assert(restored['HomeHouse-foundation']~=oldFoundation and restored['HomeHouse-ruin'].node.enabled)
 home.GetHouseOccupants=function() return Vector3(home.x-4.25,home.base+.75,home.z+4.75) end
 assert(home.SetHouseStage(3),'open porch passage is safe during restoration')
-assert(home.SetHouseStage(3) and restored['HomeHouse-third'].node.enabled)
+assert(home.SetHouseStage(3) and restored['HomeHouse-ground-door-left'].node.enabled)
 home.SetWindowLightingActive(false);home.SetWindowLightingActive(true)
 assert(home.GetHouseStage()==3 and restored['HomeHouse-foundation'].node.enabled)
 home.GetHouseOccupants=nil

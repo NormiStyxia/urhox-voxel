@@ -3,6 +3,9 @@ local P = require('ruins.RuinsPalette').P
 local Upper = { Windows = {} }
 local windowLamps={second={},third={}}
 local step = .125
+-- The shell stays on a 0.125 m grid. Local detail brushes below use smaller
+-- cells for exposed frames without fine-subdividing the whole house.
+local detailStep, trimStep = .0625, .03125
 local woodX, woodY, woodZ, oakX, oakZ, glass = 152,157,159,150,158,156
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
@@ -16,16 +19,16 @@ local function window(group, faceX, faceZ, nx, nz, bottom, width, height, flower
     end
 end
 for _,x in ipairs({-14.5,-11.5,-8.5,-5.5,-2.5}) do
-    window('second',x,7,0,-1,4.75,1.75,1.375,true)
-    window('second',x,13,0,1,4.75,1.5,1.375)
+    window('second',x,7,0,-1,4.625,1.875,1.5,true)
+    window('second',x,13,0,1,4.625,1.625,1.5)
 end
 for _,z in ipairs({8.5,11.5}) do
-    window('second',-16,z,-1,0,4.75,1.25,1.375)
-    window('second',-1,z,1,0,4.75,1.25,1.375)
+    window('second',-16,z,-1,0,4.625,1.375,1.5)
+    window('second',-1,z,1,0,4.625,1.375,1.5)
 end
-window('third',-8.5,6.75,0,-1,8.0,2.5,1.625,true)
-window('third',-8.5,12.75,0,1,8.0,1.75,1.5)
-for _,x in ipairs({-14,-3}) do window('third',x,7.125,0,-1,7.75,1,.875) end
+window('third',-8.5,6.75,0,-1,7.25,2.5,1.25,true)
+window('third',-8.5,12.75,0,1,7.25,1.875,1.25)
+for _,x in ipairs({-13.75,-3.25}) do window('third',x,7.125,0,-1,7.375,1.125,.75) end
 
 -- All window details are written in a local tangent/outward basis. The glass is one
 -- cell thick, recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -38,56 +41,130 @@ local function drawWindow(b,w)
     local h=w.width/2
     local sill,head=w.y-w.height/2,w.y+w.height/2
     local rail=tx==1 and woodX or woodZ
-    box(-h-step,sill-step,-.0625,h+step,head+step,.3125,rail)
     box(-h,sill,-.0625,h,head,.4375,false)
     box(-h,sill,-.0625,h,head,.0625,glass)
+    box(-h,sill,.0625,h,sill+step,.1875,P.HOME_WINDOW_REVEAL)
+    box(-h,head-step,.0625,h,head,.1875,P.HOME_WINDOW_REVEAL)
+end
+
+-- Window frames live outside the parent wall. The glass/opening remains in the
+-- coarse floor brush, so a fine detail volume never hides the recessed glazing.
+local function drawWindowFrame(b,w,withMullions)
+    local tx,tz = abs(w.nz),abs(w.nx)
+    local function box(a,y0,d,c,y1,e,mat)
+        b:Box(w.x+tx*a+w.nx*d,y0,w.z+tz*a+w.nz*d,
+              w.x+tx*c+w.nx*e,y1,w.z+tz*c+w.nz*e,mat)
+    end
+    local h=w.width/2
+    local sill,head=w.y-w.height/2,w.y+w.height/2
+    local rail=tx==1 and woodX or woodZ
+    local d0,d1=.375,.4375
     for _,sign in ipairs({-1,1}) do
-        box(sign*h,sill,0,sign*(h+step),head,.4375,woodY)
+        box(sign*h,sill,d0,sign*(h+detailStep),head,d1,woodY)
     end
-    -- Wide front windows are paired casements; small dormers use a single central mullion.
-    box(0,sill,.0625,step,head,.3125,woodY)
+    box(-h,sill,d0,h,sill+detailStep,d1,rail)
+    box(-h,head-detailStep,d0,h,head,d1,rail)
+    if w.flowers then
+        box(-h-detailStep,sill-.375,d0,h+detailStep,sill-.3125,d1,rail)
+        box(-h-.125,sill-.3125,d0,h+.125,sill-.1875,d1,oakX)
+        for i=0,floor(w.width/.25)-1 do
+            local a=-h+i*.25
+            box(a,sill-.1875,d0,a+.125,sill-.0625,d1,i%3==1 and P.LEAF_A or P.LEAF_C)
+            if i%3~=2 then
+                box(a,sill-.0625,d0,a+detailStep,sill,d1,i%3==1 and P.FLOWER_W or P.FLOWER_Y)
+            end
+        end
+    end
+    if not withMullions then return end
     if w.width>=1.75 then
-        for _,at in ipairs({-h*.5,h*.5}) do box(at-step/2,sill,.0625,at+step/2,head,.1875,woodY) end
+        for _,at in ipairs({-h*.5,h*.5}) do
+            box(at-trimStep/2,sill,d0,at+trimStep/2,head,d1,woodY)
+        end
     end
-    local transom=sill+floor(w.height*.56/step)*step
-    box(-h,transom,.0625,h,transom+step,.1875,rail)
-    box(-h-.25,head,.1875,h+.25,head+step,.5625,rail)
-    box(-h-.25,sill-step,.1875,h+.25,sill,.5625,rail)
-    box(-h,sill-step,.0625,h,sill,.3125,P.HOME_WINDOW_REVEAL)
-    if not w.flowers then return end
-    box(-h-.125,sill-.375,.3125,h+.125,sill-.125,.8125,rail)
-    box(-h-.25,sill-.25,.6875,h+.25,sill-.125,.9375,tx==1 and oakX or oakZ)
-    for i=0,floor(w.width/.25)-1 do
-        local a=-h+i*.25
-        local lift=(i%3==1) and .125 or 0
-        box(a,sill-.125,.4375,a+.25,sill+.125+lift,.8125,i%3==1 and P.LEAF_A or P.LEAF_C)
-        if i%3~=2 then box(a,sill+.125+lift,.5625,a+step,sill+.25+lift,.6875,i%3==1 and P.FLOWER_W or P.FLOWER_Y) end
+    box(-trimStep/2,sill,d0,trimStep/2,head,d1,woodY)
+    local transom=sill+floor(w.height*.56/detailStep)*detailStep
+    box(-h,transom-trimStep/2,d0,h,transom+trimStep/2,d1,rail)
+end
+
+local function drawGableBraces(b,cx,half,z,base,eave,rise,front)
+    local z0,z1
+    if front then z0,z1=z-.125,z-.0625 else z0,z1=z+.0625,z+.125 end
+    local beam=.0625
+    b:Box(cx-beam/2,base+.125,z0,cx+beam/2,eave,z1,woodY)
+    b:Box(cx-half, eave-beam, z0, cx+half, eave, z1, woodX)
+    local count=math.max(1,math.floor((half-.25)/detailStep))
+    for i=0,count do
+        local t=i/count
+        local y=base+.25+t*math.max(0,eave-base-.5)
+        local left=cx-half+.25+t*(half-.25)
+        local right=cx+half-.25-t*(half-.25)
+        b:Box(left-beam/2,y-beam/2,z0,left+beam/2,y+beam/2,z1,woodY)
+        b:Box(right-beam/2,y-beam/2,z0,right+beam/2,y+beam/2,z1,woodY)
     end
 end
 
+local function makeUpperDetails(brush,finish,name,group,withFrontMullions)
+    local lo,hi
+    if group=='second' then
+        lo,hi={-16.5,4.25,6.8},{-.5,6.7,13.45}
+    else
+        lo,hi={-16.5,6.55,6.55},{-.5,9.85,13.55}
+    end
+    local frame=brush(lo,hi,detailStep)
+    for _,w in ipairs(Upper.Windows) do
+        if w.group==group then drawWindowFrame(frame,w,false) end
+    end
+    if group=='third' then
+        drawGableBraces(frame,-8.5,2.75,6.75,7.0,8.625,2.125,true)
+        drawGableBraces(frame,-8.5,2.75,12.75,7.0,8.625,2.125,false)
+    for _,x in ipairs({-13.75,-3.25}) do
+            drawGableBraces(frame,x,1.25,7.125,7.25,8.25,1.125,true)
+            drawGableBraces(frame,x,1.25,9.625,7.25,8.25,1.125,false)
+        end
+    end
+    finish(group,frame,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-frames'})
+    if not withFrontMullions then return end
+    -- Only the pond-facing row receives a .03125 m pass. Its brush is limited to
+    -- the glazing strips, never the complete upper-storey volume.
+    local front=brush({-16.5,4.35,6.8},{-.5,9.75,7.5},trimStep)
+    for _,w in ipairs(Upper.Windows) do
+        if w.group==group and w.nz==-1 then drawWindowFrame(front,w,true) end
+    end
+    finish(group,front,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-mullions'})
+end
+
+local function makeRoofDetails(brush,finish,name)
+    local eaves=brush({-16.75,6.55,6.2},{-.25,7.25,13.8},detailStep)
+    -- Fine fascia strips sit one cell outside the two long eaves. The roof
+    -- carriers and tiles remain in the parent .125 m volume.
+    eaves:Box(-16.5,6.75,6.25,-.5,6.8125,6.3125,woodX)
+    eaves:Box(-16.5,6.75,13.6875,-.5,6.8125,13.75,woodX)
+    finish(name,eaves,{masonry='homeWindows',visual=true,nodeName='HomeHouseDetail-'..name..'-eaves'})
+end
+
 local function ring(b,y,height)
-    for _,z in ipairs({7,13}) do b:Box(-16.125,y,z-.125,-.875,y+height,z+.125,woodX) end
-    for _,x in ipairs({-16,-1}) do b:Box(x-.125,y,7.125,x+.125,y+height,12.875,woodZ) end
+    for _,z in ipairs({7,13}) do b:Box(-16.0625,y,z-.0625,-.9375,y+height,z+.0625,woodX) end
+    for _,x in ipairs({-16,-1}) do b:Box(x-.0625,y,7.0625,x+.0625,y+height,12.9375,woodZ) end
 end
 local function secondFloor(b)
     b:Box(-16,3.75,7,-1,6.75,13,P.MARBLE_B)
     b:Carve(-15.625,4,7.375,-1.375,6.75,12.625)
     b:Box(-15.625,3.875,7.375,-1.375,4,12.625,oakZ)
-    ring(b,3.75,.25); ring(b,6.5,.25)
+    ring(b,3.75,.125); ring(b,6.5,.125)
     for _,z in ipairs({7,13}) do
         for x=-16,-1,3 do
-            b:Box(x-.125,4,z-.125,x+.125,6.5,z+.125,woodY)
+            b:Box(x-.0625,4,z-.0625,x+.0625,6.5,z+.0625,woodY)
             for _,sign in ipairs({-1,1}) do
                 if x+sign*.625>-16 and x+sign*.625< -1 then
                     for i=0,3 do
                         local at=x+sign*(i+1)*step
-                        b:Box(at-step,6.0+i*step,z-.125,at+step,6.25+i*step,z+.125,woodY)
+                        b:Box(at-step/2,6.0+i*step,z-.0625,at+step/2,6.125+i*step,z+.0625,woodY)
                     end
                 end
             end
         end
     end
-    for _,x in ipairs({-16,-1}) do b:Box(x-.125,4,9.875,x+.125,6.5,10.125,woodY) end
+    for _,x in ipairs({-16,-1}) do b:Box(x-.0625,4,9.9375,x+.0625,6.5,10.0625,woodY) end
     for _,w in ipairs(Upper.Windows) do if w.group=='second' then drawWindow(b,w) end end
 end
 
@@ -106,23 +183,25 @@ local function tileRoof(b,acrossX,center,depth,u0,u1,eave,rise)
         for _,sign in ipairs({-1,1}) do
             local outer=center+sign*v1
             local inner=center+sign*max(0,v0-.125)
-            box(u0,y,outer,u1,y+.25,inner,ridgeMat)
+            -- The roof carrier is a single 0.125 m beam. Tile overlap supplies
+            -- the visible second layer above it.
+            box(u0,y,outer,u1,y+.125,inner,ridgeMat)
             local index=0
             local start=u0-(row%2)*.25
             while start<u1 do
                 local lo,hi=max(u0,start),min(u1,start+.625)
                 local mat=(index+row*3)%5==1 and P.HOME_CLAY_LIGHT or P.HOME_CLAY
                 if hi>lo then
-                    box(lo,y+.25,outer,hi,y+.375,inner,mat)
-                    if hi-lo>=.25 then box(lo,y+.375,outer,lo+step,y+.5,inner,mat) end
+                    box(lo,y+.125,outer,hi,y+.25,inner,mat)
+                    if hi-lo>=.25 then box(lo,y+.25,outer,lo+step,y+.375,inner,mat) end
                 end
                 index=index+1;start=start+.625
             end
         end
     end
-    box(u0-.125,eave+rise,center-.25,u1+.125,eave+rise+.25,center+.25,P.HOME_CLAY)
+    box(u0-.125,eave+rise,center-.125,u1+.125,eave+rise+.125,center+.125,P.HOME_CLAY)
     for i=0,ceil((u1-u0)/.625)-1 do
-        local lo=u0+i*.625;box(lo,eave+rise+.25,center-.125,min(lo+.5,u1),eave+rise+.375,center+.125,P.HOME_CLAY_LIGHT)
+        local lo=u0+i*.625;box(lo,eave+rise+.125,center-.0625,min(lo+.5,u1),eave+rise+.1875,center+.0625,P.HOME_CLAY_LIGHT)
     end
 end
 
@@ -160,9 +239,6 @@ local function crossGable(b,cx,half,z0,z1,base,eave,rise)
         b:Shape(cx-half,base,z,cx+half,eave+rise,z+.375,function(x,y)
             local top=eave+rise*(1-abs(x-cx)/(half+.375))
             if y<top then
-                if top-y<.25 then return woodX end
-                if abs(x-cx)<step or abs(x-cx)>half-.25 then return woodY end
-                if half>1 and y>eave and abs(abs(x-cx)-(y-eave)*.9)<step then return woodY end
                 return P.MARBLE_B
             end
         end)
@@ -206,18 +282,22 @@ function Upper.Build(brush,finish)
     local second=brush({-16.25,3.75,6},{-.75,6.75,13.5},step)
     secondFloor(second)
     finish('second',second,{masonry='homeWindows',windowLamps=windowLamps.second})
+    makeUpperDetails(brush,finish,'second','second',true)
     local roof=brush({-16.75,6.75,6.125},{-.25,10.25,13.875},step)
     longRoof(roof,1.625)
     stack(roof,-7.5,11,7.5,9.75)
     finish('secondRoof',roof,{masonry='homeWindows'})
+    makeRoofDetails(brush,finish,'secondRoof')
     local attic=brush({-16.75,5.375,6.125},{2.125,12.5,13.875},step)
     longRoof(attic,1.875)
     attic:Box(-16,6.75,7,-1,7,13,oakZ)
-    crossGable(attic,-8.5,2.375,6.75,12.75,7.0,9.875,1.875)
-    for _,x in ipairs({-14,-3}) do crossGable(attic,x,1,7.125,9.625,7.25,8.875,.875) end
+    crossGable(attic,-8.5,2.75,6.75,12.75,7.0,8.625,2.125)
+    for _,x in ipairs({-13.75,-3.25}) do crossGable(attic,x,1.25,7.125,9.625,7.25,8.25,1.125) end
     for _,w in ipairs(Upper.Windows) do if w.group=='third' then drawWindow(attic,w) end end
-    stack(attic,-14.5,11.125,8,11.25)
+    stack(attic,-13.25,11.125,8,11.25)
     eastHoist(attic)
     finish('third',attic,{masonry='homeWindows',windowLamps=windowLamps.third})
+    makeUpperDetails(brush,finish,'third','third',true)
+    makeRoofDetails(brush,finish,'third')
 end
 return Upper
