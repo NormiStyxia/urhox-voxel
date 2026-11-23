@@ -15,8 +15,8 @@ local SPLIT = -7              -- west wing X0..SPLIT, east terrace SPLIT..X1
 local F2, F3 = 5.75, 9.75     -- second-storey base, third-storey / terrace base
 local CZ = (Z0+Z1)/2
 local WEST_CX = (X0+SPLIT)/2
-local KNEE = F3+2.5           -- west attic wall top
-local GABLE_HALF, GABLE_EAVE, GABLE_RISE = 5, KNEE-.375, 4
+local KNEE = F3+3.25           -- west attic wall top; the upper door keeps a full head above the player
+local GABLE_HALF, GABLE_EAVE, GABLE_RISE = 5, KNEE-.375, 4.5
 -- Outer stair: 0.375 m risers and treads; the terrace's back rail opens west of STAIR_GAP.
 local RISE, TREAD = .375, .375
 local STAIR_GAP = X1+.5-math.floor((F3-12*RISE)/RISE)*TREAD+.25
@@ -70,7 +70,7 @@ window('third',WEST_CX,Z0,0,-1,F3+3.75,1.0,.875)
 window('third',WEST_CX,Z1,0,1,F3+.75,1.875,1.75)
 for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
-local terraceDoor={z0=CZ-.625,z1=CZ+.625,top=F3+2.375}
+local terraceDoor={z0=CZ-.625,z1=CZ+.625,bottom=F3+.25,top=F3+3.0}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -246,17 +246,19 @@ local function tileRoof(b,acrossX,center,depth,u0,u1,eave,rise)
         for _,sign in ipairs({-1,1}) do
             local outer=center+sign*v1
             local inner=center+sign*max(0,v0-.125)
-            -- The roof carrier is a single 0.125 m beam. Tile overlap supplies
-            -- the visible second layer above it.
-            box(u0,y,outer,u1,y+.125,inner,ridgeMat)
+            -- A deep carrier overlaps the adjacent course and reaches under the tile
+            -- roll. Every outside edge is consequently backed by solid roof material.
+            local outer=center+sign*(v1+.1875)
+            local inner=center+sign*max(0,v0-.25)
+            box(u0,y-.125,outer,u1,y+.3125,inner,ridgeMat)
             local index=0
             local start=u0-(row%2)*.25
             while start<u1 do
                 local lo,hi=max(u0,start),min(u1,start+.625)
                 local mat=(index+row*3)%5==1 and P.HOME_CLAY_LIGHT or P.HOME_CLAY
                 if hi>lo then
-                    box(lo,y+.125,outer,hi,y+.25,inner,mat)
-                    if hi-lo>=.25 then box(lo,y+.25,outer,lo+step,y+.375,inner,mat) end
+                    box(lo,y+.1875,outer,hi,y+.3125,inner,mat)
+                    if hi-lo>=.25 then box(lo,y+.3125,outer,lo+step,y+.4375,inner,mat) end
                 end
                 index=index+1;start=start+.625
             end
@@ -324,10 +326,11 @@ local function westAttic(b)
         for _,z in ipairs({Z0+.0625,CZ,Z1-.0625}) do b:Box(x-.0625,F3,z-.0625,x+.0625,KNEE,z+.0625,woodY) end
     end
     for _,w in ipairs(Upper.Windows) do if w.group=='third' then drawWindow(b,w) end end
-    -- Terrace door: opening, timber jambs and a glazed transom.
-    b:Carve(x1-.375,F3+.25,terraceDoor.z0,x1,terraceDoor.top,terraceDoor.z1)
+    -- Terrace door: a tall, reachable opening with a substantial lintel and a
+    -- clear route from the upper stair landing.
+    b:Carve(x1-.375,terraceDoor.bottom,terraceDoor.z0,x1,terraceDoor.top,terraceDoor.z1)
     for _,z in ipairs({terraceDoor.z0-.125,terraceDoor.z1}) do
-        b:Box(x1-.375,F3+.25,z,x1+.0625,terraceDoor.top+.125,z+.125,woodY)
+        b:Box(x1-.375,terraceDoor.bottom,z,x1+.0625,terraceDoor.top+.125,z+.125,woodY)
     end
     b:Box(x1-.375,terraceDoor.top,terraceDoor.z0-.125,x1+.0625,terraceDoor.top+.125,terraceDoor.z1+.125,woodZ)
     tileRoof(b,true,WEST_CX,GABLE_HALF,Z0-.75,Z1+.75,GABLE_EAVE,GABLE_RISE)
