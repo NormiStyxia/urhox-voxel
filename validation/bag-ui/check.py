@@ -320,10 +320,26 @@ local function render_to(w, h, ratio, sLeft, sRight, sTop, sBottom)
     root.children[1]:Render(1)
 end
 
--- 1. Materials default filter is 'all'
+-- 1. Material counts, second page and pointer navigation
 render_to(1280, 720, 1)
-assert(Bag.GetState().filterId == 'all')
+local materials = Bag.GetState()
+assert(materials.filterId == 'all' and materials.page == 1 and materials.pages == 2)
+assert(materials.items[1].count == 14 and materials.items[2].count == 6)
 _save_img('materials_p1_1280x720.png')
+assert(Menu.Key(KEY_PAGEDOWN, false))
+render_to(1280, 720, 1)
+assert(materials.page == 2 and materials.selectedKey == 'mat:time_dust')
+assert(materials.items[10].id == 'crystal_ore' and materials.items[10].count == 11)
+_save_img('materials_p2_1280x720.png')
+local ox, oy, scale = realDraw.ScrollMetrics()
+local previousPage
+for _, button in ipairs(materials.buttons) do
+    if button.id == 'prev_page' then previousPage = button; break end
+end
+assert(previousPage)
+Menu.Click(ox + (previousPage.x + previousPage.w / 2) * scale,
+    oy + (previousPage.y + previousPage.h / 2) * scale)
+assert(materials.page == 1 and materials.selectedKey == 'mat:ore')
 
 -- 2. Weapons equip preserves BOTH return values (true & false gates)
 assert(Menu.Key(KEY_2, false))
