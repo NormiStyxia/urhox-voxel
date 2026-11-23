@@ -7,6 +7,7 @@ shader_type spatial;
 render_mode shading_model_pbr, cull_back;
 #include "res://Shaders/BLGL/RuinsFrost.shaderinc"
 #include "res://Shaders/BLGL/RuinsContactAO.shaderinc"
+#include "res://Shaders/BLGL/RuinsGroundContact.shaderinc"
 
 uniform sampler2D palette_tex : filter_nearest, repeat_disable;
 #include "res://Shaders/BLGL/Voxel/VoxelPalette.shaderinc"
@@ -435,6 +436,8 @@ void fragment() {
         EMISSION += hover_color.rgb * (0.35 + fres * 2.4) * hover;
     }
     AO=min(houseWallAO,min(ruins_contact_ao(VERTEX,n,jointK,CAMERA_POSITION_WORLD),1.0-max(dressedOcclusion,0.19*dressedJoint)));
+    // 墙脚、柱础、台阶落地处的环境光遮蔽：建筑"坐"在地面上，而不是贴上去的。
+    AO*=ruins_ground_contact(VERTEX,n);
     if (meadow_origin.x > 0.0 && idx >= 115.0 && idx <= 118.0) {
         vec2 lawn = wp.xz-meadow_origin.xz;
         float canopy = min(length(lawn-vec2(-20.5,.5)),length(lawn-vec2(-17.0,-10.0)));

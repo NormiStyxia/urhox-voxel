@@ -63,6 +63,10 @@ uniform vec4 ground_frame = vec4(0.0);
 uniform float meadow_sun = 0.0;
 uniform float snow_y = 31.0;
 uniform vec3 snow_color = vec3(0.93, 0.94, 0.97);
+// GrassField 可见距离（x=开始淡出，y=完全消失）。超出后地面直接呈现草冠色，
+// 近处草根下的压暗随之退去，避免草叶消失处出现一圈深色接缝。x>=y 表示没有原生草。
+uniform vec2 grass_far = vec2(46.0, 55.0);
+uniform vec3 grass_canopy = vec3(0.36, 0.48, 0.19);
 
 float hash2(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -166,15 +170,28 @@ void fragment() {
     float wPath = sp.r * (1.0 - wRock) * (1.0 - soilLip);
     float wDirt = max(sp.g, soilLip) * (1.0 - wRock) * (1.0 - wPath);
     float edgeN = (mid - 0.5) * 0.5;
-    wPath = smoothstep(0.35, 0.65, wPath + edgeN * 0.6);
-    wDirt = smoothstep(0.3, 0.7, wDirt + edgeN);
+    // 控制图是 0.5m 双线性，直接阈值会得到一圈模糊的软边。叠加米级与厘米级噪声
+    // 再收窄过渡带：泥地边缘变成被草啃出的不规则齿边，铺石边缘带少量缺角。
+    float edgeFine = (fine - 0.5) * 0.30 + (chips - 0.5) * 0.22 * detailFade;
+    wPath = smoothstep(0.42, 0.58, wPath + edgeN * 0.6 + edgeFine * 0.45);
+    wDirt = smoothstep(0.40, 0.60, wDirt + edgeN + edgeFine);
     vec3 col = vec3(0.0);
+    float camDist = length(VERTEX - CAMERA_POSITION_WORLD);
+    float canopyK = grass_far.y > grass_far.x ? smoothstep(grass_far.x, grass_far.y, camDist) : 1.0;
     // All branches below are derivative-free. Exact zero/one tests preserve blend boundaries.
     if (wRock < 1.0) {
         // ---- 草地：铺石缝里也用到草色，不仅是裸露草地。
         vec3 grass = mix(grass_dark, grass_light, clamp(big * 1.1 + mid * 0.35 - 0.25, 0.0, 1.0));
         grass = mix(grass, grass_dry, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.55);
         grass *= 0.88 + fine * 0.22;
+        // 远景草冠：没有草叶的距离上，地面要呈现"从上往下看草丛"的颜色，
+        // 带 1–3m 的团簇明暗，而不是草根下的深色泥土。
+        if (canopyK > 0.0) {
+            float clumps = vnoise(wp.xz * 0.55) * 0.6 + vnoise(wp.xz * 1.7 + 9.0) * 0.4;
+            vec3 canopy = grass_canopy * (0.80 + clumps * 0.36) * (0.92 + big * 0.16);
+            canopy = mix(canopy, grass_dry * 0.95, smoothstep(0.62, 0.78, fbm(wp.xz * 0.06 + 40.0)) * 0.45);
+            grass = mix(grass, canopy, canopyK);
+        }
         col = grass;
 
         // ---- 泥土 / 碎石：被铺石或岩壁完全覆盖时跳过。
@@ -229,14 +246,21 @@ void fragment() {
         // 复用已有低频场，不新增纹理/噪声采样；大块深浅只作用于崖面。
         float cliff = 1.0 - smoothstep(0.15, 0.60, n.y);
         rock *= mix(1.0, mix(0.90, 1.06, smoothstep(0.22, 0.70, big)), cliff);
+        // 雨水沿陡崖下淌留下的竖向水痕：沿崖面水平方向取样、竖向拉长 8 倍。
+        // 远处仍可读，让岛侧不再是一整片均匀的灰。
+        float along = wp.z * weights.x + wp.x * weights.z + (wp.x + wp.z) * 0.5 * weights.y;
+        float streak = vnoise(vec2(along * 1.9, wp.y * 0.24 + warp * 0.3)) * 0.7 + vnoise(vec2(along * 5.3, wp.y * 0.5)) * 0.3;
+        float stain = smoothstep(0.52, 0.86, streak) * cliff;
+        rock *= 1.0 - stain * 0.20;
+        rock = mix(rock, rock * vec3(1.04, 1.0, 0.92), (1.0 - smoothstep(0.10, 0.30, streak)) * cliff * 0.5);
         // 深部仍是灰岩而非另一圈深色材料；11m宽过渡随空间低频场偏移。
         float deepHeight = wp.y + (big - 0.47) * 10.0 + (warp - 2.8) * 0.45;
         float deepMix = (1.0 - smoothstep(deep_y - 5.0, deep_y + 6.0, deepHeight)) * 0.50 * cliff;
         rock = mix(rock, deep_color, deepMix);
         col = mix(col, rock, wRock);
     }
-    // 草地被 GrassField 覆盖处稍压暗（草缝里是草丛深处）
-    float under = sp.a * (1.0 - wRock) * (1.0 - wPath) * (1.0 - wDirt);
+    // 草地被 GrassField 覆盖处稍压暗（草缝里是草丛深处）；草叶淡出后不再压暗。
+    float under = sp.a * (1.0 - wRock) * (1.0 - wPath) * (1.0 - wDirt) * (1.0 - canopyK);
     col = mix(col, col * 0.62, under * 0.5);
     // 山顶积雪：平坦处先积，噪声咬边
     float snow = smoothstep(snow_y - 1.0, snow_y + 1.5, wp.y + (big - 0.5) * 3.0) * smoothstep(0.25, 0.7, n.y);

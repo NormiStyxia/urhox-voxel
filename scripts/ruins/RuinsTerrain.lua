@@ -629,6 +629,8 @@ local function BuildVisual(scene)
     t.castShadows = false
     t.heightMap = img
     t.viewMask = 0 -- 仅 GrassField 高度源；无 CollisionShape、无碰撞地板
+    -- 同一张 1m 高度图给体素建筑的落地遮蔽查表（只建一次贴图）。
+    require("ruins.GroundContact").SetRegion("a", img, -M.HALF, M.HALF, 1 / (c * 2), M.Y_BASE, unit)
 
     local splat = BuildSplat(VH, NV)
     M.splat = splat

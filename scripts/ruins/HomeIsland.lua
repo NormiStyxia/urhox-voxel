@@ -1235,6 +1235,22 @@ local function meadow(scene)
     require('ruins.SceneQuality').ApplyGrass(field,require('ruins.GameSettings').GetProfile())
     H.field=field
 end
+-- Ground height for the shared voxel ground-contact occlusion: half-metre texels
+-- over the island footprint; cells beyond the shoreline sit far below everything.
+local function groundContact()
+    local GroundContact=require('ruins.GroundContact')
+    local w,h=141,113
+    local base,unit=H.base-4,10/255
+    local image=Image:new();image:SetSize(w,h,3)
+    for j=0,h-1 do
+        local z=H.z+28-j*.5
+        for i=0,w-1 do
+            local x=H.x-35+i*.5
+            GroundContact.EncodeHeight(image,i,j,H.Ground(x,z) and H.Height(x,z) or base,base,unit)
+        end
+    end
+    GroundContact.SetRegion('b',image,H.x-35,H.z+28,2,base,unit)
+end
 function H.Build(world,scene,dayNight)
     for _,entry in ipairs({
         -- Deep walnut frame, warm mid-tone trim, and a muted blue-grey pane.
@@ -1253,6 +1269,7 @@ function H.Build(world,scene,dayNight)
         world:SetPaletteEntryPBR(id,roughness,metallic,specular,glow)
     end
     meadow(scene); terrain(world); courtyard(world); house(world,scene); banks(world); trees(world,scene); shoreDetails(world); water(scene)
+    groundContact()
     local fire=scene:CreateChild('HomeForgeFire'); fire.position=Vector3(H.x+1.15,H.base+1.65,H.z+7.5)
     local light=fire:CreateComponent('Light'); light.lightType=LIGHT_POINT
     light.color=Color(1,.53,.21); light.range=5; light.brightness=.78

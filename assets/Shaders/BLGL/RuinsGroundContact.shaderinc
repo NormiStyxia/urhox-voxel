@@ -1,0 +1,49 @@
+// Ground-contact occlusion for static voxel architecture.
+// The visible island surface height is baked into a small 16-bit texture
+// (R = high byte, G = low byte, both linear so bilinear filtering stays exact).
+// Vertical faces darken their indirect light within ~0.9 m of the ground they
+// stand on; down-facing faces just above the ground (plinth overhangs, steps)
+// darken as well. One texture fetch per region; regions are a = ruins island,
+// b = home island. A zero strength or an unbound region skips all work.
+uniform sampler2D ground_height_a : filter_linear, repeat_disable, hint_default_black;
+uniform sampler2D ground_height_b : filter_linear, repeat_disable, hint_default_black;
+// x = min world X, y = max world Z (row 0 is north), z = texels per metre, w = width in texels (0 = unbound)
+uniform vec4 ground_frame_a = vec4(0.0);
+uniform vec4 ground_frame_b = vec4(0.0);
+// x = height at byte value 0, y = metres per high-byte step, z = height in texels
+uniform vec4 ground_range_a = vec4(0.0);
+uniform vec4 ground_range_b = vec4(0.0);
+uniform float ground_contact_strength = 0.0;
+
+float ruins_ground_contact_term(float d, vec3 n) {
+    float vertical = 1.0 - smoothstep(0.35, 0.75, abs(n.y));
+    // Faces buried well below the baked surface (cliff interiors, cellar walls) are left alone.
+    float near = (1.0 - smoothstep(0.0, 0.9, d)) * smoothstep(-0.45, -0.08, d);
+    float under = smoothstep(0.30, 0.80, -n.y) * (1.0 - smoothstep(0.05, 1.1, d)) * smoothstep(-0.2, 0.0, d);
+    return max(near * vertical, under * 0.8);
+}
+
+// Returns the AO multiplier (1 = unoccluded).
+float ruins_ground_contact(vec3 p, vec3 n) {
+    if (ground_contact_strength <= 0.0) { return 1.0; }
+    float k = 0.0;
+    if (ground_frame_a.w > 0.0) {
+        vec2 texel = vec2(p.x - ground_frame_a.x, ground_frame_a.y - p.z) * ground_frame_a.z;
+        vec2 size = vec2(ground_frame_a.w, ground_range_a.z);
+        if (texel.x > 0.0 && texel.y > 0.0 && texel.x < size.x - 1.0 && texel.y < size.y - 1.0) {
+            vec4 h = textureLod(ground_height_a, (texel + vec2(0.5)) / size, 0.0);
+            float height = ground_range_a.x + (h.r * 255.0 + h.g * (255.0 / 256.0)) * ground_range_a.y;
+            k = max(k, ruins_ground_contact_term(p.y - height, n));
+        }
+    }
+    if (ground_frame_b.w > 0.0) {
+        vec2 texel = vec2(p.x - ground_frame_b.x, ground_frame_b.y - p.z) * ground_frame_b.z;
+        vec2 size = vec2(ground_frame_b.w, ground_range_b.z);
+        if (texel.x > 0.0 && texel.y > 0.0 && texel.x < size.x - 1.0 && texel.y < size.y - 1.0) {
+            vec4 h = textureLod(ground_height_b, (texel + vec2(0.5)) / size, 0.0);
+            float height = ground_range_b.x + (h.r * 255.0 + h.g * (255.0 / 256.0)) * ground_range_b.y;
+            k = max(k, ruins_ground_contact_term(p.y - height, n));
+        }
+    }
+    return 1.0 - clamp(ground_contact_strength, 0.0, 0.5) * k;
+}

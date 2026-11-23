@@ -17,6 +17,7 @@ if not logOK then DebugLog=nil end
 ---@field sun Light
 ---@field sunNode Node
 ---@field sky ProceduralSky
+---@field iblSky ProceduralSky|nil 只进环境光捕获的天空（IBL_VIEW 位）
 ---@field capture SkyLightCapture
 ---@field hour number
 ---@field speed number
@@ -47,7 +48,21 @@ local HOR_DAY, HOR_DUSK, HOR_NIGHT = Color(0.70, 0.80, 0.93), Color(1.00, 0.56, 
 -- 空岛下方仍是天空：低饱和蓝灰，底色亮度不高于旧土色，避免岩底被 IBL 照蓝。
 local GND_DAY, GND_NIGHT = Color(0.30, 0.35, 0.42), Color(0.13, 0.17, 0.24)
 local SUN_DAY, SUN_GOLD, SUN_RED = Color(1.0, 0.95, 0.86), Color(1.0, 0.72, 0.42), Color(1.0, 0.42, 0.22)
-local MOON = Color(0.72, 0.80, 1.0)
+-- 银蓝月光：保留冷色倾向，但不把白石整片染成饱和蓝。
+local MOON = Color(0.76, 0.82, 0.97)
+-- 环境光专用天空（主相机看不到）：上半球比可见天空低饱和，下半球是岛面反弹光。
+-- 空岛上大部分受光面的"下方"是被照亮的草地与石面，而不是远处的天底；
+-- 用可见天空的蓝灰天底做漫反射会让墙脚、拱底、阴影面整体发蓝。
+local IBL_DESAT_DAY, IBL_DESAT_NIGHT = 0.38, 0.30
+local BOUNCE_DAY, BOUNCE_DUSK, BOUNCE_NIGHT = Color(0.44, 0.43, 0.34), Color(0.50, 0.38, 0.27), Color(0.12, 0.13, 0.16)
+M.IBL_VIEW = 0x04000000 -- 与家园水面 0x10000000、镜像 0x08000000 互不重叠
+
+---@param c Color
+---@param k number
+local function Desaturate(c, k)
+    local l = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
+    return Color(c.r + (l - c.r) * k, c.g + (l - c.g) * k, c.b + (l - c.b) * k)
+end
 
 ---@param o table { scene, zone, zoneNode, sun(Light), sunNode, hour }
 ---@return DayNight
@@ -81,6 +96,18 @@ function M.New(o)
     self.sky.groundCurve = 0.28 -- 扩宽地平线到天底的渐变，裂隙中不再像平涂的沟底
     self.sky.sunDiskSize = 1.6
     self.sky.sunCurve = 0.08
+    -- 第二个 ProceduralSky 只进环境光捕获。主相机与水面镜像相机不含 IBL_VIEW 位，
+    -- 捕获只看这一位，所以画面里的天空保持原样，只改漫反射/反射的来源。
+    self.sky.skybox.viewMask = self.sky.skybox.viewMask & ~M.IBL_VIEW
+    local iblNode = o.scene:CreateChild("SkyIBL")
+    self.iblSky = iblNode:CreateComponent("ProceduralSky")
+    self.iblSky.skybox.viewMask = M.IBL_VIEW
+    self.iblSky.sunLight = self.sun
+    self.iblSky.skyCurve = 0.18
+    self.iblSky.groundCurve = 0.12 -- 地平线以下很快过渡到反弹色
+    self.iblSky.sunDiskSize = 1.6
+    self.iblSky.sunCurve = 0.08
+    self.capture.viewMask = M.IBL_VIEW
     self:Apply()
     if DebugLog and DebugLog.enabled then
         DebugLog.Log("SkyFx","DayNight ready hour=%.1f capture=%s (manual,64px,time-sliced)",self.hour,tostring(self.capture.supported))
@@ -151,6 +178,17 @@ function M:Apply()
     sky.groundHorizonColor = horizon
     sky.groundBottomColor = GND_NIGHT:Lerp(GND_DAY, day)
     sky.sunEnergy = 1.0 * (1 - nightK) + 0.15 * nightK
+    local ibl = self.iblSky
+    if ibl then
+        local desat = IBL_DESAT_NIGHT + (IBL_DESAT_DAY - IBL_DESAT_NIGHT) * day
+        local bounce = BOUNCE_NIGHT:Lerp(BOUNCE_DAY, day):Lerp(BOUNCE_DUSK, dusk * 0.6)
+        local iblHorizon = Desaturate(horizon, desat * 0.6)
+        ibl.skyTopColor = Desaturate(sky.skyTopColor, desat)
+        ibl.skyHorizonColor = iblHorizon
+        ibl.groundHorizonColor = iblHorizon:Lerp(bounce, 0.55)
+        ibl.groundBottomColor = bounce
+        ibl.sunEnergy = sky.sunEnergy
+    end
 
     local sun = self.sun
     local m = (h + 12.0 - 6.0) / 12.0 * math.pi

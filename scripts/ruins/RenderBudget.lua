@@ -28,48 +28,52 @@ end
 ---@param node Node
 ---@param fn fun(d: Drawable)
 local function EachDrawable(node, fn)
-    for _, t in ipairs({ "CustomGeometry", "StaticModel" }) do
-        for _, c in ipairs(node:GetComponents(t, true)) do fn(c --[[@as Drawable]]) end
+    for _, c in ipairs(node:GetComponents("CustomGeometry", true)) do fn(c --[[@as Drawable]]) end
+    for _, c in ipairs(node:GetComponents("StaticModel", true)) do fn(c --[[@as Drawable]]) end
+end
+
+---@param node Node
+---@param stats table
+local function BudgetChild(node, stats)
+    local name = node.name
+    local voxel = VOXEL_ROOTS[name] == true
+    for _, prefix in ipairs(PREFIX_ROOTS) do
+        if name:sub(1, #prefix) == prefix then voxel = true end
+    end
+    if voxel then
+        EachDrawable(node, function(d)
+            local radius = d.worldBoundingBox.size:Length() * 0.5
+            stats.voxel = stats.voxel + 1
+            if radius < 3.5 then stats.limited = stats.limited + 1 end
+            if radius < 0.6 then stats.culled = stats.culled + 1 end
+            BudgetVoxel(d, radius)
+        end)
+    elseif name == "IslandShell" then
+        EachDrawable(node, function(d) d.castShadows = false; stats.shell = stats.shell + 1 end)
+    elseif name == "Bush" then
+        EachDrawable(node, function(d) d.shadowDistance = 30; d.drawDistance = 140; stats.foliage = stats.foliage + 1 end)
+    elseif name == "Tree" then
+        -- 树冠的影子是大块明暗，远处仍需要；方格枝干被树冠遮住，近处即可。
+        for _, leaves in ipairs(node:GetChildrenWithName("Leaves", false)) do
+            EachDrawable(leaves, function(d) d.shadowDistance = 110; stats.foliage = stats.foliage + 1 end)
+        end
+        for _, bark in ipairs(node:GetChildrenWithName("Bark", false)) do
+            EachDrawable(bark, function(d) d.shadowDistance = 45 end)
+        end
+    elseif name == "Crystal" then
+        EachDrawable(node, function(d) d.shadowDistance = 40; stats.foliage = stats.foliage + 1 end)
+    elseif name == "HomeIslandScenery" then
+        -- 家园的树与装饰挂在建造任务的根节点下，规则相同。
+        for _, child in ipairs(node:GetChildren()) do BudgetChild(child, stats) end
     end
 end
 
+-- 可重复调用（幂等）：家园展开后再调用一次即可覆盖新建的物体。
 ---@param scene Scene
 ---@return table stats
 function M.Apply(scene)
     local stats = { voxel = 0, limited = 0, culled = 0, shell = 0, foliage = 0 }
-    for _, child in ipairs(scene:GetChildren()) do
-        local name = child.name
-        local voxel = VOXEL_ROOTS[name] == true
-        if not voxel then
-            for _, prefix in ipairs(PREFIX_ROOTS) do
-                if name:sub(1, #prefix) == prefix then voxel = true; break end
-            end
-        end
-        if voxel then
-            EachDrawable(child, function(d)
-                local size = d.worldBoundingBox.size
-                local radius = size:Length() * 0.5
-                stats.voxel = stats.voxel + 1
-                if radius < 3.5 then stats.limited = stats.limited + 1 end
-                if radius < 0.6 then stats.culled = stats.culled + 1 end
-                BudgetVoxel(d, radius)
-            end)
-        elseif name == "IslandShell" then
-            EachDrawable(child, function(d) d.castShadows = false; stats.shell = stats.shell + 1 end)
-        elseif name == "Bush" then
-            EachDrawable(child, function(d) d.shadowDistance = 30; d.drawDistance = 140; stats.foliage = stats.foliage + 1 end)
-        elseif name == "Tree" then
-            -- 树冠的影子是大块明暗，远处仍需要；方格枝干被树冠遮住，近处即可。
-            for _, leaves in ipairs(child:GetChildrenWithName("Leaves", false)) do
-                EachDrawable(leaves, function(d) d.shadowDistance = 110; stats.foliage = stats.foliage + 1 end)
-            end
-            for _, bark in ipairs(child:GetChildrenWithName("Bark", false)) do
-                EachDrawable(bark, function(d) d.shadowDistance = 45 end)
-            end
-        elseif name == "Crystal" then
-            EachDrawable(child, function(d) d.shadowDistance = 40; stats.foliage = stats.foliage + 1 end)
-        end
-    end
+    for _, child in ipairs(scene:GetChildren()) do BudgetChild(child, stats) end
     print(string.format("RenderBudget: voxel %d (shadow-limited %d, draw-limited %d), shell %d no-cast, foliage %d",
         stats.voxel, stats.limited, stats.culled, stats.shell, stats.foliage))
     return stats
