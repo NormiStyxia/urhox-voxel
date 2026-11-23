@@ -125,11 +125,13 @@ function M:Init(scene,anchors,count,lights,detail)
             end
             if i<=self.lightCount then
                 local lampNode=node:CreateChild("WarmPointLight")
-                lampNode.position=Vector3(0,0.55,0)
+                -- Slightly above the flame so the pillar cap is not blown out while the
+                -- warm pool still reaches the floor ~6m below (exposure is locked at 1).
+                lampNode.position=Vector3(0,0.9,0)
                 local light=lampNode:CreateComponent("Light")
                 self.lightColors[i]=Color(1,0.50,0.18)
                 light.lightType=LIGHT_POINT;light.color=self.lightColors[i]
-                light.range,light.brightness,light.castShadows=12,0,false
+                light.range,light.brightness,light.castShadows=15,0,false
                 light.useTemperature=false;light.affectVolumetricFog=false
                 self.lights[#self.lights+1]=light
             end
@@ -168,7 +170,7 @@ function M:Update(night,clock,realFog)
     for i,light in ipairs(self.lights) do
         local phase=i*2.1
         local flicker=0.94+0.04*math.sin(clock*7+phase)+0.02*math.sin(clock*13+phase*1.7)
-        light.brightness=self.level*7.0*flicker
+        light.brightness=self.level*13.0*flicker
         local color=self.lightColors[i]
         color.g=0.48+(flicker-0.88)*0.3
         color.b=0.16+(flicker-0.88)*0.2

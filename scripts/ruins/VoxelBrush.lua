@@ -50,6 +50,11 @@ function M.New(world, o)
     end
     self.volume = world:CreateVolume(self.nx, self.ny, self.nz, s, pos, self.rot)
     self.grid = self.volume:GetGrid()
+    local d = self.grid:GetDimensions()
+    if d.x ~= self.nx or d.y ~= self.ny or d.z ~= self.nz then
+        print(string.format("VoxelBrush: CLAMPED %dx%dx%d -> %dx%dx%d (%s)",
+            self.nx, self.ny, self.nz, d.x, d.y, d.z, tostring(o.name)))
+    end
     self.count = 0
     return self
 end
