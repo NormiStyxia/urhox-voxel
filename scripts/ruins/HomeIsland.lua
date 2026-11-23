@@ -999,7 +999,9 @@ end
 local function house(world,scene)
     local old=brush(world,{-22,0,6},{5,12,17},.25)
     local columns={}
-    arch(old,columns,-9.5,13.5,6,5,5.25); arch(old,columns,-18,9,2.8,3.25,3.1)
+    arch(old,columns,-9.5,13.5,6,5,5.25)
+    -- The west relic leans on the outside of the gable wall; its pier stays out of the hall.
+    arch(old,columns,-18.75,9,2.05,3.25,3.1)
     for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{-1,15,4.5}}) do column(old,columns,p[1],p[2],0,p[3]) end
     trimGround(old)
     old:Finish({masonry='ashlar'})
