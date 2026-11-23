@@ -1,0 +1,79 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "TIMEOUT",
+    "duration_ms": 130008,
+    "frames_completed": 0,
+    "phases": {
+        "load": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "lua",
+                    "message": "[2026-11-24 02_39_30_205][114] ERROR: Load Buffer failed for ruins/HomeIsland.lua: [string \"ruins/HomeIsland\"]:1102: <eof> expected near 'end'",
+                    "frame": 0
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-24 02_39_30_205][114] ERROR: Failed to load Lua module 'ruins.HomeIsland' from 'ruins/HomeIsland.lua': LoadChunk failed",
+                    "frame": 0
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-24 02_39_30_205][114] ERROR: Error executing Lua module 'ruins.RuinsScene': [string \"ruins/RuinsScene\"]:33: LoadChunk failed: ruins/HomeIsland.lua",
+                    "frame": 0
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-24 02_39_30_205][114] ERROR: Lua Execute failed for ruins_main.lua: [string \"ruins_main\"]:7: [string \"ruins/RuinsScene\"]:33: LoadChunk failed: ruins/HomeIsland.lua",
+                    "frame": 0
+                },
+                {
+                    "category": "lua",
+                    "message": "[2026-11-24 02_39_30_205][114] ERROR: Failed to parse script file[ruins_main.lua]!",
+                    "frame": 0
+                },
+                {
+                    "category": "engine",
+                    "message": "Validation timed out",
+                    "frame": 0
+                }
+            ]
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "PASS",
+            "errors": []
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 0,
+            "component_count": 0,
+            "scene_exists": false
+        }
+    },
+    "state_snapshots": [],
+    "scene_stalled": false,
+    "max_frame_time_ms": 0.0,
+    "update_defined": false,
+    "component_census": {},
+    "test_result": "NOT_RUN",
+    "test_assertions": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 5,
+        "resource_errors": 0,
+        "engine_errors": 1,
+        "total_errors": 6
+    }
+}
