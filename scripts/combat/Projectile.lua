@@ -29,7 +29,7 @@ function P.New(opts)
     end
     return self
 end
-function P:Fire(origin,dir,charge,stats,tip)
+function P:Fire(origin,dir,charge,stats,tip,modelId)
     stats=stats or EMPTY
     charge=clamp(charge or 0,0,1)
     local power=P.Power(charge)
@@ -58,6 +58,9 @@ function P:Fire(origin,dir,charge,stats,tip)
     p.attached,p.part,p.bone,p.localPos,p.localDir=nil,nil,nil,nil,nil
     p.damage,p.poise=damage(p,speed),(stats.poise or 6)*(.4+.6*power)
     p.full=full
+    -- Captured at release so an arrow keeps its launch bow's colour through
+    -- flight, even when the player changes weapon before impact.
+    p.modelId=modelId or stats.modelId or 'field'
     p.passive=stats.passive
     p.tier=full and 'full' or (charge>=.5 and 'mid' or 'weak')
     p.pierce,p.kind=math.max(0,stats.pierce or 0),(stats.crystalRadius or 0)>0 and 'crystal' or 'arrow'

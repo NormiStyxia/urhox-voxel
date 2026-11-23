@@ -124,7 +124,7 @@ def section(row, w, d, shoulder=.5, bevel=.69):
 # Silhouette widths and depths at these stations come from all three alpha masks.
 BLADE_TRACE = [(62,.43,-.45),(110,.48,.75),(155,.46,-.55),(235,.45,.72),
                (325,.48,-.70),(394,.70,.46),(419,.85,-.48),(448,.69,.52),
-               (468,.34,-.60),(480,.38,.44),(494,.45,-.43),(505,.46,.42),
+               (468,.34,-.60),(471,.35,.30),(480,.38,.44),(494,.45,-.43),(505,.46,.42),
                (516,.48,-.42),(523,.50,.45)]
 
 
@@ -141,6 +141,9 @@ def construct(ref):
     for row,knee,offset in BLADE_TRACE:
         w = ref.width(row) if row < 523 else 29
         envelope = ref.radius(1,row) * (1 if row <= 468 else .83)
+        if row==471:
+            w*=.86
+            envelope*=.82
         crown = envelope
         if last_crown is not None and abs(crown-last_crown)*UNIT < .0021:
             crown = last_crown - .95 if last_crown >= envelope-.5 else last_crown+.95
@@ -159,7 +162,10 @@ def construct(ref):
                 y=row+13 if row==110 and i in (2,6) else row
                 ring.append((sign*x,y,sign*z))
         rings.append(ring)
-    blade.loft(rings,['edge','steel','crown','steel','steel','crown','steel','edge']*2)
+    blade_faces=['edge','steel','crown','steel','steel','crown','steel','edge']*2
+    for upper,lower in zip(rings,rings[1:]):
+        blade.bridge(upper,lower,['seat'] if lower[0][1]==471 else blade_faces)
+    blade.face(rings[-1],'steel')
 
     guard = shell('Swept quillons')
     # x stations cross the concave upper and lower arches. The three interior
@@ -233,7 +239,15 @@ def construct(ref):
         item=shell(name)
         rings=[section(row,ref.width(row),ref.radius(1,row),.64,.77) for row in rows]
         item.loft(rings,['gold'],'gold')
-    fitting('Crown ferrule',[579,588,596,602])
+    collar=shell('Crown ferrule')
+    last=None
+    for row,ratio,band in [(579,1,'gold'),(584,.89,'seat'),(586,1,'lip'),
+                          (593,1,'gold'),(596,.89,'lip'),(602,.97,'seat')]:
+        ring=section(row,ref.width(row)*ratio,ref.radius(1,row)*ratio,.64,.77)
+        if last: collar.bridge(last,ring,[band])
+        else: collar.face(ring,'gold')
+        last=ring
+    collar.face(last,'seat')
     fitting('Pommel ferrule',[699,703,709,715])
 
     # Slight swell at the grip centre. A separate continuous twisted band has
@@ -248,8 +262,8 @@ def construct(ref):
     grip.loft(rings,['leather'],'leather')
     cord=shell('Continuous bias binding')
     rings=[]
-    for i in range(49):
-        t=i/48; row=600+102*t; angle=-math.tau*4.25*t
+    for i in range(43):
+        t=i/42; row=600+102*t; angle=-math.tau*4.25*t
         r=np.interp(row,grip_rows,radii)
         ring=[]
         for radial,dy in [(-.10,-1.45),(.005,-1.85),(.085,-.72),(.082,.70),(.01,1.8),(-.10,1.5)]:
@@ -315,6 +329,7 @@ MATERIALS = {
     'edge':    ((1,0,0),0,.99,0,(.93,.96,.99),.82,.19),
     'steel':   ((1,0,0),0,.88,0,(.70,.77,.85),.80,.31),
     'crown':   ((1,0,0),0,.95,0,(.85,.90,.96),.84,.24),
+    'seat': ((1,0,0),0,.51,0,(.22,.245,.30),.65,.49),
     'rim':     ((1,0,0),.35,.59,0,(.25,.34,.46),.66,.37),
     'navy':    ((1,0,0),.35,.72,0,(.27,.35,.49),.72,.31),
     'gold':    ((0,1,0),0,.89,0,(.81,.63,.36),.72,.38),

@@ -26,6 +26,7 @@ local Dressing=require('combat.ForgeShowroomScene')
 local Blades=require('combat.ForgeShowroomBlades')
 local Catalyst=require('combat.TimeCatalystVisual')
 local WingSword=require('combat.WingSwordVisual')
+local Grains=require('combat.WeaponOrbitGrains')
 local ThornBow=require('combat.ThornBowVisual')
 local IronVisual=require('combat.IronSwordVisual')
 local WardenVisual=require('combat.WardenSwordVisual')
@@ -530,6 +531,7 @@ local function UpdateImpl(s,dt)
     end
     local compiling=s.pending~=nil
     BuildStep(s,dt)
+    if s.mesh then Grains.Update((s.mesh.catalyst or s.mesh).grains,dt) end
     if s.dressing and not compiling then
         -- Dressing failures cannot change weapon readiness or restore viewport.
         local ok,err=pcall(function()

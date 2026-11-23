@@ -8,6 +8,7 @@
 ---@field bursts table[]
 local B={};B.__index=B
 B.POOL=3
+B.PIXEL_CAPACITY=180
 local SEGMENTS=48
 local PETALS,PETAL_STEPS=7,8
 local TAU=math.pi*2
@@ -19,19 +20,28 @@ local FINISHER={size=2.4,wall=.80,life=.45,petal=.8,flash=.8}
 function B.New(scene)
     local self=setmetatable({},B)
     self.node=scene:CreateChild('ShockBurst');self.node.temporary=true;self.node.enabled=false
-    local g=self.node:CreateComponent('CustomGeometry')
-    g:SetNumGeometries(1);g:SetDynamic(true);g.castShadows=false
-    local technique=cache:GetResource('Technique','Techniques/NoTextureVColAddAlpha.xml')
-    local material=Material:new()
-    if technique then material:SetTechnique(0,technique) end
-    material.cullMode=CULL_NONE
-    material:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
-    g:BeginGeometry(0,TRIANGLE_LIST);g:Commit() -- commit before SetMaterial
-    g:SetMaterial(0,material)
-    self.geometry,self.material=g,material
+    local ok,pixels=pcall(function()
+        local VoxelFX=require('dragon.VoxelFX')
+        return VoxelFX.Motes(scene,'SwordFinisherPixels',B.PIXEL_CAPACITY,'square',true)
+    end)
+    self.pixelMode=ok and pixels~=nil;self.pixels=self.pixelMode and pixels or nil
+    self.geometry,self.material=nil,nil
+    if not self.pixelMode then
+        local g=self.node:CreateComponent('CustomGeometry')
+        g:SetNumGeometries(1);g:SetDynamic(true);g.castShadows=false
+        local technique=cache:GetResource('Technique','Techniques/NoTextureVColAddAlpha.xml')
+        local material=Material:new()
+        if technique then material:SetTechnique(0,technique) end
+        material.cullMode=CULL_NONE
+        material:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
+        g:BeginGeometry(0,TRIANGLE_LIST);g:Commit()
+        g:SetMaterial(0,material)
+        self.geometry,self.material=g,material
+    end
     self.bursts={}
     for i=1,B.POOL do self.bursts[i]={active=false,x=0,y=0,z=0,fx=0,fz=1,age=0,spin=0,kind=FINISHER} end
     self.head=0
+    self.colors={Color(1,1,1,1),Color(.52,.82,1,.88),Color(.14,.38,1,.48),Color(0,0,0,0)}
     -- Unit circle table built once; the rebuild reads it without allocating.
     self.cos,self.sin={},{}
     for i=0,SEGMENTS do self.cos[i]=math.cos(i/SEGMENTS*TAU);self.sin[i]=math.sin(i/SEGMENTS*TAU) end
@@ -51,6 +61,20 @@ function B:Emit(pos,forward)
     b.x,b.y,b.z=pos.x+fx*offset,pos.y,pos.z+fz*offset
     b.fx,b.fz=fx,fz
     b.spin=math.atan(fx,fz)
+    if self.pixelMode then
+        local center=Vector3(b.x,b.y+.06,b.z)
+        for i=1,30 do
+            local a=(i-1)*TAU/30
+            local d=Vector3(math.cos(a),.06+(i%3)*.06,math.sin(a))
+            self.pixels:Spawn{pos=center+d*.08,vel=d*(.65+(i%4)*.16),life=.38+(i%4)*.035,size=.018+(i%3)*.006,colors=self.colors,drag=2.2}
+        end
+        for i=1,7 do
+            local a=b.spin+(i-1)*TAU/7
+            local d=Vector3(math.cos(a),.12,math.sin(a))
+            self.pixels:Spawn{pos=center+d*.10,vel=d*1.1+Vector3(0,.28,0),life=.46,size=.024,colors=self.colors,drag=2.0}
+        end
+        self.pixels:Spawn{pos=center,vel=Vector3(0,.18,0),life=.22,size=.055,colors=self.colors,drag=3.0}
+    end
 end
 local function v(g,x,y,z,r,gr,bl,a)
     g:DefineVertex(Vector3(x,y,z));g:DefineColor(Color(r*a,gr*a,bl*a,a))
@@ -62,6 +86,14 @@ local function quad(g,ax,ay,az,aa,bx,by,bz,ba,cx,cy,cz,ca,dx,dy,dz,da,r,gr,bl)
 end
 ---@param dt number
 function B:Update(dt)
+    if self.pixelMode then
+        for _,b in ipairs(self.bursts) do
+            if b.active then b.age=b.age+dt;if b.age>=b.kind.life then b.active=false end end
+        end
+        self.pixels:Update(dt)
+        self.node.enabled=self.pixels.node.enabled
+        return
+    end
     local any=false
     for _,b in ipairs(self.bursts) do
         if b.active then
@@ -147,9 +179,11 @@ end
 function B:Clear()
     for _,b in ipairs(self.bursts) do b.active=false end
     self.node.enabled=false
+    if self.pixelMode then self.pixels:Clear() end
 end
 function B:Dispose()
+    if self.pixelMode then self.pixels:Clear();self.pixels.node:Remove() end
     self.node:Remove()
-    self.material:Dispose()
+    if self.material then self.material:Dispose() end
 end
 return B

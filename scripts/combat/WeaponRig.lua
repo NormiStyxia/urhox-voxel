@@ -2,11 +2,13 @@
 -- All volumes are visual-only. No Finalize, collision or gameplay damage calls.
 local Builder=require("combat.WeaponBuilder")
 local WingVisual=require("combat.WingSwordVisual")
+local Grains=require("combat.WeaponOrbitGrains")
 local ThornVisual=require("combat.ThornBowVisual")
 local IronVisual=require("combat.IronSwordVisual")
 local WardenVisual=require("combat.WardenSwordVisual")
 local HunterVisual=require("combat.HunterBowVisual")
 local SilverVisual=require("combat.SilverBowVisual")
+local BowChargeFx=require("combat.BowChargeFx")
 local Catalog=require("combat.WeaponCatalog")
 local Store=require("combat.WeaponStore")
 
@@ -237,6 +239,7 @@ function Rig:Init(scene,world,controller)
     self.retiring={weapon=nil,elapsed=0,alpha=0,layerMask=0,bowStage=0,arrow=false,position=Vector3(),rotation=Quaternion()}
     self.hangReady=false
     self.bowDraw,self.bowStage,self.bowArrowOffset=0,0,Vector3()
+    self.bowChargeFx=nil
     self.bowDrawMeshes={}
     self.glowColors,self.glowBucket,self.trailColors={},0,{}
     ---@type table<string, Node>
@@ -287,8 +290,14 @@ function Rig:Init(scene,world,controller)
     end
     self.combatFx=require("combat.CombatFx").New(scene,world)
     self.slashRibbon=require("combat.SlashRibbon").New(scene)
+    self.pixelSwordFx=self.slashRibbon.pixelMode and self.combatFx.pixelMode
     self.shockBurst=require("combat.ShockBurst").New(scene)
     self:CreateTrail()
+    do
+        local fx,err=BowChargeFx.New(scene)
+        if fx then self.bowChargeFx=fx
+        else print('WeaponRig: bow charge grains unavailable: '..tostring(err)) end
+    end
     self:BuildSwordImages()
     self:BuildBowImages()
     self:BuildVisualPools('sword');self:BuildVisualPools('bow')
@@ -326,11 +335,13 @@ end
 
 function Rig:CreateTrail()
     -- All nodes/materials and alpha Variants are allocated once, outside combat.
-    for i=1,6 do
-        local particle=Effect(self,1,1,'WeaponCharge_'..i,'particle')
-        local angle=(i-1)*math.pi/3
-        particle.direction=Vector3(math.cos(angle),.35*math.sin(angle*2),math.sin(angle))
-        self.particles[i]=particle
+    if not self.pixelSwordFx then
+        for i=1,6 do
+            local particle=Effect(self,1,1,'WeaponCharge_'..i,'particle')
+            local angle=(i-1)*math.pi/3
+            particle.direction=Vector3(math.cos(angle),.35*math.sin(angle*2),math.sin(angle))
+            self.particles[i]=particle
+        end
     end
     self.flashes.socket=Effect(self,3,3,'WeaponSocketFlash','socket')
 end
@@ -376,15 +387,22 @@ function Rig:BuildSwordImages()
     self.bladeTip=Vector3(0,(tip+.5)*Catalog.VOXEL_SIZE*SWORD_LENGTH,0)
     self.bladeFlashX=(edge+.5)*Catalog.VOXEL_SIZE*SWORD_WIDTH
     for _,trail in ipairs(self.trails) do self.world:RemoveVolume(trail.volume);trail.material:Dispose() end
-    for i=1,TRAIL_SEGMENTS do
-        self.trails[i]=Effect(self,5,tip-root+1,'WeaponBand_'..i,'band') -- 0.15m wide
-        self.trails[i].node.scale=Vector3(1,SWORD_LENGTH,1)
+    if not self.pixelSwordFx then
+        for i=1,TRAIL_SEGMENTS do
+            self.trails[i]=Effect(self,5,tip-root+1,'WeaponBand_'..i,'band') -- fallback only
+            self.trails[i].node.scale=Vector3(1,SWORD_LENGTH,1)
+        end
     end
     local oldFlash=self.flashes.blade
     if oldFlash then self.world:RemoveVolume(oldFlash.volume);oldFlash.material:Dispose() end
-    self.flashes.blade=Effect(self,1,tip-root+1,'WeaponFullChargeFlash','blade')
-    self.flashes.blade.node.scale=Vector3(1,SWORD_LENGTH,1)
-    BuildSilhouettes(self,'sword',blueprint,self.images)
+    if not self.pixelSwordFx then
+        self.flashes.blade=Effect(self,1,tip-root+1,'WeaponFullChargeFlash','blade')
+        self.flashes.blade.node.scale=Vector3(1,SWORD_LENGTH,1)
+        BuildSilhouettes(self,'sword',blueprint,self.images)
+    else
+        self.flashes.blade=nil
+        self.images={}
+    end
 end
 
 local function DisposeEffect(self,effect)
@@ -459,6 +477,14 @@ function Rig:GetBowArrowTip()
     return self.entries.bow.pivot:LocalToWorld(Vector3(launch[1],launch[2],nock.z+self.arrowTip))
 end
 
+-- Snapshot the equipped bow's visual id at the fire call. Projectile stores it
+-- on that arrow so an in-flight tail is unaffected by an air-time weapon swap.
+function Rig:GetBowModelId()
+    local entry=self.entries and self.entries.bow
+    local config=entry and entry.mesh and entry.mesh.blueprint and entry.mesh.blueprint.config
+    return config and config.modelId or 'field'
+end
+
 -- With grip/rotation this evaluates this frame's target BEFORE rig rendering;
 -- without them returns the rendered world point, for debug/launch checks.
 function Rig:GetBowNock(u,grip,rotation)
@@ -481,6 +507,12 @@ end
 
 function Rig:FlashBowFull()
     if self.active~='bow' or self.pose~='hand' or not self.trailEnabled then return end
+    if self.bowChargeFx then
+        BowChargeFx.Full(self.bowChargeFx)
+        self.flashes.socket.node.enabled=false
+        self.flashKind,self.flashLeft=nil,0
+        return
+    end
     -- Reuse the arrival spark's existing geometry/material; no full-body shake.
     local flash=self.flashes.socket
     self.flashKind,self.flashLeft='bow_full',.08
@@ -620,13 +652,14 @@ function Rig:UpdateHitImpulse()
     self.hitPosition=Rotate(self.hitPosition,self.hitRotation,self.hitOffset)
     entry.mesh.node.position=self.hitPosition
     if alive and age<self.hitWhite-1e-8 then
+        if self.pixelSwordFx then return true end
         local flash=self.flashes.blade
         flash.node:SetParent(entry.pivot)
         flash.offset=SetVec(flash.offset,self.bladeFlashX,self.bladeRoot.y,-.015)
         flash.node.position=flash.offset;flash.node.rotation=flash.rotation
         flash.node.enabled=true
         flash.material:SetShaderParameter('MatDiffColor',self.fxAlpha[17])
-    elseif self.flashKind~='full_charge' or self.flashLeft<=0 then self.flashes.blade.node.enabled=false end
+    elseif (not self.pixelSwordFx) and (self.flashKind~='full_charge' or self.flashLeft<=0) then self.flashes.blade.node.enabled=false end
 end
 
 --- Conservative contact confirmation, matching the existing gameplay sector.
@@ -634,6 +667,11 @@ end
 function Rig:ShowContactArc(zone)
     if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
     self:ClearTrail()
+    if self.pixelSwordFx then
+        self.combatFx:ContactArc(zone)
+        self.contactArc=true;self.tailLeft=TRAIL_TAIL
+        return true
+    end
     local count=self.trailEnabled and 8 or 4
     local half=math.rad(zone.angle*.5)
     local f,o=zone.forward,zone.origin
@@ -675,8 +713,15 @@ function Rig:Flash(kind)
     if kind=='full_charge' and self.chargeFlashed then return false end
     if self.flashLeft>0 and self.flashKind==kind then return false end
     if kind=='full_charge' then self.chargeFlashed=true end
-    self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
-    self.images[2].node.enabled=false
+    if self.flashes.blade then self.flashes.blade.node.enabled=false end
+    self.flashes.socket.node.enabled=false
+    if self.images[2] then self.images[2].node.enabled=false end
+    if kind=='full_charge' and self.pixelSwordFx then
+        local point=self.entries.sword.pivot:LocalToWorld(self.bladeTip)
+        self.combatFx:ChargeBurst(point)
+        self.flashKind,self.flashLeft=kind,FLASH_TIME
+        return true
+    end
     self.flashKind,self.flashLeft=kind,FLASH_TIME
     local flash=kind=='full_charge' and self.flashes.blade or self.flashes.socket
     local parent=kind=='full_charge' and self.entries.sword.pivot
@@ -717,6 +762,7 @@ local function MainAlpha(self,mesh,a)
 end
 
 function Rig:StopCombatVisual()
+    BowChargeFx.Stop(self.bowChargeFx)
     self.combatFx:Clear()
     self.slashRibbon:Clear()
     self.shockBurst:Clear()
@@ -727,7 +773,8 @@ function Rig:StopCombatVisual()
     self.afterimages=nil;self.afterimagesFresh=false;self.imageElapsed=0
     self.visualActive,self.visualFresh,self.visualCharge=false,false,nil
     self.tailLeft,self.flashLeft,self.chargeFlashed=0,0,false
-    self.flashes.blade.node.enabled=false;self.flashes.socket.node.enabled=false
+    if self.flashes.blade then self.flashes.blade.node.enabled=false end
+    self.flashes.socket.node.enabled=false
 end
 
 function Rig:HideWeapon(weapon)
@@ -1277,6 +1324,7 @@ end
 ---@param entry WeaponRigEntry
 ---@param dt number
 function Rig:UpdateImages(entry,dt)
+    if self.pixelSwordFx then return end
     -- Event flash + one silhouette, or up to two silhouettes without the flash.
     -- Also retain only one silhouette over the band for a clean swing outline.
     local limit=((self.sampleCount>=2 or self.flashLeft>0) and 1 or 2)
@@ -1303,6 +1351,13 @@ end
 
 ---@param entry WeaponRigEntry
 function Rig:UpdateCharge(entry)
+    if self.pixelSwordFx then
+        if self.visualCharge==nil or self.visualActive then return end
+        local root=entry.pivot:LocalToWorld(self.bladeRoot)
+        local tip=entry.pivot:LocalToWorld(self.bladeTip)
+        self.combatFx:Charge(root,tip,self.visualCharge or 0)
+        return
+    end
     local charge=self.visualCharge
     for _,particle in ipairs(self.particles) do
         particle.node.enabled=charge~=nil and charge<1 and not self.visualActive
@@ -1322,6 +1377,10 @@ end
 function Rig:UpdateFlash(dt)
     self.flashLeft=math.max(0,self.flashLeft-dt)
     if self.flashLeft<1e-8 then self.flashLeft=0 end
+    if self.pixelSwordFx and self.flashKind=='full_charge' then
+        if self.flashLeft<=0 then self.flashKind=nil end
+        return
+    end
     local flash=self.flashKind=='full_charge' and self.flashes.blade or self.flashes.socket
     if self.flashLeft<=0 then flash.node.enabled=false;return end
     Alpha(self,flash,math.ceil(self.flashLeft/FLASH_TIME*4)/4*.75)
@@ -1372,6 +1431,24 @@ function Rig:UpdateBowVisual()
     end
 end
 
+-- The particle target is the same world-space point passed to Projectile:Fire.
+-- This keeps grains attached to the actual nock/launch geometry while the bow
+-- follows hand IK and the player moves. It never changes arrow direction or HUD.
+function Rig:UpdateBowChargeFx(dt)
+    if not self.bowChargeFx then return end
+    local active=self.active=='bow' and self.pose=='hand' and self.visualState=='hand'
+        and self.attached=='hand' and self.bowDraw>.01 and not self.retiring.weapon
+    local entry=self.entries.bow
+    local launch=entry.mesh.blueprint.hit.origin
+    local nock=self:GetBowNockLocal()
+    local nockWorld=active and entry.pivot:LocalToWorld(Vector3(launch[1],launch[2],nock.z)) or nil
+    local tip=active and self:GetBowArrowTip() or nil
+    local rotation=entry.pivot.worldRotation
+    local modelId=entry.mesh.blueprint.config and entry.mesh.blueprint.config.modelId or 'field'
+    BowChargeFx.Update(self.bowChargeFx,dt,{active=active,charge=self.bowDraw,nock=nockWorld,tip=tip,
+        arrowLength=self.arrowTip,rotation=rotation,modelId=modelId})
+end
+
 function Rig:UpdateMaterializeParticles()
     local state=self.visualState
     local visible=self.pose~='hidden' and state=='materialize'
@@ -1414,7 +1491,7 @@ function Rig:UpdateCore(dt)
         self.motion.elapsed=self.motion.duration
     end
     local motionDt=self:AdvanceRetiring(dt)
-    if self.retiring.weapon then return end
+    if self.retiring.weapon then self:UpdateBowChargeFx(dt);return end
     self:AdvanceTransition(motionDt)
     local entry=self.entries[self.active]
     if self.visualState=='hand' then
@@ -1423,6 +1500,9 @@ function Rig:UpdateCore(dt)
         entry.pivot.rotation=self.poseRotation
     end
     self:UpdateBowVisual()
+    -- Sample after the hand pivot and drawn nock have been applied this frame,
+    -- so grains follow movement and aim without a frame of launch-point lag.
+    self:UpdateBowChargeFx(dt)
     if not self.visualFresh then self:SetCombatVisual(false,nil) end
     self.visualFresh=false
     self.tailLeft=self.visualActive and TRAIL_TAIL or math.max(0,self.tailLeft-dt)
@@ -1430,7 +1510,10 @@ function Rig:UpdateCore(dt)
     if self.afterimagesFresh then self.afterimagesFresh=false else self.imageElapsed=self.imageElapsed+dt end
     self:UpdateFlash(self.arrivalFresh and 0 or dt);self.arrivalFresh=false
     self:UpdateHitImpulse()
-    if self.contactArc then self:ClearTrail() end -- one presented contact frame
+    if self.contactArc then
+        if self.pixelSwordFx then self.combatFx:ClearSword() end
+        self:ClearTrail() -- one presented contact frame
+    end
     if self.visualState~='hand' then
         if self.visualState=='fly_to_hand' and self.active=='sword' and entry.mesh.alpha>0 and not (self.transition and self.transition.holo) then
             self:SampleBlade(entry);self:DrawBands()
@@ -1457,6 +1540,10 @@ function Rig:AttachWing(entry,blueprint)
     blueprint=blueprint or entry.mesh.blueprint
     local modelId=blueprint.config and blueprint.config.modelId
     if modelId=='iron' or modelId=='warden' then
+        if entry.wing then
+            WingVisual.SetVisible(entry.wing,false)
+            WingVisual.SetHolo(entry.wing,0,1)
+        end
         if entry.authored and entry.authoredId==modelId then return end
         if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil end
         local visual,err=(modelId=='iron' and IronVisual or WardenVisual).New(entry.pivot,Catalog.Definitions.sword.visualTip,blueprint.config.colors)
@@ -1511,6 +1598,7 @@ function Rig:SyncWing(dt)
     if self.visualCharge then glow=math.max(glow,.25+.75*self.visualCharge) end
     self.wingGlow=glow
     WingVisual.SetCharge(entry.wing,glow)
+    Grains.Update(entry.wing.grains,dt)
 end
 --- Thorn-flower bow visual (ThornBowVisual): replaces the voxel bow's look in hand and on the back.
 --- Nock, draw stages, arrows and the drawn string keep using the voxel blueprint.
@@ -1623,6 +1711,7 @@ function Rig:Dispose()
     for _,image in ipairs(self.images) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,image in ipairs(self.bowImages) do self.world:RemoveVolume(image.volume);image.material:Dispose() end
     for _,particle in ipairs(self.particles) do self.world:RemoveVolume(particle.volume);particle.material:Dispose() end
+    BowChargeFx.Dispose(self.bowChargeFx);self.bowChargeFx=nil
     for _,flash in pairs(self.flashes) do self.world:RemoveVolume(flash.volume);flash.material:Dispose() end
     for _,entry in pairs(self.entries) do
         WingVisual.Dispose(entry.wing);entry.wing=nil;ThornVisual.Dispose(entry.thorn);entry.thorn=nil

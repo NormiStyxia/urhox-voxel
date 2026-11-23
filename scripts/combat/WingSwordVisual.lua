@@ -2,6 +2,7 @@
 -- Visual only: hit geometry, sockets, trails and timing still come from the voxel blueprint.
 -- Any failure returns nil so WeaponRig keeps showing the voxel sword.
 local Blades=require('combat.ForgeShowroomBlades')
+local Grains=require('combat.WeaponOrbitGrains')
 local V={}
 V.ENABLED=true            -- kill switch: false = always show the voxel sword
 V.WIDTH,V.DEPTH=1.3,1.25  -- visual-only thickening; length is fitted to the voxel blade tip
@@ -69,6 +70,7 @@ function V.New(pivot,tipY,colors)
         g:Commit()
         assert(g:SetMaterial(0,visual.material)~=false,'wing material binding failed')
         if visual.crystal then assert(g:SetMaterial(1,visual.crystal)~=false,'crystal material binding failed') end
+        visual.grains=Grains.New(node,'wing',MASK)
         node.enabled=false
         -- Hologram twin (all triangles, one unlit additive material). Optional:
         -- without it the rig falls back to the plain show/hide.
@@ -198,11 +200,15 @@ end
 ---@param visual table?
 ---@param visible boolean
 function V.SetVisible(visual,visible)
-    if visual and visual.node and visual.node.enabled~=visible then visual.node.enabled=visible end
+    if visual and visual.node then
+        if visual.node.enabled~=visible then visual.node.enabled=visible end
+        Grains.Visible(visual.grains,visible)
+    end
 end
 ---@param visual table?
 function V.Dispose(visual)
     if not visual then return end
+    Grains.Dispose(visual.grains);visual.grains=nil
     if visual.node then pcall(visual.node.Remove,visual.node);visual.node=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end
     if visual.crystal then pcall(visual.crystal.Dispose,visual.crystal);visual.crystal=nil end

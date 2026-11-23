@@ -10,6 +10,7 @@
 --   * a cast pops the scale and spikes the spin, then both settle within ~0.5 s.
 -- Any failure returns nil so the scene keeps working without the catalyst.
 local Fx=require('combat.TimeCatalystFx')
+local Grains=require('combat.WeaponOrbitGrains')
 local V={}
 V.ENABLED=true               -- kill switch
 V.SCALE=.95                  -- model radius .27 m -> ~.26 m in the world (readable at the follow-camera distance)
@@ -44,6 +45,7 @@ local function SetShown(visual,flag)
     -- Node enable is NOT recursive: every child node must be toggled or it keeps rendering in place.
     visual.root.enabled=flag
     for _,pivot in pairs(visual.pivots) do pivot.enabled=flag end
+    Grains.Visible(visual.grains,flag and (not visual.fx or visual.fx.mode=='pixel'))
     Fx.SetShown(visual.fx,flag)
 end
 
@@ -74,6 +76,7 @@ function V.New(scene,cameraNode,showroomMask)
             g:BeginGeometry(0,TRIANGLE_LIST)
             visual.geometry[name]=g
         end
+        visual.grains=Grains.New(visual.root,'catalyst',showroomMask or MASK)
         if not showroomMask then visual.fx=Fx.New(scene,cameraNode) end
     end)
     if not ok then
@@ -226,6 +229,9 @@ function V.Update(visual,dt,ctx)
     local glow=math.min(1,.15+.55*visual.aim+.5*visual.charge+.5*visual.pulse)
     SetQuant(visual,visual.material,'glow',glow,20)
     SetQuant(visual,visual.material,'fade',visual.fade,20)
+    Fx.SetShown(visual.fx,ctx.active)
+    Grains.Visible(visual.grains,ctx.active and visual.fx and visual.fx.mode=='pixel' or false)
+    Grains.Update(visual.grains,dt)
     Fx.Update(visual.fx,dt,{center=show,rot=orient,scale=scale,aim=visual.aim,charge=visual.charge,
         pulse=visual.pulse,speed=visual.speed,fade=visual.fade,burst=castEdge})
 end
@@ -240,8 +246,10 @@ end
 ---@param mode string? pixel | off; nil cycles
 ---@return string? applied
 function V.SetFxMode(visual,mode)
-    if not visual then return nil end
-    return Fx.SetMode(visual.fx,mode or (visual.fx.mode=='pixel' and 'off' or 'pixel'))
+    if not visual or not visual.fx then return nil end
+    local applied=Fx.SetMode(visual.fx,mode or (visual.fx.mode=='pixel' and 'off' or 'pixel'))
+    Grains.Visible(visual.grains,visual.shown and applied=='pixel')
+    return applied
 end
 
 ---@param visual table?
@@ -253,6 +261,7 @@ end
 ---@param visual table?
 function V.Dispose(visual)
     if not visual then return end
+    Grains.Dispose(visual.grains);visual.grains=nil
     Fx.Dispose(visual.fx);visual.fx=nil
     if visual.root then pcall(visual.root.Remove,visual.root);visual.root=nil end
     if visual.material then pcall(visual.material.Dispose,visual.material);visual.material=nil end

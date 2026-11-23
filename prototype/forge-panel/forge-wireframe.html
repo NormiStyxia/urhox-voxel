@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>武器系统 UI 线框标注原型（原神式分页布局）</title>
+<style>
+  * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+  body {
+    background: #0a0e16; color: #eef2f8;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .screen {
+    width: 960px; height: 540px;
+    background: #101723; border: 2px solid #3a5272;
+    position: relative; display: grid;
+    grid-template-columns: 78px 1fr 356px;
+    grid-template-rows: 54px 1fr;
+    overflow: hidden;
+  }
+  .wbox {
+    border: 1.5px solid #5c88be; background: rgba(30, 43, 63, 0.72);
+    position: relative;
+  }
+  .wbox.dashed { border-style: dashed; border-color: #3a5272; background: rgba(15, 22, 34, 0.5); }
+  .wbox.gold { border-color: #eec262; }
+  .wtag {
+    position: absolute; top: 0; left: 0;
+    background: #5c88be; color: #0a0e16;
+    font-size: 11px; font-weight: 700; padding: 1px 6px;
+  }
+  .wbox.gold > .wtag { background: #eec262; }
+  /* Left vertical nav */
+  .left-nav {
+    grid-column: 1; grid-row: 1 / 3;
+    background: #0e141e; border-right: 1px solid #3a5272;
+    display: flex; flex-direction: column; align-items: center; padding-top: 16px; gap: 14px;
+  }
+  .left-nav .nav-caption { font-size: 11px; color: #98acc4; margin-bottom: 12px; }
+  .nav-btn {
+    width: 62px; height: 54px; border: 1.5px solid #3a5272; background: #141c2a;
+    color: #98acc4; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-btn.active { border-color: #eec262; background: #2c3a52; color: #f4cc72; }
+  /* Top bar */
+  .top-bar {
+    grid-column: 2 / 4; grid-row: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; border-bottom: 1px dashed #293b54;
+  }
+  .top-left { display: flex; align-items: center; gap: 18px; }
+  .page-title { font-size: 19px; font-weight: 700; color: #f4cc72; min-width: 190px; }
+  .cls-tabs { display: flex; gap: 8px; }
+  .cls-btn {
+    padding: 5px 16px; border: 1.5px solid #3a5272; background: #141c2a;
+    color: #98acc4; font-size: 13px; cursor: pointer;
+  }
+  .cls-btn.active { border-color: #eec262; background: #28364c; color: #eef2f8; }
+  .top-right { display: flex; align-items: center; gap: 8px; }
+  .mat-pill {
+    padding: 5px 12px; border: 1.5px solid #3a5272; background: #141c2a;
+    font-size: 12px; color: #f4cc72;
+  }
+  .mat-pill.sand { color: #6ebcf8; }
+  .close-btn {
+    width: 34px; height: 28px; border: 1.5px solid #5c88be; background: #243044;
+    color: #eef2f8; font-size: 16px; cursor: pointer;
+  }
+  /* Center-left 3D Stage */
+  .stage-zone {
+    grid-column: 2; grid-row: 2;
+    margin: 12px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  #stage3d { width: 100%; height: 100%; display: block; cursor: grab; }
+  .stage-overlay-bottom {
+    position: absolute; left: 14px; right: 14px; bottom: 14px;
+    display: flex; align-items: flex-end; justify-content: space-between; pointer-events: none;
+  }
+  .plaque {
+    width: 220px; padding: 24px 12px 10px; pointer-events: auto;
+  }
+  .stage-tools { display: flex; gap: 8px; pointer-events: auto; }
+  .tool-btn {
+    padding: 6px 12px; border: 1.5px solid #3a5272; background: #161f2e;
+    color: #eef2f8; font-size: 12px; cursor: pointer;
+  }
+  /* Right single-task panel */
+  .right-panel {
+    grid-column: 3; grid-row: 2;
+    margin: 12px 16px 12px 0; padding: 28px 14px 14px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .card-stack { display: flex; flex-direction: column; gap: 10px; }
+  .slot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 24px 10px 10px; }
+  .slot-item {
+    padding: 10px 6px; border: 1.5px solid #3a5272; background: #161f2e;
+    text-align: center; cursor: pointer; font-size: 12px;
+  }
+  .slot-item.active { border-color: #eec262; background: #24344c; }
+  .slot-item .sub { font-size: 11px; color: #98acc4; margin-top: 4px; }
+  .cta-btn {
+    height: 44px; border: 2px solid #eec262; background: #364838;
+    color: #f4cc72; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="screen">
+    <!-- 1. 最左侧竖向二级切页 -->
+    <div class="left-nav">
+      <div class="nav-caption">二级切页</div>
+      <button class="nav-btn active" onclick="setPage(0)">① 替换</button>
+      <button class="nav-btn" onclick="setPage(1)">② 强化</button>
+      <button class="nav-btn" onclick="setPage(2)">③ 时印</button>
+      <button class="nav-btn" onclick="setPage(3)">④ 锻造</button>
+    </div>
+
+    <!-- 2. 顶部悬浮状态栏 -->
+    <div class="top-bar">
+      <div class="top-left">
+        <div class="page-title" id="page-title">① 武器 · 详情与切换</div>
+        <div class="cls-tabs">
+          <button class="cls-btn active" onclick="setClass('sword', this)">剑</button>
+          <button class="cls-btn" onclick="setClass('bow', this)">弓</button>
+          <button class="cls-btn" onclick="setClass('time', this)">法器</button>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="mat-pill">强化矿 14</div>
+        <div class="mat-pill sand">淬炼砂 06</div>
+        <button class="close-btn">×</button>
+      </div>
+    </div>
+
+    <!-- 3. 左侧开放 3D 武器旋转预览舞台 -->
+    <div class="wbox dashed stage-zone">
+      <div class="wtag">左侧开放 3D 旋转预览区 (52% 屏宽 · 拖拽自由旋转模型)</div>
+      <canvas id="stage3d" width="490" height="450"></canvas>
+      <div class="stage-overlay-bottom">
+        <div class="wbox plaque">
+          <div class="wtag">左下悬浮铭牌</div>
+          <div id="stage-wname" style="color:#f4cc72;font-weight:700;font-size:15px;">◆◆◆ 守门长剑</div>
+          <div id="stage-wsub" style="color:#98acc4;font-size:12px;margin-top:4px;">珍贵 · 近战 &nbsp; Lv.3 / 5</div>
+        </div>
+        <div class="stage-tools">
+          <button class="tool-btn" onclick="yaw=0.5;pitch=0.2;">重置视角</button>
+          <button class="tool-btn" style="color:#f4cc72;">配色浮层</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 右侧单任务面板 (随左侧切页切换) -->
+    <div class="wbox right-panel">
+      <div class="wtag">右侧单任务面板 (36% 屏宽 · 每页只做一件事)</div>
+      <div class="card-stack" id="panel-body"></div>
+      <button class="cta-btn" id="panel-cta">装备此武器</button>
+    </div>
+  </div>
+
+<script>
+let curPage = 0;
+let curClass = 'sword';
+let yaw = 0.5, pitch = 0.2, dragging = false, lx = 0, ly = 0;
+
+function setPage(p) {
+  curPage = p;
+  document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === p));
+  renderPanel();
+}
+function setClass(c, btn) {
+  curClass = c;
+  document.querySelectorAll('.cls-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPanel();
+}
+
+function renderPanel() {
+  const titles = ['① 武器 · 详情与切换', '② 武器 · 强化升级', '③ 武器 · 时印与精炼', '④ 武器 · 锻造与熔铸'];
+  document.getElementById('page-title').textContent = titles[curPage];
+  const body = document.getElementById('panel-body');
+  const cta = document.getElementById('panel-cta');
+
+  if (curPage === 0) {
+    body.innerHTML = `
+      <div class="wbox slot-row">
+        <div class="wtag">同类武器槽 (点击切换 3D 预览)</div>
+        <div class="slot-item"><div>遗迹铁剑</div><div class="sub">Lv.3 已装</div></div>
+        <div class="slot-item active"><div>守门长剑</div><div class="sub">Lv.3 当前</div></div>
+        <div class="slot-item"><div>翼剑</div><div class="sub">未打造</div></div>
+      </div>
+      <div class="wbox" style="padding:26px 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="wtag">核心数值 (主属性 + 副词条)</div>
+        <div><div style="font-size:12px;color:#98acc4;">基础攻击</div><div style="font-size:15px;margin-top:4px;">15.6 (Lv.3/5)</div></div>
+        <div style="border-left:1px solid #3a5272;padding-left:12px;"><div style="font-size:12px;color:#98acc4;">固有副词条</div><div style="font-size:15px;color:#6ebcf8;margin-top:4px;">攻击范围 +12%</div></div>
+      </div>
+      <div class="wbox" style="padding:26px 12px 12px;font-size:13px;line-height:1.7;">
+        <div class="wtag">被动词条与当前时印</div>
+        <div style="color:#f4cc72;font-weight:700;">武器被动 · 【守门】</div>
+        <div>对处于失衡状态的敌人伤害 +15%</div>
+        <hr style="border:none;border-top:1px solid #3a5272;margin:8px 0;">
+        <div style="color:#68d08c;">已装时印：锋芒剑印 · II阶 (攻击 +16%)</div>
+        <div style="color:#98acc4;font-size:12px;">武技 [Q]：十字重击（消耗 25 体力）</div>
+      </div>`;
+    cta.textContent = '装备此武器';
+  } else if (curPage === 1) {
+    body.innerHTML = `
+      <div class="wbox gold" style="padding:28px 12px 14px;text-align:center;">
+        <div class="wtag">等级跃迁预览</div>
+        <div style="font-size:20px;color:#f4cc72;font-weight:700;">Lv. 3 &nbsp; ──→ &nbsp; Lv. 4</div>
+        <div style="font-size:12px;color:#98acc4;margin-top:6px;">强化上限 Lv.5（每级提升 10% 基础攻击）</div>
+      </div>
+      <div class="wbox" style="padding:26px 12px 12px;font-size:13px;line-height:2;">
+        <div class="wtag">强化前后数值对比</div>
+        <div style="display:flex;justify-content:space-between;"><span>基础攻击</span><span style="color:#68d08c;font-weight:700;">15.6 ──→ 16.9 (+1.3)</span></div>
+        <div style="display:flex;justify-content:space-between;color:#98acc4;"><span>固有副词条</span><span>攻击范围 +12% (不变)</span></div>
+      </div>
+      <div class="wbox" style="padding:28px 12px 14px;text-align:center;">
+        <div class="wtag">强化消耗材料</div>
+        <div style="display:inline-block;border:1.5px solid #eec262;padding:10px 28px;background:#161f2e;">
+          <div style="color:#f4cc72;font-weight:700;">强化矿 × 3</div>
+          <div style="font-size:11px;color:#98acc4;margin-top:4px;">当前持有 14</div>
+        </div>
+      </div>`;
+    cta.textContent = '强 化 升 级 （消耗 3 强化矿）';
+  } else if (curPage === 2) {
+    body.innerHTML = `
+      <div class="wbox slot-row">
+        <div class="wtag">本类时印槽 (同类武器共享)</div>
+        <div class="slot-item active"><div>锋芒剑印</div><div class="sub">II阶 · 已装</div></div>
+        <div class="slot-item"><div>长锋剑印</div><div class="sub">I阶 · 范围</div></div>
+        <div class="slot-item"><div>震刃剑印</div><div class="sub">I阶 · 削韧</div></div>
+      </div>
+      <div class="wbox" style="padding:26px 12px 12px;font-size:13px;line-height:1.8;">
+        <div class="wtag">时印阶位与保底预览</div>
+        <div style="color:#f4cc72;font-weight:700;">锋芒剑印 · II 阶 ──→ III 阶 (满阶)</div>
+        <div style="color:#68d08c;">攻击加成： +16% ──→ +24%</div>
+        <div style="color:#6ebcf8;font-size:12px;">保底进度：上次未成，本次成功率已升至 75%</div>
+      </div>
+      <div class="wbox" style="padding:26px 10px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wtag">精炼模式切换 (二选一)</div>
+        <div class="slot-item active"><div>常规精炼 · 1 砂</div><div class="sub">75% 成功 (失败叠保底)</div></div>
+        <div class="slot-item"><div>稳固精炼 · 2 砂</div><div class="sub">100% 必定成功</div></div>
+      </div>`;
+    cta.textContent = '精 炼 时 印 （消耗 1 淬炼砂 · 75%）';
+  } else {
+    body.innerHTML = `
+      <div class="wbox" style="padding:26px 10px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wtag">目标图纸选择</div>
+        <div class="slot-item active"><div>守门长剑 (珍贵)</div><div class="sub">消耗 6 强化矿</div></div>
+        <div class="slot-item"><div>翼剑 (传说)</div><div class="sub">需先解锁守门长剑</div></div>
+      </div>
+      <div class="wbox" style="padding:26px 10px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wtag">打造方式选择 (熔铸继承 vs 新造)</div>
+        <div class="slot-item active"><div>方式 A：熔铸进阶</div><div class="sub">消耗旧铁剑 · 继承 Lv.3</div></div>
+        <div class="slot-item"><div>方式 B：单独打造</div><div class="sub">保留旧铁剑 · 新剑 Lv.1</div></div>
+      </div>
+      <div class="wbox" style="padding:26px 12px 12px;text-align:center;font-size:12px;line-height:1.9;">
+        <div class="wtag">转化公式确认</div>
+        <div style="color:#f4cc72;font-weight:700;">[Lv.3 遗迹铁剑] + [强化矿 ×6] ──→ [Lv.3 守门长剑]</div>
+        <div style="color:#68d08c;">已装剑印【锋芒 · II阶】自动沿用至新武器</div>
+      </div>`;
+    cta.textContent = '熔 铸 进 阶 （消耗旧剑 + 6 矿 → Lv.3 守门长剑）';
+  }
+}
+
+const cv = document.getElementById('stage3d');
+const ctx = cv.getContext('2d');
+cv.addEventListener('mousedown', e => { dragging = true; lx = e.clientX; ly = e.clientY; });
+window.addEventListener('mouseup', () => dragging = false);
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  yaw += (e.clientX - lx) * 0.01;
+  pitch = Math.max(-0.6, Math.min(0.6, pitch + (e.clientY - ly) * 0.008));
+  lx = e.clientX; ly = e.clientY;
+});
+
+function drawStage() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const cx = cv.width / 2, cy = cv.height / 2 - 15;
+  ctx.strokeStyle = '#293e58'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, 110, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = '#6ebcf8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 95, 125, 22, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#6ebcf8'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('◀ 按住鼠标左右拖拽可自由旋转 3D 武器模型 ▶', cx, cy + 135);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.55 + Math.sin(yaw) * 0.35);
+  const sx = Math.cos(yaw);
+  ctx.strokeStyle = '#eec262'; ctx.fillStyle = 'rgba(60, 100, 160, 0.45)'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -110); ctx.lineTo(14 * sx, -85); ctx.lineTo(12 * sx, 30);
+  ctx.lineTo(-12 * sx, 30); ctx.lineTo(-14 * sx, -85); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#f4cc72'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(-36, 30); ctx.lineTo(36, 30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 30); ctx.lineTo(0, 72); ctx.stroke();
+  ctx.restore();
+  requestAnimationFrame(drawStage);
+}
+renderPanel();
+drawStage();
+</script>
+</body>
+</html>

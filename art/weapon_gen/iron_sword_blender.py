@@ -63,7 +63,7 @@ def measure():
 # part, with optical response from the normals and object-space node networks.
 SHADE = {'edge':1,'steel':.99,'bevel':.98,'crown':.97,'ridge':.96,'turn':.97,
          'silver':1,'stone':.98,'cut':.97,'slate':.96,'recess':.90,'seam':.87,
-         'wrap':1,'wrap_mid':.99,'wrap_lo':.96,'stitch':.94}
+         'seat':.51,'arris':1,'wrap':1,'wrap_mid':.99,'wrap_lo':.96,'stitch':.94}
 
 
 def vertex(p):
@@ -127,7 +127,7 @@ class Shell:
 
 # Row, traced central shoulder half-width, crown correction and lateral drift
 # in original pixels. Both outer radii come directly from the three ink masks.
-STATIONS = [(556,10,-4.0,.35),(540,13,0,-.60),(495,12,-1.15,.85),
+STATIONS = [(556,9,-4.0,.35),(543,10,-2.3,.55),(540,13,0,-.60),(495,12,-1.15,.85),
             (442,11.8,1.1,-1.05),(382,10.8,-.7,.65),(320,10.1,.65,-.75),
             (257,9.8,-.95,.8),(192,9.8,.85,-.62),(134,9.4,-1.35,.54),
             (103,.85,0,-.16)]
@@ -140,6 +140,9 @@ def blade(cols):
         w,side=radii(cols,552 if row==556 else row)
         if row==556:
             w,side=w-1,18
+        if row==543:
+            # An exposed bearing ledge leads into the narrower heel below it.
+            w,side=w*.85,18
         depth=side+adjust
         haunch=depth*(.78+.045*math.sin(row*.041))
         flute=shoulder*.72
@@ -151,7 +154,8 @@ def blade(cols):
                      (drift,row,sign*depth),(-sign*flute,row,sign*(haunch-depth*.085)),
                      (-sign*shoulder,row,sign*haunch),(-sign*edge,row,sign*depth*.50)]
         if last:
-            shell.bridge(last,ring,['bevel','steel','crown','ridge','ridge','crown','steel','bevel']*2)
+            facets=['bevel','steel','crown','ridge','ridge','crown','steel','bevel']*2
+            shell.bridge(last,ring,['seat']*16 if row==540 else facets)
         else:
             for i in range(len(ring)):
                 shell.face([ring[i-1],ring[i],(0,row,0)],'turn')
@@ -294,13 +298,14 @@ def grip(cols):
         shell.face(last,tones[0])
         shell.finish()
     wind('Five-turn leather binding',5,10.9,
-         [(-1,-.65),(-1,.34),(-.78,1.0),(.64,.91),(1,.12),(1,-.65)],2,
-         ['stitch','wrap_mid','wrap','wrap_mid','stitch','wrap_lo'])
+         [(-1,-.65),(-.78,1.0),(.64,.91),(1,.12),(1,-.65)],2,
+         ['wrap_mid','wrap','wrap_mid','stitch','wrap_lo'])
     wind('Cross-laced leather thong',-3,1.08,
          [(-1,.12),(0,1.52),(1,.12),(0,-.45)],6,
          ['wrap_mid','wrap_lo','stitch','stitch'])
-    ferrule('Grip throat',[(588,25,16),(604,20,15),(613,15,13)],
-            [['slate'],['recess']])
+    ferrule('Grip throat',[(588,25,16),(599,19,15.7),(601,18,15),
+            (603,19.6,16.4),(608,19.6,16.4),(610,16.5,14.4),(615,16,14.1)],
+            [['slate'],['seat'],['arris'],['silver'],['arris'],['seat']])
     ferrule('Pommel ferrule',[(727,15,12),(732,18.5,15),(736,18,15),(740,14.5,12.7)],
             [['cut','stone','cut','silver'],['silver','stone'],['slate','cut']])
 
@@ -430,6 +435,7 @@ def setup_blender():
     stone=procedurals('Carved grey stone',(.21,.24,.29),(.32,.36,.41),.12,(.50,.67),(205,205,205),.00015)
     hide=procedurals('Indigo leather',(.009,.018,.049),(.022,.046,.108),0,(.61,.79),(580,405,66),.00014)
     thong=procedurals('Indigo leather cord',(.004,.010,.027),(.014,.030,.064),0,(.68,.84),(450,450,85),.00012)
+    seat=procedurals('Recessed bearing faces',(.045,.060,.076),(.088,.101,.122),.66,(.42,.53),(210,210,34),.000021)
     for part in dict.fromkeys(t['part'] for t in TRIS):
         tris=[t for t in TRIS if t['part']==part]
         verts=list(dict.fromkeys(p for t in tris for p in t['p']))
@@ -442,9 +448,12 @@ def setup_blender():
         material={'Ridged steel blade':steel,'Carved crossguard':stone,'Leather grip core':hide,
                   'Five-turn leather binding':hide,'Cross-laced leather thong':thong}.get(part,iron)
         mesh.materials.append(material)
+        if any(t['material']=='seat' for t in tris):
+            mesh.materials.append(seat)
         uv=mesh.uv_layers.new(name='Submask and height')
         normals=[]
         for face,triangle in zip(mesh.polygons,tris):
+            face.material_index=int(triangle['material']=='seat')
             face.use_smooth=material in (hide,thong)
             for loop,pair,normal in zip(face.loop_indices,reversed(triangle['uv']),reversed(triangle['n'])):
                 uv.data[loop].uv=pair

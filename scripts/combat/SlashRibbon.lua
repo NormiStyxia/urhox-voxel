@@ -11,7 +11,11 @@
 ---@field head integer
 ---@field activeKind string|nil
 local R={};R.__index=R
+-- Particle capacity is deliberately larger than the old strip sample ring. The
+-- ribbon now consists of short-lived square motes, so a fast swing can leave a
+-- readable chain without ever creating a long translucent surface.
 R.CAPACITY=48
+R.PIXEL_CAPACITY=220
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 -- Per-style look. width: fraction of the blade covered from the tip inward.
 -- reach: how far the band extends PAST the tip (fraction of blade length);
@@ -28,19 +32,41 @@ local STYLES={
 function R.New(scene)
     local self=setmetatable({},R)
     self.node=scene:CreateChild('SlashRibbon');self.node.temporary=true;self.node.enabled=false
-    local geometry=self.node:CreateComponent('CustomGeometry')
-    geometry:SetNumGeometries(1)
-    geometry:SetDynamic(true)
-    geometry.castShadows=false
-    -- Vertex colour + additive: overlapping passes brighten instead of greying.
-    local technique=cache:GetResource('Technique','Techniques/NoTextureVColAddAlpha.xml')
-    local material=Material:new()
-    if technique then material:SetTechnique(0,technique) end
-    material.cullMode=CULL_NONE
-    material:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
-    geometry:BeginGeometry(0,TRIANGLE_LIST);geometry:Commit() -- commit before SetMaterial
-    geometry:SetMaterial(0,material)
-    self.geometry,self.material=geometry,material
+    -- In the game runtime use the same hard-edged pixel material as the time
+    -- catalyst. The immediate-mode strip remains a test/fallback backend for
+    -- projects where VoxelFX is unavailable.
+    local ok,pixels=pcall(function()
+        local VoxelFX=require('dragon.VoxelFX')
+        return VoxelFX.Motes(scene,'SwordSlashPixels',R.PIXEL_CAPACITY,'square',true)
+    end)
+    self.pixels=ok and pixels or nil
+    self.pixelMode=self.pixels~=nil
+    self.geometry,self.material=nil,nil
+    if not self.pixelMode then
+        local geometry=self.node:CreateComponent('CustomGeometry')
+        geometry:SetNumGeometries(1)
+        geometry:SetDynamic(true)
+        geometry.castShadows=false
+        -- Vertex colour + additive is retained only for the offline contract
+        -- double. The normal game path never submits this solid ribbon.
+        local technique=cache:GetResource('Technique','Techniques/NoTextureVColAddAlpha.xml')
+        local material=Material:new()
+        if technique then material:SetTechnique(0,technique) end
+        material.cullMode=CULL_NONE
+        material:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
+        geometry:BeginGeometry(0,TRIANGLE_LIST);geometry:Commit()
+        geometry:SetMaterial(0,material)
+        self.geometry,self.material=geometry,material
+    end
+    self.pixelColors={}
+    for kind,style in pairs(STYLES) do
+        self.pixelColors[kind]={
+            Color(style.core[1],style.core[2],style.core[3],1),
+            Color(style.body[1],style.body[2],style.body[3],.82),
+            Color(style.body[1]*.55,style.body[2]*.65,style.body[3]*.9,.42),
+            Color(0,0,0,0),
+        }
+    end
     self.samples={}
     for i=1,R.CAPACITY do
         self.samples[i]={rx=0,ry=0,rz=0,tx=0,ty=0,tz=0,age=1,
@@ -60,6 +86,7 @@ function R:Begin(kind)
     -- Every swing starts with a fresh stroke; old samples must not survive into
     -- the next attack and curve back across the actor.
     self.count,self.head=0,0
+    if self.pixels then self.pixels:Clear() end
     self.emitting=true
     self.lastValid=false
     self.stroke=true -- next sample starts a new stroke: never bridge to the previous one
@@ -72,6 +99,7 @@ function R:Clear()
     self.emitting,self.lastValid=false,false
     self.count,self.head=0,0
     self.node.enabled=false
+    if self.pixels then self.pixels:Clear() end
 end
 function R:Push(rx,ry,rz,tx,ty,tz)
     self.head=self.head%R.CAPACITY+1
@@ -79,6 +107,21 @@ function R:Push(rx,ry,rz,tx,ty,tz)
     s.rx,s.ry,s.rz,s.tx,s.ty,s.tz,s.age=rx,ry,rz,tx,ty,tz,0
     s.stroke=self.stroke==true;self.stroke=false
     self.count=math.min(R.CAPACITY,self.count+1)
+    if self.pixels then
+        local style=self.style
+        local colors=self.pixelColors[self.activeKind] or self.pixelColors.light
+        local dx,dy,dz=tx-rx,ty-ry,tz-rz
+        local length=math.sqrt(dx*dx+dy*dy+dz*dz)
+        if length>1e-5 then
+            dx,dy,dz=dx/length,dy/length,dz/length
+            local drift=Vector3(dx*.10,dy*.10,dz*.10)
+            -- The tip chain is bright and sparse. A second, smaller mote sits
+            -- inside the blade path and gives the tail a stepped decay.
+            self.pixels:Spawn{pos=Vector3(tx,ty,tz),vel=drift,life=style.life,size=.026,colors=colors,drag=1.8}
+            self.pixels:Spawn{pos=Vector3((tx+rx)*.58,(ty+ry)*.58,(tz+rz)*.58),
+                vel=drift*.55,life=style.life*.86,size=.017,colors=colors,drag=2.1}
+        end
+    end
 end
 -- Blade root/tip world positions for this frame. Subdivides by blade angle
 -- (<=12 degrees per step) so a 30 Hz swing still reads as a smooth arc.
@@ -130,6 +173,11 @@ local function vertex(g,x,y,z,r,gr,b,a)
 end
 ---@param dt number
 function R:Update(dt)
+    if self.pixels then
+        self.pixels:Update(dt)
+        self.node.enabled=self.pixels.node.enabled
+        return
+    end
     local style=self.style
     local life=style.life
     local live=0
@@ -195,7 +243,8 @@ function R:Update(dt)
     self.node.enabled=true
 end
 function R:Dispose()
+    if self.pixels then self.pixels:Clear();self.pixels.node:Remove() end
     self.node:Remove()
-    self.material:Dispose()
+    if self.material then self.material:Dispose() end
 end
 return R

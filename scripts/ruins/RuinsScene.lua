@@ -52,6 +52,7 @@ local weaponGesture_
 local CombatHit = require('combat.Hit')
 local Hit = CombatHit
 local CombatAudio = require('combat.CombatAudio')
+local BowArrowTrailFx = require('combat.BowArrowTrailFx')
 -- Keep failed audio playback from aborting damage/projectile settlement.
 local combatAudioPort={}
 function combatAudioPort.Play(name,opts)
@@ -87,6 +88,7 @@ local WeaponLoadout = require('combat.WeaponLoadout')
 local WeaponStore = require('combat.WeaponStore')
 local ForgeShowroom = require('combat.ForgeShowroom')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
+local bowArrowTrailFx_
 ---@type ClothInertia?
 local clothInertia_
 local combatParticles_
@@ -611,7 +613,7 @@ local function StartCombat()
                 target=trainingDummy_:GetHurtShapes()[1].center -- synthetic aim, real swept projectile collision
             end
             local tip=combatRig_:GetBowArrowTip()
-            local fired,shot=combatArrows_:Fire(hit.origin,(target-tip):Normalized(),charge,shotStats,tip)
+            local fired,shot=combatArrows_:Fire(hit.origin,(target-tip):Normalized(),charge,shotStats,tip,combatRig_:GetBowModelId())
             if fired and combatTest_ and combatTest_.active then combatTest_:Arrow(shot) end
             return fired
         end,
@@ -694,12 +696,14 @@ local function StartCombat()
     end
     combatEnvironment_=EnvironmentDamage.New({world=world_,cast=CombatCast,timeObject=Puzzles.FindByVolume,
         feedback=CombatFeedback,trace=CombatEnvironmentTrace})
+    bowArrowTrailFx_=BowArrowTrailFx.New(scene_)
     combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,audio=combatAudioPort,
         hit=function(...) combatMoves_:Feedback(...) end,wallHit=CombatArrowEnvironment,
         draw=function(p,visible)
             local entry=arrowNodes_[p.index]
             entry.node.enabled=visible
             combatRig_:DrawArrow(p,visible)
+            if bowArrowTrailFx_ then BowArrowTrailFx.Draw(bowArrowTrailFx_,p,visible) end
             if visible then
                 entry.node.position=Vector3.ZERO
                 local current=p.renderPos or p.pos
@@ -1840,6 +1844,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     if combatEnemies_ and not voidInputBlocked and animPreview_.index==0 then Safe('Enemies.Update',combatEnemies_.Update,combatEnemies_,dt,nomi_:Position()) end
     if trainingDummy_ then Safe('Debug.Dummy',trainingDummy_.Update,trainingDummy_) end
     if combatArrows_ then Safe('Arrows.Update',combatArrows_.Update,combatArrows_,dt) end
+    if bowArrowTrailFx_ then Safe('ArrowTrail.Update',BowArrowTrailFx.Update,bowArrowTrailFx_,dt) end
     if combatParticles_ then Safe('Particles.Update',combatParticles_.UpdateOwner,combatParticles_,hitParticleOwner_,dt) end
     Safe('Dragon.Pose',UpdateDragonPose,dt)
     if M.ride.mode=="mounted" then
@@ -2195,6 +2200,7 @@ function M.Stop()
     if handMotes_ then handMotes_:Clear(); handMotes_=nil end
     handWasOn_,combatDebugText_,combatDebugUntil_,debugDestination_=nil,nil,0,0
     if combatArrows_ then combatArrows_:Clear() end
+    if bowArrowTrailFx_ then BowArrowTrailFx.Dispose(bowArrowTrailFx_);bowArrowTrailFx_=nil end
     if combatParticles_ then combatParticles_:ClearOwner(hitParticleOwner_); combatParticles_=nil end
     if combatEnemies_ then combatEnemies_:Destroy() end
     if combatAnim_ then combatAnim_:Stop(nil,0) end

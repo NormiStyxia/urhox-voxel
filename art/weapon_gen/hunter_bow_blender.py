@@ -122,7 +122,7 @@ def point(x, depth, y):
 # Weights are per surface. Alpha follows the ribbon around each cross-section, so
 # a single longitudinal grain coordinate bends with the recurve and survives export.
 # name: (RGB weights, submask, Blender display sRGB, roughness)
-SPEC = {'wood': ((1,0,0),0,'624438',.67), 'bone': ((0,1,0),0,'D5B69A',.59),
+SPEC = {'wood': ((1,0,0),0,'624438',.42), 'bone': ((0,1,0),0,'D5B69A',.59),
         'leather': ((0,0,0),0,'503832',.82), 'flax': ((0,0,1),1,'998578',.88)}
 NAMES = list(SPEC)
 TURN_COUNT = 5
@@ -160,7 +160,7 @@ def materials():
         attr.attribute_name='grain'
         uv=node('ShaderNodeUVMap','Physical height',-1100,100);uv.uv_map='SubmaskHeight'
         split=node('ShaderNodeSeparateXYZ','Height along bow',-900,100);connect(uv.outputs[0],split.inputs[0])
-        rates={'wood':(9.5,4.5,20,.065),'bone':(7,8,16,.028),'leather':(21,102,38,.042),'flax':(7,325,9,.018)}
+        rates={'wood':(27,1.6,122,.012),'bone':(7,8,16,.028),'leather':(21,102,38,.042),'flax':(7,325,9,.018)}
         lateral,axial,lamina,depth=rates[name]
         width=scalar('MULTIPLY',attr.outputs['Fac'],lateral,'Across fibre',-860,520)
         length=scalar('MULTIPLY',split.outputs['Y'],axial,'Along fibre',-720,180)
@@ -169,7 +169,7 @@ def materials():
         noise=node('ShaderNodeTexNoise',{'wood':'Long fibre runout','bone':'Ivory striae','leather':'Hide pores','flax':'Spun fibre'}[name],-280,550)
         connect(coords.outputs[0],noise.inputs['Vector']);noise.inputs['Scale'].default_value=1.5
         noise.inputs['Detail'].default_value=3.0;noise.inputs['Roughness'].default_value=.51
-        noise.inputs['Distortion'].default_value=.18 if name=='wood' else .12
+        noise.inputs['Distortion'].default_value=.06 if name=='wood' else .12
         phase=scalar('MULTIPLY',attr.outputs['Fac'],lamina,'Growth layers',-500,-50)
         flow=scalar('MULTIPLY',noise.outputs['Fac'],3.1,'Grain drift',-65,300)
         if name=='flax':
@@ -182,10 +182,10 @@ def materials():
         field=scalar('ADD',field,.17,'Pigment',865,370)
         ramp=node('ShaderNodeValToRGB','Pigment through the material',1055,430)
         connect(field,ramp.inputs[0]);ramp.color_ramp.interpolation='EASE'
-        for e,k in zip(ramp.color_ramp.elements,{'wood':(.46,1.45),'bone':(.76,1.11),'leather':(.59,1.16),'flax':(.63,1.22)}[name]):
+        for e,k in zip(ramp.color_ramp.elements,{'wood':(.85,1.14),'bone':(.76,1.11),'leather':(.59,1.16),'flax':(.63,1.22)}[name]):
             e.color=(*np.minimum(1,color*k),1)
         bump=node('ShaderNodeBump','Micro-relief',1055,0)
-        bump.inputs['Distance'].default_value=depth*.001;bump.inputs['Strength'].default_value=.29
+        bump.inputs['Distance'].default_value=depth*.001;bump.inputs['Strength'].default_value=.08 if name=='wood' else .29
         connect(field,bump.inputs['Height'])
         bsdf=nodes['Principled BSDF'];bsdf.location=(1320,400)
         connect(ramp.outputs[0],bsdf.inputs['Base Color']);connect(bump.outputs[0],bsdf.inputs['Normal'])
@@ -616,12 +616,12 @@ def raster_previews():
                 swatch=np.frombuffer(colors[weights],dtype=np.uint8)
                 X,Y,Z=rest.T
                 if weights==(1,0,0):
-                    space=np.column_stack((grain*14.25,h*6.75))
+                    space=np.column_stack((grain*40.5,h*2.4))
                     runout=.68*fibre_noise(space)+.32*fibre_noise(2.7*space)
                     drift=np.sin(22*Y+2.2*np.sin(9*h))
-                    rings=np.sin(grain*20+3.1*runout)
-                    fibre=np.sin(210*grain+2.2*drift+4*runout)
-                    variation=.66+.55*runout+.19*rings+.075*fibre
+                    rings=np.sin(grain*122+3.1*runout)
+                    fibre=np.sin(285*grain+.6*drift+2*runout)
+                    variation=.956+.088*runout+.032*rings+.013*fibre
                 elif weights==(0,1,0):
                     variation=.96+.09*np.sin(28*grain+1.3*np.sin(57*Y))+.04*np.sin(grain*110+38*Y)*np.sin(371*X-120*Z)
                 elif weights==(0,0,1):

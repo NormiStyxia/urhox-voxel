@@ -24,7 +24,11 @@ void fragment() {
     float fibres = sin(grain_phase)*0.60 + sin(2.7*grain_phase + local_position.z*145.0)*0.40;
     ALBEDO = (alloy*steel + secondary_color.rgb*gilt + grip_color.rgb*hide*(1.0+0.08*fibres))*tone;
     METALLIC = steel*0.86+gilt*0.73;
-    ROUGHNESS = clamp(steel*(steel_roughness+0.16*(1.0-tone))+gilt*gold_roughness+hide*(0.75+0.055*fibres),0.12,0.9);
+    float surface_roughness = clamp(steel*(steel_roughness+0.16*(1.0-tone))+gilt*gold_roughness+hide*(0.75+0.055*fibres),0.12,0.9);
+    // The .51 face-tone band belongs to the machined heel and the ferrule rebate.
+    // Keep that contact surface matte as the polished rim turns into the light.
+    float contact = (1.0 - smoothstep(0.53, 0.58, COLOR.a)) * (1.0 - hide);
+    ROUGHNESS = mix(surface_roughness, 0.58, contact);
     SPECULAR = 0.55*steel + 0.48*gilt + 0.24*hide;
     vec3 n = normalize(NORMAL);
     vec3 view_delta = CAMERA_POSITION_WORLD - VERTEX;
@@ -36,5 +40,5 @@ void fragment() {
     float fres = pow(1.0-ndv,3.5);
     vec3 steel_return = alloy*(sky*0.38+fres*0.30) + vec3(0.82,0.92,1.0)*pow(rl,110.0);
     vec3 gilt_return = secondary_color.rgb*(sky*0.27+fres*0.15+0.72*pow(rl,66.0));
-    EMISSION = reflection_strength*(steel*steel_return + gilt*gilt_return)*tone;
+    EMISSION = reflection_strength*(1.0-0.72*contact)*(steel*steel_return + gilt*gilt_return)*tone;
 }

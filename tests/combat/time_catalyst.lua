@@ -49,7 +49,7 @@ local function FakeMotes(name,...)
     function motes:Count() return #self.list end
     return motes
 end
-package.loaded['dragon.VoxelFX']={WorldMotes=function(parent,name) return FakeMotes(name) end}
+package.loaded['dragon.VoxelFX']={Material=function(kind,glow) assert(kind=='square' and not glow);return {} end, WorldMotes=function(parent,name) return FakeMotes(name) end}
 local BaseMaterial=_G.Material
 rawset(_G,'Material',{new=function()
     local m=BaseMaterial:new()
@@ -116,17 +116,21 @@ end
 -- pixel mode (default): sand comets, sparks, cast ring burst
 assert(v.fx.mode=='pixel' and v.fx.ready)
 for _=1,90 do Visual.Update(v,1/60,Ctx()) end
-assert(spawned.sand>20 and spawned.spark>3,'sand + sparks spawn at rest')
+assert(v.grains and v.grains.node.enabled and spawned.sand==0,'one attached orbit, no ambient sand emitters')
+local phase=v.grains.phase
+for _=1,480 do Visual.Update(v,1/60,Ctx()) end
+assert(math.abs(v.grains.phase-phase)<1e-8,'eight-second orbit closes')
 local before=spawned.burst
 Visual.Update(v,1/60,Ctx{aiming=true,casting=true})
 assert(spawned.burst>=before+90,'cast spawns the radial splash and the 60-tick pixel clock ring')
-Visual.Draw(v);assert(v.fx.sand.draws==1 and v.fx.burst.draws==1)
+Visual.Draw(v);assert(v.fx.spark.draws==1 and v.fx.burst.draws==1)
 for _=1,120 do Visual.Update(v,1/60,Ctx()) end
 assert(v.fx.burst:Count()==0,'burst motes expire')
-local sand=v.fx.sand
-assert(Visual.SetFxMode(v)=='off' and sand:Count()==0)
-assert(Visual.SetFxMode(v)=='pixel' and v.fx.sand==sand)
+local grains=v.grains.node
+assert(Visual.SetFxMode(v)=='off' and not grains.enabled)
+assert(Visual.SetFxMode(v)=='pixel' and grains.enabled and v.grains.node==grains)
 Visual.Dispose(v)
+assert(grains.removed)
 rawset(_G,'cache',oldCache)
 rawset(_G,'Material',BaseMaterial)
 print('time_catalyst OK tris='..total)

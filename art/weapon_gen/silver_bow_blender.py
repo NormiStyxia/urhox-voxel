@@ -879,8 +879,19 @@ def silver_surfaces():
         wire(tree, grain.outputs['Fac'], bump, 'Height')
         wire(tree, bump.outputs[0], bsdf, 'Normal')
 
-    ash = material('Silver ash • growth fibres', (.69, .74, .82), 0, .65)
-    fibre(ash, (380, 530, 25), (.27, .31, .43), (.84, .87, .91), .16, .00029)
+    # Blender sockets use scene-linear RGB. The game declares its matching tint in sRGB.
+    def linear(rgb):
+        return tuple(((v + .055) / 1.055)**2.4 if v > .04045 else v / 12.92 for v in rgb)
+
+    pigment = linear((.56, .63, .72))
+    ash = material('Silver ash • cold silver lacquer', pigment, .62, .36)
+    fibre(ash, (185, 260, 19), tuple(v*.69 for v in pigment),
+          tuple(v*1.08 for v in pigment), .065, .00014)
+    lacquer = ash.node_tree.nodes['Principled BSDF']
+    setin(lacquer, 'Coat Weight', .82)
+    setin(lacquer, 'Coat Roughness', .16)
+    setin(lacquer, 'Coat IOR', 1.5)
+    setin(lacquer, 'Specular IOR Level', .50)
     silk = material('Graphite • shot silk', (.085, .095, .17), 0, .67)
     woven_grip(silk)
     setin(silk.node_tree.nodes['Principled BSDF'], 'Sheen Weight', .50)
@@ -966,6 +977,39 @@ def verify_saved_scene():
     print('PASS native scene: 0 image datablocks, 0 image samplers, 3 meshes, 5 materials, 4 cameras, 3 lamps; Cycles')
 
 
+def review_lacquer():
+    """Pair the original Cycles stills with the newly rendered coating at equal scale."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    review = OUT / 'lacquer_review'
+    font = ImageFont.truetype('/System/Library/Fonts/STHeiti Medium.ttc', 24)
+    sheet = Image.new('RGB', (1152, 1028), '#e8e8ec')
+    draw = ImageDraw.Draw(sheet)
+    rows = ['# 银枝弓银漆复核', '', '同一套三盏面光和正交相机，Cycles CPU 42 采样，AgX。', '',
+            '| 视图 | 改前实图 | 改后实图 | 轮廓 IoU |', '|---|---|---|---|']
+    for i, (view, label) in enumerate([('left', '左侧'), ('front', '正面'), ('right', '右侧'), ('iso', '斜视')]):
+        filename = f'preview_{view}.png'
+        before = Image.open(review / 'before' / filename).convert('RGBA')
+        after = Image.open(OUT / filename).convert('RGBA')
+        a, b = np.asarray(before), np.asarray(after)
+        assert a.shape == b.shape and not np.array_equal(a, b), f'{view}: missing new render'
+        ma, mb = a[:, :, 3] >= 128, b[:, :, 3] >= 128
+        overlap = (ma & mb).sum() / (ma | mb).sum()
+        assert overlap > .99, f'{view}: framing changed ({overlap:.4f})'
+        x, y = (i % 2)*576, (i//2)*514
+        draw.text((x+20,y+6), label, font=font, fill='#263747')
+        for j, (im, tag) in enumerate([(before,'改前'),(after,'银漆')]):
+            im.thumbnail((270, 435), Image.Resampling.LANCZOS)
+            sheet.paste(im, (x+j*288+(288-im.width)//2,y+41), im)
+            draw.text((x+j*288+144,y+483),tag,anchor='mm',font=font,fill='#263747')
+        rows.append(f'| {label} | [原图](before/{filename}) | [原图](../{filename}) | {overlap:.5f} |')
+    sheet.save(review/'before-after.png')
+    rows.extend(['', '[并排对比](before-after.png) · [Blender 场景](../silver_bow.blend)', '',
+                 '枝体银漆金属度 0.62、粗糙度 0.36、清漆权重 0.82、清漆粗糙度 0.16。',
+                 '展示间克隆 SilverBow.xml；清漆只覆盖木枝材质通道。'])
+    (review/'review.md').write_text(chr(10).join(rows)+chr(10))
+
+
 def blender_scene():
     global scene
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -1035,7 +1079,8 @@ def blender_scene():
 
 if __name__ == '__main__':
     mode = sys.argv[-1]
-    if mode=='check-scene': verify_saved_scene()
+    if mode=='review-lacquer': review_lacquer()
+    elif mode=='check-scene': verify_saved_scene()
     elif mode=='compare-mesh': compare_mesh()
     elif mode=='lua': verify_lua()
     elif mode=='polish': finish_contours()
@@ -1049,6 +1094,9 @@ if __name__ == '__main__':
     else:
         import bpy
         from mathutils import Vector
-        volume_geometry()
+        if mode != 'lacquer':
+            volume_geometry()
         if mode != 'export-only':
             blender_scene()
+        if mode == 'lacquer':
+            subprocess.run(['python3', str(Path(__file__).resolve()), 'review-lacquer'], check=True)

@@ -32,16 +32,16 @@ void fragment() {
     float cord = w.b*step(0.75,UV.x);
     float grain = COLOR.a;
     float height = UV.y;
-    vec2 fibrespace=vec2(grain*14.25,height*6.75);
+    vec2 fibrespace=vec2(grain*40.5,height*2.4);
     float runout=0.68*fibre_noise(fibrespace)+0.32*fibre_noise(fibrespace*2.7);
     float drift=sin(22.0*rest.y+2.2*sin(9.0*height));
-    float rings=sin(grain*20.0+3.1*runout);
-    float fibres=sin(210.0*grain+2.2*drift+4.0*runout);
-    vec3 wood=wood_color.rgb*(0.66+0.55*runout+0.19*rings+0.075*fibres);
+    float rings=sin(grain*122.0+3.1*runout);
+    float fibres=sin(285.0*grain+0.6*drift+2.0*runout);
+    vec3 wood=wood_color.rgb*(0.956+0.088*runout+0.032*rings+0.013*fibres);
     // Perturb the normal across the local lamination direction and preserve unit length.
     vec3 axis=normalize(MODEL_NORMAL_MATRIX*vec3(0.26,0.0,1.0));
     vec3 tangent=axis-dot(axis,NORMAL)*NORMAL;
-    NORMAL=normalize(NORMAL+0.045*w.r*tangent*cos(210.0*grain+2.2*drift+4.0*runout));
+    NORMAL=normalize(NORMAL+0.006*w.r*tangent*cos(285.0*grain+0.6*drift+2.0*runout));
     float striae = sin(28.0*grain+1.3*sin(57.0*rest.y));
     float pores = sin(grain*110.0+rest.y*38.0)*sin(rest.x*371.0-rest.z*120.0);
     vec3 bone = bone_color.rgb*(0.96+0.09*striae+0.04*pores);
@@ -54,7 +54,7 @@ void fragment() {
     float ndv = clamp(dot(normalize(NORMAL),v/max(length(v),0.00001)),0.0,1.0);
     float fres = pow(1.0-ndv,3.0);
     ALBEDO = (wood*w.r+bone*w.g+strap*leather+flax*cord)*(1.0+fres*(0.09*w.r+0.13*w.g+0.04*leather+0.07*cord));
-    ROUGHNESS = (0.66+0.035*fibres)*w.r+(0.60+0.03*striae)*w.g+(0.81+0.035*hide)*leather+(0.87+0.02*ply)*cord;
+    ROUGHNESS = (0.42+0.008*fibres)*w.r+(0.60+0.03*striae)*w.g+(0.81+0.035*hide)*leather+(0.87+0.02*ply)*cord;
     // All four partitions are dielectrics, including the pale ferrules.
     METALLIC = 0.0;
     SPECULAR = 0.21*w.r+0.32*w.g+0.14*leather+0.09*cord;

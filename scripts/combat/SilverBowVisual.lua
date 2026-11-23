@@ -132,8 +132,14 @@ end
 -- Use the same forge palette indices as the other showroom weapons.
 function V.Recolor(v,colors)
     if not (v and v.material and colors) then return end
-    local palette=require('combat.ForgeShowroomBlades').Palette(colors)
-    for key,name in pairs({primary='wood_color',secondary='leaf_color',accent='crystal_color',grip='grip_color'}) do
+    local paletteFor=require('combat.ForgeShowroomBlades').Palette
+    local palette=paletteFor(colors)
+    -- The stock palette leaves the authored lacquer exactly as shown in the showroom.
+    -- A custom primary dye modulates the silver pigment underneath the neutral coat.
+    local stock=paletteFor(require('combat.WeaponCatalog').Definitions.bow.colors).primary
+    local dye=palette.primary
+    v.material:SetShaderParameter('paint_tint',Variant(Vector3(dye[1]/stock[1],dye[2]/stock[2],dye[3]/stock[3])))
+    for key,name in pairs({secondary='leaf_color',accent='crystal_color',grip='grip_color'}) do
         local c=palette[key];local mat=key=='accent' and v.crystal or v.material
         if c then mat:SetShaderParameter(name,Variant(Color(c[1],c[2],c[3],1))) end
     end

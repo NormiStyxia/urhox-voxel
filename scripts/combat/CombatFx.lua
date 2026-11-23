@@ -1,6 +1,6 @@
--- Presentation only. Fixed 30 landing slots + 24 slash wedges (+24 additive edges,
--- 12 blue blade ghosts).
--- No emit/update creates a node, mesh, material, table, Color or Variant.
+-- Presentation only. Fixed landing/arc slots preserve the combat timing contract.
+-- The game path uses layered VoxelFX motes for sword arcs, charge grains and
+-- finisher impacts. The immediate-mode slots remain an offline fallback.
 ---@class CombatFx
 ---@field land table[] Fixed landing slots (30).
 ---@field arcs table[] Fixed slash wedges (24).
@@ -9,6 +9,9 @@
 local F={};F.__index=F
 F.LANDING_COUNT=30;F.ARC_COUNT=24;F.GHOST_COUNT=12
 F.GHOSTS=false
+F.PIXEL_SLASH_CAPACITY=180
+F.PIXEL_IMPACT_CAPACITY=120
+F.PIXEL_CHARGE_CAPACITY=72
 -- Vector3 is a value type in the engine: callers MUST assign the result back.
 local function set(v,x,y,z) v.x,v.y,v.z=x,y,z;return v end
 local function clamp(x,a,b)return math.max(a,math.min(b,x))end
@@ -58,8 +61,14 @@ end
 local function slot(self,kind,i,additive)
     local node=self.scene:CreateChild('CombatFx_'..kind..i..(additive and 'a' or ''));node.temporary=true;node.enabled=false
     local mat=Material:new() -- do not inherit voxel/surface-shader state from terrain
-    mat:SetTechnique(0,additive and self.additive or self.technique)
-    geometry(node,kind,mat)
+    if self.pixelMode then
+        -- Pixel mode keeps the slots as timing/state records for callers, but
+        -- submits no broad CustomGeometry. The visible path is VoxelFX motes.
+        mat.SetShaderParameter=function() end
+    else
+        mat:SetTechnique(0,additive and self.additive or self.technique)
+        geometry(node,kind,mat)
+    end
     return {node=node,mat=mat,pos=Vector3(),scale=Vector3(),rot=Quaternion(),
         x=Vector3(),y=Vector3(),z=Vector3(),age=1,ttl=0,active=false,color=1,peak=1,vx=0,vy=0,vz=0,size=0,ground=0,arc=kind=='arc'}
 end
@@ -69,6 +78,24 @@ end
 function F.New(scene,world)
     local self=setmetatable({scene=scene,land={},arcs={},edges={},ghosts={},
         colors={},head=0,ghostHead=0,ghostStep=0,width=.55,ttl=.16,tip=Vector3(),root=Vector3(),sampleTip=Vector3(),sampleRoot=Vector3(),valid=false},F)
+    local ok,pixel=pcall(function()
+        local VoxelFX=require('dragon.VoxelFX')
+        return {
+            slash=VoxelFX.Motes(scene,'SwordArcPixels',F.PIXEL_SLASH_CAPACITY,'square',true),
+            impact=VoxelFX.Motes(scene,'SwordImpactPixels',F.PIXEL_IMPACT_CAPACITY,'square',true),
+            charge=VoxelFX.Motes(scene,'SwordChargePixels',F.PIXEL_CHARGE_CAPACITY,'square',true),
+        }
+    end)
+    self.pixelMode=ok and pixel~=nil
+    if self.pixelMode then
+        self.pixel=pixel
+        self.pixelColors={
+            slash={Color(1,1,1,1),Color(.44,.82,1,.90),Color(.14,.40,1,.52),Color(0,0,0,0)},
+            heavy={Color(1,1,.88,1),Color(1,.72,.28,.92),Color(.36,.46,1,.58),Color(0,0,0,0)},
+            impact={Color(1,1,1,1),Color(.55,.82,1,.90),Color(.16,.38,.95,.52),Color(0,0,0,0)},
+            charge={Color(.86,.96,1,1),Color(.34,.72,1,.86),Color(.10,.32,.90,.44),Color(0,0,0,0)},
+        }
+    end
     self.technique=cache:GetResource('Technique','Techniques/NoTextureUnlit.xml'):Clone('CombatFxAlpha')
     local pass=self.technique:GetPass('base')
     pass:SetBlendMode(BLEND_ALPHA);pass:SetDepthWrite(false);pass:SetDepthTestMode(CMP_LESSEQUAL)
@@ -89,6 +116,27 @@ function F.New(scene,world)
     for i=1,F.GHOST_COUNT do self.ghosts[i]=slot(self,'arc',i+F.ARC_COUNT,true) end
     return self
 end
+local function spawnPixel(pool,pos,vel,life,size,colors,drag)
+    if pool then pool:Spawn{pos=pos,vel=vel,life=life,size=size,colors=colors,drag=drag or 1.8} end
+end
+local function pixelSlash(self,pos,dir,heavy)
+    if not self.pixelMode then return end
+    local colors=heavy and self.pixelColors.heavy or self.pixelColors.slash
+    local speed=heavy and .18 or .10
+    spawnPixel(self.pixel.slash,pos,dir*speed,heavy and .28 or .20,heavy and .034 or .024,colors,2.1)
+    spawnPixel(self.pixel.slash,pos-dir*.045,dir*(speed*.35),heavy and .34 or .24,heavy and .020 or .015,colors,2.4)
+end
+local function pixelImpact(self,pos,forward)
+    if not self.pixelMode then return end
+    local colors=self.pixelColors.impact
+    for i=1,18 do
+        local a=(i-1)*math.pi*2/18+.23
+        local speed=1.1+(i%4)*.25
+        local dir=Vector3(math.cos(a),.18+(i%3)*.08,math.sin(a))
+        spawnPixel(self.pixel.impact,pos+forward*.12+dir*.06,dir*speed,.34+(i%4)*.05,.018+(i%3)*.006,colors,2.0)
+    end
+    spawnPixel(self.pixel.impact,pos+forward*.18,forward*.35,.24,.040,colors,2.8)
+end
 local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
     s.pos=set(s.pos,x,y,z);s.scale=set(s.scale,sx,sy,sz)
     s.node.position=s.pos;s.node.scale=s.scale;s.node.enabled=true
@@ -97,6 +145,7 @@ local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
     s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 7 or color][math.floor((s.peak or 1)*16)+1])
 end
 function F:Impact(pos,forward)
+    pixelImpact(self,pos,forward)
     local radius=1.5
     local cx,cz=pos.x+forward.x*.65,pos.z+forward.z*.65
     local ring=self.land[1]
@@ -128,6 +177,13 @@ function F:Impact(pos,forward)
 end
 function F:Contact(pos)
     if not pos then return end
+    if self.pixelMode then
+        for i=1,12 do
+            local a=(i-1)*math.pi*2/12+.17
+            local dir=Vector3(math.cos(a),.45+(i%3)*.16,math.sin(a))
+            spawnPixel(self.pixel.impact,pos+dir*.04,dir*(1.4+(i%3)*.3),.22+(i%3)*.04,.016+(i%2)*.008,self.pixelColors.impact,2.4)
+        end
+    end
     -- Eight ice-blue crystal shards burst from the contact point.
     for i=22,29 do
         local s=self.land[i];local a=(i-22)*math.pi*.25+.2
@@ -147,6 +203,7 @@ function F:Begin(combo,heavy)
     self.ttl=(heavy or combo==4 or combo==5) and .24 or .18
     self.color=(heavy or combo==5) and 8 or 6
     self.ghostStep=0
+    if self.pixelMode then self.pixel.slash:Clear();self.pixel.charge:Clear() end
 end
 function F:Segment(root,tip)
     if self.valid then
@@ -170,6 +227,9 @@ function F:Segment(root,tip)
                 local e=self.edges[self.head]
                 e.peak=.9;e.rot:FromAxes(s.x,s.y,s.z);e.node.rotation=e.rot
                 show(self,e,cx,cy,cz,distance*1.25,.07+self.width*.08,1,7,self.ttl*.55)
+                if self.pixelMode then
+                    pixelSlash(self,Vector3(cx,cy,cz),Vector3(s.x.x,s.x.y,s.x.z),self.color==8)
+                end
                 -- Full-blade ghost streaks read as thin light pillars next to the
                 -- continuous crescent ribbon; kept pooled but no longer emitted.
                 self.ghostStep=self.ghostStep+1
@@ -184,6 +244,37 @@ function F:Segment(root,tip)
         end
     end
     self.tip=set(self.tip,tip.x,tip.y,tip.z);self.root=set(self.root,root.x,root.y,root.z);self.valid=true
+end
+function F:ContactArc(zone)
+    if not self.pixelMode or not zone then return end
+    local count=10;local half=math.rad(zone.angle*.5);local origin=zone.origin;local forward=zone.forward
+    for i=1,count do
+        local a=-half+2*half*(i-.5)/count
+        local x,z=math.sin(a),math.cos(a)
+        local dx,dz=x*forward.z+z*forward.x,z*forward.z-x*forward.x
+        local p=origin+Vector3(dx*zone.radius,.9,dz*zone.radius)
+        spawnPixel(self.pixel.slash,p,Vector3(dx*.12,.02,dz*.12),.20,.023,self.pixelColors.heavy,2.5)
+    end
+end
+function F:Charge(root,tip,charge)
+    if not self.pixelMode or not root or not tip then return end
+    self.chargePhase=(self.chargePhase or 0)+1
+    if self.chargePhase%2==0 then return end
+    local u=.18+.64*math.max(0,math.min(1,charge or 0))
+    local p=root+(tip-root)*u
+    local delta=tip-root;local len=delta:Length();if len<1e-5 then return end
+    local d=delta:Normalized()
+    local side=Vector3(-d.z,.18,d.x)
+    spawnPixel(self.pixel.charge,p+side*.045,d*.05,.24,.019,self.pixelColors.charge,1.8)
+    spawnPixel(self.pixel.charge,p-side*.045,d*-.03,.30,.014,self.pixelColors.charge,2.0)
+end
+function F:ChargeBurst(pos)
+    if not self.pixelMode or not pos then return end
+    for i=1,16 do
+        local a=(i-1)*math.pi*2/16
+        local d=Vector3(math.cos(a),.15+(i%4)*.08,math.sin(a))
+        spawnPixel(self.pixel.impact,pos+d*.035,d*(.75+(i%3)*.18),.28+(i%3)*.04,.021,self.pixelColors.heavy,2.2)
+    end
 end
 -- Subdivide the measured blade rotation, not the gameplay strike sector.
 -- Bounded work even for low FPS; interpolated roots preserve actor translation.
@@ -221,6 +312,9 @@ local function ageSlot(self,s,dt)
     s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and s.age<.03 and 7 or s.color][math.floor(alpha*16)+1])
 end
 function F:Update(dt)
+    if self.pixelMode then
+        self.pixel.slash:Update(dt);self.pixel.impact:Update(dt);self.pixel.charge:Update(dt)
+    end
     for i,s in ipairs(self.land) do
         -- Impact is emitted before Rig.Update. Preserve the first presented
         -- centre flash instead of consuming it entirely on a 30 Hz frame.
@@ -257,11 +351,16 @@ end
 function F:ClearSword()
     self.valid,self.slash=false,false
     clearPool(self.arcs);clearPool(self.edges);clearPool(self.ghosts)
+    if self.pixelMode then self.pixel.slash:Clear();self.pixel.charge:Clear() end
 end
 function F:Clear()
     self:ClearSword();clearPool(self.land)
+    if self.pixelMode then self.pixel.impact:Clear() end
 end
 function F:Dispose()
+    if self.pixelMode then
+        for _,pool in pairs(self.pixel) do pool:Clear();pool.node:Remove() end
+    end
     for _,pool in ipairs({self.land,self.arcs,self.edges,self.ghosts}) do
         for _,s in ipairs(pool) do s.node:Remove();s.mat:Dispose() end
     end

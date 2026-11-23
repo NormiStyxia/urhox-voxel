@@ -39,8 +39,12 @@ void fragment() {
     METALLIC = steel * 0.88 + iron * (0.76 - 0.53 * carved);
     float grind = sin(local_position.x * 293.0 + local_position.z * 517.0 + local_position.y * 8.0);
     float brushing = grind * sin(local_position.x * 451.0 - local_position.y * 12.0);
-    ROUGHNESS = clamp(steel * (steel_roughness + 0.06 * inset + grind_variation * brushing) + iron * (iron_roughness + 0.19 * carved)
+    float surface_roughness = clamp(steel * (steel_roughness + 0.06 * inset + grind_variation * brushing) + iron * (iron_roughness + 0.19 * carved)
                     + leather * clamp(leather_roughness + fibres * 0.045, 0.55, 0.90), 0.12, 0.90);
+    // The .51 face-tone band belongs to the machined heel and the ferrule rebate.
+    // Keep that contact surface matte as the polished rim turns into the light.
+    float contact = (1.0 - smoothstep(0.53, 0.58, COLOR.a)) * (1.0 - leather);
+    ROUGHNESS = mix(surface_roughness, 0.58, contact);
     SPECULAR = 0.64 * steel + (0.52 - 0.20 * carved) * iron + 0.23 * leather;
 
     vec3 N = normalize(NORMAL);
@@ -56,7 +60,7 @@ void fragment() {
     float glint = steel * pow(rl, 108.0) + iron * (1.0 - 0.7 * carved) * pow(rl, 72.0);
     vec3 metal_return = base * (reflection - vec3(0.45)) * environment_strength * METALLIC;
     vec3 rim = base * fresnel * (0.18 * steel + 0.11 * iron + 0.04 * leather);
-    ALBEDO = clamp((base + metal_return + rim) * linear_shade
-                 + MAIN_LIGHT_COLOR * glint * highlight_strength, 0.0, 1.0);
+    ALBEDO = clamp((base + (metal_return + rim) * (1.0 - 0.72 * contact)) * linear_shade
+                 + MAIN_LIGHT_COLOR * glint * highlight_strength * (1.0 - contact), 0.0, 1.0);
     EMISSION = vec3(0.0);
 }
