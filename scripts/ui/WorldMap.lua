@@ -49,6 +49,8 @@ local function paperStrip(vg,H,x,width,sourceX,sourceWidth)
         if section==2 then y,sy,sh,h=12,10,106,H-24
         elseif section==3 then y,sy=H-12,116 end
         local repeatCount=section==2 and math.max(1,round(h/(sh*sx))) or 1
+        -- Tall sheets repeat only clean pulp; the dark torn lip stays at the rim.
+        if repeatCount>1 and sourceX==12 then sy,sh=16,94 end
         for tile=0,repeatCount-1 do
             local dy=y+round(h*tile/repeatCount)
             local dh=y+round(h*(tile+1)/repeatCount)-dy
@@ -58,15 +60,37 @@ local function paperStrip(vg,H,x,width,sourceX,sourceWidth)
         end
     end
 end
+-- map_scroll's top 224x126 is the nine-sliced paper. The transparent cells
+-- beneath it are drawn at native resolution so the engraved curls stay fine.
+local function stamp(vg,x,y,sx,sy,w,h)
+    Draw.Save(vg);nvgIntersectScissor(vg,x,y,w,h)
+    nvgTranslate(vg,x-sx,y-sy);nvgScale(vg,.5,.5)
+    Draw.Image(vg,'map_scroll',0,0);Draw.Restore(vg)
+end
+local surveyInk={201,208,192}
+local function chartBorder(vg,W,H)
+    local l,r,t,b=17,W-17,31,H-53
+    local midX,midY=round(W*.5),round((t+b)*.5)
+    Draw.Rect(vg,l+4,midY,r-l-8,1,surveyInk)
+    Draw.Rect(vg,midX,t+4,1,b-t-8,surveyInk)
+    for inset=0,3,3 do
+        local color=inset==0 and edge or line
+        local x,y=l+inset,t+inset
+        local w,h=r-l-inset*2,b-t-inset*2
+        Draw.Rect(vg,x,y,w+1,1,color);Draw.Rect(vg,x,y+h,w+1,1,color)
+        Draw.Rect(vg,x,y,1,h,color);Draw.Rect(vg,x+w,y,1,h,color)
+    end
+    stamp(vg,l+4,t+4,0,171,91,40);stamp(vg,r-95,t+4,94,171,91,40)
+    stamp(vg,l+4,b-43,0,214,91,40);stamp(vg,r-95,b-43,94,214,91,40)
+    stamp(vg,r-108,t-8,0,128,85,30)
+    stamp(vg,l+1,b-34,90,128,58,37)
+    stamp(vg,r-24,b-round((b-t)*.32),152,128,27,8)
+end
 local function chart(vg,W,H,left,right)
     local roller=12
     Draw.Save(vg);nvgIntersectScissor(vg,left+roller,0,math.max(0,right-left-roller*2),H)
     paperStrip(vg,H,roller,W-roller*2,12,200)
-    Draw.Rect(vg,19,31,W-38,1,edge);Draw.Rect(vg,19,H-53,W-38,1,edge)
-    for x=25,W-24,8 do
-        local tick=(x-25)%32==0 and 3 or 1
-        Draw.Rect(vg,x,32,1,tick,line);Draw.Rect(vg,x,H-53-tick,1,tick,line)
-    end
+    chartBorder(vg,W,H)
     Draw.Restore(vg)
     paperStrip(vg,H,left,roller,0,12);paperStrip(vg,H,right-roller,roller,212,12)
 end
