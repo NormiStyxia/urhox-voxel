@@ -1621,6 +1621,10 @@ end
 function Rig:SyncWing(dt)
     local entry=self.entries.sword
     if SyncAuthored(self,entry,self.active=='sword' and entry.mesh.alpha>=.5) then return end
+    if entry.mesh.blueprint.config.modelId~='wing' then
+        BuildFallback(self,entry)
+        return
+    end
     SyncFallback(self,entry,entry.wing~=nil)
     if not entry.wing then return end
     if self.transition and self.transition.holo and self.active=='sword' then
@@ -1674,6 +1678,10 @@ end
 function Rig:SyncThorn(dt)
     local entry=self.entries.bow
     if SyncAuthored(self,entry,self.active=='bow' and entry.mesh.alpha>=.5) then return end
+    if entry.mesh.blueprint.config.modelId~='thorn' then
+        BuildFallback(self,entry)
+        return
+    end
     local thorn=entry and entry.thorn
     SyncFallback(self,entry,thorn and thorn.ready and not thorn.failed)
     if not thorn then return end
@@ -1705,27 +1713,35 @@ local function WithModelId(blueprint,modelId)
     copy.config=config
     return copy
 end
-function Rig:Update(dt)
+-- WeaponStore calls this after a saved equip change. Update also runs it for
+-- configuration loaded at startup and gives interrupted model loads a retry.
+function Rig:SyncEquipmentModels()
     local slots=self.config.progress.slots
     if self.swordId~=slots.sword.weapon then
-        self.swordId=slots.sword.weapon
-        self.entries.sword.mesh.blueprint=WithModelId(self.entries.sword.mesh.blueprint,self.swordId)
-        local _,grade=Catalog.Find(Catalog.Weapons.sword,self.swordId)
+        local id=slots.sword.weapon
+        self.entries.sword.mesh.blueprint=WithModelId(self.entries.sword.mesh.blueprint,id)
+        local _,grade=Catalog.Find(Catalog.Weapons.sword,id)
         self:AttachWing(self.entries.sword,self.entries.sword.mesh.blueprint)
         if self.entries.sword.authoredVisual then
             local colors=self.config.sword.colors
             self.entries.sword.authored.Recolor(self.entries.sword.authoredVisual,colors)
         else WingVisual.SetGrade(self.entries.sword.wing,grade) end
+        self.swordId=id
     end
     if self.bowId~=slots.bow.weapon then
-        self.bowId=slots.bow.weapon
-        self.entries.bow.mesh.blueprint=WithModelId(self.entries.bow.mesh.blueprint,self.bowId)
-        local _,grade=Catalog.Find(Catalog.Weapons.bow,self.bowId)
+        local id=slots.bow.weapon
+        self.entries.bow.mesh.blueprint=WithModelId(self.entries.bow.mesh.blueprint,id)
+        local _,grade=Catalog.Find(Catalog.Weapons.bow,id)
         self:AttachThorn(self.entries.bow,self.entries.bow.mesh.blueprint)
         if self.entries.bow.authoredVisual then
             if self.entries.bow.authored.Recolor then self.entries.bow.authored.Recolor(self.entries.bow.authoredVisual,self.config.bow.colors) end
         else ThornVisual.SetGrade(self.entries.bow.thorn,grade) end
+        self.bowId=id
     end
+end
+
+function Rig:Update(dt)
+    self:SyncEquipmentModels()
     self:UpdateCore(dt)
     self:SyncWing(dt)
     self:SyncThorn(dt)

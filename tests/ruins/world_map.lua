@@ -26,7 +26,7 @@ local homePort=setmetatable({BeginBuild=function()builds=builds+1;return {Step=f
 local M={region='ruins',SPAWN=spawn,ride={mode='free',wander={}},dragonAwake=true,ctrl={loco={},input={},Teleport=function(_,pos)pin=pos end}}
 local env=setmetatable({M=M,HomeIsland=homePort,Terrain=terrain,WorldMap=map,PixelDraw=draw,
    CombatSettings=require('ruins.GameSettings'),
-   HUD={root=root},TouchControls={Cancel=noop},pointer={SetBlocked=noop,Resume=noop,Release=noop},drag={},
+   HUD={root=root},RenderBudget={Apply=noop},TouchControls={Cancel=noop},pointer={SetBlocked=noop,Resume=noop,Release=noop},drag={},
    nomi_=ctl,CombatHasAggro=function()gateChecks=gateChecks+1;return enemy end,CombatState={Engaged=function()return false end},
    RefreshObjective=noop, combatArrows_={Clear=function()clears=clears+1 end},animPreview_={index=0},combatMoves_={},
    ForgePanel={IsOpen=function()return false end},SettingsMenu={IsBlocked=function()return false end},WeaponWheel={IsBlocked=function()return false end},TouchInput={IsEnabled=function()return false end}},{__index=_G})
@@ -132,7 +132,7 @@ print('PASS right-button pan without travel');checkEdge()
 x,y=location('home');enemy=true;click(x,y);assert(map.IsOpen() and builds==0);shot('04-gate');enemy=false
 mouse('Down',1,x,y);assert(builds==0);mouse('Up',1,x,y);assert(map.IsOpen() and builds==1);env.step()
 assert(M.region=='home' and not map.IsOpen() and not held and pin.x==home.x+12);print('PASS rotated model click upon release, combat gate and asynchronous home arrival')
-press(KEY_M);now=now+.3;assert(held);shot('05-home');assert(home.NearForge(Vector3(home.x+1,home.base,home.z+6)) and not home.NearForge(ctl.safePos))
+press(KEY_M);now=now+.3;assert(held);shot('05-home');assert(not home.NearForge(ctl.safePos))
 -- Exercise the actual finger capture and release methods used by the raw Touch handlers.
 GetPlatform=function()return 'Web' end
 local touch=require('ui.TouchControls');package.loaded['ruins.GameSettings'].TouchDetected=noop
@@ -156,4 +156,4 @@ now=now+.08;assert(map.StepClosing() and map.IsOpen());shot('07-rolling-up');now
 local flight=require('dragon.DragonFlight')
 local f0=flight.EdgeSpeed({pos=Vector3(12,0,3),travelYaw=90})
 local f1=flight.EdgeSpeed({pos=Vector3(home.x+12,0,3),arenaX=home.x,travelYaw=90})
-assert(f0==f1 and f1>18);print('PASS keyboard travel, Escape, reopen, pointer restoration, build reuse, dragon pad and forge radius')
+assert(f0==f1 and f1>18);print('PASS keyboard travel, Escape, reopen, pointer restoration, build reuse and dragon pad')

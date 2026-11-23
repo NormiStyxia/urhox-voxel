@@ -68,11 +68,16 @@ State.Stop();rig:Dispose()
 assert(world.created==world.removed)
 THORN_MATERIAL_MISSING=false
 scene=Mock.Node('bow upload');world=Mock.World(scene)
+Store.Load=function()
+    local fixture=Store.Default()
+    fixture.progress.slots.bow.levels.thorn=1
+    return assert(Store.Edit(fixture,'bow','select','thorn'))
+end
 rig=Rig.New(scene,world,Mock.Nomi(scene))
 local bow=rig.entries.bow
 assert(bow.thorn and not bow.mesh.volume and #rig.bowDrawMeshes==0)
 rig:Update(0)
-assert(bow.thorn.grade==1)
+assert(bow.thorn.grade==3)
 bow.thorn.failed=true
 rig:Update(0)
 assert(not bow.thorn and bow.mesh.volume and #rig.bowDrawMeshes==3)

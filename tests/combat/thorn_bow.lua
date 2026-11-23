@@ -38,6 +38,12 @@ assert(m.sockets.top[2]>.45 and m.sockets.bottom[2]<-.45)
 
 -- WeaponRig wiring: material missing keeps the voxel bow; present swaps visuals.
 local Rig=require('combat.WeaponRig')
+local Store=require('combat.WeaponStore')
+Store.Load=function()
+    local fixture=Store.Default()
+    fixture.progress.slots.bow.levels.thorn=1
+    return assert(Store.Edit(fixture,'bow','select','thorn'))
+end
 local function NewRig()
     local scene=Mock.Node('scene');local world=Mock.World(scene);local nomi=Mock.Nomi(scene)
     return Rig.New(scene,world,nomi)

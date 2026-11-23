@@ -42,8 +42,16 @@ local State=require('combat.CombatState')
 local Store=require('combat.WeaponStore')
 Store.Save=function() return true end
 local Rig=require('combat.WeaponRig')
+local function grantModels(config)
+    -- Visibility fixtures test every selectable model independently of economy.
+    for class,ids in pairs({sword={'warden','wing'},bow={'silver','thorn'}}) do
+        for _,id in ipairs(ids) do config.progress.slots[class].levels[id]=1 end
+    end
+    return config
+end
 local world=Mock.World(scene)
 local rig=Rig.New(scene,world,Mock.Nomi(scene))
+grantModels(rig.config)
 assert(rig.pixelSwordFx and rig.shockBurst.pixelMode,'exercise real billboard pool')
 State.Configure{rig=rig,explicitSelection=true}
 local function tick(n)
@@ -62,10 +70,31 @@ for _,item in ipairs({{'sword','iron'},{'bow','field'},{'sword','wing'},{'bow','
     State.SetBusy(false);tick(90);assert(e.pivot.parent==rig.sockets['back_'..class] and v.node.enabled)
     State.Exit('manual');tick(40);assert(not v.node.enabled);State.Enter('manual');tick(40)
 end
+assert(State.SetWeapon('sword'));tick(40)
+assert(Store.Forge(rig,'sword','level','iron'))
+local original=rig.config
+local entry=rig.entries.sword
+local originalVisual=entry.authoredVisual
+local oldPose=rig.pose
+local saveCalls=0
+Store.Save=function(nextConfig)
+    saveCalls=saveCalls+1
+    assert(rig.config==original and entry.authoredVisual==originalVisual,'save happens before changing the live loadout')
+    assert(nextConfig.sword.modelId=='warden' and nextConfig.progress.slots.sword.levels.iron==nil)
+    return saveCalls>1
+end
+assert(not Store.Forge(rig,'sword','smelt','warden','iron'))
+assert(saveCalls==1 and rig.config==original and entry.authoredVisual==originalVisual)
+assert(Store.Forge(rig,'sword','smelt','warden','iron'))
+assert(saveCalls==2 and rig.config.progress.slots.sword.levels.warden==2)
+assert(entry.authoredId=='warden' and entry.authoredVisual~=originalVisual,'the new model is bound before Forge returns')
+assert(rig.active=='sword' and rig.pose==oldPose and State.GetSelection()=='sword')
+Store.Save=function() return true end
 State.Stop();rig:Dispose();assert(world.created==world.removed,'volume leak')
+print('PASS equipped smelt saves once and rebinds the model immediately, failed save preserves the live model')
 
 -- Cold start from a saved common loadout, so there is no cached legendary body.
-local config=assert(Store.Normalize(Store.Default()))
+local config=grantModels(Store.Default())
 Store.Load=function() return config end
 local function failureCase()
     local root=Mock.Node('missing optional backend');world=Mock.World(root)

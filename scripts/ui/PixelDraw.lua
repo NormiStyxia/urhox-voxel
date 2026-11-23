@@ -60,12 +60,20 @@ function M.Begin(vg, screenSpace)
     nvgFontSizeMethod(vg,NVG_SIZE_PIXEL)
 end
 function M.Finish(vg) M.Restore(vg) end
+local function CreatePixelFont(vg)
+    local font=nvgCreateFont(vg,'ruins-pixel','Fonts/ArkPixel-12px-zh_hans.ttf')
+    if font>=0 and nvgAddFallbackFontId then
+        local fallback=nvgCreateFont(vg,'ruins-pixel-fallback','Fonts/MiSans-Regular.ttf')
+        if fallback>=0 then nvgAddFallbackFontId(vg,font,fallback) end
+    end
+    return font
+end
 local function Context(vg)
     local c = contexts[vg]
-    if not c then c = {images={}, retry={}, paints={}, font=nvgCreateFont(vg,'ruins-pixel','Fonts/ArkPixel-12px-zh_hans.ttf')}; contexts[vg]=c end
+    if not c then c = {images={}, retry={}, paints={}, font=CreatePixelFont(vg)}; contexts[vg]=c end
     return c
 end
-local function Image(vg,name)
+local function Image(vg,name,path)
     local c = Context(vg)
     local handle = c.images[name] or 0
     local w,h=0,0
@@ -75,12 +83,20 @@ local function Image(vg,name)
     local now=GetTime():GetElapsedTime()
     if now<(c.retry[name] or 0) then return nil end
     c.retry[name]=now+.25
-    handle=nvgCreateImage(vg,'ui/touch/'..name..'.png',NVG_IMAGE_NEAREST) or 0
+    handle=nvgCreateImage(vg,path or 'ui/touch/'..name..'.png',NVG_IMAGE_NEAREST) or 0
     c.images[name]=handle
     if handle<=0 then return nil end
     w,h=nvgImageSize(vg,handle)
     if not w or not h or w<=0 or h<=0 then return nil end
     return handle,w,h
+end
+-- Source texels are drawn at one unit in the caller's pixel grid.
+function M.ImagePixels(vg,path,x,y,sx,sy,w,h)
+    local img,iw,ih=Image(vg,path,path)
+    if not img then return false end
+    nvgBeginPath(vg); nvgRect(vg,x,y,w or iw,h or ih)
+    nvgFillPaint(vg,nvgImagePattern(vg,x-(sx or 0),y-(sy or 0),iw,ih,0,img,1)); nvgFill(vg)
+    return true
 end
 local function Color(c,alpha)
     local a=math.max(0,math.min(255,math.floor((alpha or 1)*(c[4] or 255)+.5)))
@@ -94,6 +110,36 @@ local function Color(c,alpha)
 end
 function M.Rect(vg,x,y,w,h,c,alpha)
     nvgBeginPath(vg); nvgRect(vg,x,y,w,h); nvgFillColor(vg,Color(c,alpha)); nvgFill(vg)
+end
+local scrollTexture='ui/forge/panel.png'
+local scrollPaper={234,231,216}
+function M.ScrollPaper(vg,w,h,left,right)
+    -- Full texture includes the fixed weapon panel's printed artwork.
+    if left==nil then
+        if not M.ImagePixels(vg,scrollTexture,0,0) then M.Rect(vg,0,0,w,h,scrollPaper) end
+        return
+    end
+    -- The map exposes a moving window onto the paper. Tile only the unprinted
+    -- edge and roller strips so the native texels retain their shape.
+    local roller,rim,inner=12,10,356
+    M.Save(vg)
+    nvgIntersectScissor(vg,left+roller,0,right-left-2*roller,h)
+    for x=roller,w-roller-1,inner do
+        local span=math.min(inner,w-roller-x)
+        M.ImagePixels(vg,scrollTexture,x,0,roller,0,span,rim)
+        M.ImagePixels(vg,scrollTexture,x,h-rim,roller,204,span,rim)
+    end
+    M.Rect(vg,roller,rim,w-2*roller,h-2*rim,scrollPaper)
+    M.Restore(vg)
+    for side=1,2 do
+        local x,sx=left,0
+        if side==2 then x,sx=right-roller,368 end
+        M.ImagePixels(vg,scrollTexture,x,0,sx,0,roller,rim)
+        for y=rim,h-rim-1,194 do
+            M.ImagePixels(vg,scrollTexture,x,y,sx,rim,roller,math.min(194,h-rim-y))
+        end
+        M.ImagePixels(vg,scrollTexture,x,h-rim,sx,204,roller,rim)
+    end
 end
 -- Paints are source-local, so moving/resizing a panel never creates another
 -- paint. Integer alpha is also the color path's existing 8-bit precision.
@@ -171,7 +217,7 @@ local function Font(vg,size)
         local now=GetTime():GetElapsedTime()
         if now<(c.fontRetry or 0) then return false end
         c.fontRetry=now+.25
-        c.font=nvgCreateFont(vg,'ruins-pixel','Fonts/ArkPixel-12px-zh_hans.ttf')
+        c.font=CreatePixelFont(vg)
         if c.font<0 then return false end
     end
     nvgFontFaceId(vg,c.font)

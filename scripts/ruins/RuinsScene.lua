@@ -84,7 +84,6 @@ local WeaponRig = require('combat.WeaponRig')
 local EnemySpawner = require('combat.enemies.Spawner')
 local CombatHUD = require('ui.CombatHUD')
 local ForgePanel = require('ui.ForgePanel')
-local WeaponLoadout = require('combat.WeaponLoadout')
 local WeaponStore = require('combat.WeaponStore')
 local ForgeShowroom = require('combat.ForgeShowroom')
 local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
@@ -551,7 +550,6 @@ local function OpenForge()
     HUD.SetForgeVisibility(ForgePanel.HudHidden); CombatHUD.SetForgeVisibility(ForgePanel.HudHidden)
     TouchControls.SetForgeVisibility(ForgePanel.HudHidden); PerformanceHUD.SetForgeVisibility(ForgePanel.HudHidden)
     ForgePanel.Open({rig=combatRig_,canOpen=CanOpenForge,
-        onCommit=function(config) return WeaponLoadout.Commit(combatRig_,config,CombatState) end,
         onOpen=function()
             -- Once per opening: distinguish a stale/missing module cache from a
             -- phase issue in Web logs, without probing or printing each frame.
@@ -729,19 +727,19 @@ local function StartCombat()
         PlayerPos=function() return nomi_:Position() end,
         DamagePlayer=function(info)
             if ForgePanel.IsOpen() then ForgePanel.Close(true) end
+            if SettingsMenu.IsBagOpen() then SettingsMenu.Close() end
             return CombatHit.Apply(combatMoves_,info)
         end,
         OnEnemyAggro=function(id)
             if ForgePanel.IsOpen() then ForgePanel.Close(true) end
+            if SettingsMenu.IsBagOpen() then SettingsMenu.Close() end
             if animPreview_.index==0 then CombatState.OnEnemyAggro(id) end
         end,
         OnEnemyDead=function(enemy)
             combatMoves_.target=enemy
-            local progress=combatRig_.config.progress
-            progress.ore=math.min(999999,progress.ore+3)
-            progress.sand=math.min(999999,progress.sand+2)
-            local saved=WeaponStore.Save(combatRig_.config)
-            CombatHUD.Say(saved and '强化矿 +3　淬炼砂 +2' or '已获得材料，本次保存失败',1.6)
+            if ForgePanel.IsOpen() then ForgePanel.Close(true) end
+            local _,message=WeaponStore.RewardKill(combatRig_)
+            CombatHUD.Say(message,2.5)
         end})
     M.combat={state=CombatState,moves=combatMoves_,enemies=combatEnemies_,anim=combatAnim_,arrows=combatArrows_}
     combatParticles_=combatEnemies_:GetParticlePool()
@@ -826,6 +824,13 @@ local function OpenWorldMap()
         TouchControls.Cancel();combatInputBlocked=true;pointer:SetBlocked(false);pointer:Release('map-close');pointer:Resume()
     end,TouchInput.IsEnabled())
 end
+local function CanOpenWeaponBag()
+    return M.ride and M.ride.mode=='free' and nomi_.cc.onGround and not combatMoves_.dead
+        and input.focus and not input.minimized
+        and not CombatState.Engaged() and not CombatHasAggro() and not voidInputBlocked and not M.debugOn
+        and not WorldMap.IsOpen() and not ForgePanel.IsOpen() and not WeaponWheel.IsBlocked()
+        and not (M.housePanel and M.housePanel.open) and animPreview_.index==0
+end
 local function AttachTouchControls()
     local touchState={}
     local cooldown = {}
@@ -888,7 +893,17 @@ local function AttachTouchControls()
         drag.buttons=0
         caster_.charging,caster_.charge=false,0
         if M.stream then M.stream:Stop(true) end
-    end)
+    end,{
+        available=CanOpenWeaponBag,
+        unavailable=function() CombatHUD.Say('请脱离警戒并回到地面，再打开背包',1.5) end,
+        selection=CombatState.GetSelection,
+        progress=function() return combatRig_.config.progress end,
+        equip=function(class,id)
+            if not CanOpenWeaponBag() then return false,'请脱离警戒后换装' end
+            local ok,message=WeaponStore.Forge(combatRig_,class,'select',id)
+            return ok,ok and '已装备' or message
+        end,
+    })
 end
 
 -- ---------------------------------------------------------------- 启动
@@ -1197,6 +1212,14 @@ function Ruins_HandleKeyDown(eventType, eventData)
         return
     end
     if menuKey==KEY_ESCAPE and SettingsMenu.IsOpen() then SettingsMenu.Close(); return end
+    if menuKey==KEY_B and M.ride and M.ride.mode=='free' then
+        if eventData:GetBool('Repeat') then return end
+        if SettingsMenu.IsBagOpen() then SettingsMenu.Close()
+        elseif not SettingsMenu.IsBlocked() and not SettingsMenu.Open('bag') then
+            CombatHUD.Say('请脱离警戒并回到地面，再打开背包',1.5)
+        end
+        return
+    end
     if SettingsMenu.IsBlocked() then return end
     if TouchInput.IsEnabled() then return end
     local key = eventData:GetInt("Key")

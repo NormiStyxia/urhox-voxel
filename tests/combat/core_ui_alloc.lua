@@ -147,24 +147,23 @@ if not base then
  sourceHidden=false;calls=0;for _,entry in ipairs(renders)do entry.run()end;assert(calls>0)
  for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(nil)end
  package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
- -- Use ForgePanel's actual phase function/getter, not a hand-written boolean,
+ -- Use ForgePanel's actual getter and session phases,
  -- with the registered getter route and a deliberately absent module cache.
- local ff=assert(io.open('scripts/ui/ForgePanel.lua'));local fs=ff:read('*a');ff:close()
- local constants=assert(fs:match('(local FADE_OUT,REVEAL=[^\n]+)'))
- local phase=assert(fs:match('(local function PhaseValues.-)\nlocal function Render'))
- local getter=assert(fs:match('(function M.HudHidden.-)\nend'))..'\nend'
- local fe={M={},Clamp=function(x,a,b)return math.max(a,math.min(b,x))end}
- local actual=assert(load(constants..'\n'..phase..'\n'..getter..'\nreturn M.HudHidden','actual Forge phase getter','t',fe))()
+ package.loaded['ui.ForgePanel']=nil
+ local actual=require('ui.ForgePanel').HudHidden
+ local sessionIndex
+ for i=1,10 do if debug.getupvalue(actual,i)=='session' then sessionIndex=i;break end end
+ assert(sessionIndex)
  for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(actual)end
  package.loaded['ui.ForgePanel']=nil
- for _,v in ipairs({{phase='opening',phaseT=0,want=false},{phase='opening',phaseT=.13,want=true},
-  {phase='revealing',phaseT=.15,want=true},{phase='open',phaseT=0,want=true},
-  {closing=true,closeStage=1,closeT=.1,want=true},{closing=true,closeStage=2,closeT=.05,want=true},
-  {closing=true,closeStage=2,closeT=.3,want=false},{finished=true,want=false}})do
-  fe.session=v;assert(actual()==v.want);calls=0
+ for _,v in ipairs({{phase='opening',phaseTime=0,want=false},{phase='opening',phaseTime=.13,want=true},
+  {phase='reveal',phaseTime=.15,want=true},{phase='open',phaseTime=0,want=true},
+  {phase='closing',phaseTime=.1,want=true},{phase='closed_reveal',phaseTime=.05,want=false}})do
+  debug.setupvalue(actual,sessionIndex,v);assert(actual()==v.want);calls=0
   for _,entry in ipairs(renders)do entry.run()end
   assert((calls==0)==v.want,'actual opening/revealing/open/closing/finish visibility contract')
  end
+ debug.setupvalue(actual,sessionIndex,nil)
  for _,mod in ipairs({HUD,Combat,Touch,Performance})do mod.SetForgeVisibility(nil)end
  package.loaded['ui.ForgePanel']={HudHidden=function()return hidden end}
  -- A long open session emits only one hide log per layer, not one per frame.

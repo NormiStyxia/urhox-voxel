@@ -31,7 +31,8 @@ rig:Update(1/60)
 local hit=rig:GetHit()
 Mock.VectorNear(hit.origin,nomi.castSocket:LocalToWorld(Vector3(.03,0,.06)))
 Mock.VectorNear(hit.dir,Vector3(0,1,0))
-assert(hit.length>0 and hit.radius==.12 and rig:GetStats().attack==10)
+assert(hit.length>0 and hit.radius==.12)
+Mock.Near(rig:GetStats().attack,10*1.08)
 for i=1,12 do nomi.node.position=Vector3(i*.03,0,0);rig:Update(1/60) end
 for _,trail in ipairs(rig.trails) do assert(not trail.node.enabled,'movement outside active is not a swing') end
 local samplePool={}
@@ -70,7 +71,7 @@ assert(rig:ApplyAppearance(c) and world.rebuilds==initialRebuilds)
 assert(rig.config.bow.colors.accent==2,'thorn bow preserves its original palette')
 c=Parts.DefaultWeapon('sword');c.weapon='sword';c.colors.accent=6
 assert(rig:ApplyAppearance(c) and world.rebuilds==initialRebuilds)
-assert(math.abs(rig:GetStats().move-.5*1.10)<1e-9,'appearance cannot change gameplay')
+assert(math.abs(rig:GetStats().move-.5*1.10*1.10)<1e-9,'appearance cannot change gameplay')
 assert(not rig:SetActive("axe") and not rig:SetPose("fly") and not rig:ApplyAppearance({}))
 rig:SetPose("hidden");frames(18)
 assert(not rig.entries.bow.mesh.node.enabled)
@@ -622,6 +623,13 @@ print('PASS R8 essentialHit at low quality, 40/60ms white, .8/1.5 degree mesh-on
 -- Wing sword visual: replaces the voxel sword mesh visually only; hit/sockets stay voxel-driven.
 do
     local WingVisual=require("combat.WingSwordVisual")
+    local Store=require('combat.WeaponStore')
+    local load=Store.Load
+    Store.Load=function()
+        local fixture=Store.Default()
+        fixture.progress.slots.sword.levels.wing=1
+        return assert(Store.Edit(fixture,'sword','select','wing'))
+    end
     rawset(_G,'WING_MATERIAL_MISSING',nil)
     local sc=Mock.Node("scene") --[[@as any]]
     local w=Mock.World(sc) --[[@as any]]
@@ -666,5 +674,6 @@ do
     r3:Dispose()
     WingVisual.ENABLED=true
     rawset(_G,'WING_MATERIAL_MISSING',true)
+    Store.Load=load
 end
 print('PASS wing sword visual: pivot-attached, pose/active gating, voxel mesh hidden, recolour/rebuild on Apply, dispose, fallback + kill switch')

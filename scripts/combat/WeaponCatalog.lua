@@ -31,34 +31,54 @@ M.Weapons={
 }
 -- Per-rank multipliers. All attributes apply to every weapon of that class.
 M.Imprints={
-    sword={{id='edge',name='锋芒剑印',stat='attack',label='攻击',bonus=.08},
-        {id='reach',name='长锋剑印',stat='reach',label='攻击范围',bonus=.10},
-        {id='impact',name='震刃剑印',stat='poise',label='削韧',bonus=.15}},
-    bow={{id='feather',name='白羽矢印',stat='attack',label='攻击',bonus=.08},
-        {id='awl',name='凿甲矢印',stat='armorBreak',label='破甲',bonus=.20},
-        {id='anchor',name='镇石矢印',stat='poise',label='削韧',bonus=.15}},
-    time={{id='rift',name='裂地法印',stat='terrainRadius',label='破坏范围',bonus=.12},
-        {id='echo',name='余震法印',stat='poise',label='碎时削韧',bonus=.25}},
+    -- Two options for each of the three slots in each weapon class.
+    sword={{id='edge',name='锋芒剑印',role='edge',stat='attack',label='攻击',bonus=.08},
+        {id='reach',name='长锋剑印',role='break',stat='reach',label='攻击范围',bonus=.10},
+        {id='impact',name='震刃剑印',role='break',stat='poise',label='削韧',bonus=.15},
+        {id='jiying',name='疾影剑印',role='time',stat='reach',label='攻击范围',bonus=.06},
+        {id='ruishi',name='锐势剑印',role='edge',stat='attack',label='攻击',bonus=.12},
+        {id='ningshi',name='凝时剑印',role='time',stat='poise',label='削韧',bonus=.12}},
+    bow={{id='feather',name='白羽矢印',role='edge',stat='attack',label='攻击',bonus=.08},
+        {id='awl',name='凿甲矢印',role='break',stat='armorBreak',label='破甲',bonus=.20},
+        {id='anchor',name='镇石矢印',role='break',stat='poise',label='削韧',bonus=.15},
+        {id='xunbu',name='迅步矢印',role='time',stat='move',label='移动',bonus=.10},
+        {id='manxian',name='满弦矢印',role='edge',stat='attack',label='攻击',bonus=.12},
+        {id='liuxing',name='流影矢印',role='time',stat='move',label='移动',bonus=.06}},
+    time={{id='xinghui',name='星辉法印',role='edge',stat='attack',label='攻击',bonus=.10},
+        {id='yuzhen',name='余震法印',role='edge',stat='poise',label='削韧',bonus=.25},
+        {id='rift',name='裂地法印',role='break',stat='terrainRadius',label='破坏范围',bonus=.12},
+        {id='zhenbo',name='震波法印',role='break',stat='terrainRadius',label='破坏范围',bonus=.15},
+        {id='zhanshi',name='暂滞法印',role='time',stat='poise',label='削韧',bonus=.20},
+        {id='echo',name='溯宙法印',role='time',stat='poise',label='削韧',bonus=.10}},
 }
+M.ImprintRoles={'edge','break','time'}
 M.CraftCost={3,6,12}
 M.LevelCap=5
 M.RefineChance={{80,100},{50,75,100}}
 function M.Find(list,id)
     for index,item in ipairs(list) do if item.id==id then return item,index end end
 end
-function M.Stats(class,progress)
+function M.Stats(class,progress,id)
     local slot=progress.slots[class]
-    local item=M.Find(M.Weapons[class],slot.weapon)
-    local imprint=M.Find(M.Imprints[class],slot.imprint)
+    local item=M.Find(M.Weapons[class],id or slot.weapon)
+    if not item then return nil end
     local stats={}
     local base=class=='time' and {poise=3,terrainRadius=1} or M.Definitions[class].stats
     for k,v in pairs(base) do stats[k]=v end
-    local level=slot.levels[item.id]
+    local level=slot.levels[item.id] or 1
     stats.attack=item.attack*(1+(level-1)*.10)
     if class=='time' then stats.terrainRadius=1+(level-1)*.08 end
     if item.sub then stats[item.sub.stat]=stats[item.sub.stat]*(1+item.sub.bonus) end
     stats.passive=item.passive
-    if imprint then stats[imprint.stat]=stats[imprint.stat]*(1+imprint.bonus*slot.ranks[imprint.id]) end
+    local bonuses={}
+    for _,role in ipairs(M.ImprintRoles) do
+        local imprint=M.Find(M.Imprints[class],slot.imprints[role])
+        if imprint then
+            local stat=imprint.stat
+            bonuses[stat]=(bonuses[stat] or 0)+imprint.bonus*slot.ranks[imprint.id]
+        end
+    end
+    for stat,bonus in pairs(bonuses) do stats[stat]=stats[stat]*(1+bonus) end
     return stats
 end
 -- One-line passives, multipliers per hit. ctx: combo, staggered, unaware,

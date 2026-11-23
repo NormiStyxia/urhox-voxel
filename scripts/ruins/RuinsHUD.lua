@@ -382,7 +382,7 @@ function M.HelpLines(mode)
     M.helpLines={
     combat= {'WASD 移动 · Space 跳跃','左键五连/蓄力','剑 Q 重击 · 弓右键强射 · Ctrl 步行/奔跑 · Shift 冲刺','Tab 切武器 / 长按轮盘 · 1/2/3 直选','E 冻结 · R 回溯 · Q 武技','G 锻造（脱战后）· F7 动画预览','F5 伤害数字 · F6 辅助瞄准','F8 传送 · F9 木桩 · F4 UI检查','Shift+F9 触屏开关 · H 隐藏说明'},
     mounted= {'WASD 移动 · 左键/1 持续吐息','Space 起飞/上升 · C 下降','Shift 冲刺 · G 滑翔 · L 降落','B 大招 · F 下龙（着陆后）','Z 远景 · Esc 释放鼠标','H 隐藏说明'},
-    explore= {'WASD 移动 · Space 跳跃','Ctrl 切换步行/奔跑 · 按住 Shift 冲刺（耗体力）','左键蓄力碎时 · E 冻结 · R 回溯','Tab 切换 / 长按轮盘 · Q 武技 · G 锻造 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Z 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
+    explore= {'WASD 移动 · Space 跳跃','Ctrl 切换步行/奔跑 · 按住 Shift 冲刺（耗体力）','左键蓄力碎时 · E 冻结 · R 回溯','Tab 切换 / 长按轮盘 · Q 武技 · G 锻造 · B 背包 · F 上龙','F7 动画预览 · F8 传送 · F9 木桩','F4 UI检查 · Shift+F9 触屏开关','Z 远景 · 按住 T 快进时间','Esc 释放鼠标 · H 隐藏说明'}
     }
     return M.helpLines[mode] or M.helpLines.explore
 end

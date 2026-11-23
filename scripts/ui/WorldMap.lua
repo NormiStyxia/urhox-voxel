@@ -44,38 +44,9 @@ local function progress()
     local t=clamp((clock()-opened)/.26,0,1)
     return t*t*(3-2*t)
 end
-local function paperStrip(vg,H,x,width,sourceX,sourceWidth)
-    -- The chart face follows the clean paper used by the pixel preview.
-    -- Keep the illustrated scroll edges, but do not repeat their paper grain
-    -- across the map board.
-    if sourceX==12 then
-        Draw.Rect(vg,x,0,width,H,{239,236,224})
-        return
-    end
-    local sx=width/sourceWidth
-    for section=1,3 do
-        local y,sh,sy=0,10,0
-        local h=12
-        if section==2 then y,sy,sh,h=12,10,106,H-24
-        elseif section==3 then y,sy=H-12,116 end
-        local repeatCount=section==2 and math.max(1,round(h/(sh*sx))) or 1
-        -- Tall sheets repeat only clean pulp; the dark torn lip stays at the rim.
-        if repeatCount>1 and sourceX==12 then sy,sh=16,94 end
-        for tile=0,repeatCount-1 do
-            local dy=y+round(h*tile/repeatCount)
-            local dh=y+round(h*(tile+1)/repeatCount)-dy
-            Draw.Save(vg);nvgIntersectScissor(vg,x,dy,width,dh)
-            nvgTranslate(vg,x-sourceX*sx,dy-sy*dh/sh);nvgScale(vg,sx*.5,dh/sh*.5)
-            Draw.Image(vg,'map_scroll',0,0);Draw.Restore(vg)
-        end
-    end
-end
--- map_scroll's top 224x126 is the nine-sliced paper. The transparent cells
--- beneath it are drawn at native resolution so the engraved curls stay fine.
+-- Draw the map ornaments at native resolution from their atlas.
 local function stamp(vg,x,y,sx,sy,w,h)
-    Draw.Save(vg);nvgIntersectScissor(vg,x,y,w,h)
-    nvgTranslate(vg,x-sx,y-sy);nvgScale(vg,.5,.5)
-    Draw.Image(vg,'map_scroll',0,0);Draw.Restore(vg)
+    Draw.ImagePixels(vg,'ui/touch/map_scroll.png',x,y,sx,sy,w,h)
 end
 local surveyInk={201,208,192}
 local function chartBorder(vg,W,H)
@@ -97,14 +68,6 @@ local function chartBorder(vg,W,H)
     stamp(vg,r-108,t-8,0,128,85,30)
     stamp(vg,l+1,b-34,90,128,58,37)
     stamp(vg,r-24,b-round((b-t)*.32),152,128,27,8)
-end
-local function chart(vg,W,H,left,right)
-    local roller=12
-    Draw.Save(vg);nvgIntersectScissor(vg,left+roller,0,math.max(0,right-left-roller*2),H)
-    paperStrip(vg,H,roller,W-roller*2,12,200)
-    chartBorder(vg,W,H)
-    Draw.Restore(vg)
-    paperStrip(vg,H,left,roller,0,12);paperStrip(vg,H,right-roller,roller,212,12)
 end
 local function compass(vg,x,y)
     -- Its dark needle follows geographical north in screen space.
@@ -139,8 +102,9 @@ function Layer:Render(vg)
     local left=round((W-26)*(1-openness)*.5);local right=W-left
     Draw.Begin(vg,true);Draw.Rect(vg,0,0,w,h,Draw.colors.deep,.91*openness)
     Draw.Save(vg);nvgTranslate(vg,x,y);nvgScale(vg,k,k)
-    chart(vg,W,H,left,right)
+    Draw.ScrollPaper(vg,W,H,left,right)
     Draw.Save(vg);nvgIntersectScissor(vg,left+12,0,math.max(0,right-left-24),H)
+    chartBorder(vg,W,H)
     compass(vg,23,21)
     Draw.Text(vg,'群岛航图',35,21,mapFontSize,ink)
     Draw.Text(vg,'关闭 ×',W-19,21,mapFontSize,ink,NVG_ALIGN_RIGHT)
