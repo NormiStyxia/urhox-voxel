@@ -3,7 +3,7 @@
 local M = {}
 local C = {
     bark=0x694531, cut=0xE4AF73, grain=0xA66A40, moss=0x46745B,
-    leaf=0x508864, mint=0x8EBB80, ribbon=0xE7994D,
+    leaf=0x508864, mint=0x8EBB80, ribbon=0xF2803C,
     amber=0xEFA343, honey=0xFFD782, copper=0xAB6944,
     slate=0x435569, stone=0x798C96, chalk=0xBDCCD0,
     blue=0x409FC6, ice=0xA6EDFF, jade=0x35BDAC, light=0xA0F7DD,
@@ -91,9 +91,9 @@ local function tree(base,stock)
     solid(base,7,.012,0,.24,{{.612,.146,.116},{.622,.144,.115}},C.cut)
     if not stock then return end
     solid(stock,7,0,0,.24,{{.58,.295,.269},{1.18,.27,.24,.04,0},{2.46,.13,.12,-.18,0}},C.bark)
-    -- Surveyor's double ochre band makes working timber distinct from the old trees.
+    -- Orange cloth marks harvestable timber against ordinary green trees.
     for _,y in ipairs({.85,1.04}) do
-        solid(stock,7,.024,0,.24,{{y,.312,.28},{y+.09,.31,.277}},C.ribbon)
+        solid(stock,7,.024,0,.24,{{y,.328,.294},{y+.13,.326,.290}},C.ribbon)
     end
     solid(stock,6,0,0,0,{{1.38,.19,.17},{1.76,.14,.12,.43,0},{2.08,.08,.07,.72,.03}},C.grain)
     solid(stock,6,0,0,0,{{1.64,.18,.16},{2.02,.13,.11,-.51,.14},{2.23,.07,.06,-.77,.23}},C.bark)

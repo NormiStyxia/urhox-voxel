@@ -19,7 +19,7 @@ local M = {
         time_wraith = {id='time_dust',count=1},
     },
     Sites = {
-        {'court_log','timber',2,-8.8,4.6}, {'court_vein','crystal_ore',1,8.6,5.2},
+        {'court_log','timber',2,-6.0,7.8}, {'court_vein','crystal_ore',1,8.6,5.2},
         {'court_quarry','stone',2,-11,-7.4},
         {'south_log','timber',2,-4.6,-58.4}, {'south_vein','crystal_ore',1,4.8,-56.8},
         {'east_log','timber',2,32.4,4.5}, {'west_vein','crystal_ore',1,-14.2,-28.2},
