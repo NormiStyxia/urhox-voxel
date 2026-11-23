@@ -142,6 +142,13 @@ end
 -- 4) Hologram: dissolve/reform in place, never fly through the body.
 local Mock=require('weapon_mock')
 local Rig=require('combat.WeaponRig')
+local Store=require('combat.WeaponStore')
+local load=Store.Load
+Store.Load=function()
+    local fixture=Store.Default()
+    fixture.progress.slots.sword.levels.wing=1
+    return assert(Store.Edit(fixture,'sword','select','wing'))
+end
 rawset(_G,'WING_MATERIAL_MISSING',nil)
 local scene=Mock.Node('scene') --[[@as any]]
 local r=Rig.New(scene,Mock.World(scene),Mock.Nomi(scene))
@@ -174,5 +181,6 @@ end
 assert(r.visualState=='hang' and pivot.parent==back and wing.node.enabled and not wing.holoNode.enabled)
 r:SetPose('hidden');frames(40);assert(r.visualState=='hidden' and not wing.node.enabled and not wing.holoNode.enabled)
 r:Dispose();assert(r.entries.sword.wing==nil)
+Store.Load=load
 rawset(_G,'WING_MATERIAL_MISSING',true)
 print('PASS long-press cross slash, cancellable recovery, low guard rest, hologram stow/draw in place')

@@ -2,6 +2,11 @@ local Base=require('combat.enemies.EnemyBase')
 local Beetle=require('combat.enemies.MossBeetle')
 local Sentry=require('combat.enemies.StoneSentry')
 local Beast=require('combat.enemies.StoneBeast')
+local WoodSpirit=require('combat.enemies.actors.WoodSpirit')
+local NestWeaver=require('combat.enemies.actors.NestWeaver')
+local RockColossus=require('combat.enemies.actors.RockColossus')
+local RuinConstruct=require('combat.enemies.actors.RuinConstruct')
+local TimeWraith=require('combat.enemies.actors.TimeWraith')
 ---@class EnemySpawner
 ---@field enemies EnemyBase[]
 ---@field scene Scene?
@@ -130,6 +135,42 @@ end
 function Spawner:SetCombat(combat)
     self.combat=combat
     for _,enemy in ipairs(self.enemies) do enemy:SetCombat(combat) end
+end
+
+-- Opt-in ordinary encounters. The legacy New() route deliberately keeps its
+-- original roster for tests and existing callers. RuinsScene enables this set
+-- after constructing the default spawner. Every candidate is terrain checked
+-- before it becomes reachable combat content.
+function Spawner:EnableModelEncounters()
+    if self.modelEncounterEnabled then return 0 end
+    self.modelEncounterEnabled = true
+    local seeds = {
+        -- Keep each encounter outside the living boss's 18m exclusion
+        -- circle.  These authored points were sampled against the real
+        -- RuinsTerrain, including footprint probes and puzzle clearances.
+        {WoodSpirit, -22, 8, 'wood_spirit_w'},
+        {NestWeaver, 23, 7, 'nest_weaver_e'},
+        {RockColossus, 0, -16, 'rock_colossus_n'},
+        {RuinConstruct, -13, 24, 'ruin_construct_w'},
+        {TimeWraith, 30, 7, 'time_wraith_e'},
+    }
+    local added = 0
+    for _, seed in ipairs(seeds) do
+        local class, x, z, id = seed[1], seed[2], seed[3], seed[4]
+        local y = self:ValidPosition(x, z, class.Config.radius, false)
+        if y then
+            local enemy = class.New(self.scene, self.world, self.terrain, self.combat, Vector3(x, y, z), id)
+            if not class.Config.ranged then enemy.attackGroup = self.attackGroup end
+            enemy:SetActive(false)
+            self.enemies[#self.enemies + 1] = enemy
+            self.placements[#self.placements + 1] = {id = id, x = x, y = y, z = z, model = class.Config.model}
+            added = added + 1
+        else
+            self.rejected[#self.rejected + 1] = id
+            print('EnemySpawner: unsafe model encounter skipped: ' .. id)
+        end
+    end
+    return added
 end
 function Spawner:GetEnemies() return self.enemies end
 -- W2 may emit player/arrow flecks into this SAME pool, ticking its own owner once/frame.

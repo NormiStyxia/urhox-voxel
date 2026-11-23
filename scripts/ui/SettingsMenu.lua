@@ -4,6 +4,7 @@ local Draw=require('ui.PixelDraw')
 local Settings=require('ruins.GameSettings')
 local DebugLog=require('ruins.DebugLog')
 local TouchInput=require('ui.TouchInput')
+local Catalog=require('combat.WeaponCatalog')
 local M={open=false}
 ---@type Widget?
 local parent
@@ -16,6 +17,9 @@ local receiver
 ---@type fun(boolean)?
 local changed
 local page,advancedPage=1,1
+local bag,bagClass,bagNotice
+local BAG_PAGE=4
+local BAG_CLASSES={sword='长剑',bow='长弓',time='时间法器'}
 local buttons={}
 local information={}
 local releaseLatch=false
@@ -33,6 +37,12 @@ function M.IsOpen() return M.open end
 function M.IsBlocked() return M.open or releaseLatch end
 local function Add(label,x,y,w,h,action,active)
     buttons[#buttons+1]={label=label,x=x,y=y,w=w,h=h,action=action,active=active}
+end
+local function SelectBagPage()
+    if not bag or not bag.available() then return false end
+    bagClass,bagNotice=bag.selection(),nil
+    page=BAG_PAGE
+    return true
 end
 local function Cycle(key)
     local value=Settings.Get(key)
@@ -69,8 +79,11 @@ local function Layout()
         Info('后效关闭保留基础色调映射')
     end
     local x,y,bw=box.x+16,box.y+48,box.w-32
-    local tw=math.floor(bw/3/2)*2
+    local tw=math.floor(bw/(bag and 4 or 3)/2)*2
     for i,name in ipairs(TAB_NAMES) do Add(name,x+(i-1)*tw,y,tw-4,44,function() page=i; Layout() end,page==i) end
+    if bag then Add('背包',x+3*tw,y,tw-4,44,function()
+        if SelectBagPage() then Layout() else bag.unavailable() end
+    end,page==BAG_PAGE) end
     y=y+50
     if page==1 then
         local qw=math.floor(bw/4/2)*2
@@ -89,10 +102,32 @@ local function Layout()
         end
         Add('上一页',x,box.y+box.h-96,bw/2-4,44,function() advancedPage=(advancedPage-2)%pages+1; Layout() end,false)
         Add('下一页',x+bw/2,box.y+box.h-96,bw/2-4,44,function() advancedPage=advancedPage%pages+1; Layout() end,false)
-    else
+    elseif page==3 then
         Add('调试日志：'..(Settings.Get('debugLog') and '开启' or '关闭'),x,y,bw,44,function() Settings.Set('debugLog',not Settings.Get('debugLog')); Layout() end,Settings.Get('debugLog'))
         Add('性能小字：'..(Settings.Get('perfHud') and '开启' or '关闭'),x,y+44,bw,44,function() Settings.Set('perfHud',not Settings.Get('perfHud')); Layout() end,Settings.Get('perfHud'))
         Add('打印最近日志',x,y+88,bw,44,function() for _,line in ipairs(DebugLog.GetRecent(40)) do print(line) end end,false)
+    else
+        local width=math.floor(bw/3/2)*2
+        for i,class in ipairs(Catalog.Classes) do
+            Add(BAG_CLASSES[class],x+(i-1)*width,y,width-4,44,function()
+                bagClass,bagNotice=class,nil; Layout()
+            end,bagClass==class)
+        end
+        local slot=bag.progress().slots[bagClass]
+        local rowY=y+44
+        local rowH=math.min(44,math.max(22,math.floor((box.h-212)/3)))
+        for _,item in ipairs(Catalog.Weapons[bagClass]) do
+            local level=slot.levels[item.id]
+            if level then
+                local equipped=slot.weapon==item.id
+                Add(('%s · Lv.%d%s'):format(item.name,level,equipped and ' · 已装备' or ''),x,rowY,bw,rowH,function()
+                    if equipped then return end
+                    local _,notice=bag.equip(bagClass,item.id)
+                    bagNotice=notice; Layout()
+                end,equipped)
+                rowY=rowY+rowH
+            end
+        end
     end
     Add('关闭 · 返回游戏',x,box.y+box.h-48,bw,44,function() M.Close() end,false)
 end
@@ -103,10 +138,13 @@ function Layer:Render(vg)
     Draw.Begin(vg,true)
     Draw.Rect(vg,0,0,w,h,Draw.colors.deep,.72)
     Draw.NineSlice(vg,'panel_paper',box.x,box.y,box.w,box.h,8,1)
-    Draw.Text(vg,'旅途设置',box.x+box.w/2,box.y+26,24,Draw.colors.brown,NVG_ALIGN_CENTER)
+    Draw.Text(vg,page==BAG_PAGE and '武器背包' or '旅途设置',box.x+box.w/2,box.y+26,24,Draw.colors.brown,NVG_ALIGN_CENTER)
     for _,b in ipairs(buttons) do
         Draw.Rect(vg,b.x,b.y,b.w,b.h-4,b.active and Draw.colors.gold or Draw.colors.ink)
-        Draw.Text(vg,b.label,b.x+b.w/2,b.y+20,12,b.active and Draw.colors.brown or Draw.colors.paper,NVG_ALIGN_CENTER)
+        Draw.Text(vg,b.label,b.x+b.w/2,b.y+b.h/2-2,12,b.active and Draw.colors.brown or Draw.colors.paper,NVG_ALIGN_CENTER)
+    end
+    if page==BAG_PAGE and bagNotice then
+        Draw.Text(vg,bagNotice,box.x+20,box.y+box.h-60,12,Draw.colors.brown)
     end
     if page==1 then
         Draw.Text(vg,'实际档位：'..QUALITY_NAMES[Settings.GetProfile().quality],box.x+20,box.y+160,12,Draw.colors.brown)
@@ -135,10 +173,15 @@ local function WaitForRelease(_,_,data)
     releaseLatch=false; ReleaseEvents()
     if changed then changed(false) end
 end
-function M.Open()
-    if M.open then return true end
+function M.Open(view)
+    if view=='bag' and not SelectBagPage() then return false end
+    if M.open then
+        if view=='bag' then Layout() end
+        return true
+    end
     if not parent then return false end
-    ReleaseEvents(); releaseLatch=false; M.open=true; page=1
+    ReleaseEvents(); releaseLatch=false; M.open=true
+    if view~='bag' then page=1 end
     if changed then changed(true) end
     Layout()
     layer=Layer{position='absolute',left=0,top=0,width='100%',height='100%',pointerEvents='none'}
@@ -161,14 +204,15 @@ function M.Close()
     receiver:SubscribeToEvent('Update',WaitForRelease)
 end
 function M.Toggle() if M.open then M.Close() else M.Open() end end
-function M.Attach(root,onChanged)
+function M.IsBagOpen() return M.open and page==BAG_PAGE end
+function M.Attach(root,onChanged,bagCallbacks)
     if layer and parent then parent:RemoveChild(layer) end
-    layer=nil; parent=root; changed=onChanged
+    layer=nil; parent=root; changed=onChanged; bag=bagCallbacks
     if M.open then M.open=false; M.Open() end
 end
 function M.Stop()
     ReleaseEvents()
     if layer and parent then parent:RemoveChild(layer) end
-    layer,parent,changed=nil,nil,nil; buttons={}; M.open=false; releaseLatch=false
+    layer,parent,changed,bag=nil,nil,nil,nil; buttons={}; M.open=false; releaseLatch=false
 end
 return M

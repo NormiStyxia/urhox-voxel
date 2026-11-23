@@ -113,55 +113,89 @@ local old=Store.Load()
 assert(old.active=='bow' and old.sword.colors.primary==6)
 assert(old.progress.slots.sword.weapon=='wing' and old.progress.slots.bow.weapon=='thorn')
 local rig={config=Store.Default()}
-assert(rig.config.progress.ore==999 and rig.config.progress.sand==0)
-rig.config.progress.ore=0 -- exercise the insufficient-ore path
+local function Slot(class) return rig.config.progress.slots[class or 'sword'] end
+local function Forge(action,id,option,roll)
+    return Store.Forge(rig,'sword',action,id,option,roll and function() return roll end)
+end
+local imprintTotal=0
 for _,class in ipairs(Parts.Classes) do
-    for _,item in ipairs(Parts.Weapons[class]) do
-        assert(rig.config.progress.slots[class].levels[item.id]==1)
-        assert(Store.Forge(rig,class,'select',item.id))
+    local slot=Slot(class)
+    for i,item in ipairs(Parts.Weapons[class]) do assert(slot.levels[item.id]==(i==1 and 1 or nil)) end
+    for _,role in ipairs(Parts.ImprintRoles) do
+        assert(Parts.Find(Parts.Imprints[class],slot.imprints[role]).role==role)
+        local variants=0
+        for _,item in ipairs(Parts.Imprints[class]) do if item.role==role then variants=variants+1 end end
+        assert(variants==2)
+        imprintTotal=imprintTotal+variants
     end
 end
-local partial=Store.Default()
-partial.progress.previewWeaponsGranted=nil
-partial.progress.ore=0
-partial.progress.slots.sword.levels={iron=3}
-disk['weapons-v1.json']=cjson.encode(partial)
-rig.config=Store.Load()
-assert(rig.config.progress.slots.sword.levels.iron==3 and rig.config.progress.slots.sword.levels.wing==1)
-assert(Store.Forge(rig,'sword','select','wing') and rig.config.progress.ore==0)
--- Exercise crafting on an inventory with missing items.
-rig.config=Store.Default()
-rig.config.progress.ore=0
-rig.config.progress.slots.sword.levels={iron=1}
-local function Slot() return rig.config.progress.slots.sword end
-local function Forge(action,id,roll)
-    return Store.Forge(rig,'sword',action,id,function() assert(roll);return roll end)
+assert(imprintTotal==18 and rig.config.progress.ore==3 and rig.config.progress.sand==1)
+local newQuote=assert(Store.ForgeQuote(rig.config.progress,'sword','craft','warden'))
+assert(newQuote.cost==6 and newQuote.level==1 and newQuote.source==nil)
+local inheritQuote=assert(Store.ForgeQuote(rig.config.progress,'sword','smelt','warden'))
+assert(inheritQuote.cost==6 and inheritQuote.level==1 and inheritQuote.source.id=='iron')
+assert(not Store.ForgeQuote(rig.config.progress,'sword','craft','iron'))
+assert(not Store.ForgeQuote(rig.config.progress,'sword','craft','wing'))
+assert(not Store.ForgeQuote(rig.config.progress,'sword','smelt','iron','iron'))
+assert(not Store.ForgeQuote(rig.config.progress,'sword','smelt','wing','iron'))
+assert(Store.FodderCount(Slot(),'edge','edge')==1)
+assert(Store.FodderCount(Slot(),'reach','edge')==0)
+assert(not Forge('craft','warden') and not Forge('imprint','impact') and not Forge('imprint','feather'))
+assert(not Forge('select','wing') and not Forge('refine','edge','reach'))
+
+local draft=assert(Store.Edit(rig.config,'sword','level','iron'))
+assert(Slot().levels.iron==1 and draft.progress.slots.sword.levels.iron==2)
+assert(draft.progress.ore==2 and rig.config.progress.ore==3)
+local before=Slot()
+assert(Forge('refine','edge','edge',100) and Slot().ranks.edge==1 and Slot().failures.edge==1)
+assert(before.counts.edge==2 and Slot().counts.edge==1 and Slot().imprints.edge=='edge')
+assert(rig.config.progress.sand==0 and Store.RefineChance(Slot(),'edge')==100)
+assert(Store.FodderCount(Slot(),'edge','edge')==0)
+assert(not Forge('refine','edge','edge') and not Forge('guarantee','edge','edge'))
+
+-- Six normal kills grant all alternate imprints and start replenishing the starter copies.
+for _=1,6 do assert(Store.RewardKill(rig)) end
+for _,class in ipairs(Parts.Classes) do
+    for _,item in ipairs(Parts.Imprints[class]) do assert(Slot(class).counts[item.id]>0,item.id) end
 end
-assert(not Forge('level') and not Forge('imprint','feather') and not Forge('select','thorn'))
-rig.config.progress.ore,rig.config.progress.sand=30,7
-assert(Forge('imprint','edge') and Forge('level'))
-assert(Forge('refine',nil,100) and Slot().failures.edge==1 and Slot().ranks.edge==1)
-assert(Forge('craft','warden') and Slot().levels.iron==2 and Slot().levels.warden==1)
-assert(Slot().imprint=='edge' and Slot().failures.edge==1)
-assert(Forge('select','iron') and Forge('smelt','warden'))
-assert(Slot().weapon=='warden' and Slot().levels.warden==2 and not Slot().levels.iron and rig.config.progress.ore==23)
-assert(Forge('refine') and Slot().ranks.edge==2 and Slot().failures.edge==0)
-assert(Forge('refine',nil,51) and Slot().failures.edge==1)
-assert(Forge('refine',nil,76) and Slot().failures.edge==2)
+assert(rig.config.progress.ore==21 and rig.config.progress.sand==12)
+assert(Forge('level','iron') and Forge('craft','warden'))
+assert(Slot().weapon=='iron' and rig.config.sword.modelId=='iron' and Slot().levels.warden==1)
+assert(Forge('level','warden') and Slot().weapon=='iron' and Slot().levels.warden==2)
+assert(not Store.ForgeQuote(rig.config.progress,'sword','smelt','warden','iron'))
+assert(Forge('imprint','ruishi') and Slot().imprints.edge=='ruishi' and Slot().imprints['break']=='reach')
+assert(Slot().imprints.time=='jiying' and Store.FodderCount(Slot(),'edge','edge')==1)
+assert(Forge('refine','edge','impact') and Slot().ranks.edge==2 and Slot().counts.impact==0)
+assert(Forge('refine','edge','ningshi',51) and Store.RefineChance(Slot(),'edge')==75)
+assert(not Forge('refine','edge','ruishi',76),'equipped copy is protected')
+assert(Forge('imprint','edge') and Forge('refine','edge','ruishi',76) and Store.RefineChance(Slot(),'edge')==100)
 rig.config=Store.Load()
-assert(Slot().failures.edge==2 and Forge('refine') and Slot().ranks.edge==3)
-assert(rig.config.progress.sand==2 and not Forge('refine'))
-assert(Forge('smelt','wing') and Slot().levels.wing==2 and not Slot().levels.warden)
-assert(not Forge('smelt','iron') and not Forge('smelt','wing'))
-assert(Forge('imprint','impact') and Forge('guarantee') and rig.config.progress.sand==0)
-assert(not Forge('refine') and Slot().ranks.impact==2)
+assert(Slot().failures.edge==2 and Slot().imprints.edge=='edge')
+assert(Store.RewardKill(rig) and Store.RefineChance(Slot(),'edge')==100)
+assert(Forge('refine','edge','reach') and Slot().ranks.edge==3 and Store.RefineChance(Slot(),'edge')==nil)
+assert(not Forge('refine','edge','reach'))
+
+local ore=rig.config.progress.ore
+assert(Forge('level','iron'))
+local upgradeQuote=assert(Store.ForgeQuote(rig.config.progress,'sword','smelt','warden','iron'))
+assert(upgradeQuote.cost==0 and upgradeQuote.level==3 and upgradeQuote.source.id=='iron')
+assert(Forge('smelt','warden','iron'))
+assert(Slot().weapon=='warden' and Slot().levels.warden==3 and not Slot().levels.iron)
+assert(rig.config.progress.ore==ore-2 and Slot().ranks.edge==3)
+assert(Forge('craft','iron') and Slot().weapon=='warden')
+assert(Forge('select','iron') and Slot().weapon=='iron' and rig.config.active=='sword')
+assert(not Forge('smelt','wing','iron'))
+rig.config.progress.ore=30
+assert(Forge('smelt','wing','warden') and Slot().levels.wing==3 and Slot().weapon=='iron')
+assert(not Forge('smelt','iron','wing') and not Forge('smelt','warden','wing'))
+assert(Forge('select','wing'))
 for _,failure in ipairs({'write','publish'}) do
-    local progress=rig.config.progress
-    fault=failure;assert(not Forge('level'));fault=''
-    assert(rig.config.progress==progress)
+    local configBefore=rig.config
+    fault=failure;assert(not Forge('level','wing'));fault=''
+    assert(rig.config==configBefore)
     local restored=Store.Load().progress
-    assert(restored.slots.sword.levels.wing==2 and restored.ore==progress.ore)
+    assert(restored.slots.sword.levels.wing==3 and restored.ore==configBefore.progress.ore)
 end
-assert(Forge('level') and Store.Load().progress.slots.sword.levels.wing==3)
+assert(Forge('level','wing') and Store.Load().progress.slots.sword.levels.wing==4)
 assert(opened==closed)
-print('weapon_store: progression, migration, smelt, pity and interrupted publish PASS')
+print('weapon_store: real unlocks, three slots, 18 drops, draft isolation, fodder, pity, smelt and interrupted publish PASS')

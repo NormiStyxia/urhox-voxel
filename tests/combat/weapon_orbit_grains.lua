@@ -131,7 +131,7 @@ local function Stations(ring)
     for j=1,#verts,24 do
         local a,b,c,d=verts[j].position,verts[j+6].position,verts[j+12].position,verts[j+18].position
         local width=(a-b):Length()
-        assert(width>=.007 and width<=.0082,'raster stroke width at the normal camera')
+        assert(width>=.005 and width<=.006,'raster stroke width at the normal camera')
         centers[#centers+1]=(a+b+c+d)*.25
     end
     return centers

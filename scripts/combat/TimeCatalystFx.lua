@@ -13,13 +13,19 @@ local function Rand(a,b) return a+(b-a)*math.random() end
 local function BuildPixel(fx)
     local VoxelFX=require('dragon.VoxelFX')
     fx.spark=VoxelFX.WorldMotes(fx.scene,'CatalystPixelSpark',90,'star',true,fx.camera)
-    fx.burst=VoxelFX.WorldMotes(fx.scene,'CatalystPixelBurst',130,'square',true,fx.camera)
+    if fx.showroomMask then
+        local geometry=fx.spark.geometry
+        geometry.viewMask=fx.showroomMask;geometry.lightMask=fx.showroomMask;geometry.zoneMask=fx.showroomMask
+    else
+        fx.burst=VoxelFX.WorldMotes(fx.scene,'CatalystPixelBurst',130,'square',true,fx.camera)
+    end
+    fx.sparkAcc=0
     fx.trailAcc=0
     fx.ready=true
 end
 
-function F.New(scene,camera)
-    local fx={mode='off',shown=false,
+function F.New(scene,camera,showroomMask)
+    local fx={mode='off',shown=false,showroomMask=showroomMask,
         cur={center=Vector3.ZERO,rot=Quaternion(),scale=1},scene=scene,camera=camera}
     local ok,err=pcall(BuildPixel,fx)
     if ok then fx.mode='pixel'
@@ -90,6 +96,20 @@ function F.UpdateImpl(fx,dt,s)
     cur.center,cur.rot,cur.scale=s.center,s.rot,s.scale
     if fx.shown and fx.mode=='pixel' then
         local fade=s.fade
+        -- Original free-floating star motes from the pixel catalyst. They drift
+        -- upward in world space independently of the white rings on the core.
+        fx.sparkAcc=fx.sparkAcc+(7+10*s.aim)*fade*dt
+        local units=fx.showroomMask and s.scale or 1
+        while fx.sparkAcc>=1 do
+            fx.sparkAcc=fx.sparkAcc-1
+            local a,e=Rand(0,TAU),Rand(-.9,.9)
+            local r=Rand(.32,.62)
+            local dir=Vector3(math.cos(a)*math.sqrt(1-e*e),e,math.sin(a)*math.sqrt(1-e*e))
+            fx.spark:Spawn{pos=s.center+s.rot*(dir*r)*s.scale,vel=Vector3(0,Rand(.08,.22)*units,0),
+                life=Rand(.7,1.2),size=Rand(.050,.080)*units,colors=(math.random()<.3) and RAMP_GOLD or RAMP_SAND}
+        end
+        fx.spark:Update(dt)
+        if not fx.burst then return end
         -- comet trail while it flies between the back slot and the palm
         fx.trailAcc=fx.trailAcc+math.min(48,math.max(0,(s.speed or 0)-.30)*16)*fade*dt
         while fx.trailAcc>=1 do
@@ -99,15 +119,18 @@ function F.UpdateImpl(fx,dt,s)
                 colors=RAMP_ICE,drag=1.5}
         end
         if s.burst then SpawnBurst(fx,s) end
-        fx.spark:Update(dt);fx.burst:Update(dt)
+        fx.burst:Update(dt)
     end
 end
 
 --- Pixel quads are drawn after the camera has moved (needs the final right/up vectors).
 ---@param fx table?
 function F.Draw(fx)
-    if fx and fx.mode=='pixel' and fx.burst then
-        local ok,err=pcall(function() fx.spark:Draw();fx.burst:Draw() end)
+    if fx and fx.mode=='pixel' and fx.spark then
+        local ok,err=pcall(function()
+            fx.spark:Draw()
+            if fx.burst then fx.burst:Draw() end
+        end)
         if not ok and fx.lastDrawError~=tostring(err) then
             fx.lastDrawError=tostring(err)
             print('TimeCatalystFx: pixel draw failed: '..fx.lastDrawError)
@@ -118,7 +141,7 @@ end
 ---@param fx table?
 function F.Clear(fx)
     if not fx then return end
-    fx.trailAcc=0
+    fx.sparkAcc=0;fx.trailAcc=0
     if fx.spark then fx.spark:Clear() end
     if fx.burst then fx.burst:Clear() end
 end

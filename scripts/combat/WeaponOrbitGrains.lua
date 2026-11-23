@@ -114,7 +114,7 @@ end
 -- same station corners, including the wrap from the last station to the first.
 local function BuildLinePose(g,count,radius,pose,index)
     local sections={}
-    local halfWidth=.00385
+    local halfWidth=.00275
     for i=0,count-1 do
         local sector=i%(count/2)
         local sign=i<count/2 and 1 or -1

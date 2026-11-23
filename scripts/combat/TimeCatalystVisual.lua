@@ -45,7 +45,7 @@ local function SetShown(visual,flag)
     -- Node enable is NOT recursive: every child node must be toggled or it keeps rendering in place.
     visual.root.enabled=flag
     for _,pivot in pairs(visual.pivots) do pivot.enabled=flag end
-    Grains.Visible(visual.grains,flag and (not visual.fx or visual.fx.mode=='pixel'))
+    Grains.Visible(visual.grains,flag and (visual.showroom or not visual.fx or visual.fx.mode=='pixel'))
     Fx.SetShown(visual.fx,flag)
 end
 
@@ -56,7 +56,7 @@ end
 function V.New(scene,cameraNode,showroomMask)
     if not V.ENABLED then return nil,'disabled' end
     local visual={cursor=1,partIndex=1,ready=false,fade=0,aim=0,spinBoost=0,pulse=0,charge=0,
-        glowKey=-1,fadeKey=-1,shown=false,speed=0,
+        glowKey=-1,fadeKey=-1,shown=false,showroom=showroomMask~=nil,speed=0,
         pos=Vector3(0,0,0),vel=Vector3(0,0,0),initialised=false,clock=0,castSeen=false,
         angles={bands=0,blades=0,gems=0,core=0}}
     local ok,err=pcall(function()
@@ -77,7 +77,7 @@ function V.New(scene,cameraNode,showroomMask)
             visual.geometry[name]=g
         end
         visual.grains=Grains.New(visual.pivots.core,'catalyst',showroomMask or MASK)
-        if not showroomMask then visual.fx=Fx.New(scene,cameraNode) end
+        if cameraNode or not showroomMask then visual.fx=Fx.New(scene,cameraNode,showroomMask) end
     end)
     if not ok then
         V.Dispose(visual)
@@ -121,8 +121,8 @@ function V.Step(visual)
     return visual.ready
 end
 
-function V.BeginShowroom(parent,mask)
-    local visual,err=V.New(parent,nil,mask)
+function V.BeginShowroom(parent,mask,cameraNode)
+    local visual,err=V.New(parent,cameraNode,mask)
     if not visual then return nil,err end
     local job={catalyst=visual,node=visual.root,blueprint={bounds=Model().bounds,displayHeight=1.3}}
     job.step=function()
@@ -132,6 +132,16 @@ function V.BeginShowroom(parent,mask)
         return ready
     end
     return job
+end
+
+function V.UpdateShowroom(visual,dt)
+    Grains.Update(visual.grains,dt)
+    if visual.shown and visual.fx and visual.fx.ready then
+        local root=visual.root
+        Fx.Update(visual.fx,dt,{center=root.worldPosition,rot=root.worldRotation,scale=root.worldScale.x,
+            aim=0,charge=0,pulse=0,speed=0,fade=1})
+        Fx.Draw(visual.fx)
+    end
 end
 
 local function Smooth(current,target,rate,dt)

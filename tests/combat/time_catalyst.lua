@@ -32,7 +32,7 @@ assert(m.radius>.25 and m.radius<.30)
 -- engine doubles for the FX layer: pixel motes (dragon.VoxelFX) and texture materials
 local spawned={sand=0,spark=0,burst=0}
 local function FakeMotes(name,...)
-    local motes={list={},node=Mock.Node(name),draws=0,clears=0}
+    local motes={list={},node=Mock.Node(name),geometry={},draws=0,clears=0}
     local key=name:find('Sand') and 'sand' or (name:find('Spark') and 'spark' or 'burst')
     function motes:Spawn(p) spawned[key]=spawned[key]+1;self.list[#self.list+1]=p;p.age=0;return p end
     function motes:Update(dt)
@@ -117,6 +117,7 @@ end
 assert(v.fx.mode=='pixel' and v.fx.ready)
 for _=1,90 do Visual.Update(v,1/60,Ctx()) end
 assert(v.grains and v.grains.node.enabled and spawned.sand==0,'one attached orbit, no ambient sand emitters')
+assert(spawned.spark>0 and v.fx.spark:Count()>0,'ambient stars materialise without casting')
 local phase=v.grains.phase
 for _=1,480 do Visual.Update(v,1/60,Ctx()) end
 assert(math.abs(v.grains.phase-phase)<1e-8,'eight-second orbit closes')
@@ -129,8 +130,39 @@ assert(v.fx.burst:Count()==0,'burst motes expire')
 local grains=v.grains.node
 assert(Visual.SetFxMode(v)=='off' and not grains.enabled)
 assert(Visual.SetFxMode(v)=='pixel' and grains.enabled and v.grains.node==grains)
-Visual.Dispose(v)
-assert(grains.removed)
+assert(v.fx.spark:Count()==0 and v.fx.sparkAcc==0,'turning FX off clears stars and fractional emissions')
+for _=1,60 do Visual.Update(v,1/60,Ctx()) end
+assert(v.fx.spark:Count()>0)
+Visual.Update(v,1/60,Ctx{active=false});assert(v.fx.spark:Count()==0 and v.fx.sparkAcc==0)
+local sparkNode=v.fx.spark.node
+Visual.Dispose(v);assert(grains.removed and sparkNode.removed)
+
+-- The real turntable path uses the showroom camera and reserves its view mask.
+local mask=0x40000000
+local camera=Mock.Node('ForgeCamera')
+local job=assert(Visual.BeginShowroom(scene,mask,camera));while not job.step() do end
+local preview=job.catalyst
+preview.root.worldScale=Vector3(1,1,1) -- native property supplied by the engine
+assert(preview.fx.camera==camera and preview.fx.spark.geometry.viewMask==mask)
+local function Emitted(ticks,step)
+    local before=spawned.spark
+    for _=1,ticks do step() end
+    return spawned.spark-before
+end
+local dt=.125
+assert(Emitted(64,function() Visual.UpdateShowroom(preview,dt) end)==56,'7 ambient stars/s at rest')
+assert(preview.fx.spark.draws==64 and preview.grains.node.enabled)
+local pos=preview.root.worldPosition
+for _,mote in ipairs(preview.fx.spark.list) do
+    local r=(mote.pos-pos):Length();assert(r>=.32 and r<=.62)
+    assert(mote.vel.x==0 and mote.vel.z==0 and mote.vel.y>=.08 and mote.vel.y<=.22)
+    assert(mote.size>=.05 and mote.size<=.08 and mote.life>=.7 and mote.life<=1.2)
+end
+local fx=require('combat.TimeCatalystFx')
+assert(Emitted(64,function() fx.Update(preview.fx,dt,{center=pos,rot=Quaternion(),scale=1,aim=1,fade=1}) end)==136,'17 ambient stars/s at full aim')
+fx.SetShown(preview.fx,false);assert(preview.fx.spark:Count()==0)
+local previewStar=preview.fx.spark.node
+Visual.Dispose(preview);assert(previewStar.removed)
 rawset(_G,'cache',oldCache)
 rawset(_G,'Material',BaseMaterial)
 print('time_catalyst OK tris='..total)

@@ -440,7 +440,7 @@ local function BuildStep(s,dt)
         local single=s.pending;s.pending=nil
         s.pendingRoot=Call(s,'geometry',s.spin,'CreateChild','Node:CreateChild','PendingWeapon');s.pendingRoot.enabled=false
         if single.weapon=='time' then
-            s.bladeJob=assert(Catalyst.BeginShowroom(s.pendingRoot,MASK))
+            s.bladeJob=assert(Catalyst.BeginShowroom(s.pendingRoot,MASK,s.cameraNode))
             return
         end
         if single.weapon=='sword' and (single.modelId=='iron' or single.modelId=='warden') then
@@ -535,7 +535,6 @@ local function UpdateImpl(s,dt)
     end
     local compiling=s.pending~=nil
     BuildStep(s,dt)
-    if s.mesh then Grains.Update((s.mesh.catalyst or s.mesh).grains,dt) end
     if s.dressing and not compiling then
         -- Dressing failures cannot change weapon readiness or restore viewport.
         local ok,err=pcall(function()
@@ -561,6 +560,10 @@ local function UpdateImpl(s,dt)
         s.yaw=s.yaw+AUTO_SPEED*(dt-coast)
     end
     s.yaw=s.yaw%360;Call(s,'rotation',s.rotation,'FromEulerAngles','Quaternion:FromEulerAngles',0,s.yaw,0);s.spin.rotation=s.rotation
+    if s.mesh then
+        if s.mesh.catalyst then Catalyst.UpdateShowroom(s.mesh.catalyst,dt)
+        else Grains.Update(s.mesh.grains,dt) end
+    end
     if not s.lightsFailed then
         local ok,err=pcall(AnimateLights,s,dt)
         if not ok then s.lightsFailed=true;s.stage='light_animation';ReportFailure(s,'Update',err) end
