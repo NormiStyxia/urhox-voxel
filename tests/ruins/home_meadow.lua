@@ -83,7 +83,7 @@ function world:CreateVolume(nx,ny,nz,s,pos)
     local v={id=id,phase=phase,s=s,pos=pos,n=nx*ny*nz,nx=nx,ny=ny,nz=nz}
     self.vols[#self.vols+1]=v
     assert(nx<=255 and ny<=255 and nz<=255)
-    local grid={GetSolidCount=function(g)return g.used and 1 or 0 end,PaintBox=noop,SetVoxelMaterial=noop}
+    local grid={GetSolidCount=function(g)return g.used and 1 or 0 end,PaintBox=noop,SetVoxelMaterial=noop,IsSolid=function()return false end}
     function grid:SetSolid(i,j,k,solid) if solid then self.used=true end end
     function grid:FillBox(i,j,k,ii,jj,kk,solid)
         assert(i>=0 and j>=0 and k>=0 and ii<nx and jj<ny and kk<nz and j<=jj,'out-of-range grid fill')

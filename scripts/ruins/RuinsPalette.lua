@@ -35,11 +35,20 @@ local P = {
     DEEP_A = 147, DEEP_B = 148,
     -- 雪顶（远处山顶）
     SNOW = 149,
+    -- Home masonry. Weapons use 160..191 and enemies start at 200.
+    HOME_ASHLAR = 192, HOME_COPING = 193, HOME_PLINTH = 194, HOME_PAVING = 195,
+    HOME_HEARTH = 196, HOME_ARCH = 197,
 }
 M.P = P
 
 -- { 槽位, 颜色, 硬度, 粗糙度, 金属度, 自发光(rgba, a=强度) }
 local DEF = {
+    { P.HOME_ASHLAR, { 0.69, 0.68, 0.64 }, 6.0, 0.84 },
+    { P.HOME_COPING, { 0.76, 0.74, 0.68 }, 6.0, 0.78 },
+    { P.HOME_PLINTH, { 0.62, 0.61, 0.57 }, 6.0, 0.88 },
+    { P.HOME_PAVING, { 0.72, 0.70, 0.65 }, 50.0, 0.83 },
+    { P.HOME_HEARTH, { 0.58, 0.56, 0.52 }, 6.0, 0.90 },
+    { P.HOME_ARCH, { 0.73, 0.69, 0.61 }, 6.0, 0.83 },
     { P.STONE_A, { 0.86, 0.86, 0.84 }, 4.0, 0.9 },
     { P.STONE_B, { 0.82, 0.82, 0.81 }, 4.0, 0.9 },
     { P.STONE_C, { 0.74, 0.75, 0.75 }, 4.0, 0.92 },

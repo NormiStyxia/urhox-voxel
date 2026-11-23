@@ -282,6 +282,9 @@ local function SetupLighting()
             m:SetShaderParameter("voxel_size", Variant(size))
             m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
             m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
+            -- Home stone palette slots may share a bank/entrance/house volume with other surfaces.
+            m:SetShaderParameter("home_stone_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z)))
+            if masonry=="homeMasonry" then m:SetShaderParameter("dressed_stone_draw",Variant(1.0)) end
             vmats[key] = m
         end
         -- Rebind on cache hits as well when a cancelled home build is retried.

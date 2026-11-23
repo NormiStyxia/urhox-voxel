@@ -411,51 +411,46 @@ local function terrain(world)
         cap:Finish({masonry='meadow'})
     end end
 end
-local function column(b,x,z,y,h)
-    b:Box(x-.75,y,z-.75,x+.75,y+.5,z+.75,P.STONE_C)
-    b:Box(x-.5,y+.5,z-.5,x+.5,y+h,z+.5,P.MARBLE_B)
-    b:Box(x-.125,y+.9,z-.625,x+.125,y+h-.35,z-.5,P.MARBLE_BLUE)
-    b:Box(x-.625,y+h-.5,z-.625,x+.625,y+h-.25,z+.625,P.GOLD_DARK)
-    b:Box(x-.75,y+h-.25,z-.75,x+.75,y+h+.25,z+.75,P.MARBLE_A)
+local function column(b,x,z,y,h,dressed)
+    b:Box(x-.75,y,z-.75,x+.75,y+.5,z+.75,dressed and P.HOME_PLINTH or P.STONE_C)
+    b:Box(x-.5,y+.5,z-.5,x+.5,y+h,z+.5,dressed and P.HOME_ASHLAR or P.MARBLE_B)
+    b:Box(x-.125,y+.9,z-.625,x+.125,y+h-.35,z-.5,dressed and P.HOME_PLINTH or P.MARBLE_BLUE)
+    b:Box(x-.625,y+h-.5,z-.625,x+.625,y+h-.25,z+.625,dressed and P.HOME_PLINTH or P.GOLD_DARK)
+    b:Box(x-.75,y+h-.25,z-.75,x+.75,y+h+.25,z+.75,dressed and P.HOME_COPING or P.MARBLE_A)
 end
 -- The two surviving columns at the west entrance can be inspected at walking distance.
 local function entranceColumn(world,x,z,h)
     local y=1.5
     local b=brush(world,{x-.75,y,z-.75},{x+.75,y+h+.25,z+.75},.125)
-    b:Box(x-.75,y,z-.75,x+.75,y+.375,z+.75,P.STONE_C)
-    b:Box(x-.625,y+.375,z-.625,x+.625,y+.625,z+.625,P.STONE_B)
+    b:Box(x-.75,y,z-.75,x+.75,y+.375,z+.75,P.HOME_PLINTH)
+    b:Box(x-.625,y+.375,z-.625,x+.625,y+.625,z+.625,P.HOME_PLINTH)
     b:Shape(x-.5,y+.625,z-.5,x+.5,y+h-.25,z+.5,function(px,_,pz)
-        if abs(px-x)+abs(pz-z)<.82 then return P.MARBLE_B end
+        if abs(px-x)+abs(pz-z)<.82 then return P.HOME_ASHLAR end
     end)
-    b:Box(x-.625,y+h-.25,z-.625,x+.625,y+h,z+.625,P.STONE_B)
-    b:Box(x-.75,y+h,z-.75,x+.75,y+h+.25,z+.75,P.MARBLE_A)
-    b:Finish({masonry='ashlar'})
+    b:Box(x-.625,y+h-.25,z-.625,x+.625,y+h,z+.625,P.HOME_PLINTH)
+    b:Box(x-.75,y+h,z-.75,x+.75,y+h+.25,z+.75,P.HOME_COPING)
+    b:Finish({masonry='homeMasonry'})
     -- Narrow mouldings around the plinth leave the shadow recess between the two courses open.
     local trim=brush(world,{x-.8125,y+.3125,z-.8125},{x+.8125,y+.6875,z+.8125},.0625)
-    for _,band in ipairs({{.3125,.375,.8125,.75,P.STONE_A},{.50,.5625,.6875,.625,P.MARBLE_B},
-        {.625,.6875,.5625,.50,P.STONE_A}}) do
+    for _,band in ipairs({{.3125,.375,.8125,.75,P.HOME_COPING},{.50,.5625,.6875,.625,P.HOME_ASHLAR},
+        {.625,.6875,.5625,.50,P.HOME_COPING}}) do
         local lo,hi,outer,inner,mat=table.unpack(band)
         trim:Shape(x-outer,y+lo,z-outer,x+outer,y+hi,z+outer,function(px,_,pz)
             if math.max(abs(px-x),abs(pz-z))>=inner then return mat end
         end)
     end
-    trim:Finish({visual=true,masonry='ashlar'})
+    trim:Finish({visual=true,masonry='homeMasonry'})
 end
 local function courtyard(world)
     local b=brush(world,{2,1, -7},{22,6,13},.25)
     b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z)
-        local r=pad(x,z);local diamond=abs(x-12)+abs(z-3)
-        if r>8.55 then return end
-        if abs(r-7.6)<.21 or abs(r-4.65)<.17 then return P.GOLD_DARK end
-        if abs(diamond-3.5)<.32 or abs(diamond-1.45)<.34 then return P.MARBLE_BLUE end
-        if abs(diamond-3)<.22 then return P.MARBLE_DARK end
-        return (floor(x/1.5)+floor(z/1.5))%4==0 and P.TILE_B or P.TILE_A
+        if pad(x,z)<=8.55 then return P.HOME_PAVING end
     end)
     for i=0,11 do
         local a=i*math.pi/6
-        if i~=9 and i~=6 and i~=5 and i~=7 then column(b,12+8.3*cos(a),3+8.3*sin(a),1.5,i%4==1 and 2.75 or 1.25) end
+        if i~=9 and i~=6 and i~=5 and i~=7 then column(b,12+8.3*cos(a),3+8.3*sin(a),1.5,i%4==1 and 2.75 or 1.25,true) end
     end
-    b:Finish({masonry='floor'})
+    b:Finish({masonry='homeMasonry'})
     entranceColumn(world,4.875,7.125,2.75)
     entranceColumn(world,4.875,-1.125,1.25)
 end
@@ -551,11 +546,16 @@ local function house(world)
     end
     b:Box(-13,4,10,-12,7.75,11,P.STONE_D); b:Box(-13.25,7.5,9.75,-11.75,8,11.25,P.MARBLE_B)
     -- Stone oven with a recessed vaulted mouth, coals and an iron anvil.
-    b:Box(-.5,0,7.125,2.875,2.875,10,P.STONE_C)
+    b:Box(-.5,0,7.125,2.875,2.875,10,P.HOME_HEARTH)
+    -- The voussoirs continue three voxels into the reveal; the original opening trims their inner edge.
+    b:Shape(-.5,1.375,7.125,2.875,2.875,7.5,function(x,y)
+        local dx,dy=(x-1.2)/1.25,(y-1.4)/1.05
+        if dy>=0 and dx*dx+dy*dy<=1.34^2 then return P.HOME_ARCH end
+    end)
     b:Shape(-.125,.5,7,2.5,2.75,9.375,function(x,y) if y<1.4+1.05*sqrt(math.max(0,1-((x-1.2)/1.25)^2)) then return false end end)
     b:Box(0,.5,7.375,2.375,.75,9.375,ember)
     for j=0,6 do local x=.125+j*.3125; b:Box(x,.75,8.375,x+.25,1+(j*3%5)*.125,9,flame) end
-    b:Box(-.625,2.875,7,3,3.25,10.125,P.STONE_A); b:Box(.5,3.25,8.5,1.75,5.25,9.75,P.STONE_D)
+    b:Box(-.625,2.875,7,3,3.25,10.125,P.HOME_COPING); b:Box(.5,3.25,8.5,1.75,5.25,9.75,P.HOME_HEARTH)
     b:Box(.625,0,4.625,1.625,.75,5.625,P.WOOD); b:Box(.375,.75,4.5,1.875,1,5.75,slate)
     b:Box(.875,1,4.875,1.375,1.375,5.5,slate); b:Box(.125,1.375,4.75,2.125,1.625,5.625,slate)
     porchJoint(world,-12.25)
@@ -598,6 +598,17 @@ local function house(world)
     trimCovered(b,loft)
     b:Finish({masonry='homeWindows'})
     loft:Finish({masonry='homeWindows'})
+    -- Project the cut stone face one fine cell, and the keystone two. Read the finished opening
+    -- so the lip cannot bridge a stair in the vaulted reveal or change the solid furnace.
+    local lip=brush(world,{-.5,1.375,7},{2.875,2.875,7.125},.0625)
+    local k=math.floor((7.1875-b.lmin[3])/b.s)
+    lip:Shape(-.5,1.375,7,2.875,2.875,7.125,function(x,y,z)
+        local i,j=math.floor((x-b.lmin[1])/b.s),math.floor((y-b.lmin[2])/b.s)
+        if b.grid:GetVoxelMaterial(i,j,k)==P.HOME_ARCH and b.grid:IsSolid(i,j,k) then
+            if z>=7.0625 or abs((x-1.2)/1.25)<(y-1.4)/1.05*.1438 then return P.HOME_ARCH end
+        end
+    end)
+    lip:Finish({visual=true,masonry='homeMasonry'})
 end
 local function banks(world)
     local b=brush(world,{-21,-1.5,-19},{5,5,4},.25)
@@ -616,7 +627,7 @@ local function banks(world)
     for _,z in ipairs({1.5,-2.5,-5.75}) do for _,x in ipairs({-5.25,-3}) do
         b:Box(x-.25,-1.5,z-.25,x+.25,.875,z+.25,cedarPost)
     end end
-    for _,p in ipairs({{-18,-7,2.75},{-14,-13,1.5},{2,-8,2.0},{4,2,3}}) do column(b,p[1],p[2],0,p[3]) end
+    for _,p in ipairs({{-18,-7,2.75},{-14,-13,1.5},{2,-8,2.0},{4,2,3}}) do column(b,p[1],p[2],0,p[3],true) end
     -- Terraced front parapet follows the pond lip, with an open spillway and stair entrance.
     for i=0,31 do
         local a=math.pi+i*math.pi/31
@@ -633,6 +644,16 @@ local function banks(world)
     -- The western edge of the launch paving crosses one surviving pond pillar.
     b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z) if pad(x,z)<=8.55 then return false end end)
     b:Finish()
+    -- The east pond shaft emerges through paving at 1.75 m. Dress this exposed foot and
+    -- the underside of its cap with the same 1/16 m profiles as the entrance columns.
+    local mould=brush(world,{3.1875,1.75,1.1875},{4.8125,2.8125,2.8125},.0625)
+    for _,band in ipairs({{1.75,1.8125,.6875},{1.8125,1.875,.625},{2.4375,2.5,.625},{2.75,2.8125,.8125}}) do
+        local lo,hi,r=table.unpack(band)
+        mould:Shape(4-r,lo,2-r,4+r,hi,2+r,function(x,y,z)
+            if not b:IsSolidLocal(x,y,z) then return P.HOME_COPING end
+        end)
+    end
+    mould:Finish({visual=true,masonry='homeMasonry'})
 end
 local function trees(world,scene)
     local foliage=require('ruins.RuinsTrees')

@@ -51,6 +51,7 @@ local function fixture(owner)
             for x=i,ii do for y=j,jj do for z=k,kk do if v.cells[key(x,y,z)]then self:SetVoxelMaterial(x,y,z,id)end end end end
         end
         function grid:GetSolidCount()return v.count end
+        function grid:GetVoxelMaterial(i,j,k)return v.cells[key(i,j,k)] or 0 end
         function grid:IsSolid(i,j,k)return v.cells[key(i,j,k)]~=nil end
         function v:GetGrid()return grid end
         function v:SetCollidable(value)self.collidable=value end
@@ -72,7 +73,10 @@ local function fixture(owner)
     return world,env.M.surfaceMaterials
 end
 local world,cache=fixture(home)
-assert(#world.volumes==5,'wood fix must not add house volumes')
+assert(#world.volumes==6 and world.volumes[6].collidable==false and world.volumes[6].collisionMask==0,'forge lip must be purely visual')
+local lip=world.volumes[6]
+assert(lip.s==.0625 and lip:At(1.21875,2.65625,7.03125)==197,'forward keystone')
+assert(lip:At(1.21875,2.03125,7.09375)==nil,'arch must leave the mouth open')
 local main,j1,j2,loft=world.volumes[2],world.volumes[3],world.volumes[4],world.volumes[5]
 assert(j1.material~=j2.material and j1.material~=cache['0.0625:plain'] and j2.material~=cache['0.0625:plain'])
 assert(cache['0.0625:plain'].params.wood_center==nil,'joint centre leaked to shared material')
@@ -125,7 +129,7 @@ print('PASS each main-roof voxel has a single owner across house grids')
 if TIMBER_BASELINE then
     local before=assert(load(read(TIMBER_BASELINE),'house before fix'))()
     local old=fixture(before)
-    assert(#old.volumes==#world.volumes)
+    assert(#old.volumes==5 or #old.volumes==6)
     for i,a in ipairs(old.volumes)do
         local b=world.volumes[i]
         assert(a.nx==b.nx and a.ny==b.ny and a.nz==b.nz and a.s==b.s)
@@ -144,4 +148,18 @@ if TIMBER_BASELINE then
         print('PASS baseline occupancy/collision',i,b.count,'cells; no geometry/volume growth')
     end
 end
+local P=require('ruins.RuinsPalette').P
+assert(main:At(1.1875,2.6875,7.1875)==P.HOME_ARCH and main:At(1.1875,2.6875,7.4375)==P.HOME_ARCH)
+assert(main:At(1.1875,2.6875,7.5625)==P.HOME_HEARTH and main:At(1.1875,2,7.1875)==nil)
+up(home.Build,'courtyard')(world)
+local floor=world.volumes[7]
+assert(floor:At(12,1.625,3)==P.HOME_PAVING and floor:At(4,1.625,3)==P.HOME_PAVING)
+assert(not floor:At(3.375,1.625,3) and home.Height(home.x+3.375,home.z+3)==home.base+1.5)
+assert(up(up(home.Build,'terrain'),'lawnMaterial')(3.375,3,1.5)==P.STONE_B,'outer stone shoulder belongs to RuinsGround')
+up(home.Build,'banks')(world)
+local bank,trim=world.volumes[#world.volumes-1],world.volumes[#world.volumes]
+assert(bank:At(4,2.375,2)==P.HOME_ASHLAR and bank:At(4,2.625,2)==P.HOME_PLINTH and bank:At(4,3.125,2)==P.HOME_COPING)
+assert(trim.s==.0625 and not trim.collidable and trim.collisionMask==0)
+for k in pairs(trim.cells) do local x,y,z=localCell(trim,k);assert(not bank:At(x,y,z) and not floor:At(x,y,z),'overlapping pond trim') end
+print('PASS courtyard/outer shoulder, solid coping, open mouth, 0.375 m arch lining and independent collision-free moulding')
 print('PASS house timber offline regression (not Web rendering or GPU timing)')
