@@ -921,6 +921,11 @@ function M.Start()
     scene_:CreateComponent("Octree")
     scene_:CreateComponent("DebugRenderer")
     world_ = scene_:CreateComponent("VoxelPhysicsWorld")
+    -- 体素结构断裂后由 solver 接管脱离部分：失去下方支撑的上部会
+    -- 自动成为动态碎块，使用统一重力下落并与地面碰撞；不要在玩法层把它
+    -- 留成静态体积，否则底座被打掉后上半部分会悬空。
+    world_:SetGravity(Vector3(0, -9.81, 0))
+    world_:SetStressBreakFactor(200.0)
     -- 碎块预算（移动端友好）
     world_.maxFrozenFragments = 220
     world_.maxSpallChunks = 14
