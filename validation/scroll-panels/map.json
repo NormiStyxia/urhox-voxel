@@ -1,0 +1,251 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "TIMEOUT",
+    "duration_ms": 107329,
+    "frames_completed": 27,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "[2026-11-24 03_33_16_459][56] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5568 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\n",
+                    "frame": 1
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-24 03_33_16_459][56] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5568 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 1
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-24 03_33_16_459][56] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5568 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 1
+                }
+            ]
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1968.31ms (threshold: 100ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-24 03_33_19_980][57] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5568 errmsg:glLinkProgram error:0:error: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vSideNormal' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTexCoord' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-24 03_33_19_980][57] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5568 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "[2026-11-24 03_33_19_980][57] ERROR: bgfx invalid shader => /workspace/engine/Source/ThirdParty/bgfx-all/bgfx/src/renderer_gl.cpp:5568 errmsg:glLinkProgram error:0:error: fragment shader input `vAOUV' has no matching output in the previous stage\nerror: fragment shader input `vColor' has no matching output in the previous stage\nerror: fragment shader input `vTangent' has no matching output in the previous stage\nerror: fragment shader input `vNormal' has no matching output in the previous stage\nerror: fragment shader input `vWorldPos' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos0' has no matching output in the previous stage\nerror: fragment shader input `vShadowPos1' has no matching output in the previous stage\n",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 3521.17ms (threshold: 100ms)",
+                    "frame": 3
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1727.87ms (threshold: 100ms)",
+                    "frame": 4
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1072.34ms (threshold: 100ms)",
+                    "frame": 5
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1021.74ms (threshold: 100ms)",
+                    "frame": 6
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1063.68ms (threshold: 100ms)",
+                    "frame": 7
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1446.67ms (threshold: 100ms)",
+                    "frame": 8
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1417.33ms (threshold: 100ms)",
+                    "frame": 9
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2681.5ms (threshold: 100ms)",
+                    "frame": 10
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 5525.7ms (threshold: 100ms)",
+                    "frame": 11
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1463.95ms (threshold: 100ms)",
+                    "frame": 12
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1461.62ms (threshold: 100ms)",
+                    "frame": 13
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 1809.73ms (threshold: 100ms)",
+                    "frame": 14
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2127.39ms (threshold: 100ms)",
+                    "frame": 15
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2337.3ms (threshold: 100ms)",
+                    "frame": 16
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2241.46ms (threshold: 100ms)",
+                    "frame": 17
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2401.09ms (threshold: 100ms)",
+                    "frame": 18
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2519.72ms (threshold: 100ms)",
+                    "frame": 19
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2135.03ms (threshold: 100ms)",
+                    "frame": 20
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2703.56ms (threshold: 100ms)",
+                    "frame": 21
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2065.43ms (threshold: 100ms)",
+                    "frame": 22
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2279.15ms (threshold: 100ms)",
+                    "frame": 23
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2578.05ms (threshold: 100ms)",
+                    "frame": 24
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2189.78ms (threshold: 100ms)",
+                    "frame": 25
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2402.77ms (threshold: 100ms)",
+                    "frame": 26
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 2160.96ms (threshold: 100ms)",
+                    "frame": 27
+                },
+                {
+                    "category": "engine",
+                    "message": "Validation timed out",
+                    "frame": 27
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1828,
+            "component_count": 3044,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 47,
+            "hash": 1463617596,
+            "frame_time_ms": 44870.53515625
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 47,
+            "hash": 1802521494,
+            "frame_time_ms": 2681.4990234375
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 5525.7021484375,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 7,
+        "ProceduralSky": 2,
+        "Skybox": 2,
+        "CustomGeometry": 1908,
+        "VoxelVolume": 470,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 192,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 9,
+        "SoundSource": 2,
+        "SoundSource3D": 2
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 33,
+        "total_errors": 33
+    }
+}

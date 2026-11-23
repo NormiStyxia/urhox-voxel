@@ -8,6 +8,7 @@ local Store = require('combat.WeaponStore')
 local CombatState = require('combat.CombatState')
 local TouchInput = require('ui.TouchInput')
 local M = {}
+---@type table|nil
 local session
 local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
 local function Clamp(n,lo,hi) return math.min(hi,math.max(n,lo)) end
@@ -103,7 +104,7 @@ local function Render(vg,s)
     if openness>0 then
         local left,right=Draw.ScrollBounds(W,openness)
         Draw.Save(vg);nvgTranslate(vg,x,y);nvgScale(vg,scale,scale)
-        Draw.ScrollPaper(vg,W,H,left,right)
+        Draw.ScrollPaper(vg,W,H,left,right,true)
         Draw.Save(vg);nvgIntersectScissor(vg,left+12,0,math.max(0,right-left-24),H)
         View.Draw(vg,s)
         Draw.Restore(vg);Draw.Restore(vg)

@@ -461,11 +461,12 @@ local function outerStair(b)
     end
     b:Box(lane0,0,Z1,lane1,landA,back1,stone)
     b:Box(lane0-.125,landA-.125,Z1-.125,lane1+.125,landA,back1+.125,slab)
-    -- Branch off the first rear steps into the second storey. The landing is
-    -- one 0.375 m step above its floor and flush with rear stair step two.
-    -- It occupies the wall/stair gap, never the ascending flight itself.
+    -- Two 0.375 m transitions bridge the floor to the rear flight. The outer
+    -- tread is high enough that the capsule can overlap adjacent stair treads
+    -- without meeting a combined 0.75 m rise on the way back out.
     local entryY=F2+.625
     b:Box(secondEntry.x0,entryY-.25,Z1-.5,secondEntry.x1,entryY,back0,slab)
+    b:Box(secondEntry.x0,entryY,Z1,secondEntry.x1,entryY+RISE,back0,slab)
     -- Cover the rear attic doorway across its full width, including capsule clearance.
     local landingX0=min(endX-1.625,terraceDoor.x0-.25)
     b:Box(landingX0,0,back0,endX,landB,back1,stone)

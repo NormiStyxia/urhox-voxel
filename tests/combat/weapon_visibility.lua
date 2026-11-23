@@ -30,14 +30,95 @@ Mock.Node=function(...)
     local n=newNode(...)
     function n:CreateComponent(kind)
         if kind~='BillboardSet' then return create(self,kind) end
-        local b={items={},SetMaterial=ignore,SetRelative=ignore,SetSorted=ignore,Commit=ignore}
+        local b={items={},published={},commits=0,SetMaterial=ignore,SetRelative=ignore,SetSorted=ignore}
+        function b:Commit()
+            self.commits=self.commits+1
+            for i,item in pairs(self.items) do self.published[i]=item.enabled end
+        end
         function b:SetNumBillboards(count) for i=0,count-1 do self.items[i]={} end end
         function b:GetBillboard(i) return assert(self.items[i]) end
         return b
     end
     return n
 end
-require('dragon.VoxelFX').Material=function() return Material:new() end
+local VoxelFX=require('dragon.VoxelFX')
+VoxelFX.Material=function() return Material:new() end
+-- Empty Clear is already optimized in production. Pin its GPU contract here:
+-- live -> clear and last-particle expiry must publish hidden state exactly once.
+local function mote() return {pos=Vector3.ZERO,life=.1,size=.02,colors={Color(1,1,1)}} end
+local pool=VoxelFX.Motes(scene,'clear regression',3,'square',true)
+local function CheckFree(p)
+    assert(p:Count()==0 and #p.free==p.n)
+    local seen={};for _,id in ipairs(p.free)do assert(not seen[id]);seen[id]=true end
+end
+local base=pool.bb.commits
+pool:Clear();pool:Update(.1);assert(pool.bb.commits==base,'empty billboard clear/update submits nothing')
+local item=assert(pool:Spawn(mote()));pool:Update(.01)
+assert(pool.bb.published[item.idx],'present a live mote before clearing')
+base=pool.bb.commits;pool:Clear()
+assert(pool.bb.commits==base+1 and not pool.bb.published[item.idx]);CheckFree(pool)
+base=pool.bb.commits;pool:Clear();assert(pool.bb.commits==base)
+-- Clear before first presentation must also recycle the slot safely.
+assert(pool:Spawn(mote()));pool:Clear();CheckFree(pool)
+item=assert(pool:Spawn(mote()));pool:Update(.01)
+base=pool.bb.commits;pool:Update(1)
+assert(pool.bb.commits==base+1 and not pool.bb.published[item.idx]);CheckFree(pool)
+base=pool.bb.commits;pool:Clear();pool:Update(.1);assert(pool.bb.commits==base)
+for _=1,20 do
+    for _=1,pool.n do assert(pool:Spawn(mote())) end
+    assert(not pool:Spawn(mote()),'fixed capacity survives repeated reuse')
+    pool:Clear();CheckFree(pool)
+end
+pool.node:Remove()
+
+-- WorldMotes is the actual time-catalyst backend, both immediate and deferred.
+-- Adapt only native geometry overloads; particle lifetime/clear/draw stay real.
+local parent=Mock.Node('time FX regression')
+function parent:CreateChild(name)
+    local node=Mock.Node(name,self)
+    function node:WorldToLocal(p)return p end
+    function node:CreateComponent(kind)
+        assert(kind=='CustomGeometry')
+        local g=Mock.CustomGeometry(self)
+        function g:SetMaterial(mat)self.material=mat end
+        function g:BeginGeometry()self.vertices={} end
+        return g
+    end
+    return node
+end
+getmetatable(Vector3.ZERO).__unm=function(p)return p*-1 end
+Vector3.RIGHT=Vector3(1,0,0)
+local Fx=require('combat.TimeCatalystFx')
+local camera={worldRight=Vector3(1,0,0),worldUp=Vector3.UP}
+local fx=Fx.New(parent,camera)
+assert(fx.ready and fx.spark.deferDraw and fx.burst.deferDraw)
+Fx.SetShown(fx,true)
+assert(fx.spark:Spawn(mote()) and fx.burst:Spawn(mote()))
+Fx.Draw(fx)
+assert(fx.spark.node.enabled and fx.burst.node.enabled)
+local draws=0
+for _,p in ipairs({fx.spark,fx.burst})do
+    local draw=p.Draw
+    p.Draw=function(self)draws=draws+1;return draw(self)end
+end
+Fx.SetShown(fx,false)
+assert(draws==2 and not fx.spark.node.enabled and not fx.burst.node.enabled,'time -> weapon immediately hides both world-quad pools')
+CheckFree(fx.spark);CheckFree(fx.burst)
+Fx.Clear(fx);Fx.SetShown(fx,false)
+assert(draws==2,'repeated empty time clear does not draw')
+Fx.SetShown(fx,true);assert(fx.spark:Spawn(mote()));Fx.Draw(fx)
+assert(fx.spark.node.enabled,'time FX can reappear after clear')
+local commits=fx.spark.geometry.commits
+fx.spark:Update(1)
+assert(not fx.spark.node.enabled and fx.spark.geometry.commits==commits,'deferred final expiry hides without geometry upload')
+CheckFree(fx.spark);base=draws;Fx.Clear(fx);assert(draws==base)
+Fx.Dispose(fx)
+local immediate=VoxelFX.WorldMotes(parent,'immediate expiry',2,'square',true)
+assert(immediate:Spawn(mote()));immediate:Update(.01);assert(immediate.node.enabled)
+immediate:Update(1);assert(not immediate.node.enabled);CheckFree(immediate)
+base=immediate.geometry.commits;immediate:Clear();immediate:Update(.1)
+assert(immediate.geometry.commits==base);immediate.node:Remove()
+print('PASS real VoxelFX empty/live/expiry/reuse and time-catalyst deferred clear: no empty Commit/Draw, no residual particles')
 local State=require('combat.CombatState')
 local Store=require('combat.WeaponStore')
 Store.Save=function() return true end
@@ -60,7 +141,14 @@ end
 assert(State.Enter('manual'));tick(100)
 for _,item in ipairs({{'sword','iron'},{'bow','field'},{'sword','wing'},{'bow','thorn'},{'sword','warden'},{'bow','silver'},{'sword','iron'},{'bow','field'}}) do
     local class,id=table.unpack(item)
-    assert(Store.Forge(rig,class,'select',id));assert(State.SetWeapon(class));tick(100)
+    assert(Store.Forge(rig,class,'select',id));tick(100)
+    local pools={rig.combatFx.pixel.slash,rig.combatFx.pixel.impact,rig.combatFx.pixel.charge,
+        rig.slashRibbon.pixels,rig.shockBurst.pixels,rig.bowChargeFx.motes,rig.bowChargeFx.flakes}
+    local commits={}
+    for i,p in ipairs(pools)do assert(p:Count()==0);commits[i]=p.bb.commits end
+    assert(State.SetWeapon(class))
+    for i,p in ipairs(pools)do assert(p.bb.commits==commits[i],'idle weapon switch submits no empty billboard clear')end
+    tick(100)
     local e=rig.entries[class];local v=e.authoredVisual or e.wing or e.thorn
     assert(v and v.node and v.node.enabled and v.geometry.commits>0 and v.geometry.material and #v.geometry.vertices>=3,'missing '..id)
     assert(e.pivot.parent==rig.sockets['back_'..class]);assert(State.Activity(true));State.SetBusy(true);tick(60)
