@@ -274,6 +274,28 @@ local function Restored(n,g)
     for _,tech in ipairs(e.techniques) do assert(tech.disposed,'owned technique leaked') end
 end
 
+-- Switch across all authored assets through the same pending/publish route as the forge.
+do
+    Boot()
+    local nodes,components=Live()
+    WingSword.ENABLED,ThornBow.ENABLED=true,true
+    assert(Showroom.Enter(e.scene))
+    for _,item in ipairs({{'sword','iron','iron_sword_visual'},{'bow','field','hunter_bow_visual'},
+        {'sword','warden','warden_sword_visual'},{'bow','silver','silver_bow_visual'},
+        {'sword','wing','WingSword'},{'bow','thorn','thorn_bow_visual'}}) do
+        local old=Shape()
+        local config=Config(item[1]);config.modelId=item[2]
+        Showroom.SetWeapon(config);Finish()
+        local node=assert(Shape():GetChild(item[3],true),item[2])
+        local g=node:GetComponent('CustomGeometry')
+        assert(node.enabled and g.viewMask==e.viewport.camera.viewMask and g:GetNumVertices(0)>0)
+        assert(g.material and not g.material.disposed and (not old or old.removed))
+        print('PASS showroom mesh/material',item[2],#g.vertices)
+    end
+    Showroom.Exit();Restored(nodes,components)
+    WingSword.ENABLED,ThornBow.ENABLED=false,false
+end
+
 -- Reproduce the real tolua failure: assert(v,msg) in last position expands into
 -- technique + message. The optional native numeric slots MUST reject that text.
 Boot()

@@ -42,7 +42,8 @@ local env=setmetatable({WeaponSelectGesture=G,WeaponWheel=wheel,CombatState=Stat
  M={ride={mode='free'},ctrl={loco={}},debugOn=false},nomi_={nomi=character,node=root},
  caster_={charging=true,charge=1,castAnim=1},drag={buttons=3},animPreview_={index=0},
  ForgePanel={IsOpen=function()return false end},SettingsMenu={IsBlocked=function()return false end,Attach=function(_,fn)env.settings=fn end},
- HUD={root={}},Spells={SPELLS={}},VoidRewind={Attach=function()end},DebugLog={RegisterProbe=function()end},
+ HUD={root={},AttachHouse=function()return {open=false}end},HomeIsland={},WorldMap={IsOpen=function()return false end},time_=0,
+ Spells={SPELLS={}},VoidRewind={Attach=function()end},DebugLog={RegisterProbe=function()end},
  PerformanceHUD={Attach=function()end},CombatHasAggro=function()return false end},{__index=_G})
 -- Lua local initializer isn't in scope inside its table literal.
 env.SettingsMenu.Attach=function(_,fn)env.settings=fn end

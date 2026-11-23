@@ -1,13 +1,7 @@
--- Two explicit, front-readable pixel loops shared by the catalyst and wing sword.
--- Each loop is an elliptical strip made from short tangent-aligned voxel bars.
--- A separate bright head moves against the loop flow so the long axes remain
--- stable in the final front projection while the crossed planes stay 3D.
 local M = {}
 local material
 local profiles = {
-    catalyst = {count=48, period=8, radius=.296, minor=.42, width=.0048,
-        depth=.0038, y=0, z=-.145, aSlope=.28, bSlope=-.28,
-        aTilt=.32, bTilt=-.32},
+    catalyst = {count=16, period=8, y=0, z=0},
     wing = {count=20, period=6, radius=.083, minor=.44, width=.0042,
         depth=.0032, y=.198, z=-.125, aSlope=.32, bSlope=-.32,
         aTilt=.28, bTilt=-.28},
@@ -38,17 +32,22 @@ local function Basis(p,ring)
     return u,v,n
 end
 
-local function DefineCuboid(g,halfT,halfR,halfD,color)
-    g:BeginGeometry(0,TRIANGLE_LIST)
+local function AddCuboid(g,center,halfT,halfR,halfD,color)
+    local uv=Vector2(.20,.20)
     for k,face in ipairs(faces) do
         local tone=.84+.15*(k%3)/2
         local c=Color(color[1]*tone,color[2]*tone,color[3]*tone,1)
         for _,index in ipairs(order) do
             local q=corners[face[index]]
-            g:DefineVertex(Vector3(q[1]*halfT,q[2]*halfR,q[3]*halfD))
-            g:DefineColor(c);g:DefineTexCoord(Vector2(.20,.20))
+            g:DefineVertex(center+Vector3(q[1]*halfT,q[2]*halfR,q[3]*halfD))
+            g:DefineColor(c);g:DefineTexCoord(uv)
         end
     end
+end
+
+local function DefineCuboid(g,halfT,halfR,halfD,color)
+    g:BeginGeometry(0,TRIANGLE_LIST)
+    AddCuboid(g,Vector3.ZERO,halfT,halfR,halfD,color)
     g:Commit()
     assert(g:SetMaterial(0,material)~=false,'grain material binding failed')
 end
@@ -105,6 +104,50 @@ local function UpdateHead(ring,p)
     ring.head.rotation:FromAxes(tangent,side,ring.n)
 end
 
+-- In a circle's own XY plane, a grain at angle theta rises by
+-- radius * sin(tilt) * sin(theta + 6 * orbitAngle). Adjacent batches have
+-- opposite tilt, so neighbours hop out of phase. Antipodal pairs balance.
+local function AnimateCircle(ring,phase)
+    local wave=2160*phase
+    local travel=Quaternion(0,0,360*phase-wave)
+    local cycle=Quaternion(0,0,wave)
+    for i,node in ipairs(ring.streams) do
+        node.rotation=travel*ring.tilts[i]*cycle
+    end
+end
+
+local function GrainGeometry(node,mask)
+    local g=node:CreateComponent('CustomGeometry')
+    g.castShadows=false;g.viewMask=mask;g.lightMask=mask;g.zoneMask=mask
+    return g
+end
+
+local function BuildCircle(loop,p,index,mask)
+    local ring={node=loop,streams={},tilts={Quaternion(4.5,0,0),Quaternion(-4.5,0,0)}}
+    local radius=index==1 and .264 or .290
+    local pitch=index==1 and 74 or -69
+    local roll=index==1 and 12 or -17
+    loop.rotation=Quaternion(0,0,roll)*Quaternion(pitch,0,0)
+    for parity=0,1 do
+        local stream=loop:CreateChild('catalyst_grain_stream_'..parity)
+        stream.temporary=true;stream.enabled=false
+        local g=GrainGeometry(stream,mask)
+        g:BeginGeometry(0,TRIANGLE_LIST)
+        for i=parity,p.count-1,2 do
+            local angle=2*math.pi*i/p.count
+            local point=Vector3(radius*math.cos(angle),radius*math.sin(angle),0)
+            local h=.0086+.0009*math.cos(angle*3)
+            local tint=i==index*3 and {.98,.86,.58} or {.65+.08*math.cos(angle*3),.84,.98}
+            AddCuboid(g,point,h,h,h,tint)
+        end
+        g:Commit()
+        assert(g:SetMaterial(0,material)~=false,'grain material binding failed')
+        ring.streams[parity+1]=stream
+    end
+    AnimateCircle(ring,index==1 and 0 or .5)
+    return ring
+end
+
 function M.New(parent,kind,mask)
     local p=profiles[kind]
     if not p then return nil,'unknown orbit kind '..tostring(kind) end
@@ -118,18 +161,20 @@ function M.New(parent,kind,mask)
         for ringIndex=1,2 do
             local loop=fx.node:CreateChild(kind..'_orbit_'..ringIndex)
             loop.temporary=true;loop.enabled=false
-            local g=loop:CreateComponent('CustomGeometry')
-            g.castShadows=false;g.viewMask=mask;g.lightMask=mask;g.zoneMask=mask
-            local ring=BuildLoop(g,p,ringIndex)
-            ring.node=loop;ring.index=ringIndex
-            local head=loop:CreateChild(kind..'_orbit_head_'..ringIndex)
-            head.temporary=true;head.enabled=true
-            local hg=head:CreateComponent('CustomGeometry')
-            hg.castShadows=false;hg.viewMask=mask;hg.lightMask=mask;hg.zoneMask=mask
-            DefineCuboid(hg,ring.tangentHalf*1.12,ring.radialHalf*1.18,ring.depthHalf*1.18,{1.0,.98,.74})
-            ring.head=head;ring.headGeometry=hg
-            fx.rings[ringIndex]=ring
-            UpdateHead(ring,p)
+            if kind=='catalyst' then
+                fx.rings[ringIndex]=BuildCircle(loop,p,ringIndex,mask)
+            else
+                local g=GrainGeometry(loop,mask)
+                local ring=BuildLoop(g,p,ringIndex)
+                ring.node=loop;ring.index=ringIndex
+                local head=loop:CreateChild(kind..'_orbit_head_'..ringIndex)
+                head.temporary=true;head.enabled=true
+                local hg=GrainGeometry(head,mask)
+                DefineCuboid(hg,ring.tangentHalf*1.12,ring.radialHalf*1.18,ring.depthHalf*1.18,{1.0,.98,.74})
+                ring.head=head;ring.headGeometry=hg
+                fx.rings[ringIndex]=ring
+                UpdateHead(ring,p)
+            end
         end
         fx.rotor=fx.rings[1]
     end)
@@ -144,7 +189,14 @@ end
 function M.Visible(fx,shown)
     if not fx or not fx.node then return end
     fx.node.enabled=shown
-    for _,ring in ipairs(fx.rings) do ring.node.enabled=shown end
+    for _,ring in ipairs(fx.rings) do
+        ring.node.enabled=shown
+        if ring.streams then
+            for _,stream in ipairs(ring.streams) do stream.enabled=shown end
+        else
+            ring.head.enabled=shown
+        end
+    end
 end
 
 function M.Update(fx,dt)
@@ -153,6 +205,11 @@ function M.Update(fx,dt)
     fx.phaseA=WrapPhase(fx.phaseA+step)
     fx.phaseB=WrapPhase(fx.phaseB-step)
     fx.phase=fx.phaseA
+    if fx.rings[1].streams then
+        AnimateCircle(fx.rings[1],fx.phaseA)
+        AnimateCircle(fx.rings[2],fx.phaseB)
+        return
+    end
     fx.rings[1].phase=fx.phaseA
     fx.rings[2].phase=fx.phaseB
     UpdateHead(fx.rings[1],fx.rings[1].profile)

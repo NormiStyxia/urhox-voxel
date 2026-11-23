@@ -119,6 +119,8 @@ local function DisposeMesh(s,mesh)
     if not mesh then return end
     if mesh.catalyst then CleanupFunction(s,'TimeCatalystVisual.Dispose',Catalyst.Dispose,mesh.catalyst)
     elseif mesh.thorn then CleanupFunction(s,'ThornBowVisual.DisposeShowroom',ThornBow.DisposeShowroom,mesh)
+    elseif mesh.hunter then CleanupFunction(s,'HunterBowVisual.DisposeShowroom',HunterVisual.DisposeShowroom,mesh)
+    elseif mesh.silver then CleanupFunction(s,'SilverBowVisual.DisposeShowroom',SilverVisual.DisposeShowroom,mesh)
     elseif mesh.wingSword then CleanupFunction(s,'ForgeShowroomBlades.Dispose',Blades.Dispose,mesh)
     elseif mesh.authoredVisual then CleanupFunction(s,'AuthoredWeapon.Dispose',mesh.authored.Dispose,mesh.authoredVisual)
     else CleanupFunction(s,'WeaponBuilder.DisposePreview',Builder.DisposePreview,mesh) end
@@ -496,7 +498,9 @@ local function BuildStep(s,dt)
         else
             ReportFailure(s,'Update',done)
             if s.bladeJob.catalyst then error(done,0) end
-            DisposeMesh(s,s.bladeJob);Remove(s,s.bladeJob.node);s.bladeJob=nil
+            DisposeMesh(s,s.bladeJob)
+            if s.bladeJob.wingSword then Remove(s,s.bladeJob.node) end
+            s.bladeJob=nil
             s.job=Builder.BeginPreview(s.pendingRoot,s.selection)
         end
         return

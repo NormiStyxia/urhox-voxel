@@ -219,7 +219,7 @@ function M.Motes(parent, name, n, kind, additive)
     bb:SetNumBillboards(n)
     for i = 0, n - 1 do bb:GetBillboard(i).enabled = false end
     bb:Commit()
-    self.bb, self.n, self.list, self.free = bb, n, {}, {}
+    self.node, self.bb, self.n, self.list, self.free = node, bb, n, {}, {}
     for i = n, 1, -1 do self.free[#self.free + 1] = i - 1 end
     return self
 end

@@ -171,6 +171,7 @@ end
 -- volume (and draw stages for bows) only if the model cannot be loaded.
 local function BuildFallback(self,entry)
     local state=entry.mesh
+    if state.volume then return end
     local weapon=state.blueprint.config.weapon
     local mesh=assert(Builder.Build(self.world,entry.pivot,state.blueprint.config))
     Builder.SetOpacity(mesh,state.alpha)
@@ -407,6 +408,24 @@ end
 
 local function DisposeEffect(self,effect)
     if effect then self.world:RemoveVolume(effect.volume);effect.material:Dispose() end
+end
+
+-- A late resource failure can leave a pose-only node. Keep the voxel body
+-- until a replacement has finished uploading, then release it exactly once.
+local function SyncFallback(self,entry,ready)
+    local mesh=entry.mesh
+    if ready and mesh.volume then
+        local node=entry.pivot:CreateChild('weapon_pose_'..mesh.blueprint.config.weapon)
+        node.temporary=true;node.enabled=mesh.alpha>0
+        entry.mesh={node=node,blueprint=mesh.blueprint,alpha=mesh.alpha}
+        Builder.Dispose(mesh)
+        if entry==self.entries.bow then
+            for _,draw in ipairs(self.bowDrawMeshes) do DisposeEffect(self,draw) end
+            self.bowDrawMeshes={}
+        end
+    elseif not (entry.authored or entry.wing or entry.thorn or mesh.volume) then
+        BuildFallback(self,entry)
+    end
 end
 
 -- Six non-overlapping horizontal slices reveal bottom-to-top without rebuilding
@@ -1024,7 +1043,7 @@ end
 ---@return boolean
 function Rig:HoloCapable()
     local entry=self.entries.sword
-    return self.active=='sword' and entry~=nil and entry.wing~=nil and WingVisual.HasHolo(entry.wing)
+    return self.active=='sword' and entry~=nil and not entry.authored and WingVisual.HasHolo(entry.wing)
 end
 
 -- Keeps the pivot on whichever socket it currently rides (hand pose or back hang).
@@ -1395,19 +1414,21 @@ function Rig:UpdateBowVisual()
         local t=self.visualClock-self.bowReleaseAt
         nock=nock+Vector3(.03*math.cos(t*math.pi*60)*(1-t/.05),0,0)
     end
-    local thorn=self.entries.bow.thorn
+    local bow=self.entries.bow
+    local thorn=bow.authoredVisual or bow.thorn
+    local bowVisual=bow.authored or ThornVisual
     local thornOn=thorn and thorn.ready and true or false
     -- Thorn bow: limb tips pull toward the archer while drawn; the voxel string follows them.
     local bend=thornOn and drawn and (.02+self.bowStage*.03) or 0
-    local tipZ=thornOn and (ThornVisual.StringZ(thorn)-bend) or (-2-self.bowStage)*.03
+    local tipZ=thornOn and (bowVisual.StringZ(thorn)-bend) or (-2-self.bowStage)*.03
     if thornOn then
-        ThornVisual.SetBend(thorn,bend);ThornVisual.SetStringVisible(thorn,not showString)
+        bowVisual.SetBend(thorn,bend);bowVisual.SetStringVisible(thorn,not showString)
         self.thornAim=(drawn or vibrating) and 1 or 0
     end
     for i,mesh in ipairs(self.bowStrings) do
         mesh.node.enabled=showString
         if showString then
-            local tip=thornOn and thorn.node.rotation*Vector3(0,(i==1 and 1 or -1)*ThornVisual.StringHalf(thorn),tipZ)
+            local tip=thornOn and thorn.node.rotation*Vector3(0,(i==1 and 1 or -1)*bowVisual.StringHalf(thorn),tipZ)
                 or Vector3(0,(i==1 and 1 or -1)*self.bowHalfHeight,tipZ)
             local delta=tip-nock
             mesh.node:SetDirection(delta:Normalized())
@@ -1532,6 +1553,27 @@ function Rig:UpdateCore(dt)
     if self.trailEnabled then self:UpdateCharge(entry) end
 end
 
+local function DisposeAuthored(entry)
+    if entry.authored then entry.authored.Dispose(entry.authoredVisual) end
+    entry.authored,entry.authoredVisual,entry.authoredId=nil,nil,nil
+end
+
+local function SyncAuthored(self,entry,visible)
+    local visual=entry.authoredVisual
+    if not visual then return false end
+    if not (visual.ready or visual.complete) then
+        local done,err=entry.authored.Step(visual)
+        if done==nil or visual.failed then
+            print('WeaponRig: '..entry.authoredId..' upload failed: '..tostring(err or visual.failed))
+            DisposeAuthored(entry)
+            return false
+        end
+    end
+    SyncFallback(self,entry,visual.ready or visual.complete)
+    entry.authored.SetVisible(visual,visible)
+    return true
+end
+
 --- Wing sword visual (WingSwordVisual): shown instead of the voxel sword mesh when it loads.
 --- Hit geometry, sockets, trails and afterimages keep using the voxel blueprint.
 ---@param entry table sword entry
@@ -1545,13 +1587,13 @@ function Rig:AttachWing(entry,blueprint)
             WingVisual.SetHolo(entry.wing,0,1)
         end
         if entry.authored and entry.authoredId==modelId then return end
-        if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil end
+        DisposeAuthored(entry)
         local visual,err=(modelId=='iron' and IronVisual or WardenVisual).New(entry.pivot,Catalog.Definitions.sword.visualTip,blueprint.config.colors)
         if not visual then print('WeaponRig: '..modelId..' sword unavailable, voxel sword kept: '..tostring(err));return end
         entry.authored=(modelId=='iron' and IronVisual or WardenVisual);entry.authoredVisual=visual;entry.authoredId=modelId
         return
     end
-    if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil;entry.authoredVisual=nil end
+    DisposeAuthored(entry)
     local tipY=Catalog.Definitions.sword.visualTip
     local colors=blueprint.config and blueprint.config.colors
     if entry.wing and math.abs((entry.wingTip or 0)-tipY)>1e-6 then
@@ -1578,13 +1620,9 @@ end
 ---@param dt number?
 function Rig:SyncWing(dt)
     local entry=self.entries.sword
-    if entry and entry.authoredVisual then
-        local visual=entry.authoredVisual
-        if not visual.ready then entry.authored.Step(visual) end
-        entry.authored.SetVisible(visual,self.active=='sword' and entry.mesh.alpha>=.5)
-        return
-    end
-    if not (entry and entry.wing) then return end
+    if SyncAuthored(self,entry,self.active=='sword' and entry.mesh.alpha>=.5) then return end
+    SyncFallback(self,entry,entry.wing~=nil)
+    if not entry.wing then return end
     if self.transition and self.transition.holo and self.active=='sword' then
         WingVisual.SetVisible(entry.wing,self.holoSolid==true)
         WingVisual.SetHolo(entry.wing,self.holoGlow or 0,self.holoCut or 1)
@@ -1609,13 +1647,14 @@ function Rig:AttachThorn(entry,blueprint)
     local modelId=blueprint.config and blueprint.config.modelId
     if modelId=='field' or modelId=='silver' then
         if entry.authored and entry.authoredId==modelId then return end
-        if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil end
+        DisposeAuthored(entry)
         local visual,err=(modelId=='field' and HunterVisual or SilverVisual).New(entry.pivot,Catalog.Definitions.bow.halfHeight)
         if not visual then print('WeaponRig: '..modelId..' bow unavailable, voxel bow kept: '..tostring(err));return end
         entry.authored=(modelId=='field' and HunterVisual or SilverVisual);entry.authoredVisual=visual;entry.authoredId=modelId
+        ThornVisual.SetVisible(entry.thorn,false)
         return
     end
-    if entry.authored then entry.authored.Dispose(entry.authoredVisual);entry.authored=nil;entry.authoredVisual=nil end
+    DisposeAuthored(entry)
     local half=self.bowHalfHeight
     if not half then return end
     if entry.thorn and math.abs((entry.thornHalf or 0)-half)>1e-6 then
@@ -1634,13 +1673,9 @@ end
 ---@param dt number?
 function Rig:SyncThorn(dt)
     local entry=self.entries.bow
-    if entry and entry.authoredVisual then
-        local visual=entry.authoredVisual
-        if not visual.ready then entry.authored.Step(visual) end
-        entry.authored.SetVisible(visual,self.active=='bow' and entry.mesh.alpha>=.5)
-        return
-    end
+    if SyncAuthored(self,entry,self.active=='bow' and entry.mesh.alpha>=.5) then return end
     local thorn=entry and entry.thorn
+    SyncFallback(self,entry,thorn and thorn.ready and not thorn.failed)
     if not thorn then return end
     if not thorn.ready then ThornVisual.Step(thorn) end
     if thorn.failed then

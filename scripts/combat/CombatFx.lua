@@ -60,12 +60,9 @@ local function geometry(node,kind,material)
 end
 local function slot(self,kind,i,additive)
     local node=self.scene:CreateChild('CombatFx_'..kind..i..(additive and 'a' or ''));node.temporary=true;node.enabled=false
-    local mat=Material:new() -- do not inherit voxel/surface-shader state from terrain
-    if self.pixelMode then
-        -- Pixel mode keeps the slots as timing/state records for callers, but
-        -- submits no broad CustomGeometry. The visible path is VoxelFX motes.
-        mat.SetShaderParameter=function() end
-    else
+    local mat
+    if not self.pixelMode then
+        mat=Material:new()
         mat:SetTechnique(0,additive and self.additive or self.technique)
         geometry(node,kind,mat)
     end
@@ -142,7 +139,7 @@ local function show(self,s,x,y,z,sx,sy,sz,color,ttl)
     s.node.position=s.pos;s.node.scale=s.scale;s.node.enabled=true
     s.color,s.ttl,s.age,s.active=color,ttl,0,true
     s.vx,s.vy,s.vz=0,0,0
-    s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 7 or color][math.floor((s.peak or 1)*16)+1])
+    if s.mat then s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and 7 or color][math.floor((s.peak or 1)*16)+1]) end
 end
 function F:Impact(pos,forward)
     pixelImpact(self,pos,forward)
@@ -307,6 +304,7 @@ local function ageSlot(self,s,dt)
     if not s.active then return end
     s.age=s.age+dt
     if s.age>=s.ttl then s.active=false;s.node.enabled=false;return end
+    if not s.mat then return end
     local alpha=clamp(1-s.age/s.ttl,0,1)
     alpha=alpha*alpha*(3-2*alpha)*(s.peak or 1) -- hold the head, then fade fast
     s.mat:SetShaderParameter('MatDiffColor',self.colors[s.arc and s.age<.03 and 7 or s.color][math.floor(alpha*16)+1])
@@ -335,7 +333,7 @@ function F:Update(dt)
             elseif i==30 then
                 s.frames=s.frames+1
                 s.color=s.frames<=2 and 1 or 2
-                s.mat:SetShaderParameter('MatDiffColor',self.colors[s.color][math.floor((1-s.age/s.ttl)*16)+1])
+                if s.mat then s.mat:SetShaderParameter('MatDiffColor',self.colors[s.color][math.floor((1-s.age/s.ttl)*16)+1]) end
                 local u=1-s.age/s.ttl
                 s.scale=set(s.scale,.55*u,.055,.55*u);s.node.scale=s.scale
             end
@@ -362,7 +360,10 @@ function F:Dispose()
         for _,pool in pairs(self.pixel) do pool:Clear();pool.node:Remove() end
     end
     for _,pool in ipairs({self.land,self.arcs,self.edges,self.ghosts}) do
-        for _,s in ipairs(pool) do s.node:Remove();s.mat:Dispose() end
+        for _,s in ipairs(pool) do
+            s.node:Remove()
+            if s.mat then s.mat:Dispose() end
+        end
     end
 end
 return F

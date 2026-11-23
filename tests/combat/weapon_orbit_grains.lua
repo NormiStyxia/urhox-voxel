@@ -54,7 +54,100 @@ local function Check(fx,count,period,viewMask,label)
     assert((fx.rings[1].head.position-beforeHeadA):Length()>1e-5 and (fx.rings[2].head.position-beforeHeadB):Length()>1e-5,label..' bright heads flow')
     return geomA,geomB
 end
-local a1,a2=Check(clock.catalyst.grains,48,8,mask,'catalyst')
+-- Transform through the whole hierarchy, including the charge/fade scale on
+-- the equipped catalyst. The mock's LocalToWorld omits ancestor scale.
+local function WorldPoint(node,p)
+    while node do
+        local s=node.scale
+        p=node.position+node.rotation*Vector3(s.x*p.x,s.y*p.y,s.z*p.z)
+        node=node.parent
+    end
+    return p
+end
+local function SampleStreams(visual,viewMask)
+    local bounds=visual.geometry.core.boundingBox
+    local center=(bounds.min+bounds.max)*.5
+    local expected=WorldPoint(visual.pivots.core,center)
+    assert(visual.grains.node.parent==visual.pivots.core,'inherits sapphire transform')
+    local samples={}
+    for _,ring in ipairs(visual.grains.rings) do
+        local points={}
+        for _,stream in ipairs(ring.streams) do
+            local mesh=assert(kinds[stream])
+            assert(stream.enabled and mesh.viewMask==viewMask and mesh.commits==1)
+            assert(#mesh.vertices==8*36)
+            for first=1,#mesh.vertices,36 do
+                local sum=Vector3.ZERO
+                for j=first,first+35 do sum=sum+mesh.vertices[j].position end
+                points[#points+1]=WorldPoint(stream,sum*(1/36))
+            end
+        end
+        local sum=Vector3.ZERO
+        for _,point in ipairs(points) do sum=sum+point end
+        samples[#samples+1]={centerError=(sum*(1/#points)-expected):Length(),points=points}
+    end
+    return samples
+end
+local exhibited=clock.catalyst
+local initial=SampleStreams(exhibited,mask)
+local maxError=0
+local maxHop,minSpacing=0,math.huge
+local excursions={{},{}}
+for frame=1,120 do
+    Orbit.Update(exhibited.grains,8/120)
+    local samples=SampleStreams(exhibited,mask)
+    for i,sample in ipairs(samples) do
+        maxError=math.max(maxError,sample.centerError)
+        local ring=exhibited.grains.rings[i]
+        local n=ring.node.worldRotation*Vector3.FORWARD
+        for j,point in ipairs(sample.points) do
+            local p=point-exhibited.pivots.core.worldPosition
+            local height=p.x*n.x+p.y*n.y+p.z*n.z
+            maxHop=math.max(maxHop,math.abs(height))
+            local range=excursions[i][j] or {lo=math.huge,hi=-math.huge}
+            range.lo=math.min(range.lo,height);range.hi=math.max(range.hi,height)
+            excursions[i][j]=range
+            for k=1,j-1 do minSpacing=math.min(minSpacing,(point-sample.points[k]):Length()) end
+            local d=(point-initial[i].points[j]):Length()
+            if frame==60 then assert(d>.52,'each grain orbits to the far side') end
+            if frame==120 then assert(d<1e-7,'each grain closes its own path') end
+        end
+    end
+end
+assert(minSpacing>.095,'visible space between particles of the same ring')
+for _,ring in ipairs(excursions) do
+    for _,range in ipairs(ring) do assert(range.hi-range.lo>.040,'every grain rises and falls') end
+end
+assert(maxHop>.020 and maxHop<.024,'individual normal excursion should be visible')
+-- Exercise the normal hand update and weapon switch with the native particle
+-- emitter calls stubbed. Geometry, core spin, hand spring and scale are real Lua.
+local function noop() end
+package.loaded['dragon.VoxelFX'].WorldMotes=function()
+    return {Spawn=noop,Update=noop,Clear=noop}
+end
+local held=assert(Clock.New(root,Mock.Node('camera')))
+while not Clock.Step(held) do end
+local ctx={position=Vector3(1,0,-3),hand=Vector3(1.4,1.2,-2.7),yaw=0,active=true}
+for frame=1,150 do
+    ctx.yaw=(frame*2)%360;ctx.aiming=frame>40;ctx.charge=frame/150;ctx.casting=frame==100
+    Clock.Update(held,1/30,ctx)
+    for _,sample in ipairs(SampleStreams(held,0xffffffff)) do
+        maxError=math.max(maxError,sample.centerError)
+    end
+end
+assert(maxError<1e-6,'both orbit centres follow the moving core')
+ctx.active=false
+for _=1,45 do Clock.Update(held,1/30,ctx) end
+local hiddenPhase=held.grains.phase
+Clock.Update(held,.1,ctx)
+assert(not held.root.enabled and hiddenPhase==held.grains.phase)
+for _,ring in ipairs(held.grains.rings) do
+    for _,stream in ipairs(ring.streams) do assert(not stream.enabled) end
+end
+ctx.active=true;Clock.Update(held,.05,ctx);SampleStreams(held,0xffffffff)
+local heldRoot=held.grains.node
+Clock.Dispose(held);assert(heldRoot.removed)
+print(('PASS catalyst centre max %.3g m; normal excursion %.5f m; minimum spacing %.5f m; 120 showroom + 150 held frames'):format(maxError,maxHop,minSpacing))
 local b1,b2=Check(wing.grains,20,6,mask,'showroom wing')
 local c1,c2=Check(hand.grains,20,6,0xffffffff,'hand wing')
 assert(builds==1,'material shared by all four loop meshes')

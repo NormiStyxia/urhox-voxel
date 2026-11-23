@@ -1,7 +1,6 @@
 -- Pixel mana that attaches to the complete nocked arrow during bow draw.
 -- The nock/tip/rotation are supplied by WeaponRig, so this effect never owns
 -- projectile direction or invents a second launch point.
-local VoxelFX=require('dragon.VoxelFX')
 local F={}
 local TAU=math.pi*2
 local PALETTES={
@@ -39,6 +38,7 @@ function F.New(parent)
     local fx={active=false,charge=0,acc=0,nock=Vector3.ZERO,rotation=Quaternion(),
         arrowLength=.705,modelId='field',phase=0,streamPhase=0}
     local ok,err=pcall(function()
+        local VoxelFX=require('dragon.VoxelFX')
         fx.root=parent:CreateChild('bow_charge_grains')
         fx.root.temporary=true
         fx.root.enabled=false

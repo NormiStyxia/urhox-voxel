@@ -91,7 +91,7 @@ function B:Update(dt)
             if b.active then b.age=b.age+dt;if b.age>=b.kind.life then b.active=false end end
         end
         self.pixels:Update(dt)
-        self.node.enabled=self.pixels.node.enabled
+        self.node.enabled=self.pixels:Count()>0
         return
     end
     local any=false

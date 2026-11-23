@@ -7,6 +7,7 @@ local function v(x,y,z) return setmetatable({x=x or 0,y=y or 0,z=z or 0},V) end
 function V.__add(a,b) return v(a.x+b.x,a.y+b.y,a.z+b.z) end
 function V.__sub(a,b) return v(a.x-b.x,a.y-b.y,a.z-b.z) end
 function V.__mul(a,b) return v(a.x*b,a.y*b,a.z*b) end
+function V:CrossProduct(b) return v(self.y*b.z-self.z*b.y,self.z*b.x-self.x*b.z,self.x*b.y-self.y*b.x) end
 function V:Length() return math.sqrt(self.x*self.x+self.y*self.y+self.z*self.z) end
 function V:LengthSquared() return self.x*self.x+self.y*self.y+self.z*self.z end
 function V:Normalized() local n=self:Length();return n>0 and self*(1/n) or v() end

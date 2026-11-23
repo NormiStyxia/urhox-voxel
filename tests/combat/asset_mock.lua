@@ -55,8 +55,9 @@ function M.Decode(raw)
 end
 
 function M.GetFile(_,path)
-    assert(path=='model/forge-blades/ThornBow.mesh.json','unexpected mesh resource')
-    if rawget(_G,'THORN_MESH_MISSING') then return nil end
+    assert(path=='model/forge-blades/ThornBow.mesh.json' or path=='model/forge-blades/HunterBow.mesh.json'
+        or path=='model/forge-blades/SilverBow.mesh.json','unexpected mesh resource')
+    if path=='model/forge-blades/ThornBow.mesh.json' and rawget(_G,'THORN_MESH_MISSING') then return nil end
     local file=io.open('assets/'..path,'rb')
     if not file then return nil end
     return {ReadString=function() return file:read('*a') end,

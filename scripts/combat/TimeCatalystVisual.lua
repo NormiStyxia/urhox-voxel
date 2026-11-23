@@ -76,7 +76,7 @@ function V.New(scene,cameraNode,showroomMask)
             g:BeginGeometry(0,TRIANGLE_LIST)
             visual.geometry[name]=g
         end
-        visual.grains=Grains.New(visual.root,'catalyst',showroomMask or MASK)
+        visual.grains=Grains.New(visual.pivots.core,'catalyst',showroomMask or MASK)
         if not showroomMask then visual.fx=Fx.New(scene,cameraNode) end
     end)
     if not ok then

@@ -175,7 +175,7 @@ end
 function R:Update(dt)
     if self.pixels then
         self.pixels:Update(dt)
-        self.node.enabled=self.pixels.node.enabled
+        self.node.enabled=self.pixels:Count()>0
         return
     end
     local style=self.style
