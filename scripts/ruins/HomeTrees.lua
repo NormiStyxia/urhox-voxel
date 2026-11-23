@@ -24,9 +24,18 @@ Grid.__index = Grid
 local function key(x, y, z) return x .. ":" .. y .. ":" .. z end
 
 ---@param size number
+function Grid:Init(size)
+    self.size = size
+    self.cells = {}
+    self.order = {}
+end
+
+---@param size number
 ---@return HomeTreeGrid
 local function grid(size)
-    return setmetatable({ size = size, cells = {}, order = {} }, Grid)
+    local result = setmetatable({}, Grid)
+    result:Init(size)
+    return result
 end
 
 ---@param x integer
@@ -100,7 +109,8 @@ function Grid:Build(parent, name, palette, material)
     end
     local node = parent:CreateChild(name)
     local drawable = node:CreateComponent("StaticModel")
-    drawable.model = MergeGeometries(parts, false):ToModel()
+    local merged = assert(MergeGeometries(parts, false), "家园树木几何合并失败：" .. name)
+    drawable.model = merged:ToModel()
     drawable.material = material
     drawable.castShadows = true
     return #parts
@@ -128,7 +138,8 @@ end
 local function woodPath(target, points, startRadius, endRadius, seed)
     local s = target.size
     for k = 1,#points-1 do
-        local a,b = points[k],points[k+1]
+        local a = points[k] --[[@as Vector3]]
+        local b = points[k+1] --[[@as Vector3]]
         local d = b-a
         local len2 = d:LengthSquared()
         local r0 = startRadius+(endRadius-startRadius)*(k-1)/(#points-1)

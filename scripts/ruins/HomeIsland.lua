@@ -1152,7 +1152,6 @@ end
 -- stone oven on a stepped plinth with a voussoir arch, corbelled hood and tapered
 -- chimney, bellows on the house side, an anvil on a stump, a quench trough, a coal
 -- heap and a tool rail. Flames, sparks and smoke are particles (H.Build).
-local FORGE={x=-19,z=4.25,depth=2.875}
 local function forge(world,old)
     local cx,z0=FORGE.x,FORGE.z
     local z1=z0+FORGE.depth
