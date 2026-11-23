@@ -32,6 +32,7 @@ Base.__index = Base
 Base.State = { IDLE='IDLE', PATROL='PATROL', ALERT='ALERT', CHASE='CHASE',
     TELEGRAPH='TELEGRAPH', ATTACK='ATTACK', RECOVER='RECOVER', STAGGER='STAGGER', DEAD='DEAD' }
 local Visual=require('combat.enemies.EnemyVisual')
+local ModelVisual=require('combat.enemies.EnemyModelVisual')
 local Particles=require('combat.enemies.EnemyParticles')
 local S = Base.State
 local sqrt, min, max = math.sqrt, math.min, math.max
@@ -64,7 +65,8 @@ function Base:Init(scene, world, terrain, combat, config, position, id)
     self.radius, self.yaw = config.radius, 0
     self.footprint=Base.MakeFootprint(self.radius)
     self.stats={activeCount=0,voxelCount=0,particleCount=0,surfaceFacesEstimate=0,drawSubmissionsEstimate=0,rebuildCpuMs=0}
-    self.metrics=Visual.Measure(config)
+    local visualClass=config.model and ModelVisual or Visual
+    self.metrics=visualClass.Measure(config)
     self.fx, self.fz = 0, 1
     self.state, self.stateTime, self.age = S.IDLE, 0, 0
     self.poseAge,self.poseDt,self.realDt,self.deathRealTime=0,0,0,0
@@ -104,7 +106,7 @@ function Base:Init(scene, world, terrain, combat, config, position, id)
             radius=p.radius, weak=p.weak or false, enabled=not p.hidden, material=p.material or 'stone' }
     end
     if scene and world then
-        self.visual = Visual.New(scene, world, config)
+        self.visual = visualClass.New(scene, world, config)
         self.node = self.visual.root
     end
     self.particles=Particles.Acquire(scene,world,combat or self)

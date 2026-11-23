@@ -2,6 +2,12 @@ local Base=require('combat.enemies.EnemyBase')
 local Beetle=require('combat.enemies.MossBeetle')
 local Sentry=require('combat.enemies.StoneSentry')
 local Beast=require('combat.enemies.StoneBeast')
+local WoodSpirit=require('combat.enemies.actors.WoodSpirit')
+local NestWeaver=require('combat.enemies.actors.NestWeaver')
+local RockColossus=require('combat.enemies.actors.RockColossus')
+local RuinConstruct=require('combat.enemies.actors.RuinConstruct')
+local TimeWraith=require('combat.enemies.actors.TimeWraith')
+local EnemyParticles=require('combat.enemies.EnemyParticles')
 ---@class EnemySpawner
 ---@field enemies EnemyBase[]
 ---@field scene Scene?
@@ -11,6 +17,12 @@ local Beast=require('combat.enemies.StoneBeast')
 ---@field arenaVolumes VoxelVolume[]
 local Spawner={}
 Spawner.__index=Spawner
+local TRAINING_CLASSES={
+    WoodSpirit=WoodSpirit, NestWeaver=NestWeaver, RockColossus=RockColossus,
+    RuinConstruct=RuinConstruct, TimeWraith=TimeWraith,
+    wood_spirit=WoodSpirit, nest_weaver=NestWeaver, rock_colossus=RockColossus,
+    ruin_construct=RuinConstruct, time_wraith=TimeWraith,
+}
 Spawner.MAX_ACTIVE=4 -- minors only; a live Boss arena selects the Boss exclusively
 Spawner.ARENA_DISTANCE=18
 Spawner.ACTIVE_DISTANCE=38
@@ -28,7 +40,20 @@ local function d2(x,z,a,b) return (x-a)^2+(z-b)^2 end
 ---@param combat table?
 function Spawner.New(scene,world,terrain,combat)
     local self=setmetatable({},Spawner)
-    self:Init(scene,world,terrain,combat)
+    self:Init(scene,world,terrain,combat,false)
+    return self
+end
+
+-- Isolated one-enemy harness used by offline/Web combat training. It shares
+-- the regular EnemyBase update and particle pool, while deliberately skipping
+-- authored encounters, the Boss arena, and every terrain blocker.
+function Spawner.NewTraining(scene,world,terrain,combat)
+    local self=setmetatable({},Spawner)
+    self:Init(scene,world,terrain,combat,true)
+    self.trainingPool=EnemyParticles.Acquire(scene,world,self.combat)
+    self.trainingPoolReleased=false
+    self.trainingEnemy=nil
+    self.training=true
     return self
 end
 function Spawner:ValidPosition(x,z,radius,arena)
@@ -51,7 +76,7 @@ function Spawner:ValidPosition(x,z,radius,arena)
     end
     return y
 end
-function Spawner:Init(scene,world,terrain,combat)
+function Spawner:Init(scene,world,terrain,combat,training)
     self.scene,self.world,self.terrain,self.combat=scene,world,terrain,combat or {}
     self.enemies,self.placements,self.rejected,self.obstacles,self.arenaVolumes={},{},{},{},{}
     self.nearest,self.distances={},{ }
@@ -61,6 +86,7 @@ function Spawner:Init(scene,world,terrain,combat)
         particleCapacity=64,surfaceFacesEstimate=0,drawSubmissionsEstimate=0,rebuildCpuMs=0,
         aiUpdates=0,actualDrawCalls=false,actualFrameMs=false,scope='enemies_and_hit_death_particles'}
     self.attackGroup={count=0,limit=2} -- at most two melee windups/active attacks, held until recovery
+    if training then return end
     local r=terrain.ISLAND.mainRadius
     -- Each authored encounter is two melee beetles and one ranged sentry.
     -- These clearings derive from mainRadius and are individually terrain-validated.
@@ -84,6 +110,48 @@ function Spawner:Init(scene,world,terrain,combat)
             print('EnemySpawner: unsafe placement skipped: '..id)
         end
     end
+end
+
+-- Remove the current training actor without replacing the public enemies table.
+-- SetActive first stops warnings, attack cues, projectiles and owner particles.
+function Spawner:ClearTraining()
+    if not self.training then return false end
+    local enemy=self.trainingEnemy
+    if enemy then
+        enemy.selected=false
+        enemy:SetActive(false)
+        enemy:Destroy()
+        self.trainingEnemy=nil
+    end
+    for i=#self.enemies,1,-1 do self.enemies[i]=nil end
+    for i=#self.placements,1,-1 do self.placements[i]=nil end
+    for i=#self.rejected,1,-1 do self.rejected[i]=nil end
+    for i=1,Spawner.MAX_ACTIVE do self.nearest[i]=false; self.distances[i]=math.huge end
+    self.activeCount,self.aiUpdates=0,0
+    self.boss=nil
+    return true
+end
+
+---@param modelName string one of the five model basenames (kind aliases accepted)
+---@param spawnPosition Vector3 exact training spawn in meters
+---@return EnemyBase
+function Spawner:SpawnTraining(modelName,spawnPosition)
+    assert(self.training,'SpawnTraining requires Spawner.NewTraining')
+    local class=TRAINING_CLASSES[modelName]
+    assert(class,'unknown training enemy model: '..tostring(modelName))
+    assert(spawnPosition and type(spawnPosition.x)=='number' and type(spawnPosition.y)=='number'
+        and type(spawnPosition.z)=='number','training spawnPosition must have numeric x/y/z')
+    self:ClearTraining()
+    local cfg=class.Config
+    local id='training_'..cfg.kind
+    local enemy=class.New(self.scene,self.world,self.terrain,self.combat,
+        Vector3(spawnPosition.x,spawnPosition.y,spawnPosition.z),id)
+    enemy.selected=false
+    enemy:SetActive(true)
+    self.enemies[#self.enemies+1]=enemy
+    self.placements[#self.placements+1]={id=id,x=spawnPosition.x,y=spawnPosition.y,z=spawnPosition.z,model=cfg.model}
+    self.trainingEnemy=enemy
+    return enemy
 end
 
 -- Pillars have visual voxels and analytic XZ circles ONLY. No physical blockers
@@ -131,9 +199,46 @@ function Spawner:SetCombat(combat)
     self.combat=combat
     for _,enemy in ipairs(self.enemies) do enemy:SetCombat(combat) end
 end
+
+-- Opt-in ordinary encounters. The legacy New() route deliberately keeps its
+-- original roster for tests and existing callers. RuinsScene enables this set
+-- after constructing the default spawner. Every candidate is terrain checked
+-- before it becomes reachable combat content.
+function Spawner:EnableModelEncounters()
+    if self.modelEncounterEnabled then return 0 end
+    self.modelEncounterEnabled = true
+    local seeds = {
+        -- Keep each encounter outside the living boss's 18m exclusion
+        -- circle.  These authored points were sampled against the real
+        -- RuinsTerrain, including footprint probes and puzzle clearances.
+        {WoodSpirit, -22, 8, 'wood_spirit_w'},
+        {NestWeaver, 23, 7, 'nest_weaver_e'},
+        {RockColossus, 0, -16, 'rock_colossus_n'},
+        {RuinConstruct, -13, 24, 'ruin_construct_w'},
+        {TimeWraith, 30, 7, 'time_wraith_e'},
+    }
+    local added = 0
+    for _, seed in ipairs(seeds) do
+        local class, x, z, id = seed[1], seed[2], seed[3], seed[4]
+        local y = self:ValidPosition(x, z, class.Config.radius, false)
+        if y then
+            local enemy = class.New(self.scene, self.world, self.terrain, self.combat, Vector3(x, y, z), id)
+            if not class.Config.ranged then enemy.attackGroup = self.attackGroup end
+            enemy:SetActive(false)
+            self.enemies[#self.enemies + 1] = enemy
+            self.placements[#self.placements + 1] = {id = id, x = x, y = y, z = z, model = class.Config.model}
+            added = added + 1
+        else
+            self.rejected[#self.rejected + 1] = id
+            print('EnemySpawner: unsafe model encounter skipped: ' .. id)
+        end
+    end
+    return added
+end
 function Spawner:GetEnemies() return self.enemies end
 -- W2 may emit player/arrow flecks into this SAME pool, ticking its own owner once/frame.
 function Spawner:GetParticlePool()
+    if self.training then return self.trainingPool end
     return self.enemies[1] and self.enemies[1].particles or nil
 end
 
@@ -225,6 +330,15 @@ function Spawner:GetPerfStats()
 end
 
 function Spawner:Destroy()
+    if self.training then
+        self:ClearTraining()
+        if self.trainingPool and not self.trainingPoolReleased then
+            self.trainingPool:Release(self)
+            self.trainingPoolReleased=true
+            self.trainingPool=nil
+        end
+        return
+    end
     for _,enemy in ipairs(self.enemies) do enemy:Destroy() end
     if self.world then for _,vol in ipairs(self.arenaVolumes) do self.world:RemoveVolume(vol) end end
     self.enemies,self.arenaVolumes={},{}
