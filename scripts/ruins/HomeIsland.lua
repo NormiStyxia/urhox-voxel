@@ -1006,7 +1006,9 @@ local function firstStorey(ctx)
     end
     windowBars(ctx,'ground-west-bars',sideWindows(westWindows),-16,-1,true,.125)
     windowBars(ctx,'ground-east-bars',sideWindows(eastWindows),-1,1,true,.125)
-    windowBars(ctx,'ground-back-bars',sideWindows(backWindows),Z1,1,false,.125)
+    -- 1/32 m strips stay under 256 cells: the rear wall is split into two groups.
+    windowBars(ctx,'ground-back-bars',sideWindows({backWindows[1],backWindows[2]}),Z1,1,false,.125)
+    windowBars(ctx,'ground-back-bars-east',sideWindows({backWindows[3]}),Z1,1,false,.125)
     storeyBelt(ctx)
 end
 local function singleRoof(ctx)
