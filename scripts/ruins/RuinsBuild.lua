@@ -464,7 +464,7 @@ local function BuildInnerParapet(world)
             -- 留出完整南北阶梯（含扶墙）；r>=22 仍是原本平地，不铺新环形平台。
             if y < Terrain.RING_Y then
                 if Terrain.InStairFootprint(x, z) or r < Terrain.COURT_R or r > 21.9 then return nil end
-                return MossyStone(x, y, z, Terrain.RING_Y)
+                return MossyStone(x, y, z, 0.0)
             end
             if r < 21.0 or r > 21.6 then return nil end
             if abs(x) < Terrain.STAIR_WALL_HALF + 0.1 then return nil end
@@ -480,7 +480,7 @@ local function BuildInnerParapet(world)
             end
             if ly < 1.25 then return Marble(x, y, z) end
         end)
-        Keep(b:Finish({}))
+        Keep(b:Finish({ masonry = "court" }))
     end
 end
 
@@ -966,14 +966,14 @@ function M.UpdateFloaters(t, freezeK)
 end
 
 -- ---------------------------------------------------------------- 入口
----@param world VoxelPhysicsWorld
----@param scene Scene
 -- Native scenery is owned by the scene; release this module's references.
 function M.Stop()
     M.volumes,M.floaters,M.stairVolumes={},{},{}
     M.colBroken,M.ribs=nil,nil
     M.scene=nil
 end
+---@param world VoxelPhysicsWorld
+---@param scene Scene
 function M.Build(world, scene)
     M.Stop()
     M.scene = scene

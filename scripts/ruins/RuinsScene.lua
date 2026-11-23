@@ -31,6 +31,7 @@ local VoidRewind = require("ruins.VoidRewind")
 local TouchInput = require("ui.TouchInput")
 local TouchControls = require("ui.TouchControls")
 local HomeIsland = require("ruins.HomeIsland")
+local HomeTrees = require("ruins.HomeTrees")
 local WorldMap = require("ui.WorldMap")
 local PixelDraw = require("ui.PixelDraw")
 local lastRuinsLanding,homeJob
@@ -292,8 +293,8 @@ local function SetupLighting()
             end
             m:SetSurfaceTexture("palette_tex", world_:GetPaletteTexture())
             m:SetShaderParameter("voxel_size", Variant(size))
-            m:SetShaderParameter("masonry_mode", Variant(masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0))))
-            m:SetShaderParameter("wall_radius", Variant(Terrain.WALL_R))
+            m:SetShaderParameter("masonry_mode", Variant(masonry == "court" and 4.0 or (masonry == "ring" and 2.0 or (masonry == "floor" and 3.0 or (masonry == "ashlar" and 1.0 or 0.0)))))
+            m:SetShaderParameter("wall_radius", Variant(masonry == "court" and Terrain.COURT_R or Terrain.WALL_R))
             -- Home stone palette slots may share a bank/entrance/house volume with other surfaces.
             m:SetShaderParameter("home_stone_origin",Variant(Vector3(HomeIsland.x,HomeIsland.base,HomeIsland.z)))
             if masonry=="homeMasonry" then m:SetShaderParameter("dressed_stone_draw",Variant(1.0)) end
@@ -2327,6 +2328,8 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     if combatMoves_ then SwingPerf.Invalidate() end
     nomi_:BeginQueryScope()
     if combatMoves_ then Safe('Camera.Combat',UpdateCombatCamera,dt,cn) end
+    HomeTrees.UpdateView(cn.worldPosition,nomi_:Position()+Vector3(0,1.25,0),
+        not ForgeShowroom.Active() and not WorldMap.IsOpen())
     if M.region=='home' and not ForgeShowroom.Active() and not WorldMap.IsOpen() then
         HomeIsland.UpdateReflection(dt,scene_,nomi_:Camera(),CombatSettings.GetProfile().quality,M.dayNight.sky.skybox)
     end
@@ -2358,6 +2361,7 @@ function M.Stop()
     DebugLog.RegisterProbe('Ruins',nil)
     WorldMap.Close(); TouchControls.onMap=nil
     if homeJob then homeJob:Cancel();homeJob=nil end
+    HomeTrees.Stop()
     HomeIsland.Stop(); HomeIsland.GetHouseOccupants=nil; Terrain.home=nil; lastRuinsLanding=nil
     SettingsMenu.Stop()
     PerformanceHUD.Stop()

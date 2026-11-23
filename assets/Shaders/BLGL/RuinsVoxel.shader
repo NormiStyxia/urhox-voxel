@@ -96,9 +96,15 @@ void fragment() {
 
     vec3 n = normalize(NORMAL);
     vec3 wp = VERTEX;
+    // 几何面法线保留砌墙的硬转角，不能把窄体素立面插值成竖向波浪。
+    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
+    vec3 faceNormal = normalize(cross(dpdx, dpdy));
+    faceNormal *= dot(faceNormal, n) < 0.0 ? -1.0 : 1.0;
+    if (dressed_stone_draw < 0.5 && home_house_draw < 0.5 && idx >= 100.0 && idx <= 104.0) {
+        n = faceNormal;
+    }
     // Derivatives are evaluated before any house/material branch so the Web
     // quad stays coherent when upper-wall patches fade with footprint.
-    vec3 dpdx = dFdx(wp), dpdy = dFdy(wp);
     float footprint = max(length(dpdx), length(dpdy));
     float houseWallSeam = 0.0;
     float houseWallPatch = 0.0;
@@ -208,7 +214,7 @@ void fragment() {
     float aa = 0.001;
     if (masonry_mode >= 0.5) {
         horizontal = abs(n.x) > abs(n.z) ? wp.z : wp.x;
-        if (masonry_mode > 1.5 && masonry_mode < 2.5) {
+        if ((masonry_mode > 1.5 && masonry_mode < 2.5) || masonry_mode > 3.5) {
             horizontal = mod(atan(wp.z, wp.x) + 6.2831853, 6.2831853) * wall_radius;
         }
         aa = max(fwidth(horizontal), fwidth(wp.y)) * 0.65 + 0.001;
@@ -279,37 +285,28 @@ void fragment() {
         float patina = smoothstep(0.57, 0.78, veins);
         base = mix(base, base * vec3(0.80, 0.82, 0.86), patina * 0.30 * marble);
     }
-    // 苔石槽位只给出"可能长苔"的区域；真正的苔斑在石面上按噪声生长，
-    // 朝上的面、砌缝更容易积苔，块状区域的直边被打散成不规则斑块，不再像迷彩色块。
-    float mossK = 0.0;
+    // 石面共用同一个苔斑场：厘米级碎边叠在小簇上，不按槽位换成另一套模糊雨痕。
+    // 遮罩导数在材质分支之前求值，远处只做像素抗锯齿，不把整片苔晕成绿雾。
     float mossField = 0.0;
+    if (dressed_stone_draw < 0.5 && home_house_draw < 0.5) {
+        mossField = n3(wp * 2.8 + vec3(3.1, 7.7, 1.3)) * 0.72
+            + n3(wp * 15.0 + 11.0) * 0.28;
+    }
+    float mossAA = clamp(fwidth(mossField) * 0.55, 0.008, 0.055);
+    float mossK = 0.0;
     if (dressed_stone_draw < 0.5 && COLOR.g < 0.5 && idx >= 99.5 && idx <= 104.5) {
-        // 一个连续的世界空间生长场，苔石槽位只是把它抬高。槽位边界本身不画出来：
-        // 块内只有一部分长苔，块外紧邻的普通石面也有零星苔点，体素块的直角轮廓被打散。
-        // 竖直墙面上噪声沿 Y 拉长，形成顺着雨水往下淌的苔痕。
-        vec3 mp = wp * vec3(1.6, mix(0.75, 1.6, abs(n.y)), 1.6);
-        // 普通石块只复用已求好的 g/veins（零额外噪声），只有苔石槽位才多采两次 n3。
-        mossField = veins * 0.55 + g * 0.45 + 0.04;
+        float growth = mossField + n.y * 0.12 + jointK * 0.06;
+        float threshold = idx == 104.0 ? 0.66 : 0.70;
+        mossK = smoothstep(threshold - mossAA, threshold + mossAA, growth);
         if (idx == 104.0) {
-            mossField = n3(mp + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
-        }
-        float growth = mossField + max(n.y, 0.0) * 0.20 - max(-n.y, 0.0) * 0.20
-            + (idx == 104.0 ? jointK * 0.22 : jointK * 0.10 - 0.30);
-        mossK = smoothstep(0.50, 0.64, growth);
-        if (idx == 104.0) {
-            vec3 bare = srgb_to_linear(mix(vec3(0.79, 0.76, 0.70), vec3(0.72, 0.72, 0.69), blockHash));
-            float damp = smoothstep(0.38, 0.50, growth) * (1.0 - mossK);
-            base = bare * (1.0 - 0.14 * damp);
+            base = srgb_to_linear(mix(vec3(0.79, 0.76, 0.70), vec3(0.72, 0.72, 0.69), blockHash));
         }
         if (mossK > 0.0) {
-            // 苔色：朝上受光的苔偏黄绿、垂面与背阴处偏深橄榄；块内色调变化走低频，不做像素噪点。
-            float tone = smoothstep(0.25, 0.85, n3(wp * 2.3 + 5.0));
-            vec3 mossShade = mix(vec3(0.24, 0.31, 0.14), vec3(0.33, 0.40, 0.17), tone);
-            vec3 mossSun = mix(vec3(0.40, 0.47, 0.20), vec3(0.52, 0.55, 0.25), tone);
+            float tone = smoothstep(0.30, 0.78, mossField);
+            vec3 mossShade = mix(vec3(0.30, 0.37, 0.19), vec3(0.40, 0.46, 0.24), tone);
+            vec3 mossSun = mix(vec3(0.43, 0.49, 0.25), vec3(0.51, 0.55, 0.30), tone);
             vec3 moss = srgb_to_linear(mix(mossShade, mossSun, smoothstep(0.2, 0.9, n.y)));
-            // 苔层边缘变薄、透出石色。
-            float thick = smoothstep(0.0, 0.6, mossK);
-            base = mix(base, moss, mossK * (0.55 + 0.45 * thick));
+            base = mix(base, moss, mossK * 0.86);
         }
     }
     if (mineral > 0.0 && surfaceFade > 0.0) {
@@ -322,7 +319,8 @@ void fragment() {
     float weatherable = max(max(mineral, dressed ? 1.0 : 0.0), plaster ? 0.7 : 0.0) * (1.0 - 0.5 * tile);
     float groundDist = 1000.0;
     if ((ground_weather_strength > 0.0 && weatherable > 0.0) || ground_contact_strength > 0.0) {
-        groundDist = ruins_ground_distance(wp);
+        // 中央挡土墙脚在庭院 y=0；1m 高度图会把外侧 y=6 平台插值到内壁，不能用于这里。
+        groundDist = masonry_mode > 3.5 ? wp.y : ruins_ground_distance(wp);
     }
     float dampK = 0.0;
     if (ground_weather_strength > 0.0 && weatherable > 0.0 && groundDist < 1.7 && groundDist > -0.6) {
@@ -341,9 +339,10 @@ void fragment() {
         base *= 1.0 + bloomLine * 0.05 * wk * (1.0 - mossK);
         base = mix(base, srgb_to_linear(vec3(0.40, 0.33, 0.24)), splash * 0.42 * wk);
         // 墙根背阴潮湿处才长的苔：只在旧石材上，按块状噪声成簇。
-        float footGrowth = g * 0.55 + veins * 0.45 + (1.0 - smoothstep(0.0, 0.55, groundDist)) * 0.30;
-        float footMoss = smoothstep(0.66, 0.80, footGrowth) * (1.0 - smoothstep(0.05, 0.60, groundDist)) * buried * oldStone;
-        base = mix(base, srgb_to_linear(vec3(0.26, 0.33, 0.15)), footMoss * 0.75 * ground_weather_strength);
+        float footGrowth = mossField + (1.0 - smoothstep(0.0, 0.40, groundDist)) * 0.10;
+        float footMoss = smoothstep(0.68 - mossAA, 0.68 + mossAA, footGrowth)
+            * (1.0 - smoothstep(0.08, 0.45, groundDist)) * buried * oldStone * vertical;
+        base = mix(base, srgb_to_linear(vec3(0.33, 0.40, 0.21)), footMoss * 0.65 * ground_weather_strength);
         mossK = max(mossK, footMoss);
     }
     // 旧石块（墙顶、檐口、断墙台面）朝上的面积尘长地衣：远看是墙顶一圈略暗偏橄榄色。

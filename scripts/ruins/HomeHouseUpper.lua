@@ -52,11 +52,13 @@ local function window(group, faceX, faceZ, nx, nz, bottom, width, height, flower
     return w
 end
 -- Second storey: the bay rhythm of the timber frame, three bays per side.
+local secondEntry={x0=-2.5,x1=-1.0,bottom=F2+.25,top=F2+3.125}
 local secondSill, secondHeight = F2+1.0, 2.25
 for _,x in ipairs({-14.5,-11.5,-8.5,-5.5,-2.5}) do
     local w=window('second',x,Z0,0,-1,secondSill,1.875,secondHeight,true)
     if x==-8.5 then windowLamps.second[1]={x=x,y=secondSill+.5,z=Z0,nx=0,nz=-1} end
-    window('second',x,Z1,0,1,secondSill,1.625,secondHeight)
+    -- The eastern rear bay is the stair entrance, never a glazed window.
+    if x~=-2.5 then window('second',x,Z1,0,1,secondSill,1.625,secondHeight) end
 end
 for _,z in ipairs({9,11,13}) do
     window('second',X0,z,-1,0,secondSill,1.375,secondHeight)
@@ -229,6 +231,9 @@ local function secondFloor(b)
         for _,z in ipairs({CZ-2,CZ+2}) do b:Box(x-.0625,F2+.125,z-.0625,x+.0625,F3-.25,z+.0625,woodY) end
     end
     for _,w in ipairs(Upper.Windows) do if w.group=='second' then drawWindow(b,w) end end
+    -- Cut through the rear wall and its outside timber ring, down to the floor.
+    b:Carve(secondEntry.x0,secondEntry.bottom,Z1-.5,secondEntry.x1,secondEntry.top,Z1+.25)
+    b:Box(secondEntry.x0-.125,secondEntry.top,Z1-.375,secondEntry.x1,secondEntry.top+.125,Z1+.0625,woodX)
 end
 
 -- u runs along the ridge, v across it. Each overlapping course has a dark
@@ -326,7 +331,8 @@ local function westAttic(b)
     for _,w in ipairs(Upper.Windows) do if w.group=='third' then drawWindow(b,w) end end
     -- Terrace door: a tall, reachable opening with a substantial lintel and a
     -- clear route from the upper stair landing.
-    b:Carve(x1-.375,terraceDoor.bottom,terraceDoor.z0,x1,terraceDoor.top,terraceDoor.z1)
+    -- Include the projecting centre post (x1 +/- .0625), not only the plaster.
+    b:Carve(x1-.5,terraceDoor.bottom,terraceDoor.z0,x1+.125,terraceDoor.top,terraceDoor.z1)
     for _,z in ipairs({terraceDoor.z0-.125,terraceDoor.z1}) do
         b:Box(x1-.375,terraceDoor.bottom,z,x1+.0625,terraceDoor.top+.125,z+.125,woodY)
     end
@@ -455,6 +461,11 @@ local function outerStair(b)
     end
     b:Box(lane0,0,Z1,lane1,landA,back1,stone)
     b:Box(lane0-.125,landA-.125,Z1-.125,lane1+.125,landA,back1+.125,slab)
+    -- Branch off the first rear steps into the second storey. The landing is
+    -- one 0.375 m step above its floor and flush with rear stair step two.
+    -- It occupies the wall/stair gap, never the ascending flight itself.
+    local entryY=F2+.625
+    b:Box(secondEntry.x0,entryY-.25,Z1-.5,secondEntry.x1,entryY,back0,slab)
     b:Box(endX-1.5,0,back0,endX,landB,back1,stone)
     b:Box(endX-1.625,landB-.125,Z1,endX+.125,landB,back1+.125,slab)
 

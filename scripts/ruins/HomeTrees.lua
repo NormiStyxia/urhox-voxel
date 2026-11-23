@@ -2,6 +2,25 @@
 -- 先在统一格点上合并体积，再将外层色块合并为两个模型；没有叶片卡或透明贴图。
 local Noise = require("ruins.Noise")
 local M = {}
+---@type Material|nil
+local leafMaterial_
+
+-- 由入口 PostUpdate 在相机位置确定后调用，不额外订阅全局事件。
+---@param eye Vector3
+---@param target Vector3
+---@param active boolean
+function M.UpdateView(eye,target,active)
+    if not leafMaterial_ then return end
+    leafMaterial_:SetShaderParameter("foliage_eye",Variant(Vector4(eye.x,eye.y,eye.z,active and 1 or 0)))
+    leafMaterial_:SetShaderParameter("foliage_target",Variant(Vector4(target.x,target.y,target.z,0)))
+end
+
+function M.Stop()
+    if leafMaterial_ then
+        leafMaterial_:SetShaderParameter("foliage_eye",Variant(Vector4(0,0,0,0)))
+    end
+    leafMaterial_=nil
+end
 local floor, ceil, min, max, abs = math.floor, math.ceil, math.min, math.max, math.abs
 local sin, cos, pi = math.sin, math.cos, math.pi
 
@@ -10,6 +29,7 @@ local sin, cos, pi = math.sin, math.cos, math.pi
 ---@field y integer
 ---@field z integer
 ---@field tone integer
+---@field ao integer
 
 ---@class HomeTreeGrid
 ---@field size number
@@ -46,7 +66,7 @@ function Grid:Set(x, y, z, tone)
     local k = key(x, y, z)
     local c = self.cells[k]
     if c then return end
-    c = { x = x, y = y, z = z, tone = tone }
+    c = { x = x, y = y, z = z, tone = tone, ao = 255 }
     self.cells[k] = c
     self.order[#self.order + 1] = c
 end
@@ -84,6 +104,18 @@ function Grid:Build(parent, name, palette, material)
             or not cells[key(x,y-1,z)] or not cells[key(x,y+1,z)]
             or not cells[key(x,y,z-1)] or not cells[key(x,y,z+1)] then
             visible[key(x,y,z)] = true
+            if name=="Leaves" then
+                -- 叶簇上方和斜上方的占据格决定遮蔽，量化三级以保留合批能力。
+                local covered=0
+                for _,d in ipairs({2,4,6}) do
+                    if cells[key(x,y+d,z)] then covered=covered+2 end
+                    if cells[key(x+2,y+d,z)] then covered=covered+1 end
+                    if cells[key(x-2,y+d,z)] then covered=covered+1 end
+                    if cells[key(x,y+d,z+2)] then covered=covered+1 end
+                    if cells[key(x,y+d,z-2)] then covered=covered+1 end
+                end
+                c.ao=255-floor(covered/7)*28
+            end
         end
     end
     table.sort(self.order, function(a, b)
@@ -94,20 +126,20 @@ function Grid:Build(parent, name, palette, material)
     ---@type ProceduralGeometry[]
     local parts = {}
     local s = self.size
-    local function same(x,y,z,tone)
+    local function same(x,y,z,tone,ao)
         local k=key(x,y,z)
         local c=cells[k]
-        return visible[k] and c and c.tone==tone
+        return visible[k] and c and c.tone==tone and c.ao==ao
     end
     for _, c in ipairs(self.order) do
         local x, y, z = c.x, c.y, c.z
         if visible[key(x,y,z)] then
             local width,depth,height = 1,1,1
-            while same(x+width,y,z,c.tone) do width=width+1 end
+            while same(x+width,y,z,c.tone,c.ao) do width=width+1 end
             while true do
                 local full=true
                 for i=0,width-1 do
-                    if not same(x+i,y,z+depth,c.tone) then full=false; break end
+                    if not same(x+i,y,z+depth,c.tone,c.ao) then full=false; break end
                 end
                 if not full then break end
                 depth=depth+1
@@ -116,7 +148,7 @@ function Grid:Build(parent, name, palette, material)
                 local full=true
                 for j=0,depth-1 do
                     for i=0,width-1 do
-                        if not same(x+i,y+height,z+j,c.tone) then full=false; break end
+                        if not same(x+i,y+height,z+j,c.tone,c.ao) then full=false; break end
                     end
                     if not full then break end
                 end
@@ -126,9 +158,10 @@ function Grid:Build(parent, name, palette, material)
             for k=0,height-1 do for j=0,depth-1 do for i=0,width-1 do
                 visible[key(x+i,y+k,z+j)] = nil
             end end end
+            local tint=assert(palette[c.tone])
             parts[#parts+1] = BoxGeometry(width*s,height*s,depth*s)
                 :Translate((x+width*.5)*s,(y+height*.5)*s,(z+depth*.5)*s)
-                :SetVertexColor(assert(palette[c.tone]))
+                :SetVertexColor(Color(tint.r,tint.g,tint.b,c.ao/255))
         end
     end
     local node = parent:CreateChild(name)
@@ -229,7 +262,7 @@ end
 ---@param target HomeTreeGrid
 ---@param seed integer
 local function leafRelief(target,seed)
-    ---@type HomeTreeCell[]
+    ---@type {x:integer,y:integer,z:integer,tone:integer}[]
     local buds={}
     local function bud(x,y,z,tone)
         if not target.cells[key(x,y,z)] then
@@ -311,9 +344,12 @@ function M.Tree(parent,x,gy,z,o)
     end
     leafRelief(leaves,seed)
     local material=cache:GetResource("Material","Materials/HomeTreeVoxel.xml")
+    if not leafMaterial_ then
+        leafMaterial_=cache:GetResource("Material","Materials/HomeTreeLeaves.xml"):Clone()
+    end
     local barkParts=wood:Build(root,"Bark",BARK,material)
     local palette=assert(LEAVES[o.gold and 3 or (seed%2+1)])
-    local leafParts=leaves:Build(root,"Leaves",palette,material)
+    local leafParts=leaves:Build(root,"Leaves",palette,leafMaterial_)
     print(string.format("HomeTrees: seed=%d gold=%s wood=%d leaf=%d boxes=%d, 2 drawables",
         seed,tostring(o.gold),#wood.order,#leaves.order,barkParts+leafParts))
     return root

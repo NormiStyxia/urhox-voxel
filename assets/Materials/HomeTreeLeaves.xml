@@ -1,0 +1,6 @@
+<material>
+    <surfaceshader name="Shaders/BLGL/HomeTreeLeaves.shader" />
+    <parameter name="daynight_tint" value="1 1 1" />
+    <parameter name="foliage_eye" value="0 0 0 0" />
+    <parameter name="foliage_target" value="0 0 0 0" />
+</material>

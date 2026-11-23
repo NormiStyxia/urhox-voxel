@@ -251,7 +251,8 @@ local function enableHousePart(p,on)
         p.volume.collisionMask=on and p.mask or 0
         p.volume.collisionLayer=on and p.layer or 0
     end
-    p.node.enabled=on
+    -- Glass panes are children too: SetEnabled alone leaves descendants visible.
+    p.node:SetDeepEnabled(on)
     p.on=on
 end
 local function occupiesPart(p,pos,r,height)
@@ -1113,7 +1114,8 @@ end
 -- box with an alpha PBR material, staged with the storey it belongs to and lit
 -- warm at night through RefreshWindowLights. Panes never cast shadows, so sunlight
 -- falls into the hall through the windows.
-local function houseGlass(scene)
+local function houseGlass(scene,world)
+    local hidden=Terrain.HiddenMaterial()
     local root=scene:CreateChild('HomeHouseGlass')
     root.position=Vector3(H.x,H.base,H.z)
     local m=Material:new()
@@ -1131,15 +1133,28 @@ local function houseGlass(scene)
         if not node then
             node=root:CreateChild('HomeHouseGlass-'..group)
             groups[group]=node
-            local entry={node=node,first=stages[group][1],last=stages[group][2],mask=0}
-            houseParts[#houseParts+1]=entry
-            enableHousePart(entry,inStage(entry,houseStage))
         end
         local n=node:CreateChild('Pane')
         n.position=Vector3(x,y,z)
         n.scale=alongX and Vector3(width,height,.02) or Vector3(.02,height,width)
         local sm=n:CreateComponent('StaticModel')
         sm.model=model; sm:SetMaterial(m); sm.castShadows=false
+        -- The player uses Jolt voxel physics. A hidden, two-cell-thick static
+        -- volume stops the controller while preserving transparent rendering.
+        local hx,hz=alongX and width/2 or .0625,alongX and .0625 or width/2
+        local b=brush(world,{x-hx,y-height/2,z-hz},{x+hx,y+height/2,z+hz},.0625)
+        b:Box(x-hx,y-height/2,z-hz,x+hx,y+height/2,z+hz,window)
+        local v=b:Finish()
+        if v then
+            v.material=hidden
+            v:GetNode().name='HomeHouseGlassCollider-'..group
+            -- Register after children exist. The same record controls the pane,
+            -- Jolt filters and the occupied-space guard when switching stages.
+            local entry={node=n,volume=v,brush=b,first=stages[group][1],last=stages[group][2],
+                mask=v.collisionMask,layer=v.collisionLayer}
+            houseParts[#houseParts+1]=entry
+            enableHousePart(entry,inStage(entry,houseStage))
+        end
     end
     for _,w in ipairs(Upper.Windows) do
         pane(w.group,w.x,w.y,w.z,w.width,w.height,w.nx==0)
@@ -1308,7 +1323,7 @@ local function house(world,scene)
         return false
     end}
     trimColumns(world,old,columns,structure)
-    if scene then houseGlass(scene) end
+    if scene then houseGlass(scene,world) end
     houseReady=true
     H.RefreshWindowLights(houseStage)
 end
