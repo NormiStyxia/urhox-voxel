@@ -50,9 +50,29 @@ for _=1,50 do
     State.FinishTransition();assert(rig.pose=='back')
     for _=1,24 do rig:Update(1/60)end
 end
-Builder.Build,Builder.Compile=oldBuild,oldCompile
 assert(#clips==50 and clips[1]=='weapon_swap_sword_to_bow' and clips[2]=='weapon_swap_bow_to_sword')
-assert(world.created==created and world.writes==writes and world.rebuilds==rebuilds,'50 swaps preserve native pool/build counts')
+-- Numeric/Tab/C adapters converge on SelectLoadout. Time keeps its existing
+-- casting mode and never requests a third rig model or rebuilds either weapon.
+moves.clip=nil;State.SetBusy(false);State.FinishTransition()
+assert(moves:SelectLoadout('bow'));moves.clip=nil;State.SetBusy(false);State.FinishTransition()
+State.Activity(true)
+moves.clip,moves.charge,moves.pendingFire='bow_hold',.85,{u=.85}
+moves.hitPending=true;rig:SetBowDraw(.85)
+assert(moves:SelectLoadout('time'))
+assert(State.GetSelection()=='time' and rig.pose=='hidden' and State.CanUseTime())
+assert(not moves.pendingFire and not moves.hitPending and moves.charge==0 and rig.bowDraw==0,'charged bow to time discards pending attacks')
+for _,target in ipairs({'sword','bow','sword'}) do
+    assert(moves:SelectLoadout(target))
+    assert(State.GetSelection()==target and rig.active==target)
+    State.FinishTransition();assert(rig.pose=='back')
+    for _=1,24 do rig:Update(1/60)end
+    moves.clip=nil;State.SetBusy(false)
+    assert(moves:SelectLoadout('time') and rig.pose=='hidden')
+    local beforeStops=stops
+    assert(moves:SelectLoadout('time') and stops==beforeStops,'confirming time remains a no-op')
+end
+Builder.Build,Builder.Compile=oldBuild,oldCompile
+assert(world.created==created and world.writes==writes and world.rebuilds==rebuilds,'weapon/time switches preserve native pool/build counts')
 -- Boundary teardown also clears pending visual work; later Update cannot revive it.
 for _,reason in ipairs({'manual','mount','death','stop'}) do
     State.SetMounted(false);State.SetDead(false);State.Enter('test');State.FinishTransition();State.Activity(true)

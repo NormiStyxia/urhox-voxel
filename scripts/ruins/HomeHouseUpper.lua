@@ -72,7 +72,9 @@ window('third',WEST_CX,Z0,0,-1,F3+3.75,1.0,.875)
 window('third',WEST_CX,Z1,0,1,F3+.75,1.875,1.75)
 for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
-local terraceDoor={x0=SPLIT-.875,x1=SPLIT-.125,z=Z1,bottom=F3+.25,top=F3+3.0}
+-- The east knee wall occupies 0.375 m of the corner; keep at least 0.875 m
+-- clear beside it for the player's 0.64 m capsule and collision tolerance.
+local terraceDoor={x0=SPLIT-1.25,x1=SPLIT-.125,z=Z1,bottom=F3+.25,top=F3+3.0}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
