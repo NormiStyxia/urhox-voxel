@@ -3,6 +3,11 @@ local Brush = require('ruins.VoxelBrush')
 local Noise = require('ruins.Noise')
 local Terrain = require('ruins.RuinsTerrain')
 local P = require('ruins.RuinsPalette').P
+local Upper = require('ruins.HomeHouseUpper')
+-- House footprint shared with the upper storeys; the hall now runs back to z=15.
+local HOUSE = Upper.Footprint
+---@class HomeIsland
+---@field GetHouseOccupants (fun(): Vector3|nil, table|nil)|nil 由 RuinsScene 注入：玩家脚底与龙的包围
 local H = { x = 720, z = 0, base = 6, planarReflectionEnabled = true }
 local abs, floor, sin, cos, sqrt = math.abs, math.floor, math.sin, math.cos, math.sqrt
 local oak, amber, cedar, slate, ember, flame = 150,151,152,153,154,155
@@ -41,9 +46,11 @@ local function top(x,z)
     if basin<1 then return -.75-.25*floor(4*(1-basin)) end
     x,z=(floor(x*4)+.5)*.25,(floor(z*4)+.5)*.25
     if pad(x,z)<8.8 then return 1.5 end
+    -- The house is cut level into the rising north slope.
+    if x>HOUSE.x0-.75 and x<HOUSE.x1+.25 and z>HOUSE.z0-.75 and z<HOUSE.z1+.75 then return 0 end
     if x>9 and x<15 and z<0 then return math.max(0,math.min(1.5,floor((z+10)*1.3)*.25)) end
     local north=2*(1-((x+6)/18)^2-((z-19+.55*sin(x*.31))/5.7)^2)
-    local bench=math.max(0,math.min(1,2-math.max(abs(x+13),abs(z-15))))
+    local bench=math.max(0,math.min(1,2-math.max(abs(x-3.25),abs(z-15.25))))
     north=north+(.875-north)*bench -- a level tread around the mature golden tree's spreading roots
     local west=1.25*(1-((x+24+.4*sin(z*.42))/5.7)^2-((z-1)/11)^2)
     local south=1-((x+2)/10)^2-((z+18+.45*sin(x*.52))/4.2)^2
@@ -624,23 +631,10 @@ local function entranceColumn(world,x,z,h)
     b:Finish({masonry='homeMasonry'})
     columnTrim(world,b,x,z,y,h)
 end
-local function courtyard(world)
-    local columns={}
-    local b=brush(world,{2,1, -7},{22,6,13},.25)
-    b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z)
-        if pad(x,z)<=8.55 then return P.HOME_PAVING end
-    end)
-    for i=0,11 do
-        local a=i*math.pi/6
-        if i~=9 and i~=6 and i~=5 and i~=7 then column(b,columns,12+8.3*cos(a),3+8.3*sin(a),1.5,i%4==1 and 2.75 or 1.25) end
-    end
-    b:Finish({masonry='homeMasonry'})
-    trimColumns(world,b,columns)
-    entranceColumn(world,4.875,7.125,2.75)
-    entranceColumn(world,4.875,-1.125,1.25)
-end
-local function arch(b,columns,x,z,w,spring,rise)
-    for _,side in ipairs({-1,1}) do column(b,columns,x+side*w,z,0,spring) end
+local function arch(b,columns,x,z,w,spring,rise,base)
+    base=base or 0
+    for _,side in ipairs({-1,1}) do column(b,columns,x+side*w,z,base,spring) end
+    spring=spring+base
     b:Shape(x-w-1,spring-.5,z-.625,x+w+1,spring+rise+1.25,z+.625,function(px,y,pz)
         local dx,dy=(px-x)/w,(y-spring)/rise
         local r=sqrt(dx*dx+dy*dy)
@@ -650,16 +644,40 @@ local function arch(b,columns,x,z,w,spring,rise)
         end
     end)
 end
+local function courtyard(world)
+    local columns={}
+    local b=brush(world,{2,1, -7},{22,6,13},.25)
+    b:Shape(3,1.5,-6,21,1.75,12,function(x,_,z)
+        if pad(x,z)<=8.55 then return P.HOME_PAVING end
+    end)
+    for i=0,11 do
+        local a=i*math.pi/6
+        if i~=9 and i~=6 and i~=5 and i~=7 and (i<2 or i>4) then column(b,columns,12+8.3*cos(a),3+8.3*sin(a),1.5,i%4==1 and 2.75 or 1.25) end
+    end
+    b:Finish({masonry='homeMasonry'})
+    trimColumns(world,b,columns)
+    -- The great relic arch stands on the rear rim of the court, its piers on the
+    -- 60 and 120 degree column seats, framing the sky behind the dragon's nest.
+    local z=3+8.3*sin(math.pi/3)
+    local gate,piers=brush(world,{6.5,1.5,z-.75},{17.5,11,z+.75},.25),{}
+    arch(gate,piers,12,z,8.3*cos(math.pi/3),3.75,4.25,1.5)
+    trimCovered(gate,b)
+    gate:Finish({masonry='ashlar'})
+    trimColumns(world,gate,piers)
+    entranceColumn(world,4.875,7.125,2.75)
+    entranceColumn(world,4.875,-1.125,1.25)
+end
 -- Reuse the upper storeys' staggered clay tiles, raised rolls and capped ridge.
 local function tiledRoof(b,cx,cz,halfRidge,halfRun,eave,rise,frontGable)
     local along=frontGable and cz or cx
-    require('ruins.HomeHouseUpper').TileRoof(b,frontGable,frontGable and cx or cz,halfRun,
+    Upper.TileRoof(b,frontGable,frontGable and cx or cz,halfRun,
         along-halfRidge,along+halfRidge,eave-.25,rise)
 end
 local function houseBase(ctx)
-    local b=ctx.brush({-16.5,0,3.5},{-.75,.75,13.25},.125)
-    b:Box(-16.25,0,6.75,-.75,.625,13.25,P.HOME_PLINTH)
-    b:Box(-16.125,.625,6.875,-.875,.75,13.125,P.HOME_PAVING)
+    local Z1=HOUSE.z1
+    local b=ctx.brush({-16.5,0,3.5},{-.75,.75,Z1+.25},.125)
+    b:Box(-16.25,0,6.75,-.75,.625,Z1+.25,P.HOME_PLINTH)
+    b:Box(-16.125,.625,6.875,-.875,.75,Z1+.125,P.HOME_PAVING)
     b:Box(-7,0,4,-1.5,.625,7,P.HOME_PLINTH)
     b:Box(-7,.625,4,-1.5,.75,7,P.HOME_PAVING)
     b:Box(-5.625,0,3.5,-2.875,.25,4,P.HOME_COPING)
@@ -667,15 +685,18 @@ local function houseBase(ctx)
     ctx.finish('foundation',b,0,3,{masonry='homeMasonry'})
 end
 local function fallenHouse(ctx)
-    local b=ctx.brush({-16,.75,6.875},{-1,3.25,13},.25)
+    local back=HOUSE.z1-13
+    local b=ctx.brush({-16,.75,6.875},{-1,3.25,HOUSE.z1},.25)
     -- Rear and side walls survive in broad courses. The collapsed frontage has gaps down to the slab.
     for _,p in ipairs({{-16,12.5,-12,13,2.00},{-12,12.5,-9.5,13,1.75},{-9.5,12.5,-8,13,1.50},
         {-8,12.5,-2.5,13,1.75},{-2.5,12.5,-1,13,2.00},{-16,8.5,-15.5,10,1.25},{-16,10,-15.5,12.5,1.75},
         {-1.5,10,-1,12.5,1.50},{-1.5,9,-1,10,1.00},{-16,7,-13,7.5,1.25},{-13,7,-12,7.5,1.00},
         {-10.5,7,-8.75,7.5,1.00},{-8.75,7,-7.75,7.5,1.25},{-2.5,7,-1,7.5,1.00}}) do
-        b:Box(p[1],.75,p[2],p[3],p[5],p[4],P.HOME_ASHLAR)
+        -- The rear courses follow the deepened back wall.
+        local z0,z1=p[2]>=12.5 and p[2]+back or p[2],p[4]>=12.5 and p[4]+back or p[4]
+        b:Box(p[1],.75,z0,p[3],p[5],z1,P.HOME_ASHLAR)
     end
-    for i,p in ipairs({{-15.75,7.25,1.75},{-8.5,7.25,1.50},{-1.5,12.5,2.25},{-12,12.5,2.25}}) do
+    for i,p in ipairs({{-15.75,7.25,1.75},{-8.5,7.25,1.50},{-1.5,12.5+back,2.25},{-12,12.5+back,2.25}}) do
         b:Box(p[1]-.25,.75,p[2]-.25,p[1]+.5,p[3],p[2]+.5,P.HOME_ASHLAR)
         b:Box(p[1]-.25,p[3],p[2]-.25,p[1]+.5,p[3]+.25,p[2]+.5,i==4 and P.STONE_MOSS or P.HOME_COPING)
     end
@@ -722,10 +743,9 @@ local frontWindows={
     {x=-9.625,r=.5,sill=1.375,spring=3.0625,rise=.4375,panes=3},
 }
 local doorX=-4.625
--- The ground hall stands one metre taller than the original 3 m storey: about
--- 4.1 m of clear height for furnishing. Everything above it rides on GROUND_LIFT.
-local GROUND_LIFT=1.0
-local WALL_TOP=3.75+GROUND_LIFT
+-- The ground hall is 4 m floor to ceiling for furnishing; the upper storeys
+-- (HomeHouseUpper) start on its wall top.
+local WALL_TOP=HOUSE.second
 local function frontWindow(b,w)
     local cell=.0625
     local trim=.125
@@ -903,10 +923,11 @@ end
 -- Stone skin that gives the tall ground hall a footing and a real seat for the
 -- upper storeys: a skirting course, interlocking corner quoins, and below the
 -- first-floor ring a stepped corbel table carrying a projecting cap. Distances
--- are measured outside the -16..-1 by 7..13 footprint, so the courses wrap the
+-- are measured outside the house footprint, so the courses wrap the
 -- corners. Collision stays with the coarse walls; these strips only render.
 local function storeyBelt(ctx)
     local T=WALL_TOP
+    local Z1=HOUSE.z1
     local porch=-4.125
     local function corbelAt(along,start,span)
         if along<start or along>start+span then return false end
@@ -914,7 +935,7 @@ local function storeyBelt(ctx)
         return r<.125 or r>.625
     end
     local function skin(x,y,z,quoins)
-        local dx,dz=math.max(-16-x,x+1,0),math.max(7-z,z-13,0)
+        local dx,dz=math.max(-16-x,x+1,0),math.max(7-z,z-Z1,0)
         local d=math.max(dx,dz)
         if d<=0 then return end
         local h=y-T
@@ -923,8 +944,8 @@ local function storeyBelt(ctx)
         if h>=-.4375 then return d<.1875 and P.HOME_COPING or nil end
         if h>=-.875 then
             local corbel
-            if dx==0 then corbel=corbelAt(x,-15.625,14.25) and (z>13 or abs(x-porch)>3.25)
-            elseif dz==0 then corbel=corbelAt(z,7.375,5.25) end
+            if dx==0 then corbel=corbelAt(x,-15.625,14.25) and (z>Z1 or abs(x-porch)>3.25)
+            elseif dz==0 then corbel=corbelAt(z,7.375,Z1-7.75) end
             if not corbel then return end
             if h>=-.625 then return d<.25 and P.HOME_COPING or nil end
             if h>=-.8125 then return d<.1875 and P.HOME_COPING or nil end
@@ -937,14 +958,14 @@ local function storeyBelt(ctx)
         local course=floor((y-.75)/.3125)
         local onSide=dz==0
         local long=(course%2==0)==onSide
-        local fromCorner=onSide and math.min(z-7,13-z) or math.min(x+16,-1-x)
+        local fromCorner=onSide and math.min(z-7,Z1-z) or math.min(x+16,-1-x)
         if fromCorner<(long and .625 or .375) then return P.HOME_COPING end
     end
     local strips={
         {{-16.5,T-.875,6.5},{-.5,T,7},false},
-        {{-16.5,.75,13},{-.5,T,13.5},true},
-        {{-16.5,.75,7},{-16,T,13},true},
-        {{-1,.75,7},{-.5,T,13},true},
+        {{-16.5,.75,Z1},{-.5,T,Z1+.5},true},
+        {{-16.5,.75,7},{-16,T,Z1},true},
+        {{-1,.75,7},{-.5,T,Z1},true},
     }
     for i,s in ipairs(strips) do
         local lo,hi,quoins=s[1],s[2],s[3]
@@ -954,13 +975,16 @@ local function storeyBelt(ctx)
     end
 end
 
+-- Hall windows along the deepened side and rear walls (east ones clear the oven).
+local westWindows,eastWindows,backWindows={10.75,13.25},{11.5,13.5},{-13,-8.5,-4}
 local function firstStorey(ctx)
-    local b=ctx.brush({-16.5,.75,3.375},{-.75,WALL_TOP,13.25},.125)
-    b:Box(-16,.75,7.375,-1,WALL_TOP,13,P.HOME_ASHLAR)
-    b:Carve(-15.625,.75,7.375,-1.375,WALL_TOP,12.625)
-    archedWindow(b,10.75,-16,-1,true)
-    archedWindow(b,11.375,-1,1,true)
-    for _,x in ipairs({-12.5,-7}) do archedWindow(b,x,13,1,false) end
+    local Z1=HOUSE.z1
+    local b=ctx.brush({-16.5,.75,3.375},{-.75,WALL_TOP,Z1+.25},.125)
+    b:Box(-16,.75,7.375,-1,WALL_TOP,Z1,P.HOME_ASHLAR)
+    b:Carve(-15.625,.75,7.375,-1.375,WALL_TOP,Z1-.375)
+    for _,z in ipairs(westWindows) do archedWindow(b,z,-16,-1,true) end
+    for _,z in ipairs(eastWindows) do archedWindow(b,z,-1,1,true) end
+    for _,x in ipairs(backWindows) do archedWindow(b,x,Z1,1,false) end
     b:Box(-16,WALL_TOP-.25,7,-1,WALL_TOP,7.375,P.HOME_ASHLAR)
     local ridge=-4.125
     for _,x in ipairs({-6.375,-1.875}) do
@@ -975,34 +999,40 @@ local function firstStorey(ctx)
     porchTimber(ctx,ridge)
     porchDoors(ctx)
     windowBars(ctx,'ground-front-bars',frontWindows,7,-1,false,.25)
-    local function sideWindow(x) return {x=x,r=.75,sill=1.5,spring=2.5,rise=.625,panes=3} end
-    windowBars(ctx,'ground-west-bars',{sideWindow(10.75)},-16,-1,true,.125)
-    windowBars(ctx,'ground-east-bars',{sideWindow(11.375)},-1,1,true,.125)
-    windowBars(ctx,'ground-back-bars',{sideWindow(-12.5),sideWindow(-7)},13,1,false,.125)
+    local function sideWindows(list)
+        local out={}
+        for i,x in ipairs(list) do out[i]={x=x,r=.75,sill=1.5,spring=2.5,rise=.625,panes=3} end
+        return out
+    end
+    windowBars(ctx,'ground-west-bars',sideWindows(westWindows),-16,-1,true,.125)
+    windowBars(ctx,'ground-east-bars',sideWindows(eastWindows),-1,1,true,.125)
+    windowBars(ctx,'ground-back-bars',sideWindows(backWindows),Z1,1,false,.125)
     storeyBelt(ctx)
 end
 local function singleRoof(ctx)
-    local L=GROUND_LIFT
-    local b=ctx.brush({-16.75,3.625+L,6.25},{-.25,6.5+L,13.75},.125)
-    tiledRoof(b,-8.5,10,8,3.625,3.875+L,2.5,false)
+    local Z1=HOUSE.z1
+    local cz,half,rise=(7+Z1)/2,(Z1-7)/2+.625,3.0
+    local eave=WALL_TOP+.125
+    local b=ctx.brush({-16.75,WALL_TOP-.125,6.25},{-.25,eave+rise+.5,Z1+.75},.125)
+    tiledRoof(b,-8.5,cz,8,half,eave,rise,false)
     for _,x in ipairs({-16,-1.25}) do
-        b:Shape(x,WALL_TOP,7,x+.25,6.125+L,13,function(_,y,z)
-            if y<=6.125+L-abs(z-10)*.69 then return abs(z-10)<.13 and cedarPost or P.STONE_A end
+        b:Shape(x,WALL_TOP,7,x+.25,eave+rise,Z1,function(_,y,z)
+            if y<=eave+rise*(1-abs(z-cz)/half) then return abs(z-cz)<.13 and cedarPost or P.STONE_A end
         end)
     end
-    b:Box(-12.5,4.625+L,10.75,-11.75,6.375+L,11.5,P.HOME_ASHLAR)
-    b:Box(-12.625,6.375+L,10.625,-11.625,6.5+L,11.625,P.HOME_COPING)
-    b:Carve(-12.25,6.125+L,11,-12,6.5+L,11.25)
+    local cx,cz2,c0=-12.125,cz+1,eave+rise-.75
+    b:Box(cx-.375,WALL_TOP+.875,cz2-.375,cx+.375,c0+.75,cz2+.375,P.HOME_ASHLAR)
+    b:Box(cx-.5,c0+.75,cz2-.5,cx+.5,c0+.875,cz2+.5,P.HOME_COPING)
+    b:Carve(cx-.125,c0+.5,cz2-.125,cx+.125,c0+.875,cz2+.125)
     ctx.finish('one-storey-roof',b,1,1,{masonry='homeWindows'})
 end
 
 local function house(world,scene)
-    local old=brush(world,{-22,0,6},{5,12,17},.25)
+    local old=brush(world,{-22,0,6},{5,12,18.5},.25)
     local columns={}
-    arch(old,columns,-9.5,13.5,6,5,5.25)
     -- The west relic leans on the outside of the gable wall; its pier stays out of the hall.
     arch(old,columns,-18.75,9,2.05,3.25,3.1)
-    for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{-1,15,4.5}}) do column(old,columns,p[1],p[2],0,p[3]) end
+    for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{.75,17,4.5}}) do column(old,columns,p[1],p[2],0,p[3]) end
     trimGround(old)
     old:Finish({masonry='ashlar'})
     local b=brush(world,{-.625,0,4.5},{3,5.25,10.125},.125)
@@ -1058,12 +1088,11 @@ local function house(world,scene)
     fallenHouse(ctx)
     firstStorey(ctx)
     singleRoof(ctx)
-    local upper=require('ruins.HomeHouseUpper')
-    local groups={second={2,3},secondRoof={2,2},third={3,3}}
-    upper.Build(ctx.brush,function(name,part,options)
+    local groups={second={2,3},secondRoof={2,2},third={3,3},terrace={3,3}}
+    Upper.Build(ctx.brush,function(name,part,options)
         local ages=groups[name]
         ctx.finish(name,part,ages[1],ages[2],options)
-    end,GROUND_LIFT)
+    end)
     local structure={IsSolidLocal=function(_,x,y,z)
         if b:IsSolidLocal(x,y,z) then return true end
         for _,p in ipairs(houseParts) do
@@ -1115,7 +1144,7 @@ end
 local function trees(world,scene)
     local foliage=require('ruins.RuinsTrees')
     local hidden=require('ruins.RuinsTerrain').HiddenMaterial()
-    for i,p in ipairs({{-19.5,8,5.6,2.3},{-13,15,7.2,3},{-22.5,1,4,2},{3,13.25,5,2.4},{9,15,3,1.6},{20,-5,3.9,2.1},{-18,-10,3.2,1.7},{-2,-13.25,2.8,1.6}}) do
+    for i,p in ipairs({{-19.5,8,5.6,2.3},{3.25,15.25,7.2,3},{-22.5,1,4,2},{6.75,13.75,5,2.4},{9,15,3,1.6},{20,-5,3.9,2.1},{-18,-10,3.2,1.7},{-2,-13.25,2.8,1.6}}) do
         local x,z,h,r=table.unpack(p)
         local y=H.Height(H.x+x,H.z+z)-H.base
         local trunk=brush(world,{x-.375,y,z-.375},{x+.375,y+h*.65,z+.375},.25)
@@ -1210,7 +1239,7 @@ local function shoreDetails(world)
 end
 local function meadowClearance(x,z,shore)
     return shore<.65 or pool(x,z)<1.55 or pad(x,z)<9.2 or abs(x+11.75)<2.1 and z< -6
-        or x>-18 and x<3.5 and z>3 and z<13 or abs(x-4)<1.6 and abs(z)<11
+        or x>-18 and x<3.5 and z>3 and z<HOUSE.z1+.75 or abs(x-4)<1.6 and abs(z)<11
         or x>8.5 and x<15.5 and z>-11 and z<2 or abs(z-4)<1.7 and x>-19 and x<9
         or (x-5)^2+(z+12)^2<1.7^2
 end
