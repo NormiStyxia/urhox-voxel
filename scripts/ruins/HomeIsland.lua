@@ -64,7 +64,6 @@ function H.Safe(x,y,z)
     local lx,lz=x-H.x,z-H.z
     return edge(lx,lz)>1.6 and pool(lx,lz)>1.06 and not channel(lx,lz) and abs(y-H.Height(x,z))<.46
 end
-function H.NearForge(p) return (p.x-H.x-1.25)^2+(p.z-H.z-6.0)^2<15 and abs(p.y-H.base)<2 end
 local activeJob
 local ripples,nextSlot,wet,lastX,lastZ={},1,false,nil,nil
 local stepTime,travel=0,0
@@ -290,6 +289,7 @@ end
 
 -- A staged part contributes its sockets on creation. Two short, down-facing
 -- cones cover the nearest sills; the recessed panes carry the light at pond distance.
+local hearthTime=0.0
 local windows={sockets={},lamps={},materials={},stage=0,active=false,budget=2,dimmer=0,spill=0}
 
 function H.BindWindowMaterial(material)
@@ -451,7 +451,12 @@ function H.Update(dt,feet,dn)
         windows.dimmer,windows.spill=dimmer,spill
         H.RefreshWindowLights(windows.stage)
     end
-    if H.hearth then H.hearth.brightness=.78+.34*(1-day) end
+    if H.hearth then
+        -- Two incommensurate waves plus a fast jitter: the forge light breathes with the flames.
+        hearthTime=hearthTime+dt
+        local flicker=.82+.1*sin(hearthTime*7.3)+.06*sin(hearthTime*17.9+1.3)+.04*sin(hearthTime*31.1)
+        H.hearth.brightness=(.78+.34*(1-day))*flicker
+    end
 end
 
 local function brush(world,lo,hi,s)
@@ -462,6 +467,7 @@ local function brush(world,lo,hi,s)
 end
 local function lawnPath(x,z)
     return pool(x,z)<1.22 or abs(z-4)<1.35 and x<8 and x>-18 or abs(x-4)<1.3 and abs(z)<10
+        or x>-21 and x<-16.5 and z>1.5 and z<3.75
 end
 local function lawnMaterial(x,z,h)
     local patch=pattern(x*.65,z*.65)+.36*pattern(x*1.8,z*1.8)
@@ -1081,42 +1087,129 @@ local function houseGlass(scene)
     H.RefreshWindowLights(houseStage)
 end
 
-local function house(world,scene)
-    local old=brush(world,{-22,0,6},{5,12,18.5},.25)
-    local columns={}
-    -- The west relic leans on the outside of the gable wall; its pier stays out of the hall.
-    arch(old,columns,-18.75,9,2.05,3.25,3.1)
-    for _,p in ipairs({{-20,6,5.25},{2.5,11.5,6},{.75,17,4.5}}) do column(old,columns,p[1],p[2],0,p[3]) end
-    trimGround(old)
-    old:Finish({masonry='ashlar'})
-    local b=brush(world,{-.625,0,4.5},{3,5.25,10.125},.125)
-    -- Stone oven with a recessed vaulted mouth, coals and an iron anvil.
-    b:Box(-.5,0,7.125,2.875,2.875,10,P.HOME_HEARTH)
-    -- The voussoirs continue three voxels into the reveal; the original opening trims their inner edge.
-    b:Shape(-.5,1.375,7.125,2.875,2.875,7.5,function(x,y)
-        local dx,dy=(x-1.2)/1.25,(y-1.4)/1.05
-        if dy>=0 and dx*dx+dy*dy<=1.34^2 then return P.HOME_ARCH end
+-- The smithy forge stands on the west lawn, mouth to the pond path: a banded
+-- stone oven on a stepped plinth with a voussoir arch, corbelled hood and tapered
+-- chimney, bellows on the house side, an anvil on a stump, a quench trough, a coal
+-- heap and a tool rail. Flames, sparks and smoke are particles (H.Build).
+local FORGE={x=-19,z=4.25,depth=2.875}
+local function forge(world,old)
+    local cx,z0=FORGE.x,FORGE.z
+    local z1=z0+FORGE.depth
+    local b=brush(world,{cx-2.75,0,z0-2.25},{cx+3,6.5,z1+.25},.125)
+    b:Box(cx-1.875,0,z0-.125,cx+1.875,.25,z1+.125,P.HOME_PLINTH)
+    b:Box(cx-1.75,.25,z0,cx+1.75,.375,z1,P.HOME_COPING)
+    -- Body: darker bed courses, pale interlocking quoins on all four corners.
+    b:Shape(cx-1.75,.375,z0,cx+1.75,2.75,z1,function(x,y,z)
+        local course=floor((y-.375)/.375)
+        local reach=course%2==0 and .5 or .25
+        local nearX=abs(x-cx)>1.75-reach
+        local nearZ=z-z0<.5-(reach-.25) or z1-z<.5-(reach-.25)
+        if nearX and nearZ then return P.HOME_COPING end
+        if y-.375-course*.375<.125 and course%2==1 then return P.HOME_PLINTH end
+        return P.HOME_HEARTH
     end)
-    b:Shape(-.125,.5,7,2.5,2.75,9.375,function(x,y) if y<1.4+1.05*sqrt(math.max(0,1-((x-1.2)/1.25)^2)) then return false end end)
-    b:Box(0,.5,7.375,2.375,.75,9.375,ember)
-    for j=0,6 do local x=.125+j*.3125; b:Box(x,.75,8.375,x+.25,1+(j*3%5)*.125,9,flame) end
-    b:Box(-.625,2.875,7,3,3.25,10.125,P.HOME_COPING); b:Box(.5,3.25,8.5,1.75,5.25,9.75,P.HOME_HEARTH)
-    b:Box(.625,0,4.625,1.625,.75,5.625,P.WOOD); b:Box(.375,.75,4.5,1.875,1,5.75,slate)
-    b:Box(.875,1,4.875,1.375,1.375,5.5,slate); b:Box(.125,1.375,4.75,2.125,1.625,5.625,slate)
+    -- Firebox under an elliptical crown.
+    local function crown(dx) return 1.375+.875*sqrt(math.max(0,1-(dx/1.125)^2)) end
+    b:Shape(cx-1.125,.75,z0-.125,cx+1.125,2.25,z1-.5,function(x,y)
+        if y<crown(x-cx) then return false end
+    end)
+    -- Voussoirs project one cell; jamb stones below the spring; keystone stands proud.
+    b:Shape(cx-1.5,.375,z0-.125,cx+1.5,2.875,z0+.25,function(x,y,z)
+        local dx=x-cx
+        if y<1.375 then
+            if abs(dx)>=1.125 and abs(dx)<1.5 and z<z0 then
+                return floor((y-.375)/.25)%2==0 and P.HOME_ARCH or P.HOME_COPING
+            end
+            return
+        end
+        local dy=y-1.375
+        local inner=(dx/1.125)^2+(dy/.875)^2
+        local outer=(dx/1.5)^2+(dy/1.25)^2
+        if inner>=1 and outer<=1 then
+            if abs(dx)<.1875 then return P.HOME_COPING end
+            return floor(math.atan(dy,dx)*7)%2==0 and P.HOME_ARCH or P.HOME_HEARTH
+        end
+    end)
+    b:Box(cx-.1875,2.5,z0-.25,cx+.1875,2.875,z0,P.HOME_COPING)
+    b:Box(cx-1.25,.625,z0-.375,cx+1.25,.75,z0+.25,P.HOME_COPING)
+    -- Coal bed: a glowing layer with brighter lumps that the flames rise from.
+    b:Box(cx-1,.625,z0+.25,cx+1,.75,z1-.5,ember)
+    for i=0,13 do
+        local x=cx-.875+(i*.6180%1)*1.75
+        local z=z0+.375+((i*.4142)%1)*1.625
+        b:Box(x,.75,z,x+.125+(i%2)*.125,.875,z+.125,i%3==0 and flame or ember)
+    end
+    -- Iron bands with rivets round the oven, clear of the arch.
+    for _,y in ipairs({.875,2.125}) do
+        b:Shape(cx-1.875,y,z0-.125,cx+1.875,y+.125,z1+.125,function(x,_,z)
+            local outside=abs(x-cx)>1.75 or z<z0 or z>z1
+            if not outside then return end
+            if z<z0 and abs(x-cx)<1.625 then return end
+            return slate
+        end)
+    end
+    -- Corbelled hood, stepped shoulders and a banded, tapering chimney with a cap.
+    b:Box(cx-2,2.75,z0-.25,cx+2,2.875,z1+.25,P.HOME_COPING)
+    b:Box(cx-1.875,2.875,z0-.125,cx+1.875,3.0,z1+.125,P.HOME_PLINTH)
+    b:Box(cx-1.5,3.0,z0+.125,cx+1.5,3.5,z1-.125,P.HOME_HEARTH)
+    b:Box(cx-1.625,3.5,z0,cx+1.625,3.625,z1,P.HOME_COPING)
+    b:Box(cx-1.125,3.625,z0+.375,cx+1.125,4.125,z1-.375,P.HOME_HEARTH)
+    local f0,f1=z0+1.125,z0+2.375
+    b:Box(cx-.625,4.125,f0,cx+.625,5.875,f1,P.HOME_HEARTH)
+    for y=4.625,5.5,.625 do b:Box(cx-.625,y,f0,cx+.625,y+.125,f1,P.STONE_C) end
+    b:Box(cx-.75,5.875,f0-.125,cx+.75,6.125,f1+.125,P.HOME_COPING)
+    b:Carve(cx-.25,5.5,(f0+f1)/2-.25,cx+.25,6.125,(f0+f1)/2+.25)
+    -- Bellows on the house side: boards, a leather wedge, nozzle, stand and handle.
+    local bx0,bx1,bz0,bz1=cx+1.875,cx+2.875,z0+.75,z0+2
+    b:Box(bx0+.125,0,bz0+.125,bx0+.25,.5,bz0+.25,cedarPost)
+    b:Box(bx1-.25,0,bz1-.25,bx1-.125,.5,bz1-.125,cedarPost)
+    b:Box(bx0,.5,bz0,bx1,.625,bz1,oak)
+    b:Shape(bx0,.625,bz0+.125,bx1,1.125,bz1-.125,function(x,y)
+        if y<.625+.5*(x-bx0)/(bx1-bx0) then return amber end
+    end)
+    b:Box(bx0,1.125,bz0,bx1,1.25,bz1,oak)
+    b:Box(cx+1.5,.75,z0+1.25,bx0,.875,z0+1.5,slate)
+    b:Box(bx1,1.125,z0+1.25,bx1+.375,1.25,z0+1.5,cedar)
+    -- Anvil on an oak stump.
+    local ax,az=cx+.75,z0-1.375
+    b:Cylinder(ax,az,.375,0,.625,function(x,_,z) return (x-ax)^2+(z-az)^2>.25^2 and P.BARK or P.WOOD end)
+    b:Box(ax-.375,.625,az-.25,ax+.375,.75,az+.25,slate)
+    b:Box(ax-.1875,.75,az-.125,ax+.1875,1.0,az+.125,slate)
+    b:Box(ax-.5,1.0,az-.1875,ax+.5,1.1875,az+.1875,slate)
+    b:Box(ax+.5,1.0625,az-.125,ax+.75,1.1875,az+.125,slate)
+    b:Box(ax+.75,1.125,az-.0625,ax+.875,1.1875,az+.0625,slate)
+    -- Quench trough and a coal heap to the west, tongs and hammers on a rail.
+    local tx,tz=cx-1.5,z0-1.5
+    b:Box(tx-.625,0,tz-.5,tx+.625,.625,tz+.5,P.STONE_C)
+    b:Box(tx-.75,.5,tz-.625,tx+.75,.625,tz+.625,P.HOME_COPING)
+    b:Carve(tx-.5,.375,tz-.375,tx+.5,.625,tz+.375)
+    b:Box(tx-.5,.25,tz-.375,tx+.5,.375,tz+.375,P.MARBLE_BLUE)
+    b:Shape(cx-2.625,0,z0+.375,cx-1.75,.75,z0+2.375,function(x,y,z)
+        local r=((x-(cx-1.75))/.875)^2+((z-(z0+1.375))/1.0)^2
+        if y<.75*(1-r) then return (floor(x*8)+floor(z*8))%3==0 and P.DIRT_B or slate end
+    end)
+    b:Box(cx-1.875,1.625,z0+.5,cx-1.75,1.75,z1-.5,cedar)
+    for i=0,3 do
+        local z=z0+.75+i*.5
+        b:Box(cx-2,1.0+(i%2)*.125,z,cx-1.875,1.75,z+.0625,slate)
+        if i%2==0 then b:Box(cx-2.0625,1.0,z-.0625,cx-1.875,1.125,z+.125,slate) end
+    end
     trimGround(b)
     trimCovered(b,old)
     b:Finish({masonry='homeWindows'})
-    -- Project the cut stone face one fine cell, and the keystone two. Read the finished opening
-    -- so the lip cannot bridge a stair in the vaulted reveal or change the solid furnace.
-    local lip=brush(world,{-.5,1.375,7},{2.875,2.875,7.125},.0625)
-    local k=math.floor((7.1875-b.lmin[3])/b.s)
-    lip:Shape(-.5,1.375,7,2.875,2.875,7.125,function(x,y,z)
-        local i,j=math.floor((x-b.lmin[1])/b.s),math.floor((y-b.lmin[2])/b.s)
-        if b.grid:GetVoxelMaterial(i,j,k)==P.HOME_ARCH and b.grid:IsSolid(i,j,k) then
-            if z>=7.0625 or abs((x-1.2)/1.25)<(y-1.4)/1.05*.1438 then return P.HOME_ARCH end
-        end
-    end)
-    lip:Finish({visual=true,masonry='homeMasonry'})
+    return b
+end
+function H.NearForge(p) return (p.x-H.x-FORGE.x)^2+(p.z-H.z-FORGE.z+1)^2<15 and abs(p.y-H.base)<2 end
+
+local function house(world,scene)
+    local old=brush(world,{-24,0,3.5},{5,12,18.5},.25)
+    local columns={}
+    -- The west relic leans on the outside of the gable wall; its pier stays out of the hall.
+    arch(old,columns,-18.75,9,2.05,3.25,3.1)
+    for _,p in ipairs({{-22.75,4.5,5.25},{2.5,11.5,6},{.75,17,4.5}}) do column(old,columns,p[1],p[2],0,p[3]) end
+    trimGround(old)
+    old:Finish({masonry='ashlar'})
+    local b=forge(world,old)
     houseParts={}
     houseReady=false
     local ctx={brush=function(lo,hi,size) return brush(world,lo,hi,size) end}
@@ -1199,7 +1292,7 @@ end
 local function trees(world,scene)
     local foliage=require('ruins.RuinsTrees')
     local hidden=require('ruins.RuinsTerrain').HiddenMaterial()
-    for i,p in ipairs({{-19.5,8,5.6,2.3},{3.25,15.25,7.2,3},{-22.5,1,4,2},{6.75,13.75,5,2.4},{9,15,3,1.6},{20,-5,3.9,2.1},{-18,-10,3.2,1.7},{-2,-13.25,2.8,1.6}}) do
+    for i,p in ipairs({{-22.25,8,5.6,2.3},{3.25,15.25,7.2,3},{-24,-1.5,4,2},{6.75,13.75,5,2.4},{9,15,3,1.6},{20,-5,3.9,2.1},{-18,-10,3.2,1.7},{-2,-13.25,2.8,1.6}}) do
         local x,z,h,r=table.unpack(p)
         local y=H.Height(H.x+x,H.z+z)-H.base
         local trunk=brush(world,{x-.375,y,z-.375},{x+.375,y+h*.65,z+.375},.25)
@@ -1296,6 +1389,7 @@ local function meadowClearance(x,z,shore)
     return shore<.65 or pool(x,z)<1.55 or pad(x,z)<9.2 or abs(x+11.75)<2.1 and z< -6
         or x>-18 and x<3.5 and z>3 and z<HOUSE.z1+.75 or abs(x-4)<1.6 and abs(z)<11
         or x>8.5 and x<15.5 and z>-11 and z<2 or abs(z-4)<1.7 and x>-19 and x<9
+        or x>-22 and x<-15.5 and z>1 and z<7.75
         or (x-5)^2+(z+12)^2<1.7^2
 end
 
@@ -1418,10 +1512,14 @@ function H.Build(world,scene,dayNight)
     end
     meadow(scene); terrain(world); courtyard(world); house(world,scene); banks(world); trees(world,scene); shoreDetails(world); water(scene)
     groundContact()
-    local fire=scene:CreateChild('HomeForgeFire'); fire.position=Vector3(H.x+1.15,H.base+1.65,H.z+7.5)
+    local fire=scene:CreateChild('HomeForgeFire'); fire.position=Vector3(H.x+FORGE.x,H.base+1.2,H.z+FORGE.z-.4)
     local light=fire:CreateComponent('Light'); light.lightType=LIGHT_POINT
-    light.color=Color(1,.53,.21); light.range=5; light.brightness=.78
+    light.color=Color(1,.53,.21); light.range=5.5; light.brightness=.78
     H.hearth=light
+    local flames=cache:GetResource('CascadeParticleSystem','Effects/Forge/ForgeFire.effect')
+    if flames then
+        CascadeParticle.SpawnEmitterAttached(flames,scene,Vector3(H.x+FORGE.x,H.base+.8,H.z+FORGE.z+1.3),Quaternion(),Vector3.ONE,false)
+    end
     if dayNight then H.Update(0,nil,dayNight) end
     world:OptimizeBroadPhase()
 end
