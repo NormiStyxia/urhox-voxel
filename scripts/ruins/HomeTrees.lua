@@ -13,7 +13,7 @@ local sin, cos, pi = math.sin, math.cos, math.pi
 
 ---@class HomeTreeGrid
 ---@field size number
----@field cells table<string, HomeTreeCell>
+---@field cells table<string, HomeTreeCell?>
 ---@field order HomeTreeCell[]
 local Grid = {}
 Grid.__index = Grid

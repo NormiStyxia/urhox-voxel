@@ -100,6 +100,7 @@ function H.ReleaseReflection()
     mirror=nil
 end
 
+---@param scene Scene
 local function createReflection(r,scene,skybox,w,h)
     r.texture=Texture2D:new()
     r.texture:SetNumLevels(1)
@@ -154,6 +155,9 @@ end
 
 -- On the banks, aim the capture at the pool independently of camera yaw. A
 -- stationary player can turn right around using the same projective texture.
+---@param dt number
+---@param scene Scene
+---@param source Camera
 function H.UpdateReflection(dt,scene,source,tier,skybox)
     if not H.spring then return end
     if not H.planarReflectionEnabled then H.ReleaseReflection(); return end
@@ -385,13 +389,16 @@ function H.Stop()
     H.lastDay,H.lastDusk,H.lastNight,H.zoneFallback=nil,nil,nil,nil
 end
 
+---@param dt number
+---@param feet Vector3
 local function updateWater(dt,feet)
     for slot,wave in pairs(ripples) do
         wave.age=wave.age+dt
         if wave.age>=WAVE_LIFE then wave.strength=0; ripples[slot]=nil end
         H.spring:SetShaderParameter('foot_wave'..slot,Variant(Vector4(wave.x,wave.z,wave.age,wave.strength)))
     end
-    local x,z,bed
+    local x,z=0.0,0.0
+    local bed
     if feet and feet.y<=H.base+WATER_LEVEL+(wet and .04 or 0) then
         x,z=feet.x-H.x,feet.z-H.z
         bed=waterBed(x,z)
