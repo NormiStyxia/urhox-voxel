@@ -64,61 +64,155 @@ local function WorldPoint(node,p)
     end
     return p
 end
-local function SampleStreams(visual,viewMask)
-    local bounds=visual.geometry.core.boundingBox
-    local center=(bounds.min+bounds.max)*.5
-    local expected=WorldPoint(visual.pivots.core,center)
-    assert(visual.grains.node.parent==visual.pivots.core,'inherits sapphire transform')
-    local samples={}
-    for _,ring in ipairs(visual.grains.rings) do
-        local points={}
-        for _,stream in ipairs(ring.streams) do
-            local mesh=assert(kinds[stream])
-            assert(stream.enabled and mesh.viewMask==viewMask and mesh.commits==1)
-            assert(#mesh.vertices==8*36)
-            for first=1,#mesh.vertices,36 do
-                local sum=Vector3.ZERO
-                for j=first,first+35 do sum=sum+mesh.vertices[j].position end
-                points[#points+1]=WorldPoint(stream,sum*(1/36))
-            end
+local function Key(p)
+    return ('%d,%d,%d'):format(math.floor(p.x*1e7+.5),math.floor(p.y*1e7+.5),math.floor(p.z*1e7+.5))
+end
+
+-- Weld the submitted triangle list by position, then walk its directed edges.
+-- A single torus has one connected component, no boundary and Euler number zero.
+local function CheckTube(mesh)
+    local edges,adjacent={},{}
+    local points=#mesh.vertices
+    assert(points==40*4*6)
+    for first=1,points,3 do
+        local ids={}
+        for j=1,3 do
+            local v=mesh.vertices[first+j-1]
+            assert(v.color.r==v.color.g and v.color.g==v.color.b and v.color.r>.9 and v.color.a==1)
+            ids[j]=Key(v.position)
         end
-        local sum=Vector3.ZERO
-        for _,point in ipairs(points) do sum=sum+point end
-        samples[#samples+1]={centerError=(sum*(1/#points)-expected):Length(),points=points}
+        for j=1,3 do
+            local a,b=ids[j],ids[j%3+1];assert(a~=b)
+            adjacent[a]=adjacent[a] or {};adjacent[a][b]=true
+            local key=a<b and a..'/'..b or b..'/'..a
+            local e=edges[key] or {n=0,dir=0};edges[key]=e
+            e.n=e.n+1;e.dir=e.dir+(a<b and 1 or -1)
+        end
     end
-    return samples
+    local n,e=0,0
+    for _,edge in pairs(edges) do assert(edge.n==2 and edge.dir==0,'open or flipped seam');e=e+1 end
+    for _ in pairs(adjacent) do n=n+1 end
+    assert(n-e+points/3==0)
+    local stack={(next(adjacent))};local seen={};local reached=0
+    while #stack>0 do
+        local key=table.remove(stack)
+        if not seen[key] then
+            seen[key]=true;reached=reached+1
+            for neighbor in pairs(adjacent[key]) do stack[#stack+1]=neighbor end
+        end
+    end
+    assert(reached==n,'one connected tube per pose')
+end
+
+local localCenters={}
+local maxError=0
+local function CheckActive(visual,viewMask)
+    assert(visual.grains.node.parent==visual.pivots.core)
+    local bounds=visual.geometry.core.boundingBox
+    local core=WorldPoint(visual.pivots.core,(bounds.min+bounds.max)*.5)
+    for _,ring in ipairs(visual.grains.rings) do
+        for i,node in ipairs(ring.poses) do
+            assert(node.enabled==(i==ring.active),'exactly one complete line visible')
+            local mesh=kinds[node];assert(mesh.viewMask==viewMask and mesh.commits==1)
+            if not localCenters[mesh] then
+                local sum=Vector3.ZERO
+                for _,vertex in ipairs(mesh.vertices) do sum=sum+vertex.position end
+                localCenters[mesh]=sum*(1/#mesh.vertices)
+            end
+            maxError=math.max(maxError,(WorldPoint(node,localCenters[mesh])-core):Length())
+        end
+    end
 end
 local exhibited=clock.catalyst
-local initial=SampleStreams(exhibited,mask)
-local maxError=0
-local maxHop,minSpacing=0,math.huge
-local excursions={{},{}}
-for frame=1,120 do
-    Orbit.Update(exhibited.grains,8/120)
-    local samples=SampleStreams(exhibited,mask)
-    for i,sample in ipairs(samples) do
-        maxError=math.max(maxError,sample.centerError)
-        local ring=exhibited.grains.rings[i]
-        local n=ring.node.worldRotation*Vector3.FORWARD
-        for j,point in ipairs(sample.points) do
-            local p=point-exhibited.pivots.core.worldPosition
-            local height=p.x*n.x+p.y*n.y+p.z*n.z
-            maxHop=math.max(maxHop,math.abs(height))
-            local range=excursions[i][j] or {lo=math.huge,hi=-math.huge}
-            range.lo=math.min(range.lo,height);range.hi=math.max(range.hi,height)
-            excursions[i][j]=range
-            for k=1,j-1 do minSpacing=math.min(minSpacing,(point-sample.points[k]):Length()) end
-            local d=(point-initial[i].points[j]):Length()
-            if frame==60 then assert(d>.52,'each grain orbits to the far side') end
-            if frame==120 then assert(d<1e-7,'each grain closes its own path') end
+-- Recover the centre of each square section from its four submitted corners.
+local function Stations(ring)
+    local verts=kinds[ring.poses[1]].vertices
+    local centers={}
+    for j=1,#verts,24 do
+        local a,b,c,d=verts[j].position,verts[j+6].position,verts[j+12].position,verts[j+18].position
+        local width=(a-b):Length()
+        assert(width>=.007 and width<=.0082,'raster stroke width at the normal camera')
+        centers[#centers+1]=(a+b+c+d)*.25
+    end
+    return centers
+end
+local one,two=exhibited.grains.rings[1],exhibited.grains.rings[2]
+local first,second=Stations(one),Stations(two)
+for i,p in ipairs(first) do
+    assert((p-second[i]):Length()<1e-7,'both rest circles have the same radius at every station')
+end
+-- Positive and negative radii differences along screen-space rays distinguish
+-- crossing contours from two nested ellipses, in the actual test camera views.
+local function RayHit(ring,stations,yaw,pitch,dx,dy)
+    local cy,sy,cp,sp=math.cos(yaw),math.sin(yaw),math.cos(pitch),math.sin(pitch)
+    local function Project(p)
+        local q=WorldPoint(ring.node,p)
+        local depth=4.6+.95*(-sy*cp*q.x-sp*q.y+cy*cp*q.z)
+        return (cy*q.x+sy*q.z)*4.6/depth,(-sy*sp*q.x+cp*q.y+cy*sp*q.z)*4.6/depth
+    end
+    local ax,ay=Project(stations[#stations])
+    for _,p in ipairs(stations) do
+        local bx,by=Project(p)
+        local a,b=dx*ay-dy*ax,dx*by-dy*bx
+        if (a<0)~=(b<0) then
+            local f=a/(a-b)
+            local r=dx*(ax+f*(bx-ax))+dy*(ay+f*(by-ay))
+            if r>0 then return r end
         end
+        ax,ay=bx,by
+    end
+    error('projected ring must enclose the central ray')
+end
+for _,view in ipairs({{0,0},{38,14}}) do
+    local lo,hi=math.huge,-math.huge
+    for ray=0,35 do
+        local dx,dy=math.cos(math.rad(10*ray)),math.sin(math.rad(10*ray))
+        local yaw,pitch=math.rad(view[1]),math.rad(view[2])
+        local a,b=RayHit(one,first,yaw,pitch,dx,dy),RayHit(two,second,yaw,pitch,dx,dy)
+        assert(math.min(a,b)>.09,'blue core stays clear')
+        lo,hi=math.min(lo,a-b),math.max(hi,a-b)
+    end
+    assert(lo<-.020 and hi>.020,'both outlines cross with visible separation')
+end
+for _,ring in ipairs(exhibited.grains.rings) do
+    local rest=kinds[ring.poses[1]].vertices
+    for i,node in ipairs(ring.poses) do
+        local mesh=kinds[node];CheckTube(mesh)
+        local changed=0
+        for j,v in ipairs(mesh.vertices) do
+            local delta=(v.position-rest[j].position):Length();assert(delta<.015)
+            if delta>1e-8 then changed=changed+1 end
+        end
+        if i>1 then assert(changed>0 and changed<#rest/3,'only short arcs change') end
     end
 end
-assert(minSpacing>.095,'visible space between particles of the same ring')
-for _,ring in ipairs(excursions) do
-    for _,range in ipairs(ring) do assert(range.hi-range.lo>.040,'every grain rises and falls') end
+-- The sparkle changes its own geometry coverage, independently of tube visibility.
+local peakFrames={}
+local darkFrames=0
+local transitions,heldFrames=0,0
+for frame=1,240 do
+    local old=exhibited.grains.rings[1].active
+    Orbit.Update(exhibited.grains,1/30);CheckActive(exhibited,mask)
+    local lit=0
+    for _,ring in ipairs(exhibited.grains.rings) do
+        for _,star in ipairs(ring.stars) do
+            assert(star.node.enabled==(star.size>0))
+            local mesh=kinds[star.node]
+            assert(mesh.viewMask==mask and mesh.commits==1 and #mesh.vertices==108)
+            if star.node.enabled then
+                lit=lit+1
+                assert(star.node.scale.x==star.size)
+                if star.size==1 then peakFrames[star]=true end
+            end
+        end
+    end
+    assert(lit<=2,'sparkles have staggered phases')
+    if lit==0 then darkFrames=darkFrames+1 end
+    if old==exhibited.grains.rings[1].active then heldFrames=heldFrames+1 else transitions=transitions+1 end
 end
-assert(maxHop>.020 and maxHop<.024,'individual normal excursion should be visible')
+local peaks=0;for _ in pairs(peakFrames) do peaks=peaks+1 end
+assert(peaks==4 and darkFrames>0)
+assert(transitions>0 and heldFrames>transitions and exhibited.grains.rings[1].active==1)
 -- Exercise the normal hand update and weapon switch with the native particle
 -- emitter calls stubbed. Geometry, core spin, hand spring and scale are real Lua.
 local function noop() end
@@ -131,9 +225,7 @@ local ctx={position=Vector3(1,0,-3),hand=Vector3(1.4,1.2,-2.7),yaw=0,active=true
 for frame=1,150 do
     ctx.yaw=(frame*2)%360;ctx.aiming=frame>40;ctx.charge=frame/150;ctx.casting=frame==100
     Clock.Update(held,1/30,ctx)
-    for _,sample in ipairs(SampleStreams(held,0xffffffff)) do
-        maxError=math.max(maxError,sample.centerError)
-    end
+    CheckActive(held,0xffffffff)
 end
 assert(maxError<1e-6,'both orbit centres follow the moving core')
 ctx.active=false
@@ -142,12 +234,13 @@ local hiddenPhase=held.grains.phase
 Clock.Update(held,.1,ctx)
 assert(not held.root.enabled and hiddenPhase==held.grains.phase)
 for _,ring in ipairs(held.grains.rings) do
-    for _,stream in ipairs(ring.streams) do assert(not stream.enabled) end
+    for _,node in ipairs(ring.poses) do assert(not node.enabled) end
+    for _,star in ipairs(ring.stars) do assert(not star.node.enabled) end
 end
-ctx.active=true;Clock.Update(held,.05,ctx);SampleStreams(held,0xffffffff)
+ctx.active=true;Clock.Update(held,.05,ctx);CheckActive(held,0xffffffff)
 local heldRoot=held.grains.node
 Clock.Dispose(held);assert(heldRoot.removed)
-print(('PASS catalyst centre max %.3g m; normal excursion %.5f m; minimum spacing %.5f m; 120 showroom + 150 held frames'):format(maxError,maxHop,minSpacing))
+print(('PASS six connected closed poses; max centre error %.3g m; %d stepped changes and %d held frames'):format(maxError,transitions,heldFrames))
 local b1,b2=Check(wing.grains,20,6,mask,'showroom wing')
 local c1,c2=Check(hand.grains,20,6,0xffffffff,'hand wing')
 assert(builds==1,'material shared by all four loop meshes')

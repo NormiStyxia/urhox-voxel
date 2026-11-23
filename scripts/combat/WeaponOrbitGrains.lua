@@ -1,7 +1,7 @@
 local M = {}
 local material
 local profiles = {
-    catalyst = {count=16, period=8, y=0, z=0},
+    catalyst = {count=40, radius=.285, period=8, y=0, z=0},
     wing = {count=20, period=6, radius=.083, minor=.44, width=.0042,
         depth=.0032, y=.198, z=-.125, aSlope=.32, bSlope=-.32,
         aTilt=.28, bTilt=-.28},
@@ -104,48 +104,114 @@ local function UpdateHead(ring,p)
     ring.head.rotation:FromAxes(tangent,side,ring.n)
 end
 
--- In a circle's own XY plane, a grain at angle theta rises by
--- radius * sin(tilt) * sin(theta + 6 * orbitAngle). Adjacent batches have
--- opposite tilt, so neighbours hop out of phase. Antipodal pairs balance.
-local function AnimateCircle(ring,phase)
-    local wave=2160*phase
-    local travel=Quaternion(0,0,360*phase-wave)
-    local cycle=Quaternion(0,0,wave)
-    for i,node in ipairs(ring.streams) do
-        node.rotation=travel*ring.tilts[i]*cycle
-    end
-end
-
 local function GrainGeometry(node,mask)
     local g=node:CreateComponent('CustomGeometry')
     g.castShadows=false;g.viewMask=mask;g.lightMask=mask;g.zoneMask=mask
     return g
 end
 
-local function BuildCircle(loop,p,index,mask)
-    local ring={node=loop,streams={},tilts={Quaternion(4.5,0,0),Quaternion(-4.5,0,0)}}
-    local radius=index==1 and .264 or .290
-    local pitch=index==1 and 74 or -69
-    local roll=index==1 and 12 or -17
-    loop.rotation=Quaternion(0,0,roll)*Quaternion(pitch,0,0)
-    for parity=0,1 do
-        local stream=loop:CreateChild('catalyst_grain_stream_'..parity)
-        stream.temporary=true;stream.enabled=false
-        local g=GrainGeometry(stream,mask)
-        g:BeginGeometry(0,TRIANGLE_LIST)
-        for i=parity,p.count-1,2 do
-            local angle=2*math.pi*i/p.count
-            local point=Vector3(radius*math.cos(angle),radius*math.sin(angle),0)
-            local h=.0086+.0009*math.cos(angle*3)
-            local tint=i==index*3 and {.98,.86,.58} or {.65+.08*math.cos(angle*3),.84,.98}
-            AddCuboid(g,point,h,h,h,tint)
-        end
-        g:Commit()
-        assert(g:SetMaterial(0,material)~=false,'grain material binding failed')
-        ring.streams[parity+1]=stream
+-- Each pose is one closed square-section tube. Adjacent spans use the exact
+-- same station corners, including the wrap from the last station to the first.
+local function BuildLinePose(g,count,radius,pose,index)
+    local sections={}
+    local halfWidth=.00385
+    for i=0,count-1 do
+        local sector=i%(count/2)
+        local sign=i<count/2 and 1 or -1
+        local angle=sector*2*math.pi/count
+        local c,s=math.cos(angle),math.sin(angle)
+        -- Only short, opposite pairs of arcs change on a tick. The rest of the
+        -- line remains fixed, and paired displacements keep the centre still.
+        local arc=(sector+3*index)%10
+        local shift=0
+        if pose==2 and arc<=1 then shift=.008 end
+        if pose==3 and arc>=5 and arc<=6 then shift=-.008 end
+        local r=radius+shift
+        local grid=.005
+        local x=sign*grid*math.floor(r*c/grid+.5)
+        local y=sign*grid*math.floor(r*s/grid+.5)
+        local z=sign*shift*.5
+        local dx,dy=sign*c*halfWidth,sign*s*halfWidth
+        sections[i+1]={Vector3(x+dx,y+dy,z+halfWidth),Vector3(x-dx,y-dy,z+halfWidth),
+            Vector3(x-dx,y-dy,z-halfWidth),Vector3(x+dx,y+dy,z-halfWidth)}
     end
-    AnimateCircle(ring,index==1 and 0 or .5)
+    local white=Color(.96,.96,.96,1)
+    local uv=Vector2(.1875,.1875) -- centre of an opaque white texel of the shared material
+    g:BeginGeometry(0,TRIANGLE_LIST)
+    for i,section in ipairs(sections) do
+        local nextSection=sections[i%count+1]
+        for j=1,4 do
+            local k=j%4+1
+            local quad={section[j],nextSection[j],nextSection[k],section[k]}
+            for _,corner in ipairs(order) do
+                g:DefineVertex(quad[corner]);g:DefineColor(white);g:DefineTexCoord(uv)
+            end
+        end
+    end
+    g:Commit()
+    assert(g:SetMaterial(0,material)~=false,'line material binding failed')
+end
+
+-- Four stars share the existing white pixel material. Each sits on a station
+-- outside the jittering arcs. The three short axes keep a glint visible edge-on.
+local starStations={{6,21},{13,37}}
+local starOffsets={{0,13},{8,20}}
+local starEnvelope={.40,.72,1,.72,.40}
+local function BuildStars(loop,p,index,mask,rotation)
+    local stars={}
+    for j,station in ipairs(starStations[index]) do
+        local node=loop:CreateChild('catalyst_star_'..j)
+        node.temporary=true;node.enabled=false
+        local a=station*2*math.pi/p.count
+        node.position=Vector3(.005*math.floor(p.radius*math.cos(a)/.005+.5),
+            .005*math.floor(p.radius*math.sin(a)/.005+.5),0)
+        node.rotation=rotation
+        local g=GrainGeometry(node,mask)
+        g:BeginGeometry(0,TRIANGLE_LIST)
+        local white={1,1,1}
+        AddCuboid(g,Vector3.ZERO,.022,.0045,.0045,white)
+        AddCuboid(g,Vector3.ZERO,.0045,.024,.0045,white)
+        AddCuboid(g,Vector3.ZERO,.0045,.0045,.017,white)
+        g:Commit()
+        assert(g:SetMaterial(0,material)~=false,'star material binding failed')
+        stars[j]={node=node,offset=starOffsets[index][j],size=0}
+    end
+    return stars
+end
+
+local function AnimateStars(ring,tick)
+    for _,star in ipairs(ring.stars) do
+        local size=starEnvelope[(tick+star.offset)%24+1] or 0
+        if size~=star.size then
+            star.node.enabled=size>0
+            if size>0 then star.node.scale=Vector3(size,size,size) end
+            star.size=size
+        end
+    end
+end
+
+local function BuildCircle(loop,p,index,mask)
+    local ring={node=loop,poses={},active=1}
+    local roll=index==1 and -12 or 32
+    local pitch=index==1 and 60 or 52
+    loop.rotation=Quaternion(0,0,roll)*Quaternion(pitch,0,0)
+    for pose=1,3 do
+        local node=loop:CreateChild('catalyst_line_pose_'..pose)
+        node.temporary=true;node.enabled=false
+        BuildLinePose(GrainGeometry(node,mask),p.count,p.radius,pose,index)
+        ring.poses[pose]=node
+    end
+    ring.stars=BuildStars(loop,p,index,mask,Quaternion(-pitch,0,0)*Quaternion(0,0,-roll))
     return ring
+end
+
+local linePoses={1,2,1,3}
+local function AnimateLine(ring,phase)
+    local active=linePoses[math.floor(phase*32)%4+1]
+    if active==ring.active then return end
+    ring.poses[ring.active].enabled=false
+    ring.poses[active].enabled=true
+    ring.active=active
 end
 
 function M.New(parent,kind,mask)
@@ -191,8 +257,9 @@ function M.Visible(fx,shown)
     fx.node.enabled=shown
     for _,ring in ipairs(fx.rings) do
         ring.node.enabled=shown
-        if ring.streams then
-            for _,stream in ipairs(ring.streams) do stream.enabled=shown end
+        if ring.poses then
+            ring.poses[ring.active].enabled=shown
+            for _,star in ipairs(ring.stars) do star.node.enabled=shown and star.size>0 end
         else
             ring.head.enabled=shown
         end
@@ -205,9 +272,11 @@ function M.Update(fx,dt)
     fx.phaseA=WrapPhase(fx.phaseA+step)
     fx.phaseB=WrapPhase(fx.phaseB-step)
     fx.phase=fx.phaseA
-    if fx.rings[1].streams then
-        AnimateCircle(fx.rings[1],fx.phaseA)
-        AnimateCircle(fx.rings[2],fx.phaseB)
+    if fx.rings[1].poses then
+        local tick=math.floor(fx.phaseA*96)
+        for _,ring in ipairs(fx.rings) do AnimateStars(ring,tick) end
+        AnimateLine(fx.rings[1],fx.phaseA)
+        AnimateLine(fx.rings[2],(fx.phaseA+.015625)%1)
         return
     end
     fx.rings[1].phase=fx.phaseA
