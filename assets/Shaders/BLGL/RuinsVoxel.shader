@@ -288,7 +288,11 @@ void fragment() {
         // 块内只有一部分长苔，块外紧邻的普通石面也有零星苔点，体素块的直角轮廓被打散。
         // 竖直墙面上噪声沿 Y 拉长，形成顺着雨水往下淌的苔痕。
         vec3 mp = wp * vec3(1.6, mix(0.75, 1.6, abs(n.y)), 1.6);
-        mossField = n3(mp + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
+        // 普通石块只复用已求好的 g/veins（零额外噪声），只有苔石槽位才多采两次 n3。
+        mossField = veins * 0.55 + g * 0.45 + 0.04;
+        if (idx == 104.0) {
+            mossField = n3(mp + vec3(3.1, 7.7, 1.3)) * 0.62 + n3(wp * 5.2 + 11.0) * 0.38;
+        }
         float growth = mossField + max(n.y, 0.0) * 0.20 - max(-n.y, 0.0) * 0.20
             + (idx == 104.0 ? jointK * 0.22 : jointK * 0.10 - 0.30);
         mossK = smoothstep(0.50, 0.64, growth);
