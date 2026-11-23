@@ -28,6 +28,11 @@ local VIEWS = {
         { name = "rim_close", hour = 14, pos = Vector3(-62, R + 6, -48), look = Vector3(-48, R - 1, -30) },
         { name = "cliff_noon", hour = 13, pos = Vector3(70, -4, -95), look = Vector3(0, -6, -20) },
     },
+    r3 = {
+        { name = "overview_noon", hour = 11, pos = Vector3(55, 42, -85), look = Vector3(0, 0, 0) },
+        { name = "court_night", hour = 22, pos = Vector3(-12, R + 3.5, -24), look = Vector3(0, 1.5, 4) },
+        { name = "home_night", hour = 21.5, pos = Vector3(HX + 5, HB + 2.2, -13), look = Vector3(HX - 2, HB + 2, 6) },
+    },
     detail = {
         { name = "wall_foot", hour = 10, pos = Vector3(-14, R + 1.4, -58), look = Vector3(-9.5, R + 0.8, -50) },
         { name = "ground_close", hour = 15, pos = Vector3(3, R + 1.2, -66), look = Vector3(1.5, R, -61) },
