@@ -1139,6 +1139,9 @@ local function houseGlass(scene,world)
         n.scale=alongX and Vector3(width,height,.02) or Vector3(.02,height,width)
         local sm=n:CreateComponent('StaticModel')
         sm.model=model; sm:SetMaterial(m); sm.castShadows=false
+        -- brush() may yield during incremental building; never expose an
+        -- unstaged pane while its collision volume is still being prepared.
+        n:SetDeepEnabled(false)
         -- The player uses Jolt voxel physics. A hidden, two-cell-thick static
         -- volume stops the controller while preserving transparent rendering.
         local hx,hz=alongX and width/2 or .0625,alongX and .0625 or width/2

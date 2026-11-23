@@ -72,7 +72,7 @@ window('third',WEST_CX,Z0,0,-1,F3+3.75,1.0,.875)
 window('third',WEST_CX,Z1,0,1,F3+.75,1.875,1.75)
 for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
-local terraceDoor={z0=CZ-.625,z1=CZ+.625,bottom=F3+.25,top=F3+3.0}
+local terraceDoor={x0=SPLIT-1.25,x1=SPLIT-.0,z=Z1,bottom=F3+.25,top=F3+3.0}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -329,14 +329,12 @@ local function westAttic(b)
         for _,z in ipairs({Z0+.0625,CZ,Z1-.0625}) do b:Box(x-.0625,F3,z-.0625,x+.0625,KNEE,z+.0625,woodY) end
     end
     for _,w in ipairs(Upper.Windows) do if w.group=='third' then drawWindow(b,w) end end
-    -- Terrace door: a tall, reachable opening with a substantial lintel and a
-    -- clear route from the upper stair landing.
-    -- Include the projecting centre post (x1 +/- .0625), not only the plaster.
-    b:Carve(x1-.5,terraceDoor.bottom,terraceDoor.z0,x1+.125,terraceDoor.top,terraceDoor.z1)
-    for _,z in ipairs({terraceDoor.z0-.125,terraceDoor.z1}) do
-        b:Box(x1-.375,terraceDoor.bottom,z,x1+.0625,terraceDoor.top+.125,z+.125,woodY)
-    end
-    b:Box(x1-.375,terraceDoor.top,terraceDoor.z0-.125,x1+.0625,terraceDoor.top+.125,terraceDoor.z1+.125,woodZ)
+    -- Rear gable entry: the upper landing arrives directly at this tall door.
+    b:Carve(terraceDoor.x0,terraceDoor.bottom,Z1-.375,terraceDoor.x1,terraceDoor.top,Z1)
+    b:Box(terraceDoor.x0-.125,terraceDoor.bottom,Z1-.375,terraceDoor.x0,terraceDoor.top+.125,Z1+.0625,woodY)
+    b:Box(terraceDoor.x1,terraceDoor.bottom,Z1-.375,terraceDoor.x1+.125,terraceDoor.top+.125,Z1+.0625,woodY)
+    b:Box(terraceDoor.x0-.125,terraceDoor.top,Z1-.375,terraceDoor.x1+.125,terraceDoor.top+.125,Z1+.0625,woodZ)
+    b:Box(terraceDoor.x0+.125,terraceDoor.bottom,Z1-.25,terraceDoor.x1-.125,terraceDoor.top-.125,Z1-.1875,window)
     tileRoof(b,true,WEST_CX,GABLE_HALF,Z0-.75,Z1+.75,GABLE_EAVE,GABLE_RISE)
     stack(b,X0+1.75,Z1-1.75,F3,gableTop(X0+1.75)+1.75)
 end

@@ -293,7 +293,6 @@ end
 function M.Draw(vg,s)
     s.buttons={}
     local progress,slot,equipped,list=Equipment(s)
-    Draw.ScrollPaper(vg,M.width,M.height)
     Header(vg,s,progress)
     if s.mode=='forge' then
         local pattern=s.blueprints[s.pattern]

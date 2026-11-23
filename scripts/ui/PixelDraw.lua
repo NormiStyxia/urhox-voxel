@@ -43,6 +43,30 @@ function M.Metrics()
     return w/dpr/z,h/dpr/z,safeMetrics
 end
 
+M.ScrollWidth,M.ScrollHeight=380,214
+M.ScrollOpenTime,M.ScrollCloseTime=.26,.16
+-- 地图和锻造共用纸张尺寸、安全区与物理像素对齐。
+function M.ScrollMetrics()
+    local w,h,inset=M.Metrics()
+    local pixel=M.PixelToHUD()
+    local width,height=w-inset.left-inset.right,h-inset.top-inset.bottom
+    local scale=math.min(width/M.ScrollWidth,height/M.ScrollHeight)
+    if scale>=pixel then scale=math.floor(scale/pixel)*pixel end
+    scale=math.max(scale,.01)
+    local x=inset.left+(width-M.ScrollWidth*scale)*.5
+    local y=inset.top+(height-M.ScrollHeight*scale)*.5
+    return math.floor(x/pixel+.5)*pixel,math.floor(y/pixel+.5)*pixel,scale,M.ScrollWidth,M.ScrollHeight,w,h
+end
+function M.ScrollProgress(elapsed,closing,from)
+    if closing then return (from or 1)*(1-math.min(1,math.max(0,elapsed/M.ScrollCloseTime))) end
+    local t=math.min(1,math.max(0,elapsed/M.ScrollOpenTime))
+    return t*t*(3-2*t)
+end
+function M.ScrollBounds(width,openness)
+    local left=math.floor((width-26)*(1-openness)*.5+.5)
+    return left,width-left
+end
+
 -- Track only this renderer's saves; unwind them after a protected HUD failure
 -- without touching the parent UI widget's NanoVG transform/scissor stack.
 local saveDepth={}

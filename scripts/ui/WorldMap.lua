@@ -15,13 +15,7 @@ local ids={'ruins','home'}
 local mapFontSize=5
 local function round(n) return math.floor(n+.5) end
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
-local function metrics()
-    local w,h,s=Draw.Metrics();local u=Draw.PixelToHUD()
-    local aw,ah=w-s.left-s.right-8,h-s.top-s.bottom-8
-    local k=math.max(u,math.floor(math.min(aw/344,ah/196)/u)*u)
-    local W,H=math.floor(aw/k),math.floor(ah/k)
-    return round((w+s.left-s.right-W*k)*.5/u)*u,round((h+s.top-s.bottom-H*k)*.5/u)*u,k,W,H,w,h
-end
+local function metrics() return Draw.ScrollMetrics() end
 local function frame(W,H,k)
     local top,bottom=34,H-54
     local u=Draw.PixelToHUD()
@@ -40,9 +34,7 @@ local function screenPoint(x,y)
 end
 local function clock() return GetTime():GetElapsedTime() end
 local function progress()
-    if closing then return closeFrom*(1-clamp((clock()-closing)/.16,0,1)) end
-    local t=clamp((clock()-opened)/.26,0,1)
-    return t*t*(3-2*t)
+    return Draw.ScrollProgress(clock()-(closing or opened),closing~=nil,closeFrom)
 end
 -- Draw the map ornaments at native resolution from their atlas.
 local function stamp(vg,x,y,sx,sy,w,h)
@@ -96,11 +88,10 @@ local function button(vg,x,y,w,h,text,active)
 end
 local Layer=UI.Panel:Extend('RuinsWorldMap')
 function Layer:Render(vg)
-    local x,y,k,W,H,w,h=metrics()
+    local x,y,k,W,H=metrics()
     local ox,oy,step,top,bottom=frame(W,H,k)
-    local openness=progress()
-    local left=round((W-26)*(1-openness)*.5);local right=W-left
-    Draw.Begin(vg,true);Draw.Rect(vg,0,0,w,h,Draw.colors.deep,.91*openness)
+    local left,right=Draw.ScrollBounds(W,progress())
+    Draw.Begin(vg,true)
     Draw.Save(vg);nvgTranslate(vg,x,y);nvgScale(vg,k,k)
     Draw.ScrollPaper(vg,W,H,left,right)
     Draw.Save(vg);nvgIntersectScissor(vg,left+12,0,math.max(0,right-left-24),H)

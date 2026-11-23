@@ -9,7 +9,6 @@ local CombatState = require('combat.CombatState')
 local TouchInput = require('ui.TouchInput')
 local M = {}
 local session
-local FADE,REVEAL=.20,.30
 local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
 local function Clamp(n,lo,hi) return math.min(hi,math.max(n,lo)) end
 local function Round(n) return math.floor(n+.5) end
@@ -26,18 +25,7 @@ local function PublishHud(hidden)
 end
 PublishHud(false)
 
-local function Grid()
-    local w,h,inset=Draw.Metrics()
-    local pixel=Draw.PixelToHUD()
-    local width,height=w-inset.left-inset.right,h-inset.top-inset.bottom
-    local scale=math.min(width/View.width,height/View.height)
-    -- Use whole display pixels whenever the full 380 x 214 grid fits.
-    if scale>=pixel then scale=math.floor(scale/pixel)*pixel end
-    scale=math.max(scale,0.01)
-    local x=inset.left+(width-View.width*scale)*.5
-    local y=inset.top+(height-View.height*scale)*.5
-    return Round(x/pixel)*pixel,Round(y/pixel)*pixel,scale,w,h
-end
+local function Grid() return Draw.ScrollMetrics() end
 local function Position(event)
     local x,y,scale=Grid()
     local ui=UI.GetScale()*Draw.PixelToHUD()
@@ -106,20 +94,21 @@ function Layer:Render()
     local s=session
     if s then UI.QueueOverlay(s.render) end
 end
+local function Openness(s)
+    return Draw.ScrollProgress(s.phaseTime,s.phase=='closing',s.closeFrom)
+end
 local function Render(vg,s)
-    local x,y,scale,w,h=Grid()
+    local x,y,scale,W,H=Grid()
+    local openness=Openness(s)
     Draw.Begin(vg,true)
-    local phase=s.phase
-    if phase~='opening' and phase~='closed_reveal' then
-        Draw.Rect(vg,0,0,w,h,{20,26,36})
+    if openness>0 then
+        local left,right=Draw.ScrollBounds(W,openness)
         Draw.Save(vg);nvgTranslate(vg,x,y);nvgScale(vg,scale,scale)
+        Draw.ScrollPaper(vg,W,H,left,right)
+        Draw.Save(vg);nvgIntersectScissor(vg,left+12,0,math.max(0,right-left-24),H)
         View.Draw(vg,s)
-        Draw.Restore(vg)
+        Draw.Restore(vg);Draw.Restore(vg)
     end
-    local alpha=0
-    if phase=='opening' or phase=='closing' then alpha=Clamp(s.phaseTime/FADE,0,1)
-    elseif phase=='reveal' or phase=='closed_reveal' then alpha=1-Clamp(s.phaseTime/REVEAL,0,1) end
-    if alpha>0 then Draw.Rect(vg,0,0,w,h,{0,0,0},alpha) end
     Draw.Finish(vg)
 end
 local function Released()
@@ -148,14 +137,12 @@ local function Update(_,_,data)
     local dt=Clamp(data:GetFloat('TimeStep'),0,.10)
     s.phaseTime=s.phaseTime+dt
     if s.phase=='closing' then
-        if s.phaseTime>=FADE and Released() then s.phase,s.phaseTime='closed_reveal',0 end
-    elseif s.phase=='closed_reveal' then
-        if s.phaseTime>=REVEAL then Finish(s);return end
+        -- 卷轴收起后仍等待输入释放，防止关闭按键穿透到战斗。
+        if s.phaseTime>=Draw.ScrollCloseTime and Released() then Finish(s);return end
     else
         if not Safe(s.callbacks) then Finish(s);return end
         s.clock=s.clock+dt
-        if s.phase=='opening' and s.phaseTime>=FADE then s.phase,s.phaseTime='reveal',0
-        elseif s.phase=='reveal' and s.phaseTime>=REVEAL then s.phase,s.phaseTime='open',0 end
+        if s.phase=='opening' and s.phaseTime>=Draw.ScrollOpenTime then s.phase='open' end
         local delta=(s.targetAngle-s.preview.angle+math.pi)%(math.pi*2)-math.pi
         s.preview.angle=math.abs(delta)<.001 and s.targetAngle or s.preview.angle+delta*math.min(1,dt*8)
     end

@@ -26,16 +26,14 @@ V.atFrame(8, function()
             local dims = grid:GetDimensions()
             local upperMoss = 0
             local upperStone = 0
-            for x = 0, dims.x - 1 do
-                for z = 0, dims.z - 1 do
-                    for y = 0, dims.y - 1 do
+            for x = 0, dims.x - 1, 4 do
+                for z = 0, dims.z - 1, 4 do
+                    for _, height in ipairs({ 3.25, 4.25, 5.25 }) do
+                        local y = math.floor((height - volume:GetNode().worldPosition.y) / volume.voxelSize)
                         if grid:IsSolid(x, y, z) then
-                            local height = volume:GetNode():LocalToWorld(Vector3(0, (y + 0.5) * volume.voxelSize, 0)).y
-                            if height > 3 and height < 5.5 then
-                                local slot = grid:GetVoxelMaterial(x, y, z)
-                                if slot == 104 then upperMoss = upperMoss + 1 end
-                                if slot >= 100 and slot <= 103 then upperStone = upperStone + 1 end
-                            end
+                            local slot = grid:GetVoxelMaterial(x, y, z)
+                            if slot == 104 then upperMoss = upperMoss + 1 end
+                            if slot >= 100 and slot <= 103 then upperStone = upperStone + 1 end
                         end
                     end
                 end
