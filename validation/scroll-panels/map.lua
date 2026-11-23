@@ -2,7 +2,7 @@ local UI=require('urhox-libs/UI')
 local Draw=require('ui.PixelDraw')
 local Map=require('ui.WorldMap')
 local V=_G['V']
-local openness=.5
+local openness=1
 Draw.ScrollProgress=function() return openness end
 V.atFrame(8,function()
     Map.Open(UI.GetRoot(),'ruins',function() return false end)

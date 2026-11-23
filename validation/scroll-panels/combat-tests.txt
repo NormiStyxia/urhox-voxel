@@ -1656,3 +1656,226 @@ WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lu
 WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
 WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
 thorn_bow OK tris=6320
+thorn_bow_asset OK: cache, validation, closure, fallback, recovery
+PASS caster ownership: sword/bow 3s hold and direct Cast rejected without effects; E/R, time charge and interruptions preserved
+PASS actual Scene + Moves + Caster: continuous 3s left hold stays sword, zero time casts
+time_catalyst OK tris=2659
+PASS time sigil routing: sword/bow reject shatter and passive/stale circles; E/R feedback and time charge preserved
+PASS voxel result: world/target isolation, nested calls/errors, multi-volume, no stale reads, real gate bridge
+PASS weapon affix: sub-stats change one number, removed stats gone, passives gated by condition, wind window
+PASS equipped imprint effects reach melee zones, arrow damage and armor break, draw movement, and shatter damage, poise and terrain radius
+Bow top: +Z target; X left -> right; G grip, W string, B bow back
++0.09 .BBB
++0.06 BBBB
++0.03 BBBB
++0.00 BGB.
+-0.03 BBB.
+-0.06 .W..
+-Z shooter; arrow at +X, direction +Z
+weapon_builder: PASS (72 volume+greedy preview combinations, exact surface/color coverage, winding, bounds, cancellation, cache)
+weapon_data: fixed class stats/hit, appearance isolation, original bow palette PASS
+weapon_forge: safe area, drag, three slots, materials, upgrade, smelt, and teardown PASS
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS hang clearance: 20/30/60/120/240Hz opening and delayed closing agree
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS hang input isolation: blocked intent, pure turn, camera, vertical jump, pause, teleport; imported and legacy rigs
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS hang target ownership: swap, hand held position, stow arrival, holo reform and moving turn
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS native Vector3 value semantics: root sampling, target offset and decay write back correctly
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS equipment transaction: real Rig/State, preflight, second-item failure, retained-material rollback, late rejection, single save, save failure, geometry reuse
+PASS six connected closed poses; max centre error 3.14e-16 m; 32 stepped changes and 208 held frames
+PASS two opposite tilted loops, continuous pixel meshes, shared material, period, counter-rotation, masks, holster and disposal
+WeaponRig: wing sword unavailable, voxel sword kept: scripts/combat/WingSwordVisual.lua:36: wing material unavailable
+WeaponRig: thorn bow unavailable, voxel bow kept: scripts/combat/ThornBowVisual.lua:81: thorn bow material unavailable
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+weapon_rig shared palms: PASS (legacy and zero-elbow hit/snapshot equality, bent forearm routing, owned-child-only idempotent cleanup)
+weapon_rig: PASS (bow axes/draw/nock, timed reveal/flight/stow/dissolve, event drain, spring/float, visual-only sword scale, pooled FX)
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: iron sword unavailable, voxel sword kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+PASS R8 essentialHit at low quality, 40/60ms white, .8/1.5 degree mesh-only impulse, stop+50ms reset, 4-band contact sample, 100-hit pool stability, hidden clears
+WeaponOrbitGrains: wing unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+WeaponRig: field bow unavailable, voxel bow kept: tests/combat/weapon_mock.lua:211: assertion failed!
+WeaponRig: bow charge grains unavailable: ./urhox-libs/Platform/PlatformUtils.lua:16: attempt to call a nil value (global 'GetPlatform')
+PASS wing sword visual: pivot-attached, pose/active gating, voxel mesh hidden, recolour/rebuild on Apply, dispose, fallback + kill switch
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+FAIL tests/combat/weapon_select_gesture.lua [string "actual Scene weapon selection callbacks"]:9: attempt to index a nil value (global 'Training')
+stack traceback:
+	[string "actual Scene weapon selection callbacks"]:9: in field 'canOpen'
+	./scripts/combat/WeaponSelectGesture.lua:79: in function 'combat.WeaponSelectGesture.Open'
+	[string "<python>"]:60: in main chunk
+weapon_store: PASS (round trip, isolation, 7 invalid schemas, I/O failures, closed handles)
+weapon_store: real unlocks, three slots, 18 drops, draft isolation, fodder, pity, smelt and interrupted publish PASS
+weapon_store_missing PASS
+VoxelFX: CatalystPixelSpark uses world-space quads, capacity=90
+VoxelFX: CatalystPixelBurst uses world-space quads, capacity=130
+VoxelFX: immediate expiry uses world-space quads, capacity=2
+PASS real VoxelFX empty/live/expiry/reuse and time-catalyst deferred clear: no empty Commit/Draw, no residual particles
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	iron	6486	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	field	7020	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	wing	2754	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	thorn	18960	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	warden	6510	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	silver	7890	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	sword	iron	6486	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->COMBAT_ACTIVE attack
+PASS	bow	field	7020	1
+Combat: state COMBAT_ACTIVE->COMBAT_IDLE idle
+Combat: state COMBAT_IDLE->EXPLORE manual
+Combat: state EXPLORE->COMBAT_IDLE manual
+Combat: state COMBAT_IDLE->EXPLORE stop
+PASS equipped smelt saves once and rebinds the model immediately, failed save preserves the live model
+WeaponRig: bow charge grains unavailable: [string "<python>"]:192: injected backend unavailable
+Combat: state EXPLORE->COMBAT_IDLE manual
+WeaponRig: warden sword unavailable, voxel sword kept: scripts/combat/WardenSwordVisual.lua:38: missing WardenSword
+WeaponRig: silver upload failed: [string "<python>"]:206: injected geometry upload failure
+Combat: state COMBAT_IDLE->EXPLORE stop
+PASS missing pixel backend, missing sword material, failed bow upload, fallback and re-equip; volumes released
+weapon_wheel: geometry, DPI, pointer, selection, guard, teardown, drawing PASS
+PASS visible PC cursor, 3-slot targeting, reduced gain, boundary hysteresis, opening-frame delta
+wrote /tmp/thornbow-export-kivhe44_/mesh.json: body=6320, crystal=128, string=20 triangles
+81 Lua suites + export reproducibility; 10 failed

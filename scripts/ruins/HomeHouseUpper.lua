@@ -72,9 +72,9 @@ window('third',WEST_CX,Z0,0,-1,F3+3.75,1.0,.875)
 window('third',WEST_CX,Z1,0,1,F3+.75,1.875,1.75)
 for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
--- The east knee wall occupies 0.375 m of the corner; keep at least 0.875 m
--- clear beside it for the player's 0.64 m capsule and collision tolerance.
-local terraceDoor={x0=SPLIT-1.25,x1=SPLIT-.125,z=Z1,bottom=F3+.25,top=F3+3.0}
+-- The east knee wall occupies 0.375 m of the corner; leave 1.25 m of
+-- clear floor width beside it for the player's capsule and turning room.
+local terraceDoor={x0=SPLIT-1.625,x1=SPLIT-.125,z=Z1,bottom=F3+.25,top=F3+3.0}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -461,16 +461,19 @@ local function outerStair(b)
     end
     b:Box(lane0,0,Z1,lane1,landA,back1,stone)
     b:Box(lane0-.125,landA-.125,Z1-.125,lane1+.125,landA,back1+.125,slab)
-    -- Two 0.375 m transitions bridge the floor to the rear flight. The outer
-    -- tread is high enough that the capsule can overlap adjacent stair treads
-    -- without meeting a combined 0.75 m rise on the way back out.
-    local entryY=F2+.625
-    b:Box(secondEntry.x0,entryY-.25,Z1-.5,secondEntry.x1,entryY,back0,slab)
-    b:Box(secondEntry.x0,entryY,Z1,secondEntry.x1,entryY+RISE,back0,slab)
-    -- Cover the rear attic doorway across its full width, including capsule clearance.
+    -- Filled 0.125 m risers avoid catching the capsule under a floating slab
+    -- and ease the return climb where adjacent rear-flight treads overlap it.
+    for i=1,6 do
+        local z=Z1-1.0+(i-1)*.25
+        b:Box(secondEntry.x0,secondEntry.bottom,z,secondEntry.x1,secondEntry.bottom+i*.125,z+.25,slab)
+    end
+    -- Cover the rear attic doorway across its full width. Fill the wall/stair
+    -- gap beneath the deck too, then meet the attic floor with two small risers.
     local landingX0=min(endX-1.625,terraceDoor.x0-.25)
-    b:Box(landingX0,0,back0,endX,landB,back1,stone)
+    b:Box(landingX0,0,Z1,endX,landB,back1,stone)
     b:Box(landingX0,landB-.125,Z1,endX+.125,landB,back1+.125,slab)
+    b:Box(terraceDoor.x0,landB,Z1,terraceDoor.x1,landB+.125,Z1+.5,slab)
+    b:Box(terraceDoor.x0,landB+.125,Z1,terraceDoor.x1,terraceDoor.bottom,Z1+.25,slab)
 
     -- Continuous sloped rails follow each flight; short vertical balusters keep
     -- the handrail joined to the stair instead of producing broken stair-step caps.
@@ -520,7 +523,7 @@ function Upper.Build(brush,finish)
     local hoist=brush({-1.5,5.25+HOIST_Y,7.5},{2.25,F3,9.5},step)
     eastHoist(hoist)
     finish('terrace',hoist,{masonry='homeWindows'})
-    local stair=brush({SPLIT-1.5,0,Z0-.5},{X1+2.0,F3+1.25,Z1+2.0},step)
+    local stair=brush({min(SPLIT-1.5,terraceDoor.x0-.25),0,Z0-.5},{X1+2.0,F3+1.25,Z1+2.0},step)
     outerStair(stair)
     finish('terrace',stair,{masonry='homeWindows'})
     makeDetails(brush,finish,'third',{X0-.5,F3-.5,Z0-1.0},{SPLIT+.5,GABLE_EAVE+GABLE_RISE-.5,Z1+.45},function(frame)
