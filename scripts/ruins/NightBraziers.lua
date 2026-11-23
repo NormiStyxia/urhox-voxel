@@ -131,7 +131,7 @@ function M:Init(scene,anchors,count,lights,detail)
                 local light=lampNode:CreateComponent("Light")
                 self.lightColors[i]=Color(1,0.50,0.18)
                 light.lightType=LIGHT_POINT;light.color=self.lightColors[i]
-                light.range,light.brightness,light.castShadows=15,0,false
+                light.range,light.brightness,light.castShadows=12,0,false
                 light.useTemperature=false;light.affectVolumetricFog=false
                 self.lights[#self.lights+1]=light
             end

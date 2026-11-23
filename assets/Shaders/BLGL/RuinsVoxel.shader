@@ -292,6 +292,44 @@ void fragment() {
     if (mineral > 0.0 && surfaceFade > 0.0) {
         shade *= 1.0 - smoothstep(0.64, 0.82, pores) * 0.14 * mineral * surfaceFade;
     }
+    // ---- 落地风化（反照率，正午直射光下也能读出）：墙脚返潮带、溅泥、根部苔，
+    // 加上旧石块顶面的积尘/地衣。只复用已有的低频噪声 g/veins/pores，额外开销是一次高度查表。
+    float oldStone = step(99.5, idx) * (1.0 - step(104.5, idx));
+    bool plaster = home_house_draw > 0.5 && (idx == 240.0 || idx == 241.0);
+    float weatherable = max(max(mineral, dressed ? 1.0 : 0.0), plaster ? 0.7 : 0.0) * (1.0 - 0.5 * tile);
+    float groundDist = 1000.0;
+    if ((ground_weather_strength > 0.0 && weatherable > 0.0) || ground_contact_strength > 0.0) {
+        groundDist = ruins_ground_distance(wp);
+    }
+    float dampK = 0.0;
+    if (ground_weather_strength > 0.0 && weatherable > 0.0 && groundDist < 1.7 && groundDist > -0.6) {
+        float wk = ground_weather_strength * weatherable;
+        float vertical = 1.0 - smoothstep(0.55, 0.85, abs(n.y));
+        float buried = smoothstep(-0.55, -0.12, groundDist);
+        // 返潮线高度 0.25–1.15m，按石面低频噪声起伏，不是一条水平直线。
+        float tide = 0.62 + (g - 0.5) * 0.95 + (veins - 0.5) * 0.40;
+        dampK = (1.0 - smoothstep(tide - 0.30, tide + 0.04, groundDist)) * buried * vertical;
+        // 返潮上沿析出的一道浅色盐霜，让湿区有边界而不是一层脏雾。
+        float bloomLine = smoothstep(tide - 0.16, tide - 0.03, groundDist) * (1.0 - smoothstep(tide - 0.03, tide + 0.07, groundDist)) * vertical * buried;
+        // 雨滴溅起的泥点：离地 0–35cm，贴地最浓，边缘由细孔噪声打碎。
+        float splash = (1.0 - smoothstep(0.02, 0.30 + (pores - 0.5) * 0.18, groundDist)) * buried * vertical;
+        splash *= 0.55 + 0.45 * smoothstep(0.35, 0.65, pores);
+        base *= mix(vec3(1.0), vec3(0.78, 0.78, 0.70), dampK * wk);
+        base *= 1.0 + bloomLine * 0.05 * wk * (1.0 - mossK);
+        base = mix(base, srgb_to_linear(vec3(0.40, 0.33, 0.24)), splash * 0.42 * wk);
+        // 墙根背阴潮湿处才长的苔：只在旧石材上，按块状噪声成簇。
+        float footGrowth = g * 0.55 + veins * 0.45 + (1.0 - smoothstep(0.0, 0.55, groundDist)) * 0.30;
+        float footMoss = smoothstep(0.66, 0.80, footGrowth) * (1.0 - smoothstep(0.05, 0.60, groundDist)) * buried * oldStone;
+        base = mix(base, srgb_to_linear(vec3(0.26, 0.33, 0.15)), footMoss * 0.75 * ground_weather_strength);
+        mossK = max(mossK, footMoss);
+    }
+    // 旧石块（墙顶、檐口、断墙台面）朝上的面积尘长地衣：远看是墙顶一圈略暗偏橄榄色。
+    if (oldStone > 0.0 && n.y > 0.6 && dressed_stone_draw < 0.5 && COLOR.g < 0.5 && groundDist > 0.4) {
+        float up = smoothstep(0.6, 0.9, n.y);
+        float lichen = smoothstep(0.52, 0.70, g * 0.5 + veins * 0.5) * up;
+        base = mix(base, base * vec3(0.84, 0.86, 0.74), lichen * 0.55);
+        base = mix(base, srgb_to_linear(vec3(0.42, 0.46, 0.26)), smoothstep(0.70, 0.80, g * 0.45 + veins * 0.55) * up * 0.45);
+    }
     float dressedJoint = 0.0;
     float dressedRoughness = 0.0;
     float dressedOcclusion = 0.0;
@@ -417,7 +455,7 @@ void fragment() {
         emiK*=window_light*(.2+.65*max(n.y,0.0)+.22*(1.0-abs(n.y)));
     }
     ALBEDO = base * shade * daynight_tint;
-    ROUGHNESS = clamp(pbr.r + homeRoughness + houseWallRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + 0.04 * mossK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
+    ROUGHNESS = clamp(pbr.r + homeRoughness + houseWallRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + 0.04 * mossK - 0.07 * dampK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
     SPECULAR = pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
@@ -437,7 +475,7 @@ void fragment() {
     }
     AO=min(houseWallAO,min(ruins_contact_ao(VERTEX,n,jointK,CAMERA_POSITION_WORLD),1.0-max(dressedOcclusion,0.19*dressedJoint)));
     // 墙脚、柱础、台阶落地处的环境光遮蔽：建筑"坐"在地面上，而不是贴上去的。
-    AO*=ruins_ground_contact(VERTEX,n);
+    AO*=ruins_ground_contact_ao(groundDist,n);
     if (meadow_origin.x > 0.0 && idx >= 115.0 && idx <= 118.0) {
         vec2 lawn = wp.xz-meadow_origin.xz;
         float canopy = min(length(lawn-vec2(-20.5,.5)),length(lawn-vec2(-17.0,-10.0)));
