@@ -290,6 +290,8 @@ end
 -- A staged part contributes its sockets on creation. Two short, down-facing
 -- cones cover the nearest sills; the recessed panes carry the light at pond distance.
 local hearthTime=0.0
+---@type { root: Node|nil, material: Material|nil, time: number }
+local forgeFlame={root=nil,material=nil,time=0.0}
 local windows={sockets={},lamps={},materials={},stage=0,active=false,budget=2,dimmer=0,spill=0}
 
 function H.BindWindowMaterial(material)
@@ -377,6 +379,9 @@ function H.Stop()
     windows.stage,windows.active,windows.budget,windows.dimmer,windows.spill=0,false,2,0,0
     if H.meadowMaterial then H.meadowMaterial:SetSurfaceTexture('splat_map',nil) end
     H.spring,H.hearth,H.field,H.housing,H.meadowMaterial=nil,nil,nil,nil,nil
+    if forgeFlame.root then forgeFlame.root:Remove() end
+    if forgeFlame.material then forgeFlame.material:Dispose() end
+    forgeFlame.root,forgeFlame.material,forgeFlame.time=nil,nil,0
     H.lastDay,H.lastDusk,H.lastNight,H.zoneFallback=nil,nil,nil,nil
 end
 
@@ -427,6 +432,11 @@ end
 
 function H.Update(dt,feet,dn)
     if H.spring then updateWater(dt,feet) end
+    hearthTime=hearthTime+dt
+    forgeFlame.time=hearthTime
+    if forgeFlame.material then
+        forgeFlame.material:SetShaderParameter('flame_time',Variant(hearthTime))
+    end
     local day,dusk,night=floor(dn.day*128+.5)/128,floor(dn.dusk*128+.5)/128,floor(dn.nightK*128+.5)/128
     local zone=dn.zone
     local target=(dn.capture.ready or zone.envSpecTexture) and 0 or 1
@@ -452,8 +462,10 @@ function H.Update(dt,feet,dn)
         H.RefreshWindowLights(windows.stage)
     end
     if H.hearth then
-        -- Two incommensurate waves plus a fast jitter: the forge light breathes with the flames.
-        hearthTime=hearthTime+dt
+        -- The forge light follows the same clock as the analytic flame.
+        if forgeFlame.material then
+            forgeFlame.material:SetShaderParameter('night_strength',Variant(.75+.25*night))
+        end
         local flicker=.82+.1*sin(hearthTime*7.3)+.06*sin(hearthTime*17.9+1.3)+.04*sin(hearthTime*31.1)
         H.hearth.brightness=(.78+.34*(1-day))*flicker
     end
@@ -811,16 +823,16 @@ local function frontWall(ctx)
     b:Box(-16,.75,7,-1,WALL_TOP-.25,7.375,P.HOME_ASHLAR)
     for _,w in ipairs(frontWindows) do frontWindow(b,w) end
     -- The voussoirs, darker inner jamb and inset arched transom have separate depths.
-    b:Shape(doorX-1.375,.75,6.875,doorX+1.375,3.5,7.375,function(x,y,z)
+    b:Shape(doorX-1.375,.75,6.875,doorX+1.375,4.0,7.375,function(x,y,z)
         local u=x-doorX
-        local dy=math.max(0,y-2.75)
+        local dy=math.max(0,y-3.25)
         if (u/1.375)^2+(dy/.75)^2>1 then return end
         if (u/1.1875)^2+(dy/.5625)^2>=1 then return P.HOME_COPING end
         if z<7.125 then return false end
-        if abs(u)>=1.125 or (y>=2.875 and y<3) then return cedar end
-        if y>=3 then
+        if abs(u)>=1.125 or (y>=3.375 and y<3.5) then return cedar end
+        if y>=3.5 then
             if z>=7.3125 or z<7.1875 then return false end
-            if abs(u)<.0625 or abs(abs(u)-(y-2.875)*1.2)<.045 then return cedarPost end
+            if abs(u)<.0625 or abs(abs(u)-(y-3.375)*1.2)<.045 then return cedarPost end
             return z>=7.25 and window or false
         end
         return false
@@ -884,15 +896,15 @@ local function porchDoors(ctx)
         local hinge=doorX-sign*1.125
         local tip=hinge+sign*.46875
         local left,right=math.min(hinge,tip)-.125,math.max(hinge,tip)+.125
-        local b=ctx.brush({left,.75,7.25},{right,2.875,8.5625},cell)
-        b:Box(hinge-.09375,.75,7.25,hinge+.09375,2.875,7.53125,cedarPost)
-        b:Shape(left,.78125,7.375,right,2.875,8.5625,function(x,y,z)
+        local b=ctx.brush({left,.75,7.25},{right,3.25,8.5625},cell)
+        b:Box(hinge-.09375,.75,7.25,hinge+.09375,3.25,7.53125,cedarPost)
+        b:Shape(left,.78125,7.375,right,3.25,8.5625,function(x,y,z)
             local dx,dz=(x-hinge)*sign,z-7.4375
             local u,d=dx*alongX+dz*alongZ,dx*alongZ-dz*alongX
             if u<0 or u>1.125 or abs(d)>.09375 then return end
             if d>.0625 and u>.9375 and u<1.03125 and y>=1.5625 and y<1.6875 then return P.GOLD_DARK end
             local low=y<1.6875
-            local bottom,topY=low and .9375 or 1.8125,low and 1.5625 or 2.6875
+            local bottom,topY=low and .9375 or 1.8125,low and 1.5625 or 3.0625
             local edge=math.min(u-.125,1-u,y-bottom,topY-y)
             if edge<0 then return abs(d)<=.0625 and cedar or nil end
             if edge<cell then return oak end
@@ -1041,6 +1053,55 @@ local function singleRoof(ctx)
     ctx.finish('one-storey-roof',b,1,1,{masonry='homeWindows'})
 end
 
+local FORGE={x=-19,z=4.25,depth=2.875}
+local function buildForgeFlame(scene)
+    if forgeFlame.root then forgeFlame.root:Remove() end
+    if forgeFlame.material then forgeFlame.material:Dispose() end
+    forgeFlame.root,forgeFlame.material=nil,nil
+    local root=scene:CreateChild('HomeForgeAnalyticFlame')
+    root.position=Vector3(H.x+FORGE.x,H.base+.72,H.z+FORGE.z+.55)
+    forgeFlame.root=root
+    local function attach(source)
+        if not source or not forgeFlame.root then return end
+        local material=source:Clone()
+        forgeFlame.material=material
+        material:SetShaderParameter('night_strength',Variant(1.0))
+        material:SetShaderParameter('flame_detail',Variant(1.0))
+        for i,at in ipairs({Vector3(-.55,0,0),Vector3(0,0,.08),Vector3(.55,0,.02)}) do
+            local node=root:CreateChild('ForgeFlame'..i)
+            node.position=at
+            local g=node:CreateComponent('CustomGeometry')
+            g:BeginGeometry(0,TRIANGLE_LIST)
+            local order={1,3,2,1,4,3}
+            for plane=1,3 do
+                local halo=plane==3
+                local width=halo and .85 or .38
+                local bottom,top=halo and -.35 or 0,halo and 1.45 or 1.18
+                local corners={{-width,bottom},{width,bottom},{width,top},{-width,top}}
+                local uv={Vector2(0,0),Vector2(1,0),Vector2(1,1),Vector2(0,1)}
+                for _,k in ipairs(order) do
+                    local v=corners[k]
+                    g:DefineVertex(Vector3(plane==2 and 0 or v[1],v[2],plane==2 and v[1] or 0))
+                    g:DefineNormal(Vector3.UP)
+                    g:DefineColor(Color(i/255,halo and 1 or 0,0,1))
+                    g:DefineTexCoord(uv[k])
+                end
+            end
+            for _,s in ipairs({-1,1}) do
+                for k=1,3 do
+                    g:DefineVertex(Vector3(s*2,s*2,s*2));g:DefineNormal(Vector3.UP)
+                    g:DefineColor(Color(0,0,0,0));g:DefineTexCoord(Vector2(0,0))
+                end
+            end
+            g:Commit();g:SetMaterial(material)
+            g.castShadows,g.occluder,g.occludee=false,false,false
+            g.drawDistance=45
+        end
+        material:SetShaderParameter('flame_time',Variant(forgeFlame.time))
+    end
+    cache:GetResourceAsync('Material','Materials/RuinsPillarFlameDynamic.xml',attach)
+end
+
 -- Transparent window panes. The voxel openings are left clear; each pane is a thin
 -- box with an alpha PBR material, staged with the storey it belongs to and lit
 -- warm at night through RefreshWindowLights. Panes never cast shadows, so sunlight
@@ -1050,8 +1111,8 @@ local function houseGlass(scene)
     root.position=Vector3(H.x,H.base,H.z)
     local m=Material:new()
     m:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTextureAlpha.xml'))
-    m:SetShaderParameter('MatDiffColor',Variant(Color(.80,.90,.95,.14)))
-    m:SetShaderParameter('Metallic',Variant(0.0))
+    m:SetShaderParameter('MatDiffColor',Variant(Color(.72,.88,.96,.32)))
+    m:SetShaderParameter('Metallic',Variant(0.08))
     m:SetShaderParameter('Roughness',Variant(.06))
     m:SetShaderParameter('MatEmissiveColor',Variant(Color(0,0,0)))
     windows.glass=m
@@ -1283,16 +1344,20 @@ local function banks(world)
     trimColumns(world,b,columns)
 end
 local function trees(world,scene)
-    local foliage=require('ruins.RuinsTrees')
+    local foliage=require('ruins.HomeTrees')
     local hidden=require('ruins.RuinsTerrain').HiddenMaterial()
-    for i,p in ipairs({{-22.25,8,5.6,2.3},{3.25,15.25,7.2,3},{-24,-1.5,4,2},{6.75,13.75,5,2.4},{9,15,3,1.6},{20,-5,3.9,2.1},{-18,-10,3.2,1.7},{-2,-13.25,2.8,1.6}}) do
+    -- 金叶主树加高、展冠；其余保留高低错落的庭院树群。
+    for i,p in ipairs({{-22.25,8,5.6,2.3},{3.25,15.25,8.4,3.5},{-24,-1.5,4,2},{6.75,13.75,5,2.4},{9,15,3,1.6},{20,-5,3.9,2.1},{-18,-10,3.2,1.7},{-2,-13.25,2.8,1.6}}) do
         local x,z,h,r=table.unpack(p)
         local y=H.Height(H.x+x,H.z+z)-H.base
-        local trunk=brush(world,{x-.375,y,z-.375},{x+.375,y+h*.65,z+.375},.25)
-        trunk:Box(x-.25,y,z-.25,x+.25,y+h*.65,z+.25,P.BARK)
+        local radius=.28+h*.035
+        local half=math.max(.25,math.floor(radius/.25)*.25)
+        local trunk=brush(world,{x-half-.125,y,z-half-.125},{x+half+.125,y+h*.60,z+half+.125},.25)
+        trunk:Box(x-half,y,z-half,x+half,y+h*.60,z+half,P.BARK)
         local collider=trunk:Finish()
         if hidden then collider.material=hidden end
-        foliage.Tree(scene,nil,H.x+x,H.base+y,H.z+z,{h=h,r=r,trunk=.24+h*.022,gold=i==2,lean=.35+i%3*.18,leanA=i*2.4})
+        foliage.Tree(scene,H.x+x,H.base+y,H.z+z,{h=h,r=r,trunk=radius,gold=i==2,
+            lean=.24+i%3*.12,leanA=i*2.4,seed=730+i*37})
     end
 end
 local function water(scene)
@@ -1513,6 +1578,7 @@ function H.Build(world,scene,dayNight)
     if flames then
         CascadeParticle.SpawnEmitterAttached(flames,scene,Vector3(H.x+FORGE.x,H.base+.8,H.z+FORGE.z+1.3),Quaternion(),Vector3.ONE,false)
     end
+    buildForgeFlame(scene)
     if dayNight then H.Update(0,nil,dayNight) end
     world:OptimizeBroadPhase()
 end

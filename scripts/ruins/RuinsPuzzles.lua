@@ -24,6 +24,7 @@ local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
 local TimeObject = require("ruins.TimeObject")
 local VoxelDamage = require("ruins.VoxelDamage")
+local StructuralSupport = require("ruins.StructuralSupport")
 local P = Pal.P
 
 local M = {}
@@ -615,6 +616,7 @@ local function GateDamaged(eventType, eventData)
     local world = M.world
     if world == nil then return end
     VoxelDamage.Observe(world, eventData)
+    if eventData:GetInt("Removed") > 0 then StructuralSupport.Queue(eventData:GetPtr("Volume")) end
     InvalidateGate(eventData:GetPtr("Volume"), eventData:GetVector3("Position"))
 end
 
@@ -677,6 +679,7 @@ end
 -- This module owns puzzle volumes and its two sender-specific subscriptions.
 -- The parent scene owns all other static scenery.
 function M.Stop()
+    StructuralSupport.Reset()
     if M.world then
         UnsubscribeFromEvent(M.world,'VoxelDamaged')
         UnsubscribeFromEvent(M.world,'VoxelSevered')
@@ -754,7 +757,18 @@ local function UpdateStairStones(dt)
     end
 end
 
+function M.UpdateStructuralSupport()
+    for _, record in ipairs(StructuralSupport.Update(M.world)) do
+        M.severed[#M.severed + 1] = record
+        if #M.severed > 32 then table.remove(M.severed, 1) end
+        M.lastSevered = record
+        gateDirty = true
+        Emit("severed", record)
+    end
+end
+
 function M.Update(dt,deferPresentation)
+    M.UpdateStructuralSupport()
     gateClock = gateClock + dt
     UpdateStairStones(dt)
     for _, o in ipairs(M.list) do o:Update(dt,deferPresentation) end

@@ -1,0 +1,4 @@
+<material>
+    <surfaceshader name="Shaders/BLGL/HomeTreeVoxel.shader" />
+    <parameter name="daynight_tint" value="1 1 1" />
+</material>
