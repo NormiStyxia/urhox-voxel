@@ -67,7 +67,7 @@ local LEAVES = {
       Color(.76,.59,.23), Color(.85,.68,.30), Color(.91,.77,.39), Color(.95,.84,.51) },
 }
 
--- 只保留外层格，连续同色格沿 X 合为实体长方体，最后由原生几何接口合批。
+-- 只保留外层格，沿三个方向合并连续同色格，最后由原生几何接口合批。
 -- 每个盒子都是封闭的六面实体，避免手写面绕序导致从外面看见背面的空心感。
 ---@param parent Node
 ---@param name string
@@ -94,17 +94,41 @@ function Grid:Build(parent, name, palette, material)
     ---@type ProceduralGeometry[]
     local parts = {}
     local s = self.size
+    local function same(x,y,z,tone)
+        local k=key(x,y,z)
+        local c=cells[k]
+        return visible[k] and c and c.tone==tone
+    end
     for _, c in ipairs(self.order) do
         local x, y, z = c.x, c.y, c.z
         if visible[key(x,y,z)] then
-            local width = 1
-            while visible[key(x+width,y,z)] and cells[key(x+width,y,z)].tone == c.tone do
-                width = width + 1
+            local width,depth,height = 1,1,1
+            while same(x+width,y,z,c.tone) do width=width+1 end
+            while true do
+                local full=true
+                for i=0,width-1 do
+                    if not same(x+i,y,z+depth,c.tone) then full=false; break end
+                end
+                if not full then break end
+                depth=depth+1
             end
-            for i = 0, width-1 do visible[key(x+i,y,z)] = nil end
-            parts[#parts+1] = BoxGeometry(width*s,s,s)
-                :Translate((x+width*.5)*s,(y+.5)*s,(z+.5)*s)
-                :SetVertexColor(palette[c.tone])
+            while true do
+                local full=true
+                for j=0,depth-1 do
+                    for i=0,width-1 do
+                        if not same(x+i,y+height,z+j,c.tone) then full=false; break end
+                    end
+                    if not full then break end
+                end
+                if not full then break end
+                height=height+1
+            end
+            for k=0,height-1 do for j=0,depth-1 do for i=0,width-1 do
+                visible[key(x+i,y+k,z+j)] = nil
+            end end end
+            parts[#parts+1] = BoxGeometry(width*s,height*s,depth*s)
+                :Translate((x+width*.5)*s,(y+height*.5)*s,(z+depth*.5)*s)
+                :SetVertexColor(assert(palette[c.tone]))
         end
     end
     local node = parent:CreateChild(name)
@@ -190,7 +214,7 @@ local function crownClump(target,center,radius,seed,bias)
                 local limit=terrace+irregular-(notch>.79 and .16 or 0)
                 if edge<limit then
                     local patch=Noise.Value3(x*.26,y*.32,z*.26,seed)
-                    local shade=.37+height*.15+(patch-.5)*.65+bias
+                    local shade=.45+height*.17+(patch-.5)*.65+bias
                     local speck=Noise.Hash3(x,y,z+seed)
                     if speck>.90 then shade=shade+.10 elseif speck<.06 then shade=shade-.09 end
                     local tone=max(1,min(8,1+floor(shade*8)))
@@ -199,6 +223,31 @@ local function crownClump(target,center,radius,seed,bias)
             end
         end
     end
+end
+
+-- 只从已存在的叶格向外生长，颗粒始终有相邻支撑，不散成漂浮的噪点。
+---@param target HomeTreeGrid
+---@param seed integer
+local function leafRelief(target,seed)
+    ---@type HomeTreeCell[]
+    local buds={}
+    local function bud(x,y,z,tone)
+        if not target.cells[key(x,y,z)] then
+            buds[#buds+1]={x=x,y=y,z=z,tone=max(1,min(8,tone))}
+        end
+    end
+    for _,c in ipairs(target.order) do
+        local x,y,z=c.x,c.y,c.z
+        local n=Noise.Hash3(x,y,z+seed)
+        if n>.67 then bud(x,y+1,z,c.tone+1) end
+        if n<.09 then bud(x,y-1,z,c.tone-1) end
+        -- 四周只补一部分枝梢，保持叶簇大形和透景缝。
+        if n>.87 then bud(x+1,y,z,c.tone) end
+        if n<.12 then bud(x-1,y,z,c.tone-1) end
+        if n>.42 and n<.54 then bud(x,y,z+1,c.tone) end
+        if n>.23 and n<.35 then bud(x,y,z-1,c.tone) end
+    end
+    for _,c in ipairs(buds) do target:Set(c.x,c.y,c.z,c.tone) end
 end
 
 ---@class HomeTreeOptions
@@ -219,7 +268,7 @@ function M.Tree(parent,x,gy,z,o)
     local rng=Noise.Rng(seed)
     local root=parent:CreateChild("Tree")
     root.position=Vector3(x,gy,z)
-    local wood,leaves=grid(.125),grid(.25)
+    local wood,leaves=grid(.125),grid(.1875)
     local h,cr,tr=o.h,o.r,o.trunk
     local lx,lz=cos(o.leanA)*o.lean,sin(o.leanA)*o.lean
     ---@param t number
@@ -260,9 +309,10 @@ function M.Tree(parent,x,gy,z,o)
         woodPath(wood,{mid,p,tip},tr*.20,.075,seed+i*5)
         crownClump(leaves,tip+Vector3(0,.10,0),radius*.46,seed+50+i,-.025)
     end
+    leafRelief(leaves,seed)
     local material=cache:GetResource("Material","Materials/HomeTreeVoxel.xml")
     local barkParts=wood:Build(root,"Bark",BARK,material)
-    local palette=LEAVES[o.gold and 3 or (seed%2+1)]
+    local palette=assert(LEAVES[o.gold and 3 or (seed%2+1)])
     local leafParts=leaves:Build(root,"Leaves",palette,material)
     print(string.format("HomeTrees: seed=%d gold=%s wood=%d leaf=%d boxes=%d, 2 drawables",
         seed,tostring(o.gold),#wood.order,#leaves.order,barkParts+leafParts))
