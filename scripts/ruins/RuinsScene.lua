@@ -15,6 +15,7 @@ local Pal = require("ruins.RuinsPalette")
 local Brush = require("ruins.VoxelBrush")
 local DayNight = require("ruins.DayNight")
 local SkyAtmosphere = require("ruins.SkyAtmosphere")
+local LightQuality = require("ruins.LightQuality")
 local Terrain = require("ruins.RuinsTerrain")
 local Build = require("ruins.RuinsBuild")
 local Puzzles = require("ruins.RuinsPuzzles")
@@ -253,6 +254,7 @@ local function SetupLighting()
     local sun = M.sun
     sun.castShadows = true
     sun.shadowCascade = CascadeParameters(10.0, 38.0, 140.0, 0.0, 0.85)
+    LightQuality.ApplyShadowFocus(sun)
     renderer.shadowPCFSamples = 4
     sun.shadowBias = BiasParameters(0.00025, 0.6)
     sun.shadowIntensity = 0.0

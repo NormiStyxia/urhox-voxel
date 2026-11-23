@@ -2,6 +2,7 @@
 local Settings=require('ruins.GameSettings')
 local Terrain=require('ruins.RuinsTerrain')
 local ContactAO=require('ruins.ContactAO')
+local LightQuality=require('ruins.LightQuality')
 local M={}
 ---@class SettingsGrass: Component
 ---@field density number
@@ -55,6 +56,7 @@ function M.Attach(host)
     Settings.RegisterQuality('scene-shadows',function(p)
         sun.castShadows=p.shadowOn
         sun:SetAttribute('Auto Shadow Cascade',Variant(false))
+        if p.shadowOn and p.shadowCascades>0 then LightQuality.ApplyShadowFocus(sun) end
         if p.shadowCascades>=3 then sun.shadowCascade=CascadeParameters(10,38,p.shadowDistance,0,.85)
         elseif p.shadowCascades==2 then sun.shadowCascade=CascadeParameters(12,p.shadowDistance,0,0,.85) end
         renderer.shadowMapSize=p.shadowMapSize

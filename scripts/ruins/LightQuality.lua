@@ -10,6 +10,13 @@ M.PROFILES = {
 }
 M.PROFILES.off = M.PROFILES.low
 
+-- Keep a square split footprint independent of the visible caster bounds.
+-- A moving sun otherwise changes the fitted width and height independently.
+function M.ApplyShadowFocus(sun)
+    if not sun or not FocusParameters then return end
+    sun.shadowFocus = FocusParameters(false, false, false, 0.75, 3.0)
+end
+
 function M.Default()
     return M.PROFILES[M.DEFAULT] and M.DEFAULT or "high"
 end
@@ -61,6 +68,7 @@ end
 ---@param sun Light
 function M.ApplyStandaloneScene(zone,sun,profile,bloom)
     sun.castShadows = profile.shadowOn
+    if profile.shadowOn and profile.shadowCascades>0 then M.ApplyShadowFocus(sun) end
     if profile.shadowCascades>=3 then sun.shadowCascade=CascadeParameters(10,38,profile.shadowDistance,0,0.82)
     elseif profile.shadowCascades==2 then sun.shadowCascade=CascadeParameters(12,profile.shadowDistance,0,0,0.82) end
     renderer.shadowMapSize,renderer.shadowPCFSamples = profile.shadowMapSize,profile.shadowPCFSamples
