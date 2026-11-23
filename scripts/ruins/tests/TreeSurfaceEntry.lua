@@ -13,6 +13,7 @@ function Start()
     light.lightType, light.brightness = LIGHT_DIRECTIONAL, 1.0
     local tree = Trees.Tree(scene,0,0,0,{h=9,r=4.5,trunk=.7,gold=true,lean=1.2,leanA=math.pi,seed=714})
     local material = cache:GetResource("Material", "Materials/HomeTreeVoxel.xml")
+    ---@type TreeSurfaceGrid
     local grid = {size=1,cells={},order={}}
     for x=0,1 do
         local cell = {x=x,y=0,z=0,tone=1,ao=255}

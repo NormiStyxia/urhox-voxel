@@ -2,7 +2,12 @@
 local M = {}
 local floor = math.floor
 
----@param grid {size:number, cells:table<string, HomeTreeCell?>, order:HomeTreeCell[]}
+---@class TreeSurfaceGrid
+---@field size number
+---@field cells table<string, HomeTreeCell?>
+---@field order HomeTreeCell[]
+
+---@param grid TreeSurfaceGrid
 ---@param parent Node
 ---@param name string
 ---@param palette Color[]
@@ -29,6 +34,7 @@ function M.Build(grid, parent, name, palette, material)
     for axis = 1, 3 do
         for _, sign in ipairs({ -1, 1 }) do
             -- 每层只收集真正朝空气的面；相邻实心格即使不同色也不画内部面。
+            ---@type table<number, table<number, table<number, integer>>>
             local planes = {}
             for _, cell in ipairs(order) do
                 local p, u, v
@@ -48,7 +54,7 @@ function M.Build(grid, parent, name, palette, material)
             for p in pairs(planes) do levels[#levels + 1] = p end
             table.sort(levels)
             for _, p in ipairs(levels) do
-                local layer = planes[p]
+                local layer = assert(planes[p])
                 local rows = {}
                 for v in pairs(layer) do rows[#rows + 1] = v end
                 table.sort(rows)

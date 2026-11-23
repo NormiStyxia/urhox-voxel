@@ -1,0 +1,98 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 40039,
+    "frames_completed": 8,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 299.623ms (threshold: 100ms)",
+                    "frame": 2
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 1828,
+            "component_count": 2980,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 47,
+            "hash": 1463617596,
+            "frame_time_ms": 35693.65234375
+        },
+        {
+            "frame": 4,
+            "phase": "run",
+            "nodes": 23,
+            "components": 47,
+            "hash": 2723094333,
+            "frame_time_ms": 60.534000396728519
+        },
+        {
+            "frame": 8,
+            "phase": "run",
+            "nodes": 23,
+            "components": 47,
+            "hash": 1802521494,
+            "frame_time_ms": 49.89099884033203
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 299.62298583984377,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 7,
+        "ProceduralSky": 2,
+        "Skybox": 2,
+        "CustomGeometry": 1900,
+        "VoxelVolume": 470,
+        "Terrain": 1,
+        "GrassField": 2,
+        "TerrainPatch": 441,
+        "StaticModel": 136,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 9,
+        "SoundSource": 2,
+        "SoundSource3D": 2
+    },
+    "test_result": "PASSED",
+    "test_assertions": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+    },
+    "test_issues": [],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 1,
+        "total_errors": 1
+    }
+}
