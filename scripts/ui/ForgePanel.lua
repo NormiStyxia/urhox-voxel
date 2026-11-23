@@ -11,7 +11,6 @@ local M = {}
 local session
 local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
 local function Clamp(n,lo,hi) return math.min(hi,math.max(n,lo)) end
-local function Round(n) return math.floor(n+.5) end
 local function Safe(callbacks)
     if CombatState.Engaged() or (CombatState.HasAggro and CombatState.HasAggro()) then return false end
     if callbacks.canOpen then return callbacks.canOpen()==true end
@@ -258,11 +257,11 @@ end
 function M.IsOpen() return session~=nil end
 function M.HudHidden()
     local s=session
-    return s~=nil and (s.phase~='opening' or s.phaseTime>=FADE*.6) and s.phase~='closed_reveal'
+    return s~=nil and Openness(s)>0
 end
 function M.ForceClose() return M.Close(true) end
 function M.PreviewMode()
     local s=session
-    if s and (s.phase=='open' or s.phase=='reveal') then return '3d' end
+    if s and s.phase~='closing' and Openness(s)>0 then return '3d' end
 end
 return M

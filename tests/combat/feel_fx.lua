@@ -3,6 +3,19 @@ local Mock=require('weapon_mock');local Fx=require('combat.CombatFx')
 local scene=Mock.Node('scene');local world=Mock.World(scene)
 local fx=Fx.New(scene,world)
 assert(#fx.land==30 and #fx.arcs==24 and #fx.ghosts==12)
+-- Count binding writes, not wall time: all slots are initially inactive/hidden.
+local hiddenWrites=0
+for _,pool in ipairs({fx.land,fx.arcs,fx.edges,fx.ghosts}) do
+ for _,s in ipairs(pool) do
+  local node=s.node
+  s.node=setmetatable({}, {__index=node,__newindex=function(_,key,value)
+   if key=='enabled' then hiddenWrites=hiddenWrites+1 end
+   node[key]=value
+  end})
+ end
+end
+fx:Clear();fx:ClearSword();fx:Clear()
+assert(hiddenWrites==0,'empty effect clears perform no native enabled writes')
 local children=#scene.children;local pos=Vector3(0,0,0);local forward=Vector3(0,0,1)
 fx:Impact(pos,forward)
 local active=0;for _,s in ipairs(fx.land)do if s.active then active=active+1 end end
@@ -60,7 +73,16 @@ print(string.format('FX steady 600-frame stopped-GC delta %.3f KiB',steady))
 fx:Impact(pos,forward);fx:ClearSword()
 assert(fx.land[1].active and fx.land[1].node.enabled,'low-quality trail switch preserves essential ground impact')
 for _,s in ipairs(fx.arcs)do assert(not s.active and not s.node.enabled)end
+local beforeClear=hiddenWrites
 fx:Clear();for _,s in ipairs(fx.land)do assert(not s.active and not s.node.enabled)end
+assert(hiddenWrites-beforeClear==30,'only the 30 live impact slots need hiding')
+beforeClear=hiddenWrites
+fx:Clear();fx:ClearSword()
+assert(hiddenWrites==beforeClear,'repeated clear must not re-hide inactive nodes')
+-- Natural expiry establishes the same clean invariant as explicit clear.
+fx:Contact(pos);fx:Update(1)
+beforeClear=hiddenWrites;fx:Clear()
+assert(hiddenWrites==beforeClear,'expired slots need no second enabled write')
 fx:Dispose()
 -- Exercise the real rig port as well as the individual effect pools.
 do

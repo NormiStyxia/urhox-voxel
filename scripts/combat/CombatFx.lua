@@ -344,7 +344,11 @@ function F:Update(dt)
     for _,s in ipairs(self.ghosts) do ageSlot(self,s,dt) end
 end
 local function clearPool(pool)
-    for _,s in ipairs(pool) do s.active=false;s.node.enabled=false end
+    -- show/ageSlot own both flags. Inactive slots are already hidden; repeated
+    -- swap/cancel teardown must not write every pooled node through the binding.
+    for _,s in ipairs(pool) do
+        if s.active then s.active=false;s.node.enabled=false end
+    end
 end
 function F:ClearSword()
     self.valid,self.slash=false,false

@@ -76,14 +76,20 @@ Draw.Metrics=function() return width,height,safe end
 Draw.Begin=function() end
 Draw.Save=function() end
 Draw.Restore=function() end
-Draw.Rect=function() end
+Draw.Rect=function(_,x,y,w,h)
+    assert(x~=0 or y~=0 or w~=width or h~=height,'卷轴不能绘制全屏遮罩')
+end
 Draw.ImagePixels=function() return true end
-Draw.ScrollPaper=function() end
+local paperBounds
+Draw.ScrollPaper=function(_,w,h,left,right) paperBounds={w,h,left,right} end
 Draw.Finish=function() end
 Draw.Image=function() imageCalls=imageCalls+1 end
 Draw.Text=function() end
 local selectedClass,engaged,safeToOpen='sword',false,true
 package.loaded['urhox-libs/UI']=UI
+local scroll=assert(loadfile('scripts/ui/PixelDraw.lua'))()
+scroll.Metrics,scroll.PixelToHUD=Draw.Metrics,Draw.PixelToHUD
+for _,key in ipairs({'ScrollMetrics','ScrollProgress','ScrollBounds','ScrollOpenTime','ScrollCloseTime'}) do Draw[key]=scroll[key] end
 package.loaded['ui.PixelDraw']=Draw
 package.loaded['ui.TouchInput']={Clear=function() cleared=cleared+1 end}
 package.loaded['combat.CombatState']={Engaged=function() return engaged end,GetSelection=function() return selectedClass end}
@@ -154,7 +160,16 @@ assert(not Forge.Open({rig=rig,canOpen=function() return false end}))
 engaged=true
 assert(not Forge.Open({rig=rig,canOpen=function() return true end}))
 engaged=false
+-- 打开、半展开中关闭、重新打开均复用地图曲线，并在动画中拦截点击。
+assert(Forge.Open({rig=rig,canOpen=function() return true end}))
+Tick(6);local partial=Render();local openingLeft=paperBounds[3]
+assert(openingLeft>0 and openingLeft<177 and paperBounds[1]==380 and paperBounds[2]==214)
+partial.layer.props.onPointerDown(Event(105,80));assert(not partial.pointer)
+Forge.Close();Render();assert(paperBounds[3]==openingLeft,'半展开关闭不能跳成全宽')
+Tick(3);Render();assert(paperBounds[3]>openingLeft,'关闭应从当前宽度向中心收卷')
+Tick(20);assert(not Forge.IsOpen())
 local s=Open(rig)
+assert(paperBounds[3]==0 and paperBounds[4]==380,'完整展开保持原锻造尺寸')
 assert(not Has('tab_bow') and not Has('color_primary') and s.tab=='detail')
 CheckLayout()
 local props=s.layer.props

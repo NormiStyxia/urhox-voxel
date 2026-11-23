@@ -13,7 +13,20 @@ draw.Metrics=function()return 896,504,{left=0,right=0,top=0,bottom=0} end
 draw.PixelToHUD=function()return 1 end
 package.loaded['ui.PixelDraw']=draw
 package.loaded['urhox-libs/UI']={Panel={Extend=function()return setmetatable({},{__call=function(t)return setmetatable({},{__index=t}) end})end}}
+local scroll=assert(loadfile('scripts/ui/PixelDraw.lua'))()
+scroll.Metrics,scroll.PixelToHUD=draw.Metrics,draw.PixelToHUD
+for _,key in ipairs({'ScrollMetrics','ScrollProgress','ScrollBounds','ScrollOpenTime','ScrollCloseTime'}) do draw[key]=scroll[key] end
 local root={AddChild=function(self,c)self.layer=c end,RemoveChild=function(self)self.layer=nil end}
+local mapPaper
+local oldPaper,oldRect=draw.ScrollPaper,draw.Rect
+draw.ScrollPaper=function(vg,w,h,left,right)
+    assert(w==380 and h==214,'地图和锻造必须使用同一纸张尺寸')
+    mapPaper={left,right};return oldPaper(vg,w,h,left,right)
+end
+draw.Rect=function(vg,x,y,w,h,...)
+    assert(x~=0 or y~=0 or w~=896 or h~=504,'地图不能盖全屏遮罩')
+    return oldRect(vg,x,y,w,h,...)
+end
 local model=require('ui.WorldMapModel');local new=model.New;local view
 model.New=function()view=new();return view end
 local map=require('ui.WorldMap')
@@ -99,8 +112,11 @@ end
 local function click(x,y)
     mouse('Down',1,x,y);mouse('Up',1,x,y)
 end
-press(KEY_M);assert(map.IsOpen() and held);now=now+.13;shot('00-unrolling');click(629,207)
+press(KEY_M);assert(map.IsOpen() and held);now=now+.13;shot('00-unrolling')
+assert(mapPaper[1]==89 and mapPaper[2]==291,'半展开应保持地图原卷轴曲线')
+click(629,207)
 assert(builds==0);now=now+.16;shot('01-open')
+assert(mapPaper[1]==0 and mapPaper[2]==380)
 local x,y=location('home');mouse('Down',1,x,y);assert(builds==0);mouse('Move',1,x+20,y);mouse('Move',1,x,y);mouse('Up',1,x,y);assert(builds==0 and map.IsOpen())
 click(42,72);assert(builds==0 and map.IsOpen());print('PASS blank tap and dragged release never initiate travel')
 -- Find a contour in drawn screen-space spans, without consulting the ID buffer.

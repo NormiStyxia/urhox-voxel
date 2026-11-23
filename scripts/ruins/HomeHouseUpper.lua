@@ -72,7 +72,7 @@ window('third',WEST_CX,Z0,0,-1,F3+3.75,1.0,.875)
 window('third',WEST_CX,Z1,0,1,F3+.75,1.875,1.75)
 for _,z in ipairs({9.5,12.5}) do window('third',X0,z,-1,0,F3+.5,1.25,1.5) end
 for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) end
-local terraceDoor={x0=SPLIT-1.25,x1=SPLIT-.0,z=Z1,bottom=F3+.25,top=F3+3.0}
+local terraceDoor={x0=SPLIT-.875,x1=SPLIT-.125,z=Z1,bottom=F3+.25,top=F3+3.0}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -334,7 +334,7 @@ local function westAttic(b)
     b:Box(terraceDoor.x0-.125,terraceDoor.bottom,Z1-.375,terraceDoor.x0,terraceDoor.top+.125,Z1+.0625,woodY)
     b:Box(terraceDoor.x1,terraceDoor.bottom,Z1-.375,terraceDoor.x1+.125,terraceDoor.top+.125,Z1+.0625,woodY)
     b:Box(terraceDoor.x0-.125,terraceDoor.top,Z1-.375,terraceDoor.x1+.125,terraceDoor.top+.125,Z1+.0625,woodZ)
-    b:Box(terraceDoor.x0+.125,terraceDoor.bottom,Z1-.25,terraceDoor.x1-.125,terraceDoor.top-.125,Z1-.1875,P.HOME_WINDOW_REVEAL)
+    -- Keep the rear entrance open; no solid or glazed leaf crosses the doorway.
     tileRoof(b,true,WEST_CX,GABLE_HALF,Z0-.75,Z1+.75,GABLE_EAVE,GABLE_RISE)
     stack(b,X0+1.75,Z1-1.75,F3,gableTop(X0+1.75)+1.75)
 end
@@ -464,8 +464,10 @@ local function outerStair(b)
     -- It occupies the wall/stair gap, never the ascending flight itself.
     local entryY=F2+.625
     b:Box(secondEntry.x0,entryY-.25,Z1-.5,secondEntry.x1,entryY,back0,slab)
-    b:Box(endX-1.5,0,back0,endX,landB,back1,stone)
-    b:Box(endX-1.625,landB-.125,Z1,endX+.125,landB,back1+.125,slab)
+    -- Cover the rear attic doorway across its full width, including capsule clearance.
+    local landingX0=min(endX-1.625,terraceDoor.x0-.25)
+    b:Box(landingX0,0,back0,endX,landB,back1,stone)
+    b:Box(landingX0,landB-.125,Z1,endX+.125,landB,back1+.125,slab)
 
     -- Continuous sloped rails follow each flight; short vertical balusters keep
     -- the handrail joined to the stair instead of producing broken stair-step caps.

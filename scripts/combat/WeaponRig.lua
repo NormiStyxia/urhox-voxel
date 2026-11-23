@@ -873,7 +873,7 @@ function Rig:SetActive(weapon)
     self.visualState,self.hangReady='hidden',false
     self.attached="hidden"
     self.swingOffset,self.swingEuler=Vector3.ZERO,Vector3.ZERO
-    self:ClearTrail()
+    -- StopCombatVisual already cleared trails before changing the active entry.
     self:UpdateTrailColor()
     self:HideWeapon(weapon)
     -- Swapping stows the new weapon; the combat owner may then request hand.
@@ -887,8 +887,12 @@ end
 ---@return boolean
 function Rig:SetPose(pose)
     if self.disposed or (pose~="hidden" and pose~="back" and pose~="hand") then return false end
-    if pose=='hidden' then self:CancelRetiring();self:StopCombatVisual() end
-    if self.pose==pose then return true end
+    if pose=='hidden' then self:CancelRetiring() end
+    if self.pose==pose then
+        -- Reasserting hidden is a teardown boundary, even during a dissolve.
+        if pose=='hidden' then self:StopCombatVisual() end
+        return true
+    end
     for i=#self.events,1,-1 do self.events[i]=nil end -- a redirected flight owns a new arrival
     local previous=self.pose
     self.pose=pose
