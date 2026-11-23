@@ -4,7 +4,7 @@ local Draw=require('ui.PixelDraw')
 local Settings=require('ruins.GameSettings')
 local DebugLog=require('ruins.DebugLog')
 local TouchInput=require('ui.TouchInput')
-local Catalog=require('combat.WeaponCatalog')
+local BagPanel=require('ui.BagPanel')
 local M={open=false}
 ---@type Widget?
 local parent
@@ -17,9 +17,8 @@ local receiver
 ---@type fun(boolean)?
 local changed
 local page,advancedPage=1,1
-local bag,bagClass,bagNotice
+local bag
 local BAG_PAGE=4
-local BAG_CLASSES={sword='长剑',bow='长弓',time='时间法器'}
 local buttons={}
 local information={}
 local releaseLatch=false
@@ -40,7 +39,7 @@ local function Add(label,x,y,w,h,action,active)
 end
 local function SelectBagPage()
     if not bag or not bag.available() then return false end
-    bagClass,bagNotice=bag.selection(),nil
+    BagPanel.Reset()
     page=BAG_PAGE
     return true
 end
@@ -72,6 +71,10 @@ local function Layout()
             local b=utf8.offset(line,math.min(count+1,first+limit)) or (#line+1)
             information[#information+1]=line:sub(a,b-1)
         end
+    end
+    if page==BAG_PAGE then
+        buttons={}; information={}
+        return
     end
     if page==1 then
         Info(DESCRIPTIONS[Settings.Get('quality')])
@@ -106,45 +109,28 @@ local function Layout()
         Add('调试日志：'..(Settings.Get('debugLog') and '开启' or '关闭'),x,y,bw,44,function() Settings.Set('debugLog',not Settings.Get('debugLog')); Layout() end,Settings.Get('debugLog'))
         Add('性能小字：'..(Settings.Get('perfHud') and '开启' or '关闭'),x,y+44,bw,44,function() Settings.Set('perfHud',not Settings.Get('perfHud')); Layout() end,Settings.Get('perfHud'))
         Add('打印最近日志',x,y+88,bw,44,function() for _,line in ipairs(DebugLog.GetRecent(40)) do print(line) end end,false)
-    else
-        local width=math.floor(bw/3/2)*2
-        for i,class in ipairs(Catalog.Classes) do
-            Add(BAG_CLASSES[class],x+(i-1)*width,y,width-4,44,function()
-                bagClass,bagNotice=class,nil; Layout()
-            end,bagClass==class)
-        end
-        local slot=bag.progress().slots[bagClass]
-        local rowY=y+44
-        local rowH=math.min(44,math.max(22,math.floor((box.h-212)/3)))
-        for _,item in ipairs(Catalog.Weapons[bagClass]) do
-            local level=slot.levels[item.id]
-            if level then
-                local equipped=slot.weapon==item.id
-                Add(('%s · Lv.%d%s'):format(item.name,level,equipped and ' · 已装备' or ''),x,rowY,bw,rowH,function()
-                    if equipped then return end
-                    local _,notice=bag.equip(bagClass,item.id)
-                    bagNotice=notice; Layout()
-                end,equipped)
-                rowY=rowY+rowH
-            end
-        end
     end
     Add('关闭 · 返回游戏',x,box.y+box.h-48,bw,44,function() M.Close() end,false)
 end
 local Layer=UI.Panel:Extend('RuinsSettingsMenu')
 function Layer:Render(vg)
+    if page==BAG_PAGE then
+        BagPanel.Render(vg,{
+            bag=bag,
+            onClose=function() M.Close() end,
+            onSettings=function() page=1; Layout() end,
+        })
+        return
+    end
     local w,h=Draw.Metrics()
     if w~=WIDTH or h~=HEIGHT then Layout() end
     Draw.Begin(vg,true)
     Draw.Rect(vg,0,0,w,h,Draw.colors.deep,.72)
     Draw.NineSlice(vg,'panel_paper',box.x,box.y,box.w,box.h,8,1)
-    Draw.Text(vg,page==BAG_PAGE and '武器背包' or '旅途设置',box.x+box.w/2,box.y+26,24,Draw.colors.brown,NVG_ALIGN_CENTER)
+    Draw.Text(vg,'旅途设置',box.x+box.w/2,box.y+26,24,Draw.colors.brown,NVG_ALIGN_CENTER)
     for _,b in ipairs(buttons) do
         Draw.Rect(vg,b.x,b.y,b.w,b.h-4,b.active and Draw.colors.gold or Draw.colors.ink)
         Draw.Text(vg,b.label,b.x+b.w/2,b.y+b.h/2-2,12,b.active and Draw.colors.brown or Draw.colors.paper,NVG_ALIGN_CENTER)
-    end
-    if page==BAG_PAGE and bagNotice then
-        Draw.Text(vg,bagNotice,box.x+20,box.y+box.h-60,12,Draw.colors.brown)
     end
     if page==1 then
         Draw.Text(vg,'实际档位：'..QUALITY_NAMES[Settings.GetProfile().quality],box.x+20,box.y+160,12,Draw.colors.brown)
@@ -157,9 +143,26 @@ function Layer:Render(vg)
 end
 function M.Click(x,y)
     if not M.open then return end
+    if page==BAG_PAGE then BagPanel.Click(x,y); return end
     for _,b in ipairs(buttons) do
         if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.action(); return end
     end
+end
+function M.Key(key,repeatKey)
+    if not M.open then return false end
+    if page==BAG_PAGE then
+        return BagPanel.Key(key,repeatKey,{bag=bag,onClose=function() M.Close() end})
+    end
+    if repeatKey then return true end
+    if key==KEY_ESCAPE then M.Close(); return true end
+    if key==KEY_1 then page=1; Layout(); return true
+    elseif key==KEY_2 then page=2; Layout(); return true
+    elseif key==KEY_3 then page=3; Layout(); return true
+    elseif key==KEY_4 and bag then
+        if SelectBagPage() then Layout() else bag.unavailable() end
+        return true
+    end
+    return false
 end
 local function ReleaseEvents()
     if receiver then receiver:UnsubscribeFromAllEvents() end
@@ -192,11 +195,15 @@ function M.Open(view)
         local k=Draw.PixelToHUD()
         M.Click(data:GetInt('X')*k,data:GetInt('Y')*k)
     end)
+    receiver:SubscribeToEvent('MouseWheel',function(_,_,data)
+        if page==BAG_PAGE then BagPanel.Wheel(data:GetInt('Wheel')) end
+    end)
     return true
 end
 function M.Close()
     if not M.open then return end
     M.open=false; releaseLatch=true
+    BagPanel.OnClose()
     if layer and parent then parent:RemoveChild(layer) end
     layer=nil; buttons={}; ReleaseEvents()
     -- Stay blocked through the closing click and held movement/skill keys.
