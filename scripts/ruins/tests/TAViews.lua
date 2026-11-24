@@ -51,6 +51,23 @@ local VIEWS = {
         { name = "home_pond_dusk", hour = 17.8, pos = Vector3(HX - 2, HB + 1.8, -16), look = Vector3(HX - 9, HB, -2) },
         { name = "home_night", hour = 21.5, pos = Vector3(HX + 5, HB + 2.2, -13), look = Vector3(HX - 2, HB + 2, 6) },
     },
+    warm = {
+        { name = "w_gate_night", hour = 22, pos = Vector3(-2, R + 2.6, -66), look = Vector3(-7, R + .3, -55) },
+        { name = "w_east_night", hour = 22, pos = Vector3(50, R + 3.2, 2), look = Vector3(57, R + .3, 9) },
+        { name = "w_overview_night", hour = 22, pos = Vector3(-60, 30, -70), look = Vector3(0, 0, 0) },
+        { name = "w_court_night", hour = 22, pos = Vector3(-12, R + 3.5, -24), look = Vector3(0, 1.5, 4) },
+        { name = "home_w_front", stage = 3, hour = 21.5, pos = Vector3(HX - 8.5, HB + 4, -12), look = Vector3(HX - 8.5, HB + 6, 10) },
+        { name = "home_w_pond", stage = 3, hour = 21.5, pos = Vector3(HX + 3, HB + 2.4, -10), look = Vector3(HX - 8, HB + 1.5, 3) },
+        { name = "home_w_inside", stage = 3, hour = 21.5, pos = Vector3(HX - 1.9, HB + 2.6, 14), look = Vector3(HX - 15, HB + 1.6, 8) },
+        { name = "home_w_terrace", stage = 3, hour = 21.5, pos = Vector3(HX - 5.2, HB + 12.6, 8.4), look = Vector3(HX - 2.2, HB + 10.4, 12.2) },
+        { name = "home_w_court", stage = 3, hour = 21.5, pos = Vector3(HX + 9, HB + 3.6, -3.5), look = Vector3(HX + 15, HB + 2.2, 4) },
+        { name = "home_w_day", stage = 3, hour = 14, pos = Vector3(HX + 9, HB + 3.6, -3.5), look = Vector3(HX + 15, HB + 2.2, 4) },
+    },
+    nomi = {
+        { name = "nomi_day", hour = 13, nomi = true, pos = Vector3(1.2, R + 1.4, -61.8), look = Vector3(0, R + .9, -64) },
+        { name = "nomi_night", hour = 22, nomi = true, pos = Vector3(1.2, R + 1.4, -61.8), look = Vector3(0, R + .9, -64) },
+        { name = "nomi_fire", hour = 22, nomi = true, at = Vector3(-5.6, R + .1, -56.4), pos = Vector3(-3.4, R + 1.4, -57.6), look = Vector3(-5.6, R + .9, -56.4) },
+    },
     forge = {
         { name = "house_forge", stage = 3, hour = 15, pos = Vector3(HX - 14.5, HB + 2.6, -1.5), look = Vector3(HX - 19, HB + 1.4, 5.5) },
         { name = "house_forge_n", stage = 3, hour = 21.5, pos = Vector3(HX - 15.5, HB + 2.2, -0.5), look = Vector3(HX - 19, HB + 1.2, 5.5) },
@@ -142,6 +159,10 @@ function TAViews_PostUpdate(eventType, eventData)
         game.dayNight.lockHour = v.hour
         game.dayNight:SetHour(v.hour)
         if v.stage then print("TAViews: stage", require("ruins.HomeIsland").SetHouseStage(v.stage)) end
+        if v.nomi ~= nil then
+            game.nomiCtl.node:SetDeepEnabled(true)
+            game.nomiCtl.cc:Teleport(v.at or Vector3(0, R, -64))
+        end
         for _, tree in ipairs(game.scene:GetChildrenWithName("Tree", true)) do tree.enabled = not v.hideTrees end
         print(string.format("TAViews: view %s hour %.1f frame %d", v.name, v.hour, frame))
     end

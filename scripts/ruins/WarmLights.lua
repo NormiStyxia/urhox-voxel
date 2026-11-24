@@ -310,7 +310,8 @@ function M:Add(o)
     local base = o.pos
     local root = self.root --[[@as Node]]
     local node = root:CreateChild('Warm-' .. o.kind)
-    node.position = base + rot * flame
+    local offset = rot * flame --[[@as Vector3]]
+    node.position = base + offset
     local lamp = { kind = o.kind, def = kind, node = node, shell = lamp_shell, priority = o.priority or 5, light = nil, fx = {},
         phase = (#self.lamps + 1) * 2.1, first = o.first or 0, last = o.last or 99, shown = true }
     -- 火焰粒子：蜡烛每根一簇，其余一处
@@ -318,7 +319,8 @@ function M:Add(o)
     if fx then
         local points = flames or { flame }
         for _, p in ipairs(points) do
-            local at = base + rot * p
+            local turned = rot * p --[[@as Vector3]]
+            local at = base + turned
             local s = o.kind == 'candles' and .55 or 1.0
             local inst = CascadeParticle.SpawnEmitterAttached(fx, root, at, Quaternion(), Vector3(s, s, s), false, CASCADE_POOL_NONE, false)
             if inst then lamp.fx[#lamp.fx + 1] = inst end

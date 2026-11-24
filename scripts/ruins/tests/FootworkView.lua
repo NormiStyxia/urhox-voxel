@@ -8,6 +8,8 @@ local ATTACKS = { [40] = true, [96] = true, [120] = true, [146] = true, [176] = 
 local SHOTS = {}
 for f = 60, 260, 2 do SHOTS[f] = true end
 local pending = nil
+---@type Vector3[]|nil
+local eyeAt = nil
 V.atFrame(8, function()
     local game = _G["RUINS"]
     local moves, state = game.combat.moves, game.combat.state
@@ -24,15 +26,14 @@ V.atFrame(8, function()
         -- 固定的侧面机位：在起手位置的右侧，相机每帧被游戏重新摆放后再挪过来
         if frame == 30 then
             -- 朝起手时的身后打：默认相机就在那边，是开阔地面，突进不会被台阶挡住
-            local p, f = nomi.node.worldPosition, -nomi.node.worldDirection
-            local right = Vector3(f.z, 0, -f.x)
-            local eye = p + right * 4.6 + f * 1.2 + Vector3(0, 0.6, 0)
-            local look = p + f * 1.2 + Vector3(0, 0.62, 0)
+            local f = -nomi.node.worldDirection
             -- 战斗相机最后一步是 ApplyCombatOffset（震屏 / 防穿墙），在它之后把相机摆到侧面
             local applyOffset = nomi.ApplyCombatOffset
             ---@param n any
             nomi.ApplyCombatOffset = function(n, offset)
                 applyOffset(n, offset)
+                if not eyeAt then return end
+                local eye, look = eyeAt[1], eyeAt[2]
                 local camNode = n:CameraNode()
                 camNode.worldPosition = eye
                 camNode:LookAt(look)
@@ -49,6 +50,12 @@ V.atFrame(8, function()
                 if options and m and (m.x ~= 0 or m.z ~= 0) then options.motion = m end
                 return move(n, mdt, mf, mr, run, jump, aiming, options)
             end
+        end
+        -- 第一刀开始后角色朝向已定：相机放在它的右侧，之后固定不动
+        if frame == 59 then
+            local p, d = nomi.node.worldPosition, nomi.node.worldDirection
+            local right = Vector3(d.z, 0, -d.x)
+            eyeAt = { p + right * 4.6 + d * 1.0 + Vector3(0, 0.6, 0), p + d * 1.0 + Vector3(0, 0.62, 0) }
         end
         if pending ~= nil then
             local image = Image()
