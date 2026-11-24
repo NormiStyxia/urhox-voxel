@@ -13,34 +13,72 @@ local C = {
     rust=0xA6512A, rustDark=0x4E261A, rustLight=0xCE7239, rustCut=0xF2BA72,
     iron=0x8CA0AD, slateDark=0x2F3B48,
 }
-local function color(rgb, k)
+local function color(rgb, k, a)
     k=k or 1
-    return Color(((rgb>>16)&255)*k/255, ((rgb>>8)&255)*k/255, (rgb&255)*k/255, 1)
+    return Color(math.min(1,((rgb>>16)&255)*k/255), math.min(1,((rgb>>8)&255)*k/255), math.min(1,(rgb&255)*k/255), a or 1)
 end
+
+local SHADERS = {
+    stone = { path = 'Shaders/BLGL/RuinsBark.shader', param = 'rock_mode', value = 1.0 },
+    matte = { path = 'Shaders/BLGL/RuinsBark.shader', param = 'rock_mode', value = 2.0 },
+    gem   = { path = 'Shaders/BLGL/RuinsCrystal.shader', param = 'ore_mode', value = 1.0 },
+    glass = { path = 'model/forge-blades/WingSwordCrystal.shader', xml = 'model/forge-blades/WingSwordCrystal.xml', param = 'ore_mode', value = 1.0 },
+}
 
 function M.Materials()
     local mats={}
     for _,finish in ipairs({'matte','stone','gem','beam','glass'}) do
-        local mat=Material:new()
-        local path=finish=='beam' and 'Techniques/NoTextureUnlit.xml'
-            or finish=='glass' and 'Techniques/PBR/PBRNoTextureAlpha.xml' or 'Techniques/PBR/PBRNoTexture.xml'
-        mat:SetTechnique(0,cache:GetResource('Technique',path))
-        mat.vertexShaderDefines='VERTEXCOLOR'
-        mat.pixelShaderDefines='VERTEXCOLOR'
-        mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,finish=='glass' and .34 or 1)))
-        if finish=='glass' then
-            -- Translucent shell: both faces drawn so the inner facets and the
-            -- bright core read through it, with a faint self-glow like cut gem.
-            mat:SetCullMode(CULL_NONE)
-            mat:SetShaderParameter('MatEmissiveColor',Variant(Color(.10,.20,.23)))
+        local mat
+        local spec=SHADERS[finish]
+        local bound=false
+        if spec then
+            if spec.xml and cache and cache.GetResource then
+                local src=cache:GetResource('Material',spec.xml)
+                if src and src.Clone then
+                    mat=src:Clone('RuinsResource_'..finish)
+                    bound=mat~=nil
+                end
+            end
+            if not mat then mat=Material:new() end
+            if not bound and mat.SetSurfaceShader then
+                bound=mat:SetSurfaceShader(spec.path)==true
+            end
+            if bound then
+                mat:SetShaderParameter(spec.param,Variant(spec.value))
+                if finish=='gem' or finish=='glass' then
+                    mat:SetShaderParameter('night_k',Variant(0.0))
+                end
+            end
+        else
+            mat=Material:new()
         end
-        if finish~='beam' then
-            mat:SetShaderParameter('Roughness',Variant(finish=='glass' and .10 or finish=='gem' and .17 or finish=='stone' and .96 or .88))
-            mat:SetShaderParameter('Metallic',Variant(finish=='glass' and 0 or finish=='gem' and .21 or 0))
+        if not bound then
+            local path=finish=='beam' and 'Techniques/NoTextureUnlit.xml'
+                or finish=='glass' and 'Techniques/PBR/PBRNoTextureAlpha.xml' or 'Techniques/PBR/PBRNoTexture.xml'
+            mat:SetTechnique(0,cache:GetResource('Technique',path))
+            mat.vertexShaderDefines='VERTEXCOLOR'
+            mat.pixelShaderDefines='VERTEXCOLOR'
+            mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,finish=='glass' and .52 or 1)))
+            if finish~='beam' then
+                mat:SetShaderParameter('Roughness',Variant(finish=='glass' and .05 or finish=='gem' and .08 or finish=='stone' and .92 or .88))
+                mat:SetShaderParameter('Metallic',Variant(0))
+            end
         end
         mats[finish]=mat
     end
     return mats
+end
+
+function M.SetNight(mats, nightK)
+    if not mats then return end
+    local k=math.max(0,math.min(1,nightK or 0))
+    local step=math.floor(k*64+.5)/64
+    if mats.nightStep==step then return end
+    mats.nightStep=step
+    for _,name in ipairs({'gem','glass'}) do
+        local m=mats[name]
+        if m and m.SetShaderParameter then m:SetShaderParameter('night_k',Variant(step)) end
+    end
 end
 
 local function mesh(node,name,material,shadow)
@@ -51,17 +89,40 @@ local function mesh(node,name,material,shadow)
     return g
 end
 
-local function triangle(g,a,b,c,tint)
+local faceCounter = 0
+local function facetAlpha(normal, salt)
+    -- Key-light + per-facet hash matching ClockCatalyst's core facet brightness (COLOR.a).
+    local dotKey = -0.45 * normal.x + 0.58 * normal.y - 0.68 * normal.z
+    local base = math.max(0, math.min(1, (dotKey + 0.34) / 1.34))
+    local h = (((salt or faceCounter) * 43) % 19) / 19
+    return math.max(0.02, math.min(0.98, (base ^ 1.25) * 0.78 + h * 0.22))
+end
+
+local function triangle(g,a,b,c,rgb,k,center,salt)
+    faceCounter = faceCounter + 1
+    if center then
+        local raw = (b-a):CrossProduct(c-a)
+        local out = raw.x*(a.x-center.x)+raw.y*(a.y-center.y)+raw.z*(a.z-center.z)
+        if out<0 then b,c=c,b end
+    end
     local normal=(b-a):CrossProduct(c-a):Normalized()
+    local alpha=type(rgb)=='number' and facetAlpha(normal,salt or faceCounter) or nil
+    local tint=type(rgb)=='number' and color(rgb,k or 1,alpha) or rgb
+    local hasUV = g.DefineTexCoord ~= nil and Vector2 ~= nil
     g:DefineVertex(a); g:DefineNormal(normal); g:DefineColor(tint)
+    if hasUV then g:DefineTexCoord(Vector2(0, 0)) end
     g:DefineVertex(b); g:DefineNormal(normal); g:DefineColor(tint)
+    if hasUV then g:DefineTexCoord(Vector2(1, 0)) end
     g:DefineVertex(c); g:DefineNormal(normal); g:DefineColor(tint)
+    if hasUV then g:DefineTexCoord(Vector2(0.5, 1)) end
 end
 
 -- Each row is {height, xRadius, zRadius, xOffset?, zOffset?}. Offsetting
 -- successive rings gives each crystal its own growth axis and cleavage planes.
 local function solid(g,sides,x,z,angle,rows,body,cap)
     local lower
+    local midY = .5 * (rows[1][1] + rows[#rows][1])
+    local center = Vector3(x, midY, z)
     for j,row in ipairs(rows) do
         local ring={}
         for i=1,sides do
@@ -71,29 +132,155 @@ local function solid(g,sides,x,z,angle,rows,body,cap)
         if lower then
             for i=1,sides do
                 local n=i%sides+1
-                local tint=color(body,.80+.05*((i*3)%5))
-                triangle(g,lower[i],ring[i],ring[n],tint)
-                triangle(g,lower[i],ring[n],lower[n],tint)
+                local k=.82+.04*((i*3+j)%5)
+                triangle(g,lower[i],ring[i],ring[n],body,k,center,i*7+j*13)
+                triangle(g,lower[i],ring[n],lower[n],body,k*.96,center,i*11+j*17)
             end
         end
         if j==1 or j==#rows then
-            local tint=color(cap or body)
+            local cTone=cap or body
             for i=2,sides-1 do
-                if j==1 then triangle(g,ring[1],ring[i],ring[i+1],tint)
-                else triangle(g,ring[1],ring[i+1],ring[i],tint) end
+                if j==1 then triangle(g,ring[1],ring[i],ring[i+1],cTone,.86,center,i*5+j)
+                else triangle(g,ring[1],ring[i+1],ring[i],cTone,.94,center,i*9+j) end
             end
         end
         lower=ring
     end
 end
 
-local function crystal(g,x,y,z,h,r,dx,dz,tone)
-    solid(g,6,x,z,.24,{{y,r*.78,r*.7},{y+h*.19,r,r*.84,dx*.14,dz*.14},
-        {y+h*.72,r*.91,r*.79,dx*.70,dz*.70},{y+h,r*.08,r*.06,dx+r*.15,dz}},tone)
+-- Staggered antiprism / diamond-cut crystal spire: alternating rings twist by half
+-- a sector and vary vertex radius/height so every band is a lattice of distinct
+-- triangular facets (matching the facet distribution of ClockCatalyst's gem).
+local function crystal(g,x,y,z,h,r,dx,dz,tone,seed)
+    seed = seed or 1
+    local sides = 6
+    local step = 2 * math.pi / sides
+    local bands = {
+        { t = 0.00, rad = 0.76, twist = 0.0, ox = 0.00, oz = 0.00 },
+        { t = 0.17, rad = 0.98, twist = 0.5, ox = 0.12, oz = 0.12 },
+        { t = 0.41, rad = 1.04, twist = 0.0, ox = 0.34, oz = 0.34 },
+        { t = 0.64, rad = 0.94, twist = 0.5, ox = 0.62, oz = 0.62 },
+        { t = 0.83, rad = 0.62, twist = 0.0, ox = 0.84, oz = 0.84 },
+    }
+    local center = Vector3(x + dx * .45, y + h * .48, z + dz * .45)
+    local rings = {}
+    for bIdx, b in ipairs(bands) do
+        local ring = {}
+        local cx, cz = x + dx * b.ox, z + dz * b.oz
+        for i = 1, sides do
+            local a = .22 + seed * .37 + (i - 1 + b.twist) * step
+            local alt = (i % 2 == 0) and 1.05 or 0.91
+            local rad = r * b.rad * alt
+            local hy = y + h * b.t + ((bIdx > 1 and bIdx < #bands) and (((i + bIdx) % 2 == 0 and 1 or -1) * h * .018) or 0)
+            ring[i] = Vector3(cx + rad * math.cos(a), hy, cz + rad * math.sin(a) * .88)
+        end
+        rings[bIdx] = ring
+    end
+    for bIdx = 1, #bands - 1 do
+        local lo, hi = rings[bIdx], rings[bIdx + 1]
+        for i = 1, sides do
+            local n = i % sides + 1
+            if bIdx % 2 == 1 then
+                triangle(g, lo[i], hi[i], lo[n], tone, 1, center, seed * 19 + bIdx * 7 + i * 3)
+                triangle(g, lo[n], hi[i], hi[n], tone, 1, center, seed * 23 + bIdx * 11 + i * 5)
+            else
+                triangle(g, lo[i], hi[i], hi[n], tone, 1, center, seed * 29 + bIdx * 13 + i * 3)
+                triangle(g, lo[i], hi[n], lo[n], tone, 1, center, seed * 31 + bIdx * 17 + i * 5)
+            end
+        end
+    end
+    local topRing = rings[#rings]
+    local apex = Vector3(x + dx + r * .08, y + h, z + dz)
+    local baseCap = Vector3(x, y, z)
+    for i = 1, sides do
+        local n = i % sides + 1
+        triangle(g, topRing[i], apex, topRing[n], tone, 1.04, center, seed * 37 + i * 7)
+        triangle(g, baseCap, rings[1][n], rings[1][i], tone, .82, center, seed * 41 + i * 3)
+    end
 end
+
+-- Subdivided polyhedral gem heart (same 5-fold staggered latitude rings as ClockCatalyst.core).
+local function polyGem(g,x,y,z,rx,ry,rz,yaw,tone,seed)
+    seed = seed or 7
+    local sides = 6
+    local step = 2 * math.pi / sides
+    local center = Vector3(x, y, z)
+    local levels = {
+        { y = -0.72, r = 0.56, twist = 0.0 },
+        { y = -0.28, r = 0.94, twist = 0.5 },
+        { y =  0.22, r = 1.00, twist = 0.0 },
+        { y =  0.66, r = 0.64, twist = 0.5 },
+    }
+    local rings = {}
+    for lIdx, lv in ipairs(levels) do
+        local ring = {}
+        for i = 1, sides do
+            local a = (yaw or 0) + (i - 1 + lv.twist) * step
+            local k = ((i + lIdx) % 2 == 0) and 1.04 or 0.92
+            ring[i] = Vector3(x + rx * lv.r * k * math.cos(a), y + ry * lv.y, z + rz * lv.r * k * math.sin(a))
+        end
+        rings[lIdx] = ring
+    end
+    local bot = Vector3(x, y - ry * .96, z)
+    local top = Vector3(x, y + ry * .98, z)
+    for i = 1, sides do
+        local n = i % sides + 1
+        triangle(g, bot, rings[1][n], rings[1][i], tone, .88, center, seed * 11 + i)
+        triangle(g, rings[#rings][i], top, rings[#rings][n], tone, 1.04, center, seed * 13 + i)
+    end
+    for lIdx = 1, #levels - 1 do
+        local lo, hi = rings[lIdx], rings[lIdx + 1]
+        for i = 1, sides do
+            local n = i % sides + 1
+            triangle(g, lo[i], hi[i], lo[n], tone, 1, center, seed * 17 + lIdx * 7 + i * 3)
+            triangle(g, lo[n], hi[i], hi[n], tone, 1, center, seed * 19 + lIdx * 11 + i * 5)
+        end
+    end
+end
+
+-- Irregular fractured rock crag (replaces smooth hexagonal pucks).
+local function crag(g,x,y,z,w,h,d,angle,tone,cap,seed)
+    seed = seed or 3
+    local sides = 7
+    local step = 2 * math.pi / sides
+    local center = Vector3(x, y + h * .42, z)
+    local bands = {
+        { t = 0.00, r = 0.92, twist = 0.0 },
+        { t = 0.36, r = 1.04, twist = 0.35 },
+        { t = 0.74, r = 0.84, twist = 0.12 },
+        { t = 1.00, r = 0.46, twist = 0.48 },
+    }
+    local rings = {}
+    for bIdx, b in ipairs(bands) do
+        local ring = {}
+        for i = 1, sides do
+            local a = angle + (i - 1 + b.twist) * step
+            local jag = 0.84 + 0.28 * (((i * 5 + bIdx * 3 + seed) % 7) / 6)
+            local lift = (bIdx > 1) and ((((i * 3 + bIdx + seed) % 5) - 2) * h * .045) or 0
+            ring[i] = Vector3(x + w * b.r * jag * math.cos(a), y + h * b.t + lift, z + d * b.r * jag * math.sin(a))
+        end
+        rings[bIdx] = ring
+    end
+    for bIdx = 1, #bands - 1 do
+        local lo, hi = rings[bIdx], rings[bIdx + 1]
+        for i = 1, sides do
+            local n = i % sides + 1
+            triangle(g, lo[i], hi[i], hi[n], tone, 1, center, seed * 13 + bIdx * 7 + i)
+            triangle(g, lo[i], hi[n], lo[n], tone, .95, center, seed * 17 + bIdx * 11 + i)
+        end
+    end
+    local topPeak = Vector3(x - w * .06, y + h * 1.04, z + d * .05)
+    local botPeak = Vector3(x, y, z)
+    local topRing = rings[#rings]
+    for i = 1, sides do
+        local n = i % sides + 1
+        triangle(g, topRing[i], topPeak, topRing[n], cap or tone, 1.02, center, seed * 23 + i)
+        triangle(g, botPeak, rings[1][n], rings[1][i], tone, .80, center, seed * 29 + i)
+    end
+end
+
 local function boulder(g,x,y,z,w,h,d,angle,tone)
-    solid(g,6,x,z,angle,{{y,w*.82,d*.78},{y+h*.50,w,d,.03,0},
-        {y+h,w*.65,d*.63,-w*.09,d*.11}},tone)
+    crag(g,x,y,z,w,h,d,angle,tone,tone,math.floor((x*13+z*17+angle*7)*10))
 end
 
 -- A straight six-sided log lying on the ground. Faces are flipped to face away
@@ -112,24 +299,21 @@ local function log(g,x,y,z,len,r,yaw,tone,cap)
         end
         rings[k]=ring
     end
-    local function face(a,b,c,tint,center)
-        local n=(b-a):CrossProduct(c-a)
-        local out=n.x*(a.x-center.x)+n.y*(a.y-center.y)+n.z*(a.z-center.z)
-        if out<0 then b,c=c,b end
-        triangle(g,a,b,c,tint)
+    local function face(a,b,c,rgb,k,center)
+        triangle(g,a,b,c,rgb,k,center)
     end
     for i=1,6 do
         local n=i%6+1
-        local tint=color(tone,.82+.05*((i*3)%5))
+        local k=.82+.05*((i*3)%5)
         local mid=Vector3(x,y+r,z)
-        face(rings[1][i],rings[2][i],rings[2][n],tint,mid)
-        face(rings[1][i],rings[2][n],rings[1][n],tint,mid)
+        face(rings[1][i],rings[2][i],rings[2][n],tone,k,mid)
+        face(rings[1][i],rings[2][n],rings[1][n],tone,k,mid)
     end
     for k=1,2 do
         local c=Vector3(x+dx*(k-1.5)*len,y+r,z+dz*(k-1.5)*len)
         for i=1,6 do
             local n=i%6+1
-            face(c,rings[k][i],rings[k][n],color(cap or tone),Vector3(x,y+r,z))
+            face(c,rings[k][i],rings[k][n],cap or tone,1,Vector3(x,y+r,z))
         end
     end
 end
@@ -148,25 +332,29 @@ end
 
 local function mine(base,stock,core)
     if base then
-        boulder(base,-.05,-.08,-.05,.88,.48,.64,.21,C.slate)
-        boulder(base,.55,.02,.12,.40,.35,.34,.63,C.stone)
-        boulder(base,-.54,0,-.15,.36,.30,.33,.87,C.stone)
-        -- Dull broken sockets stay attached to the exposed host rock.
-        for _,s in ipairs({{0,.34,0,.23},{-.40,.28,.14,.16},{.37,.27,-.17,.15}}) do
-            solid(base,6,s[1],s[3],.24,{{s[2],s[4],s[4]*.8},{s[2]+.15,s[4]*.82,s[4]*.69}},C.moss,C.chalk)
+        -- Craggy fractured slate-basalt host rock (no flat hexagonal plugs).
+        crag(base,-.04,-.08,-.05,.92,.52,.68,.21,C.slateDark,C.slate,1)
+        crag(base,.54,-.02,.12,.44,.38,.36,.63,C.slate,C.stone,2)
+        crag(base,-.52,-.02,-.15,.40,.34,.35,.87,C.slate,C.stone,3)
+        crag(base,.08,.04,.34,.36,.28,.30,1.24,C.slateDark,C.slate,4)
+        -- Jagged dark-mineral collar shards where the crystals break through the rock.
+        for idx,s in ipairs({{-.18,.28,.16,.16,.24},{.24,.26,.14,.15,.18},{.02,.30,-.22,.18,.26}}) do
+            crag(base,s[1],s[2],s[3],s[4],s[5],s[4]*.88,idx*.7,C.slateDark,C.slate,idx+10)
         end
     end
     if not stock then return end
-    -- Translucent shells, then a smaller opaque core of the same growth axes so
-    -- depth shows through the glass instead of a flat see-through blob.
-    crystal(stock,0,.40,-.08,1.32,.28,.10,.04,C.ice)
-    crystal(stock,-.40,.34,.12,.90,.20,-.28,.10,C.light)
-    crystal(stock,.36,.32,-.14,.98,.21,.28,-.08,C.ice)
-    crystal(stock,.16,.31,.24,.58,.145,.12,.22,C.light)
-    crystal(core,0,.44,-.08,1.02,.12,.08,.03,C.jade)
-    crystal(core,-.40,.37,.12,.64,.085,-.20,.07,C.jade)
-    crystal(core,.36,.35,-.14,.74,.09,.20,-.06,C.blue)
-    crystal(core,.12,.39,.24,.48,.065,.10,.18,C.light)
+    -- Central polyhedral gem heart (matching ClockCatalyst's orb facet layout) +
+    -- staggered diamond-cut crystal spires with inner cores.
+    polyGem(stock,-.02,.52,.10,.26,.30,.24,.35,C.blue,5)
+    crystal(stock,0,.38,-.08,1.34,.27,.10,.04,C.blue,1)
+    crystal(stock,-.38,.32,.12,.92,.20,-.26,.10,C.ice,2)
+    crystal(stock,.36,.30,-.14,.98,.21,.26,-.08,C.blue,3)
+    crystal(stock,.18,.29,.25,.62,.15,.14,.20,C.ice,4)
+    polyGem(core,-.02,.50,.10,.15,.19,.14,.35,C.jade,6)
+    crystal(core,0,.42,-.08,1.04,.13,.08,.03,C.jade,1)
+    crystal(core,-.38,.35,.12,.68,.09,-.20,.07,C.blue,2)
+    crystal(core,.36,.33,-.14,.74,.095,.20,-.06,C.jade,3)
+    crystal(core,.16,.33,.24,.46,.07,.10,.16,C.light,4)
 end
 
 -- Dedicated quarry stone node: dark slate/basalt bedrock cradle with iron wedges
@@ -177,9 +365,9 @@ local function slab(g,x,y,z,w,h,d,dx,dz,angle,tone,cap)
 end
 local function quarry(base,stock)
     if base then
-        solid(base,6,0,-.06,.32,{{-.06,.92,.72},{.22,.84,.64},{.36,.58,.44}},C.slateDark,C.slate)
-        boulder(base,-.52,0,.16,.34,.22,.28,.62,C.slate)
-        boulder(base,.50,.01,.18,.30,.20,.26,.18,C.rustDark)
+        crag(base,0,-.07,-.05,.94,.42,.70,.32,C.slateDark,C.slate,5)
+        crag(base,-.52,0,.16,.36,.26,.30,.62,C.slate,C.slate,6)
+        crag(base,.50,.01,.18,.32,.24,.28,.18,C.rustDark,C.rust,7)
         -- Left-behind iron quarry wedges / chisel socket on the bed.
         solid(base,4,-.12,.14,.4,{{.28,.07,.07},{.48,.04,.04,.02,0}},C.iron)
         solid(base,4,.22,-.04,.2,{{.26,.06,.06},{.44,.035,.035,-.02,0}},C.iron)
@@ -200,7 +388,7 @@ local function buildStock(root,id,mats)
     local stock,core
     if id=='crystal_ore' then
         stock=mesh(canopy,'Yield',mats.glass,false)
-        core=mesh(canopy,'Core',mats.gem,false)
+        core=mesh(canopy,'Core',mats.gem,true)
     else
         stock=mesh(canopy,'Yield',id=='stone' and mats.stone or mats.matte,true)
     end
@@ -211,14 +399,14 @@ local function buildStock(root,id,mats)
     local y=markerY[id]
     local r=id=='timber' and .065 or .085
     solid(marker,4,0,0,0,{{y,.012,.012},{y+.12*r/.085,r,r},{y+.24*r/.085,.012,.012}},
-        id=='crystal_ore' and C.light or C.honey)
+        id=='crystal_ore' and C.ice or C.honey)
     marker:Commit()
     return canopy
 end
 
 function M.Site(root,id,mats,spent)
     if id~='timber' then
-        local base=mesh(root,'Remainder',id=='stone' and mats.stone or mats.matte,true)
+        local base=mesh(root,'Remainder',mats.stone,true)
         sites[id](base,nil,nil)
         base:Commit()
     end

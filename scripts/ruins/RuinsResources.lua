@@ -302,6 +302,10 @@ function R:Refresh()
     return restored
 end
 
+function R:SetNight(nightK)
+    if self.materials then Models.SetNight(self.materials,nightK) end
+end
+
 function R:Destroy()
     for _,item in pairs(self.entries) do
         if item.upperCollider then self.world:RemoveVolume(item.upperCollider) end
