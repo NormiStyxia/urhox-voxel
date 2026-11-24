@@ -29,7 +29,7 @@ function NestWeaver.Build()
         {name="Raw bast", rgb={177,151,78}, roughness=0.97, metallic=0, emission=0},
         {name="Combed flax", rgb={234,211,147}, roughness=0.93, metallic=0, emission=0},
         {name="Amber", rgb={252,169,43}, roughness=0.37, metallic=0, emission=0.14},
-        {name="Honey silk", rgb={255,222,159}, roughness=0.79, metallic=0, emission=0},
+        {name="Silk membrane", rgb={241,225,184}, roughness=0.52, metallic=0, emission=0},
     }
     local parts, occupied = {}, {}
     local function part(id, x, y, z)
@@ -74,6 +74,21 @@ function NestWeaver.Build()
 
     for _,side in ipairs({-1,1}) do
         local suffix = side==1 and "_r" or "_l"
+        -- One continuous flight membrane. The stiff leading spar sweeps back to
+        -- a tapered tip; three darker veins branch into the scalloped fan.
+        local wing = part("wing"..suffix,side*3.5,9.5,1.5)
+        stamp(wing,-26,26,9,10,-16,3,function(x,_,z)
+            local span=side*x-3.5
+            if span<0 or span>22 then return end
+            local t=span/22
+            local leading=2.8-3.9*t-6.6*t*t
+            local chord=1.8+8.5*math.sin(math.pi*t)^.80-1.1*t
+            local depth=leading-z
+            if depth<0 or depth>chord then return end
+            if depth<1.05 then return BAST end
+            if math.abs(depth-(span-2)*.61)<.45 or math.abs(depth-(span-8)*.49)<.44 then return FLAX end
+            return SILK
+        end)
         local shell = part("shell"..suffix,side*2.5,11.2,4.0)
         for i=1,#wingSections-1 do
             local a,b = wingSections[i],wingSections[i+1]
