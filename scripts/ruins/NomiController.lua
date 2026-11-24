@@ -96,8 +96,7 @@ function M.New(scene, world, spawn, spawnYaw)
     self.camPitch = 12
     self.speed = 0
     self.vel = Vector3(0, 0, 0)
-    self.stuckTime = 0
-    self.stuckCooldown = 0
+    self.stuckTime, self.stuckCooldown = 0, 0
     self.enabled = true
     self:ResetJump()
     self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
@@ -235,6 +234,30 @@ function N:UpdateJump(dt,pressed,allowed)
 end
 
 -- 移动输入（f, r ∈ [-1,1]）
+-- Pinch test for rubble: four short horizontal probes at hip height. Pressing
+-- into one wall (or a corner) must not read as a crevice, so only two opposite
+-- hits or three hits of four count. Four rays, and only once the player has
+-- already been blocked for a moment.
+local wedgeDirs = {Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, -1)}
+local wedgeBits = {1, 2, 4, 8}
+function N:WedgeBlocked()
+    local cc,world = self.cc,self.world
+    if not world then return false end
+    local p = self.node.worldPosition + Vector3(0, .55, 0)
+    local reach = (cc.radius or .32) + .12
+    local hits = 0
+    for i = 1, 4 do
+        for _,h in ipairs(world:Raycast(Ray(p, wedgeDirs[i]), reach, cc.collisionMask)) do
+            local volume = h.volume
+            if h.hit and volume and (volume.collisionMask & cc.collisionLayer) ~= 0 then
+                hits = hits | wedgeBits[i]
+                break
+            end
+        end
+    end
+    return (hits & 3) == 3 or (hits & 12) == 12 or hits == 15
+end
+
 function N:Move(dt, f, r, run, jump, aiming, combat)
     local requestedScale=combat and combat.playerTimeScale or 1
     if requestedScale~=(self.playerTimeScale or 1) then self:SetPlayerTimeScale(requestedScale,dt) end
@@ -277,10 +300,10 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
         end
         cc.desiredVelocity=self.vel+motion*(fraction/math.max(dt,.001))
     end
-    -- Destructible rubble can leave the capsule supported by several narrow
-    -- faces at once. When input persists but the controller makes no horizontal
-    -- progress, give it one small upward escape impulse after a short grace.
-    -- The cooldown prevents this from becoming an automatic jump while walking.
+    -- Destructible rubble can pinch the capsule between several narrow faces at
+    -- once, so the slide solver may never produce horizontal progress. Only a
+    -- real crevice earns a small upward escape impulse after a short grace: one
+    -- wall you cannot walk through must stay a wall, not an automatic hop.
     local blockedInput = moving and target > 1.0 and onGround
         and (self.frameTravel or 0) < .012 and (self.actualSpeed or 0) < .35
     if blockedInput then
@@ -289,7 +312,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
         self.stuckTime = 0
     end
     if self.stuckTime > .35 and self.stuckCooldown <= 0 and not jump
-        and not (combat and combat.scale and combat.scale <= 0) then
+        and not (combat and combat.scale and combat.scale <= 0) and self:WedgeBlocked() then
         local velocity = cc:GetLinearVelocity()
         cc:SetLinearVelocity(Vector3(velocity.x, math.max(velocity.y, 2.4), velocity.z))
         self.stuckTime = 0
@@ -475,6 +498,7 @@ function N:TeleportForCombatDebug(pos,yaw)
     self.cc:SetLinearVelocity(Vector3.ZERO)
     self.cc:Teleport(pos)
     self.measuredPosition,self.actualVelocity,self.frameTravel=pos,Vector3.ZERO,0
+    self.stuckTime,self.stuckCooldown=0,0
     self.vel=Vector3.ZERO; self.speed,self.safeT,self.onGround=0,0,false
     self.safePos=Vector3(pos.x,pos.y,pos.z)
     self.yaw,self.camYaw,self.camPitch=yaw,yaw,12

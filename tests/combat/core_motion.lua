@@ -11,6 +11,10 @@ local env=setmetatable({N=N,WALK=4.2,RUN=7.2,AIR_CONTROL=.35,JUMP=6.4,COYOTE_TIM
     Clamp=function(v,a,b) return math.max(a,math.min(b,v)) end,
     Terrain={HasGround=function(x,z,margin) return x<1 or x>2 end}}, {__index=_G})
 assert(load(body,'actual Nomi Move','t',env))()
+-- Real pinch probe too: this harness gives no voxel world, so Move must stay
+-- in its "not wedged" branch instead of inventing an escape impulse.
+assert(load(assert(source:match('(local wedgeDirs.-\nfunction N:WedgeBlocked%b().-)\nend'))..'\nend',
+    'actual Nomi wedge','t',env))()
 local n=setmetatable({vel=Vector3.ZERO,node={worldPosition=Vector3.ZERO},camYaw=0,yaw=0,
     cc={onGround=true,Jump=function() error('must not jump during attack') end},UpdateSafety=function() return false end},{__index=N})
 n:Move(.1,0,0,false,true,true,{scale=0,motion=Vector3(3,0,0)})
