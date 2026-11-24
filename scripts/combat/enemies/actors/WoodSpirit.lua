@@ -1,13 +1,14 @@
 local Base = require('combat.enemies.EnemyBase')
 local WoodSpirit = setmetatable({}, {__index = Base})
 WoodSpirit.__index = WoodSpirit
+local FX = require('combat.enemies.actors.WoodSpiritFX')
 local S = Base.State
 local min, max, sin, cos = math.min, math.max, math.sin, math.cos
 local headbutt = {name='stump_headbutt', telegraph=.46, duration=.28, recover=.55,
     warning='fan', range=1.32, hitRange=.48, cosine=.5, travel=.52,
     start=.05, finish=.19, damage=9, poise=7}
 local pounce = {name='root_pounce', telegraph=.90, duration=.54, recover=1.08,
-    warning='line', range=4.22, hitRange=.40, cosine=.35, travel=3.50,
+    warning='line', range=2.42, hitRange=.40, cosine=.35, travel=1.70,
     start=.06, finish=.46, damage=16, poise=12}
 WoodSpirit.Config = {kind='wood_spirit', enemy='beetle', name='木灵', model='WoodSpirit',
     hp=42, radius=.45, height=1.34, speed=2.15, aggro=9, leash=23,
@@ -15,7 +16,9 @@ WoodSpirit.Config = {kind='wood_spirit', enemy='beetle', name='木灵', model='W
     attacks={headbutt,pounce}}
 
 function WoodSpirit.New(scene, world, terrain, combat, position, id)
-    return setmetatable(Base.Create(scene, world, terrain, combat, WoodSpirit.Config, position, id), WoodSpirit)
+    local self = setmetatable(Base.Create(scene, world, terrain, combat, WoodSpirit.Config, position, id), WoodSpirit)
+    self.woodFX = FX.New(self)
+    return self
 end
 
 function WoodSpirit:Chase(dt, target, distance)
@@ -45,19 +48,44 @@ function WoodSpirit:AttackStep(dt, target, knocked)
     for _ = 1, steps do
         if not self.active or self.dead or self.state ~= S.ATTACK then return end
         if not self:Move(self.fx*step, self.fz*step) then
+            if a == pounce then FX.Emit(self,'land') end
             self:FinishAttack()
             return
         end
         self.attackTravel = self.attackTravel + step
         self:DamagePlayer(target, a.hitRange, a.cosine)
     end
+    if a == pounce and self.stateTime >= a.finish and self.stateTime-dt < a.finish
+        and self.active and not self.dead and self.state == S.ATTACK then
+        FX.Emit(self,'land')
+    end
 end
 
-function WoodSpirit:FinishAttack()
-    if self.attack == pounce and self.particles then
-        self.particles:Emit(self, {pos=self.position, dir=Vector3.UP, material='soft', kind='dust'})
+function WoodSpirit:TickExtras(_, _, dt)
+    FX.Tick(self,dt)
+    if self.state == S.TELEGRAPH and self.attack == pounce and self.stateTime < .44 and self.stateTime+dt >= .44 then
+        FX.Emit(self,'plant')
     end
-    Base.FinishAttack(self)
+end
+
+function WoodSpirit:DamagePlayer(target,range,cosine,jumpable)
+    local hit = Base.DamagePlayer(self,target,range,cosine,jumpable)
+    if hit and self.active and not self.dead and self.state == S.ATTACK then FX.Emit(self,'contact') end
+    return hit
+end
+
+function WoodSpirit:ClearExtras()
+    if self.dead then FX.Destroy(self.woodFX) else FX.Clear(self.woodFX) end
+end
+
+function WoodSpirit:SetState(state)
+    if state == S.STAGGER then self:ClearExtras() end
+    return Base.SetState(self,state)
+end
+
+function WoodSpirit:Destroy()
+    Base.Destroy(self)
+    FX.Destroy(self.woodFX)
 end
 
 function WoodSpirit:SetActive(active)
@@ -71,7 +99,10 @@ end
 function WoodSpirit:UpdatePose()
     Base.UpdatePose(self)
     -- The four feet stay planted while posePart lowers the barrel between them.
-    if self.state == S.TELEGRAPH then self.poseY = 0 end
+    if self.state == S.TELEGRAPH then
+        self.poseY = 0
+        self.warning.step = 6 -- show the complete swept footprint throughout the windup
+    end
 end
 
 local function ease(t, a, b)
@@ -123,7 +154,7 @@ function WoodSpirit.Config.posePart(enemy, id, p)
     local foot = feet[id]
     if enemy.dead then die(enemy,id,p,side,foot); return end
     local t, state, a = enemy.stateTime, enemy.state, enemy.attack
-    local pitch, lift, fold, plant = 0, 0, 0, 0
+    local pitch, lift, fold, plant, impact = 0, 0, 0, 0, 0
     if state == S.TELEGRAPH or state == S.ATTACK or state == S.RECOVER then
         local load, strike = 1, 0
         if state == S.TELEGRAPH then load = ease(t,0,a.telegraph*.76)
@@ -137,8 +168,14 @@ function WoodSpirit.Config.posePart(enemy, id, p)
         end
         if a == pounce then
             local arc = state == S.ATTACK and sin(math.pi*ease(t,a.start,a.finish)) or 0
-            pitch,lift,fold,plant = -14*load+32*strike, -.16*load+.23*arc-.08*strike,
+            pitch,lift,fold,plant = -14*load+32*strike, -.19*load+.14*arc-.08*strike,
                 48*load+23*strike, load
+            local touchdown = state == S.RECOVER and t+a.duration or (state == S.ATTACK and t or 0)
+            impact = ease(touchdown,a.finish-.04,a.finish+.025)*(1-ease(touchdown,a.finish+.025,a.finish+.19))
+            lift,fold = lift-.08*impact,fold+16*impact
+            if state == S.RECOVER and not enemy.attackHit then
+                pitch = pitch-13*ease(t,0,.27)*strike
+            end
         else
             pitch,lift,fold,plant = -22*load+34*strike, -.05*load+.03*strike, 20*load-12*strike, load*.4
         end
@@ -158,12 +195,20 @@ function WoodSpirit.Config.posePart(enemy, id, p)
         p.x,p.z = foot[1]*.09*plant,foot[2]*.07*plant
         p.sy,p.pitch = 1-.19*plant, -foot[2]*10*plant
         p.y = -.06*plant
-        if state == S.ATTACK and a == pounce then p.y=lift+.08 end
+        -- Plant the rear pair first, then rock onto the forefeet as the bark releases.
+        if a == pounce and state == S.TELEGRAPH then
+            local brace = ease(t,foot[2]<0 and .08 or .27,foot[2]<0 and .34 or .54)
+            p.x,p.z = foot[1]*.12*brace,foot[2]*.12*brace
+            p.sy,p.y = 1-.28*brace,-.09*brace
+        end
+        if state == S.ATTACK and a == pounce then p.y=max(0,lift+.08) end
+        p.sy,p.y = p.sy-.20*impact,p.y-.064*impact
         return
     end
     local socketY = side ~= 0 and .8 or (id == 'core' and .20 or 0)
     local socketZ = side ~= 0 and -.08 or (id == 'core' and .36 or 0)
-    tilt(p,socketY,socketZ,pitch,lift)
+    tilt(p,socketY*(1-.13*impact),socketZ,pitch,lift-.13*impact*socketY)
+    if id == 'body' then p.sy = 1-.13*impact end
     local age = enemy.reaction.recoilAge
     local twist = enemy.reaction.dx >= 0 and -1 or 1
     local recoil = 1-ease(age,0,.22)

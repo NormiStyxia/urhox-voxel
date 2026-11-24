@@ -21,7 +21,7 @@ local function lock(e)
     assert(e.directionLocked and e.state==S.TELEGRAPH)
 end
 
-for index, distance in ipairs({1.23,3.85}) do
+for index, distance in ipairs({1.23,2.25}) do
     local e,c = approach(distance)
     local a = e.attack
     assert(a==Wood.Config.attacks[index] and e.warning.kind==(index==1 and 'fan' or 'line'))
@@ -48,7 +48,7 @@ for index, distance in ipairs({1.23,3.85}) do
     e:Destroy()
 end
 
-local e,c = approach(3.8)
+local e,c = approach(2.2)
 lock(e); T.Tick(e,.12)
 e.obstacles={{x=0,z=1,radius=.30}}
 T.Tick(e,.20)
@@ -57,7 +57,7 @@ e:Reset(); assert(e.particles:CountOwner(e)==0 and not e.warning.visible)
 e:Destroy()
 
 for _,interrupt in ipairs({'disable','reset','kill'}) do
-    e,c=approach(3.8); lock(e); T.Tick(e,.22)
+    e,c=approach(2.2); lock(e); T.Tick(e,.22)
     assert(e.state==S.ATTACK and c.hits==0)
     if interrupt=='kill' then
         local dies=0
@@ -88,3 +88,56 @@ for _,interrupt in ipairs({'disable','reset','kill'}) do
     e:Destroy()
 end
 print('PASS WoodSpirit: headbutt and pounce hit once, locked sidestep, wall stop, recovery, reset, disable, delayed leaf recoil and one death release')
+
+local FX = require('combat.enemies.actors.WoodSpiritFX')
+local function chipCount(enemy)
+    local count=0
+    for _,slot in ipairs(enemy.woodFX.slots) do
+        if slot.alive then count=count+1 end
+    end
+    return count
+end
+
+for _,index in ipairs({1,2}) do
+    local a=Wood.Config.attacks[index]
+    T.Near(a.range,a.travel+a.hitRange+.32)
+    local sections=FX.SoilSections(a)
+    T.Near(sections[1][1],0); T.Near(sections[#sections][1],a.range)
+    for _,section in ipairs(sections) do
+        T.Near(section[2],FX.HalfWidth(a,section[1]))
+    end
+    -- Use the live movement and damage path to probe each side of the drawn border.
+    for _,fraction in ipairs({.13,.48,.84}) do
+        local z=a.range*fraction
+        for _,offset in ipairs({-.055,.055}) do
+            e,c=approach(index==1 and 1.23 or 2.25)
+            lock(e)
+            local x=FX.HalfWidth(a,z)+offset
+            T.Tick(e,.12+a.duration,Vector3(x,0,z))
+            assert(c.hits==(offset<0 and 1 or 0),'warning boundary diverged at z='..z..' offset='..offset)
+            e:Destroy()
+        end
+    end
+end
+
+for _,interrupt in ipairs({'freeze','disable','reset','destroy','death'}) do
+    e,c=approach(2.25)
+    T.Tick(e,.46-e.stateTime)
+    assert(chipCount(e)==4 and e.warning.step==6)
+    if interrupt=='freeze' then assert(e:Stagger(1.5,false))
+    elseif interrupt=='disable' then e:SetActive(false)
+    elseif interrupt=='reset' then e:Reset()
+    elseif interrupt=='destroy' then e:Destroy()
+    else assert(e:ApplyHit({kind='arrow',part='body',dmg=999}).killed) end
+    assert(chipCount(e)==0 and c.hits==0,'chips survived '..interrupt)
+    if interrupt~='destroy' then e:Destroy() end
+end
+
+e,c=approach(2.25);lock(e)
+T.Tick(e,.12+e.attack.finish+.02,Vector3(2,0,2.25))
+assert(c.hits==0 and chipCount(e)==5 and pose(e,'root_front_l').sy<.83)
+local resins=0
+for _,s in ipairs(e.woodFX.slots) do if s.alive and s.palette==6 then resins=resins+1 end end
+assert(resins==1,'landing should throw a single resin bead among the bark')
+T.Tick(e,.42,Vector3(2,0,2.25)); assert(chipCount(e)==0); e:Destroy()
+print('PASS WoodSpirit: 12 measured warning boundary probes, five foreground cleanup paths, root-plant and landing chip budgets')
