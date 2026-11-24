@@ -458,6 +458,21 @@ local function CombatEnemies()
     return combatEnemyView
 end
 
+-- Query only active enemy-owned fields.  The returned value is consumed by the
+-- player controller and combat clock, never by UI, camera, enemy AI, or world
+-- time.  Multiple fields compose by taking the strongest local slowdown.
+local function PlayerTimeScale(position)
+    local scale=1
+    for _,enemy in ipairs(CombatEnemies()) do
+        if enemy and enemy.active~=false and not enemy.dead and type(enemy.GetPlayerTimeScale)=='function' then
+            local candidate=enemy:GetPlayerTimeScale(position)
+            if type(candidate)=='number' and candidate<candidate then candidate=1 end
+            if type(candidate)=='number' then scale=math.min(scale,math.max(.5,math.min(1,candidate))) end
+        end
+    end
+    return scale
+end
+
 -- Independent ray safeguard: even a misconfigured native layer cannot let the
 -- equipped model, sword afterimages or trail particles occlude aim/projectiles.
 local function IsCombatVisualVolume(volume)
@@ -893,8 +908,9 @@ local function StartCombat()
             CombatHUD.Say(message,2.5)
         end})
     -- The legacy Spawner.New roster remains the default for tests and callers.
-    -- This scene explicitly opts into the five model-backed ordinary encounters.
-    combatEnemies_:EnableModelEncounters()
+    -- Exploration explicitly opts into model-backed encounters; the central
+    -- training arena stays empty and selects exactly one actor at a time.
+    if not M.trainingMode then combatEnemies_:EnableModelEncounters() end
     M.combat={state=CombatState,moves=combatMoves_,enemies=combatEnemies_,anim=combatAnim_,arrows=combatArrows_}
     combatParticles_=combatEnemies_:GetParticlePool()
     CombatSettings.RegisterQuality('combat-presentation',function(profile)
@@ -1734,15 +1750,20 @@ M.walkMode=false
 function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
     local dt = eventData["TimeStep"]:GetFloat()
-    if nomi_ == nil or M.mounted or not OnFoot() then
-        if nomi_ then nomi_:ResetJump() end
+    if nomi_ == nil then return end
+    if M.mounted or not OnFoot() then
+        nomi_:SetPlayerTimeScale(1,dt)
+        nomi_:ResetJump()
         if foot_ then foot_:Cancel('mounted') end
         return
     end
     if Training.blocked() then
-        nomi_:Move(dt,0,0,false,false,false,{scale=0,motion=Vector3.ZERO})
+        nomi_:SetPlayerTimeScale(1,dt)
+        nomi_:Move(dt,0,0,false,false,false,{scale=0,motion=Vector3.ZERO,playerTimeScale=1})
         return
     end
+    local playerTimeScale=PlayerTimeScale(nomi_:Position())
+    nomi_:SetPlayerTimeScale(playerTimeScale,dt)
     nomi_:MeasureMotion(dt)
     local allowed=GameplayInputAllowed()
     if allowed and not combatInputBlocked and (Press(KEY_LCTRL) or Press(KEY_RCTRL) or Press(KEY_CTRL)) then
@@ -1782,6 +1803,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             controls.travel,controls.motionSampleDt=nomi_.frameTravel,nomi_.actualDt
             controls.actualForwardSpeed=foot_ and foot_.direction and nomi_.actualVelocity:DotProduct(foot_.direction) or nil
             controls.normalSpeed=CombatState.Engaged() and 5 or 4.2
+            controls.playerTimeScale=playerTimeScale
             if combatTest_ and combatTest_.active then
                 local testOK,synthetic=Safe('Debug.F11Input',combatTest_.Input,combatTest_,dt,allowed and not CombatState.HasAggro() and not ForgePanel.IsOpen() and not SettingsMenu.IsBlocked())
                 if synthetic then
@@ -1809,6 +1831,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             local aiming=combatMoves_.clip=='bow_draw' or combatMoves_.clip=='bow_hold'
                 or (options.explore and (caster_.charging or caster_.castAnim>0))
             options.baseSpeed=options.explore and (aiming and 4.2*.6 or 4.2) or 5
+            options.playerTimeScale=playerTimeScale
             options.sprinting=foot_ and foot_:IsRunning()
             options.fast=foot_ and foot_:IsSprinting()
             options.facing,options.motionChecked=combatMoves_:Facing(),combatMoves_.motionChecked
@@ -1819,7 +1842,8 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         end
     end
     if not allowed or animPreview_.index>0 then nomi_:Move(dt,0,0,false,false,false,{scale=0}); return end
-    nomi_:Move(dt, f, r, false, Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0)
+    nomi_:Move(dt, f, r, false, Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0,
+        {playerTimeScale=playerTimeScale})
 end
 
 local function UpdateCombatPreview(dt,combatAllowed)
