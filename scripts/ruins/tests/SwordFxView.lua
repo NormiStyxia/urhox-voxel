@@ -33,7 +33,6 @@ V.atFrame(8, function()
             controls.allowed = true
             controls.attack = ATTACKS[frame] == true
             controls.attackTap = ATTACKS[frame] == true
-            controls.heavy = frame >= 165 and frame < 245
         end
         local rig = self.rig
         local fx = rig.swordVfx
@@ -42,10 +41,14 @@ V.atFrame(8, function()
             local right = Vector3.UP:CrossProduct(forward)
             if frame == 130 then fx:Contact(position + forward * .6 + right * 1.1 + Vector3(0, 1.2, 0), true) end
             if frame == 145 then fx:GroundWave(position, forward) end
+            local pivot = rig.entries.sword.pivot
+            local root, tip = pivot:LocalToWorld(rig.bladeRoot), pivot:LocalToWorld(rig.bladeTip)
+            if frame >= 165 and frame < 245 then fx:Charge(root, tip, (frame - 165) / 80, dt) end
+            if frame == 245 then fx:ChargeBurst(root, tip) end
         end
         if ATTACKS[frame] or SHOTS[frame] then
-            print(string.format("SwordFxView: frame %d clip=%s charge=%s visual=%s arc=%d hit=%d wave=%d charge=%d free=%d",
-                frame, tostring(self.clip), tostring(rig.visualCharge), tostring(rig.visualActive),
+            print(string.format("SwordFxView: frame %d clip=%s combo=%s visual=%s arc=%d hit=%d wave=%d charge=%d free=%d",
+                frame, tostring(self.clip), tostring(self.combo), tostring(rig.visualActive),
                 fx and fx.world:Count("arc") or -1, fx and fx.world:Count("hit") or -1, fx and fx.world:Count("wave") or -1,
                 fx and fx.blade:Count("charge") or -1, fx and #fx.world.free or -1))
         end
