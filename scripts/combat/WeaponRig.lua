@@ -289,10 +289,12 @@ function Rig:Init(scene,world,controller)
         if entry.wing or entry.thorn or entry.authored then Builder.ApplyPalette(world,blueprint.config)
         else BuildFallback(self,entry) end
     end
-    self.combatFx=require("combat.CombatFx").New(scene,world)
-    self.slashRibbon=require("combat.SlashRibbon").New(scene)
-    self.pixelSwordFx=self.slashRibbon.pixelMode and self.combatFx.pixelMode
-    self.shockBurst=require("combat.ShockBurst").New(scene)
+    do
+        local ok,vfx=pcall(function() return require("combat.SwordVfx").New(scene) end)
+        if ok then self.swordVfx=vfx
+        else print('WeaponRig: sword voxel vfx unavailable: '..tostring(vfx)) end
+    end
+    self.pixelSwordFx=self.swordVfx~=nil
     self:CreateTrail()
     do
         local fx,err=BowChargeFx.New(scene)
@@ -618,8 +620,7 @@ end
 function Rig:SetTrail(on)
     self.trailEnabled=on==true
     if not self.trailEnabled then
-        self.combatFx:ClearSword()
-        self.slashRibbon:Clear()
+        if self.swordVfx then self.swordVfx:ClearSword() end
         -- Decorative silhouettes/charge grains can be disabled independently
         -- of arrival flashes and essential hit confirmation.
         for _,image in ipairs(self.images) do image.node.enabled=false end
@@ -630,17 +631,13 @@ end
 
 --- Borrowed synchronous HitEvent; only scalar state is retained.
 function Rig:BeginSlash(combo,heavy)
-    if self.trailEnabled then
-        self.combatFx:Begin(combo,heavy)
-        self.slashRibbon:Begin(heavy and "cross" or (combo==5 and "moon" or (combo==4 and "heavy" or "light")))
+    if self.trailEnabled and self.swordVfx then
+        self.swordVfx:Begin(heavy and "cross" or (combo==5 and "moon" or (combo==4 and "heavy" or "light")))
     end
     self.wingGlow=math.max(self.wingGlow or 0,heavy and 1 or .8)
 end
 function Rig:ImpactFx(position,forward)
-    if self.pose=='hand' then
-        self.combatFx:Impact(position,forward)
-        self.shockBurst:Emit(position,forward)
-    end
+    if self.pose=='hand' and self.swordVfx then self.swordVfx:GroundWave(position,forward) end
 end
 function Rig:HitImpulse(event)
     if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
@@ -654,7 +651,7 @@ function Rig:HitImpulse(event)
     self.hitAngle=math.max(self.hitAngle,strong and 1.5 or .8)
     self.hitSign=event.combo==2 and 1 or -1
     self.wingGlow=1
-    if self.trailEnabled then self.combatFx:Contact(event.pos) end
+    if self.trailEnabled and self.swordVfx then self.swordVfx:Contact(event.pos,strong or event.critical or event.killed) end
     self:UpdateHitImpulse() -- AfterPose runs after Rig.Update; show on contact frame.
     return true
 end
@@ -686,11 +683,7 @@ end
 function Rig:ShowContactArc(zone)
     if self.disposed or self.pose~='hand' or self.active~='sword' or self.retiring.weapon then return false end
     self:ClearTrail()
-    if self.pixelSwordFx then
-        self.combatFx:ContactArc(zone)
-        self.contactArc=true;self.tailLeft=TRAIL_TAIL
-        return true
-    end
+    if self.pixelSwordFx then return true end
     local count=self.trailEnabled and 8 or 4
     local half=math.rad(zone.angle*.5)
     local f,o=zone.forward,zone.origin
@@ -736,8 +729,8 @@ function Rig:Flash(kind)
     self.flashes.socket.node.enabled=false
     if self.images[2] then self.images[2].node.enabled=false end
     if kind=='full_charge' and self.pixelSwordFx then
-        local point=self.entries.sword.pivot:LocalToWorld(self.bladeTip)
-        self.combatFx:ChargeBurst(point)
+        local pivot=self.entries.sword.pivot
+        self.swordVfx:ChargeBurst(pivot:LocalToWorld(self.bladeRoot),pivot:LocalToWorld(self.bladeTip))
         self.flashKind,self.flashLeft=kind,FLASH_TIME
         return true
     end
@@ -782,9 +775,7 @@ end
 
 function Rig:StopCombatVisual()
     BowChargeFx.Stop(self.bowChargeFx)
-    self.combatFx:Clear()
-    self.slashRibbon:Clear()
-    self.shockBurst:Clear()
+    if self.swordVfx then self.swordVfx:Clear() end
     self:ClearTrail()
     self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
     self.hitGroup,self.contactArc=nil,false
@@ -1283,8 +1274,8 @@ end
 function Rig:SampleBlade(entry)
     local root=entry.pivot:LocalToWorld(self.bladeRoot)
     local tip=entry.pivot:LocalToWorld(self.bladeTip)
-    if self.visualActive and self.trailEnabled then
-        self.slashRibbon:Sample(root,tip)
+    if self.visualActive and self.trailEnabled and self.swordVfx then
+        self.swordVfx:Sample(root,tip)
     end
     local previousRoot,previousTip=self.previousRoot,self.previousTip
     local distance=self.sampleValid and math.max(Distance(root,previousRoot),Distance(tip,previousTip)) or 0
@@ -1373,12 +1364,14 @@ function Rig:UpdateImages(entry,dt)
 end
 
 ---@param entry WeaponRigEntry
-function Rig:UpdateCharge(entry)
+---@param dt number
+function Rig:UpdateCharge(entry,dt)
     if self.pixelSwordFx then
-        if self.visualCharge==nil or self.visualActive then return end
         local root=entry.pivot:LocalToWorld(self.bladeRoot)
         local tip=entry.pivot:LocalToWorld(self.bladeTip)
-        self.combatFx:Charge(root,tip,self.visualCharge or 0)
+        -- Rings are parented to the blade frame: keep it glued while they play out.
+        if self.visualCharge==nil or self.visualCharge>=1 or self.visualActive then self.swordVfx:PlaceBlade(root,tip)
+        else self.swordVfx:Charge(root,tip,self.visualCharge,dt) end
         return
     end
     local charge=self.visualCharge
@@ -1504,10 +1497,10 @@ function Rig:UpdateCore(dt)
     if self.disposed then return end
     dt=math.max(0,dt)
     self.visualClock=self.visualClock+dt
-    self.combatFx:Update(dt)
-    if not self.visualActive then self.slashRibbon:Clear() end
-    self.slashRibbon:Update(dt)
-    self.shockBurst:Update(dt)
+    if self.swordVfx then
+        if not self.visualActive then self.swordVfx:End() end
+        self.swordVfx:Update(dt)
+    end
     self:UpdateHang(dt)
     -- W2 submits the real hit_on state before Update and performs AfterPose
     -- sweeps afterwards. Never leave its first hit using a mid-flight pivot.
@@ -1535,10 +1528,7 @@ function Rig:UpdateCore(dt)
     if self.afterimagesFresh then self.afterimagesFresh=false else self.imageElapsed=self.imageElapsed+dt end
     self:UpdateFlash(self.arrivalFresh and 0 or dt);self.arrivalFresh=false
     self:UpdateHitImpulse()
-    if self.contactArc then
-        if self.pixelSwordFx then self.combatFx:ClearSword() end
-        self:ClearTrail() -- one presented contact frame
-    end
+    if self.contactArc then self:ClearTrail() end -- one presented contact frame
     if self.visualState~='hand' then
         if self.visualState=='fly_to_hand' and self.active=='sword' and entry.mesh.alpha>0 and not (self.transition and self.transition.holo) then
             self:SampleBlade(entry);self:DrawBands()
@@ -1549,12 +1539,11 @@ function Rig:UpdateCore(dt)
     end
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
-    if not self.visualActive then self.combatFx.valid=false end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
         self:DrawBands();if self.trailEnabled then self:UpdateImages(entry,dt) end
     else self:ClearTrail() end
-    if self.trailEnabled then self:UpdateCharge(entry) end
+    if self.trailEnabled then self:UpdateCharge(entry,dt) end
 end
 
 local function DisposeAuthored(entry)
@@ -1754,9 +1743,7 @@ end
 function Rig:Dispose()
     if self.disposed then return end
     self.disposed=true
-    self.combatFx:Dispose()
-    self.slashRibbon:Dispose()
-    self.shockBurst:Dispose()
+    if self.swordVfx then self.swordVfx:Dispose() end
     for _,layers in pairs(self.layers) do for _,layer in ipairs(layers) do DisposeEffect(self,layer) end end
     for _,mesh in ipairs(self.bowDrawMeshes) do DisposeEffect(self,mesh) end
     DisposeEffect(self,self.bowArrow)

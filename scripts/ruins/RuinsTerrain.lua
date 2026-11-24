@@ -132,7 +132,7 @@ end
 
 -- 阶梯台面高度（0.25m 一级、每级 0.5m 深，24 级；两端夹紧，不生成负台面/超高末级）
 -- 坡度与旧 0.5×1m 相同，单次抬升减半：胶囊不再每级顶到步高上限造成顿挫。
-M.STAIR_RISE, M.STAIR_TREAD = 0.5, 1.0
+M.STAIR_RISE, M.STAIR_TREAD = 0.25, 0.5
 function M.StairY(z)
     return max(0, min(M.RING_Y, M.STAIR_RISE * floor((abs(z) - M.COURT_R) / M.STAIR_TREAD + 1)))
 end
