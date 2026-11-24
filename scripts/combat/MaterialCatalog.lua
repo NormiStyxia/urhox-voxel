@@ -7,7 +7,7 @@ local M = {
         {id='armor_crystal', name='岩甲晶片', description='岩甲巨兽的肩晶碎片，依然连着深色岩甲。', icon='ui/materials/armor_crystal_20.png'},
         {id='ruin_conduit', name='遗迹导能件', description='构装体的铜环中嵌着仍有余光的青晶。', icon='ui/materials/ruin_conduit_20.png'},
         {id='time_dust', name='时蚀砂', description='时蚀灵体消散后留下的冷光砂粒。', icon='ui/materials/time_dust_20.png'},
-        {id='timber', name='木材', description='从遗迹采集树折取的带皮枝材。', icon='ui/materials/timber_20.png'},
+        {id='timber', name='木材', description='从遗迹古树旁取得的带皮枝材。', icon='ui/materials/timber_20.png'},
         {id='stone', name='石料', description='在遗迹采石点拾取的硬质石块。', icon='ui/materials/stone_20.png'},
         {id='crystal_ore', name='晶矿', description='从遗迹的晶簇中采下的原矿。', icon='ui/materials/crystal_ore_20.png'},
     },
@@ -18,12 +18,12 @@ local M = {
         ruin_construct = {id='ruin_conduit',count=1},
         time_wraith = {id='time_dust',count=1},
     },
+    -- {key, item, count, x, z, 'tree'?}. Tree sites sit at the trunk of a tree the
+    -- ruins already grows (RuinsBuild's two ancient gold trees); no extra tree is built.
     Sites = {
-        {'court_log','timber',2,-6.0,7.8}, {'court_vein','crystal_ore',1,8.6,5.2},
+        {'east_ancient','timber',2,30.5,-14,'tree'}, {'west_ancient','timber',2,-31,15,'tree'},
+        {'court_vein','crystal_ore',1,8.6,5.2}, {'west_vein','crystal_ore',1,-14.2,-28.2},
         {'court_quarry','stone',2,-11,-7.4},
-        {'south_log','timber',2,-4.6,-58.4}, {'south_vein','crystal_ore',1,4.8,-56.8},
-        {'east_log','timber',2,32.4,4.5}, {'west_vein','crystal_ore',1,-14.2,-28.2},
-        {'east_quarry','stone',2,31.2,10.8},
     },
     ById = {},
     SiteByKey = {},

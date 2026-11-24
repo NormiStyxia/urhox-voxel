@@ -8,6 +8,9 @@ local C = {
     slate=0x435569, stone=0x798C96, chalk=0xBDCCD0,
     blue=0x409FC6, ice=0xA6EDFF, jade=0x35BDAC, light=0xA0F7DD,
     violet=0x8366B9, lilac=0xDFC7FF, indigo=0x413958,
+    -- Rust sandstone: deliberately warm and saturated so it cannot pass for the
+    -- grey-beige masonry and blue-grey cliffs of the ruins.
+    rust=0x9C4A26, rustDark=0x4A2418, rustLight=0xC4672F, rustCut=0xE58B4A,
 }
 local function color(rgb, k)
     k=k or 1
@@ -16,16 +19,23 @@ end
 
 function M.Materials()
     local mats={}
-    for _,finish in ipairs({'matte','gem','beam'}) do
+    for _,finish in ipairs({'matte','gem','beam','glass'}) do
         local mat=Material:new()
-        local path=finish=='beam' and 'Techniques/NoTextureUnlit.xml' or 'Techniques/PBR/PBRNoTexture.xml'
+        local path=finish=='beam' and 'Techniques/NoTextureUnlit.xml'
+            or finish=='glass' and 'Techniques/PBR/PBRNoTextureAlpha.xml' or 'Techniques/PBR/PBRNoTexture.xml'
         mat:SetTechnique(0,cache:GetResource('Technique',path))
         mat.vertexShaderDefines='VERTEXCOLOR'
         mat.pixelShaderDefines='VERTEXCOLOR'
-        mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,1)))
+        mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,finish=='glass' and .46 or 1)))
+        if finish=='glass' then
+            -- Translucent shell: both faces drawn so the inner facets and the
+            -- bright core read through it, with a faint self-glow like cut gem.
+            mat:SetCullMode(CULL_NONE)
+            mat:SetShaderParameter('MatEmissiveColor',Variant(Color(.05,.26,.24)))
+        end
         if finish~='beam' then
-            mat:SetShaderParameter('Roughness',Variant(finish=='gem' and .17 or .88))
-            mat:SetShaderParameter('Metallic',Variant(finish=='gem' and .21 or 0))
+            mat:SetShaderParameter('Roughness',Variant(finish=='glass' and .06 or finish=='gem' and .17 or .88))
+            mat:SetShaderParameter('Metallic',Variant(finish=='glass' and 0 or finish=='gem' and .21 or 0))
         end
         mats[finish]=mat
     end
@@ -85,25 +95,53 @@ local function boulder(g,x,y,z,w,h,d,angle,tone)
         {y+h,w*.65,d*.63,-w*.09,d*.11}},tone)
 end
 
-local function tree(base,stock)
-    solid(base,7,0,0,.24,{{-.08,.58,.49},{.16,.43,.38},{.60,.29,.26}},C.bark,C.cut)
-    solid(base,7,0,0,.24,{{.60,.22,.18},{.612,.21,.17}},C.grain,C.grain)
-    solid(base,7,.012,0,.24,{{.612,.146,.116},{.622,.144,.115}},C.cut)
-    if not stock then return end
-    solid(stock,7,0,0,.24,{{.58,.295,.269},{1.18,.27,.24,.04,0},{2.46,.13,.12,-.18,0}},C.bark)
-    -- Orange cloth marks harvestable timber against ordinary green trees.
-    for _,y in ipairs({.85,1.04}) do
-        solid(stock,7,.024,0,.24,{{y,.328,.294},{y+.13,.326,.290}},C.ribbon)
+-- A straight six-sided log lying on the ground. Faces are flipped to face away
+-- from the log's axis, so winding never has to be reasoned about per call.
+local function log(g,x,y,z,len,r,yaw,tone,cap)
+    local dx,dz=math.cos(yaw),math.sin(yaw)
+    local sx,sz=-dz,dx
+    local rings={}
+    for k=1,2 do
+        local t=(k-1.5)*len
+        local ring={}
+        for i=1,6 do
+            local a=2*math.pi*i/6+.3
+            local u,v=r*math.cos(a),r*math.sin(a)
+            ring[i]=Vector3(x+dx*t+sx*u,y+r+v,z+dz*t+sz*u)
+        end
+        rings[k]=ring
     end
-    solid(stock,6,0,0,0,{{1.38,.19,.17},{1.76,.14,.12,.43,0},{2.08,.08,.07,.72,.03}},C.grain)
-    solid(stock,6,0,0,0,{{1.64,.18,.16},{2.02,.13,.11,-.51,.14},{2.23,.07,.06,-.77,.23}},C.bark)
-    boulder(stock,.66,1.92,0,.70,.62,.62,.43,C.leaf)
-    boulder(stock,-.68,2.08,.16,.68,.67,.60,.87,C.moss)
-    boulder(stock,-.23,2.32,0,.87,.70,.74,.34,C.leaf)
-    boulder(stock,-.33,2.68,-.05,.59,.46,.53,.23,C.mint)
+    local function face(a,b,c,tint,center)
+        local n=(b-a):CrossProduct(c-a)
+        local out=n.x*(a.x-center.x)+n.y*(a.y-center.y)+n.z*(a.z-center.z)
+        if out<0 then b,c=c,b end
+        triangle(g,a,b,c,tint)
+    end
+    for i=1,6 do
+        local n=i%6+1
+        local tint=color(tone,.82+.05*((i*3)%5))
+        local mid=Vector3(x,y+r,z)
+        face(rings[1][i],rings[2][i],rings[2][n],tint,mid)
+        face(rings[1][i],rings[2][n],rings[1][n],tint,mid)
+    end
+    for k=1,2 do
+        local c=Vector3(x+dx*(k-1.5)*len,y+r,z+dz*(k-1.5)*len)
+        for i=1,6 do
+            local n=i%6+1
+            face(c,rings[k][i],rings[k][n],color(cap or tone),Vector3(x,y+r,z))
+        end
+    end
 end
 
-local function mine(base,stock)
+-- Existing trees are the source: only a beacon rises beside the trunk, and a few
+-- fresh-cut logs appear on the ground once the timber has been taken.
+local function tree(base,stock)
+    local g=stock
+    if not g then return end
+    solid(g,4,0,0,0,{{.15,.012,.012},{.55,.045,.045},{2.05,.045,.045}},C.honey)
+end
+
+local function mine(base,stock,core)
     boulder(base,-.05,-.08,0,.90,.49,.66,.21,C.slate)
     boulder(base,.57,.02,.13,.42,.37,.35,.63,C.stone)
     boulder(base,-.57,0,-.18,.38,.32,.35,.87,C.stone)
@@ -112,43 +150,67 @@ local function mine(base,stock)
         solid(base,6,s[1],s[3],.24,{{s[2],s[4],s[4]*.8},{s[2]+.15,s[4]*.82,s[4]*.69}},C.moss,C.chalk)
     end
     if not stock then return end
-    crystal(stock,0,.42,0,1.27,.275,.12,-.04,C.jade)
+    -- Translucent shells, then a smaller opaque core of the same growth axes so
+    -- depth shows through the glass instead of a flat see-through blob.
+    crystal(stock,0,.42,0,1.27,.275,.12,-.04,C.ice)
     crystal(stock,-.4,.35,.14,.87,.20,-.31,.07,C.light)
-    crystal(stock,.37,.33,-.17,.97,.215,.29,-.12,C.jade)
+    crystal(stock,.37,.33,-.17,.97,.215,.29,-.12,C.ice)
     crystal(stock,.19,.32,.25,.54,.14,.13,.20,C.light)
+    crystal(core,0,.46,0,.98,.12,.09,-.03,C.jade)
+    crystal(core,-.4,.38,.14,.62,.085,-.22,.05,C.jade)
+    crystal(core,.37,.36,-.17,.72,.09,.21,-.09,C.blue)
 end
 
+-- Rust sandstone: chunky layered slabs with pale chisel faces. Warm and clearly
+-- unlike the ruins' grey-beige masonry or the blue-grey of the mine's host rock.
 local function quarry(base,stock)
-    boulder(base,0,-.07,0,.89,.39,.65,.37,C.slate)
-    boulder(base,-.50,.01,.17,.31,.24,.25,.62,C.stone)
+    boulder(base,0,-.07,0,.89,.39,.65,.37,C.rustDark)
+    boulder(base,-.50,.01,.17,.31,.24,.25,.62,C.rust)
     if not stock then return end
-    -- Offset cleavage shelves and pale quartz seam across the upper slab.
-    boulder(stock,-.19,.23,.03,.66,.51,.50,.26,C.stone)
-    solid(stock,5,.16,-.07,.44,{{.55,.69,.46},{.67,.65,.45}},C.chalk)
-    boulder(stock,.13,.64,-.09,.67,.38,.46,.44,C.stone)
-    boulder(stock,.49,.20,.22,.33,.38,.28,.20,C.stone)
+    boulder(stock,-.19,.23,.03,.66,.51,.50,.26,C.rust)
+    solid(stock,5,.16,-.07,.44,{{.55,.69,.46},{.67,.65,.45}},C.rustCut)
+    boulder(stock,.13,.64,-.09,.67,.38,.46,.44,C.rustLight)
+    boulder(stock,.49,.20,.22,.33,.38,.28,.20,C.rust)
 end
 
 local sites={timber=tree,crystal_ore=mine,stone=quarry}
-local markerY={timber=3.24,crystal_ore=1.94,stone=1.24}
+local markerY={timber=2.45,crystal_ore=1.94,stone=1.24}
 function M.Site(root,id,mats,spent)
-    local base=mesh(root,'Remainder',mats.matte,true)
-    local stock,canopy
+    local base
+    if id~='timber' then base=mesh(root,'Remainder',mats.matte,true) end
+    local stock,core,canopy
     if not spent then
         canopy=root:CreateChild('Harvestable')
-        stock=mesh(canopy,'Yield',id=='crystal_ore' and mats.gem or mats.matte,true)
+        if id=='crystal_ore' then
+            stock=mesh(canopy,'Yield',mats.glass,false)
+            core=mesh(canopy,'Core',mats.gem,false)
+        else
+            stock=mesh(canopy,'Yield',id=='timber' and mats.beam or mats.matte,id~='timber')
+        end
     end
-    sites[id](base,stock)
-    base:Commit()
+    sites[id](base,stock,core)
+    if base then base:Commit() end
     if stock then
         stock:Commit()
+        if core then core:Commit() end
         local marker=mesh(canopy,'GatherMark',mats.beam,false)
         local y=markerY[id]
-        solid(marker,4,0,0,0,{{y,.012,.012},{y+.12,.085,.085},{y+.24,.012,.012}},
+        local r=id=='timber' and .13 or .085
+        solid(marker,4,0,0,0,{{y,.012,.012},{y+.12*r/.085,r,r},{y+.24*r/.085,.012,.012}},
             id=='crystal_ore' and C.light or C.honey)
         marker:Commit()
     end
     return canopy
+end
+
+-- Visible proof that the tree has been worked: three fresh-cut logs.
+function M.Harvested(root,id,mats)
+    if id~='timber' then return end
+    local g=mesh(root,'CutLogs',mats.matte,true)
+    log(g,0,-.02,0,.46,.12,.35,C.bark,C.cut)
+    log(g,.05,-.02,.27,.42,.11,.62,C.bark,C.cut)
+    log(g,.03,.2,.13,.40,.105,.48,C.grain,C.cut)
+    g:Commit()
 end
 
 local drops={}

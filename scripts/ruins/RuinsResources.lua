@@ -11,7 +11,7 @@ local Models=require('ruins.RuinsResourceModels')
 local R={}
 R.__index=R
 
-local verbs={timber='伐木',crystal_ore='采矿',stone='采石'}
+local verbs={timber='取木',crystal_ore='采矿',stone='采石'}
 local mask=0xffffffff & ~2 -- same environment mask as the walking controller
 local down=Vector3(0,-1,0)
 local directions={{1,0},{.707,.707},{0,1},{-.707,.707},{-1,0},{-.707,-.707},{0,-1},{.707,-.707}}
@@ -112,9 +112,18 @@ local function claimed(self,key,trainingKind)
     return key and (self.receipts[key] or (self.wasClaimed and self.wasClaimed(key,trainingKind)))
 end
 
+-- Timber comes from trees the ruins already grows: the site stands on the
+-- courtyard side of the trunk (clear of its hidden collider) and owns no volume.
+local TRUNK_STANDOFF=1.55
 local function addSite(self,def)
-    local site,itemId,count,x,z=table.unpack(def)
-    local pos=landing(self,Vector3(x,0,z),nil,.8,1.0)
+    local site,itemId,count,x,z,tree=table.unpack(def)
+    local anchor,width=Vector3(x,0,z),.8
+    if tree then
+        local length=math.max(.001,math.sqrt(x*x+z*z))
+        anchor=Vector3(x-x/length*TRUNK_STANDOFF,0,z-z/length*TRUNK_STANDOFF)
+        width=.3
+    end
+    local pos=landing(self,anchor,nil,width,1.0)
     if not pos then
         print('RuinsResources: no walkable ground for '..site)
         return
@@ -123,13 +132,13 @@ local function addSite(self,def)
     local spent=claimed(self,key)
     local node=self.root:CreateChild(site)
     node.position=pos
-    local timber=itemId=='timber'
-    local item={id=key,key=key,source='site',itemId=itemId,count=count,position=pos,node=node,spent=spent}
+    local item={id=key,key=key,source='site',itemId=itemId,count=count,position=pos,node=node,spent=spent,tree=tree}
     item.stock=Models.Site(node,itemId,self.materials,spent)
-    local baseHeight=timber and 2 or 1
-    item.baseCollider=collider(self.world,pos,timber and 2 or 4,baseHeight,0)
-    if not spent then
-        item.upperCollider=collider(self.world,pos,timber and 2 or 3,timber and 6 or 2,baseHeight*.25)
+    if spent then item.remains=Models.Harvested(node,itemId,self.materials) end
+    if not tree then
+        local baseHeight=itemId=='timber' and 2 or 1
+        item.baseCollider=collider(self.world,pos,4,baseHeight,0)
+        if not spent then item.upperCollider=collider(self.world,pos,3,2,baseHeight*.25) end
     end
     self.entries[item.id]=item
 end
@@ -228,7 +237,8 @@ function R:Claim(id,feet,grant)
         item.spent=true
         item.stock:Remove()
         item.stock=nil
-        self.world:RemoveVolume(item.upperCollider)
+        if item.tree then item.remains=Models.Harvested(item.node,item.itemId,self.materials) end
+        if item.upperCollider then self.world:RemoveVolume(item.upperCollider) end
         item.upperCollider=nil
     end
     return true,message

@@ -22,7 +22,8 @@ function Color(r,g,b,a)
 end
 function Variant(v) return v end
 local function noop() end
-Material={new=function() return {SetTechnique=noop,SetShaderParameter=noop,SetSurfaceShader=function() return true end} end}
+CULL_NONE=0
+Material={new=function() return {SetTechnique=noop,SetShaderParameter=noop,SetCullMode=noop,SetSurfaceShader=function() return true end} end}
 cache={GetResource=function(_,_,path) return path end}
 TRIANGLE_LIST=0
 
@@ -79,11 +80,18 @@ local training,world=build({training=true,wasClaimed=function(key,kind)
     return kind=='time_wraith' or key==restored
 end})
 for _,site in ipairs(Catalog.Sites) do
-    local name,itemId,count,x,z=table.unpack(site)
+    local name,itemId,count,x,z,tree=table.unpack(site)
     local key='site:'..name
     local item=assert(training.entries[key],key..' missing')
     assert(item.itemId==itemId and item.count==count,key..' yield')
-    assert(item.position.x==x and item.position.z==z,key..' anchor')
+    if tree then
+        -- Existing trees: the interaction point is beside the trunk, no collider is created.
+        local dx,dz=item.position.x-x,item.position.z-z
+        assert(math.sqrt(dx*dx+dz*dz)<2.4 and math.sqrt(dx*dx+dz*dz)>1.0,key..' trunk standoff')
+        assert(not item.baseCollider and not item.upperCollider,key..' must not add collision')
+    else
+        assert(item.position.x==x and item.position.z==z,key..' anchor')
+    end
     if key==restored then
         assert(item.spent and not item.stock and not item.upperCollider,key..' receipt')
     else
@@ -94,7 +102,8 @@ for _,site in ipairs(Catalog.Sites) do
             assert(t.key==key and t.source=='site' and t.itemId==itemId and t.count==count and not t.trainingKind)
             return true
         end))
-        assert(item.spent and stock.removed and not world.volumes[upper] and world.volumes[item.baseCollider])
+        assert(item.spent and stock.removed)
+        if not tree then assert(not world.volumes[upper] and world.volumes[item.baseCollider]) end
     end
     assert(not training:Claim(key,item.position,unexpectedGrant))
 end
@@ -152,7 +161,7 @@ local gate,gateWorld=build({cast=function(a,b)
 end})
 local gateDrop=assert(gate:SpawnDrop('time_wraith',Vector3(13,12,-7),safe))
 assert(gate.entries[gateDrop].position.x<=7,'airborne kill behind closed gate')
-local site=gate.entries['site:'..Catalog.Sites[1][1]]
+local site=gate.entries['site:court_vein']
 local near=site.position+Vector3(1.3,0,0)
 hitVolume=site.upperCollider
 assert(gate:Nearest(near).id==site.id,'visible resource shell')
