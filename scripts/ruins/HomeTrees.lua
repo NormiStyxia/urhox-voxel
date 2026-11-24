@@ -3,24 +3,38 @@
 local Noise = require("ruins.Noise")
 local SurfaceMesh = require("ruins.TreeSurfaceMesh")
 local M = {}
----@type Material|nil
-local leafMaterial_
+-- 每种叶粒尺寸一份材质：着色器按 leaf_cell 画方粒棱边。
+---@type table<number, Material>
+local leafMaterials_ = {}
+
+---@param cell number
+---@return Material
+local function leafMaterial(cell)
+    local m=leafMaterials_[cell]
+    if not m then
+        m=cache:GetResource("Material","Materials/HomeTreeLeaves.xml"):Clone()
+        m:SetShaderParameter("leaf_cell",Variant(cell))
+        leafMaterials_[cell]=m
+    end
+    return m
+end
 
 -- 由入口 PostUpdate 在相机位置确定后调用，不额外订阅全局事件。
 ---@param eye Vector3
 ---@param target Vector3
 ---@param active boolean
 function M.UpdateView(eye,target,active)
-    if not leafMaterial_ then return end
-    leafMaterial_:SetShaderParameter("foliage_eye",Variant(Vector4(eye.x,eye.y,eye.z,active and 1 or 0)))
-    leafMaterial_:SetShaderParameter("foliage_target",Variant(Vector4(target.x,target.y,target.z,0)))
+    for _,m in pairs(leafMaterials_) do
+        m:SetShaderParameter("foliage_eye",Variant(Vector4(eye.x,eye.y,eye.z,active and 1 or 0)))
+        m:SetShaderParameter("foliage_target",Variant(Vector4(target.x,target.y,target.z,0)))
+    end
 end
 
 function M.Stop()
-    if leafMaterial_ then
-        leafMaterial_:SetShaderParameter("foliage_eye",Variant(Vector4(0,0,0,0)))
+    for _,m in pairs(leafMaterials_) do
+        m:SetShaderParameter("foliage_eye",Variant(Vector4(0,0,0,0)))
     end
-    leafMaterial_=nil
+    leafMaterials_={}
 end
 local floor, ceil, min, max, abs = math.floor, math.ceil, math.min, math.max, math.abs
 local sin, cos, pi = math.sin, math.cos, math.pi
@@ -291,14 +305,56 @@ function M.Tree(parent,x,gy,z,o)
     end
     leafRelief(leaves,seed)
     local material=cache:GetResource("Material","Materials/HomeTreeVoxel.xml")
-    if not leafMaterial_ then
-        leafMaterial_=cache:GetResource("Material","Materials/HomeTreeLeaves.xml"):Clone()
-    end
     local barkParts=wood:Build(root,"Bark",BARK,material)
     local palette=assert(LEAVES[o.gold and 3 or (seed%2+1)])
-    local leafParts=leaves:Build(root,"Leaves",palette,leafMaterial_)
+    local leafParts=leaves:Build(root,"Leaves",palette,leafMaterial(leaves.size))
     print(string.format("HomeTrees: seed=%d gold=%s wood=%d leaf=%d surfaceQuads=%d, 2 drawables",
         seed,tostring(o.gold),#wood.order,#leaves.order,barkParts+leafParts))
+    return root
+end
+
+-- 盆栽与花箱：与庭院树同一套叶簇、遮蔽和叶片材质，只是叶粒减半。
+---@class HomeShrubOptions
+---@field kind string 'ball' 修剪过的球冠；'hedge' 沿 Z 的矮篱
+---@field r number
+---@field length number|nil
+---@field seed integer
+---@param parent Node
+---@param x number
+---@param y number
+---@param z number
+---@param o HomeShrubOptions
+function M.Shrub(parent,x,y,z,o)
+    local root=parent:CreateChild("Shrub")
+    root.position=Vector3(x,y,z)
+    local leaves=grid(.09375)
+    local seed,r=o.seed,o.r
+    local rng=Noise.Rng(seed)
+    if o.kind=='hedge' then
+        local half=(o.length or 1)*.5
+        local n=max(1,floor(half*2/(r*1.1)+.5))
+        for i=0,n do
+            local t=-half+2*half*i/n
+            local rr=r*rng:Range(.85,1.15)
+            crownClump(leaves,Vector3(rng:Range(-.04,.04),rr*.42,t),rr,seed+i*7,(i%3)*.04)
+            if i%2==1 then
+                crownClump(leaves,Vector3(rng:Range(-.06,.06),rr*.95,t+rng:Range(-.1,.1)),rr*.55,seed+90+i,.12)
+            end
+        end
+    else
+        crownClump(leaves,Vector3(0,r*.55,0),r,seed,.06)
+        crownClump(leaves,Vector3(r*.12,r*1.05,-r*.08),r*.70,seed+1,.14)
+        crownClump(leaves,Vector3(-r*.10,r*1.45,r*.06),r*.40,seed+2,.20)
+        local a0=rng:Range(0,2*pi)
+        for i=1,4 do
+            local a=a0+i*pi/2+rng:Range(-.3,.3)
+            local d=r*rng:Range(.45,.62)
+            crownClump(leaves,Vector3(cos(a)*d,r*(.35+(i%2)*.35),sin(a)*d),r*rng:Range(.48,.60),
+                seed+10+i,(i%3)*.035-.02)
+        end
+    end
+    leafRelief(leaves,seed)
+    leaves:Build(root,"Leaves",assert(LEAVES[seed%2+1]),leafMaterial(leaves.size))
     return root
 end
 

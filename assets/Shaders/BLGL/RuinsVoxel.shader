@@ -138,7 +138,7 @@ void fragment() {
     }
     float pores = n3(wp * 24.0);
     float relief = (pores * 0.0025 + veins * 0.003) * mineral;
-    if (dressed) { relief = pores * 0.0007 + veins * 0.0012; }
+    if (dressed) { relief = pores * 0.0018 + veins * 0.0016; }
     vec3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
     float det = dot(dpdx, r1);
     vec3 grad = sign(det) * (dFdx(relief) * r1 + dFdy(relief) * r2) / max(abs(det), 0.000001);
@@ -355,6 +355,8 @@ void fragment() {
     float dressedJoint = 0.0;
     float dressedRoughness = 0.0;
     float dressedOcclusion = 0.0;
+    float dressedStain = 0.5;
+    float dressedSpeck = 0.5;
     if (dressed) {
         vec3 p = wp-home_stone_origin;
         bool topFace = abs(n.y)>0.5;
@@ -364,6 +366,9 @@ void fragment() {
         float nearFade = 1.0-smoothstep(0.025,0.13,footprint);
         float stoneFade = 1.0-smoothstep(0.12,0.32,footprint);
         float spread = max(0.001,footprint*0.5);
+        // Decimetre stains and millimetre grit: cut limestone is never one flat value.
+        dressedStain = n3(p*vec3(3.1,1.7,3.1)+19.0);
+        if (grainFade>0.0) { dressedSpeck = h31(floor(wp*48.0)); }
         // Shafts, paving and mouldings all use island-local metres, including the footing embedded in the court.
         if (p.x>3.0 && p.x<5.9) {
             dressedOcclusion=max(home_pillar_occlusion(p,n,vec2(4.0,2.0),0.6875,2.5),
@@ -408,21 +413,46 @@ void fragment() {
                 joints=true;
             }
             if (joints) {
-                dressedJoint=(1.0-smoothstep(0.003,0.012+spread,distanceToJoint))*nearFade*0.010/(0.010+spread);
-                float shoulder=(1.0-smoothstep(0.010,0.026+spread,distanceToJoint))*nearFade;
-                grad-=(tangent-n*dot(tangent,n))*0.13*shoulder;
-                shade*=1.0+(blockTint-0.5)*0.13*stoneFade-0.32*dressedJoint;
-                base*=vec3(1.0)+(blockTint-0.5)*stoneFade*vec3(0.036,0.0,-0.046);
-                dressedRoughness+=(0.5-blockTint)*0.055*stoneFade-0.050*shoulder;
-            } else if (!topFace) {
-                // Copings and plinths are solid cut stones. Dress their horizontal arrises only.
-                float level = fract(p.y*4.0);
-                float arris = (1.0-smoothstep(0.002,0.014+spread,min(level,1.0-level)*0.25))*nearFade;
-                grad.y += (level<0.5 ? 0.07 : -0.07)*arris;
+                // Raked mortar joint with a hand-cut, slightly ragged arris; dirt settles
+                // in a decimetre band beside it so the bond still reads from a distance.
+                float jointWidth = idx==195.0 ? 0.017 : 0.011;
+                distanceToJoint=max(0.0,distanceToJoint+(pores-0.5)*0.011*nearFade);
+                dressedJoint=(1.0-smoothstep(jointWidth*0.35,jointWidth+spread,distanceToJoint))
+                    *nearFade*(jointWidth*1.4)/(jointWidth*1.4+spread);
+                float shoulder=(1.0-smoothstep(jointWidth,jointWidth+0.024+spread,distanceToJoint))*nearFade;
+                float settled=(1.0-smoothstep(jointWidth,0.12,distanceToJoint))*stoneFade;
+                grad-=(tangent-n*dot(tangent,n))*0.19*shoulder;
+                shade*=1.0+(blockTint-0.5)*0.21*stoneFade-0.40*dressedJoint-0.085*settled*(0.4+dressedStain);
+                base*=vec3(1.0)+(blockTint-0.5)*stoneFade*vec3(0.07,0.012,-0.075);
+                base=mix(base,base*vec3(0.82,0.77,0.68),dressedJoint*0.6);
+                dressedRoughness+=(0.5-blockTint)*0.07*stoneFade-0.050*shoulder;
+            } else {
+                // Copings, rails and plinths: metre-long cut stones with butt joints
+                // and a diagonal chisel dressing instead of one endless extrusion.
+                vec2 q = topFace ? uv+vec2(0.45,0.5) : vec2(uv.x+(abs(n.x)>0.5 ? 0.5 : 0.45),0.0);
+                float seam = 0.5-abs(fract(q.x)-0.5);
+                if (topFace) { seam = min(seam,0.5-abs(fract(q.y)-0.5)); }
+                float butt = (1.0-smoothstep(0.003,0.010+spread,seam))*nearFade*0.012/(0.012+spread);
+                float stoneId = h31(vec3(floor(p.x+0.45),floor(p.z+0.5),idx));
+                shade*=1.0+(stoneId-0.5)*0.13*stoneFade-0.34*butt;
+                base*=vec3(1.0)+(stoneId-0.5)*stoneFade*vec3(0.05,0.008,-0.055);
+                dressedJoint=butt;
+                float toolFade = (1.0-smoothstep(0.006,0.020,footprint))*(0.55+0.45*dressedStain);
+                float toolPhase = (uv.x*0.55+uv.y)*170.0+veins*9.0;
+                shade*=1.0+sin(toolPhase)*0.035*toolFade;
+                grad+=normalize(axisU*0.55+axisV)*cos(toolPhase)*0.055*toolFade;
+                if (!topFace) {
+                    float level = fract(p.y*4.0);
+                    float arris = (1.0-smoothstep(0.002,0.014+spread,min(level,1.0-level)*0.25))*nearFade;
+                    grad.y += (level<0.5 ? 0.07 : -0.07)*arris;
+                }
             }
         }
-        shade *= 1.0+(veins-0.5)*0.065+(pores-0.5)*0.035*surfaceFade;
-        dressedRoughness+=(veins-0.5)*0.075+0.10*dressedJoint;
+        shade *= 1.0+(veins-0.5)*0.09+(pores-0.5)*0.07*surfaceFade+(dressedStain-0.5)*0.17
+            +(dressedSpeck-0.5)*0.09*grainFade;
+        shade *= 1.0-smoothstep(0.66,0.84,pores)*0.16*surfaceFade;
+        base *= mix(vec3(1.035,1.0,0.94),vec3(0.955,1.0,1.045),dressedStain);
+        dressedRoughness+=(veins-0.5)*0.075+0.10*dressedJoint+(dressedStain-0.5)*0.10+0.05;
     }
     // 世界空间表面梯度已在非一致分支前求好，不依赖体素切线流。
     float woodRoughness = 0.0;
@@ -479,7 +509,8 @@ void fragment() {
     ALBEDO = base * shade * daynight_tint;
     ROUGHNESS = clamp(pbr.r + homeRoughness + houseWallRoughness + woodRoughness + dressedRoughness + 0.06 * jointK + 0.04 * mossK - 0.07 * dampK + (grain - 0.5) * 0.05 * grainFade * mineral, 0.0, 1.0);
     METALLIC = pbr.g;
-    SPECULAR = pbr.b;
+    // Dry limestone has no polish: halve the dielectric highlight on dressed stone.
+    SPECULAR = dressed ? pbr.b*0.55 : pbr.b;
     EMISSION = srgb_to_linear(emi.rgb) * emiK * 16.0;
     float ice = ruins_frost(VERTEX, NORMAL);
     // Frost is evaluated after all derivatives; a zero mask needs no vein sin/pow or PBR mixes.

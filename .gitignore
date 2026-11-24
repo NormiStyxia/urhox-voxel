@@ -115,4 +115,6 @@ urhox-libs/
 # Maker i18n 自动生成物（当前 .project/i18n.json 为 enabled:false）
 # 若将来开启多语言、且确实要把译文表纳入版本管理，删掉这一行
 /i18n/
+
+# Maker 默认忽略规则（自动补充；平台内容不应提交）
 /.cache/

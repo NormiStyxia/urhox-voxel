@@ -1318,6 +1318,16 @@ local function house(world,scene)
         local ages=groups[name]
         ctx.finish(name,part,ages[1],ages[2],options)
     end)
+    if scene then
+        local foliage=require('ruins.HomeTrees')
+        local planters=scene:CreateChild('HomeHousePlanters')
+        for _,p in ipairs(Upper.Planters) do
+            foliage.Shrub(planters,H.x+p.x,H.base+p.y,H.z+p.z,p)
+        end
+        local entry={node=planters,first=3,last=3}
+        houseParts[#houseParts+1]=entry
+        enableHousePart(entry,inStage(entry,houseStage))
+    end
     local structure={IsSolidLocal=function(_,x,y,z)
         if b:IsSolidLocal(x,y,z) then return true end
         for _,p in ipairs(houseParts) do

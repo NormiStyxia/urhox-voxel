@@ -485,12 +485,42 @@ local function BuildInnerParapet(world)
     end
 end
 
+-- 隐形斜坡（侧视，d=|z|）：斜面穿过每级前沿棱上方 1cm，胶囊只接触平面，
+-- 不再被立面/棱角逐级吃掉水平速度（实测步行最低速 0.39→3.36m/s）。
+--   y=6 ____________          斜面 y=(d-20.25)*0.5+0.01，d∈[20.25,32.25]
+--          ___|/            石阶与扶墙体积照常碰撞（扶墙挡人、下方地基不变）
+--      ___|/                代理只改物理：唯一体素藏在 y=-3 地下，不参与渲染/破坏
+--  ___|/     d=20.25
+local RAMP_LIFT = 0.01
+---@param world VoxelPhysicsWorld
+---@param sz number
+---@return VoxelVolume|nil
+local function BuildStairRamp(world, sz)
+    local rise, tread = Terrain.STAIR_RISE, Terrain.STAIR_TREAD
+    local d0 = Terrain.COURT_R - tread -- 斜面零点：首级前沿 (COURT_R, rise) 向下延一级
+    local run = Terrain.RING_Y * tread / rise
+    local angle = math.deg(math.atan(rise / tread))
+    local rot = Quaternion(-angle * sz, Vector3.RIGHT)
+    local up = rot * Vector3.UP
+    local d = d0 + run * 0.5
+    local center = Vector3(0, Terrain.RING_Y * 0.5 + RAMP_LIFT, sz * d) - up * 0.5
+    local origin = Vector3(-0.125, -3.0, sz * d - 0.125)
+    local volume = world:CreateVolume(1, 1, 1, 0.25, origin)
+    if volume == nil then return nil end
+    volume:GetGrid():FillBox(0, 0, 0, 0, 0, 0, true)
+    volume.destructible, volume.evictable = false, false
+    world:FinalizeVolume(volume)
+    volume:SetCollisionBox(Vector3(Terrain.STAIR_HALF * 2, 1.0, math.sqrt(run * run + Terrain.RING_Y ^ 2)),
+        center - (origin + Vector3(0.125, 0.125, 0.125)), rot)
+    return volume
+end
+
 -- ---------------------------------------------------------------- 大阶梯（龙庭 ↔ 内环，南北各一条）
 -- 踏面、压边、两侧扶墙一次写入同一 Grid：内部相邻面由同一体积剔除，不跨 Volume 共面。
 -- 碰撞尺寸/边界见 Terrain.InStair 前的示意；颜色压边只涂材质，不额外叠盒/抬高踏面。
 local function BuildStairs(world)
     local hw, wall = Terrain.STAIR_HALF, Terrain.STAIR_WALL_HALF
-    M.stairVolumes = {}
+    M.stairVolumes, M.stairRamps = {}, {}
     for _, sz in ipairs({ -1, 1 }) do
         local zA, zB = sz * Terrain.STAIR_START, sz * Terrain.STAIR_JOIN
         local b = Brush.New(world, { min = { -wall, -1.0, min(zA, zB) },
@@ -507,7 +537,7 @@ local function BuildStairs(world)
             if y >= top then return nil end
             local d = abs(z) - Terrain.COURT_R
             if y > top - 0.25 then
-                if d >= 0 and (d % 1.0) < 0.25 then return P.MARBLE_A end
+                if d >= 0 and (d % Terrain.STAIR_TREAD) < 0.25 then return P.MARBLE_A end
                 if abs(x) < 1.2 and Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.5 then return P.TILE_B end
                 return Marble(x, y, z)
             end
@@ -515,6 +545,8 @@ local function BuildStairs(world)
         end)
         local volume = Keep(b:Finish({}))
         if volume ~= nil then M.stairVolumes[#M.stairVolumes + 1] = volume end
+        local ramp = BuildStairRamp(world, sz)
+        if ramp ~= nil then M.stairRamps[#M.stairRamps + 1] = ramp end
     end
 end
 
@@ -975,7 +1007,7 @@ end
 -- ---------------------------------------------------------------- 入口
 -- Native scenery is owned by the scene; release this module's references.
 function M.Stop()
-    M.volumes,M.floaters,M.stairVolumes,M.trees={},{},{},{}
+    M.volumes,M.floaters,M.stairVolumes,M.stairRamps,M.trees={},{},{},{},{}
     M.colBroken,M.ribs=nil,nil
     M.scene=nil
 end

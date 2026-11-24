@@ -113,13 +113,13 @@ function M.HasGround(x, z, margin)
 end
 
 -- 碰撞区域侧视（d = |z|，南北镜像，所有长度单位为米）：
---  龙庭 y=0  ______|0.5____|1.0____ ... |6.0____________ 内环 y=6
---            d=20.25  20.75   21.75        31.75       33.5
+--  龙庭 y=0  ______|.25__|.5___ ... |6.0________ 内环 y=6
+--            d=20.25  20.75  21.25     32.25      33.5
 --  隐藏地形 y=-1 ___________________________________________________
 --  正面：扶墙 [-4.25,-3.5) | 净通道 [-3.5,3.5) | 扶墙 [3.5,4.25)
 -- 检测目的：只有同一个可见体积承担踏面/立面/扶墙碰撞，不叠一份粗地形台阶。
 -- 边界：底踏步先于圆形龙庭边缘，避免斜接出现 y=6 隐墙；末踏面 y=6 与平台齐平。
--- 每级 1m 深 > 胶囊直径 0.64m，0.5m 高 < stepHeight 0.55m；扶墙高 1m 仍挡人。
+-- 每级 0.5m 深、0.25m 高（远低于 stepHeight 0.55m）；扶墙高 1m 仍挡人。
 function M.InStair(x, z)
     local d = abs(z)
     return abs(x) < M.STAIR_HALF and d >= M.STAIR_START and d < M.STAIR_JOIN
@@ -130,9 +130,11 @@ function M.InStairFootprint(x, z)
     return abs(x) < M.STAIR_WALL_HALF and d >= M.STAIR_START and d < M.STAIR_JOIN
 end
 
--- 阶梯台面高度（0.5m 一级、每级 1m 深；两端夹紧，不生成负台面/超高末级）
+-- 阶梯台面高度（0.25m 一级、每级 0.5m 深，24 级；两端夹紧，不生成负台面/超高末级）
+-- 坡度与旧 0.5×1m 相同，单次抬升减半：胶囊不再每级顶到步高上限造成顿挫。
+M.STAIR_RISE, M.STAIR_TREAD = 0.25, 0.5
 function M.StairY(z)
-    return max(0, min(M.RING_Y, 0.5 * floor((abs(z) - M.COURT_R) + 1)))
+    return max(0, min(M.RING_Y, M.STAIR_RISE * floor((abs(z) - M.COURT_R) / M.STAIR_TREAD + 1)))
 end
 
 -- 未裁剪的顶面延拓；先判新台阶，防止龙庭圆弧覆盖底踏步。
