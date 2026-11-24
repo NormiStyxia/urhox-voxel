@@ -112,3 +112,7 @@ tools/
 urhox-libs/
 # <<< TapTap Maker AI dev kit (local only) <<<
 /.cache/
+
+# Maker i18n 自动生成物（当前 .project/i18n.json 为 enabled:false）
+# 若将来开启多语言、且确实要把译文表纳入版本管理，删掉这一行
+/i18n/
