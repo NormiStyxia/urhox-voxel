@@ -93,6 +93,10 @@ function Visual.New(scene, world, config)
     local started = os.clock()
     local self = setmetatable({}, Visual)
     self.scene, self.world, self.config = scene, world, config
+    -- Voxel volume bounds sit on the terrain boundary. UrhoX terrain contact
+    -- includes the lower half-cell, so lift only the visual root by half a
+    -- voxel. Combat position and hurt shapes stay on the authored ground.
+    self.groundLift = (config.voxelSize or .08) * .5
     self.data = modelData(config)
     local built = Adapter.Build(world, scene, self.data)
     self.adapter, self.root = built, built.root
@@ -147,7 +151,7 @@ end
 
 function Visual:Update(enemy)
     if self.removed then return end
-    self.root.position = enemy.position
+    self.root.position = Vector3(enemy.position.x, enemy.position.y + self.groundLift, enemy.position.z)
     self.root.rotation = Quaternion(enemy.yaw, Vector3.UP)
     local reaction = enemy.reaction
     local recoil = math.max(0, 1 - reaction.recoilAge / .12)
