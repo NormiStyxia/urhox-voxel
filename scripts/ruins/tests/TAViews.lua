@@ -59,8 +59,8 @@ local VIEWS = {
     },
     terrace = {
         { name = "house_terrace_door", stage = 3, hour = 14, pos = Vector3(HX - 2.2, HB + 11.6, 8.2), look = Vector3(HX - 7, HB + 11, 11) },
-        { name = "house_stair_top", stage = 3, hour = 14, pos = Vector3(HX - 2, HB + 13.5, 21), look = Vector3(HX - 7.5, HB + 10, 16) },
-        { name = "house_stair_corner", stage = 3, hour = 14, pos = Vector3(HX + 4.5, HB + 9.5, 21), look = Vector3(HX, HB + 6, 16) },
+        { name = "house_stair_top", stage = 3, hour = 14, pos = Vector3(HX - 4, HB + 15, 22.5), look = Vector3(HX - 7.5, HB + 9.8, 16) },
+        { name = "house_stair_corner", stage = 3, hour = 14, pos = Vector3(HX + 4, HB + 10, 21), look = Vector3(HX + 0.2, HB + 5.8, 16), hideTrees = true },
     },
     house = {
         { name = "house_aerial", stage = 3, hour = 15, pos = Vector3(HX + 16, HB + 15, -24), look = Vector3(HX - 3, HB + 4, 6) },
@@ -140,6 +140,7 @@ function TAViews_PostUpdate(eventType, eventData)
         game.dayNight.lockHour = v.hour
         game.dayNight:SetHour(v.hour)
         if v.stage then print("TAViews: stage", require("ruins.HomeIsland").SetHouseStage(v.stage)) end
+        for _, tree in ipairs(game.scene:GetChildrenWithName("Tree", true)) do tree.enabled = not v.hideTrees end
         print(string.format("TAViews: view %s hour %.1f frame %d", v.name, v.hour, frame))
     end
     Apply(v)

@@ -1,0 +1,119 @@
+{
+    "version": 2,
+    "script": "ruins_main.lua",
+    "result": "FAIL",
+    "duration_ms": 42956,
+    "frames_completed": 12,
+    "phases": {
+        "load": {
+            "result": "PASS",
+            "errors": []
+        },
+        "init": {
+            "result": "PASS",
+            "errors": []
+        },
+        "run": {
+            "result": "FAIL",
+            "errors": [
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 328.009ms (threshold: 100ms)",
+                    "frame": 2
+                },
+                {
+                    "category": "engine",
+                    "message": "Frame time spike: 5460.31ms (threshold: 100ms)",
+                    "frame": 5
+                }
+            ]
+        },
+        "scene": {
+            "result": "PASS",
+            "errors": [],
+            "node_count": 2032,
+            "component_count": 3990,
+            "scene_exists": true
+        }
+    },
+    "state_snapshots": [
+        {
+            "frame": 1,
+            "phase": "init",
+            "nodes": 23,
+            "components": 47,
+            "hash": 2438665705,
+            "frame_time_ms": 34117.31640625
+        },
+        {
+            "frame": 6,
+            "phase": "run",
+            "nodes": 23,
+            "components": 48,
+            "hash": 3606271510,
+            "frame_time_ms": 21.93199920654297
+        },
+        {
+            "frame": 10,
+            "phase": "run",
+            "nodes": 23,
+            "components": 48,
+            "hash": 190951372,
+            "frame_time_ms": 20.54599952697754
+        },
+        {
+            "frame": 12,
+            "phase": "run",
+            "nodes": 23,
+            "components": 48,
+            "hash": 3077683653,
+            "frame_time_ms": 20.68400001525879
+        }
+    ],
+    "scene_stalled": false,
+    "max_frame_time_ms": 5460.31396484375,
+    "update_defined": false,
+    "component_census": {
+        "Octree": 1,
+        "DebugRenderer": 1,
+        "VoxelPhysicsWorld": 1,
+        "CascadeParticleSystemManager": 1,
+        "Zone": 1,
+        "SkyLightCapture": 1,
+        "Light": 8,
+        "ProceduralSky": 2,
+        "Skybox": 2,
+        "CustomGeometry": 2698,
+        "VoxelVolume": 575,
+        "Terrain": 2,
+        "GrassField": 4,
+        "TerrainPatch": 505,
+        "StaticModel": 166,
+        "VoxelCharacterController": 1,
+        "BillboardSet": 9,
+        "SoundSource": 4,
+        "SoundSource3D": 3,
+        "CascadeParticleSystemInstance": 1,
+        "CascadeSpriteEmitter": 4
+    },
+    "test_result": "FAILED",
+    "test_assertions": {
+        "total": 6,
+        "passed": 2,
+        "failed": 4
+    },
+    "test_issues": [
+        "转角平台外侧（背面）有护栏",
+        "转角平台外侧（东面）有护栏",
+        "顶部平台背面有护栏",
+        "顶部平台西侧有护栏"
+    ],
+    "missing_resources": [],
+    "missing_engine_resources": [],
+    "summary": {
+        "lua_errors": 0,
+        "resource_errors": 0,
+        "engine_errors": 2,
+        "total_errors": 2
+    }
+}

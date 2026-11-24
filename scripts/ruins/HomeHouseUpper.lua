@@ -505,11 +505,12 @@ local function outerStair(b)
     -- Landings are guarded on every open edge: a posted rail at the same height as
     -- the flight rails, so the corner turn and the top landing are fully enclosed.
     local function guard(ax,az,bx,bz,y)
-        b:Box(min(ax,bx)-.1,y+.95,min(az,bz)-.1,max(ax,bx)+.1,y+1.05,max(az,bz)+.1,woodX)
+        -- Two full 0.125 m cells tall: a thinner bar falls between voxel centres and vanishes.
+        b:Box(min(ax,bx)-.1,y+.875,min(az,bz)-.1,max(ax,bx)+.1,y+1.125,max(az,bz)+.1,woodX)
         local n=max(1,ceil(max(abs(bx-ax),abs(bz-az))/.5))
         for i=0,n do
             local x,z=ax+(bx-ax)*i/n,az+(bz-az)*i/n
-            b:Box(x-.0625,y,z-.0625,x+.0625,y+.95,z+.0625,woodY)
+            b:Box(x-.0625,y,z-.0625,x+.0625,y+.875,z+.0625,woodY)
         end
     end
     guard(lane1+.1,Z1+.0625,lane1+.1,back1,landA)
