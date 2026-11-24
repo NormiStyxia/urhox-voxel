@@ -1,0 +1,1113 @@
+[
+  {
+    "name": "WoodSpirit",
+    "attack": "stump_headbutt",
+    "warning": "fan",
+    "frames": [
+      {
+        "name": "WoodSpirit",
+        "label": "telegraph",
+        "state": "TELEGRAPH",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "body",
+            "y": 0.73,
+            "x": 0.0,
+            "r": 0.58,
+            "z": 0.0
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 1.32,
+          "visible": true,
+          "step": 6,
+          "kind": "fan"
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.36800000000000005
+      },
+      {
+        "name": "WoodSpirit",
+        "label": "active",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "body",
+            "y": 0.73,
+            "x": 0.0,
+            "r": 0.58,
+            "z": 0.0
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 1.32,
+          "visible": false,
+          "step": 6,
+          "kind": "fan"
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.03200000000000003
+      },
+      {
+        "name": "WoodSpirit",
+        "label": "recover",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "body",
+            "y": 0.73,
+            "x": 0.0,
+            "r": 0.58,
+            "z": 0.5199999999999999
+          }
+        ],
+        "ax": 0.0,
+        "ay": 0,
+        "warning": {
+          "radius": 1.32,
+          "visible": false,
+          "step": 6,
+          "kind": "fan"
+        },
+        "core": true,
+        "az": 0.5199999999999999,
+        "t": 0.23200000000000007
+      }
+    ],
+    "recover": 0.55,
+    "range": 1.32,
+    "telegraph": 0.46,
+    "duration": 0.28
+  },
+  {
+    "name": "NestWeaver",
+    "attack": "hook_scissor",
+    "warning": "fan",
+    "frames": [
+      {
+        "name": "NestWeaver",
+        "label": "telegraph",
+        "state": "TELEGRAPH",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "body",
+            "y": 2.41,
+            "x": 0.0,
+            "r": 0.62,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "head",
+            "y": 2.65,
+            "x": 0.0,
+            "r": 0.31,
+            "z": 0.51
+          },
+          {
+            "enabled": true,
+            "id": "wing_l",
+            "y": 2.292341020726342,
+            "x": -1.0683800719487717,
+            "r": 0.22,
+            "z": -0.3724868281181952
+          },
+          {
+            "enabled": true,
+            "id": "shell_l",
+            "y": 2.893164841551103,
+            "x": -0.6609017568808389,
+            "r": 0.32,
+            "z": -0.06012981148212909
+          },
+          {
+            "enabled": true,
+            "id": "nest_l",
+            "y": 2.186,
+            "x": -0.694,
+            "r": 0.22,
+            "z": 0.06
+          },
+          {
+            "enabled": true,
+            "id": "wing_r",
+            "y": 2.292341020726342,
+            "x": 1.0683800719487717,
+            "r": 0.22,
+            "z": -0.3724868281181952
+          },
+          {
+            "enabled": true,
+            "id": "shell_r",
+            "y": 2.893164841551103,
+            "x": 0.6609017568808389,
+            "r": 0.32,
+            "z": -0.06012981148212909
+          },
+          {
+            "enabled": true,
+            "id": "nest_r",
+            "y": 2.186,
+            "x": 0.694,
+            "r": 0.22,
+            "z": 0.06
+          }
+        ],
+        "ax": 0,
+        "ay": 1.8699999999999999,
+        "warning": {
+          "radius": 1.85,
+          "visible": true,
+          "step": 5,
+          "kind": "fan"
+        },
+        "az": 0,
+        "core": true,
+        "thread": {
+          "travel": 0,
+          "active": false
+        },
+        "floor": 0,
+        "t": 0.44800000000000006
+      },
+      {
+        "name": "NestWeaver",
+        "label": "active",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "body",
+            "y": 2.27126134430727,
+            "x": 0.0,
+            "r": 0.62,
+            "z": 0.04267522314457146
+          },
+          {
+            "enabled": true,
+            "id": "head",
+            "y": 2.51126134430727,
+            "x": 0.0,
+            "r": 0.31,
+            "z": 0.5526752231445715
+          },
+          {
+            "enabled": true,
+            "id": "wing_l",
+            "y": 2.748624571424818,
+            "x": -1.1572323153855537,
+            "r": 0.22,
+            "z": -0.2145881254210451
+          },
+          {
+            "enabled": true,
+            "id": "shell_l",
+            "y": 2.754426185858373,
+            "x": -0.6609017568808389,
+            "r": 0.32,
+            "z": -0.017454588337557635
+          },
+          {
+            "enabled": true,
+            "id": "nest_l",
+            "y": 2.0472613443072696,
+            "x": -0.694,
+            "r": 0.22,
+            "z": 0.10267522314457145
+          },
+          {
+            "enabled": true,
+            "id": "wing_r",
+            "y": 2.748624571424818,
+            "x": 1.1572323153855537,
+            "r": 0.22,
+            "z": -0.2145881254210451
+          },
+          {
+            "enabled": true,
+            "id": "shell_r",
+            "y": 2.754426185858373,
+            "x": 0.6609017568808389,
+            "r": 0.32,
+            "z": -0.017454588337557635
+          },
+          {
+            "enabled": true,
+            "id": "nest_r",
+            "y": 2.0472613443072696,
+            "x": 0.694,
+            "r": 0.22,
+            "z": 0.10267522314457145
+          }
+        ],
+        "ax": 0.0,
+        "ay": 1.7312613443072697,
+        "warning": {
+          "radius": 1.85,
+          "visible": false,
+          "step": 6,
+          "kind": "fan"
+        },
+        "az": 0.04267522314457146,
+        "core": true,
+        "thread": {
+          "travel": 0,
+          "active": false
+        },
+        "floor": 0,
+        "t": 0.03200000000000003
+      },
+      {
+        "name": "NestWeaver",
+        "label": "recover",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "body",
+            "y": 0.75,
+            "x": 0.0,
+            "r": 0.62,
+            "z": 0.81
+          },
+          {
+            "enabled": true,
+            "id": "head",
+            "y": 0.99,
+            "x": 0.0,
+            "r": 0.31,
+            "z": 1.32
+          },
+          {
+            "enabled": true,
+            "id": "wing_l",
+            "y": 1.6873980612198358,
+            "x": -0.8577680938916241,
+            "r": 0.22,
+            "z": 0.5699665967734935
+          },
+          {
+            "enabled": true,
+            "id": "shell_l",
+            "y": 1.2331648415511034,
+            "x": -0.6609017568808389,
+            "r": 0.32,
+            "z": 0.7498701885178709
+          },
+          {
+            "enabled": true,
+            "id": "nest_l",
+            "y": 0.526,
+            "x": -0.694,
+            "r": 0.22,
+            "z": 0.8700000000000001
+          },
+          {
+            "enabled": true,
+            "id": "wing_r",
+            "y": 1.6873980612198358,
+            "x": 0.8577680938916241,
+            "r": 0.22,
+            "z": 0.5699665967734935
+          },
+          {
+            "enabled": true,
+            "id": "shell_r",
+            "y": 1.2331648415511034,
+            "x": 0.6609017568808389,
+            "r": 0.32,
+            "z": 0.7498701885178709
+          },
+          {
+            "enabled": true,
+            "id": "nest_r",
+            "y": 0.526,
+            "x": 0.694,
+            "r": 0.22,
+            "z": 0.8700000000000001
+          }
+        ],
+        "ax": 0.0,
+        "ay": 0.20999999999999996,
+        "warning": {
+          "radius": 1.85,
+          "visible": false,
+          "step": 6,
+          "kind": "fan"
+        },
+        "az": 0.81,
+        "core": true,
+        "thread": {
+          "travel": 0,
+          "active": false
+        },
+        "floor": 0,
+        "t": 0.23200000000000007
+      }
+    ],
+    "recover": 0.62,
+    "range": 1.85,
+    "telegraph": 0.56,
+    "duration": 0.42
+  },
+  {
+    "name": "RockColossus",
+    "attack": "quarry_fault",
+    "warning": "line",
+    "frames": [
+      {
+        "name": "RockColossus",
+        "label": "telegraph",
+        "state": "TELEGRAPH",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "torso",
+            "y": 2.037386458018919,
+            "x": 0.0,
+            "r": 0.76,
+            "z": 0.03444982706848079
+          },
+          {
+            "enabled": true,
+            "id": "head",
+            "y": 3.1675572406113672,
+            "x": 0.0,
+            "r": 0.43,
+            "z": 0.10121835943769159
+          },
+          {
+            "enabled": true,
+            "id": "crystal",
+            "y": 2.110670471863339,
+            "x": 1.593985612917229,
+            "r": 0.25,
+            "z": -0.6195917204659835
+          },
+          {
+            "enabled": true,
+            "id": "fist_r",
+            "y": 4.295221629509964,
+            "x": 1.8725259823736147,
+            "r": 0.57,
+            "z": 0.6191380733986406
+          },
+          {
+            "enabled": true,
+            "id": "fist_l",
+            "y": 1.267564572279772,
+            "x": -1.75,
+            "r": 0.33,
+            "z": 0.3857014920564895
+          },
+          {
+            "enabled": true,
+            "id": "upper_arm_r",
+            "y": 2.481253213001682,
+            "x": 1.5093063654557,
+            "r": 0.44,
+            "z": -0.07691515286817231
+          },
+          {
+            "enabled": true,
+            "id": "upper_arm_l",
+            "y": 2.826171893654722,
+            "x": -1.48,
+            "r": 0.44,
+            "z": 0.04834859818048676
+          },
+          {
+            "enabled": true,
+            "id": "leg_r",
+            "y": 0.488,
+            "x": 0.65,
+            "r": 0.34,
+            "z": 0.25
+          },
+          {
+            "enabled": true,
+            "id": "leg_l",
+            "y": 0.488,
+            "x": -0.65,
+            "r": 0.34,
+            "z": 0.25
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 6.25,
+          "visible": true,
+          "step": 5,
+          "kind": "fault_strip"
+        },
+        "fault": {
+          "sections": 5,
+          "active": true
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.8960000000000001
+      },
+      {
+        "name": "RockColossus",
+        "label": "active",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "torso",
+            "y": 2.1045767592956874,
+            "x": 0.0,
+            "r": 0.76,
+            "z": 0.07067908581416273
+          },
+          {
+            "enabled": true,
+            "id": "head",
+            "y": 3.230772532200492,
+            "x": 0.0,
+            "r": 0.43,
+            "z": 0.12628565596411748
+          },
+          {
+            "enabled": true,
+            "id": "crystal",
+            "y": 2.3668914603709386,
+            "x": 1.597707224719055,
+            "r": 0.25,
+            "z": -0.7378662265943281
+          },
+          {
+            "enabled": true,
+            "id": "fist_r",
+            "y": 4.161261801319361,
+            "x": 1.8061461649129933,
+            "r": 0.57,
+            "z": 1.0287939806145943
+          },
+          {
+            "enabled": true,
+            "id": "fist_l",
+            "y": 1.3766492262724495,
+            "x": -1.75,
+            "r": 0.33,
+            "z": 0.4135397649885573
+          },
+          {
+            "enabled": true,
+            "id": "upper_arm_r",
+            "y": 2.576547314667369,
+            "x": 1.511658162916779,
+            "r": 0.44,
+            "z": -0.11525882082229377
+          },
+          {
+            "enabled": true,
+            "id": "upper_arm_l",
+            "y": 2.9292815562279735,
+            "x": -1.48,
+            "r": 0.44,
+            "z": 0.06021972650596244
+          },
+          {
+            "enabled": true,
+            "id": "leg_r",
+            "y": 0.5855524790431569,
+            "x": 0.65,
+            "r": 0.34,
+            "z": 0.24396765268794973
+          },
+          {
+            "enabled": true,
+            "id": "leg_l",
+            "y": 0.5855524790431569,
+            "x": -0.65,
+            "r": 0.34,
+            "z": 0.24396765268794973
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 6.25,
+          "visible": false,
+          "step": 6,
+          "kind": "fault_strip"
+        },
+        "fault": {
+          "sections": 5,
+          "active": true
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.03399999999999995
+      },
+      {
+        "name": "RockColossus",
+        "label": "recover",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "torso",
+            "y": 1.7661309937255403,
+            "x": 0.0,
+            "r": 0.76,
+            "z": 0.3256447705137474
+          },
+          {
+            "enabled": true,
+            "id": "head",
+            "y": 2.886725717684307,
+            "x": 0.0,
+            "r": 0.43,
+            "z": 0.29227192333870433
+          },
+          {
+            "enabled": true,
+            "id": "crystal",
+            "y": 3.0172768731943473,
+            "x": 1.45,
+            "r": 0.25,
+            "z": 0.17067435077351278
+          },
+          {
+            "enabled": true,
+            "id": "fist_r",
+            "y": 0.6698227112017867,
+            "x": 1.98,
+            "r": 0.57,
+            "z": 0.9406476992368245
+          },
+          {
+            "enabled": true,
+            "id": "fist_l",
+            "y": 1.438371299387251,
+            "x": -1.75,
+            "r": 0.33,
+            "z": 0.6189507865463018
+          },
+          {
+            "enabled": true,
+            "id": "upper_arm_r",
+            "y": 2.3653455557593355,
+            "x": 1.48,
+            "r": 0.44,
+            "z": 0.056282229771016976
+          },
+          {
+            "enabled": true,
+            "id": "upper_arm_l",
+            "y": 2.9332380291296287,
+            "x": -1.48,
+            "r": 0.44,
+            "z": 0.14985246110224276
+          },
+          {
+            "enabled": true,
+            "id": "leg_r",
+            "y": 0.5596326619173945,
+            "x": 0.65,
+            "r": 0.34,
+            "z": 0.19585361497022052
+          },
+          {
+            "enabled": true,
+            "id": "leg_l",
+            "y": 0.5596326619173945,
+            "x": -0.65,
+            "r": 0.34,
+            "z": 0.19585361497022052
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 6.25,
+          "visible": false,
+          "step": 6,
+          "kind": "fault_strip"
+        },
+        "fault": {
+          "sections": 5,
+          "active": true
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.23399999999999999
+      }
+    ],
+    "recover": 1.05,
+    "range": 6.25,
+    "telegraph": 1.12,
+    "duration": 1.42
+  },
+  {
+    "name": "RuinConstruct",
+    "attack": "locked_beam",
+    "warning": "line",
+    "frames": [
+      {
+        "name": "RuinConstruct",
+        "label": "telegraph",
+        "state": "TELEGRAPH",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "torso",
+            "y": 1.3617770927860733,
+            "x": 0.0,
+            "r": 0.35,
+            "z": -0.13
+          },
+          {
+            "enabled": true,
+            "id": "plate_l",
+            "y": 1.3617770927860733,
+            "x": -0.16,
+            "r": 0.235,
+            "z": 0.37
+          },
+          {
+            "enabled": true,
+            "id": "plate_r",
+            "y": 1.3617770927860733,
+            "x": 0.16,
+            "r": 0.235,
+            "z": 0.37
+          },
+          {
+            "enabled": false,
+            "id": "core",
+            "y": 1.3617770927860733,
+            "x": 0.0,
+            "r": 0,
+            "z": 0.16
+          },
+          {
+            "enabled": true,
+            "id": "arm_l",
+            "y": 1.2696401481072555,
+            "x": -0.376,
+            "r": 0.22,
+            "z": 0.37144438208849884
+          },
+          {
+            "enabled": true,
+            "id": "arm_r",
+            "y": 1.2739208024742925,
+            "x": 0.376,
+            "r": 0.22,
+            "z": 0.37334752262071264
+          },
+          {
+            "enabled": true,
+            "id": "satellite_l",
+            "y": 2.018632139842025,
+            "x": -0.88,
+            "r": 0.13,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "satellite_r",
+            "y": 1.9562200397759837,
+            "x": 0.88,
+            "r": 0.13,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "lower_body",
+            "y": 0.5817770927860736,
+            "x": 0.0,
+            "r": 0.21,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "neck",
+            "y": 1.9217770927860733,
+            "x": 0.0,
+            "r": 0.1,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "crown",
+            "y": 2.2497770927860734,
+            "x": 0.12617073656846484,
+            "r": 0.11,
+            "z": 0.2673344347734655
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 13,
+          "visible": false,
+          "step": 5,
+          "kind": "line"
+        },
+        "optics": {
+          "enabled": true,
+          "radius": 0.34,
+          "beam": 13.0
+        },
+        "az": 0,
+        "t": 0.96
+      },
+      {
+        "name": "RuinConstruct",
+        "label": "active",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "torso",
+            "y": 1.4452747810076716,
+            "x": 0.0,
+            "r": 0.35,
+            "z": -0.13
+          },
+          {
+            "enabled": true,
+            "id": "plate_l",
+            "y": 1.4452747810076716,
+            "x": -0.16,
+            "r": 0.235,
+            "z": 0.37
+          },
+          {
+            "enabled": true,
+            "id": "plate_r",
+            "y": 1.4452747810076716,
+            "x": 0.16,
+            "r": 0.235,
+            "z": 0.37
+          },
+          {
+            "enabled": false,
+            "id": "core",
+            "y": 1.4452747810076716,
+            "x": 0.0,
+            "r": 0,
+            "z": 0.0857142857142857
+          },
+          {
+            "enabled": true,
+            "id": "arm_l",
+            "y": 1.4562765911180244,
+            "x": -0.27,
+            "r": 0.22,
+            "z": 0.26904333995379426
+          },
+          {
+            "enabled": true,
+            "id": "arm_r",
+            "y": 1.4562765911180244,
+            "x": 0.27,
+            "r": 0.22,
+            "z": 0.26904333995379426
+          },
+          {
+            "enabled": true,
+            "id": "satellite_l",
+            "y": 2.1087298865412634,
+            "x": -0.88,
+            "r": 0.13,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "satellite_r",
+            "y": 2.016749262705006,
+            "x": 0.88,
+            "r": 0.13,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "lower_body",
+            "y": 0.6652747810076717,
+            "x": 0.0,
+            "r": 0.21,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "neck",
+            "y": 2.005274781007672,
+            "x": 0.0,
+            "r": 0.1,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "crown",
+            "y": 2.3452747810076713,
+            "x": 0.1504259096954,
+            "r": 0.11,
+            "z": 0.2520661351850204
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 13,
+          "visible": false,
+          "step": 6,
+          "kind": "line"
+        },
+        "optics": {
+          "enabled": true,
+          "radius": 0.34,
+          "beam": 13.0
+        },
+        "az": 0,
+        "t": 0.0399999999999999
+      },
+      {
+        "name": "RuinConstruct",
+        "label": "recover",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "torso",
+            "y": 1.4301039064331595,
+            "x": 0.0,
+            "r": 0.35,
+            "z": -0.13
+          },
+          {
+            "enabled": true,
+            "id": "plate_l",
+            "y": 1.4301039064331595,
+            "x": -0.16,
+            "r": 0.235,
+            "z": 0.37
+          },
+          {
+            "enabled": true,
+            "id": "plate_r",
+            "y": 1.4301039064331595,
+            "x": 0.16,
+            "r": 0.235,
+            "z": 0.37
+          },
+          {
+            "enabled": false,
+            "id": "core",
+            "y": 1.4301039064331595,
+            "x": 0.0,
+            "r": 0,
+            "z": 0.11428571428571427
+          },
+          {
+            "enabled": true,
+            "id": "arm_l",
+            "y": 1.4411057165435124,
+            "x": -0.27,
+            "r": 0.22,
+            "z": 0.3261861970966514
+          },
+          {
+            "enabled": true,
+            "id": "arm_r",
+            "y": 1.4411057165435124,
+            "x": 0.27,
+            "r": 0.22,
+            "z": 0.3261861970966514
+          },
+          {
+            "enabled": true,
+            "id": "satellite_l",
+            "y": 2.0704415243494316,
+            "x": -0.88,
+            "r": 0.13,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "satellite_r",
+            "y": 1.9817566722054858,
+            "x": 0.88,
+            "r": 0.13,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "lower_body",
+            "y": 0.6501039064331595,
+            "x": 0.0,
+            "r": 0.21,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "neck",
+            "y": 1.9901039064331596,
+            "x": 0.0,
+            "r": 0.1,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "crown",
+            "y": 2.3301039064331595,
+            "x": 0.15244762363069841,
+            "r": 0.11,
+            "z": 0.2506174780243865
+          }
+        ],
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 13,
+          "visible": false,
+          "step": 6,
+          "kind": "line"
+        },
+        "optics": {
+          "enabled": true,
+          "radius": 0.34,
+          "beam": 13.0
+        },
+        "az": 0,
+        "t": 0.23999999999999994
+      }
+    ],
+    "recover": 2.3,
+    "range": 13,
+    "telegraph": 1.2,
+    "duration": 0.56
+  },
+  {
+    "name": "TimeWraith",
+    "attack": "hourglass_field",
+    "warning": "ring",
+    "frames": [
+      {
+        "name": "TimeWraith",
+        "label": "telegraph",
+        "state": "TELEGRAPH",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "mantle",
+            "y": 1.0979999999999999,
+            "x": 0.0,
+            "r": 0.61,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "hood",
+            "y": 1.688,
+            "x": 0.0,
+            "r": 0.5,
+            "z": 0.04
+          }
+        ],
+        "domainStage": "warn",
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 2.8,
+          "visible": false,
+          "step": 5,
+          "kind": "ring"
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.68
+      },
+      {
+        "name": "TimeWraith",
+        "label": "active",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "mantle",
+            "y": 1.2,
+            "x": 0.0,
+            "r": 0.61,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "hood",
+            "y": 1.79,
+            "x": 0.0,
+            "r": 0.5,
+            "z": 0.04
+          }
+        ],
+        "domainStage": "active",
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 2.8,
+          "visible": false,
+          "step": 6,
+          "kind": "ring"
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.03999999999999998
+      },
+      {
+        "name": "TimeWraith",
+        "label": "recover",
+        "state": "ATTACK",
+        "parts": [
+          {
+            "enabled": true,
+            "id": "mantle",
+            "y": 1.2,
+            "x": 0.0,
+            "r": 0.61,
+            "z": 0.0
+          },
+          {
+            "enabled": true,
+            "id": "hood",
+            "y": 1.79,
+            "x": 0.0,
+            "r": 0.5,
+            "z": 0.04
+          }
+        ],
+        "domainStage": "active",
+        "ax": 0,
+        "ay": 0,
+        "warning": {
+          "radius": 2.8,
+          "visible": false,
+          "step": 6,
+          "kind": "ring"
+        },
+        "core": true,
+        "az": 0,
+        "t": 0.24000000000000002
+      }
+    ],
+    "recover": 0.8,
+    "range": 2.8,
+    "telegraph": 0.85,
+    "duration": 3.6
+  }
+]
