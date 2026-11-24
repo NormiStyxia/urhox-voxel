@@ -47,45 +47,44 @@ local Pool={};Pool.__index=Pool
 ---@field cells table<number, boolean>
 local V={};V.__index=V
 
-V.WORLD_CUBES=420
+V.WORLD_CUBES=640
 V.BLADE_CUBES=48
-local PITCH=.07       -- 刀光 / 命中的体素边长（米）
+local PITCH=.09       -- 刀光 / 命中的体素边长（米）
 local GROUND_PITCH=.18
 local FILL=.9         -- 方块占格比例，留一条缝让网格读得出来
 local WHITE,ICE,BLUE,DEEP=1,2,3,4
 
--- 刀光每一行（0 = 最外缘）的时间线。内侧行寿命更短，月牙因此从内向外收。
+-- 刀光每一行（1 = 最外缘）的时间线。内侧行寿命更短，月牙因此从内向外收；
+-- 方块只收一档就整块熄灭，不会缩成散点。
 ---@type SwordVfxStep[][]
 local ARC_ROWS={
-    {{t=0,s=1,c=WHITE},{t=.07,s=1,c=ICE},{t=.15,s=.66,c=ICE},{t=.20,s=.4,c=BLUE},{t=.25}},
-    {{t=0,s=1,c=WHITE},{t=.035,s=1,c=ICE},{t=.10,s=1,c=BLUE},{t=.15,s=.66,c=BLUE},{t=.19,s=.4,c=DEEP},{t=.22}},
-    {{t=0,s=1,c=WHITE},{t=.03,s=1,c=BLUE},{t=.09,s=.66,c=BLUE},{t=.13,s=.4,c=DEEP},{t=.16}},
-    {{t=0,s=1,c=ICE},{t=.03,s=1,c=BLUE},{t=.07,s=.66,c=DEEP},{t=.10,s=.4,c=DEEP},{t=.13}},
-    {{t=0,s=1,c=ICE},{t=.03,s=1,c=DEEP},{t=.06,s=.66,c=DEEP},{t=.09,s=.4,c=DEEP},{t=.11}},
-    {{t=0,s=1,c=BLUE},{t=.03,s=.66,c=DEEP},{t=.06,s=.4,c=DEEP},{t=.08}},
+    {{t=0,s=1,c=WHITE},{t=.07,s=1,c=ICE},{t=.16,s=.72,c=ICE},{t=.22}},
+    {{t=0,s=1,c=WHITE},{t=.04,s=1,c=ICE},{t=.11,s=1,c=BLUE},{t=.16,s=.72,c=BLUE},{t=.20}},
+    {{t=0,s=1,c=WHITE},{t=.03,s=1,c=BLUE},{t=.11,s=.72,c=BLUE},{t=.15}},
+    {{t=0,s=1,c=ICE},{t=.03,s=1,c=BLUE},{t=.08,s=1,c=DEEP},{t=.11,s=.72,c=DEEP},{t=.14}},
+    {{t=0,s=1,c=ICE},{t=.03,s=1,c=DEEP},{t=.08,s=.72,c=DEEP},{t=.11}},
+    {{t=0,s=1,c=BLUE},{t=.03,s=1,c=DEEP},{t=.06,s=.72,c=DEEP},{t=.09}},
+    {{t=0,s=1,c=DEEP},{t=.04,s=.72,c=DEEP},{t=.07}},
 }
--- 外缘每隔几格有一块被离心力甩出两格再消失。
----@type SwordVfxStep[]
-local ARC_SHED={{t=0,s=1,c=WHITE},{t=.07,s=1,c=ICE},{t=.15,s=.7,c=ICE,o=1},{t=.21,s=.5,c=BLUE,o=2},{t=.27,s=.3,c=BLUE,o=3},{t=.32}}
 ---@type table<string, {rows: integer, reach: number}>
 local STYLES={
-    light={rows=4,reach=1},
-    heavy={rows=5,reach=1.5},
-    moon={rows=6,reach=2},
-    cross={rows=5,reach=1.5},
+    light={rows=5,reach=1},
+    heavy={rows=6,reach=1.5},
+    moon={rows=7,reach=2},
+    cross={rows=6,reach=1.5},
 }
 ---@type SwordVfxStep[]
 local HIT_CORE={{t=0,s=2.4,c=WHITE},{t=.05,s=1.6,c=ICE},{t=.09}}
 ---@type SwordVfxStep[]
-local HIT_CUT={{t=0,s=1,c=WHITE},{t=.06,s=.66,c=ICE},{t=.11,s=.4,c=BLUE},{t=.15}}
+local HIT_CUT={{t=0,s=1,c=WHITE},{t=.06,s=1,c=ICE},{t=.11,s=.72,c=BLUE},{t=.15}}
 ---@type SwordVfxStep[]
-local HIT_RING={{t=0,s=1,c=WHITE},{t=.045,s=.8,c=ICE},{t=.09,s=.5,c=BLUE},{t=.13}}
+local HIT_RING={{t=0,s=1,c=WHITE},{t=.045,s=1,c=ICE},{t=.09,s=.72,c=BLUE},{t=.13}}
 ---@type SwordVfxStep[]
 local WAVE={{t=0,s=1,c=WHITE,h=1},{t=.05,s=1,c=ICE,h=.62},{t=.10,s=.8,c=BLUE,h=.3},{t=.15,s=.6,c=DEEP,h=.14},{t=.19}}
 ---@type SwordVfxStep[]
 local CHARGE_RING={{t=0,s=.6,c=DEEP,o=4},{t=.07,s=.75,c=BLUE,o=3},{t=.14,s=.9,c=ICE,o=2},{t=.21,s=1,c=WHITE,o=1},{t=.27}}
 ---@type SwordVfxStep[]
-local CHARGE_BURST={{t=0,s=1,c=WHITE,o=1},{t=.05,s=1,c=ICE,o=2},{t=.10,s=.7,c=BLUE,o=3},{t=.15,s=.45,c=DEEP,o=4},{t=.20}}
+local CHARGE_BURST={{t=0,s=1,c=WHITE,o=1},{t=.05,s=1,c=ICE,o=2},{t=.10,s=.8,c=BLUE,o=3},{t=.15,s=.6,c=DEEP,o=4},{t=.20}}
 
 -- 三个正交菱形环：半径 r 的格点中至少一个坐标为 0 的那些。
 ---@type integer[][][]
@@ -245,7 +244,7 @@ function V.New(scene)
     self.cells={}
     self.style=STYLES.light
     self.stroke,self.has=false,false
-    self.travel,self.edge=0.0,0
+    self.travel=0.0
     self.lrx,self.lry,self.lrz,self.ldx,self.ldy,self.ldz,self.llen=0.0,0.0,0.0,0.0,1.0,0.0,0.0
     self.tx,self.ty,self.tz=0.0,0.0,0.0
     self.chargeClock,self.bladeRotation=0.0,Quaternion()
@@ -259,7 +258,7 @@ function V:Begin(kind)
     self.kind=kind
     self.cells={}
     self.stroke,self.has=true,false
-    self.travel,self.edge=0.0,0
+    self.travel=0.0
     self.blade:Clear('charge')
 end
 
@@ -272,6 +271,8 @@ function V:Column(rx,ry,rz,dx,dy,dz,len)
     local style=self.style
     -- 起手处月牙由窄变宽
     local rows=math.min(style.rows,1+math.floor(self.travel/(PITCH*1.5)))
+    -- 方块快用完时先保外缘，内侧行让位
+    rows=math.min(rows,1+#self.world.free//40)
     local outer=len+style.reach*PITCH
     local cells,world=self.cells,self.world
     local q=0.0
@@ -283,14 +284,7 @@ function V:Column(rx,ry,rz,dx,dy,dz,len)
         local key=Key(cx,cy,cz)
         if not cells[key] then
             cells[key]=true
-            local steps=ARC_ROWS[math.min(#ARC_ROWS,row+1)]
-            local shed=false
-            if row==0 then
-                self.edge=self.edge+1
-                shed=self.edge%5==0
-            end
-            local item=world:Add('arc',shed and ARC_SHED or steps,0,cx*PITCH,cy*PITCH,cz*PITCH,PITCH*FILL)
-            if shed then item.dx,item.dy,item.dz=dx*PITCH,dy*PITCH,dz*PITCH end
+            world:Add('arc',ARC_ROWS[math.min(#ARC_ROWS,row+1)] or ARC_ROWS[1],0,cx*PITCH,cy*PITCH,cz*PITCH,PITCH*FILL)
         end
         q=q+PITCH*.6
     end
