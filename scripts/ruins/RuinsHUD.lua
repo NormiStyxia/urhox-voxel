@@ -23,8 +23,8 @@ local function ForgeHidden()
 end
 local ready=false
 local EMPTY={}
-local SPELL_BUTTONS={{name='shatter',key='左键'},{name='freeze',key='E'},{name='rewind',key='R'}}
-local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键'},{name='heavy',key='右键'},{name='run',icon='sprint',key='Shift'},{name='swap',key='Tab'}}
+local SPELL_BUTTONS={{name='shatter',key='左键',main=true},{name='freeze',key='E'},{name='rewind',key='R'}}
+local COMBAT_BUTTONS={{name='attack',icon='sword',key='左键',main=true},{name='heavy',key='右键'},{name='run',icon='sprint',key='Shift'},{name='swap',key='Tab'}}
 local MESSAGE_STEPS={-4,0,4,0}
 local MESSAGE_ALPHA={.34,.67,1,1}
 local combatObjective={x=0,y=0,h=0}
@@ -38,6 +38,7 @@ local help=false
 local C=Draw.colors
 -- 三个法术的按键色：左键碎时红、E 冻结蓝、R 回溯黄
 local SPELL_COLORS={shatter={255,92,76},freeze={96,160,255},rewind={255,206,96}}
+local SPELL_TEXT_COLORS={shatter={255,148,136},freeze={148,196,255},rewind={255,224,140}}
 local Layer=UI.Panel:Extend('RuinsPixelHUD')
 local function MobileText(text)
     if not Touch.IsEnabled() then return text end
@@ -102,12 +103,10 @@ local function Lines(vg,cached,text,maxWidth,size,touch,mobile)
     cached.valid=fontReady -- 字体加载失败不缓存；PixelDraw.Font 会节流重试。
     return result,widths
 end
--- NineSlice 的 border 单位是源图像素，固定以2倍铺贴。
--- 目标边框实际占24px，文字行盒与边框之间再留8px石板内底。
-local OBJECTIVE_BORDER,OBJECTIVE_INSET,OBJECTIVE_LINE=12,32,16
+local OBJECTIVE_PAD_X,OBJECTIVE_PAD_Y,OBJECTIVE_ACCENT,OBJECTIVE_LINE=12,10,2,16
 local objectiveLayout={}
 local function ObjectiveSize(vg,width,touch)
-    local contentWidth=math.max(12,width-2*OBJECTIVE_INSET)
+    local contentWidth=math.max(12,width-2*OBJECTIVE_PAD_X-OBJECTIVE_ACCENT)
     Lines(vg,headingCache,'时之遗迹',contentWidth,12,touch,false)
     Lines(vg,titleCache,title,contentWidth,12,touch,true)
     Lines(vg,objectiveCache,sub,contentWidth,12,touch,true)
@@ -115,7 +114,7 @@ local function ObjectiveSize(vg,width,touch)
     local y1=math.max(headingCache.bottom,titleCache.bottom,objectiveCache.bottom)
     local step=math.max(OBJECTIVE_LINE,math.ceil((y1-y0+4)/2)*2)
     local count=#headingCache.lines+#titleCache.lines+#objectiveCache.lines
-    return 2*OBJECTIVE_INSET+count*step,step,(y0+y1)/2
+    return 2*OBJECTIVE_PAD_Y+count*step,step,(y0+y1)/2
 end
 local function ObjectiveRows(vg,cached,color,x,y,step,mid,row)
     for i,line in ipairs(cached.lines) do
@@ -128,7 +127,7 @@ local function Objective(vg,w,h,s,touch)
     local left,top=Draw.Snap(s.left+16),Draw.Snap(s.top+16)
     -- 可用宽度向下对齐像素网格，不能向上取整越过右侧安全区。
     local available=math.max(0,math.floor((w-s.right-16-left)/2)*2)
-    local baseWidth=math.min(w<620 and 360 or 260,available)
+    local baseWidth=math.min(w<620 and 320 or 230,available)
     local height=h-s.bottom-16-top
     local scale=graphics:GetDPR()*Draw.Zoom()
     local c=objectiveLayout
@@ -144,10 +143,10 @@ local function Objective(vg,w,h,s,touch)
         c.valid=headingCache.valid and titleCache.valid and objectiveCache.valid
     end
     local ow,oh,step,mid=c.ow,c.oh,c.step,c.mid
-    Draw.NineSlice(vg,'plaque_ink',left,top,ow,oh,OBJECTIVE_BORDER,.9)
-    local x,y=left+OBJECTIVE_INSET,top+OBJECTIVE_INSET
+    Draw.Frame(vg,left,top,ow,oh,C.gold,.94,C.gold)
+    local x,y=left+OBJECTIVE_PAD_X+OBJECTIVE_ACCENT,top+OBJECTIVE_PAD_Y
     Draw.Save(vg)
-    nvgIntersectScissor(vg,x,y,math.max(0,ow-2*OBJECTIVE_INSET),oh-2*OBJECTIVE_INSET)
+    nvgIntersectScissor(vg,x,y,math.max(0,ow-2*OBJECTIVE_PAD_X-OBJECTIVE_ACCENT),oh-2*OBJECTIVE_PAD_Y)
     local row=ObjectiveRows(vg,headingCache,C.gold,x,y,step,mid,0)
     row=ObjectiveRows(vg,titleCache,C.paper,x,y,step,mid,row)
     ObjectiveRows(vg,objectiveCache,C.muted,x,y,step,mid,row)
@@ -168,19 +167,20 @@ local function RenderHUD(self,vg)
     local selecting=wheel and wheel.IsOpen and wheel.IsOpen()
     local preview=not touch and CombatHUD.Preview()
     local left,top,ow,oh,available=Objective(vg,w,h,s,touch)
-    local _,clockWidths=Lines(vg,clockCache,clockText,math.max(12,available-48),12,touch,false)
-    local cw=120
-    for _,width in ipairs(clockWidths) do cw=math.max(cw,math.ceil((width+48)/2)*2) end
+    local _,clockWidths=Lines(vg,clockCache,clockText,math.max(12,available-24),12,touch,false)
+    local cw=96
+    for _,width in ipairs(clockWidths) do cw=math.max(cw,math.ceil((width+24)/2)*2) end
     cw=math.min(available,cw)
-    local ch=math.max(48,32+#clockCache.lines*16)
+    local ch=math.max(28,12+#clockCache.lines*16)
     local cx=Draw.Snap(math.max(left,math.min((w-cw)/2,w-s.right-16-cw)))
     local cy=top
     if CombatHUD.HasBoss() then cy=top+48 end
+    if touch and cx+cw>w-s.right-456 then cy=math.max(cy,s.top+88) end
     -- 按真实矩形避让，而不是固定断点；宽任务卡和非对称安全区
     -- 同样不能与居中的时钟重叠。
-    if cx<left+ow+8 then cy=top+oh+8 end
+    if cx<left+ow+8 then cy=top+oh+6 end
     if not selecting then
-        Draw.NineSlice(vg,'plaque_ink',cx,cy,cw,ch,12,.9)
+        Draw.Frame(vg,cx,cy,cw,ch,{118,140,156},.94)
         for i,line in ipairs(clockCache.lines) do
             Draw.Text(vg,line,cx+cw/2,cy+ch/2+(i-(#clockCache.lines+1)/2)*16,12,C.gold,NVG_ALIGN_CENTER)
         end
@@ -196,9 +196,9 @@ local function RenderHUD(self,vg)
     end
     if not selecting and not preview and not touch and not CombatHUD.Active() then
         for i,b in ipairs(SPELL_BUTTONS) do
-            local x,y=Draw.Snap(w/2+(i-2)*80),Draw.Snap(h-s.bottom-64)
-            Draw.Button(vg,b,x,y,.78,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
-            Draw.Text(vg,b.key,x,y+44,12,SPELL_COLORS[b.name],NVG_ALIGN_CENTER)
+            local x,y=Draw.Snap(w/2+(i-2)*78),Draw.Snap(h-s.bottom-62)
+            Draw.Button(vg,b,x,y,.92,false,false,false,cool[b.name] or 0,cd[b.name] or 1,b.name=='shatter' and charge or 0)
+            Draw.KeyBadge(vg,b.key,x,y+38,SPELL_COLORS[b.name],SPELL_TEXT_COLORS[b.name],.95)
         end
     end
     if not selecting and not preview and not touch and CombatHUD.Active() then
@@ -207,9 +207,9 @@ local function RenderHUD(self,vg)
         -- Sword: heavy = hold left button (cross slash); right button is the bow's crystal shot.
         list[2].key=CombatHUD.Weapon()=='bow' and '右键' or 'Q'
         for i,b in ipairs(list) do
-            local x,y=Draw.Snap(w/2+(i-2.5)*80),Draw.Snap(h-s.bottom-64)
-            Draw.Button(vg,b,x,y,.78,false,false,false,0,1,i==1 and CombatHUD.Charge() or 0)
-            Draw.Text(vg,b.key,x,y+44,12,C.gold,NVG_ALIGN_CENTER)
+            local x,y=Draw.Snap(w/2+(i-2.5)*78),Draw.Snap(h-s.bottom-62)
+            Draw.Button(vg,b,x,y,.92,false,false,false,0,1,i==1 and CombatHUD.Charge() or 0)
+            Draw.KeyBadge(vg,b.key,x,y+38,i==1 and C.gold or nil,C.bright,.95)
         end
     end
     local actionHint=CombatHUD.Hint()
@@ -218,17 +218,17 @@ local function RenderHUD(self,vg)
     if not selecting and not preview and shownHint~='' then
         -- Keep the bottom-center strip in the gap left of the right action cluster.
         -- Longer air instructions wrap instead of covering glide/land buttons.
-        local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(640,w-40)
+        local maxW=touch and math.max(96,math.min(340,w-s.left-s.right-470)) or math.min(460,w-40)
         local hs,widths=Lines(vg,hintCache,shownHint,maxW-32,12,touch,false)
-        local hw=96
+        local hw=72
         for _,width in ipairs(widths) do hw=math.max(hw,Draw.Snap(width+32)) end
-        local hh=math.max(48,24+#hs*16)
+        local hh=math.max(28,12+#hs*16)
         local hx=Draw.Snap((w-hw)/2)
         if touch then hx=math.min(hx,w-s.right-290-hw) end
         hx=math.max(s.left+20,hx)
-        local hy=Draw.Snap(math.max(h-s.bottom-150-hh/2,h/2+40))
-        Draw.NineSlice(vg,'plaque_ink',hx,hy,hw,hh,12,.9)
-        for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.paper,NVG_ALIGN_CENTER) end
+        local hy=Draw.Snap(math.max(h-s.bottom-126-hh/2,h/2+40))
+        Draw.Frame(vg,hx,hy,hw,hh,C.gold,.94)
+        for i,line in ipairs(hs) do Draw.Text(vg,line,hx+hw/2,hy+hh/2+(i-(#hs+1)/2)*16,12,C.white,NVG_ALIGN_CENTER) end
     end
     if not selecting and not preview and (message~='' or hideFrame>0) then
         local maxW=math.max(96,w-s.left-s.right-40)

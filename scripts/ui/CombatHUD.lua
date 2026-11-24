@@ -224,22 +224,25 @@ function H.Render(vg,w,h,s,objective)
             Draw.Rect(vg,Draw.Snap(point.x*w)-size/2,Draw.Snap(point.y*h)-size/2,size,size,C.gold,rangeActive and 1 or .55)
         end
     end
-    local x,y=objective.x,objective.y+objective.h+8
-    local columns=math.min(5,math.max(1,math.floor((w-s.right-x-32)/32)))
+    local x,y=objective.x,objective.y+objective.h+6
+    local columns=math.min(5,math.max(1,math.floor((w-s.right-x-24)/32)))
     local rows=math.ceil(10/columns)
     local shake=moves.invuln>.76 and (math.floor(moves.age*30)%2==0 and 2 or -2) or 0
     x=Draw.Snap(x+shake)
-    Draw.NineSlice(vg,'plaque_ink',x,y,columns*32+24,rows*32+24,8,.9)
+    local padX,padY=10,8
+    local barW=columns*32
+    Draw.Frame(vg,x,y,barW+padX*2,rows*32+padY*2+10,{118,140,156},.94)
     for i=1,10 do
         local hp=moves.hp-(i-1)*10
         local icon=hp>=10 and 'heart_16' or (hp>0 and 'heart_half_16' or 'heart_empty_16')
-        Draw.Image(vg,icon,x+12+((i-1)%columns)*32,y+12+math.floor((i-1)/columns)*32,1)
+        Draw.Image(vg,icon,x+padX+((i-1)%columns)*32,y+padY+math.floor((i-1)/columns)*32,1)
     end
     local trail=trails[moves]
-    local barY=y+rows*32+16
-    Draw.Rect(vg,x+12,barY,columns*32,4,C.deep)
-    Draw.Rect(vg,x+12,barY,Draw.Snap(columns*32*(trail and trail.shown or moves.hp)/moves.maxHP),4,HISTORY)
-    Draw.Rect(vg,x+12,barY,Draw.Snap(columns*32*moves.hp/moves.maxHP),4,RED)
+    local barY=y+padY+rows*32+2
+    Draw.Rect(vg,x+padX-1,barY-1,barW+2,6,{56,74,92})
+    Draw.Rect(vg,x+padX,barY,barW,4,C.deep)
+    Draw.Rect(vg,x+padX,barY,Draw.Snap(barW*(trail and trail.shown or moves.hp)/moves.maxHP),4,HISTORY)
+    Draw.Rect(vg,x+padX,barY,Draw.Snap(barW*moves.hp/moves.maxHP),4,RED)
     if moves.bowFullAt and moves.age-moves.bowFullAt>=0 and moves.age-moves.bowFullAt<.18
         and (moves.clip=='bow_hold' or moves.clip=='bow_draw') then
         Draw.Text(vg,'满蓄',Draw.Snap(w/2),Draw.Snap(h/2-34),12,C.gold,NVG_ALIGN_CENTER)
@@ -280,11 +283,17 @@ function H.Render(vg,w,h,s,objective)
     for _,boss in ipairs(data.enemies or EMPTY) do if boss.boss and boss.aggro and not boss.dead then
         local bw=math.min(320,w-s.left-s.right-32)
         local bx,by=Draw.Snap((w-bw)/2),Draw.Snap(s.top+24)
-        Draw.NineSlice(vg,'bar_frame',bx,by,bw,36,6,1)
-        Draw.Text(vg,'石甲兽',bx+bw/2,by-8,12,C.paper,NVG_ALIGN_CENTER)
-        Draw.Rect(vg,bx+12,by+12,Draw.Snap((bw-24)*(trails[boss] and trails[boss].shown or boss.hp)/boss.maxHP),6,HISTORY)
-        Draw.NineSlice(vg,'bar_fill_red',bx+12,by+12,Draw.Snap((bw-24)*boss.hp/boss.maxHP),6,0,1)
-        Draw.NineSlice(vg,'bar_fill_blue',bx+12,by+20,Draw.Snap((bw-24)*(boss.poise or 0)/(boss.maxPoise or 100)),4,0,1)
+        Draw.Frame(vg,bx,by,bw,32,C.gold,.95)
+        Draw.Text(vg,'石甲兽',bx+bw/2+1,by-8,12,C.deep,NVG_ALIGN_CENTER,.85)
+        Draw.Text(vg,'石甲兽',bx+bw/2,by-9,12,C.paper,NVG_ALIGN_CENTER)
+        local innerW=bw-20
+        Draw.Rect(vg,bx+9,by+9,innerW+2,8,{56,74,92})
+        Draw.Rect(vg,bx+10,by+10,innerW,6,C.deep)
+        Draw.Rect(vg,bx+10,by+10,Draw.Snap(innerW*(trails[boss] and trails[boss].shown or boss.hp)/boss.maxHP),6,HISTORY)
+        Draw.Rect(vg,bx+10,by+10,Draw.Snap(innerW*boss.hp/boss.maxHP),6,RED)
+        Draw.Rect(vg,bx+9,by+19,innerW+2,6,{56,74,92})
+        Draw.Rect(vg,bx+10,by+20,innerW,4,C.deep)
+        Draw.Rect(vg,bx+10,by+20,Draw.Snap(innerW*(boss.poise or 0)/(boss.maxPoise or 100)),4,{78,156,242})
         break
     end end
     local partNotice=moves.partNotice --[[@as {part:string,untilTime:number}|nil]]
@@ -302,9 +311,9 @@ function H.Render(vg,w,h,s,objective)
     end
     if data.debug then
         local lines=debugLines
-        Draw.NineSlice(vg,'plaque_ink',s.left+16,s.top+16,math.min(500,w-s.left-s.right-32),48+#lines*16,8,1)
-        for i,line in ipairs(lines) do Draw.Text(vg,line,s.left+32,s.top+32+(i-1)*16,12,C.gold) end
-        Draw.Text(vg,feedbackDebug,s.left+32,s.top+32+#lines*16,12,C.gold)
+        Draw.Frame(vg,s.left+16,s.top+16,math.min(500,w-s.left-s.right-32),28+#lines*16,{118,140,156},.95)
+        for i,line in ipairs(lines) do Draw.Text(vg,line,s.left+28,s.top+28+(i-1)*16,12,C.gold) end
+        Draw.Text(vg,feedbackDebug,s.left+28,s.top+28+#lines*16,12,C.gold)
     end
 end
 return H

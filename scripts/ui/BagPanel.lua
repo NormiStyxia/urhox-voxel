@@ -192,16 +192,18 @@ local function DrawWeaponSprite(vg, id, class, x, y)
     end
 end
 
-local function DrawItemIcon(vg, item, x, y)
-    if item.iconPath and item.iconPath ~= '' and Draw.ImagePixels(vg, item.iconPath, x, y) then return end
+local function DrawItemIcon(vg, item, x, y, pad20, useDetail)
+    local path = useDetail and item.detailIconPath or item.iconPath
+    local offset = (not useDetail and item.kind ~= 'weapon' and pad20) and pad20 or 0
+    if path and path ~= '' and Draw.ImagePixels(vg, path, x + offset, y + offset) then return end
     if item.kind == 'weapon' then
-        DrawWeaponSprite(vg, item.id, item.class, x, y)
+        DrawWeaponSprite(vg, item.id, item.class, x + (useDetail and 4 or 1), y + (useDetail and 4 or 1))
     elseif item.drawIcon then
-        item.drawIcon(vg, x, y)
+        item.drawIcon(vg, x + offset, y + offset)
     else
-        Rect(vg, x + 4, y + 4, 12, 12, P.outline)
-        Rect(vg, x + 5, y + 5, 10, 10, item.roleColor or P.gold)
-        Rect(vg, x + 7, y + 7, 4, 4, P.light)
+        Rect(vg, x + offset + 4, y + offset + 4, 12, 12, P.outline)
+        Rect(vg, x + offset + 5, y + offset + 5, 10, 10, item.roleColor or P.gold)
+        Rect(vg, x + offset + 7, y + offset + 7, 4, 4, P.light)
     end
 end
 
@@ -266,6 +268,8 @@ local function CollectWeapons(progress, filterId, bag)
                             level = level,
                             attack = item.attack * (1 + (level - 1) * .1),
                             subStat = item.sub and ((STATS[item.sub.stat] or item.sub.stat) .. (' +%d%%'):format(Round(item.sub.bonus * 100))) or '',
+                            iconPath = 'ui/forge/weapons/' .. item.id .. '_22.png',
+                            detailIconPath = 'ui/forge/weapons/' .. item.id .. '_28.png',
                             subtitle = ('%s · %s · Lv.%d/%d'):format(CLASS_NAMES[class], tierLabel, level, Catalog.LevelCap),
                             description = (passive and ('被动[' .. passive[1] .. '] ' .. passive[2]) or '') .. '\n时印：' .. table.concat(names, ' / '),
                             count = 1,
@@ -469,11 +473,11 @@ local function DrawCard(vg, item, x, y, h, selected)
     elseif item.equipped then
         Rect(vg, x + 1, y + 1, 2, h - 2, P.green)
     end
-    local iconY = y + math.floor((h - 20) * .5)
-    Rect(vg, x + 4, iconY - 1, 22, 22, P.line)
-    Rect(vg, x + 5, iconY, 20, 20, P.paperDeep)
-    DrawItemIcon(vg, item, x + 5, iconY)
-    local textX, textRight = x + 30, x + CARD_W - 4
+    local iconY = y + math.floor((h - 22) * .5)
+    Rect(vg, x + 4, iconY - 1, 24, 24, P.line)
+    Rect(vg, x + 5, iconY, 22, 22, P.paperDeep)
+    DrawItemIcon(vg, item, x + 5, iconY, 1, false)
+    local textX, textRight = x + 31, x + CARD_W - 4
     local y1 = y + math.floor(h * .34)
     local y2 = y + math.floor(h * .71)
     Text(vg, FitText(vg, item.name, textRight - textX, 6), textX, y1, P.ink, NVG_ALIGN_LEFT, 6)
@@ -499,38 +503,40 @@ local function DrawDetail(vg, s, item, bag, L)
         return
     end
     local top = L.detailTop
-    Rect(vg, RX, top, 26, 26, P.edge); Rect(vg, RX + 1, top + 1, 24, 24, P.paper)
-    DrawItemIcon(vg, item, RX + 3, top + 3)
-    Text(vg, FitText(vg, item.name, RW - 32, 6), RX + 30, top + 7, P.ink, NVG_ALIGN_LEFT, 6)
-    Text(vg, FitText(vg, item.subtitle or '', RW - 32, 5), RX + 30, top + 19, item.roleColor or P.muted, NVG_ALIGN_LEFT, 5)
-    Line(vg, RX, top + 30, RW)
-    local row1 = top + 39
-    local row2 = top + 51
+    local boxSize = item.detailIconPath and 32 or 26
+    Rect(vg, RX, top, boxSize, boxSize, P.edge); Rect(vg, RX + 1, top + 1, boxSize - 2, boxSize - 2, P.paper)
+    DrawItemIcon(vg, item, RX + (item.detailIconPath and 2 or 3), top + (item.detailIconPath and 2 or 3), 0, true)
+    Text(vg, FitText(vg, item.name, RW - boxSize - 6, 6), RX + boxSize + 4, top + (item.detailIconPath and 9 or 7), P.ink, NVG_ALIGN_LEFT, 6)
+    Text(vg, FitText(vg, item.subtitle or '', RW - boxSize - 6, 5), RX + boxSize + 4, top + (item.detailIconPath and 22 or 19), item.roleColor or P.muted, NVG_ALIGN_LEFT, 5)
+    local lineY = top + boxSize + 4
+    Line(vg, RX, lineY, RW)
+    local row1 = lineY + 9
+    local row2 = lineY + 21
     if item.kind == 'material' then
         Text(vg, '持有数量', RX, row1, P.muted); Right(vg, '×' .. tostring(item.count), RX + RW, row1, P.blue)
-        Line(vg, RX, top + 48, RW)
+        Line(vg, RX, lineY + 18, RW)
         local maxLines = L.compact and 5 or 7
         for i, line in ipairs(WrapText(vg, item.description, RW, 6, maxLines)) do
-            Text(vg, line, RX, top + 58 + (i - 1) * 11, P.ink)
+            Text(vg, line, RX, lineY + 28 + (i - 1) * 11, P.ink)
         end
         return
     elseif item.kind == 'weapon' then
         Text(vg, '基础攻击', RX, row1, P.muted); Right(vg, ('%.1f'):format(item.attack or 0), RX + RW, row1, P.ink)
         Text(vg, '固有词条', RX, row2, P.muted, NVG_ALIGN_LEFT, 5); Right(vg, item.subStat or '-', RX + RW, row2, P.blue, 5)
-        Line(vg, RX, top + 58, RW)
+        Line(vg, RX, lineY + 28, RW)
         local maxLines = L.compact and 4 or 5
         for i, line in ipairs(WrapText(vg, item.description, RW, 5, maxLines)) do
-            Text(vg, line, RX, top + 67 + (i - 1) * 10, i == 1 and P.rank or P.ink, NVG_ALIGN_LEFT, 5)
+            Text(vg, line, RX, lineY + 37 + (i - 1) * 10, i == 1 and P.rank or P.ink, NVG_ALIGN_LEFT, 5)
         end
     elseif item.kind == 'imprint' then
         Text(vg, '持有数量', RX, row1, P.muted)
         Right(vg, ('×%d（闲置 %d）'):format(item.count, item.idleCount or 0), RX + RW, row1, P.blue, 5)
         Text(vg, '词条加成', RX, row2, P.muted, NVG_ALIGN_LEFT, 5)
         Right(vg, item.benefit or '-', RX + RW, row2, item.roleColor or P.green, 5)
-        Line(vg, RX, top + 58, RW)
+        Line(vg, RX, lineY + 28, RW)
         local maxLines = L.compact and 4 or 5
         for i, line in ipairs(WrapText(vg, item.description, RW, 5, maxLines)) do
-            Text(vg, line, RX, top + 67 + (i - 1) * 10, P.ink, NVG_ALIGN_LEFT, 5)
+            Text(vg, line, RX, lineY + 37 + (i - 1) * 10, P.ink, NVG_ALIGN_LEFT, 5)
         end
     end
     if state.notice then

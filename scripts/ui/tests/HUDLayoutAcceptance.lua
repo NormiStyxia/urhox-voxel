@@ -5,7 +5,7 @@ local V=_G['V']
 local UI=require('urhox-libs/UI')
 local Draw=require('ui.PixelDraw')
 local Touch=require('ui.TouchInput')
-local oldBegin,oldFinish,oldNineSlice,oldText,oldWidth=Draw.Begin,Draw.Finish,Draw.NineSlice,Draw.Text,Draw.TextWidth
+local oldBegin,oldFinish,oldFrame,oldText,oldWidth=Draw.Begin,Draw.Finish,Draw.Frame,Draw.Text,Draw.TextWidth
 local oldGraphics,oldSafeArea=graphics,UI.GetSafeAreaInsets
 local oldTouch=Touch.IsEnabled()
 local bounds={}
@@ -26,8 +26,8 @@ function Draw.Begin(vg,screen)
     capture={panels=0,title='',sub='',inside=true,rows=0}
     measureCount=0
 end
-function Draw.NineSlice(vg,name,x,y,w,h,border,alpha)
-    oldNineSlice(vg,name,x,y,w,h,border,alpha)
+function Draw.Frame(vg,x,y,w,h,border,alpha,accent)
+    oldFrame(vg,x,y,w,h,border,alpha,accent)
     capture.panels=capture.panels+1
     if capture.panels==1 then
         capture.x,capture.y,capture.w,capture.h=x,y,w,h
@@ -42,8 +42,8 @@ function Draw.Text(vg,text,x,y,size,color,align,alpha)
         oldWidth(vg,text,size,bounds)
         local xx,yy=math.floor(x+.5),math.floor(y+.5)
         if text~='' then
-            local fits=xx+bounds[1]>=capture.x+32-.01 and xx+bounds[3]<=capture.x+capture.w-32+.01
-                and yy+bounds[2]>=capture.y+32-.01 and yy+bounds[4]<=capture.y+capture.h-32+.01
+            local fits=xx+bounds[1]>=capture.x+14-.01 and xx+bounds[3]<=capture.x+capture.w-12+.01
+                and yy+bounds[2]>=capture.y+10-.01 and yy+bounds[4]<=capture.y+capture.h-10+.01
             capture.inside=capture.inside and fits
         end
         if color==Draw.colors.paper then capture.title=capture.title..text end
@@ -68,13 +68,13 @@ function Draw.Finish(vg)
     if capture.title~=Flat(expected[1]) or capture.sub~=Flat(expected[2]) then return end
     stable=stable+1
     if stable==2 then
-        V.assert(capture.inside,key..' 每个完整字形都处于24px边框加8px内距之内')
+        V.assert(capture.inside,key..' 每个完整字形都处于1px边框加内距之内')
         V.assert(capture.title==Flat(expected[1]) and capture.sub==Flat(expected[2]),key..' 标题与正文全文保留')
         local w,h,s=Draw.Metrics()
         V.assert(capture.x>=s.left and capture.x+capture.w<=w-s.right+.01,key..' 面板宽度位于安全区内')
         V.assert(capture.y+capture.h<=h-s.bottom+.01,key..' 完整面板高度位于安全区内')
         local clock=capture.clock
-        V.assert(clock.x>=capture.x+capture.w+8 or clock.y>=capture.y+capture.h+8,key..' 时钟避开任务卡')
+        V.assert(clock.x>=capture.x+capture.w+8 or clock.y>=capture.y+capture.h+6,key..' 时钟避开任务卡')
         V.assert(clock.x>=s.left and clock.x+clock.w<=w-s.right+.01,key..' 时钟宽度位于安全区内')
         V.assert(measureCount==0,key..' 稳定帧直接复用文本布局，不重新测量')
         verified=verified+1
@@ -112,7 +112,7 @@ for _,mode in ipairs({{1,false,false},{2,true,false},{2,true,true}}) do
 end
 V.atFrame(frame+2,function()
     V.assert(verified==21,'七组全文用例均通过DPR1、DPR2与触控安全区验证')
-    Draw.Begin,Draw.Finish,Draw.NineSlice,Draw.Text,Draw.TextWidth=oldBegin,oldFinish,oldNineSlice,oldText,oldWidth
+    Draw.Begin,Draw.Finish,Draw.Frame,Draw.Text,Draw.TextWidth=oldBegin,oldFinish,oldFrame,oldText,oldWidth
     graphics=oldGraphics; UI.GetSafeAreaInsets=oldSafeArea; UI.SetScale(UI.Scale.DEFAULT)
     if Touch.IsEnabled()~=oldTouch then Touch.Toggle() end
     V.finish()
