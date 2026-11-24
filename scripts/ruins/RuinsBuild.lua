@@ -820,12 +820,18 @@ local function Reserved(x, z)
 end
 M.Reserved = Reserved
 
+M.trees = {}
 -- 树 / 灌木是网格（RuinsTrees），不是体素：树冠是起伏的叶团，枝干是弯曲的管
 local function Tree(world, x, z, o)
     if not o.force and Reserved(x, z) then return nil end
     if not Terrain.HasGround(x,z,1.0) then return nil end
     local gy = Terrain.HeightAt(x, z) - 0.05
-    return Trees.Tree(M.scene, world, x, gy, z, o)
+    local node = Trees.Tree(M.scene, world, x, gy, z, o)
+    if node then
+        local idx = #M.trees + 1
+        M.trees[idx] = { id = o.id or ('tree_' .. idx), x = x, y = gy, z = z, trunk = o.trunk or 0.45 }
+    end
+    return node
 end
 
 local function Crystal(b, x, y, z, h, r, tilt, a)
@@ -847,8 +853,8 @@ M.Crystal = Crystal
 local function BuildVegetation(world)
     local rng = Noise.Rng(2026)
     -- 金叶古树：龙庭东南、西北各一棵，内环上（作为构图焦点）
-    Tree(world, 30.5, -14, { force = true, h = 9, r = 4.5, trunk = 0.7, gold = true, lean = 1.2, leanA = pi })
-    Tree(world, -31, 15, { force = true, h = 10, r = 5.0, trunk = 0.75, gold = true, lean = 1.4, leanA = 0.3 })
+    Tree(world, 30.5, -14, { id = 'east_ancient', force = true, h = 9, r = 4.5, trunk = 0.7, gold = true, lean = 1.2, leanA = pi })
+    Tree(world, -31, 15, { id = 'west_ancient', force = true, h = 10, r = 5.0, trunk = 0.75, gold = true, lean = 1.4, leanA = 0.3 })
     -- 外环普通树：沿外环随机，避开道路和城墙
     local placed = 0
     for i = 1, 60 do
@@ -969,7 +975,7 @@ end
 -- ---------------------------------------------------------------- 入口
 -- Native scenery is owned by the scene; release this module's references.
 function M.Stop()
-    M.volumes,M.floaters,M.stairVolumes={},{},{}
+    M.volumes,M.floaters,M.stairVolumes,M.trees={},{},{},{}
     M.colBroken,M.ribs=nil,nil
     M.scene=nil
 end

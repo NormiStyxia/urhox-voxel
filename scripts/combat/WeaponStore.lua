@@ -56,6 +56,11 @@ end
 local function Integer(n,lo,hi)
     return type(n)=='number' and n%1==0 and n>=lo and n<=hi
 end
+local function NowSeconds()
+    local ok,v=pcall(os.time)
+    return ok and type(v)=='number' and v>=0 and math.floor(v) or 0
+end
+Store.NowSeconds=NowSeconds
 local function ReadProgress(source)
     if type(source)~='table' or type(source.slots)~='table' or not Integer(source.ore,0,MAX_COUNT)
         or not Integer(source.sand,0,MAX_COUNT) then return nil end
@@ -76,8 +81,14 @@ local function ReadProgress(source)
         end
     end
     if type(source.siteClaims)=='table' then
-        for key in pairs(Materials.SiteByKey) do
-            if source.siteClaims[key]==true then result.siteClaims[key]=true end
+        local now=NowSeconds()
+        local ttl=Materials.SiteRespawnSeconds or 180
+        for key,stamp in pairs(source.siteClaims) do
+            if (Materials.SiteByKey[key] or Materials.IsTreeSiteKey(key))
+                and type(stamp)=='number' and stamp%1==0 and stamp>0
+                and (now<=0 or (now-stamp)<ttl) then
+                result.siteClaims[key]=stamp
+            end
         end
     end
     for _,class in ipairs(Catalog.Classes) do
@@ -269,11 +280,11 @@ function Store.AddMaterial(rig,id,count,trainingKind,siteKey)
         end
         progress.trainingClaims[trainingKind]=true
     elseif siteKey then
-        local site=Materials.SiteByKey[siteKey]
-        if not site or site[2]~=id or site[3]~=count or progress.siteClaims[siteKey] then
-            return false,'此处已经采集'
+        local now=NowSeconds()
+        if not Materials.ValidSite(siteKey,id,count) or Materials.IsSiteClaimed(progress.siteClaims,siteKey,now) then
+            return false,'此处还在恢复中'
         end
-        progress.siteClaims[siteKey]=true
+        progress.siteClaims[siteKey]=now>0 and now or 1
     end
     if (progress.materials[id] or 0)+count>MAX_COUNT then return false,'材料已达堆叠上限' end
     progress.materials[id]=(progress.materials[id] or 0)+count

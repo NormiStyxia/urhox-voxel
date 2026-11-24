@@ -16,6 +16,7 @@ function Vec:CrossProduct(b)
     return Vector3(self.y*b.z-self.z*b.y,self.z*b.x-self.x*b.z,self.x*b.y-self.y*b.x)
 end
 function Ray(origin,direction) return {origin=origin,direction=direction} end
+function Quaternion(deg,axis) return {deg=deg,axis=axis} end
 function Color(r,g,b,a)
     assert(r>=0 and r<=1 and g>=0 and g<=1 and b>=0 and b<=1,'resource colour out of range')
     return {r,g,b,a}
@@ -73,19 +74,20 @@ end
 local function unexpectedGrant() error('unexpected inventory grant') end
 local safe=Vector3(3,0,-5.4)
 
--- Restore one receipt and collect every other site. Check all five catalog
--- fields so swapping x/count or silently setting all yields to 1 fails here.
+-- Restore one receipt and collect every other site (including dynamic trees).
 local restored='site:'..Catalog.Sites[#Catalog.Sites][1]
-local training,world=build({training=true,wasClaimed=function(key,kind)
-    return kind=='time_wraith' or key==restored
+local claimedMap={[restored]=true}
+local sampleTrees={{id='east_ancient',x=30.5,z=-14,trunk=.7},{id='tree_3',x=49.46,z=31.01,trunk=.45}}
+local training,world=build({training=true,trees=sampleTrees,wasClaimed=function(key,kind)
+    return kind=='time_wraith' or claimedMap[key]==true
 end})
 for _,site in ipairs(Catalog.Sites) do
-    local name,itemId,count,x,z,tree=table.unpack(site)
+    local name,itemId,count,x,z,mode=table.unpack(site)
     local key='site:'..name
     local item=assert(training.entries[key],key..' missing')
     assert(item.itemId==itemId and item.count==count,key..' yield')
+    local tree=mode=='tree'
     if tree then
-        -- Existing trees: the interaction point is beside the trunk, no collider is created.
         local dx,dz=item.position.x-x,item.position.z-z
         assert(math.sqrt(dx*dx+dz*dz)<2.4 and math.sqrt(dx*dx+dz*dz)>1.0,key..' trunk standoff')
         assert(not item.baseCollider and not item.upperCollider,key..' must not add collision')
@@ -107,6 +109,22 @@ for _,site in ipairs(Catalog.Sites) do
     end
     assert(not training:Claim(key,item.position,unexpectedGrant))
 end
+for _,t in ipairs(sampleTrees) do
+    local key='site:'..t.id
+    local item=assert(training.entries[key],key..' dynamic tree missing')
+    assert(item.tree and not item.baseCollider and not item.upperCollider)
+    local dx,dz=item.position.x-t.x,item.position.z-t.z
+    assert(math.sqrt(dx*dx+dz*dz)<2.4 and math.sqrt(dx*dx+dz*dz)>1.0,key..' trunk standoff')
+    assert(training:Claim(key,item.position,function(d)
+        assert(d.itemId=='timber' and d.count==2 and d.verb=='取木')
+        return true
+    end))
+    assert(item.spent and item.remains)
+end
+-- Respawn: once wasClaimed expires, Refresh restores stock, clears woodchips and restores collider.
+claimedMap[restored]=false
+assert(training:Refresh()>=1)
+assert(not training.entries[restored].spent and training.entries[restored].stock and training.entries[restored].upperCollider)
 assert(not training:SpawnDrop('beetle',safe),'unknown kind')
 assert(not training:SpawnDrop('time_wraith',safe),'restored training receipt')
 local id=assert(training:SpawnDrop('wood_spirit',Vector3(0,12,-45),safe))

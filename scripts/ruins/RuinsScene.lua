@@ -620,6 +620,10 @@ function Resources.interact(target)
 end
 
 function Resources.present(cameraNode)
+    if Resources.live and time_>=(Resources.nextRefreshAt or 0) then
+        Resources.nextRefreshAt=time_+1
+        Resources.live:Refresh()
+    end
     local target=Resources.nearest()
     if not target then Resources.prompt.Clear(); return end
     local offset=target.source=='drop' and .45 or 1.15
@@ -1155,11 +1159,11 @@ function M.Start()
         handPos = function() return nomi_:HandPos() end,
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
-    Resources.live=Resources.world.New(scene_,world_,{training=M.trainingMode,cast=CombatCast,
+    Resources.live=Resources.world.New(scene_,world_,{training=M.trainingMode,cast=CombatCast,trees=Build.trees,
         wasClaimed=function(key,kind)
             local progress=combatRig_.config.progress
             if kind then return progress.trainingClaims[kind] end
-            return progress.siteClaims[key]
+            return Resources.catalog.IsSiteClaimed(progress.siteClaims,key,WeaponStore.NowSeconds())
         end})
     world_:OptimizeBroadPhase()
     do
@@ -2444,7 +2448,7 @@ end
 function M.Stop()
     if M.trainingStation then M.trainingStation:Destroy(); M.trainingStation=nil end
     Training.release=false
-    Resources.prompt.Clear();Resources.consumed=false
+    Resources.prompt.Clear();Resources.consumed=false;Resources.nextRefreshAt=nil
     if Resources.live then Resources.live:Destroy();Resources.live=nil end
     TouchControls.onGatherHit,TouchControls.onGather=nil,nil
     if M.housePanel then M.housePanel:Close();M.housePanel=nil;TouchControls.housePanel=nil end

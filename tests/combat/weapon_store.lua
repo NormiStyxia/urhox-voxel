@@ -214,6 +214,7 @@ assert(not next(rig.config.progress.materials) and not next(rig.config.progress.
 fault=''
 assert(Store.AddMaterial(rig,'wood_resin',1,'wood_spirit'))
 assert(Store.AddMaterial(rig,'timber',2,nil,'site:east_ancient'))
+assert(Store.AddMaterial(rig,'timber',2,nil,'site:tree_3'))
 assert(Store.AddMaterial(rig,'crystal_ore',1,nil,'site:court_vein'))
 assert(not Store.AddMaterial(rig,'crystal_ore',2,nil,'site:south_vein'))
 assert(not Store.AddMaterial(rig,'ore',1))
@@ -221,13 +222,28 @@ rig.config=Store.Load()
 assert(rig.config.progress.imprintDrops==imprintCursor and Materials.Count(rig.config.progress,'sand')==26)
 assert(not Store.AddMaterial(rig,'wood_resin',1,'wood_spirit'))
 assert(not Store.AddMaterial(rig,'timber',2,nil,'site:east_ancient'))
+-- Legacy boolean siteClaims in older saves are automatically refreshed on load, while inventory stays intact.
+local legacyBool=Store.Normalize(rig.config)
+legacyBool.progress.siteClaims['site:court_quarry']=true
+disk['weapons-v1.json']=cjson.encode(legacyBool)
+rig.config=Store.Load()
+assert(rig.config.progress.siteClaims['site:court_quarry']==nil,'legacy boolean siteClaim refreshed')
+assert(rig.config.progress.siteClaims['site:court_vein']~=nil,'numeric timestamp preserved')
+-- Respawn expiry: advancing clock past SiteRespawnSeconds lets the site be claimed again.
+local realTime=os.time
+local fakeTime=realTime()+Materials.SiteRespawnSeconds+5
+os.time=function() return fakeTime end
+rig.config=Store.Load()
+assert(rig.config.progress.siteClaims['site:court_vein']==nil,'expired siteClaim refreshed')
+assert(Store.AddMaterial(rig,'crystal_ore',1,nil,'site:court_vein'))
+os.time=realTime
 assert(Store.AddMaterial(rig,'wood_resin',1))
 assert(Forge('level','iron'))
 assert(Store.RewardKill(rig))
 rig.config=Store.Load()
 assert(Materials.Count(rig.config.progress,'ore')==49 and Materials.Count(rig.config.progress,'sand')==28)
-assert(Materials.Count(rig.config.progress,'wood_resin')==2 and Materials.Count(rig.config.progress,'timber')==2)
-assert(Materials.Count(rig.config.progress,'crystal_ore')==1)
+assert(Materials.Count(rig.config.progress,'wood_resin')==2 and Materials.Count(rig.config.progress,'timber')==4)
+assert(Materials.Count(rig.config.progress,'crystal_ore')==2)
 assert(rig.config.progress.siteClaims['site:court_vein'] and rig.config.progress.trainingClaims.wood_spirit)
 print('weapon_store: materials migration, inventory and source receipts, retry, and forge integration PASS')
 

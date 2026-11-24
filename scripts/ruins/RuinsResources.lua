@@ -14,6 +14,7 @@ R.__index=R
 local verbs={timber='取木',crystal_ore='采矿',stone='采石'}
 local mask=0xffffffff & ~2 -- same environment mask as the walking controller
 local down=Vector3(0,-1,0)
+local up=Vector3(0,1,0)
 local directions={{1,0},{.707,.707},{0,1},{-.707,.707},{-1,0},{-.707,-.707},{0,-1},{.707,-.707}}
 
 local function castWorld(world,origin,direction,distance)
@@ -112,35 +113,71 @@ local function claimed(self,key,trainingKind)
     return key and (self.receipts[key] or (self.wasClaimed and self.wasClaimed(key,trainingKind)))
 end
 
--- Timber comes from trees the ruins already grows: the site stands on the
--- courtyard side of the trunk (clear of its hidden collider) and owns no volume.
-local TRUNK_STANDOFF=1.55
-local function addSite(self,def)
-    local site,itemId,count,x,z,tree=table.unpack(def)
-    local anchor,width=Vector3(x,0,z),.8
-    if tree then
-        local length=math.max(.001,math.sqrt(x*x+z*z))
-        anchor=Vector3(x-x/length*TRUNK_STANDOFF,0,z-z/length*TRUNK_STANDOFF)
-        width=.3
-    end
-    local pos=landing(self,anchor,nil,width,1.0)
-    if not pos then
-        print('RuinsResources: no walkable ground for '..site)
-        return
-    end
+local function orient(node,dx,dz)
+    if not Quaternion or (dx*dx+dz*dz)<1e-6 then return end
+    node.rotation=Quaternion(math.deg(math.atan(dx,dz)),up)
+end
+
+local function registerSite(self,site,itemId,count,pos,tree,faceDx,faceDz)
     local key='site:'..site
     local spent=claimed(self,key)
     local node=self.root:CreateChild(site)
     node.position=pos
+    if faceDx and faceDz then orient(node,faceDx,faceDz) end
     local item={id=key,key=key,source='site',itemId=itemId,count=count,position=pos,node=node,spent=spent,tree=tree}
     item.stock=Models.Site(node,itemId,self.materials,spent)
     if spent then item.remains=Models.Harvested(node,itemId,self.materials) end
     if not tree then
-        local baseHeight=itemId=='timber' and 2 or 1
-        item.baseCollider=collider(self.world,pos,4,baseHeight,0)
-        if not spent then item.upperCollider=collider(self.world,pos,3,2,baseHeight*.25) end
+        item.baseCollider=collider(self.world,pos,4,1,0)
+        if not spent then item.upperCollider=collider(self.world,pos,3,2,.25) end
     end
     self.entries[item.id]=item
+end
+
+local function addSite(self,def)
+    local site,itemId,count,x,z,mode,faceX,faceZ=table.unpack(def)
+    local wall=mode=='wall'
+    local tree=mode=='tree'
+    local anchor,width=Vector3(x,0,z),wall and .35 or .8
+    if tree then
+        local length=math.max(.001,math.sqrt(x*x+z*z))
+        anchor=Vector3(x-x/length*1.55,0,z-z/length*1.55)
+        width=.25
+    end
+    local pos=landing(self,anchor,nil,width,.9)
+    if not pos then
+        print('RuinsResources: no walkable ground for '..site)
+        return
+    end
+    local fdx,fdz
+    if faceX and faceZ then fdx,fdz=faceX-pos.x,faceZ-pos.z end
+    registerSite(self,site,itemId,count,pos,tree,fdx,fdz)
+end
+
+-- Timber comes from every tree the ruins already grows: place a compact woodpile
+-- right beside the trunk (clear of its hidden collider) and own no volume.
+local function addTreeSite(self,tree)
+    local tx,tz=tree.x,tree.z
+    local standoff=math.max(1.25,(tree.trunk or .45)*.8+.75)
+    local len=math.max(.001,math.sqrt(tx*tx+tz*tz))
+    local ix,iz=-tx/len,-tz/len
+    local pos
+    local function tryAt(px,pz)
+        local p=clearFloor(self.world,px,pz,.25)
+        if p and hasRoom(self,p,.85) then return p end
+    end
+    pos=tryAt(tx+ix*standoff,tz+iz*standoff)
+    if not pos then
+        for _,d in ipairs(directions) do
+            pos=tryAt(tx+d[1]*standoff,tz+d[2]*standoff)
+            if pos then break end
+        end
+    end
+    if not pos then
+        print('RuinsResources: no walkable ground for '..tostring(tree.id))
+        return
+    end
+    registerSite(self,tree.id,Catalog.TreeYield.id,Catalog.TreeYield.count,pos,true,pos.x-tx,pos.z-tz)
 end
 
 function R.New(scene,world,options)
@@ -149,6 +186,9 @@ function R.New(scene,world,options)
         training=options.training==true,cast=options.cast,wasClaimed=options.wasClaimed,
         materials=Models.Materials(),entries={},receipts={},nextId=0},R)
     for _,def in ipairs(Catalog.Sites) do addSite(self,def) end
+    if type(options.trees)=='table' then
+        for _,tree in ipairs(options.trees) do addTreeSite(self,tree) end
+    end
     return self
 end
 
@@ -242,6 +282,24 @@ function R:Claim(id,feet,grant)
         item.upperCollider=nil
     end
     return true,message
+end
+
+function R:Refresh()
+    if not self.wasClaimed or not self.root then return 0 end
+    local restored=0
+    for _,item in pairs(self.entries) do
+        if item.source=='site' and item.spent and not self.wasClaimed(item.key,nil) then
+            self.receipts[item.key]=nil
+            item.spent=false
+            if item.remains then item.remains:Remove(); item.remains=nil end
+            item.stock=Models.Restock(item.node,item.itemId,self.materials)
+            if not item.tree and not item.upperCollider then
+                item.upperCollider=collider(self.world,item.position,3,2,.25)
+            end
+            restored=restored+1
+        end
+    end
+    return restored
 end
 
 function R:Destroy()
