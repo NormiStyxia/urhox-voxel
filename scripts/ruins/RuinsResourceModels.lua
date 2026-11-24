@@ -20,22 +20,22 @@ end
 
 function M.Materials()
     local mats={}
-    for _,finish in ipairs({'matte','gem','beam','glass'}) do
+    for _,finish in ipairs({'matte','stone','gem','beam','glass'}) do
         local mat=Material:new()
         local path=finish=='beam' and 'Techniques/NoTextureUnlit.xml'
             or finish=='glass' and 'Techniques/PBR/PBRNoTextureAlpha.xml' or 'Techniques/PBR/PBRNoTexture.xml'
         mat:SetTechnique(0,cache:GetResource('Technique',path))
         mat.vertexShaderDefines='VERTEXCOLOR'
         mat.pixelShaderDefines='VERTEXCOLOR'
-        mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,finish=='glass' and .44 or 1)))
+        mat:SetShaderParameter('MatDiffColor',Variant(Color(1,1,1,finish=='glass' and .34 or 1)))
         if finish=='glass' then
             -- Translucent shell: both faces drawn so the inner facets and the
             -- bright core read through it, with a faint self-glow like cut gem.
             mat:SetCullMode(CULL_NONE)
-            mat:SetShaderParameter('MatEmissiveColor',Variant(Color(.06,.28,.26)))
+            mat:SetShaderParameter('MatEmissiveColor',Variant(Color(.10,.20,.23)))
         end
         if finish~='beam' then
-            mat:SetShaderParameter('Roughness',Variant(finish=='glass' and .06 or finish=='gem' and .17 or .88))
+            mat:SetShaderParameter('Roughness',Variant(finish=='glass' and .10 or finish=='gem' and .17 or finish=='stone' and .96 or .88))
             mat:SetShaderParameter('Metallic',Variant(finish=='glass' and 0 or finish=='gem' and .21 or 0))
         end
         mats[finish]=mat
@@ -166,6 +166,7 @@ local function mine(base,stock,core)
     crystal(core,0,.44,-.08,1.02,.12,.08,.03,C.jade)
     crystal(core,-.40,.37,.12,.64,.085,-.20,.07,C.jade)
     crystal(core,.36,.35,-.14,.74,.09,.20,-.06,C.blue)
+    crystal(core,.12,.39,.24,.48,.065,.10,.18,C.light)
 end
 
 -- Dedicated quarry stone node: dark slate/basalt bedrock cradle with iron wedges
@@ -201,7 +202,7 @@ local function buildStock(root,id,mats)
         stock=mesh(canopy,'Yield',mats.glass,false)
         core=mesh(canopy,'Core',mats.gem,false)
     else
-        stock=mesh(canopy,'Yield',mats.matte,true)
+        stock=mesh(canopy,'Yield',id=='stone' and mats.stone or mats.matte,true)
     end
     sites[id](nil,stock,core)
     stock:Commit()
@@ -217,7 +218,7 @@ end
 
 function M.Site(root,id,mats,spent)
     if id~='timber' then
-        local base=mesh(root,'Remainder',mats.matte,true)
+        local base=mesh(root,'Remainder',id=='stone' and mats.stone or mats.matte,true)
         sites[id](base,nil,nil)
         base:Commit()
     end
