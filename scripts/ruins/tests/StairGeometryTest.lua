@@ -8,6 +8,7 @@ local function Check(ok, message)
 end
 
 local function Structure()
+    print("StairGeometryTest: rise=" .. tostring(Terrain.STAIR_RISE) .. " y21=" .. Terrain.StairY(21))
     Check(Terrain.STAIR_JOIN == 33.5, "阶梯回接覆盖完整地形三角面")
     Check(Terrain.StairY(0) == 0 and Terrain.StairY(100) == 6, "台面两端夹紧")
     for _, sign in ipairs({ -1, 1 }) do
