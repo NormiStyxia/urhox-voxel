@@ -4,6 +4,8 @@ local Noise = require('ruins.Noise')
 local Terrain = require('ruins.RuinsTerrain')
 local P = require('ruins.RuinsPalette').P
 local Upper = require('ruins.HomeHouseUpper')
+local WarmLights = require('ruins.WarmLights')
+local HomeWarmLayout = require('ruins.HomeWarmLayout')
 -- House footprint shared with the upper storeys; the hall now runs back to z=15.
 local HOUSE = Upper.Footprint
 ---@class HomeIsland
@@ -1629,8 +1631,8 @@ function H.Build(world,scene,dayNight)
     buildForgeFlame(scene)
     -- 夜间暖光：池边路灯、壁灯、室内吊灯、露台灯盏、柱台蜡烛与火盆
     if activeJob then coroutine.yield() end
-    require('ruins.WarmLights').SetupPalette(world)
-    H.warm=require('ruins.HomeWarmLayout').Build(scene,world,Vector3(H.x,H.base,H.z))
+    WarmLights.SetupPalette(world)
+    H.warm=HomeWarmLayout.Build(scene,world,Vector3(H.x,H.base,H.z),H.Height)
     if activeJob then
         for _,v in ipairs(H.warm.volumes) do activeJob.ids[v:GetVolumeId()]=true end
     end

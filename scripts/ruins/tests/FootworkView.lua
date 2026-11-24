@@ -27,17 +27,6 @@ V.atFrame(8, function()
         if frame == 30 then
             -- 朝起手时的身后打：默认相机就在那边，是开阔地面，突进不会被台阶挡住
             local f = -nomi.node.worldDirection
-            -- 战斗相机最后一步是 ApplyCombatOffset（震屏 / 防穿墙），在它之后把相机摆到侧面
-            local applyOffset = nomi.ApplyCombatOffset
-            ---@param n any
-            nomi.ApplyCombatOffset = function(n, offset)
-                applyOffset(n, offset)
-                if not eyeAt then return end
-                local eye, look = eyeAt[1], eyeAt[2]
-                local camNode = n:CameraNode()
-                camNode.worldPosition = eye
-                camNode:LookAt(look)
-            end
             -- 不吸附训练木桩、不跟随相机朝向：五段都朝起手时的正前方打，侧面机位才一直是侧面
             local facing = Vector3(f.x, 0, f.z):Normalized()
             moves.o.assist = nil
@@ -51,14 +40,20 @@ V.atFrame(8, function()
                 return move(n, mdt, mf, mr, run, jump, aiming, options)
             end
         end
-        -- 第一刀开始后角色朝向已定：相机放在它的右侧，之后固定不动
+        -- 第一刀开始后角色朝向已定：另开一台相机放在它的右侧，固定不动。
+        -- 不改游戏相机——战斗朝向会跟着游戏相机转，挪它会把角色也转过来。
         if frame == 59 then
-            -- 模型容器的朝向才是攻击朝向（战斗朝向转的是它，不是物理节点）
             local p = nomi.node.worldPosition
             local d = nomi.nomi.root.worldRotation * Vector3(0, 0, 1)
             d = Vector3(d.x, 0, d.z):Normalized()
             local right = Vector3(d.z, 0, -d.x)
-            eyeAt = { p + right * 4.6 + d * 1.0 + Vector3(0, 0.6, 0), p + d * 1.0 + Vector3(0, 0.62, 0) }
+            local camNode = game.scene:CreateChild("FootworkCamera")
+            local cam = camNode:CreateComponent("Camera") --[[@as Camera]]
+            cam.fov = 38
+            camNode.worldPosition = p + right * 4.6 + d * 1.0 + Vector3(0, 0.6, 0)
+            camNode:LookAt(p + d * 1.0 + Vector3(0, 0.62, 0))
+            renderer:GetViewport(0):SetCamera(cam)
+            eyeAt = { camNode.worldPosition, d }
         end
         if pending ~= nil then
             local image = Image()

@@ -33,6 +33,7 @@ local TouchControls = require("ui.TouchControls")
 local HomeIsland = require("ruins.HomeIsland")
 local HomeTrees = require("ruins.HomeTrees")
 local RuinsWarmLayout = require("ruins.RuinsWarmLayout")
+local WarmLights = require("ruins.WarmLights")
 local WorldMap = require("ui.WorldMap")
 local PixelDraw = require("ui.PixelDraw")
 local lastRuinsLanding,homeJob
@@ -2203,7 +2204,7 @@ function Ruins_HandleUpdate(eventType, eventData)
     -- 法阵灯：苏醒后常亮；夜里本来就有一点微光
     M.courtLight.brightness = 2.2 * M.runeK + 0.6 * (dn.nightK or 0)
     -- 角色与手中武器跟随昼夜：白天原色，夜里降低自发光并接受篝火 / 灯光
-    local night=require('ruins.WarmLights').NightLevel(dn)
+    local night=WarmLights.NightLevel(dn)
     if nomi_.nomi.SetSceneLight then nomi_.nomi:SetSceneLight(1-night) end
     if combatRig_ and combatRig_.SetSceneLight then combatRig_:SetSceneLight(1-night) end
     if M.warm then

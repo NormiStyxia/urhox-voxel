@@ -51,16 +51,16 @@ end
 
 -- 光源类型：点光范围 / 亮度（夜间满强度）/ 颜色 / 火焰特效 / 点光离火焰的高度
 local KIND = {
-    campfire = { range = 9.5, brightness = 5.2, color = { 1, .52, .20 }, effect = 'Effects/Warm/Campfire.effect', lift = .55 },
-    streetlamp = { range = 8.0, brightness = 3.6, color = { 1, .62, .30 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
-    wall = { range = 4.6, brightness = 1.9, color = { 1, .60, .30 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
-    floor = { range = 4.2, brightness = 1.7, color = { 1, .60, .30 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
-    torch = { range = 6.0, brightness = 2.6, color = { 1, .50, .18 }, effect = 'Effects/Warm/TorchFlame.effect', lift = .25 },
-    candles = { range = 2.6, brightness = .9, color = { 1, .64, .34 }, effect = 'Effects/Warm/LanternFlame.effect', lift = .05 },
+    campfire = { range = 11, brightness = 14, color = { 1, .52, .20 }, effect = 'Effects/Warm/Campfire.effect', lift = .55 },
+    streetlamp = { range = 9.0, brightness = 7.5, color = { 1, .62, .30 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
+    wall = { range = 5.0, brightness = 4.0, color = { 1, .60, .30 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
+    floor = { range = 4.6, brightness = 3.6, color = { 1, .60, .30 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
+    torch = { range = 6.5, brightness = 6.0, color = { 1, .50, .18 }, effect = 'Effects/Warm/TorchFlame.effect', lift = .25 },
+    candles = { range = 2.8, brightness = 2.0, color = { 1, .64, .34 }, effect = 'Effects/Warm/LanternFlame.effect', lift = .05 },
     -- 室内吊灯：从天花板垂链吊下的铁灯笼
-    hanging = { range = 5.2, brightness = 2.2, color = { 1, .66, .38 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
+    hanging = { range = 6.0, brightness = 5.0, color = { 1, .66, .38 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
     -- 已有体素灯具（家园正墙小壁灯）只补一盏点光和火苗，不建外壳
-    fixture = { range = 4.2, brightness = 1.6, color = { 1, .62, .32 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
+    fixture = { range = 4.2, brightness = 3.0, color = { 1, .62, .32 }, effect = 'Effects/Warm/LanternFlame.effect', lift = 0 },
 }
 M.KIND = KIND
 

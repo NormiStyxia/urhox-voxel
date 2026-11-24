@@ -68,15 +68,15 @@ end
 ---@param scene Scene 家园建造任务的根节点（随家园一起移除）
 ---@param world VoxelPhysicsWorld
 ---@param origin Vector3 岛原点（HomeIsland.x, base, z）
-function M.Build(scene, world, origin)
+---@param heightAt fun(x: number, z: number): number 地面高度（世界坐标）
+function M.Build(scene, world, origin, heightAt)
     local lights = WarmLights.New(scene, world, 'HomeWarmLights')
     for _, d in ipairs(M.Definitions()) do
         d.pos = Vector3(origin.x + d.x, origin.y + (d.y or 0), origin.z + d.z)
         d.home = true
         if d.kind == 'streetlamp' then
             -- 路灯底座落在地面上
-            local H = require('ruins.HomeIsland')
-            d.pos.y = H.Height(d.pos.x, d.pos.z)
+            d.pos.y = heightAt(d.pos.x, d.pos.z)
         end
         lights:Add(d)
     end
