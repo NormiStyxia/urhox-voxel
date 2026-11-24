@@ -146,6 +146,18 @@ function Model.Build()
     sample(parts,'lower_body',{0,0.84,0},{-6,5,3,11,-3,2},base)
     for _,side in ipairs({{1,'r'},{-1,'l'}}) do
         local sign,suffix=side[1],side[2]
+        -- Two separate sliding shutters meet on the front seam. Their stepped
+        -- gilt rim stands proud of the crystal apex; dark bronze shows at the tracks.
+        local startX=sign==1 and 0 or -4
+        sample(parts,'plate_'..suffix,{sign*.16,1.44,.44},{startX,startX+3,13,22,5,6},function(x,y,z)
+            local u=abs(x+.5)
+            local tip=abs(y-17.5)
+            if tip>=4 and u>1.5 then return end
+            if z==6 and (u>=2.5 or tip>=3) then return end
+            if tip>=3 or u>=3 then return BRONZE end
+            if y==16 or y==19 or u<1 then return GOLD end
+            return y>=18 and ASHLAR or SHALE
+        end)
         local x0,x1 = sign==1 and 7 or -13, sign==1 and 12 or -8
         sample(parts,'arm_'..suffix,{sign*0.80,1.44,0},{x0,x1,10,18,-3,2},function(x,y,z)
             return arm(sign*(x+0.5),y,z)

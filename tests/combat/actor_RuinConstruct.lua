@@ -15,25 +15,6 @@ local function encounter(index)
     return e,combat
 end
 
--- Capture the same transforms sent to the two scene nodes at the lock,
--- discharge and stop boundaries. Material changes must not allocate a new ray.
-do
-    local e,c=encounter(2)
-    e.lockMaterial,e.crystalMaterial={},{}
-    e.beamNode={LookAt=function(self,point) self.aim=point end,Remove=function() end}
-    e.beamMesh={SetMaterial=function(self,m) self.selected=m end}
-    T.Tick(e,.60,target)
-    local node=e.beamNode
-    assert(node.enabled and e.beamMesh.selected==e.lockMaterial and node.scale.x==.055)
-    T.Near(node.position.z-node.scale.z*.5,e.beamOrigin.z)
-    T.Near(node.scale.z,e.beamLength)
-    T.Tick(e,.47,target)
-    assert(node.enabled and node.scale.x==.20 and e.beamMesh.selected==e.crystalMaterial)
-    T.Tick(e,.22,target)
-    assert(not node.enabled and c.hits==1)
-    e:Destroy()
-end
-
 local function pose(e,id)
     local p={x=0,y=0,z=0,pitch=0,yaw=0,roll=0,sx=1,sy=1,sz=1}
     e.config.posePart(e,id,p)
@@ -51,8 +32,8 @@ for _,dodge in ipairs({false,true}) do
     e:Destroy()
 end
 
--- Samples straddle half beam width (.10) plus player radius (.32).
-for _,sample in ipairs({{0,0,1},{.40,0,1},{.44,0,0},{2,0,0},{0,1.9,0}}) do
+-- Samples straddle half beam width (.34) plus player radius (.32).
+for _,sample in ipairs({{0,0,1},{.64,0,1},{.67,0,0},{2,0,0},{0,1.9,0}}) do
     local e,c=encounter(2)
     T.Tick(e,.56,target)
     assert(e.directionLocked and e.beamOrigin and c.hits==0)
@@ -61,7 +42,7 @@ for _,sample in ipairs({{0,0,1},{.40,0,1},{.44,0,0},{2,0,0},{0,1.9,0}}) do
     T.Tick(e,.48,after)
     assert(c.hits==0 and e.beamDir.x==0 and e.beamDir.z==1)
     assert(e.beamOrigin.x==lockedX and e.beamOrigin.z==lockedZ)
-    T.Tick(e,.42,after)
+    T.Tick(e,.89,after)
     assert(c.hits==sample[3] and c.damage==15*sample[3] and not e.beamOrigin)
     e:Destroy()
 end
@@ -84,9 +65,9 @@ for attackIndex=1,2 do
         T.Tick(e,attackIndex==1 and .70 or .62,target)
         assert(e.boltPos or e.beamOrigin)
         if action=='death' then
-            e:ApplyHit({kind='arrow',part='core',dmg=1,dir=Vector3.FORWARD})
+            e:ApplyHit({kind='arrow',part='plate_r',dmg=1,dir=Vector3.FORWARD})
             assert(pose(e,'core').z<0,'core must recoil immediately')
-            e:ApplyHit({kind='arrow',part='core',dmg=1000,dir=Vector3.FORWARD})
+            e:ApplyHit({kind='arrow',part='plate_r',dmg=1000,dir=Vector3.FORWARD})
             local dieEvents=0
             e.onEvent=function(name) if name=='die' then dieEvents=dieEvents+1 end end
             T.Tick(e,.80,target)
@@ -103,4 +84,45 @@ for attackIndex=1,2 do
         e:Destroy()
     end
 end
-print('PASS RuinConstruct: projectile, locked beam, dodge, cover, recoil, death and cleanup')
+-- Weapon query, arrow flight, damage resolution and embed use the actual game modules.
+dofile('tests/combat/core_support.lua')
+local Projectile=require('combat.Projectile')
+local Hit=require('combat.Hit')
+local function frontShot(e)
+    local from=Vector3(.018,1.48,4)
+    local line=Hit.Query({e},from,Vector3(.018,1.48,-1),.03)
+    assert(line[1], 'reticle missed chest')
+    local arrow=Projectile.New({random=function() return .5 end,enemies=function() return {e} end})
+    local hp=e.hp
+    local ok,p=arrow:Fire(from,Vector3(0,0,-1),1,{attack=5,poise=0})
+    assert(ok);arrow:Update(.1)
+    assert(p.embedded and p.attached==e and p.part==line[1].shape.id,'reticle and arrow disagree')
+    return p.part,(hp-e.hp)/p.damage
+end
+for _,open in ipairs({false,true}) do
+    local e=encounter(2)
+    if open then T.Tick(e,2.10,target) end
+    local part,factor=frontShot(e)
+    assert(open and part=='core' or not open and part:find('plate_',1,true))
+    T.Near(factor,open and 2.4 or .35)
+    if open then
+        T.Tick(e,2.1,target)
+        assert(not e:PartEnabled(e.parts.core.spec));assert(pose(e,'plate_r').x==0)
+    end
+    e:Destroy()
+end
+for _,t in ipairs({.74,1.39}) do
+    local e=encounter(2);T.Tick(e,t,target);assert(e:Stagger(.5,false));T.Tick(e,.51,target)
+    assert(not e.venting and not e.beamOrigin and not e:PartEnabled(e.parts.core.spec));e:Destroy()
+end
+-- A wall touching only the beam's rim still truncates its full cross-section.
+do
+    local e,c=encounter(2)
+    e.world={RaycastSingle=function(_,ray,d)
+        local hit=ray.origin.x>.30 and ray.direction.z>.9 and 3-ray.origin.z or nil
+        if hit and hit>=0 and hit<=d then return {hit=true,distance=hit} end
+        return {hit=false}
+    end}
+    T.Tick(e,1.38,target);T.Near(e.beamLength+e.beamOrigin.z,3);assert(c.hits==0);e:Destroy()
+end
+print('PASS RuinConstruct: locked cylinder, edge cover, dodge, real arrow and reticle, armored 0.35x / core 2.40x, vents, interrupts, death and cleanup')
