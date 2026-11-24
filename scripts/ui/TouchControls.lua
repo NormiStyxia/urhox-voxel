@@ -295,7 +295,7 @@ local function DrawSet(vg,mode,alpha,offset)
         end
         if fullFlash>0 and charge>0 then Draw.Arc(vg,x,y,48,42,1,32,Draw.colors.bright,1) end
         local label=b.label or (b.name=='mount' and '上龙')
-        if label then Draw.Text(vg,label,x,y+42,12,Draw.colors.gold,NVG_ALIGN_CENTER,a) end
+        if label then Draw.KeyBadge(vg,label,x,y+38,b.main and Draw.colors.gold or nil,Draw.colors.bright,a) end
     end end
 end
 local Layer=UI.Panel:Extend('RuinsTouchControls')
@@ -320,8 +320,11 @@ local function RenderControls(self,vg)
     for i,b in ipairs(TopButtons()) do
         local x,y=Position(b,true,i)
         local down=Input.Down(b.name)
-        if b.name=='worldMap' then Draw.Text(vg,'地图',x,y,12,Draw.colors.bright,NVG_ALIGN_CENTER) else
-        Draw.Button(vg,b,x,y,down and 1 or math.min(.6,alpha),down,b.name=='glide' and state.gliding,Disabled(b),b.name=='skill' and state.skillLeft or nil,4)
+        if b.name=='worldMap' then
+            Draw.Frame(vg,x-26,y-13,52,26,Draw.colors.gold,.92)
+            Draw.Text(vg,'地图',x,y,12,Draw.colors.bright,NVG_ALIGN_CENTER)
+        else
+            Draw.Button(vg,b,x,y,down and 1 or math.min(.88,alpha),down,b.name=='glide' and state.gliding,Disabled(b),b.name=='skill' and state.skillLeft or nil,4)
         end
     end
     if M.menuOpen then

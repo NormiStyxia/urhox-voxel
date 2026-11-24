@@ -10,7 +10,12 @@ local WHITE,DISABLED={255,255,255},{110,110,120}
 local safeMetrics={left=0,right=0,top=0,bottom=0}
 local metricsFrame,metricsW,metricsH,metricsScale,metricsDPR,metricsZoom
 local colorCache={}
+local keyBadgeBounds={}
 local numbers={}
+local BTN_BORDER_IDLE={94,118,136}
+local BTN_TOP_HIGHLIGHT={42,64,86}
+local BTN_ACTIVE_FILL={34,54,74}
+local BTN_DOWN_FILL={30,46,66}
 function M.Number(n)
     local text=numbers[n]
     if not text then text=tostring(n); if n>=0 and n<=9999 and n%1==0 then numbers[n]=text end end
@@ -294,25 +299,72 @@ function M.Arc(vg,x,y,r,inner,fraction,segments,color,alpha)
     for _,p in ipairs(list) do if p[3]<steps then nvgRect(vg,x+p[1],y+p[2],2,2) end end
     nvgFillColor(vg,Color(color,alpha)); nvgFill(vg)
 end
+function M.Frame(vg,x,y,w,h,border,alpha,accent)
+    x,y,w,h=M.Snap(x),M.Snap(y),M.Snap(w),M.Snap(h)
+    local a=alpha or 1
+    M.Rect(vg,x+2,y+3,w,h,M.colors.deep,.74*a)
+    M.Rect(vg,x,y,w,h,border or M.colors.gold,.95*a)
+    M.Rect(vg,x+1,y+1,w-2,h-2,M.colors.ink,.96*a)
+    if accent then M.Rect(vg,x+1,y+1,2,h-2,accent,.95*a) end
+end
+function M.KeyBadge(vg,text,cx,cy,border,textColor,alpha)
+    if not text or text=='' then return end
+    local a=alpha or 1
+    local w=M.TextWidth(vg,text,12,keyBadgeBounds)
+    if w<=0 then w=(utf8.len(text) or 1)*10 end
+    local bw=math.max(36,math.ceil((w+14)/2)*2)
+    local bh=20
+    local bx,by=M.Snap(cx-bw*.5),M.Snap(cy-bh*.5)
+    M.Rect(vg,bx+1,by+2,bw,bh,M.colors.deep,.78*a)
+    M.Rect(vg,bx,by,bw,bh,border or BTN_BORDER_IDLE,.95*a)
+    M.Rect(vg,bx+1,by+1,bw-2,bh-2,M.colors.ink,.96*a)
+    M.Text(vg,text,cx,cy,12,textColor or M.colors.white,NVG_ALIGN_CENTER,a)
+end
 function M.Button(vg,b,x,y,alpha,down,active,disabled,cool,total,charge)
     local size=b.size or 64
     local main=b.main or active
-    local frame
-    if size==80 then frame=main and (down and 'btn40_main_down' or 'btn40_main') or (down and 'btn40_down' or 'btn40')
-    else frame=main and (down and 'btn32_main_down' or 'btn32_main') or (down and 'btn32_down' or 'btn32') end
     local shade=disabled and DISABLED or nil
     if disabled then alpha=alpha*.5 end
-    M.Image(vg,frame,x-size/2,y-size/2,alpha,shade)
+    local bx=M.Snap(x-size*.5)
+    local by=M.Snap(y-size*.5)+(down and 2 or 0)
+    local border=down and M.colors.bright or (main and M.colors.gold or BTN_BORDER_IDLE)
+    local fill=down and BTN_DOWN_FILL or (active and BTN_ACTIVE_FILL or M.colors.ink)
+    local sx,sy=down and 1 or 2,down and 1 or 3
+    M.Rect(vg,bx+2+sx,by+sy,size-4,2,M.colors.deep,.70*alpha)
+    M.Rect(vg,bx+sx,by+2+sy,size,size-4,M.colors.deep,.70*alpha)
+    M.Rect(vg,bx+2+sx,by+size-2+sy,size-4,2,M.colors.deep,.70*alpha)
+    M.Rect(vg,bx+2,by,size-4,1,border,.95*alpha)
+    M.Rect(vg,bx+1,by+1,1,1,border,.95*alpha)
+    M.Rect(vg,bx+size-2,by+1,1,1,border,.95*alpha)
+    M.Rect(vg,bx,by+2,1,size-4,border,.95*alpha)
+    M.Rect(vg,bx+size-1,by+2,1,size-4,border,.95*alpha)
+    M.Rect(vg,bx+1,by+size-2,1,1,border,.95*alpha)
+    M.Rect(vg,bx+size-2,by+size-2,1,1,border,.95*alpha)
+    M.Rect(vg,bx+2,by+size-1,size-4,1,border,.95*alpha)
+    M.Rect(vg,bx+2,by+1,size-4,1,not down and BTN_TOP_HIGHLIGHT or fill,.96*alpha)
+    M.Rect(vg,bx+1,by+2,size-2,size-4,fill,.96*alpha)
+    M.Rect(vg,bx+2,by+size-2,size-4,1,not down and M.colors.deep or fill,(not down and .70 or .96)*alpha)
     local icon=b.icon or b.name
     if b.cachedIcon~=icon or b.cachedSize~=size then
         b.cachedIcon,b.cachedSize,b.imageName=icon,size,icon..(size==80 and '' or '_s')
     end
     M.Image(vg,b.imageName,x-(size==80 and 32 or 20),y-(size==80 and 32 or 20)+(down and 2 or 0),alpha,shade)
     if (cool or 0)>0 then
-        M.Arc(vg,x,y,size/2-6,0,cool/math.max(.001,total or 1),24,M.colors.deep,.62*alpha)
-        if cool>=1 then M.Text(vg,M.Number(math.ceil(cool)),x,y,12,M.colors.paper,NVG_ALIGN_CENTER,alpha) end
+        local frac=math.max(0,math.min(1,cool/math.max(.001,total or 1)))
+        local ch=math.max(2,M.Snap((size-4)*frac))
+        M.Rect(vg,bx+2,by+size-2-ch,size-4,ch,M.colors.deep,.78*alpha)
+        if cool>=1 then M.Text(vg,M.Number(math.ceil(cool)),x,y,12,M.colors.bright,NVG_ALIGN_CENTER,alpha) end
     end
-    if (charge or 0)>0 then M.Arc(vg,x,y,size/2+6,size/2+2,charge,32,M.colors.bright,alpha) end
+    if (charge or 0)>0 then
+        local frac=math.max(0,math.min(1,charge))
+        local bw=math.max(2,M.Snap((size-8)*frac))
+        M.Rect(vg,bx+4,by+size-6,size-8,3,M.colors.deep,.85*alpha)
+        M.Rect(vg,bx+4,by+size-6,bw,3,frac>=1 and M.colors.bright or M.colors.gold,alpha)
+        if frac>=1 then
+            M.Rect(vg,bx+2,by,size-4,1,M.colors.bright,alpha)
+            M.Rect(vg,bx+2,by+size-1,size-4,1,M.colors.bright,alpha)
+        end
+    end
 end
 function M.Release()
     local live=require('urhox-libs/UI/Core/ImageCache').GetContext()
