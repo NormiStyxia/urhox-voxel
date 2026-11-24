@@ -2,7 +2,7 @@
     "version": 2,
     "script": "ruins_main.lua",
     "result": "FAIL",
-    "duration_ms": 42956,
+    "duration_ms": 45547,
     "frames_completed": 12,
     "phases": {
         "load": {
@@ -18,12 +18,12 @@
             "errors": [
                 {
                     "category": "engine",
-                    "message": "Frame time spike: 328.009ms (threshold: 100ms)",
+                    "message": "Frame time spike: 337.198ms (threshold: 100ms)",
                     "frame": 2
                 },
                 {
                     "category": "engine",
-                    "message": "Frame time spike: 5460.31ms (threshold: 100ms)",
+                    "message": "Frame time spike: 5684.26ms (threshold: 100ms)",
                     "frame": 5
                 }
             ]
@@ -43,7 +43,7 @@
             "nodes": 23,
             "components": 47,
             "hash": 2438665705,
-            "frame_time_ms": 34117.31640625
+            "frame_time_ms": 35622.6484375
         },
         {
             "frame": 6,
@@ -51,7 +51,7 @@
             "nodes": 23,
             "components": 48,
             "hash": 3606271510,
-            "frame_time_ms": 21.93199920654297
+            "frame_time_ms": 21.874000549316408
         },
         {
             "frame": 10,
@@ -59,7 +59,7 @@
             "nodes": 23,
             "components": 48,
             "hash": 190951372,
-            "frame_time_ms": 20.54599952697754
+            "frame_time_ms": 20.715999603271486
         },
         {
             "frame": 12,
@@ -67,11 +67,11 @@
             "nodes": 23,
             "components": 48,
             "hash": 3077683653,
-            "frame_time_ms": 20.68400001525879
+            "frame_time_ms": 21.843000411987306
         }
     ],
     "scene_stalled": false,
-    "max_frame_time_ms": 5460.31396484375,
+    "max_frame_time_ms": 5684.2568359375,
     "update_defined": false,
     "component_census": {
         "Octree": 1,
@@ -96,18 +96,13 @@
         "CascadeParticleSystemInstance": 1,
         "CascadeSpriteEmitter": 4
     },
-    "test_result": "FAILED",
+    "test_result": "PASSED",
     "test_assertions": {
         "total": 6,
-        "passed": 2,
-        "failed": 4
+        "passed": 6,
+        "failed": 0
     },
-    "test_issues": [
-        "转角平台外侧（背面）有护栏",
-        "转角平台外侧（东面）有护栏",
-        "顶部平台背面有护栏",
-        "顶部平台西侧有护栏"
-    ],
+    "test_issues": [],
     "missing_resources": [],
     "missing_engine_resources": [],
     "summary": {
