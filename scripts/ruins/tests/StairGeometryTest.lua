@@ -11,10 +11,10 @@ local function Structure()
     Check(Terrain.STAIR_JOIN == 33.5, "阶梯回接覆盖完整地形三角面")
     Check(Terrain.StairY(0) == 0 and Terrain.StairY(100) == 6, "台面两端夹紧")
     for _, sign in ipairs({ -1, 1 }) do
-        for step = 0, 11 do
-            local d = Terrain.COURT_R + step
+        for step = 0, 23 do
+            local d = Terrain.COURT_R + step * Terrain.STAIR_TREAD
             local before, after = Terrain.StairY(sign * (d - .001)), Terrain.StairY(sign * (d + .001))
-            Check(math.abs(after - before - .5) < .00001, "每级恰为0.5米，不靠扩大步高")
+            Check(math.abs(after - before - .25) < .00001, "每级恰为0.25米，不靠扩大步高")
             for _, x in ipairs({ -3.125, .125, 3.125 }) do
                 Check(Terrain.CollideHeight(x, sign * (d + .25)) == -1,
                     "粗网格不叠在可见台阶上")
@@ -107,16 +107,28 @@ local function Actual(game)
         local direction = sign * (ascending and 1 or -1)
         walker.desiredVelocity = Vector3(0, 0, direction * 4.2)
         local reached, exceeded = false, false
+        local minSpeed, slowFrames, maxPop, frames = math.huge, 0, 0, 0
+        local last = node.worldPosition
         for i = 1, 360 do
             world:Update(1 / 60, 1)
             exceeded = exceeded or walker.maxHitsExceeded
+            local p = node.worldPosition
+            -- 起步加速后统计：水平速度跌落 = 卡脚，单帧竖直跳变 = 顿挫。
+            if i > 10 then
+                local speed = Vector3(p.x - last.x, 0, p.z - last.z):Length() * 60
+                minSpeed = math.min(minSpeed, speed)
+                if speed < 4.2 * .6 then slowFrames = slowFrames + 1 end
+                maxPop = math.max(maxPop, math.abs(p.y - last.y))
+            end
+            last, frames = p, i
             local d = sign * node.worldPosition.z
             if (ascending and d >= finish) or (not ascending and d <= finish) then reached = true; break end
         end
         walker.desiredVelocity = Vector3.ZERO
         for i = 1, 15 do world:Update(1 / 60, 1) end
-        print(string.format("StairGeometryTest: %s sign=%d lane=%.2f feet=%s grounded=%s hitsExceeded=%s",
-            ascending and "up" or "down", sign, x, tostring(node.worldPosition), tostring(walker.onGround), tostring(exceeded)))
+        print(string.format("StairGeometryTest: %s sign=%d lane=%.2f feet=%s grounded=%s hitsExceeded=%s frames=%d minSpeed=%.2f slowFrames=%d maxPop=%.3f",
+            ascending and "up" or "down", sign, x, tostring(node.worldPosition), tostring(walker.onGround), tostring(exceeded),
+            frames, minSpeed, slowFrames, maxPop))
         Check(reached, "真实角色不跳跃走完南北阶梯及起终点/侧缘")
         Check(not exceeded, "台阶接触查询未超预算")
         Check(math.abs(node.worldPosition.y - (ascending and 6 or 0)) < .15,

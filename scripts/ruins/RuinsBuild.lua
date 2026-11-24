@@ -507,7 +507,7 @@ local function BuildStairs(world)
             if y >= top then return nil end
             local d = abs(z) - Terrain.COURT_R
             if y > top - 0.25 then
-                if d >= 0 and (d % 1.0) < 0.25 then return P.MARBLE_A end
+                if d >= 0 and (d % Terrain.STAIR_TREAD) < 0.25 then return P.MARBLE_A end
                 if abs(x) < 1.2 and Hash3(floor(x * 4), floor(y * 4), floor(z * 4)) < 0.5 then return P.TILE_B end
                 return Marble(x, y, z)
             end

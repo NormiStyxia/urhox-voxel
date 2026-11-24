@@ -519,7 +519,32 @@ function N:GroundFeet(foot,dt,active)
     foot:Ground(dt,self.soleGroundPort,active,self.cc.onGround)
 end
 
+-- 台阶视觉平滑：胶囊每级瞬间抬升/下落，模型反向偏移后指数回零，
+-- 读起来像连续上坡。只认「贴地时、竖直跳变大于水平位移（>45°）」的帧，斜坡/跳跃/传送不受影响。
+local STEP_SMOOTH_TIME, STEP_MIN, STEP_MAX = .075, .06, .6
+function N:SmoothSteps(dt)
+    local p=self.node.worldPosition
+    local last=self.stepLastPos
+    self.stepLastPos=p
+    local offset=self.stepOffset or 0
+    local grounded=self.cc.onGround
+    if last and grounded and self.stepWasGrounded then
+        local dy=p.y-last.y
+        local run=Vector3(p.x-last.x,0,p.z-last.z):Length()
+        if math.abs(dy)>=STEP_MIN and math.abs(dy)<=STEP_MAX and math.abs(dy)>run then
+            offset=Clamp(offset-dy,-STEP_MAX,STEP_MAX)
+        end
+    end
+    self.stepWasGrounded=grounded
+    -- 离地时尽快交还给真实位置，避免跳起后模型仍低于胶囊。
+    offset=offset*math.exp(-dt/(grounded and STEP_SMOOTH_TIME or .03))
+    if math.abs(offset)<.002 then offset=0 end
+    self.stepOffset=offset
+    self.nomi.root.position=Vector3(0,offset,0)
+end
+
 function N:Animate(dt, casting)
+    self:SmoothSteps(dt)
     self.nomi:Update(dt, { moveSpeed = self.onGround and (self.actualSpeed or self.speed) or 0, onGround = self.onGround, armed = casting, aiming = casting,
         aimPitch = self.camPitch })
 end

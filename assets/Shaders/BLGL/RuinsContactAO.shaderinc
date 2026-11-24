@@ -39,14 +39,15 @@ float ruins_contact_ao(vec3 point,vec3 normal,float joint,vec3 cameraPos) {
     }
     float z=abs(point.z);
     if (z>=contact_stairs.x && z<contact_stairs.w && abs(point.x)<contact_stairs.y+0.08) {
-        float d=z-contact_stairs.x;
-        float top=min(baseY,0.5*floor(d+1.0));
+        // Same 0.25m rise / 0.5m tread as RuinsTerrain.StairY.
+        float d=(z-contact_stairs.x)*2.0;
+        float top=min(baseY,0.25*floor(d+1.0));
         float surfaceBand=1.0-smoothstep(0.025,0.10,abs(point.y-top));
-        float back=top<baseY ? 1.0-smoothstep(0.02,0.32,1.0-fract(d)) : 0.0;
+        float back=top<baseY ? 1.0-smoothstep(0.02,0.20,(1.0-fract(d))*0.5) : 0.0;
         float wall=z<contact_stairs.z ? 1.0-smoothstep(0.02,0.30,contact_stairs.y-abs(point.x)) : 0.0;
         float tread=max(back,wall*0.7)*up*surfaceBand;
-        float riserBand=1.0-smoothstep(0.02,0.22,abs(point.y-(top-0.5)));
-        float riser=(1.0-smoothstep(0.01,0.06,fract(d)))*riserBand;
+        float riserBand=1.0-smoothstep(0.02,0.14,abs(point.y-(top-0.25)));
+        float riser=(1.0-smoothstep(0.01,0.06,fract(d)*0.5))*riserBand;
         riser*=smoothstep(0.65,0.9,-normal.z*sign(point.z))*(1.0-up);
         localContact=max(localContact,max(tread,riser*0.7));
     }
