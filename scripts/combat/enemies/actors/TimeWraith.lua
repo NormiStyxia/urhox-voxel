@@ -1,10 +1,10 @@
 local Base = require('combat.enemies.EnemyBase')
+local Field = require('combat.enemies.actors.TimeWraithField')
 local Wraith = setmetatable({}, {__index = Base})
 Wraith.__index = Wraith
 local S = Base.State
-local SWEEP, BLINK = 'needle_sweep', 'stopped_clock'
+local SWEEP, DOMAIN = 'needle_sweep', 'hourglass_field'
 local SWEEP_START, SWEEP_END = .10, .22
-local RING_TIME, RING_RADIUS, RING_HALF_WIDTH = .70, 1.85, .30
 local function unit(x) return math.max(0, math.min(1, x)) end
 
 Wraith.Config = {
@@ -18,106 +18,93 @@ Wraith.Config = {
     attacks = {
         {name = SWEEP, telegraph = .56, duration = .32, recover = .58,
             warning = 'fan', range = 1.65, cosine = .5, damage = 9, poise = 7},
-        {name = BLINK, telegraph = .48, duration = .90, recover = .90,
-            warning = 'ring', range = RING_RADIUS, damage = 14, poise = 10},
+        {name = DOMAIN, telegraph = Field.warning, duration = Field.duration, recover = .80,
+            warning = 'ring', range = Field.radius, damage = 0, poise = 0},
     },
 }
 
 function Wraith.New(scene, world, terrain, combat, position, id)
     local self = setmetatable(Base.Create(scene, world, terrain, combat, Wraith.Config, position, id), Wraith)
-    self.blinkSide = 1
-    self.phaseFx = {kind = 'phase', material = 'core', dir = Vector3.UP, normal = Vector3.UP}
+    self.fieldAge = 0
     return self
 end
 
 function Wraith:Chase(dt, target, distance)
     self:Face(target)
-    local reach = self.attackIndex == 1 and 3.65 or self.config.attackDistance
+    local reach = self.attackIndex == 1 and Field.radius or self.config.attackDistance
     if distance <= reach then self:StartAttack()
     else self:Move(self.fx * self.config.speed * dt, self.fz * self.config.speed * dt) end
 end
 
-local function sparks(self, position)
-    if self.particles then
-        self.phaseFx.pos = Vector3(position.x, position.y + .48, position.z)
-        self.particles:Emit(self, self.phaseFx)
-    end
+-- The two caps and the outer rim are inclusive for the player's feet.
+function Wraith:GetPlayerTimeScale(feet)
+    if not feet or not self.active or self.dead or self.fieldStage ~= 'active' then return 1 end
+    local c = self.fieldCenter
+    local dx, dz = feet.x-c.x, feet.z-c.z
+    if feet.y >= c.y+Field.bottom and feet.y <= c.y+Field.top and dx*dx+dz*dz <= Field.radius^2+1e-8 then return .5 end
+    return 1
 end
 
--- Base.Move checks the whole swept footprint. Roll back partial travel before
--- trying the opposite side so a blocked corridor cannot become a chain of hops.
 function Wraith:BeginAttack()
-    if self.attack.name ~= BLINK then return end
-    local origin, aim = self.position, self.aimPoint
-    local ax, az = aim.x - origin.x, aim.z - origin.z
-    local distance = math.sqrt(ax * ax + az * az)
-    local fx, fz = self.fx, self.fz
-    if distance > .001 then fx, fz = ax / distance, az / distance end
-    -- Choose a flank on the marked circle with a chord no longer than 2.35 m.
-    -- A stationary target stays on the rim throughout the possible cast ranges.
-    if distance > 2.35 + RING_RADIUS then self:FinishAttack(); return end
-    local along = math.max(0, (distance ^ 2 + RING_RADIUS ^ 2 - 2.35 ^ 2) / (2 * math.max(.001, distance)))
-    local flank = math.sqrt(math.max(0, RING_RADIUS ^ 2 - along ^ 2))
-    local side = self.blinkSide
-    for _ = 1, 2 do
-        local dx = ax - fx * along + side * fz * flank
-        local dz = az - fz * along - side * fx * flank
-        if self:Move(dx, dz) then
-            self.blinkSide = -side
-            self.arrived = true
-            self.warning.visible, self.warning.kind = true, 'ring'
-            self.warning.radius, self.warning.step, self.warning.progress = RING_RADIUS, 6, 0
-            sparks(self, origin)
-            sparks(self, self.position)
-            return
-        end
-        self.position = origin
-        side = -side
+    if self.attack.name == DOMAIN and self.fieldStage == 'warn' then
+        self.fieldStage, self.fieldAge = 'active', 0
+        Field.Draw(self.fieldFx, self.fieldCenter, 'active', 0)
     end
-    self:FinishAttack()
 end
 
 function Wraith:AttackStep(dt, target)
-    if self.attack.name == SWEEP then
-        if self.stateTime >= SWEEP_START and self.stateTime - dt < SWEEP_END then
-            -- Base includes a .32 m player radius. The advertised outer edge
-            -- is already measured to the player's centre.
-            self:DamagePlayer(target, self.attack.range - .32, self.attack.cosine, false)
-        end
-        return
-    end
-    if not self.arrived or self.ringSpent then return end
-    self.warning.progress = unit(self.stateTime / RING_TIME)
-    if self.stateTime >= .48 and self.stateTime - dt < .48 then self:EmitAttackCue('danger') end
-    if self.stateTime + 1e-8 < RING_TIME then return end
-    self.ringSpent = true
-    self:EmitAttackCue('whoosh')
-    local dx, dz = target.x - self.position.x, target.z - self.position.z
-    if dx * dx + dz * dz >= (RING_RADIUS - RING_HALF_WIDTH) ^ 2 then
-        self:DamagePlayer(target, RING_RADIUS + RING_HALF_WIDTH - .32, nil, true)
+    if self.attack.name == SWEEP and self.stateTime >= SWEEP_START and self.stateTime - dt < SWEEP_END then
+        self:DamagePlayer(target, self.attack.range - .32, self.attack.cosine, false)
     end
 end
 
 function Wraith:ClearExtras()
-    self.arrived, self.ringSpent = false, false
+    self.fieldStage, self.fieldCenter, self.fieldAge = nil, nil, 0
+    Field.Draw(self.fieldFx, nil, nil, 0)
     self.warning.visible = false
-    if self.particles then self.particles:ClearOwner(self) end
 end
 
 function Wraith:UpdatePose()
     Base.UpdatePose(self)
-    if self.state == S.TELEGRAPH and self.attack.name == BLINK then
-        -- The small departure mark belongs to the caster. The full-sized ring
-        -- first appears at the actual, terrain-checked destination.
-        self.warning.radius = .52
-    end
+    if self.attack.name == DOMAIN then self.warning.visible = false end
 end
 
 function Wraith:SetState(state)
-    if self.state == S.ATTACK and self.attack.name == BLINK and state ~= S.ATTACK then
-        self:ClearExtras()
+    local changed = Base.SetState(self, state)
+    if not changed or self.dead or self.state ~= state then return changed end
+    if state == S.TELEGRAPH and self.attack.name == DOMAIN then
+        local pos = self.position
+        self.fieldCenter = Vector3(pos.x,pos.y,pos.z)
+        self.fieldStage, self.fieldAge = 'warn', 0
+        if self.scene and not self.fieldFx then self.fieldFx = Field.New(self.scene) end
+        Field.Draw(self.fieldFx, self.fieldCenter, 'warn', 0)
+    elseif state == S.RECOVER and self.fieldStage == 'active' then
+        self.fieldStage, self.fieldAge = 'release', 0
+        Field.Draw(self.fieldFx, self.fieldCenter, 'release', 0)
+    elseif state ~= S.ATTACK and self.fieldStage then self:ClearExtras() end
+    return true
+end
+
+function Wraith:Update(dt, target)
+    -- The field expires in real seconds, even during hit-stop or a long frame.
+    local stage = self.fieldStage
+    if stage == 'active' or stage == 'release' then
+        self.fieldAge = self.fieldAge + math.max(0, dt)
+        if stage == 'active' and self.fieldAge+1e-8 >= Field.duration then
+            local overflow = math.max(0, self.fieldAge-Field.duration)
+            self:FinishAttack()
+            self.fieldAge = overflow
+        end
+        if self.fieldStage == 'release' and self.fieldAge+1e-8 >= Field.release then self:ClearExtras() end
     end
-    return Base.SetState(self, state)
+    Base.Update(self, dt, target)
+    if self.fieldStage == 'warn' then self.fieldAge = self.stateTime end
+    if self.fieldStage then Field.Draw(self.fieldFx, self.fieldCenter, self.fieldStage, self.fieldAge) end
+end
+
+function Wraith:Destroy()
+    Base.Destroy(self)
+    if self.fieldFx then self.fieldFx.root:Remove(); self.fieldFx=nil end
 end
 
 function Wraith:SetActive(active)
@@ -130,7 +117,6 @@ end
 
 function Wraith:Reset()
     if not Base.Reset(self) then return false end
-    self.blinkSide = 1
     self.stoppedClock = nil
     return true
 end
@@ -140,23 +126,23 @@ end
 local function handAngle(e)
     local t, name = e.stateTime, e.attack.name
     if e.state == S.TELEGRAPH then
-        if name == BLINK then return -45 end
+        if name == DOMAIN then return -45 end
         return -75 * unit(t / .38)
     elseif e.state == S.ATTACK then
-        if name == BLINK then return -45 + 180 * unit((t - RING_TIME) / .16) end
+        if name == DOMAIN then return -45 + 30 * unit(t / Field.duration) end
         return -75 + 185 * unit((t - .045) / .18)
     elseif e.state == S.RECOVER then
-        local endAngle = name == BLINK and 135 or 110
+        local endAngle = name == DOMAIN and -15 or 110
         return endAngle * (1 - unit(t / e.attack.recover))
     end
     return (math.floor(e.poseAge * 2) % 12) * 30
 end
 
 local function bezelAngle(e)
-    if e.attack.name == BLINK then
+    if e.attack.name == DOMAIN then
         if e.state == S.TELEGRAPH then return -12 * unit(e.stateTime / .24) end
-        if e.state == S.ATTACK then return -12 + 72 * unit((e.stateTime - .56) / .28) end
-        if e.state == S.RECOVER then return 60 * (1 - unit(e.stateTime / e.attack.recover)) end
+        if e.state == S.ATTACK then return -12 + 36 * unit(e.stateTime / Field.duration) end
+        if e.state == S.RECOVER then return 24 * (1 - unit(e.stateTime / e.attack.recover)) end
     end
     return 5 * math.sin(e.poseAge * 1.4)
 end
@@ -176,9 +162,7 @@ function Wraith:OnDamaged()
             Wraith.Config.posePart(self, id, p)
             self.stoppedClock[id] = p
         end
-    elseif self.arrived and self.knock.active then
-        -- A melee shove breaks the locked ground seal before it could drift.
-        self:FinishAttack()
+
     end
 end
 
@@ -229,15 +213,15 @@ function Wraith.Config.posePart(e, id, p)
         p.y = -.12 * unit(t / .35)
         if id == 'hourglass' then p.pitch = 70 * unit(t / .38) end
     elseif state == S.ATTACK then
-        local reveal = unit(t / .16)
-        p.sx, p.sz = .28 + .72 * reveal, .28 + .72 * reveal
-        p.y = p.y + .16 * (1 - reveal)
+        local beat = math.sin(t * 2.4)
+        p.y = .045 + beat * .012
         if id == 'ribbon_r' or id == 'ribbon_l' then
-            local swell = unit((t - .28) / .42) * (1 - unit((t - RING_TIME) / .20))
-            p.x = (id == 'ribbon_r' and 1 or -1) * swell * .43
-            p.roll = swell * (id == 'ribbon_r' and 28 or -28)
-        elseif id == 'hourglass' then p.pitch = 70 * (1 - unit(t / RING_TIME)) end
-    elseif id == 'hood' or id == 'face' then p.pitch = 14 * (1 - unit(t / .90)) end
+            local side = id == 'ribbon_r' and 1 or -1
+            p.x, p.roll = side * (.17 + beat * .04), side * (18 + beat * 4)
+        elseif id == 'sleeve_r' or id == 'sleeve_l' then p.pitch = -36 + beat * 3
+        elseif id == 'hourglass' then p.pitch = 70 + 110 * unit(t / Field.duration) end
+    elseif id == 'hood' or id == 'face' then p.pitch = 14 * (1-unit(t/e.attack.recover))
+    elseif id == 'hourglass' then p.pitch = 180 * (1-unit(t/e.attack.recover)) end
 end
 
 return Wraith
