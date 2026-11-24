@@ -96,6 +96,8 @@ function M.New(scene, world, spawn, spawnYaw)
     self.camPitch = 12
     self.speed = 0
     self.vel = Vector3(0, 0, 0)
+    self.stuckTime = 0
+    self.stuckCooldown = 0
     self.enabled = true
     self:ResetJump()
     self.fallbackPos = Vector3(spawn.x,spawn.y,spawn.z)
@@ -238,6 +240,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     if requestedScale~=(self.playerTimeScale or 1) then self:SetPlayerTimeScale(requestedScale,dt) end
     if self:UpdateSafety(dt) then self:ResetJump(); return end
     local cc = self.cc
+    self.stuckCooldown = math.max(0, (self.stuckCooldown or 0) - dt)
     local rad = math.rad(self.camYaw)
     local fwd = Vector3(math.sin(rad), 0, math.cos(rad))
     local right = Vector3(math.cos(rad), 0, -math.sin(rad))
@@ -273,6 +276,24 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
             if not Terrain.HasGround(q.x,q.z,.4) then fraction=(i-1)/steps; break end
         end
         cc.desiredVelocity=self.vel+motion*(fraction/math.max(dt,.001))
+    end
+    -- Destructible rubble can leave the capsule supported by several narrow
+    -- faces at once. When input persists but the controller makes no horizontal
+    -- progress, give it one small upward escape impulse after a short grace.
+    -- The cooldown prevents this from becoming an automatic jump while walking.
+    local blockedInput = moving and target > 1.0 and onGround
+        and (self.frameTravel or 0) < .012 and (self.actualSpeed or 0) < .35
+    if blockedInput then
+        self.stuckTime = (self.stuckTime or 0) + dt
+    else
+        self.stuckTime = 0
+    end
+    if self.stuckTime > .35 and self.stuckCooldown <= 0 and not jump
+        and not (combat and combat.scale and combat.scale <= 0) then
+        local velocity = cc:GetLinearVelocity()
+        cc:SetLinearVelocity(Vector3(velocity.x, math.max(velocity.y, 2.4), velocity.z))
+        self.stuckTime = 0
+        self.stuckCooldown = .75
     end
     local jumped=self:UpdateJump(dt,jump,not combat or
         (combat.jumpAllowed~=false and (combat.scale or 1)>0))
