@@ -56,13 +56,12 @@ void fragment() {
         METALLIC = 0.0;
         SPECULAR = 0.92;
         EMISSION = mix(day_emit, night_emit, nk);
-        return;
+    } else {
+        // INSTANCE_COLOR.rgb 区分蓝 / 蓝紫两种晶体
+        ALBEDO = base_color * tint * daynight_tint;
+        ROUGHNESS = 0.12;
+        METALLIC = 0.0;
+        SPECULAR = 0.8;
+        EMISSION = glow_color * tint * (0.35 + fres * 1.6) * glow * breathe;
     }
-
-    // INSTANCE_COLOR.rgb 区分蓝 / 蓝紫两种晶体
-    ALBEDO = base_color * tint * daynight_tint;
-    ROUGHNESS = 0.12;
-    METALLIC = 0.0;
-    SPECULAR = 0.8;
-    EMISSION = glow_color * tint * (0.35 + fres * 1.6) * glow * breathe;
 }

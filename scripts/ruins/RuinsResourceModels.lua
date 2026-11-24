@@ -333,13 +333,13 @@ end
 local function mine(base,stock,core)
     if base then
         -- Craggy fractured slate-basalt host rock (no flat hexagonal plugs).
-        crag(base,-.04,-.08,-.05,.92,.52,.68,.21,C.slateDark,C.slate,1)
-        crag(base,.54,-.02,.12,.44,.38,.36,.63,C.slate,C.stone,2)
-        crag(base,-.52,-.02,-.15,.40,.34,.35,.87,C.slate,C.stone,3)
-        crag(base,.08,.04,.34,.36,.28,.30,1.24,C.slateDark,C.slate,4)
-        -- Jagged dark-mineral collar shards where the crystals break through the rock.
+        crag(base,-.04,-.08,-.05,.92,.52,.68,.21,C.slate,C.stone,1)
+        crag(base,.54,-.02,.12,.44,.38,.36,.63,C.stone,C.chalk,2)
+        crag(base,-.52,-.02,-.15,.40,.34,.35,.87,C.stone,C.chalk,3)
+        crag(base,.08,.04,.34,.36,.28,.30,1.24,C.slate,C.stone,4)
+        -- Jagged pale-mineral collar shards where the crystals break through the rock.
         for idx,s in ipairs({{-.18,.28,.16,.16,.24},{.24,.26,.14,.15,.18},{.02,.30,-.22,.18,.26}}) do
-            crag(base,s[1],s[2],s[3],s[4],s[5],s[4]*.88,idx*.7,C.slateDark,C.slate,idx+10)
+            crag(base,s[1],s[2],s[3],s[4],s[5],s[4]*.88,idx*.7,C.stone,C.chalk,idx+10)
         end
     end
     if not stock then return end

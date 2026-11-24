@@ -89,9 +89,7 @@ void fragment() {
             ROUGHNESS = 0.88;
             METALLIC = 0.0;
             SPECULAR = 0.20;
-            return;
-        }
-
+        } else {
         float vein = pow(1.0 - abs(sin(wp.x * 5.8 + wp.y * 8.2 + chips * 4.2)), 11.0);
         vec3 col = base * (0.74 + 0.42 * facet);
         col *= (0.84 + 0.32 * strata) * (0.88 + 0.24 * cell.x);
@@ -105,9 +103,8 @@ void fragment() {
         ROUGHNESS = clamp(0.88 + (grain - 0.5) * 0.14 + crack * 0.08 - vein * 0.12, 0.72, 0.98);
         METALLIC = 0.0;
         SPECULAR = 0.24 + 0.10 * vein;
-        return;
-    }
-
+        }
+    } else {
     // 世界投影，跨贪心合并面保持一致，不使用旧圆管的环形 UV。
     float ridge = n2(vec2(along * 18.0, wp.y * 0.8));
     float crack = smoothstep(0.58, 0.76, ridge);
@@ -126,4 +123,5 @@ void fragment() {
     ROUGHNESS = 0.92;
     METALLIC = 0.0;
     SPECULAR = 0.2;
+    }
 }

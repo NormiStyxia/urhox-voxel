@@ -87,8 +87,7 @@ void fragment() {
         SPECULAR = 0.94;
         EMISSION = mix(day_emit, night_emit, nk);
         ALPHA = clamp(0.50 + facet * 0.18 + fres * 0.26 + glint * 0.18 + ridge * 0.08, 0.48, 0.95);
-        return;
-    }
+    } else {
 
     // Each flat cut gets its own interior brightness: reads as faceted stone,
     // not a smooth glass tube. Shade is constant per triangle.
@@ -117,4 +116,5 @@ void fragment() {
     float alpha = mix(crystal_alpha, edge_alpha, clamp(fres * 1.4 + glint, 0.0, 1.0));
     alpha = max(alpha, sweep * 0.7);
     ALPHA = clamp(mix(alpha, gem_alpha, gem_m) + k * 0.25, 0.0, 1.0);
+    }
 }
