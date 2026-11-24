@@ -134,7 +134,7 @@ end
 local world=Mock.World(scene)
 local rig=Rig.New(scene,world,Mock.Nomi(scene))
 grantModels(rig.config)
-assert(rig.pixelSwordFx and rig.swordVfx,'exercise the real sword voxel pool')
+assert(rig.pixelSwordFx and rig.swordVfx,'exercise the real sword sheet vfx')
 State.Configure{rig=rig,explicitSelection=true}
 local function tick(n)
     for _=1,n do State.Update(1/60);rig:Update(1/60) end
@@ -143,7 +143,7 @@ assert(State.Enter('manual'));tick(100)
 for _,item in ipairs({{'sword','iron'},{'bow','field'},{'sword','wing'},{'bow','thorn'},{'sword','warden'},{'bow','silver'},{'sword','iron'},{'bow','field'}}) do
     local class,id=table.unpack(item)
     assert(Store.Forge(rig,class,'select',id));tick(100)
-    assert(rig.swordVfx.world:Count()==0 and rig.swordVfx.blade:Count()==0)
+    assert(rig.swordVfx:Count()==0 and not rig.swordVfx.node.enabled)
     local pools={rig.bowChargeFx.motes,rig.bowChargeFx.flakes}
     local commits={}
     for i,p in ipairs(pools)do assert(p:Count()==0);commits[i]=p.bb.commits end

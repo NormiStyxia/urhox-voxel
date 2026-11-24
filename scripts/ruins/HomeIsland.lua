@@ -328,12 +328,14 @@ function H.RefreshWindowLights(stage)
     end
     -- Clear panes carry a faint warm room glow at dusk and night.
     if windows.glass then
-        windows.glass:SetShaderParameter('MatEmissiveColor',Variant(Color(2.4*glow,1.4*glow,.65*glow)))
+        local k=H.warm and .55 or 1
+        windows.glass:SetShaderParameter('MatEmissiveColor',Variant(Color(2.4*glow*k,1.4*glow*k,.65*glow*k)))
     end
     local previous
     for i=1,2 do
         local socket
-        if windows.active and stage>0 and i<=windows.budget and windows.spill>0 then socket=chooseWindowLamp(previous) end
+        -- 室内已有真实灯具（HomeWarmLayout）时，不再用窗外向下照的小聚光假装屋里亮着
+        if windows.active and stage>0 and i<=windows.budget and windows.spill>0 and not H.warm then socket=chooseWindowLamp(previous) end
         local lamp=windows.lamps[i]
         if socket then
             if not lamp then
@@ -366,7 +368,13 @@ function H.RegisterWindowLamps(root,sockets,first,last)
     H.RefreshWindowLights(windows.stage)
 end
 
+-- 家园暖光点光预算（高 / 中 / 低）
+local WARM_BUDGET={high=14,medium=9,low=4}
 function H.SetWindowLightingActive(on,quality)
+    if quality and WARM_BUDGET[quality]~=H.warmBudget then
+        H.warmBudget=WARM_BUDGET[quality]
+        if H.warm then H.warm:SetLightBudget(H.warmBudget) end
+    end
     local budget=quality and (quality=='low' and 1 or 2) or windows.budget
     if on==windows.active and budget==windows.budget then return end
     windows.active,windows.budget=on,budget
@@ -388,6 +396,8 @@ function H.Stop()
     if forgeFlame.material then forgeFlame.material:Dispose() end
     forgeFlame.root,forgeFlame.material,forgeFlame.time=nil,nil,0
     H.lastDay,H.lastDusk,H.lastNight,H.zoneFallback=nil,nil,nil,nil
+    -- 体素外壳由建造任务的 Cancel 或场景销毁负责；这里只释放灯光与粒子。
+    if H.warm then H.warm:Release(false); H.warm=nil end
 end
 
 ---@param dt number
@@ -440,6 +450,10 @@ end
 
 function H.Update(dt,feet,dn)
     if H.spring then updateWater(dt,feet) end
+    if H.warm then
+        H.warm:SetStage(houseStage)
+        H.warm:Update(dt,dn)
+    end
     hearthTime=hearthTime+dt
     forgeFlame.time=hearthTime
     if forgeFlame.material then
@@ -1613,6 +1627,15 @@ function H.Build(world,scene,dayNight)
         CascadeParticle.SpawnEmitterAttached(flames,scene,Vector3(H.x+FORGE.x,H.base+.8,H.z+FORGE.z+1.3),Quaternion(),Vector3.ONE,false)
     end
     buildForgeFlame(scene)
+    -- 夜间暖光：池边路灯、壁灯、室内吊灯、露台灯盏、柱台蜡烛与火盆
+    if activeJob then coroutine.yield() end
+    require('ruins.WarmLights').SetupPalette(world)
+    H.warm=require('ruins.HomeWarmLayout').Build(scene,world,Vector3(H.x,H.base,H.z))
+    if activeJob then
+        for _,v in ipairs(H.warm.volumes) do activeJob.ids[v:GetVolumeId()]=true end
+    end
+    H.warm:SetLightBudget(H.warmBudget or 12)
+    H.RefreshWindowLights(houseStage) -- 关掉窗外假光，改由室内灯具照亮
     if dayNight then H.Update(0,nil,dayNight) end
     world:OptimizeBroadPhase()
 end

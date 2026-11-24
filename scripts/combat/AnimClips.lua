@@ -41,6 +41,7 @@
 ---@field locomotion boolean|nil Pure pose, driven by real displacement gaitPhase.
 ---@field smoothBlend boolean|nil Smooth natural entry/exit, never retime events.
 ---@field comboEntry number|nil 普攻继承上一刀末势的预备段终点（归一化时间）。
+---@field footwork {steps: table[], support: {foot: string, drag: number, settle: number[]}, hips: number[][]}|nil 落脚点驱动的步法（combat.FootPlant）。
 
 ---@class CombatClipCatalog
 ---@field Layer table<string, number>
@@ -440,11 +441,47 @@ pathAttack("sword_light_2",{-.40,.80,.65},{.62,1.60,.30},-140,"xz",.23,.27,.45,{
 pathAttack("sword_light_3",{.70,1.20,-.20},{-.70,1.10,.35},200,"xz",.24,.30,1.6,{.2,1,-.3})
 pathAttack("sword_light_4",{.65,1.25,.05},{.62,1.20,-.12},340,"xz",.32,.40,.75,{0,1,0})
 pathAttack("sword_light_5",{.45,1.10,-.55},{.40,.30,.80},230,"yz",.40,.46,1.3,{1,0,0})
+-- The lunge starts in the windup and is spent by contact: the body is carried
+-- by the step, never shoved forward while the blade is already cutting.
+C.Clips.sword_light_1.motion={{t0=.04,t1=.24,forward=.55}}
+C.Clips.sword_light_2.motion={{t0=.06,t1=.25,forward=.45}}
 -- Stage 3 dashes: most of the step happens before the blade arrives.
-C.Clips.sword_light_3.motion={{t0=.06,t1=.30,forward=1.6}}
+C.Clips.sword_light_3.motion={{t0=.04,t1=.27,forward=1.6}}
 -- Stage 4 hops forward through the spin; stage 5 travels with the leap.
-C.Clips.sword_light_4.motion={{t0=.18,t1=.46,forward=.75}}
-C.Clips.sword_light_5.motion={{t0=.14,t1=.46,forward=1.3}}
+C.Clips.sword_light_4.motion={{t0=.10,t1=.42,forward=.75}}
+C.Clips.sword_light_5.motion={{t0=.12,t1=.42,forward=1.3}}
+-- Footwork (combat.FootPlant). One lead foot per strike: it steps out with the
+-- swing and is drawn back in the recovery. The support foot never lifts; it
+-- stays planted and is only dragged along the floor when the lunge carries the
+-- body further than `drag`, then glides back under the hips in `settle`.
+-- Step: foot, lift t0, land t1 (seconds), body-relative landing x (right) /
+-- z (forward) in metres, arc height h, toe turn outward in degrees, ride =
+-- the foot leaves the ground with the hop (jump strikes lift both feet).
+-- hips: pelvis yaw keys {t, degrees}, about half of the torso turn.
+-- Both feet are back under the hips before the fade-out begins.
+local REST=.094
+C.Clips.sword_light_1.footwork={ -- 斜劈：右脚上步压上去，左脚原地生根；收招右脚收回
+    steps={{"R",.05,.23,REST+.04,.34,.10,6},{"R",.40,.58,REST,0,.06,0}},
+    support={foot="L",drag=.30,settle={.40,.58}},
+    hips={{0,0},{.12,12},{.19,8},{.25,-20},{.36,-24},{.60,-6},{.80,0}}}
+C.Clips.sword_light_2.footwork={ -- 上挑：左脚上步，右脚原地生根；收招左脚收回
+    steps={{"L",.06,.22,-REST-.04,.30,.10,4},{"L",.42,.60,-REST,0,.06,0}},
+    support={foot="R",drag=.30,settle={.42,.60}},
+    hips={{0,0},{.12,-14},{.20,8},{.26,14},{.36,18},{.62,4},{.82,0}}}
+C.Clips.sword_light_3.footwork={ -- 突进横斩：右脚大弓步，左脚贴地滑行跟进；收招右脚收回
+    steps={{"R",.06,.24,REST+.05,.46,.12,8},{"R",.46,.66,REST,0,.07,0}},
+    support={foot="L",drag=.34,settle={.46,.66}},
+    hips={{0,0},{.10,16},{.21,12},{.27,-22},{.40,-28},{.66,-6},{.88,0}}}
+C.Clips.sword_light_4.footwork={ -- 腾空回旋：双脚离地，右脚在前先落、左脚落回脚下；收招右脚收回
+    steps={{"R",.13,.45,REST+.04,.24,.22,10,true},{"L",.15,.48,-REST,0,.26,0,true},
+        {"R",.56,.74,REST,0,.06,0}},
+    support={foot="L",drag=.30,settle={.56,.74}},
+    hips={{0,0},{.13,18},{.22,8},{.32,-16},{.46,-22},{.72,-4},{.96,0}}}
+C.Clips.sword_light_5.footwork={ -- 跃起半月斩：双脚起跳，落成右前左后的深弓步并停一拍；收招右脚收回
+    steps={{"R",.15,.43,REST+.04,.38,.26,4,true},{"L",.17,.46,-REST-.02,-.18,.24,24,true},
+        {"R",.70,.88,REST,0,.07,0}},
+    support={foot="L",drag=.30,settle={.70,.88}},
+    hips={{0,0},{.13,6},{.30,4},{.42,-8},{.70,-10},{.92,-2},{1.10,0}}}
 -- Half-moon finisher: blade lands at the end of the arc and stays planted .06s.
 local moonPath=C.Clips.sword_light_5.handPath.arm_right.segments
 local moonEnd=moonPath[4].t1

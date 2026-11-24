@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 野外篝火：柴堆火舌 + 底部暖光团 + 上飘火星 + 淡烟。节点放在柴堆底部中心。 -->
+<ParticleSystem version="2" warmupTime="1.0" warmupTickRate="20" secondsBeforeInactive="0.5">
+    <Emitter emitterName="Glow">
+        <Required material="Effects/Forge/FireAdd.material" screenAlignment="Square" emitterDuration="1" emitterLoops="0"/>
+        <Spawn>
+            <Rate type="Constant" constant="4"/>
+        </Spawn>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="Uniform" min="0.8" max="1.2"/>
+            </Module>
+            <Module type="Location">
+                <StartLocation type="Uniform" min="-0.12 0.15 -0.12" max="0.12 0.3 0.12"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="Uniform" min="0.9 0.9 0.9" max="1.2 1.2 1.2"/>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="Constant" constant="1 0.34 0.08"/>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="0"/>
+                    <Point inVal="0.4" outVal="0.22"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+        </Modules>
+    </Emitter>
+    <Emitter emitterName="Flame">
+        <Required material="Effects/Forge/FireAdd.material" screenAlignment="Square" emitterDuration="1" emitterLoops="0"/>
+        <Spawn>
+            <Rate type="Constant" constant="34"/>
+        </Spawn>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="Uniform" min="0.35" max="0.65"/>
+            </Module>
+            <Module type="Location">
+                <StartLocation type="Uniform" min="-0.16 0.04 -0.16" max="0.16 0.1 0.16"/>
+            </Module>
+            <Module type="Velocity">
+                <StartVelocity type="Uniform" min="-0.08 0.55 -0.08" max="0.08 1.0 0.08"/>
+            </Module>
+            <Module type="AttractorLine" endPoint0="0 0 0" endPoint1="0 1.1 0">
+                <Range type="Constant" constant="0.5"/>
+                <Strength type="Constant" constant="0.8"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="Uniform" min="0.26 0.26 0.26" max="0.4 0.4 0.4"/>
+            </Module>
+            <Module type="SizeMultiplyLife">
+                <LifeMultiplier type="ConstantCurve">
+                    <Point inVal="0" outVal="0.8 0.8 0.8"/>
+                    <Point inVal="0.3" outVal="1.1 1.1 1.1"/>
+                    <Point inVal="1" outVal="0.25 0.25 0.25"/>
+                </LifeMultiplier>
+            </Module>
+            <Module type="Rotation">
+                <StartRotation type="Uniform" min="0" max="360"/>
+            </Module>
+            <Module type="RotationRate">
+                <StartRotationRate type="Uniform" min="-90" max="90"/>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="1 0.85 0.45"/>
+                    <Point inVal="0.35" outVal="1 0.48 0.11"/>
+                    <Point inVal="1" outVal="0.75 0.12 0.02"/>
+                </ColorOverLife>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="0"/>
+                    <Point inVal="0.15" outVal="0.9"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+            <Module type="ColorScaleOverLife">
+                <ColorScaleOverLife type="Constant" constant="2.0 2.0 2.0"/>
+            </Module>
+        </Modules>
+    </Emitter>
+    <Emitter emitterName="Sparks">
+        <Required material="Effects/Forge/Spark.material" screenAlignment="Velocity" emitterDuration="1" emitterLoops="0"/>
+        <Spawn>
+            <Rate type="Uniform" min="2" max="6"/>
+        </Spawn>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="Uniform" min="0.8" max="1.6"/>
+            </Module>
+            <Module type="Location">
+                <StartLocation type="Uniform" min="-0.12 0.2 -0.12" max="0.12 0.35 0.12"/>
+            </Module>
+            <Module type="Velocity">
+                <StartVelocity type="Uniform" min="-0.35 0.9 -0.35" max="0.35 1.8 0.35"/>
+            </Module>
+            <Module type="Acceleration">
+                <Acceleration type="Uniform" min="-0.4 -0.6 -0.4" max="0.4 -0.2 0.4"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="Uniform" min="0.02 0.02 0.02" max="0.04 0.04 0.04"/>
+            </Module>
+            <Module type="SizeScaleBySpeed" speedScale="1 2.5" maxScale="1 4"/>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="1 0.85 0.5"/>
+                    <Point inVal="1" outVal="1 0.3 0.05"/>
+                </ColorOverLife>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="1"/>
+                    <Point inVal="0.6" outVal="1"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+            <Module type="ColorScaleOverLife">
+                <ColorScaleOverLife type="Constant" constant="3.5 3.5 3.5"/>
+            </Module>
+        </Modules>
+    </Emitter>
+    <Emitter emitterName="Smoke">
+        <Required material="Effects/Forge/Smoke.material" emitterOrigin="0 0.7 0" screenAlignment="Square"
+                  emitterDuration="1" emitterLoops="0"/>
+        <Spawn>
+            <Rate type="Constant" constant="2.5"/>
+        </Spawn>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="Uniform" min="2.5" max="3.5"/>
+            </Module>
+            <Module type="Location">
+                <StartLocation type="Uniform" min="-0.1 0 -0.1" max="0.1 0.1 0.1"/>
+            </Module>
+            <Module type="Velocity">
+                <StartVelocity type="Uniform" min="-0.08 0.45 -0.08" max="0.08 0.7 0.08"/>
+            </Module>
+            <Module type="Acceleration" alwaysInWorldSpace="true">
+                <Acceleration type="Uniform" min="0.06 -0.05 0.02" max="0.15 -0.02 0.06"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="Uniform" min="0.3 0.3 0.3" max="0.45 0.45 0.45"/>
+            </Module>
+            <Module type="SizeMultiplyLife">
+                <LifeMultiplier type="ConstantCurve">
+                    <Point inVal="0" outVal="0.6 0.6 0.6"/>
+                    <Point inVal="1" outVal="2.6 2.6 2.6"/>
+                </LifeMultiplier>
+            </Module>
+            <Module type="Rotation">
+                <StartRotation type="Uniform" min="0" max="360"/>
+            </Module>
+            <Module type="RotationRate">
+                <StartRotationRate type="Uniform" min="-20" max="20"/>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="0.24 0.22 0.22"/>
+                    <Point inVal="1" outVal="0.36 0.37 0.40"/>
+                </ColorOverLife>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="0"/>
+                    <Point inVal="0.2" outVal="0.28"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+        </Modules>
+    </Emitter>
+</ParticleSystem>

@@ -1162,6 +1162,23 @@ end
 ---@return Vector3 euler
 function A:GetWeaponPose() return self.weaponOffset,self.weaponEuler end
 
+---The newest live clip that authors footwork, its clip-time seconds and handle,
+---plus the summed weight of every footwork clip (a combo crossfade never dips).
+---@return CombatClip|nil clip
+---@return number t
+---@return number weight
+---@return integer handle
+function A:Footwork()
+    local clip,t,handle,total=nil,0,0,0
+    for _,s in ipairs(self.ordered) do
+        if s.live and s.weight>0 and s.clip.footwork then
+            total=total+s.weight
+            if not s.stopping or clip==nil then clip,t,handle=s.clip,s.t,s.handle end
+        end
+    end
+    return clip,t,math.min(1,total),handle
+end
+
 ---Reusable IK diagnostics in body-node local space. No allocation; read after Apply.
 ---@param clipId string|nil
 ---@return table<string, CombatIKResult>|nil

@@ -62,7 +62,7 @@ local SETS = {
         {name='breathSpecial',icon='breath',label='大招',x=-196,y=-160},
     },
 }
-local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','轻推摇杆步行 · 推到底奔跑 · 按住【冲】冲刺耗体力','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
+local HELP_LINES={'操作说明','左摇杆移动 · 右侧拖动看四周','推动摇杆奔跑 · 按住【冲】冲刺耗体力','按住碎时蓄力 · 松手释放碎时','按住【龙息】持续吐息 · 点【大招】施法','点【起飞】升空 · 摇杆控制方向','按住【上升】/【下降】· 点【滑翔】省力','轻触屏幕返回'}
 local TOP = {{name='menu',icon='menu'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local AIR_TOP = {{name='menu',icon='menu'},{name='glide',icon='glide'},{name='farview',icon='farview'},{name='fastTime',icon='clock'}}
 local FOOT_TOP={{name='menu',icon='menu'},{name='sheath',icon='swap',label='切换'},{name='forge'},{name='skill',icon='shatter',label='碎时'},{name='farview'},{name='fastTime',icon='clock'},{name='worldMap',label='地图'}}
@@ -152,7 +152,7 @@ local function JoyMove(x,y)
     joy.dx,joy.dy=Draw.Snap(dx*k),Draw.Snap(dy*k)
     local magnitude=Clamp((len/40-.15)/.85,0,1)
     Input.SetMove(len>0 and -dy/len*magnitude or 0,len>0 and dx/len*magnitude or 0)
-    Input.Set('runIntent',(current=='foot' or current=='combat') and len>=36)
+    Input.Set('runIntent',(current=='foot' or current=='combat') and magnitude>0)
     local atTop=(current=='air' or current=='ground') and -dy>=36 and math.abs(dx)<18
     if atTop and not joy.atTop then joy.flash=frame end
     joy.atTop=atTop

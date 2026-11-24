@@ -20,7 +20,8 @@ local Perf=require("combat.SwingPerf")
 
 local M = {}
 
-local WALK, RUN, SPRINT = 4.2, 7.2, 10.0 -- walk / run (free) / held sprint (stamina)
+local RUN, SPRINT = 7.2, 10.0 -- run (default, free) / held sprint (stamina)
+local AIM_SPEED = 2.5 -- aiming/charging keeps a slow run so the reticle stays steady
 local JUMP = 6.4
 local COYOTE_TIME, JUMP_BUFFER = .12, .12
 local AIR_CONTROL = 0.35
@@ -272,7 +273,7 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     local moving = dir:LengthSquared() > 0.01
     if moving then dir = dir:Normalized() end
     local runSpeed=(combat and combat.fast) and SPRINT or RUN
-    local target = moving and ((run and not aiming) and runSpeed or (aiming and WALK * 0.6 or WALK)) or 0
+    local target = moving and (aiming and AIM_SPEED or runSpeed) or 0
     if combat then
         target=moving and ((run and not aiming and (combat.scale or 1)==1) and runSpeed or (combat.baseSpeed or 5))
             *(combat.scale or 1)*(self.playerTimeScale or 1) or 0
