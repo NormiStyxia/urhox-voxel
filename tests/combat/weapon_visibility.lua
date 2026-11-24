@@ -119,6 +119,7 @@ immediate:Update(1);assert(not immediate.node.enabled);CheckFree(immediate)
 base=immediate.geometry.commits;immediate:Clear();immediate:Update(.1)
 assert(immediate.geometry.commits==base);immediate.node:Remove()
 print('PASS real VoxelFX empty/live/expiry/reuse and time-catalyst deferred clear: no empty Commit/Draw, no residual particles')
+require('sword_vfx_support').Install()
 local State=require('combat.CombatState')
 local Store=require('combat.WeaponStore')
 Store.Save=function() return true end
@@ -133,7 +134,7 @@ end
 local world=Mock.World(scene)
 local rig=Rig.New(scene,world,Mock.Nomi(scene))
 grantModels(rig.config)
-assert(rig.pixelSwordFx and rig.shockBurst.pixelMode,'exercise real billboard pool')
+assert(rig.pixelSwordFx and rig.swordVfx,'exercise the real sword voxel pool')
 State.Configure{rig=rig,explicitSelection=true}
 local function tick(n)
     for _=1,n do State.Update(1/60);rig:Update(1/60) end
@@ -142,8 +143,8 @@ assert(State.Enter('manual'));tick(100)
 for _,item in ipairs({{'sword','iron'},{'bow','field'},{'sword','wing'},{'bow','thorn'},{'sword','warden'},{'bow','silver'},{'sword','iron'},{'bow','field'}}) do
     local class,id=table.unpack(item)
     assert(Store.Forge(rig,class,'select',id));tick(100)
-    local pools={rig.combatFx.pixel.slash,rig.combatFx.pixel.impact,rig.combatFx.pixel.charge,
-        rig.slashRibbon.pixels,rig.shockBurst.pixels,rig.bowChargeFx.motes,rig.bowChargeFx.flakes}
+    assert(rig.swordVfx.world:Count()==0 and rig.swordVfx.blade:Count()==0)
+    local pools={rig.bowChargeFx.motes,rig.bowChargeFx.flakes}
     local commits={}
     for i,p in ipairs(pools)do assert(p:Count()==0);commits[i]=p.bb.commits end
     assert(State.SetWeapon(class))
@@ -190,6 +191,8 @@ local function failureCase()
 end
 package.loaded['dragon.VoxelFX']=nil
 package.preload['dragon.VoxelFX']=function() error('injected backend unavailable') end
+package.loaded['combat.SwordVfx']=nil
+package.preload['combat.SwordVfx']=function() error('injected backend unavailable') end
 rig=failureCase()
 assert(not rig.pixelSwordFx and not rig.bowChargeFx)
 State.Configure{rig=rig,explicitSelection=true};State.Enter('manual');tick(100)

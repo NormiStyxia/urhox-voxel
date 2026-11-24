@@ -30,11 +30,13 @@
 ---@field size number
 ---@field height number
 ---@field ground boolean
+---@field live boolean
 
 ---@class SwordVfxPool
 ---@field free SwordVfxCube[]
 ---@field items SwordVfxItem[]
 ---@field spare SwordVfxItem[]
+---@field fresh SwordVfxItem[]
 ---@field colors Color[]
 local Pool={};Pool.__index=Pool
 
@@ -66,12 +68,13 @@ local ARC_ROWS={
     {{t=0,s=1,c=BLUE},{t=.03,s=1,c=DEEP},{t=.06,s=.72,c=DEEP},{t=.09}},
     {{t=0,s=1,c=DEEP},{t=.04,s=.72,c=DEEP},{t=.07}},
 }
----@type table<string, {rows: integer, reach: number}>
+-- rib：最外面几行沿挥砍面法线加厚成三层。镜头常常贴着挥砍面看，单层会退化成一条线。
+---@type table<string, {rows: integer, reach: number, rib: integer}>
 local STYLES={
-    light={rows=5,reach=1},
-    heavy={rows=6,reach=1.5},
-    moon={rows=7,reach=2},
-    cross={rows=6,reach=1.5},
+    light={rows=5,reach=1,rib=1},
+    heavy={rows=6,reach=1.5,rib=2},
+    moon={rows=7,reach=2,rib=2},
+    cross={rows=6,reach=1.5,rib=2},
 }
 ---@type SwordVfxStep[]
 local HIT_CORE={{t=0,s=2.4,c=WHITE},{t=.05,s=1.6,c=ICE},{t=.09}}
@@ -116,7 +119,7 @@ local SQUARE={{-1,-1},{0,-1},{1,-1},{-1,0},{1,0},{-1,1},{0,1},{1,1}}
 ---@param colors Color[]
 ---@return SwordVfxPool
 local function NewPool(parent,name,count,material,colors)
-    local self=setmetatable({free={},items={},spare={},colors=colors},Pool)
+    local self=setmetatable({free={},items={},spare={},fresh={},colors=colors},Pool)
     local model=cache:GetResource('Model','Models/Box.mdl')
     for i=1,count do
         local node=parent:CreateChild(name..i)
@@ -139,13 +142,46 @@ end
 function Pool:Add(tag,steps,delay,px,py,pz,size)
     local item=table.remove(self.spare)
     if item==nil then
-        item={tag=tag,steps=steps,age=0.0,stage=0,px=0.0,py=0.0,pz=0.0,dx=0.0,dy=0.0,dz=0.0,size=0.0,height=1.0,ground=false}
+        item={tag=tag,steps=steps,age=0.0,stage=0,px=0.0,py=0.0,pz=0.0,dx=0.0,dy=0.0,dz=0.0,size=0.0,height=1.0,ground=false,live=true}
     end
     item.tag,item.steps,item.age,item.stage,item.cube=tag,steps,-delay,0,nil
     item.px,item.py,item.pz,item.size=px,py,pz,size
-    item.dx,item.dy,item.dz,item.height,item.ground=0.0,0.0,0.0,1.0,false
+    item.dx,item.dy,item.dz,item.height,item.ground,item.live=0.0,0.0,0.0,1.0,false,true
     self.items[#self.items+1]=item
+    self.fresh[#self.fresh+1]=item
     return item
+end
+
+---@param item SwordVfxItem
+---@param stage integer
+---@return boolean shown false when the pool has no cube left
+function Pool:Show(item,stage)
+    local cube=item.cube
+    if cube==nil then
+        cube=table.remove(self.free)
+        if cube==nil then return false end
+        item.cube=cube
+    end
+    item.stage=stage
+    local step=item.steps[stage]
+    local s=item.size*(step.s or 1)
+    local sy=s*(step.h or 1)*item.height
+    local o=step.o or 0
+    cube.node.position=Vector3(item.px+item.dx*o,item.py+item.dy*o+(item.ground and sy*.5 or 0),item.pz+item.dz*o)
+    cube.node.scale=Vector3(s,sy,s)
+    cube.model.instanceColor=self.colors[step.c or WHITE]
+    cube.node.enabled=true
+    return true
+end
+
+--- 把本帧刚加入、没有延迟的方块立刻显示出来，不等下一次 Update。
+function Pool:Present()
+    local fresh=self.fresh
+    for i=1,#fresh do
+        local item=fresh[i]
+        if item.live and item.stage==0 and item.age>=0 then self:Show(item,1) end
+        fresh[i]=nil
+    end
 end
 
 ---@param item SwordVfxItem
@@ -156,6 +192,7 @@ function Pool:Release(item)
         self.free[#self.free+1]=cube
         item.cube=nil
     end
+    item.live=false
     self.spare[#self.spare+1]=item
 end
 
@@ -164,6 +201,8 @@ function Pool:Update(dt)
     local items=self.items
     local count=#items
     if count==0 then return end
+    local fresh=self.fresh
+    for i=#fresh,1,-1 do fresh[i]=nil end
     local kept=0
     for i=1,count do
         local item=items[i]
@@ -173,25 +212,7 @@ function Pool:Update(dt)
         local stage=item.stage
         while stage<last and item.age>=steps[stage+1].t do stage=stage+1 end
         local alive=stage<last
-        if alive and stage~=item.stage then
-            local cube=item.cube
-            if cube==nil then
-                cube=table.remove(self.free)
-                item.cube=cube
-            end
-            if cube==nil then alive=false
-            else
-                item.stage=stage
-                local step=steps[stage]
-                local s=item.size*(step.s or 1)
-                local sy=s*(step.h or 1)*item.height
-                local o=step.o or 0
-                cube.node.position=Vector3(item.px+item.dx*o,item.py+item.dy*o+(item.ground and sy*.5 or 0),item.pz+item.dz*o)
-                cube.node.scale=Vector3(s,sy,s)
-                cube.model.instanceColor=self.colors[step.c or WHITE]
-                cube.node.enabled=true
-            end
-        end
+        if alive and stage~=item.stage then alive=self:Show(item,stage) end
         if alive then kept=kept+1;items[kept]=item
         else self:Release(item) end
     end
@@ -229,9 +250,11 @@ function V.New(scene)
     local self=setmetatable({},V)
     local material=Material:new()
     assert(material:SetSurfaceShader('Shaders/BLGL/SwordVoxel.shader'),'SwordVoxel.shader unavailable')
-    local lowFx=false
-    local ok,platform=pcall(require,'urhox-libs.Platform.PlatformUtils')
-    if ok and platform then lowFx=platform.IsWebPlatform() or platform.IsMobilePlatform() end
+    local ok,lowFx=pcall(function()
+        local platform=require('urhox-libs.Platform.PlatformUtils')
+        return platform.IsWebPlatform() or platform.IsMobilePlatform()
+    end)
+    lowFx=ok and lowFx==true
     -- 移动端 / Web 的泛光没有色调映射兜底，发光倍数压低。
     material:SetShaderParameter('glow',Variant(lowFx and 1.5 or 2.4))
     self.material=material
@@ -266,8 +289,8 @@ function V:End()
     self.stroke,self.has=false,false
 end
 
--- 一条剑刃采样：从外缘向内逐格点亮尚未亮过的世界格子。
-function V:Column(rx,ry,rz,dx,dy,dz,len)
+-- 一条剑刃采样：从外缘向内逐格点亮尚未亮过的世界格子。n 是挥砍面法线（起手第一条没有，传 0）。
+function V:Column(rx,ry,rz,dx,dy,dz,len,nx,ny,nz)
     local style=self.style
     -- 起手处月牙由窄变宽
     local rows=math.min(style.rows,1+math.floor(self.travel/(PITCH*1.5)))
@@ -285,6 +308,19 @@ function V:Column(rx,ry,rz,dx,dy,dz,len)
         if not cells[key] then
             cells[key]=true
             world:Add('arc',ARC_ROWS[math.min(#ARC_ROWS,row+1)] or ARC_ROWS[1],0,cx*PITCH,cy*PITCH,cz*PITCH,PITCH*FILL)
+        end
+        if row<style.rib and nx*nx+ny*ny+nz*nz>.5 then
+            -- 两侧的肋比中线暗一档、早灭一档，白热的棱线始终在正中
+            local side=ARC_ROWS[math.min(#ARC_ROWS,row+2)] or ARC_ROWS[1]
+            for sign=-1,1,2 do
+                local o=PITCH*sign
+                local sx,sy,sz=Snap(rx+dx*d+nx*o),Snap(ry+dy*d+ny*o),Snap(rz+dz*d+nz*o)
+                local sideKey=Key(sx,sy,sz)
+                if not cells[sideKey] then
+                    cells[sideKey]=true
+                    world:Add('arc',side,0,sx*PITCH,sy*PITCH,sz*PITCH,PITCH*FILL)
+                end
+            end
         end
         q=q+PITCH*.6
     end
@@ -306,9 +342,13 @@ function V:Sample(root,tip)
         local moved=math.sqrt(mx*mx+my*my+mz*mz)
         if moved>2.5 or self.ldx*dx+self.ldy*dy+self.ldz*dz<-.2 then
             -- 瞬移或剑刃近乎反向：不跨越连接，当作新的一笔起点
-            self:Column(rx,ry,rz,dx,dy,dz,len)
+            self:Column(rx,ry,rz,dx,dy,dz,len,0,0,0)
         elseif moved>1e-4 then
-            self.tx,self.ty,self.tz=mx/moved,my/moved,mz/moved
+            local tx,ty,tz=mx/moved,my/moved,mz/moved
+            self.tx,self.ty,self.tz=tx,ty,tz
+            local nx,ny,nz=dy*tz-dz*ty,dz*tx-dx*tz,dx*ty-dy*tx
+            local nl=math.sqrt(nx*nx+ny*ny+nz*nz)
+            if nl>1e-3 then nx,ny,nz=nx/nl,ny/nl,nz/nl else nx,ny,nz=0,0,0 end
             local n=math.min(40,math.max(1,math.ceil(moved/(PITCH*.5))))
             for i=1,n do
                 local u=i/n
@@ -317,15 +357,16 @@ function V:Sample(root,tip)
                 if il>1e-5 then
                     self.travel=self.travel+moved/n
                     self:Column(self.lrx+(rx-self.lrx)*u,self.lry+(ry-self.lry)*u,self.lrz+(rz-self.lrz)*u,
-                        ix/il,iy/il,iz/il,self.llen+(len-self.llen)*u)
+                        ix/il,iy/il,iz/il,self.llen+(len-self.llen)*u,nx,ny,nz)
                 end
             end
         end
     else
-        self:Column(rx,ry,rz,dx,dy,dz,len)
+        self:Column(rx,ry,rz,dx,dy,dz,len,0,0,0)
     end
     self.lrx,self.lry,self.lrz,self.ldx,self.ldy,self.ldz,self.llen=rx,ry,rz,dx,dy,dz,len
     self.has=true
+    self.world:Present()
 end
 
 --- 命中：切痕沿最近一次挥砍方向从命中点向两端延伸，菱形环逐层外扩。
@@ -360,6 +401,7 @@ function V:Contact(pos,strong)
             world:Add('hit',HIT_RING,.03+(r-1)*.045,x+cell[1]*PITCH,y+cell[2]*PITCH,z+cell[3]*PITCH,PITCH*FILL*.8)
         end
     end
+    world:Present()
 end
 
 --- 终结技落地：以前方落点为圆心，方柱波前只向前半边推进，越远越矮。
@@ -382,6 +424,7 @@ function V:GroundWave(pos,forward)
             item.height=1+3.2*(1-d/WAVE_RINGS)
         end
     end
+    world:Present()
 end
 
 ---@param root Vector3
@@ -391,7 +434,7 @@ function V:PlaceBlade(root,tip)
     local delta=tip-root
     local len=delta:Length()
     if len<1e-4 then return 0 end
-    self.bladeRotation:FromRotationTo(Vector3.UP,delta/len)
+    self.bladeRotation:FromRotationTo(Vector3.UP,delta*(1/len))
     self.bladeNode.position=root
     self.bladeNode.rotation=self.bladeRotation
     return len
@@ -402,6 +445,7 @@ local function Ring(self,steps,delay,height)
         local item=self.blade:Add('charge',steps,delay,0,height,0,PITCH*.62)
         item.dx,item.dz=cell[1]*PITCH*.62,cell[2]*PITCH*.62
     end
+    self.blade:Present()
 end
 
 --- 蓄力中每帧调用：方环在剑身上按蓄力进度的高度处逐级收拢。

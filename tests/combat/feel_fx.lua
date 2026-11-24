@@ -86,17 +86,18 @@ assert(hiddenWrites==beforeClear,'expired slots need no second enabled write')
 fx:Dispose()
 -- Exercise the real rig port as well as the individual effect pools.
 do
+ require('sword_vfx_support').Install()
  local Rig=require('combat.WeaponRig')
  local sc=Mock.Node('scene')
  local r=Rig.New(sc,Mock.World(sc),Mock.Nomi(sc))
  r:SetPose('hand');for _=1,12 do r:Update(1/60) end
- r:BeginSlash(5,false);assert(r.slashRibbon.activeKind=='moon')
- r:BeginSlash(nil,true);assert(r.slashRibbon.activeKind=='cross')
+ r:BeginSlash(5,false);assert(r.swordVfx.kind=='moon')
+ r:BeginSlash(nil,true);assert(r.swordVfx.kind=='cross')
  r:SetTrail(false)
  r:ImpactFx(Vector3.ZERO,Vector3.FORWARD)
- assert(r.combatFx.land[1].active,'ground impact remains with decorative trails disabled')
- local burst=r.shockBurst.bursts[r.shockBurst.head]
- assert(burst.active and burst.z==.65 and burst.kind.size==2.4,'finisher remains forward-centred')
+ assert(r.swordVfx.world:Count('wave')>0,'ground impact remains with decorative trails disabled')
+ for _,item in ipairs(r.swordVfx.world.items) do assert(item.pz>-.9,'finisher remains forward-centred') end
+ r:StopCombatVisual();assert(r.swordVfx.world:Count()==0)
  r:Dispose()
 end
 print('PASS fixed 30 impact/24 arc/12 ghost slots, forward ground strike, 360 coverage, lifetime/geometry budget, no hot vectors/nodes')
