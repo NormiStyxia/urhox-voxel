@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/i18n.schema.json",
 
-  "enabled": false,
+  "enabled": true,
 
   "source_lang": "zh_CN",
   "target_langs": ["en"],

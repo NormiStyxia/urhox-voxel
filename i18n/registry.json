@@ -1,0 +1,5410 @@
+{
+  "已保存": {
+    "key": "t_GysYxqGeHPe02f2V",
+    "locations": [
+      "ui/ForgePanel.lua:210"
+    ]
+  },
+  "整备入口未就绪": {
+    "key": "t_9p7V9xwN9cs96znc",
+    "locations": [
+      "ui/ForgePanel.lua:210"
+    ]
+  },
+  "{0} · 锻造": {
+    "key": "t_LScakdMULa27HRxp",
+    "locations": [
+      "ui/ForgeLayout.lua:86"
+    ]
+  },
+  "{0} · 滑动观看": {
+    "key": "t_18Tf7XMOt17yMJbUPQ",
+    "locations": [
+      "ui/ForgeLayout.lua:107"
+    ]
+  },
+  "被动 · {0}": {
+    "key": "t_1EXmPiThjEgqWYw",
+    "locations": [
+      "ui/ForgeLayout.lua:121"
+    ]
+  },
+  "强化 {0} →": {
+    "key": "t_Q46DYDBZPs9Mh5Ek",
+    "locations": [
+      "ui/ForgeLayout.lua:174"
+    ]
+  },
+  "{0}强化": {
+    "key": "t_v6PHaFDmvDoVwj2T",
+    "locations": [
+      "ui/ForgeLayout.lua:224"
+    ]
+  },
+  "{0} · {1} 阶": {
+    "key": "t_ItoWlshpJ63nqr4M",
+    "locations": [
+      "ui/ForgeLayout.lua:228"
+    ]
+  },
+  "{0}（已满阶）": {
+    "key": "t_8gxNc7rd8GByyXWo",
+    "locations": [
+      "ui/ForgeLayout.lua:230"
+    ]
+  },
+  "阶位 {0} → {1}": {
+    "key": "t_C1Gzx9KvCDWfpoeo",
+    "locations": [
+      "ui/ForgeLayout.lua:236"
+    ]
+  },
+  "共余 {0} 枚": {
+    "key": "t_rUEOL96arN7V5jIZ",
+    "locations": [
+      "ui/ForgeLayout.lua:247"
+    ]
+  },
+  "消耗 {0} · 继承等级": {
+    "key": "t_EYhyV5wzEfoV9D3q",
+    "locations": [
+      "ui/ForgeLayout.lua:278"
+    ]
+  },
+  "确认熔铸 · 消耗 {0}": {
+    "key": "t_Y68uWm3QXttW3gk7",
+    "locations": [
+      "ui/ForgeLayout.lua:286"
+    ]
+  },
+  "锋位": {
+    "key": "t_TV7bjqKwTvt7E0FZ",
+    "locations": [
+      "ui/BagPanel.lua:20",
+      "ui/ForgeLayout.lua:13"
+    ]
+  },
+  "强化进攻": {
+    "key": "t_G2bbRaVdFqf2M3Ty",
+    "locations": [
+      "ui/BagPanel.lua:20",
+      "ui/ForgeLayout.lua:13"
+    ]
+  },
+  "破位": {
+    "key": "t_19tZUTn4x1AOsFbIvY",
+    "locations": [
+      "ui/BagPanel.lua:21",
+      "ui/ForgeLayout.lua:14"
+    ]
+  },
+  "强化压制": {
+    "key": "t_1SK4G1aF1ZQxVytA",
+    "locations": [
+      "ui/BagPanel.lua:21",
+      "ui/ForgeLayout.lua:14"
+    ]
+  },
+  "时位": {
+    "key": "t_1GOygWuV61GHsAY3GB",
+    "locations": [
+      "ui/BagPanel.lua:22",
+      "ui/ForgeLayout.lua:15"
+    ]
+  },
+  "同类武器共享": {
+    "key": "t_Ph5kMIJeQChUTX0v",
+    "locations": [
+      "ui/BagPanel.lua:22",
+      "ui/ForgeLayout.lua:15"
+    ]
+  },
+  "稳固": {
+    "key": "t_8Qbh8ZJv8XiTXxdw",
+    "locations": [
+      "ui/BagPanel.lua:27",
+      "ui/ForgeLayout.lua:19"
+    ]
+  },
+  "连击第三段削韧 +20%": {
+    "key": "t_6LXwoFbI6r9QzlE3",
+    "locations": [
+      "ui/BagPanel.lua:27",
+      "ui/ForgeLayout.lua:19"
+    ]
+  },
+  "守门": {
+    "key": "t_VhArKDrKVGhqVSML",
+    "locations": [
+      "ui/BagPanel.lua:28",
+      "ui/ForgeLayout.lua:19"
+    ]
+  },
+  "对失衡敌人伤害 +15%": {
+    "key": "t_XKBFH8osXRabAXbx",
+    "locations": [
+      "ui/BagPanel.lua:28",
+      "ui/ForgeLayout.lua:19"
+    ]
+  },
+  "逐风": {
+    "key": "t_YpspPXvqYPPqOxrS",
+    "locations": [
+      "ui/BagPanel.lua:29",
+      "ui/ForgeLayout.lua:20"
+    ]
+  },
+  "冲刺后首击伤害 +25%": {
+    "key": "t_8SqOSWms8LjZbKvW",
+    "locations": [
+      "ui/BagPanel.lua:29",
+      "ui/ForgeLayout.lua:20"
+    ]
+  },
+  "游猎": {
+    "key": "t_zAQuese3yepR21il",
+    "locations": [
+      "ui/BagPanel.lua:30",
+      "ui/ForgeLayout.lua:20"
+    ]
+  },
+  "对未察觉敌人伤害 +15%": {
+    "key": "t_IiOq5LCZICmztMQh",
+    "locations": [
+      "ui/BagPanel.lua:30",
+      "ui/ForgeLayout.lua:20"
+    ]
+  },
+  "银枝": {
+    "key": "t_1FJ1w2uyi1EsGF6Dp6",
+    "locations": [
+      "ui/BagPanel.lua:31",
+      "ui/ForgeLayout.lua:21"
+    ]
+  },
+  "满蓄力射击削韧 +25%": {
+    "key": "t_eaBQ0vyDe4sKUV4b",
+    "locations": [
+      "ui/BagPanel.lua:31",
+      "ui/ForgeLayout.lua:21"
+    ]
+  },
+  "荆棘": {
+    "key": "t_jDS6izj6jPP0Fe7s",
+    "locations": [
+      "ui/BagPanel.lua:32",
+      "ui/ForgeLayout.lua:21"
+    ]
+  },
+  "满蓄力射击伤害 +20%": {
+    "key": "t_nV51WAULnhKab1qj",
+    "locations": [
+      "ui/BagPanel.lua:32",
+      "ui/ForgeLayout.lua:21"
+    ]
+  },
+  "星砂": {
+    "key": "t_UgpGOwNPVCR2C85j",
+    "locations": [
+      "ui/BagPanel.lua:33",
+      "ui/ForgeLayout.lua:22"
+    ]
+  },
+  "碎时伤害 +20%": {
+    "key": "t_v3WvRystvAdonynT",
+    "locations": [
+      "ui/BagPanel.lua:33",
+      "ui/ForgeLayout.lua:22"
+    ]
+  },
+  "攻击": {
+    "key": "t_jRV4IImNj125jmIR",
+    "locations": [
+      "combat/WeaponCatalog.lua:35",
+      "combat/WeaponCatalog.lua:39",
+      "combat/WeaponCatalog.lua:41",
+      "combat/WeaponCatalog.lua:45",
+      "combat/WeaponCatalog.lua:47",
+      "ui/BagPanel.lua:36",
+      "ui/ForgeLayout.lua:24"
+    ]
+  },
+  "攻击范围": {
+    "key": "t_Jjfkk1E9JXQQxHxx",
+    "locations": [
+      "combat/WeaponCatalog.lua:36",
+      "combat/WeaponCatalog.lua:38",
+      "ui/BagPanel.lua:36",
+      "ui/ForgeLayout.lua:24"
+    ]
+  },
+  "削韧": {
+    "key": "t_1D7mRpUgz1DJjNeawz",
+    "locations": [
+      "combat/WeaponCatalog.lua:37",
+      "combat/WeaponCatalog.lua:40",
+      "combat/WeaponCatalog.lua:43",
+      "combat/WeaponCatalog.lua:48",
+      "combat/WeaponCatalog.lua:51",
+      "combat/WeaponCatalog.lua:52",
+      "ui/BagPanel.lua:36",
+      "ui/ForgeLayout.lua:24"
+    ]
+  },
+  "破甲": {
+    "key": "t_17FZwAhYa16p7Cx4Bg",
+    "locations": [
+      "combat/WeaponCatalog.lua:42",
+      "ui/BagPanel.lua:37",
+      "ui/ForgeLayout.lua:24"
+    ]
+  },
+  "拉弓移速": {
+    "key": "t_lirnOdhRluoOKZbV",
+    "locations": [
+      "ui/BagPanel.lua:37",
+      "ui/ForgeLayout.lua:24"
+    ]
+  },
+  "破坏范围": {
+    "key": "t_1F7K0ocFY1F0DWP6KK",
+    "locations": [
+      "combat/WeaponCatalog.lua:49",
+      "combat/WeaponCatalog.lua:50",
+      "ui/BagPanel.lua:37",
+      "ui/ForgeLayout.lua:24"
+    ]
+  },
+  "重击 · Q": {
+    "key": "t_16W23Jo3fkERZaN",
+    "locations": [
+      "ui/ForgeLayout.lua:25"
+    ]
+  },
+  "蓄力射击": {
+    "key": "t_sBxmYWZirlC2vAAw",
+    "locations": [
+      "ui/ForgeLayout.lua:25"
+    ]
+  },
+  "碎时 · 破坏地形": {
+    "key": "t_AY828SEKA7Mb5qSO",
+    "locations": [
+      "ui/ForgeLayout.lua:25"
+    ]
+  },
+  "独立锻造台": {
+    "key": "t_18MYzxPY318F9gwkTT",
+    "locations": [
+      "ui/ForgeLayout.lua:56"
+    ]
+  },
+  "武器整备": {
+    "key": "t_13hvZqPHr148h3CZjL",
+    "locations": [
+      "ui/ForgeLayout.lua:56"
+    ]
+  },
+  "← 武器整备": {
+    "key": "t_SBPnY8bKSh1HDCOI",
+    "locations": [
+      "ui/ForgeLayout.lua:58"
+    ]
+  },
+  "详情": {
+    "key": "t_o9gmilHZoH6JONyv",
+    "locations": [
+      "ui/ForgeLayout.lua:60"
+    ]
+  },
+  "时印": {
+    "key": "t_10FGi5AN9107rT2L5X",
+    "locations": [
+      "ui/ForgeLayout.lua:61"
+    ]
+  },
+  "锻造 →": {
+    "key": "t_1GLcPruK31GT1l3KQV",
+    "locations": [
+      "ui/ForgeLayout.lua:62"
+    ]
+  },
+  "矿 %d · 砂 %d": {
+    "key": "t_lat0NJF2m1eP2XKi",
+    "locations": [
+      "ui/ForgeLayout.lua:64"
+    ]
+  },
+  "关闭 ×": {
+    "key": "t_1BbLjOfg51B62dhEMn",
+    "locations": [
+      "ui/BagPanel.lua:580",
+      "ui/ForgeLayout.lua:65",
+      "ui/WorldMap.lua:101"
+    ]
+  },
+  "滑动观看武器细节": {
+    "key": "t_RqfaCKxTRePu85yh",
+    "locations": [
+      "ui/ForgeLayout.lua:87"
+    ]
+  },
+  "法器": {
+    "key": "t_UZ20OcHUU3izEDPY",
+    "locations": [
+      "ui/BagPanel.lua:238",
+      "ui/BagPanel.lua:24",
+      "ui/BagPanel.lua:251",
+      "ui/ForgeLayout.lua:107",
+      "ui/ForgeLayout.lua:113"
+    ]
+  },
+  "基础攻击": {
+    "key": "t_LoetcmcHLJM5WUR3",
+    "locations": [
+      "ui/BagPanel.lua:518",
+      "ui/ForgeLayout.lua:115"
+    ]
+  },
+  "固有副词条": {
+    "key": "t_1Gxetziio1H548TNKs",
+    "locations": [
+      "ui/ForgeLayout.lua:117"
+    ]
+  },
+  "时印加成": {
+    "key": "t_TTMNMxXETtp8taKO",
+    "locations": [
+      "ui/ForgeLayout.lua:125"
+    ]
+  },
+  "空槽": {
+    "key": "t_AHyy15KjAPOHUtW5",
+    "locations": [
+      "ui/ForgeLayout.lua:136"
+    ]
+  },
+  "已满级": {
+    "key": "t_YW7xW2TbYi4aZQId",
+    "locations": [
+      "ui/ForgeLayout.lua:140"
+    ]
+  },
+  "升级 Lv.%d · %d 矿": {
+    "key": "t_pewjrtsJpShLR11X",
+    "locations": [
+      "ui/ForgeLayout.lua:140"
+    ]
+  },
+  "已装": {
+    "key": "t_1BOzRee1Y1BHZoCr7Q",
+    "locations": [
+      "ui/BagPanel.lua:484",
+      "ui/BagPanel.lua:487",
+      "ui/ForgeLayout.lua:166"
+    ]
+  },
+  "点击装配": {
+    "key": "t_TGuqOFDPSqRpiGoV",
+    "locations": [
+      "ui/ForgeLayout.lua:166"
+    ]
+  },
+  "未获得": {
+    "key": "t_HMrHGlxvGrYG6vnj",
+    "locations": [
+      "ui/ForgeLayout.lua:166"
+    ]
+  },
+  "请先装配时印": {
+    "key": "t_HsbDgyfTHlUN8kah",
+    "locations": [
+      "ui/ForgeLayout.lua:174"
+    ]
+  },
+  "全部": {
+    "key": "t_lfTN8Zw9lmstfw6T",
+    "locations": [
+      "ui/BagPanel.lua:237",
+      "ui/BagPanel.lua:348",
+      "ui/BagPanel.lua:385",
+      "ui/ForgeLayout.lua:188"
+    ]
+  },
+  "剑印": {
+    "key": "t_MJjxIStlM7UgNvv7",
+    "locations": [
+      "ui/ForgeLayout.lua:188"
+    ]
+  },
+  "矢印": {
+    "key": "t_ntgIraA8nTDetXES",
+    "locations": [
+      "ui/ForgeLayout.lua:188"
+    ]
+  },
+  "法印": {
+    "key": "t_1HrEeFQwW1HQSwsJQ4",
+    "locations": [
+      "ui/ForgeLayout.lua:188"
+    ]
+  },
+  "挑选要消耗的闲置时印": {
+    "key": "t_qtfmImg1qhjDc02n",
+    "locations": [
+      "ui/ForgeLayout.lua:190"
+    ]
+  },
+  "收起": {
+    "key": "t_syDL3mKktTp9j8k2",
+    "locations": [
+      "ui/ForgeLayout.lua:191"
+    ]
+  },
+  "当前筛选下没有闲置时印": {
+    "key": "t_XwzSTPTVY460p7In",
+    "locations": [
+      "ui/ForgeLayout.lua:202"
+    ]
+  },
+  "← 返回时印": {
+    "key": "t_XmqACWuZYDIr9NIZ",
+    "locations": [
+      "ui/ForgeLayout.lua:223"
+    ]
+  },
+  "已达最高 III 阶": {
+    "key": "t_FiAKQLs4GDTNrYq4",
+    "locations": [
+      "ui/ForgeLayout.lua:231"
+    ]
+  },
+  "成功率 %d%%": {
+    "key": "t_MXfiO5Q1My8OmHaL",
+    "locations": [
+      "ui/ForgeLayout.lua:237"
+    ]
+  },
+  "消耗 1 枚闲置时印": {
+    "key": "t_19TCiExuO19acK1vee",
+    "locations": [
+      "ui/ForgeLayout.lua:246"
+    ]
+  },
+  "请选择一枚材料": {
+    "key": "t_QSho24sTQeedBc2r",
+    "locations": [
+      "ui/ForgeLayout.lua:255"
+    ]
+  },
+  "暂无闲置时印": {
+    "key": "t_jRh1owY6j0vGU0uQ",
+    "locations": [
+      "ui/ForgeLayout.lua:255"
+    ]
+  },
+  "更换 ▾": {
+    "key": "t_TPjCcx36TqCFaF36",
+    "locations": [
+      "ui/ForgeLayout.lua:257"
+    ]
+  },
+  "挑选 ▾": {
+    "key": "t_14vW8qBUG15R7uf22K",
+    "locations": [
+      "ui/ForgeLayout.lua:257"
+    ]
+  },
+  "淬炼砂不足 · 需要 1 枚": {
+    "key": "t_fbTmZtsRfUNIjanz",
+    "locations": [
+      "ui/ForgeLayout.lua:259"
+    ]
+  },
+  "强化 · 1 砂 + 1 时印 (%d%%)": {
+    "key": "t_Fvy9i1F2ForJKmee",
+    "locations": [
+      "ui/ForgeLayout.lua:259"
+    ]
+  },
+  "选择锻造图纸": {
+    "key": "t_qu5tOuqPqhqVVYIL",
+    "locations": [
+      "ui/ForgeLayout.lua:264"
+    ]
+  },
+  "锻造方式": {
+    "key": "t_ETXx9I9FEz9OM0uT",
+    "locations": [
+      "ui/ForgeLayout.lua:270"
+    ]
+  },
+  "熔铸继承": {
+    "key": "t_9YpBUAQF9gEmfiux",
+    "locations": [
+      "ui/ForgeLayout.lua:271"
+    ]
+  },
+  "新造 Lv.1": {
+    "key": "t_kM00xhIdkmlSZWOl",
+    "locations": [
+      "ui/ForgeLayout.lua:272"
+    ]
+  },
+  "继承 Lv.%d · %s": {
+    "key": "t_EwqImar6ERXFWwXc",
+    "locations": [
+      "ui/ForgeLayout.lua:279"
+    ]
+  },
+  "保留原武器 · 新造 Lv.1": {
+    "key": "t_KeHqQEciL4kbwqMK",
+    "locations": [
+      "ui/ForgeLayout.lua:281"
+    ]
+  },
+  "所需材料　强化矿 ×%d": {
+    "key": "t_esgqFfycf065BvkA",
+    "locations": [
+      "ui/ForgeLayout.lua:284"
+    ]
+  },
+  "锻造 %s · %d 矿": {
+    "key": "t_4NIQD8ft4sbEJSSD",
+    "locations": [
+      "ui/ForgeLayout.lua:286"
+    ]
+  },
+  "长剑": {
+    "key": "t_Aa3NXw52A4kcQQlU",
+    "locations": [
+      "ruins/RuinsScene.lua:793",
+      "ui/BagPanel.lua:237",
+      "ui/BagPanel.lua:24",
+      "ui/WeaponWheel.lua:9"
+    ]
+  },
+  "长弓": {
+    "key": "t_15IqhvcCu14sO1Xxc8",
+    "locations": [
+      "ruins/RuinsScene.lua:794",
+      "ui/BagPanel.lua:238",
+      "ui/BagPanel.lua:24",
+      "ui/WeaponWheel.lua:10"
+    ]
+  },
+  "点击选择 · 空白处取消": {
+    "key": "t_tn36a3n4tuSNJxM6",
+    "locations": [
+      "ui/WeaponWheel.lua:312"
+    ]
+  },
+  "松开 Tab 确认 · 滚轮切换 · 右键取消": {
+    "key": "t_amI581Q8aLp1THE8",
+    "locations": [
+      "ui/WeaponWheel.lua:312"
+    ]
+  },
+  "被动[{0}] {1}": {
+    "key": "t_GhUsZWPwGVFExd8C",
+    "locations": [
+      "ui/BagPanel.lua:270"
+    ]
+  },
+  "{0}\n时印：{1}": {
+    "key": "t_KpTsNQl5KwahE2ul",
+    "locations": [
+      "ui/BagPanel.lua:270"
+    ]
+  },
+  "已装 · {0}": {
+    "key": "t_WM3ool9kY4WW3",
+    "locations": [
+      "ui/BagPanel.lua:322"
+    ]
+  },
+  "装配 · {0}": {
+    "key": "t_OfP1kMHNOXzVFj0H",
+    "locations": [
+      "ui/BagPanel.lua:323"
+    ]
+  },
+  "材料": {
+    "key": "t_15VuzvaxT15wNlSCkh",
+    "locations": [
+      "ui/BagPanel.lua:223",
+      "ui/BagPanel.lua:347"
+    ]
+  },
+  "武器": {
+    "key": "t_1BK8ZgeNg1BWNsrQIG",
+    "locations": [
+      "ui/BagPanel.lua:251",
+      "ui/BagPanel.lua:351"
+    ]
+  },
+  "空": {
+    "key": "t_14GSLavZ714hDkpMW5",
+    "locations": [
+      "ui/BagPanel.lua:257"
+    ]
+  },
+  "当前已装备": {
+    "key": "t_6vqhnpjR7McR0mMX",
+    "locations": [
+      "ui/BagPanel.lua:274"
+    ]
+  },
+  "装备武器": {
+    "key": "t_6O28mUvt6onbxesX",
+    "locations": [
+      "ui/BagPanel.lua:274"
+    ]
+  },
+  "暂不可换装": {
+    "key": "t_Yg46sYcZYYepg5Vf",
+    "locations": [
+      "ui/BagPanel.lua:277"
+    ]
+  },
+  "%s · %s · %s阶": {
+    "key": "t_V3DnrNd8UrHHaAXO",
+    "locations": [
+      "ui/BagPanel.lua:315"
+    ]
+  },
+  "%s（%s）\n当前加成：%s\n满阶加成：%s\n空闲可用：%d 枚": {
+    "key": "t_dEsz73WKcjHQWDoO",
+    "locations": [
+      "ui/BagPanel.lua:316"
+    ]
+  },
+  "前往锻造台装配": {
+    "key": "t_MGfzEiDPM9GO0xrz",
+    "locations": [
+      "ui/BagPanel.lua:323"
+    ]
+  },
+  "暂不可装配时印": {
+    "key": "t_b50UxkEVbHGAzEBv",
+    "locations": [
+      "ui/BagPanel.lua:326"
+    ]
+  },
+  "暂无材料": {
+    "key": "t_U3yS5hG0UZHQx7EC",
+    "locations": [
+      "ui/BagPanel.lua:350"
+    ]
+  },
+  "采集遗迹矿木或击败敌人后可在此查看材料。": {
+    "key": "t_k5CQo8xtjeQzkyYL",
+    "locations": [
+      "ui/BagPanel.lua:350"
+    ]
+  },
+  "暂无此类武器": {
+    "key": "t_9rsQeHO09R6jqNFs",
+    "locations": [
+      "ui/BagPanel.lua:352"
+    ]
+  },
+  "可在锻造台打造新武器后在此切换装备。": {
+    "key": "t_127beTkKj11vf83lLB",
+    "locations": [
+      "ui/BagPanel.lua:352"
+    ]
+  },
+  "石印": {
+    "key": "t_4j6CLgVJ4X9aoLPJ",
+    "locations": [
+      "ui/BagPanel.lua:353"
+    ]
+  },
+  "暂无此类石印": {
+    "key": "t_jrtZ69SGjz03KfM4",
+    "locations": [
+      "ui/BagPanel.lua:354"
+    ]
+  },
+  "击败遗迹敌人获得石印后可在此查看并装配。": {
+    "key": "t_3dAYNjNU37rmYCZY",
+    "locations": [
+      "ui/BagPanel.lua:354"
+    ]
+  },
+  "已装备": {
+    "key": "t_UGxtXyqgUO4kX96w",
+    "locations": [
+      "ruins/RuinsScene.lua:1062",
+      "ruins/RuinsScene.lua:1067",
+      "ui/BagPanel.lua:440"
+    ]
+  },
+  "操作未完成": {
+    "key": "t_EFLAs86CDjjK5JEu",
+    "locations": [
+      "ui/BagPanel.lua:440"
+    ]
+  },
+  "暂无物品": {
+    "key": "t_OFefdDA3NkLbdN5X",
+    "locations": [
+      "ui/BagPanel.lua:455"
+    ]
+  },
+  "探索遗迹后可在此查看。": {
+    "key": "t_WnaMZALQWgTa1W1Q",
+    "locations": [
+      "ui/BagPanel.lua:456"
+    ]
+  },
+  "背包": {
+    "key": "t_kZG1cZw0kN0kfr68",
+    "locations": [
+      "ui/BagPanel.lua:484",
+      "ui/SettingsMenu.lua:87"
+    ]
+  },
+  "未选中物品": {
+    "key": "t_uTUpRG4xuabOG5Yh",
+    "locations": [
+      "ui/BagPanel.lua:495"
+    ]
+  },
+  "在左侧选择分类或翻页查看已收集的材料、武器与石印。": {
+    "key": "t_cjsGHqYVdFTzeuAt",
+    "locations": [
+      "ui/BagPanel.lua:496"
+    ]
+  },
+  "持有数量": {
+    "key": "t_17Hha2Kgo16mOoETIk",
+    "locations": [
+      "ui/BagPanel.lua:510",
+      "ui/BagPanel.lua:526"
+    ]
+  },
+  "固有词条": {
+    "key": "t_1FXg9XOMh1G3Hvvxfr",
+    "locations": [
+      "ui/BagPanel.lua:519"
+    ]
+  },
+  "×%d（闲置 %d）": {
+    "key": "t_1H5xN6cP41GyXq02uY",
+    "locations": [
+      "ui/BagPanel.lua:527"
+    ]
+  },
+  "词条加成": {
+    "key": "t_9yU6rZby9SsIExkc",
+    "locations": [
+      "ui/BagPanel.lua:528"
+    ]
+  },
+  "操作": {
+    "key": "t_W8afSCtRWFhWPAEv",
+    "locations": [
+      "ui/BagPanel.lua:540"
+    ]
+  },
+  "行囊背包": {
+    "key": "t_Im6BrLYNJCZ88XRH",
+    "locations": [
+      "ui/BagPanel.lua:570"
+    ]
+  },
+  "设置": {
+    "key": "t_d8tLSjv8d1U4irt4",
+    "locations": [
+      "ui/BagPanel.lua:578"
+    ]
+  },
+  "共%d项": {
+    "key": "t_tqR6dFneu2Ni8NNC",
+    "locations": [
+      "ui/BagPanel.lua:593"
+    ]
+  },
+  "◀ 上页": {
+    "key": "t_DqYivTRPELroUftP",
+    "locations": [
+      "ui/BagPanel.lua:610"
+    ]
+  },
+  "下页 ▶": {
+    "key": "t_iJl7t34Lho9NlF8T",
+    "locations": [
+      "ui/BagPanel.lua:613"
+    ]
+  },
+  "点选页签与物品卡 · 左右翻页 · 右侧操作": {
+    "key": "t_dIObQWMIcrvsAgbe",
+    "locations": [
+      "ui/BagPanel.lua:618"
+    ]
+  },
+  "方向键/WASD 选格 · Q/E 切类 · [ ] 翻页 · Enter 装备 · Esc 关闭": {
+    "key": "t_5f9kGfSK65cOyubQ",
+    "locations": [
+      "ui/BagPanel.lua:619"
+    ]
+  },
+  "{0} · 破甲": {
+    "key": "t_KfUqTq8ZL5xbyFTP",
+    "locations": [
+      "ui/CombatHUD.lua:295",
+      "ui/CombatHUD.lua:89"
+    ]
+  },
+  "弱蓄 · 松手射击 · 切换取消": {
+    "key": "t_vbNyySXaw1r240Xa",
+    "locations": [
+      "ui/CombatHUD.lua:82"
+    ]
+  },
+  "中蓄 · 松手射击 · 切换取消": {
+    "key": "t_FxrRaX2oFlc3sB3C",
+    "locations": [
+      "ui/CombatHUD.lua:82"
+    ]
+  },
+  "满蓄 · 松手射击 · 切换取消": {
+    "key": "t_dFpjdvrlckDsslNJ",
+    "locations": [
+      "ui/CombatHUD.lua:82"
+    ]
+  },
+  "头部": {
+    "key": "t_9KAzcdCk8tPIDKt8",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "左前腿": {
+    "key": "t_15MW1Gu2R14w30Ykqt",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "右前腿": {
+    "key": "t_3dMW8aLF383pYdy1",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "背甲": {
+    "key": "t_HIeLtkinH6hnLmGH",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "核心": {
+    "key": "t_Z8KLJqA8ZKZuXTxM",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "躯干": {
+    "key": "t_4gAfXXP34nZwHz7l",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "腹部": {
+    "key": "t_bwre4dy5bWOxpmsD",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "侧腹": {
+    "key": "t_i6SZnx1Ihz2wLbQS",
+    "locations": [
+      "ui/CombatHUD.lua:88"
+    ]
+  },
+  "%s stop %.0fms flash %.0fms 核 %d ready %s dropped %d": {
+    "key": "t_Ii6NtzmWICUX6dMi",
+    "locations": [
+      "ui/CombatHUD.lua:125"
+    ]
+  },
+  "未发出": {
+    "key": "t_2nWr7zHH2uddZYzb",
+    "locations": [
+      "ui/CombatHUD.lua:203"
+    ]
+  },
+  "自动蓄力中": {
+    "key": "t_lKjqZPusktyMeaqQ",
+    "locations": [
+      "ui/CombatHUD.lua:205"
+    ]
+  },
+  "已取消拉弓": {
+    "key": "t_fQKMbtcpfXjiVK0p",
+    "locations": [
+      "ui/CombatHUD.lua:208"
+    ]
+  },
+  "满蓄": {
+    "key": "t_qmBuGWeCqemZ56Xk",
+    "locations": [
+      "ui/CombatHUD.lua:245"
+    ]
+  },
+  "石甲兽": {
+    "key": "t_jlpu3csfjy5FeWUv",
+    "locations": [
+      "combat/CombatMoves.lua:1011",
+      "combat/enemies/StoneBeast.lua:6",
+      "ui/CombatHUD.lua:284"
+    ]
+  },
+  "弱点命中": {
+    "key": "t_VsEWFTMfWNXDObOL",
+    "locations": [
+      "ui/CombatHUD.lua:297"
+    ]
+  },
+  "调试日志：{0}": {
+    "key": "t_slmxs9vZsZqMVpJt",
+    "locations": [
+      "ui/SettingsMenu.lua:109"
+    ]
+  },
+  "性能小字：{0}": {
+    "key": "t_iXASHCm1iea6C8Of",
+    "locations": [
+      "ui/SettingsMenu.lua:110"
+    ]
+  },
+  "实际档位：{0}": {
+    "key": "t_HogpjlBcHhZyl7wq",
+    "locations": [
+      "ui/SettingsMenu.lua:136"
+    ]
+  },
+  "画质": {
+    "key": "t_11iuqWST912EDbnL71",
+    "locations": [
+      "ui/SettingsMenu.lua:27"
+    ]
+  },
+  "高级": {
+    "key": "t_vCxnPqNev11E9s1K",
+    "locations": [
+      "ui/SettingsMenu.lua:27"
+    ]
+  },
+  "调试": {
+    "key": "t_Gc7GfLJcGPrxRpRk",
+    "locations": [
+      "ui/SettingsMenu.lua:27"
+    ]
+  },
+  "高": {
+    "key": "t_10MsvICdtzw7BeJ8z",
+    "locations": [
+      "ui/SettingsMenu.lua:29",
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "中": {
+    "key": "t_105rmGdee10DH7PJC8",
+    "locations": [
+      "ui/SettingsMenu.lua:29"
+    ]
+  },
+  "低": {
+    "key": "t_Q1ptWGZUPuQITV7I",
+    "locations": [
+      "ui/SettingsMenu.lua:29",
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "自动": {
+    "key": "t_11SKMqj1011G4nCfv0",
+    "locations": [
+      "ui/SettingsMenu.lua:29"
+    ]
+  },
+  "完整草地、远景阴影与天空特效": {
+    "key": "t_og5zv0pspBhlkP0a",
+    "locations": [
+      "ui/SettingsMenu.lua:30"
+    ]
+  },
+  "半量草地、近景阴影，减少特效": {
+    "key": "t_1GgQ2z1ZF1HC1ZRKEf",
+    "locations": [
+      "ui/SettingsMenu.lua:30"
+    ]
+  },
+  "稀疏草地，关闭阴影与天空特效": {
+    "key": "t_9rIVm2vk9Qpn5QQe",
+    "locations": [
+      "ui/SettingsMenu.lua:30"
+    ]
+  },
+  "持续低于28帧自动降档，只降不升": {
+    "key": "t_SLuouYwbSYAO8Ds1",
+    "locations": [
+      "ui/SettingsMenu.lua:30"
+    ]
+  },
+  "云层": {
+    "key": "t_mcqLARMTm7EreidR",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "低空云": {
+    "key": "t_kYbyeOmpkRCP8mB9",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "地面云影": {
+    "key": "t_rsJMV2XCs4GIKhQI",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "光柱": {
+    "key": "t_pYorNskPpMs2nYuD",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "浮光": {
+    "key": "t_1t59UdvC2OgtbscI",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "体积光": {
+    "key": "t_3wegJ3UH43lF5hdp",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "草地": {
+    "key": "t_CruWyfLBCfy0YgM9",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "阴影": {
+    "key": "t_U0lKJotFURWnUQ8f",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "后效": {
+    "key": "t_tKBE3uvFt7vx7k7p",
+    "locations": [
+      "ui/SettingsMenu.lua:31"
+    ]
+  },
+  "跟随画质": {
+    "key": "t_LjOFhj3fLIclp6qt",
+    "locations": [
+      "ui/SettingsMenu.lua:102",
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "完整": {
+    "key": "t_1172c9Lqg11XoLmgiU",
+    "locations": [
+      "ruins/RuinsScene.lua:1629",
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "半量": {
+    "key": "t_Xb9dnGUIXAgt0pN0",
+    "locations": [
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "关闭": {
+    "key": "t_4Er1BuvB3oOFgvsf",
+    "locations": [
+      "ruins/RuinsScene.lua:1919",
+      "ruins/TrainingStation.lua:179",
+      "ui/SettingsMenu.lua:102",
+      "ui/SettingsMenu.lua:109",
+      "ui/SettingsMenu.lua:110",
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "精简": {
+    "key": "t_ZB1bnmeoZI8Smwva",
+    "locations": [
+      "ui/SettingsMenu.lua:33"
+    ]
+  },
+  "高级选项单独覆盖，即时生效": {
+    "key": "t_AcuHGNG8B8W3TyGi",
+    "locations": [
+      "ui/SettingsMenu.lua:81"
+    ]
+  },
+  "后效关闭保留基础色调映射": {
+    "key": "t_BjlyL0LPBJJKKlZ1",
+    "locations": [
+      "ui/SettingsMenu.lua:82"
+    ]
+  },
+  "开启": {
+    "key": "t_TOyhchHETpkBPGPI",
+    "locations": [
+      "ui/SettingsMenu.lua:102",
+      "ui/SettingsMenu.lua:109",
+      "ui/SettingsMenu.lua:110"
+    ]
+  },
+  "上一页": {
+    "key": "t_13mPcS1gu13tp8xC4e",
+    "locations": [
+      "ui/SettingsMenu.lua:106"
+    ]
+  },
+  "下一页": {
+    "key": "t_MpOn1qhfMhzBqIkV",
+    "locations": [
+      "ui/SettingsMenu.lua:107"
+    ]
+  },
+  "打印最近日志": {
+    "key": "t_CzgIkLLXCYuu6lXX",
+    "locations": [
+      "ui/SettingsMenu.lua:111"
+    ]
+  },
+  "关闭 · 返回游戏": {
+    "key": "t_10S6gK7KH10xPTgDtl",
+    "locations": [
+      "ui/SettingsMenu.lua:113"
+    ]
+  },
+  "旅途设置": {
+    "key": "t_wIjJetDSwQ8fOxws",
+    "locations": [
+      "ui/SettingsMenu.lua:130"
+    ]
+  },
+  "冲": {
+    "key": "t_18nCh4a6l18uJVszsh",
+    "locations": [
+      "ui/TouchControls.lua:44",
+      "ui/TouchControls.lua:51"
+    ]
+  },
+  "大招": {
+    "key": "t_jGaM1TzPjNzzvrRr",
+    "locations": [
+      "ui/TouchControls.lua:56",
+      "ui/TouchControls.lua:62"
+    ]
+  },
+  "操作说明": {
+    "key": "t_V6XY1XQ3UbEkcfIh",
+    "locations": [
+      "ui/TouchControls.lua:65"
+    ]
+  },
+  "左摇杆移动 · 右侧拖动看四周": {
+    "key": "t_ObvwKcjKOoBDx8SY",
+    "locations": [
+      "dragon/DragonRide.lua:481",
+      "ui/TouchControls.lua:100",
+      "ui/TouchControls.lua:65"
+    ]
+  },
+  "轻推摇杆步行 · 推到底奔跑 · 按住【冲】冲刺耗体力": {
+    "key": "t_gxfA6bPmgWtkioGg",
+    "locations": [
+      "ui/TouchControls.lua:65"
+    ]
+  },
+  "按住碎时蓄力 · 松手释放碎时": {
+    "key": "t_5KqEJMXP5DQvI8pj",
+    "locations": [
+      "ui/TouchControls.lua:65"
+    ]
+  },
+  "按住【龙息】持续吐息 · 点【大招】施法": {
+    "key": "t_dzTCL0N8eUlzs7tK",
+    "locations": [
+      "ui/TouchControls.lua:65"
+    ]
+  },
+  "点【起飞】升空 · 摇杆控制方向": {
+    "key": "t_DiTa0bePDCrj4Qf7",
+    "locations": [
+      "dragon/DragonRide.lua:480",
+      "ui/TouchControls.lua:65",
+      "ui/TouchControls.lua:97"
+    ]
+  },
+  "按住【上升】/【下降】· 点【滑翔】省力": {
+    "key": "t_10pUdRO2H10dY6ce3B",
+    "locations": [
+      "dragon/DragonRide.lua:480",
+      "ui/TouchControls.lua:65",
+      "ui/TouchControls.lua:98"
+    ]
+  },
+  "轻触屏幕返回": {
+    "key": "t_Vn6VG44BVMKm0MLb",
+    "locations": [
+      "ui/TouchControls.lua:65"
+    ]
+  },
+  "切换": {
+    "key": "t_Ziqxe5GXa9Jz22xZ",
+    "locations": [
+      "ui/TouchControls.lua:68"
+    ]
+  },
+  "碎时": {
+    "key": "t_8jE5AmrG8DvH3wZy",
+    "locations": [
+      "ruins/TimeSpells.lua:61",
+      "ui/TouchControls.lua:68"
+    ]
+  },
+  "地图": {
+    "key": "t_lWMEwOf9lx7dZQyF",
+    "locations": [
+      "ui/TouchControls.lua:323",
+      "ui/TouchControls.lua:68",
+      "ui/TouchControls.lua:69"
+    ]
+  },
+  "冻结": {
+    "key": "t_zovDq5Ff10KWzTuFL",
+    "locations": [
+      "ruins/RuinsScene.lua:1680",
+      "ruins/TimeSpells.lua:118",
+      "ui/TouchControls.lua:69"
+    ]
+  },
+  "回溯": {
+    "key": "t_SUzEpHQOSNsM1vfM",
+    "locations": [
+      "ruins/TimeSpells.lua:145",
+      "ui/TouchControls.lua:69"
+    ]
+  },
+  "武技": {
+    "key": "t_SLNPflANSXczJojH",
+    "locations": [
+      "ui/TouchControls.lua:69"
+    ]
+  },
+  "按住拉弓 · 松手射击 · 按住冲键冲刺": {
+    "key": "t_wny9TUt5xJZbFxzz",
+    "locations": [
+      "ui/TouchControls.lua:95"
+    ]
+  },
+  "点按五连 · 空中下劈 · 按住冲键冲刺": {
+    "key": "t_OE5RcEH6NncSdJ1Q",
+    "locations": [
+      "ui/TouchControls.lua:95"
+    ]
+  },
+  "松手释放碎时": {
+    "key": "t_wJmDhPtPwVj8xIpj",
+    "locations": [
+      "ui/TouchControls.lua:96"
+    ]
+  },
+  "靠近龙，点【上龙】": {
+    "key": "t_UEj8QZSTUQyWi7mr",
+    "locations": [
+      "dragon/DragonRide.lua:458",
+      "dragon/DragonTest.lua:264",
+      "ui/TouchControls.lua:99"
+    ]
+  },
+  "上龙": {
+    "key": "t_gGQGenHxg90k7PRt",
+    "locations": [
+      "ui/TouchControls.lua:297"
+    ]
+  },
+  "打通被封的城门": {
+    "key": "t_cWsBVlCicKvYSNOC",
+    "locations": [
+      "ruins/RuinsScene.lua:221",
+      "ui/tests/HUDLayout.lua:7",
+      "ui/tests/TouchLayout.lua:14"
+    ]
+  },
+  "南门被碎石堵住了。准星对准碎石，按左键施放「碎时」把它打碎。": {
+    "key": "t_KxEMnuHDKpp8KG83",
+    "locations": [
+      "ruins/RuinsScene.lua:221",
+      "ui/tests/HUDLayout.lua:7",
+      "ui/tests/TouchLayout.lua:14"
+    ]
+  },
+  "黄昏 17:40": {
+    "key": "t_RcWstGY1S2zZJ74f",
+    "locations": [
+      "ui/tests/TouchLayout.lua:15"
+    ]
+  },
+  "封门碎石": {
+    "key": "t_jfrOSslVkBARlGZN",
+    "locations": [
+      "ui/tests/TouchLayout.lua:16"
+    ]
+  },
+  "用例{0} DPR={1} 安全区={2} 触控={3}": {
+    "key": "t_FIkdQqGRFGvC1Y",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:66"
+    ]
+  },
+  "{0} 每个完整字形都处于24px边框加8px内距之内": {
+    "key": "t_1G99rEFVP1GelLJhRv",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:71"
+    ]
+  },
+  "{0} 标题与正文全文保留": {
+    "key": "t_zea7ogdFzSdWK7AH",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:72"
+    ]
+  },
+  "{0} 面板宽度位于安全区内": {
+    "key": "t_xNAtIi8bxndu81fZ",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:74"
+    ]
+  },
+  "{0} 完整面板高度位于安全区内": {
+    "key": "t_J2W2TO4SJ9vZ0lqO",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:75"
+    ]
+  },
+  "{0} 时钟避开任务卡": {
+    "key": "t_jKMnj09vj87S860d",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:77"
+    ]
+  },
+  "{0} 时钟宽度位于安全区内": {
+    "key": "t_1BT8DRMJG1BM1jCqKo",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:78"
+    ]
+  },
+  "{0} 稳定帧直接复用文本布局，不重新测量": {
+    "key": "t_qFAUlKMKq83bxx0i",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:79"
+    ]
+  },
+  "按左键施放": {
+    "key": "t_1047nLiC110G4iZwq9",
+    "locations": [
+      "ruins/RuinsHUD.lua:45",
+      "ui/tests/HUDLayoutAcceptance.lua:56"
+    ]
+  },
+  "按住【碎时】蓄力，松手施放": {
+    "key": "t_wIZBiQRAwPfg5jye",
+    "locations": [
+      "ruins/RuinsHUD.lua:45",
+      "ui/tests/HUDLayoutAcceptance.lua:56"
+    ]
+  },
+  "按 R 施放": {
+    "key": "t_LIwfHIjzLji3uLZb",
+    "locations": [
+      "ruins/RuinsHUD.lua:45",
+      "ui/tests/HUDLayoutAcceptance.lua:56"
+    ]
+  },
+  "点【回溯】施放": {
+    "key": "t_1GZcTRVYp1G40zFzwR",
+    "locations": [
+      "ruins/RuinsHUD.lua:45",
+      "ui/tests/HUDLayoutAcceptance.lua:56"
+    ]
+  },
+  "按 E": {
+    "key": "t_FW038Oi7F0OGscxz",
+    "locations": [
+      "ruins/RuinsHUD.lua:46",
+      "ui/tests/HUDLayoutAcceptance.lua:57"
+    ]
+  },
+  "点【冻结】": {
+    "key": "t_we2sWm3bwDH9ScNr",
+    "locations": [
+      "ruins/RuinsHUD.lua:46",
+      "ui/tests/HUDLayoutAcceptance.lua:57"
+    ]
+  },
+  "按 F 骑乘，Space 起飞": {
+    "key": "t_HZBrlVWDI4nihfVZ",
+    "locations": [
+      "ruins/RuinsHUD.lua:46",
+      "ui/tests/HUDLayoutAcceptance.lua:57"
+    ]
+  },
+  "点【上龙】骑乘，再点【起飞】": {
+    "key": "t_cypoybiFdAmiXRyF",
+    "locations": [
+      "ruins/RuinsHUD.lua:46",
+      "ui/tests/HUDLayoutAcceptance.lua:57"
+    ]
+  },
+  "七组全文用例均通过DPR1、DPR2与触控安全区验证": {
+    "key": "t_7VnteOs681PiAyBm",
+    "locations": [
+      "ui/tests/HUDLayoutAcceptance.lua:114"
+    ]
+  },
+  "修复断桥": {
+    "key": "t_rgHi80jjrAyuaMB1",
+    "locations": [
+      "ruins/RuinsScene.lua:222",
+      "ui/tests/HUDLayout.lua:8"
+    ]
+  },
+  "古桥碎落在峡谷里。对准任意一块带金色符脉的桥体碎片，按 R 施放「回溯」。": {
+    "key": "t_qNvUEMdmpxSVodis",
+    "locations": [
+      "ui/tests/HUDLayout.lua:8"
+    ]
+  },
+  "取得时之钥": {
+    "key": "t_1Enzo4tN61FJbeyJvg",
+    "locations": [
+      "ruins/RuinsScene.lua:223",
+      "ruins/tests/StairViewTest.lua:24",
+      "ui/tests/HUDLayout.lua:9"
+    ]
+  },
+  "时之碑被封印了。西侧塔台顶上有「时之钥」：打碎悬石，趁碎块下落时按 E「冻结」，踩着碎块爬上塔台。": {
+    "key": "t_1DwaSXY9X1DkKqRhbL",
+    "locations": [
+      "ruins/RuinsScene.lua:223",
+      "ruins/tests/StairViewTest.lua:24",
+      "ui/tests/HUDLayout.lua:9"
+    ]
+  },
+  "复原四座时之碑": {
+    "key": "t_Tj3E1F7dTWnXWbWP",
+    "locations": [
+      "ruins/RuinsScene.lua:224",
+      "ui/tests/HUDLayout.lua:10"
+    ]
+  },
+  "带着时之钥回到内环，对倒塌的时之碑按 R 施放「回溯」。（4 / 4）": {
+    "key": "t_L34plz0HKqpWag3B",
+    "locations": [
+      "ui/tests/HUDLayout.lua:10"
+    ]
+  },
+  "遗迹看守者已苏醒": {
+    "key": "t_OdemDiTyOkldIvMY",
+    "locations": [
+      "ruins/RuinsScene.lua:225",
+      "ui/tests/HUDLayout.lua:11"
+    ]
+  },
+  "巨龙认可了你。走近它按 F 骑乘，Space 起飞。时之物件仍可以随意碎时 / 冻结 / 回溯。": {
+    "key": "t_skPEaTATsczfFK5F",
+    "locations": [
+      "ruins/RuinsScene.lua:225",
+      "ui/tests/HUDLayout.lua:11"
+    ]
+  },
+  "长任务标题 Long objective title 需要多行完整呈现": {
+    "key": "t_11n9oaPOk12ISrqbLu",
+    "locations": [
+      "ui/tests/HUDLayout.lua:12"
+    ]
+  },
+  "第一段 English LongUnbrokenIdentifier01234567890123456789\\r\n\\r\n第二段：按 E 冻结，踩着碎块爬上塔台。\n": {
+    "key": "t_E1C5SKbaE8Ivq6DS",
+    "locations": [
+      "ui/tests/HUDLayout.lua:12"
+    ]
+  },
+  "白昼 16:00": {
+    "key": "t_UiENkaQ0VDXN43My",
+    "locations": [
+      "ruins/tests/StairViewTest.lua:25",
+      "ui/tests/HUDLayout.lua:28"
+    ]
+  },
+  "当前位置 · {0}": {
+    "key": "t_o7J2CONnoJYJhlyt",
+    "locations": [
+      "ui/WorldMap.lua:137"
+    ]
+  },
+  "时之遗迹": {
+    "key": "t_mZ6SoIDSm8dPfyeY",
+    "locations": [
+      "ruins/RuinsHUD.lua:111",
+      "ui/WorldMap.lua:11"
+    ]
+  },
+  "家园小岛": {
+    "key": "t_rWXABUyKrKHliO3Y",
+    "locations": [
+      "ruins/RuinsScene.lua:230",
+      "ui/WorldMap.lua:11"
+    ]
+  },
+  "群岛航图": {
+    "key": "t_63vrXUNM5rgTFxBg",
+    "locations": [
+      "ui/WorldMap.lua:100"
+    ]
+  },
+  "单指转动 · 双指平移 · 点岛前往": {
+    "key": "t_90IIhv2X9CEwVTwn",
+    "locations": [
+      "ui/WorldMap.lua:138"
+    ]
+  },
+  "左键滑动转向 · 右键平移 · 点岛前往": {
+    "key": "t_erhxYAixeyomG0vD",
+    "locations": [
+      "ui/WorldMap.lua:138"
+    ]
+  },
+  "装备配置无效": {
+    "key": "t_kyXQ7UdNlPItI6UT",
+    "locations": [
+      "combat/WeaponLoadout.lua:14",
+      "combat/WeaponStore.lua:185",
+      "combat/WeaponStore.lua:239",
+      "combat/WeaponStore.lua:263",
+      "combat/WeaponStore.lua:285"
+    ]
+  },
+  "暂时无法切换武器": {
+    "key": "t_5HSa0Scs5OZ6YV3a",
+    "locations": [
+      "combat/WeaponLoadout.lua:15",
+      "combat/WeaponLoadout.lua:31"
+    ]
+  },
+  "外观未能应用": {
+    "key": "t_1xuVbVJe2TWHQtUs",
+    "locations": [
+      "combat/WeaponLoadout.lua:28"
+    ]
+  },
+  "配置已应用，本次未能保存": {
+    "key": "t_Iq33Il0UJLM4QOqY",
+    "locations": [
+      "combat/WeaponLoadout.lua:37"
+    ]
+  },
+  "时砂金": {
+    "key": "t_8RBgGYTw8JmRtW6i",
+    "locations": [
+      "combat/WeaponCatalog.lua:6"
+    ]
+  },
+  "冰蓝": {
+    "key": "t_1F5Nq3l3Z1FCUeCx5l",
+    "locations": [
+      "combat/WeaponCatalog.lua:6"
+    ]
+  },
+  "遗迹灰": {
+    "key": "t_ZTC1q6L2Z2QGVAAK",
+    "locations": [
+      "combat/WeaponCatalog.lua:7"
+    ]
+  },
+  "铜红": {
+    "key": "t_boQfVAXobhK4JUwq",
+    "locations": [
+      "combat/WeaponCatalog.lua:7"
+    ]
+  },
+  "苔绿": {
+    "key": "t_enSyez8QeuZVD2dC",
+    "locations": [
+      "combat/WeaponCatalog.lua:8"
+    ]
+  },
+  "暮紫": {
+    "key": "t_Zd6Meyvda8PSMxoT",
+    "locations": [
+      "combat/WeaponCatalog.lua:8"
+    ]
+  },
+  "翼剑": {
+    "key": "t_16YNOISKo167bcOKV8",
+    "locations": [
+      "combat/WeaponCatalog.lua:11",
+      "combat/WeaponCatalog.lua:26"
+    ]
+  },
+  "荆棘花弓": {
+    "key": "t_17P2AizQ517uKuG3pl",
+    "locations": [
+      "combat/WeaponCatalog.lua:15",
+      "combat/WeaponCatalog.lua:29"
+    ]
+  },
+  "普通": {
+    "key": "t_YtiMXjRlYSwfjpK9",
+    "locations": [
+      "combat/WeaponCatalog.lua:21"
+    ]
+  },
+  "珍贵": {
+    "key": "t_OdHRSF6oOkNv85qc",
+    "locations": [
+      "combat/WeaponCatalog.lua:21"
+    ]
+  },
+  "传说": {
+    "key": "t_HLrIOHp0GvOc9Qmk",
+    "locations": [
+      "combat/WeaponCatalog.lua:21"
+    ]
+  },
+  "遗迹铁剑": {
+    "key": "t_AXs2QF0UA76LcLPu",
+    "locations": [
+      "combat/WeaponCatalog.lua:24"
+    ]
+  },
+  "守门长剑": {
+    "key": "t_WqDSOTddWeGrT6Qn",
+    "locations": [
+      "combat/WeaponCatalog.lua:25"
+    ]
+  },
+  "猎弓": {
+    "key": "t_AFp48HD3AS4Picfd",
+    "locations": [
+      "combat/WeaponCatalog.lua:27"
+    ]
+  },
+  "银枝弓": {
+    "key": "t_py6iB1y9qOZQhCXN",
+    "locations": [
+      "combat/WeaponCatalog.lua:28"
+    ]
+  },
+  "星砂时钟": {
+    "key": "t_Ayjpp8dMAmUBe2Uq",
+    "locations": [
+      "combat/WeaponCatalog.lua:30"
+    ]
+  },
+  "锋芒剑印": {
+    "key": "t_JV5nslecJvYqyrgY",
+    "locations": [
+      "combat/WeaponCatalog.lua:35"
+    ]
+  },
+  "长锋剑印": {
+    "key": "t_ockD8W1Gp3W1Sngk",
+    "locations": [
+      "combat/WeaponCatalog.lua:36"
+    ]
+  },
+  "震刃剑印": {
+    "key": "t_FJzxhBGUFCagNXLm",
+    "locations": [
+      "combat/WeaponCatalog.lua:37"
+    ]
+  },
+  "疾影剑印": {
+    "key": "t_1GCmx99um1GdYj5VoS",
+    "locations": [
+      "combat/WeaponCatalog.lua:38"
+    ]
+  },
+  "锐势剑印": {
+    "key": "t_7AP8wMTC7Homp5cw",
+    "locations": [
+      "combat/WeaponCatalog.lua:39"
+    ]
+  },
+  "凝时剑印": {
+    "key": "t_1UUicHn71gRLqeQj",
+    "locations": [
+      "combat/WeaponCatalog.lua:40"
+    ]
+  },
+  "白羽矢印": {
+    "key": "t_15RBJzaz114vZlnVD5",
+    "locations": [
+      "combat/WeaponCatalog.lua:41"
+    ]
+  },
+  "凿甲矢印": {
+    "key": "t_19338cmtb18caRlzeR",
+    "locations": [
+      "combat/WeaponCatalog.lua:42"
+    ]
+  },
+  "镇石矢印": {
+    "key": "t_jRvYYMnOj1A2MD7O",
+    "locations": [
+      "combat/WeaponCatalog.lua:43"
+    ]
+  },
+  "迅步矢印": {
+    "key": "t_f1Cpo63iepFwozcs",
+    "locations": [
+      "combat/WeaponCatalog.lua:44"
+    ]
+  },
+  "移动": {
+    "key": "t_1EKxmpP6c1EXDB9hvK",
+    "locations": [
+      "combat/WeaponCatalog.lua:44",
+      "combat/WeaponCatalog.lua:46"
+    ]
+  },
+  "满弦矢印": {
+    "key": "t_14XrkM3iy14Lc90yUC",
+    "locations": [
+      "combat/WeaponCatalog.lua:45"
+    ]
+  },
+  "流影矢印": {
+    "key": "t_Pi7qBVLOQDQWlzoA",
+    "locations": [
+      "combat/WeaponCatalog.lua:46"
+    ]
+  },
+  "星辉法印": {
+    "key": "t_auC2Tj8AbKxVgXuY",
+    "locations": [
+      "combat/WeaponCatalog.lua:47"
+    ]
+  },
+  "余震法印": {
+    "key": "t_8nFYma3l9DiFCzCz",
+    "locations": [
+      "combat/WeaponCatalog.lua:48"
+    ]
+  },
+  "裂地法印": {
+    "key": "t_KPn9rXaKKDXlzpv6",
+    "locations": [
+      "combat/WeaponCatalog.lua:49"
+    ]
+  },
+  "震波法印": {
+    "key": "t_1CovLqoQT1CJcczWSH",
+    "locations": [
+      "combat/WeaponCatalog.lua:50"
+    ]
+  },
+  "暂滞法印": {
+    "key": "t_12eaZCZhb12XU5MG6d",
+    "locations": [
+      "combat/WeaponCatalog.lua:51"
+    ]
+  },
+  "溯宙法印": {
+    "key": "t_1Au1k3ymn1ATZ5x7lZ",
+    "locations": [
+      "combat/WeaponCatalog.lua:52"
+    ]
+  },
+  "{0}（本次保存失败）": {
+    "key": "t_1ETIHtP6c1EaOt7pBO",
+    "locations": [
+      "combat/WeaponStore.lua:301"
+    ]
+  },
+  "武器类型不符": {
+    "key": "t_103kthOwZ10G0VkV0x",
+    "locations": [
+      "combat/WeaponStore.lua:162"
+    ]
+  },
+  "图纸无效": {
+    "key": "t_ktZPrr3LlKL9XPqN",
+    "locations": [
+      "combat/WeaponStore.lua:164"
+    ]
+  },
+  "已拥有这件武器": {
+    "key": "t_StHFyBK8T5WeRHdE",
+    "locations": [
+      "combat/WeaponStore.lua:168"
+    ]
+  },
+  "请先打造同类上一阶武器": {
+    "key": "t_9xoKb5WB9SCr7ZBP",
+    "locations": [
+      "combat/WeaponStore.lua:171"
+    ]
+  },
+  "未知锻造方式": {
+    "key": "t_19LyPKUAE19XvIqazy",
+    "locations": [
+      "combat/WeaponStore.lua:174"
+    ]
+  },
+  "只能熔入同类下一阶，需要拥有上一阶武器": {
+    "key": "t_1Ar5Ec5rp1Ajyfno1l",
+    "locations": [
+      "combat/WeaponStore.lua:177"
+    ]
+  },
+  "目标武器等级已达继承等级": {
+    "key": "t_piL6oYF4pCjYbuIw",
+    "locations": [
+      "combat/WeaponStore.lua:178"
+    ]
+  },
+  "尚未打造": {
+    "key": "t_OCVTUVouNljy0LMu",
+    "locations": [
+      "combat/WeaponStore.lua:190",
+      "combat/WeaponStore.lua:211"
+    ]
+  },
+  "时印类型不符": {
+    "key": "t_ZIod1HRzZBP3g7Ih",
+    "locations": [
+      "combat/WeaponStore.lua:194"
+    ]
+  },
+  "尚未获得这枚时印": {
+    "key": "t_V0DQTyjuUt6XGlKI",
+    "locations": [
+      "combat/WeaponStore.lua:195"
+    ]
+  },
+  "强化矿不足": {
+    "key": "t_EfRrtHgIEmYiRWDS",
+    "locations": [
+      "combat/WeaponStore.lua:200",
+      "combat/WeaponStore.lua:213"
+    ]
+  },
+  "武器已满级": {
+    "key": "t_mEffrrrKmf8h9m0k",
+    "locations": [
+      "combat/WeaponStore.lua:212"
+    ]
+  },
+  "请选择可强化的时印": {
+    "key": "t_eRpPZbzNe1MkrMqn",
+    "locations": [
+      "combat/WeaponStore.lua:218"
+    ]
+  },
+  "淬炼砂不足": {
+    "key": "t_WNMOV5daVrkv1ZMw",
+    "locations": [
+      "combat/WeaponStore.lua:219"
+    ]
+  },
+  "请选择一枚闲置时印": {
+    "key": "t_mH2am2FbmSzE0xWp",
+    "locations": [
+      "combat/WeaponStore.lua:221"
+    ]
+  },
+  "强化成功": {
+    "key": "t_ylL9BQiRyxHxlkZ9",
+    "locations": [
+      "combat/WeaponStore.lua:227"
+    ]
+  },
+  "强化未成，下次成功率 %d%%": {
+    "key": "t_1FyCvETOT1FSbBFU6D",
+    "locations": [
+      "combat/WeaponStore.lua:230"
+    ]
+  },
+  "未知锻造操作": {
+    "key": "t_gKB4diHkftiQUfLA",
+    "locations": [
+      "combat/WeaponStore.lua:232"
+    ]
+  },
+  "已应用": {
+    "key": "t_1HFvRAhPU1GpSPvWkS",
+    "locations": [
+      "combat/WeaponStore.lua:234"
+    ]
+  },
+  "保存失败，材料已保留": {
+    "key": "t_1AQVkBs8319uu0DQOJ",
+    "locations": [
+      "combat/WeaponStore.lua:240"
+    ]
+  },
+  "材料无效": {
+    "key": "t_1mln7WqQ1HSlzJJC",
+    "locations": [
+      "combat/WeaponStore.lua:260"
+    ]
+  },
+  "这份训练素材已领取": {
+    "key": "t_CCTvdqvqC5N9dDTe",
+    "locations": [
+      "combat/WeaponStore.lua:268"
+    ]
+  },
+  "此处已经采集": {
+    "key": "t_c2MKvcfnbbtMLStb",
+    "locations": [
+      "combat/WeaponStore.lua:274"
+    ]
+  },
+  "材料已达堆叠上限": {
+    "key": "t_18RRjT61g180gIPvYW",
+    "locations": [
+      "combat/WeaponStore.lua:278"
+    ]
+  },
+  "强化矿 +%d　淬炼砂 +%d　%s": {
+    "key": "t_iGeKvnEnhqBLod3B",
+    "locations": [
+      "combat/WeaponStore.lua:300"
+    ]
+  },
+  "强化矿": {
+    "key": "t_LocpdJ2QLJK4PCXa",
+    "locations": [
+      "combat/MaterialCatalog.lua:3"
+    ]
+  },
+  "用于打造和升级武器。": {
+    "key": "t_lOKlurmPkxYxaadR",
+    "locations": [
+      "combat/MaterialCatalog.lua:3"
+    ]
+  },
+  "淬炼砂": {
+    "key": "t_ibQz4MALingLGeNN",
+    "locations": [
+      "combat/MaterialCatalog.lua:4"
+    ]
+  },
+  "用于提高石印的品阶。": {
+    "key": "t_y81sc4iXyJyjR0HZ",
+    "locations": [
+      "combat/MaterialCatalog.lua:4"
+    ]
+  },
+  "木灵凝脂": {
+    "key": "t_10QygtmNxzvfbDypJ",
+    "locations": [
+      "combat/MaterialCatalog.lua:5"
+    ]
+  },
+  "凝结在木灵胸前的暖金树脂。": {
+    "key": "t_1CmWTtPol1CM3iOSJj",
+    "locations": [
+      "combat/MaterialCatalog.lua:5"
+    ]
+  },
+  "琥珀巢丝": {
+    "key": "t_1Fj2wVItV1Fq9XYBvN",
+    "locations": [
+      "combat/MaterialCatalog.lua:6"
+    ]
+  },
+  "织巢虫金色巢囊中取出的坚韧纤维。": {
+    "key": "t_UX9vZoVlU6gsTiTJ",
+    "locations": [
+      "combat/MaterialCatalog.lua:6"
+    ]
+  },
+  "岩甲晶片": {
+    "key": "t_rzsX3PeXs6zIt39x",
+    "locations": [
+      "combat/MaterialCatalog.lua:7"
+    ]
+  },
+  "岩甲巨兽的肩晶碎片，依然连着深色岩甲。": {
+    "key": "t_1G5ycoAi81GWROJ8ki",
+    "locations": [
+      "combat/MaterialCatalog.lua:7"
+    ]
+  },
+  "遗迹导能件": {
+    "key": "t_Yq5Ra2PzYPJfd91v",
+    "locations": [
+      "combat/MaterialCatalog.lua:8"
+    ]
+  },
+  "构装体的铜环中嵌着仍有余光的青晶。": {
+    "key": "t_5yMZCoLQ5m7I7qW0",
+    "locations": [
+      "combat/MaterialCatalog.lua:8"
+    ]
+  },
+  "时蚀砂": {
+    "key": "t_VbOsb9ZqVPSH61wg",
+    "locations": [
+      "combat/MaterialCatalog.lua:9"
+    ]
+  },
+  "时蚀灵体消散后留下的冷光砂粒。": {
+    "key": "t_dE7zkrwNcipGDn3n",
+    "locations": [
+      "combat/MaterialCatalog.lua:9"
+    ]
+  },
+  "木材": {
+    "key": "t_8OyPCWKm8WNl5N5k",
+    "locations": [
+      "combat/MaterialCatalog.lua:10"
+    ]
+  },
+  "从遗迹采集树折取的带皮枝材。": {
+    "key": "t_4676FAfM3uAAJTl6",
+    "locations": [
+      "combat/MaterialCatalog.lua:10"
+    ]
+  },
+  "石料": {
+    "key": "t_VuxGD7jQWLPykwaq",
+    "locations": [
+      "combat/MaterialCatalog.lua:11"
+    ]
+  },
+  "在遗迹采石点拾取的硬质石块。": {
+    "key": "t_7pKex1xS7hvJcop0",
+    "locations": [
+      "combat/MaterialCatalog.lua:11"
+    ]
+  },
+  "晶矿": {
+    "key": "t_1EjiiVXYz1EJG4MUcO",
+    "locations": [
+      "combat/MaterialCatalog.lua:12"
+    ]
+  },
+  "从遗迹的晶簇中采下的原矿。": {
+    "key": "t_8DXWyQ4P8iqVh1rs",
+    "locations": [
+      "combat/MaterialCatalog.lua:12"
+    ]
+  },
+  "苔壳虫组": {
+    "key": "t_M58FQns4MCEjo6s1",
+    "locations": [
+      "combat/CombatMoves.lua:1011"
+    ]
+  },
+  "哨灵": {
+    "key": "t_vxibnarFvS6pRlyG",
+    "locations": [
+      "combat/CombatMoves.lua:1011"
+    ]
+  },
+  "武器就绪 · Q 点按切换 / 长按选择": {
+    "key": "t_jhrzsCHCk8dRWlvn",
+    "locations": [
+      "combat/CombatState.lua:175"
+    ]
+  },
+  "拔刃 · 时间之力暂息": {
+    "key": "t_kp1jNyFCkJj0Whrb",
+    "locations": [
+      "combat/CombatState.lua:175"
+    ]
+  },
+  "仍在交战": {
+    "key": "t_1GDeCORb01GPankl4V",
+    "locations": [
+      "combat/CombatState.lua:181"
+    ]
+  },
+  "时间法器 · 左键碎时 / E 冻结 / R 回溯": {
+    "key": "t_d4fqbKoKcsQCHSAL",
+    "locations": [
+      "combat/CombatState.lua:192"
+    ]
+  },
+  "收刃 · 时间之力恢复中": {
+    "key": "t_IjBffhRjIDsuYASw",
+    "locations": [
+      "combat/CombatState.lua:192"
+    ]
+  },
+  "武器已释放": {
+    "key": "t_19qb5cVZi1ALuBksgl",
+    "locations": [
+      "combat/WeaponRig.lua:976"
+    ]
+  },
+  "战斗音效加载失败，已静音降级：{0}": {
+    "key": "t_lxrbuDVXlSYWLapK",
+    "locations": [
+      "combat/CombatAudio.lua:148"
+    ]
+  },
+  "无法预建战斗声源，已静音降级。": {
+    "key": "t_16YlVZgIa167zhmOUz",
+    "locations": [
+      "combat/CombatAudio.lua:244",
+      "combat/CombatAudio.lua:272"
+    ]
+  },
+  "空间音源不可用，改为平面播放并按距离衰减。": {
+    "key": "t_pkUTPHjLpEszkmVq",
+    "locations": [
+      "combat/CombatAudio.lua:262"
+    ]
+  },
+  "声源停止接口不可用，已尝试静音。": {
+    "key": "t_HU0iZ0BOGyOrf1at",
+    "locations": [
+      "combat/CombatAudio.lua:290"
+    ]
+  },
+  "战斗音效播放接口失败，已静音降级。": {
+    "key": "t_x3TD4b0ywrDYqlWL",
+    "locations": [
+      "combat/CombatAudio.lua:318",
+      "combat/CombatAudio.lua:432"
+    ]
+  },
+  "忽略未知战斗音效事件。": {
+    "key": "t_IunMZtDBJ6jxXSsO",
+    "locations": [
+      "combat/CombatAudio.lua:401"
+    ]
+  },
+  "拉弓循环接口不可用，已静音降级。": {
+    "key": "t_TvNsegBaTUutfkT1",
+    "locations": [
+      "combat/CombatAudio.lua:486"
+    ]
+  },
+  "碎石哨灵": {
+    "key": "t_gqF61m6zgeIV4CRk",
+    "locations": [
+      "combat/enemies/StoneSentry.lua:6"
+    ]
+  },
+  "苔壳虫": {
+    "key": "t_OWAEEVp6Oi6nSqQH",
+    "locations": [
+      "combat/enemies/MossBeetle.lua:5"
+    ]
+  },
+  "岩甲巨兽": {
+    "key": "t_QOZWObUZQaW9alCs",
+    "locations": [
+      "combat/enemies/actors/RockColossus.lua:15",
+      "ruins/TrainingStation.lua:11"
+    ]
+  },
+  "织巢虫": {
+    "key": "t_hXfwmlyJhLQYVEF4",
+    "locations": [
+      "combat/enemies/actors/NestWeaver.lua:74",
+      "ruins/TrainingStation.lua:10"
+    ]
+  },
+  "遗迹构装体": {
+    "key": "t_47HIL4HO3vKjeIFL",
+    "locations": [
+      "combat/enemies/actors/RuinConstruct.lua:62",
+      "ruins/TrainingStation.lua:12"
+    ]
+  },
+  "时蚀灵体": {
+    "key": "t_s7pUtrJ1s0ieL6CE",
+    "locations": [
+      "combat/enemies/actors/TimeWraith.lua:11",
+      "ruins/TrainingStation.lua:13"
+    ]
+  },
+  "木灵": {
+    "key": "t_ZwsCGDfaZkvIhMM3",
+    "locations": [
+      "combat/enemies/actors/WoodSpirit.lua:12",
+      "ruins/TrainingStation.lua:9"
+    ]
+  },
+  "下方没有安全落点，请飞到开阔岛面再降落": {
+    "key": "t_i5qP0LwChtb1HSIv",
+    "locations": [
+      "ruins/RuinsDragon.lua:57"
+    ]
+  },
+  "先按 L 降落，落稳后再按 F 下龙": {
+    "key": "t_D4BKxS50CdPdPtJ1",
+    "locations": [
+      "ruins/RuinsDragon.lua:215"
+    ]
+  },
+  "旁边没有安全落脚点，移动到开阔地再下龙": {
+    "key": "t_M5Neu3JFMCn0ki8q",
+    "locations": [
+      "ruins/RuinsDragon.lua:234"
+    ]
+  },
+  "无效房屋阶段": {
+    "key": "t_1CQrvQnYlxrDG0P",
+    "locations": [
+      "ruins/HomeIsland.lua:273"
+    ]
+  },
+  "请等待家园展开": {
+    "key": "t_XnLWfB1CYDoBCPk7",
+    "locations": [
+      "ruins/HomeIsland.lua:275"
+    ]
+  },
+  "请先离开即将变化的墙、楼板或屋顶": {
+    "key": "t_17K5ShGJgr8ka7i",
+    "locations": [
+      "ruins/HomeIsland.lua:285"
+    ]
+  },
+  "已是{0}": {
+    "key": "t_6mhTduO86H61gRJR",
+    "locations": [
+      "ruins/RuinsHUD.lua:296"
+    ]
+  },
+  "已切换至{0}": {
+    "key": "t_1GXGQNGPV1G6Uf2JhE",
+    "locations": [
+      "ruins/RuinsHUD.lua:299"
+    ]
+  },
+  "当前 · {0}": {
+    "key": "t_4Le4kUa63q2W1Q0t",
+    "locations": [
+      "ruins/RuinsHUD.lua:343"
+    ]
+  },
+  "左键": {
+    "key": "t_1BZEkxnT51B3vepyWE",
+    "locations": [
+      "ruins/RuinsHUD.lua:26",
+      "ruins/RuinsHUD.lua:27"
+    ]
+  },
+  "右键": {
+    "key": "t_WezM96YrWrEvooU4",
+    "locations": [
+      "ruins/RuinsHUD.lua:208",
+      "ruins/RuinsHUD.lua:27"
+    ]
+  },
+  "%[R 回溯%]": {
+    "key": "t_CE1CSr4nC24InxoC",
+    "locations": [
+      "ruins/RuinsHUD.lua:47"
+    ]
+  },
+  "【回溯】": {
+    "key": "t_Goh84nzVGOE6e6Lg",
+    "locations": [
+      "ruins/RuinsHUD.lua:47"
+    ]
+  },
+  "按 R": {
+    "key": "t_kOdAxf1ikaZho2hr",
+    "locations": [
+      "ruins/RuinsHUD.lua:47"
+    ]
+  },
+  "点【回溯】": {
+    "key": "t_JkG1B91zJY0PnrSY",
+    "locations": [
+      "ruins/RuinsHUD.lua:47"
+    ]
+  },
+  "%[左键 碎时%]": {
+    "key": "t_1ALUH3oC019psXXPWD",
+    "locations": [
+      "ruins/RuinsHUD.lua:48"
+    ]
+  },
+  "【碎时】": {
+    "key": "t_dghlYkP19IYWA8q",
+    "locations": [
+      "ruins/RuinsHUD.lua:48"
+    ]
+  },
+  "左键碎时": {
+    "key": "t_M9umaZwlMHK1fc9e",
+    "locations": [
+      "ruins/RuinsHUD.lua:48"
+    ]
+  },
+  "碎时蓄力 · 松开【碎时】释放": {
+    "key": "t_X5UuviwbWZt4073I",
+    "locations": [
+      "ruins/RuinsHUD.lua:216"
+    ]
+  },
+  "碎时蓄力 · 松开左键释放": {
+    "key": "t_F0mCwpJBFWO12Stk",
+    "locations": [
+      "ruins/RuinsHUD.lua:216"
+    ]
+  },
+  "废墟": {
+    "key": "t_EdQD5axdEkpqZaK8",
+    "locations": [
+      "ruins/RuinsHUD.lua:265"
+    ]
+  },
+  "一层": {
+    "key": "t_1H6BIhfZo1Gz4oTA8P",
+    "locations": [
+      "ruins/RuinsHUD.lua:265"
+    ]
+  },
+  "两层": {
+    "key": "t_R7zVhrEkRFP7SbS3",
+    "locations": [
+      "ruins/RuinsHUD.lua:265"
+    ]
+  },
+  "三层": {
+    "key": "t_pOuh2b7bpW1BJs3G",
+    "locations": [
+      "ruins/RuinsHUD.lua:265"
+    ]
+  },
+  "即将": {
+    "key": "t_13vBHhl4U13jELusGp",
+    "locations": [
+      "ruins/RuinsHUD.lua:302"
+    ]
+  },
+  "将要": {
+    "key": "t_lgJlUrm4lnjOxCpt",
+    "locations": [
+      "ruins/RuinsHUD.lua:302"
+    ]
+  },
+  "暂不可切换，请稍后再试": {
+    "key": "t_aNZhcoOpaZp1NK94",
+    "locations": [
+      "ruins/RuinsHUD.lua:302"
+    ]
+  },
+  "家园房屋": {
+    "key": "t_JgjRRtvCJZJqPi63",
+    "locations": [
+      "ruins/RuinsHUD.lua:337",
+      "ruins/RuinsHUD.lua:342"
+    ]
+  },
+  "家园房屋  J": {
+    "key": "t_QQVmN4HxQXv1S6YS",
+    "locations": [
+      "ruins/RuinsHUD.lua:337"
+    ]
+  },
+  "返回 ×": {
+    "key": "t_EDBnBJuoDmiqIBDr",
+    "locations": [
+      "ruins/RuinsHUD.lua:342"
+    ]
+  },
+  "等待中": {
+    "key": "t_1Bp6iM27g1CFZjkYVR",
+    "locations": [
+      "ruins/RuinsHUD.lua:343"
+    ]
+  },
+  "点选房屋状态": {
+    "key": "t_GmOf9AN4GGn8e8M3",
+    "locations": [
+      "ruins/RuinsHUD.lua:352"
+    ]
+  },
+  "按 0-3 切换 · Esc 返回": {
+    "key": "t_aCoOKXYGZhCqA6bZ",
+    "locations": [
+      "ruins/RuinsHUD.lua:352"
+    ]
+  },
+  "WASD 移动 · Space 跳跃": {
+    "key": "t_wR5fL1IGwEq3oMzh",
+    "locations": [
+      "ruins/RuinsHUD.lua:383",
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "左键五连/蓄力": {
+    "key": "t_4xfrQxAT4SNAseYO",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "剑 Q 重击 · 弓右键强射 · Ctrl 步行/奔跑 · Shift 冲刺": {
+    "key": "t_RrJn1EU5Rf4P7LR2",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "Tab 切武器 / 长按轮盘 · 1/2/3 直选": {
+    "key": "t_bAN6aWNKb2xlPeNT",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "E 冻结 · R 回溯 · Q 武技": {
+    "key": "t_YXetLK7HYelTp0Pa",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "G 锻造（脱战后）· F7 动画预览": {
+    "key": "t_19MxV8nj219Yu6faeL",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "F5 伤害数字 · F6 辅助瞄准": {
+    "key": "t_a3BCCI7rZqvsqVeo",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "F8 传送 · F9 木桩 · F4 UI检查": {
+    "key": "t_Cl5CqEMPCxKtIeVo",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "Shift+F9 触屏开关 · H 隐藏说明": {
+    "key": "t_Wd7F6WbtWp447nJs",
+    "locations": [
+      "ruins/RuinsHUD.lua:383"
+    ]
+  },
+  "WASD 移动 · 左键/1 持续吐息": {
+    "key": "t_hG42w3NmhSJKPlc7",
+    "locations": [
+      "ruins/RuinsHUD.lua:384"
+    ]
+  },
+  "Space 起飞/上升 · C 下降": {
+    "key": "t_1EaJKSH5Z1ESu5W2ua",
+    "locations": [
+      "ruins/RuinsHUD.lua:384"
+    ]
+  },
+  "Shift 冲刺 · G 滑翔 · L 降落": {
+    "key": "t_oyXlKr5jorQux4wo",
+    "locations": [
+      "ruins/RuinsHUD.lua:384"
+    ]
+  },
+  "B 大招 · F 下龙（着陆后）": {
+    "key": "t_TDopeoIhSnM9Exm2",
+    "locations": [
+      "ruins/RuinsHUD.lua:384"
+    ]
+  },
+  "Z 远景 · Esc 释放鼠标": {
+    "key": "t_CqAnwjfsCeED0opN",
+    "locations": [
+      "ruins/RuinsHUD.lua:384"
+    ]
+  },
+  "H 隐藏说明": {
+    "key": "t_RjTJgz9YRvPsNlmn",
+    "locations": [
+      "ruins/RuinsHUD.lua:384"
+    ]
+  },
+  "Ctrl 切换步行/奔跑 · 按住 Shift 冲刺（耗体力）": {
+    "key": "t_1B7DAncIS1BXftvD7h",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "左键蓄力碎时 · E 冻结 · R 回溯": {
+    "key": "t_Ic55rL8hIBJHUrbS",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "Tab 切换 / 长按轮盘 · Q 武技 · G 锻造 · B 背包 · F 上龙": {
+    "key": "t_xooEyeevxOLIpjJY",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "F7 动画预览 · F8 传送 · F9 木桩": {
+    "key": "t_poELK20bpIvFc23g",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "F4 UI检查 · Shift+F9 触屏开关": {
+    "key": "t_QQnfuCuPQYDJDCJc",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "Z 远景 · 按住 T 快进时间": {
+    "key": "t_EAZlZzrtDyKBvwls",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "Esc 释放鼠标 · H 隐藏说明": {
+    "key": "t_YJvsOgkuXod7H9qH",
+    "locations": [
+      "ruins/RuinsHUD.lua:385"
+    ]
+  },
+  "{0}  ·  M 地图 · F10 设置 · H 隐藏说明": {
+    "key": "t_Xk8lls6nYFkHYMCa",
+    "locations": [
+      "ruins/RuinsScene.lua:1231"
+    ]
+  },
+  "没有找到安全传送点：{0}": {
+    "key": "t_zblVVOOrzUMABBKW",
+    "locations": [
+      "ruins/RuinsScene.lua:1509"
+    ]
+  },
+  "传送：{0}": {
+    "key": "t_10ryWRqHk10kZAhDzp",
+    "locations": [
+      "ruins/RuinsScene.lua:1518"
+    ]
+  },
+  "镜头震动 · {0}": {
+    "key": "t_1C0eqy5PS1BtYI0yrf",
+    "locations": [
+      "ruins/RuinsScene.lua:1591"
+    ]
+  },
+  "动作镜头 / FOV · {0}": {
+    "key": "t_eZZr8OLHe4GsNZ0o",
+    "locations": [
+      "ruins/RuinsScene.lua:1595"
+    ]
+  },
+  "辅助瞄准 · {0}": {
+    "key": "t_Si1fJDL9SCiZ218c",
+    "locations": [
+      "ruins/RuinsScene.lua:1600"
+    ]
+  },
+  "伤害数字 · {0}": {
+    "key": "t_KdI6YbktL8asFt1i",
+    "locations": [
+      "ruins/RuinsScene.lua:1605"
+    ]
+  },
+  "{0}\nP 对比：{1}": {
+    "key": "t_10GiAvzHG104lKD8O3",
+    "locations": [
+      "ruins/RuinsScene.lua:1900"
+    ]
+  },
+  "法器特效 · {0}（5 切换）": {
+    "key": "t_QPjUN8jZQbgLd15E",
+    "locations": [
+      "ruins/RuinsScene.lua:1919"
+    ]
+  },
+  "后": {
+    "key": "t_olXUBZm7oxn3xrnW",
+    "locations": [
+      "ruins/RuinsScene.lua:104",
+      "ruins/RuinsScene.lua:2464"
+    ]
+  },
+  "点击激活画面 · 未锁定时按住鼠标拖动视角 · 再点击可锁定": {
+    "key": "t_IEwMlKAtIfi4AdY2",
+    "locations": [
+      "ruins/RuinsScene.lua:180"
+    ]
+  },
+  "点击画面锁定鼠标 · Esc 释放": {
+    "key": "t_173ORPFXa16rRVZbBX",
+    "locations": [
+      "ruins/RuinsScene.lua:180"
+    ]
+  },
+  "F10 关闭调试面板后，点击画面继续": {
+    "key": "t_WexIsnyZWqu7I7OY",
+    "locations": [
+      "ruins/RuinsScene.lua:208"
+    ]
+  },
+  "未锁定：按住鼠标拖动视角 · 技能可用 · 点击可重试锁定": {
+    "key": "t_ODWOeoUxNn3d7ebe",
+    "locations": [
+      "ruins/RuinsScene.lua:209"
+    ]
+  },
+  "画面已激活：按住拖动视角 · 再点击可请求锁定": {
+    "key": "t_1ItA92LW1jexvlyx",
+    "locations": [
+      "ruins/RuinsScene.lua:210"
+    ]
+  },
+  "桥体残片悬在裂隙中。站在岸边，瞄准带金色符脉的悬空桥片，按 R 施放「回溯」。": {
+    "key": "t_zD1sQ7lUzideoh4f",
+    "locations": [
+      "ruins/RuinsScene.lua:222"
+    ]
+  },
+  "带着时之钥回到内环，对倒塌的时之碑按 R 施放「回溯」。（%d / 4）": {
+    "key": "t_GT8vMRZMGfOZ14s1",
+    "locations": [
+      "ruins/RuinsScene.lua:224"
+    ]
+  },
+  "J 家园房屋　 G 锻造　 M 地图": {
+    "key": "t_1BLcO8IQe1BT1unvf3",
+    "locations": [
+      "ruins/RuinsScene.lua:230"
+    ]
+  },
+  "四座时之碑已复原": {
+    "key": "t_EIELOXlcDrlaQYaz",
+    "locations": [
+      "ruins/RuinsScene.lua:234"
+    ]
+  },
+  "遗迹训练场": {
+    "key": "t_14wWsfFBZ15MzwMBmK",
+    "locations": [
+      "ruins/RuinsScene.lua:234"
+    ]
+  },
+  "靠近中央木桩选择训练对手，或前往南门探索遗迹。": {
+    "key": "t_bJ02ofzVb73BQYAK",
+    "locations": [
+      "ruins/RuinsScene.lua:234"
+    ]
+  },
+  "遗迹看守者 · 苏醒": {
+    "key": "t_PMi1I1zkPASjoI9p",
+    "locations": [
+      "ruins/RuinsScene.lua:422"
+    ]
+  },
+  "城门已打通": {
+    "key": "t_fnXsw6pEfIF7EpTl",
+    "locations": [
+      "ruins/RuinsScene.lua:429"
+    ]
+  },
+  "古桥 · 复原": {
+    "key": "t_17ikhqaQi17bLMYaDZ",
+    "locations": [
+      "ruins/RuinsScene.lua:432"
+    ]
+  },
+  "获得「时之钥」——时之碑的封印解除了": {
+    "key": "t_nNx8T3TTnoitqBRm",
+    "locations": [
+      "ruins/RuinsScene.lua:435"
+    ]
+  },
+  "时之碑 %d / 4": {
+    "key": "t_iS2zSLiyisoUwUVl",
+    "locations": [
+      "ruins/RuinsScene.lua:439"
+    ]
+  },
+  "战斗中无法锻造": {
+    "key": "t_14moIn7nsXXFT30",
+    "locations": [
+      "ruins/RuinsScene.lua:556"
+    ]
+  },
+  "走近屋前的锻造炉": {
+    "key": "t_QhuGh7JuQH8UkmYR",
+    "locations": [
+      "ruins/RuinsScene.lua:556"
+    ]
+  },
+  "请在安全地面、脱离警戒后锻造": {
+    "key": "t_zZ15Xq0TzMlTSY4q",
+    "locations": [
+      "ruins/RuinsScene.lua:556"
+    ]
+  },
+  "训练落点不可用": {
+    "key": "t_13jXmbi3rn0wCQo",
+    "locations": [
+      "ruins/RuinsScene.lua:703"
+    ]
+  },
+  "时之印记 · 生命已恢复": {
+    "key": "t_RHcumDuTR5NEKKjQ",
+    "locations": [
+      "ruins/RuinsScene.lua:767"
+    ]
+  },
+  "近距离 / 削切": {
+    "key": "t_5T9eMWui52gtP6JZ",
+    "locations": [
+      "ruins/RuinsScene.lua:793"
+    ]
+  },
+  "远距离 / 单点": {
+    "key": "t_ew6vVoLceohOyyfl",
+    "locations": [
+      "ruins/RuinsScene.lua:794"
+    ]
+  },
+  "时间法器": {
+    "key": "t_EkV9ahjIEYFqEOkn",
+    "locations": [
+      "ruins/RuinsScene.lua:795"
+    ]
+  },
+  "中距离 / 碎时 · 冻结 · 回溯": {
+    "key": "t_moviW9bknKETc2Ir",
+    "locations": [
+      "ruins/RuinsScene.lua:795"
+    ]
+  },
+  "训练完成，靠近拾取素材": {
+    "key": "t_1GRemPdfJ1GKYDbLDY",
+    "locations": [
+      "ruins/RuinsScene.lua:887"
+    ]
+  },
+  "训练完成，可回木桩再选对手": {
+    "key": "t_NrmoszSgOIYaGg7j",
+    "locations": [
+      "ruins/RuinsScene.lua:887"
+    ]
+  },
+  "先下龙，再启程": {
+    "key": "t_BpBW2EIuBJskNAwn",
+    "locations": [
+      "ruins/RuinsScene.lua:907"
+    ]
+  },
+  "脱离战斗后可启程": {
+    "key": "t_11BSurqW911glgWuvo",
+    "locations": [
+      "ruins/RuinsScene.lua:908"
+    ]
+  },
+  "请先回到地面": {
+    "key": "t_1BLksrfyka1d9QN",
+    "locations": [
+      "ruins/RuinsScene.lua:909"
+    ]
+  },
+  "正在展开家园小岛…": {
+    "key": "t_psAGzUhhqIvyMaYu",
+    "locations": [
+      "ruins/RuinsScene.lua:926"
+    ]
+  },
+  "此落点暂不可用": {
+    "key": "t_1HmUl9YCT1HM1oPD40",
+    "locations": [
+      "ruins/RuinsScene.lua:935"
+    ]
+  },
+  "载入中断，点家园重试": {
+    "key": "t_H9yA9Wc4HH50g6O9",
+    "locations": [
+      "ruins/RuinsScene.lua:966"
+    ]
+  },
+  "请脱离警戒并回到地面，再打开背包": {
+    "key": "t_C9MS9qAPCGTEarnA",
+    "locations": [
+      "ruins/RuinsScene.lua:1056",
+      "ruins/RuinsScene.lua:1418"
+    ]
+  },
+  "请脱离警戒后换装": {
+    "key": "t_facTQk39fOfujPv0",
+    "locations": [
+      "ruins/RuinsScene.lua:1060",
+      "ruins/RuinsScene.lua:1065"
+    ]
+  },
+  "时之印记将你带回安全处": {
+    "key": "t_1BFIhJhAP1BRYGQlSa",
+    "locations": [
+      "ruins/RuinsScene.lua:1192"
+    ]
+  },
+  "右": {
+    "key": "t_4Hg1CsS13mMuvhq4",
+    "locations": [
+      "ruins/RuinsScene.lua:1480",
+      "ruins/RuinsScene.lua:1950",
+      "ruins/RuinsScene.lua:1952"
+    ]
+  },
+  "左": {
+    "key": "t_BRVfLUVIBYcEAJyX",
+    "locations": [
+      "ruins/RuinsScene.lua:1480",
+      "ruins/RuinsScene.lua:1950",
+      "ruins/RuinsScene.lua:1952"
+    ]
+  },
+  "%s握点目标 (%.3f, %.3f, %.3f)m": {
+    "key": "t_1644NopCS16Zfu8JEH",
+    "locations": [
+      "ruins/RuinsScene.lua:1484"
+    ]
+  },
+  "%s握点实际 (%.3f, %.3f, %.3f)m": {
+    "key": "t_Jes9lXNjJlyy2xsQ",
+    "locations": [
+      "ruins/RuinsScene.lua:1489"
+    ]
+  },
+  "%s肘 (%.3f, %.3f, %.3f)m": {
+    "key": "t_9u5tWv3s9OmpWXUz",
+    "locations": [
+      "ruins/RuinsScene.lua:1496"
+    ]
+  },
+  "%s骨长 上臂%.3fm / 前臂%.3fm": {
+    "key": "t_R9nSPAXqRGuH5KqJ",
+    "locations": [
+      "ruins/RuinsScene.lua:1497"
+    ]
+  },
+  "%s单段臂长 %.3fm": {
+    "key": "t_jshxAazGk07EN5hn",
+    "locations": [
+      "ruins/RuinsScene.lua:1499"
+    ]
+  },
+  "旧轨道对比：不显示残留IK目标": {
+    "key": "t_vEGudvm2v7ALrpC3",
+    "locations": [
+      "ruins/RuinsScene.lua:1503"
+    ]
+  },
+  "此片段未提供握点轨迹": {
+    "key": "t_g97eMkmdgGEX1JRW",
+    "locations": [
+      "ruins/RuinsScene.lua:1503"
+    ]
+  },
+  "先退出 F7 动画预览": {
+    "key": "t_13THivQ5O12xgAilgt",
+    "locations": [
+      "ruins/RuinsScene.lua:1506"
+    ]
+  },
+  "训练木桩已移除": {
+    "key": "t_MClb5BtxM5MHdZ2m",
+    "locations": [
+      "ruins/RuinsScene.lua:1525"
+    ]
+  },
+  "前方3米没有安全空地": {
+    "key": "t_sBvdtfddrlAFG6IW",
+    "locations": [
+      "ruins/RuinsScene.lua:1531"
+    ]
+  },
+  "训练木桩 · 点按 Tab 切换 / 长按 Tab 选择": {
+    "key": "t_mvanETALn2hc3R5w",
+    "locations": [
+      "ruins/RuinsScene.lua:1544"
+    ]
+  },
+  "开": {
+    "key": "t_yE3PPqzHyLABOJ3e",
+    "locations": [
+      "ruins/RuinsScene.lua:1591",
+      "ruins/RuinsScene.lua:1595",
+      "ruins/RuinsScene.lua:1600",
+      "ruins/RuinsScene.lua:1605"
+    ]
+  },
+  "关": {
+    "key": "t_C49kArwjCBGagt5g",
+    "locations": [
+      "ruins/RuinsScene.lua:1591",
+      "ruins/RuinsScene.lua:1595",
+      "ruins/RuinsScene.lua:1600",
+      "ruins/RuinsScene.lua:1605"
+    ]
+  },
+  "破碎中": {
+    "key": "t_TyZf1xoWUTsQA2ID",
+    "locations": [
+      "ruins/RuinsScene.lua:1629"
+    ]
+  },
+  "已碎": {
+    "key": "t_ev945hSmeo2SroPV",
+    "locations": [
+      "ruins/RuinsScene.lua:1629"
+    ]
+  },
+  "回溯中": {
+    "key": "t_136qcB6kW13InFygir",
+    "locations": [
+      "ruins/RuinsScene.lua:1629"
+    ]
+  },
+  "  [左键 碎时]": {
+    "key": "t_hRpNl7CuhFspD7fp",
+    "locations": [
+      "ruins/RuinsScene.lua:1681"
+    ]
+  },
+  "  [R 回溯]": {
+    "key": "t_J5txy7Z2Itx2ZPXF",
+    "locations": [
+      "ruins/RuinsScene.lua:1681"
+    ]
+  },
+  "◇ 碎石堆 · 左键碎时": {
+    "key": "t_JEsgAyqdIo6u5HLy",
+    "locations": [
+      "ruins/RuinsScene.lua:1686"
+    ]
+  },
+  "◇ 可破坏 · 左键碎时": {
+    "key": "t_1BRBO2Rv21BEvjqokX",
+    "locations": [
+      "ruins/RuinsScene.lua:1686"
+    ]
+  },
+  "步行": {
+    "key": "t_1E8T26t331DhhGjjx2",
+    "locations": [
+      "ruins/RuinsScene.lua:1750"
+    ]
+  },
+  "奔跑": {
+    "key": "t_7Vp79d0W81Qr8cmD",
+    "locations": [
+      "ruins/RuinsScene.lua:1750"
+    ]
+  },
+  "F7 %s / %.3f / %s%s\n事件：%s\n空格 暂停 · , / . 逐帧 · 左右 切片段": {
+    "key": "t_GU9X9t41GgPDDZs4",
+    "locations": [
+      "ruins/RuinsScene.lua:1897"
+    ]
+  },
+  " · 暂停": {
+    "key": "t_YPaSps51YqLuTtZO",
+    "locations": [
+      "ruins/RuinsScene.lua:1898"
+    ]
+  },
+  "\nIJKL 方向:%s · B:%s · +/- 拉弓:%.1f": {
+    "key": "t_yjV6PWFmyvRuzqhf",
+    "locations": [
+      "ruins/RuinsScene.lua:1899"
+    ]
+  },
+  "弓": {
+    "key": "t_15qb6AhvD15jBn9TDa",
+    "locations": [
+      "ruins/RuinsScene.lua:1899"
+    ]
+  },
+  "剑": {
+    "key": "t_SwcSmn3bT41hpdPG",
+    "locations": [
+      "ruins/RuinsScene.lua:1899"
+    ]
+  },
+  " · O 持手": {
+    "key": "t_1DWlyrij51D1Svc4P4",
+    "locations": [
+      "ruins/RuinsScene.lua:1899"
+    ]
+  },
+  " · O 背挂": {
+    "key": "t_2Tom6l9F1yCvunuq",
+    "locations": [
+      "ruins/RuinsScene.lua:1899"
+    ]
+  },
+  "旧骨骼轨道 / IK关闭": {
+    "key": "t_y8kH9JAqj6onFR",
+    "locations": [
+      "ruins/RuinsScene.lua:1900"
+    ]
+  },
+  "路径驱动 / IK开启": {
+    "key": "t_1CSFNCW0j1Ct0or548",
+    "locations": [
+      "ruins/RuinsScene.lua:1900"
+    ]
+  },
+  "像素粒子": {
+    "key": "t_TBtEy3ZNSzdtTl7M",
+    "locations": [
+      "ruins/RuinsScene.lua:1919"
+    ]
+  },
+  "1 前 / 2 侧 / 3 背 / 4 斜 · 距离2.6m · 鼠标微调": {
+    "key": "t_1Fs1hGgrJ1Fg4o8mKu",
+    "locations": [
+      "ruins/RuinsScene.lua:1944"
+    ]
+  },
+  "音频预加载 %d/%d": {
+    "key": "t_Jiira7KOJWTYNA57",
+    "locations": [
+      "ruins/RuinsScene.lua:1946"
+    ]
+  },
+  "髋Y %.3f · root修正 %+.3fm · 支撑 %s": {
+    "key": "t_16l719KWA17BZm56EV",
+    "locations": [
+      "ruins/RuinsScene.lua:1950"
+    ]
+  },
+  "%s%d 脚Y %.3f / 地Y %.3f": {
+    "key": "t_1D7lLe5zU1DJhzReQr",
+    "locations": [
+      "ruins/RuinsScene.lua:1952"
+    ]
+  },
+  "按住【龙息】持续吐息 · 朝准星方向喷射": {
+    "key": "t_nmQEulr1naThv0q2",
+    "locations": [
+      "ruins/RuinsScene.lua:2100"
+    ]
+  },
+  "长按破坏键持续吐息（左键/1）": {
+    "key": "t_cnBTFK3qdImzZNFn",
+    "locations": [
+      "ruins/RuinsScene.lua:2101"
+    ]
+  },
+  "遗迹场景已加载": {
+    "key": "t_6gcaL8bS6UMtjtlL",
+    "locations": [
+      "ruins/tests/WallSurfaceViewTest.lua:5"
+    ]
+  },
+  "坑壁石缝使用内圈半径": {
+    "key": "t_qVMqPnmJqvpooy4c",
+    "locations": [
+      "ruins/tests/WallSurfaceViewTest.lua:24"
+    ]
+  },
+  "上半墙不再被整列标记为潮湿墙脚": {
+    "key": "t_HiJr3EUPHpj7n6zM",
+    "locations": [
+      "ruins/tests/WallSurfaceViewTest.lua:41"
+    ]
+  },
+  "四片坑壁均启用独立环形砌石材质": {
+    "key": "t_JWzffnMOJiwbc2tF",
+    "locations": [
+      "ruins/tests/WallSurfaceViewTest.lua:44"
+    ]
+  },
+  "太阳逐帧更新，不再每6秒跳转": {
+    "key": "t_17TJVbxJL17fGKcgvC",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:21"
+    ]
+  },
+  "常速10秒只请求初始与一次环境捕获": {
+    "key": "t_EKMAXJtxDp3Qy3d2",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:22"
+    ]
+  },
+  "快进环境捕获不超过每秒2次": {
+    "key": "t_mppEZgd5nGIFQf3O",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:26"
+    ]
+  },
+  "正在捕获时不重复排队": {
+    "key": "t_4mmjpw834fgBTgCg",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:30"
+    ]
+  },
+  "完成后取最新时刻，不补发历史捕获": {
+    "key": "t_t7xwMuFftJuZQGT4",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:33"
+    ]
+  },
+  "固定白天只捕获一次，且不重复设置光照": {
+    "key": "t_xGDQndKWwpRha80D",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:39"
+    ]
+  },
+  "手动改时间在固定时刻下也能刷新环境光": {
+    "key": "t_18PARfB8s17yhj8zxz",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:43"
+    ]
+  },
+  "不支持捕获的设备不发出请求": {
+    "key": "t_E0ZSWmHgECW6IhUv",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:47"
+    ]
+  },
+  "跨24点的小幅变化不会被当成整日跳转": {
+    "key": "t_inQ2VzahibATRhNu",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:53"
+    ]
+  },
+  "跨日后环境捕获仍能按时间变化继续": {
+    "key": "t_4KFy5dfM3tUEzIjZ",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:55"
+    ]
+  },
+  "原生光照测试场景初始化成功": {
+    "key": "t_1Hb5e1Y4M1HiVHNHxv",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:58"
+    ]
+  },
+  "原生灯光方向按小台阶转动，台阶之间静止，无6秒式大跳变": {
+    "key": "t_1CVterKUe1CdJBv91x",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:74"
+    ]
+  },
+  "环境捕获使用64像素、分帧、手动节流预算": {
+    "key": "t_XzRPn7HLYBOECyjG",
+    "locations": [
+      "ruins/tests/DayNightTest.lua:77"
+    ]
+  },
+  "场景使用向下的正常重力": {
+    "key": "t_Gm0TMKBaGGhQ67EV",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:20"
+    ]
+  },
+  "场景启用结构应力断裂": {
+    "key": "t_If7GbpSkIELSHXFj",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:21"
+    ]
+  },
+  "底座破坏后保留真实上部体素": {
+    "key": "t_7UojIRCj807nIom8",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:57"
+    ]
+  },
+  "底座仍有支撑时不误坍塌": {
+    "key": "t_11KIEN9z511WXo0fVW",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:65"
+    ]
+  },
+  "失去底座的上部必须真实下落": {
+    "key": "t_1CUsKCNVF1CgpG1TAa",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:67"
+    ]
+  },
+  "实心下表面落在地面而非悬空或穿透": {
+    "key": "t_TdKFrYABTkR1skn0",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:68"
+    ]
+  },
+  "落地后稳定停止": {
+    "key": "t_1BDm3n0Kc1BQ1dTGLv",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:69"
+    ]
+  },
+  "检测到失去支撑的上部碎块": {
+    "key": "t_vLgE9cOeuq4UbZtZ",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:73"
+    ]
+  },
+  "谜题接收到结构断裂事件": {
+    "key": "t_10POucz9Szu66h7AF",
+    "locations": [
+      "ruins/tests/StructureGravityTest.lua:75"
+    ]
+  },
+  "树木外壳测试已加载": {
+    "key": "t_t2SqSibctY4KYB5h",
+    "locations": [
+      "ruins/tests/TreeSurfaceTest.lua:4"
+    ]
+  },
+  "同色相邻两格合并为六个外表面": {
+    "key": "t_FpwaUYbiFx34uc1r",
+    "locations": [
+      "ruins/tests/TreeSurfaceTest.lua:6"
+    ]
+  },
+  "剔除两个内部面，保留十个外露单位面": {
+    "key": "t_1GvxSp0831H8CoS78U",
+    "locations": [
+      "ruins/tests/TreeSurfaceTest.lua:7"
+    ]
+  },
+  "树干和树冠仍为两个绘制体": {
+    "key": "t_15fqbXRlT15s6Al5co",
+    "locations": [
+      "ruins/tests/TreeSurfaceTest.lua:9"
+    ]
+  },
+  "不额外转换复制一份模型缓冲": {
+    "key": "t_B4JWoPJtAsMtcF0O",
+    "locations": [
+      "ruins/tests/TreeSurfaceTest.lua:10"
+    ]
+  },
+  "树木各部分仍有有效实体范围": {
+    "key": "t_1CtX3qXe31COEIj1nS",
+    "locations": [
+      "ruins/tests/TreeSurfaceTest.lua:13"
+    ]
+  },
+  "法阵随实际相机距离缩小 mode={0}": {
+    "key": "t_ocqekSUVp3JavbIg",
+    "locations": [
+      "ruins/tests/SpellScaleTest.lua:35"
+    ]
+  },
+  "法阵仍位于施法手附近而非屏幕/脸部": {
+    "key": "t_eyvMxb09erW6DiVg",
+    "locations": [
+      "ruins/tests/SpellScaleTest.lua:36"
+    ]
+  },
+  "施法粒子使用六个世界顶点而非公告板尺寸扩张": {
+    "key": "t_7YzYpUxE7zSFdXB3",
+    "locations": [
+      "ruins/tests/SpellScaleTest.lua:37"
+    ]
+  },
+  "镜头变化不改变法阵施法朝向": {
+    "key": "t_GxeqcDWOHTGaAH1R",
+    "locations": [
+      "ruins/tests/SpellScaleTest.lua:38"
+    ]
+  },
+  "正式瓮最近命中一致 {0} angle={1} range={2} h={3}": {
+    "key": "t_9uyTLVpg9UVkh4jR",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:51"
+    ]
+  },
+  "可见瓮面可锁定 {0} angle={1} range={2} h={3}": {
+    "key": "t_1Dj68pHIS1Dv2kB3Cv",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:52"
+    ]
+  },
+  "原生漏报或空气障碍不清空可见瓮 mode={0}": {
+    "key": "t_78l9bIF27KhgaTUD",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:83"
+    ]
+  },
+  "瓮外壳各表面命中一致 angle={0} h={1} offset={2}": {
+    "key": "t_O0sCzpZkO7yj6wkn",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:109"
+    ]
+  },
+  "启用实心墙仍阻止瓮锁定": {
+    "key": "t_vMTDBRX12SwvEVS",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:120"
+    ]
+  },
+  "禁用体积不留下隐形遮挡": {
+    "key": "t_18cScKEcZ193E1fnmo",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:122"
+    ]
+  },
+  "禁用组件不留下隐形遮挡": {
+    "key": "t_mKP09yyamWLw6DRN",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:125"
+    ]
+  },
+  "最终相机更新后同帧选中瓮并显示钟面": {
+    "key": "t_1A2AieR6C1A9aHYezN",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:137"
+    ]
+  },
+  "最终选中同帧更新高亮但不重复推进玩法计时": {
+    "key": "t_rMjE6nvDrU8lDMtC",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:138"
+    ]
+  },
+  "截图类似视角的实际相机准星锁定瓮": {
+    "key": "t_Dh5qvRRnDGd7nsDe",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:164"
+    ]
+  },
+  "选中钟面实际启用": {
+    "key": "t_f0HGnAy1AJGY3jh",
+    "locations": [
+      "ruins/tests/UrnTargetTest.lua:167"
+    ]
+  },
+  "受控施法法阵启用": {
+    "key": "t_5GHqhkxS5SEPmkQZ",
+    "locations": [
+      "ruins/tests/SpellViewTest.lua:37"
+    ]
+  },
+  "两种实际施法粒子均参与截图": {
+    "key": "t_To9BekHFTcCfN0Dc",
+    "locations": [
+      "ruins/tests/SpellViewTest.lua:38"
+    ]
+  },
+  "受控相机角色脚底与第四级台面一致": {
+    "key": "t_LrQgwDiRMN2EzVzS",
+    "locations": [
+      "ruins/tests/StairViewTest.lua:29"
+    ]
+  },
+  "遗迹场景已经初始化": {
+    "key": "t_W2xUM2doWAN3GEvN",
+    "locations": [
+      "ruins/tests/PerformanceTest.lua:29"
+    ]
+  },
+  "稳态沉睡不重复求解骨骼与翼膜": {
+    "key": "t_l4EZEXJ7lGTug6Gi",
+    "locations": [
+      "ruins/tests/PerformanceTest.lua:61"
+    ]
+  },
+  "缓存睡姿不会累积下沉": {
+    "key": "t_NFuE7dQ3NgfdKQ0g",
+    "locations": [
+      "ruins/tests/PerformanceTest.lua:64"
+    ]
+  },
+  "采样覆盖沉睡龙": {
+    "key": "t_6ySpOfz87TloihZj",
+    "locations": [
+      "ruins/tests/PerformanceTest.lua:77"
+    ]
+  },
+  "苏醒后恢复完整动画与翼膜更新": {
+    "key": "t_10o86CSup10bsX8Ai2",
+    "locations": [
+      "ruins/tests/PerformanceTest.lua:90"
+    ]
+  },
+  "原生漏前景也不能隔着南门锁断桥 zero={0} x={1} y={2}": {
+    "key": "t_qYXEqk6Ur48iwBWV",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:41"
+    ]
+  },
+  "左侧门柱挡住石堆时不穿墙锁定 y={0}": {
+    "key": "t_1HZkauSlx1Hh9tp4lo",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:83"
+    ]
+  },
+  "整面斜射锁定 originX={0} x={1} y={2}": {
+    "key": "t_1GMYCVtmK1GTxRS8wj",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:85"
+    ]
+  },
+  "南门实景直线命中堵门碎石，y={0}": {
+    "key": "t_cTiWhaN9cHSsKxlq",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:96"
+    ]
+  },
+  "正式越肩准星锁定南门，z={0} mode={1}": {
+    "key": "t_Zl6uSO4eZxMC4NJR",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:114"
+    ]
+  },
+  "施法手在肩前而非背后 pitch={0}": {
+    "key": "t_hjdXL3gWiFFIzQmH",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:142"
+    ]
+  },
+  "网页持续锁断桥的同一条射线应先命中南门碎石": {
+    "key": "t_br3JAwYlbenzxxeE",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:16"
+    ]
+  },
+  "空网格中的相机不能被零距离假命中截断": {
+    "key": "t_Z27niOKNZSaoxYVy",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:58"
+    ]
+  },
+  "实景南门目标时钟显示": {
+    "key": "t_Hc7wMUqtI2aumEMw",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:116"
+    ]
+  },
+  "逆投影方向异常不让中心瞄准朝背后": {
+    "key": "t_87RHrKDv8d2oD0dy",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:129"
+    ]
+  },
+  "施法起点始终是模型掌心": {
+    "key": "t_vAJw2GrLv3DPxN8c",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:143"
+    ]
+  },
+  "抬头抬手、低头降手，俯仰不反向": {
+    "key": "t_xaMD4j7CxmbmkyXL",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:145"
+    ]
+  },
+  "背对目标单击施法先转身": {
+    "key": "t_SbIs02VwSAXB9vT3",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:155"
+    ]
+  },
+  "首次单击也从前伸掌心发射": {
+    "key": "t_vhhYz3jBvteNR8hY",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:156"
+    ]
+  },
+  "光束两端严格为掌心和准星命中点": {
+    "key": "t_RSM5kt6sQx3MN9tv",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:161"
+    ]
+  },
+  "光束使用世界坐标，不受特效父节点影响": {
+    "key": "t_ieD2Je8KiX6YTKTF",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:162"
+    ]
+  },
+  "施法法阵在同帧掌心前方12厘米": {
+    "key": "t_lOrq1fE2ky68cLNz",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:166"
+    ]
+  },
+  "法阵朝施法目标而非固定迎着镜头": {
+    "key": "t_1CLe74B9m1CmPqqKeB",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:167"
+    ]
+  },
+  "两分钟只流逝一游戏小时": {
+    "key": "t_temDwZ4PuA5CfAOy",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:178"
+    ]
+  },
+  "进入十分钟后仍有日光": {
+    "key": "t_KQQiklvTKEU55zWA",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:180"
+    ]
+  },
+  "固定白天保持可用": {
+    "key": "t_vnygfgmKvc2337lF",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:185"
+    ]
+  },
+  "T键快进仍为30倍速": {
+    "key": "t_cpnz07qvdGGvkRum",
+    "locations": [
+      "ruins/tests/GateTargetTest.lua:187"
+    ]
+  },
+  "正式瓮截图视角未命中": {
+    "key": "t_1287jGn8611vsA9jRb",
+    "locations": [
+      "ruins/tests/UrnView.lua:24"
+    ]
+  },
+  "时之瓮 · 完整": {
+    "key": "t_2ETD1KIm22DrX0GD",
+    "locations": [
+      "ruins/tests/UrnView.lua:28"
+    ]
+  },
+  "真实场景输入回归没有异常：{0}": {
+    "key": "t_oItNP2uEoBTnvchL",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:183"
+    ]
+  },
+  "UI 不请求锁定": {
+    "key": "t_1FtUT66Xz1FhXZzqNO",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:22"
+    ]
+  },
+  "Web 首次点击只激活新画布": {
+    "key": "t_1EiCpn3Dw1ECtmLrqX",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:24"
+    ]
+  },
+  "焦点尚未稳定不请求锁定": {
+    "key": "t_xACdP8hdwxxMLo5o",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:27"
+    ]
+  },
+  "焦点稳定后的真实点击请求锁定": {
+    "key": "t_TygFC93fUUI37KFS",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:31"
+    ]
+  },
+  "等待浏览器时玩法已经激活": {
+    "key": "t_qUJzsTUXqzvnvt9M",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:32"
+    ]
+  },
+  "等待锁定时仍可施法": {
+    "key": "t_Om3J3D2dOedjZoQo",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:34"
+    ]
+  },
+  "仅相对模式不冒充浏览器锁定成功": {
+    "key": "t_jz2jmHqRjrw9I3S2",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:36"
+    ]
+  },
+  "pending 不重复请求": {
+    "key": "t_Mn7hZABXMg1B3ri6",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:38"
+    ]
+  },
+  "超时兼容模式仍允许技能": {
+    "key": "t_17efBTtR117XYIDw46",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:41"
+    ]
+  },
+  "失败不自动重试": {
+    "key": "t_136ONNvAq13IdzR1Ir",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:42"
+    ]
+  },
+  "后续真实点击可以重试": {
+    "key": "t_1Z09CZNM1RansMFR",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:45"
+    ]
+  },
+  "成功回报进入真正锁定": {
+    "key": "t_nxSkcy7FoSlmBYky",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:48"
+    ]
+  },
+  "ESC 释放并暂停玩法输入": {
+    "key": "t_nYtiWBmKng0bLCpV",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:50"
+    ]
+  },
+  "键盘恢复技能不需要再次申请锁定": {
+    "key": "t_1Fb1kjPjy1FnH4cC0l",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:53"
+    ]
+  },
+  "面板阻止输入与锁定": {
+    "key": "t_TDkMJ8BNSnHhjg0e",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:57"
+    ]
+  },
+  "失焦不恢复玩法": {
+    "key": "t_tQHef2YPszohuhU4",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:61"
+    ]
+  },
+  "桌面根据 relative 模式锁定": {
+    "key": "t_QkAWuT1hQErnNPDA",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:66"
+    ]
+  },
+  "按下鼠标不切换模式破坏拖动": {
+    "key": "t_pbnqu1t4pUhKOBuF",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:104"
+    ]
+  },
+  "Web 纯点击先激活": {
+    "key": "t_kAiYnRlhjf6i2HCa",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:111"
+    ]
+  },
+  "桌面纯点击松开时请求锁定": {
+    "key": "t_vwWj8NV5vVlFD1ve",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:113"
+    ]
+  },
+  "真实输入 E 在未锁定时施放冻结": {
+    "key": "t_uPR6oEuiuWqSW6ir",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:121"
+    ]
+  },
+  "真实输入 R 在未锁定时施放回溯": {
+    "key": "t_4erfJJRi4mHCVv11",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:124"
+    ]
+  },
+  "键盘施法无需浏览器锁定": {
+    "key": "t_jiBEIibYk8x2Tf8z",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:125"
+    ]
+  },
+  "真实左键开始碎时蓄力": {
+    "key": "t_ajLne2bTaE2mUCN8",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:129"
+    ]
+  },
+  "真实输入推进蓄力": {
+    "key": "t_1B8VU6ljn1Be6yL1r0",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:131"
+    ]
+  },
+  "松开左键实际释放碎时": {
+    "key": "t_SHvQOtWiSTsHgwg5",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:134"
+    ]
+  },
+  "无按下事件时不转视角": {
+    "key": "t_y1UUtIPKyX5yylU3",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:142"
+    ]
+  },
+  "相对位移和轮询按键均为零时，绝对坐标拖动仍转视角": {
+    "key": "t_5gEUnIqr66h8o5jo",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:147"
+    ]
+  },
+  "拖动期间没有锁定请求": {
+    "key": "t_1uuulu7x2LgJaV0u",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:148"
+    ]
+  },
+  "松开事件后停止转视角且不重复应用位移": {
+    "key": "t_12MfJmaBy12n85HYAR",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:154"
+    ]
+  },
+  "引擎焦点标志滞后不阻塞已到达的拖动事件": {
+    "key": "t_Qan7PB5JBWNW5S",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:159"
+    ]
+  },
+  "真正失焦事件取消拖动": {
+    "key": "t_Jy3xyZvoJSlEY6E1",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:166"
+    ]
+  },
+  "F10 面板内 E 不误施法": {
+    "key": "t_1G8qcdcIW1GeSM1CsH",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:174"
+    ]
+  },
+  "关闭面板后 E 可直接恢复施法": {
+    "key": "t_Z760VBfJZXYfBnZk",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:178"
+    ]
+  },
+  "实际场景 ESC 释放鼠标": {
+    "key": "t_Ku15n9PuL17cKdkZ",
+    "locations": [
+      "ruins/tests/PointerCaptureTest.lua:180"
+    ]
+  },
+  "{0}：旧 owner 已注销": {
+    "key": "t_HBiemfEmH4bqWtYn",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:62"
+    ]
+  },
+  "{0}：存活体积数无累积/丢失": {
+    "key": "t_186VhbQHk18IlLy3LR",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:76"
+    ]
+  },
+  "{0}：真实 solver body 数正确": {
+    "key": "t_qY9UgJctr3l0QcP0",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:77"
+    ]
+  },
+  "{0}：完整体素守恒": {
+    "key": "t_dEkhZ1MtcjRvjVA6",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:82"
+    ]
+  },
+  "{0}：最终碎块硬上限90": {
+    "key": "t_187JIgMzC18JYcbK7H",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:86"
+    ]
+  },
+  "{0}：无缺失残片": {
+    "key": "t_WdXaoSuQWpnESZBb",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:89"
+    ]
+  },
+  "{0}：分组体素全部建入网格": {
+    "key": "t_QHHklrDVQhkOuudX",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:90"
+    ]
+  },
+  "{0}：原始 id 不重复": {
+    "key": "t_17VoBEm1z17dDmyyDJ",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:102"
+    ]
+  },
+  "{0}：全部体素位置及材质守恒": {
+    "key": "t_ETsekJMOEuLdtfPG",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:103"
+    ]
+  },
+  "{0}：全部原始 ids 守恒": {
+    "key": "t_FJSXVZOXFCM3GWSF",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:105"
+    ]
+  },
+  "{0}：Raycast 命中真实物件": {
+    "key": "t_1FnBcDceY1FbEgQiFk",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:114"
+    ]
+  },
+  "{0}：SphereCast 命中真实碰撞": {
+    "key": "t_9Bp0pXFV8zZjsnHz",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:115"
+    ]
+  },
+  "{0}：Raycast 无旧残留": {
+    "key": "t_1B8Lvjfnd1BYoypmtf",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:117"
+    ]
+  },
+  "{0}：SphereCast 无旧残留": {
+    "key": "t_4EnYlKZ33o1mgChT",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:118"
+    ]
+  },
+  "回溯有限时间内重组完成": {
+    "key": "t_RCCG4HxnR4mc2jZF",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:144"
+    ]
+  },
+  "回溯时角色胶囊穿过旧碎块位置，没有虚空阻挡": {
+    "key": "t_1tijL6oy2PKHOP5W",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:160"
+    ]
+  },
+  "初始完整体": {
+    "key": "t_LJY7CVcGLp9fObNi",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:166"
+    ]
+  },
+  "完整物件可碰撞": {
+    "key": "t_l7m6LyarlFBi08hT",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:168"
+    ]
+  },
+  "重复 Shatter 成功": {
+    "key": "t_b4Rdl8NjbBrEpX41",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:170"
+    ]
+  },
+  "Shatter 释放原 whole": {
+    "key": "t_Z4VfaJJ9Za7EB8PN",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:171"
+    ]
+  },
+  "碎块离开后完整体旧位置": {
+    "key": "t_4Hjaxb3H3m7n0Cw9",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:183"
+    ]
+  },
+  "重复 Freeze 成功": {
+    "key": "t_fLsRqjzLfmL8o7sD",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:186"
+    ]
+  },
+  "Freeze 释放动态 body": {
+    "key": "t_JCLXBalhJ06DOrV1",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:187"
+    ]
+  },
+  "冻结静态残片仍可碰撞": {
+    "key": "t_1CeZG6fKo1CXSNJq8q",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:189"
+    ]
+  },
+  "冻结静止不下落": {
+    "key": "t_90AWHWM99CQ5Uc3L",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:194"
+    ]
+  },
+  "Unfreeze 释放静态 body": {
+    "key": "t_13yEg0m7213r8A2Sxy",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:198"
+    ]
+  },
+  "Unfreeze 恢复状态": {
+    "key": "t_1H9MF9ing1GiajXK1S",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:199"
+    ]
+  },
+  "Unfreeze 恢复冻结前线速度及角速度": {
+    "key": "t_LCyE5HaiKhMfURMI",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:203"
+    ]
+  },
+  "覆盖 FROZEN 发起回溯": {
+    "key": "t_VUzqy0YkVcPQRysC",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:205"
+    ]
+  },
+  "重复 Rewind 成功": {
+    "key": "t_HrNRLpSIHfQuvpL2",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:207"
+    ]
+  },
+  "Rewind 释放原残骸": {
+    "key": "t_ZfhGfDuaaBJ0n0mQ",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:208"
+    ]
+  },
+  "回溯仅视觉且mask=0": {
+    "key": "t_m2ORqIjvlbvilTvx",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:211"
+    ]
+  },
+  "回溯开始时旧残骸位置": {
+    "key": "t_BxUCLQ7qCSmt2Vhk",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:214"
+    ]
+  },
+  "物理步之后仍无旧碰撞": {
+    "key": "t_i4vNoXyXhsfmHugR",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:218"
+    ]
+  },
+  "Reassemble 释放所有 visual": {
+    "key": "t_h5fY3UdJhbHM98Dv",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:221"
+    ]
+  },
+  "重组完成后旧残骸位置": {
+    "key": "t_h33K8MaUgXkDrk56",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:224"
+    ]
+  },
+  "对象重复 Dispose": {
+    "key": "t_1DzwYIeHz1DnhGgf3h",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:230"
+    ]
+  },
+  "Dispose 后原位置": {
+    "key": "t_4RAjXwRS4rdQMXIK",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:231"
+    ]
+  },
+  "开局散落没有构建 whole": {
+    "key": "t_Oq84kUduOPMNuw9Q",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:236"
+    ]
+  },
+  "直接开局散落": {
+    "key": "t_26julM2W2IzYWaRq",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:237"
+    ]
+  },
+  "开局散落": {
+    "key": "t_NEy8mw1hNfjplIXb",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:238"
+    ]
+  },
+  "开局原 whole 位置无残留": {
+    "key": "t_OnSPGgEUObVqi808",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:239"
+    ]
+  },
+  "开局散落覆盖 noTrack 回溯": {
+    "key": "t_5PBWozb05I4vb7bk",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:241"
+    ]
+  },
+  "开局回溯释放静态残片": {
+    "key": "t_n2FUS1OAmupuy3bg",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:242"
+    ]
+  },
+  "开局 visual": {
+    "key": "t_U2Us6JwFUSxYwZ9R",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:243"
+    ]
+  },
+  "开局旧残骸位置无碰撞": {
+    "key": "t_kDzJ1hUXkjI1qn4V",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:244"
+    ]
+  },
+  "开局重组释放 visual": {
+    "key": "t_B0iGOgIhAtbfsF37",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:247"
+    ]
+  },
+  "开局回溯重组": {
+    "key": "t_ZgcO2Du2aCEAO3qW",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:248"
+    ]
+  },
+  "开局物件释放": {
+    "key": "t_2Eptv9Hu22t3ETjM",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:250"
+    ]
+  },
+  "低级 Shatter 为再次细分准备": {
+    "key": "t_kWdGga1ykPWSPA3k",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:253"
+    ]
+  },
+  "再次细分": {
+    "key": "t_RN2FJJSFQrQixcYj",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:256",
+      "ruins/tests/TimeLifecycleTest.lua:257"
+    ]
+  },
+  "对抗性细分达到90但不超过90": {
+    "key": "t_IhaY03Q5IBz3o0lD",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:260"
+    ]
+  },
+  "预算满拒绝继续细分": {
+    "key": "t_1W9kF1TK1iPM9r0e",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:262"
+    ]
+  },
+  "预算满不重建/截断旧残片": {
+    "key": "t_bTHpMdKubytNNjgc",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:263"
+    ]
+  },
+  "细分后冻结": {
+    "key": "t_1EhAgapIe1EBYqGbas",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:264",
+      "ruins/tests/TimeLifecycleTest.lua:265"
+    ]
+  },
+  "细分后回溯": {
+    "key": "t_19sXSPzuT1AJJG2Hkp",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:266"
+    ]
+  },
+  "90个visual无body": {
+    "key": "t_c1NKyW8FbabZ3oar",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:267"
+    ]
+  },
+  "90块回溯仍恢复全部体素": {
+    "key": "t_UNuIofBOUGUelSUe",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:269"
+    ]
+  },
+  "90块重组": {
+    "key": "t_16lY58oVZ17H9Yl8Kl",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:270"
+    ]
+  },
+  "第三级初始碎裂": {
+    "key": "t_dCsqag6vcmPuQ6St",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:272"
+    ]
+  },
+  "第三级初碎": {
+    "key": "t_QX80JPrCQeXEmVqe",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:273",
+      "ruins/tests/TimeLifecycleTest.lua:274"
+    ]
+  },
+  "细分对象释放": {
+    "key": "t_47AcydnY3uv1bMA2",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:278"
+    ]
+  },
+  "真实 RUINS 场景已初始化": {
+    "key": "t_rEWBrcxYrQlnOHKI",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:283"
+    ]
+  },
+  "全部生命周期完成": {
+    "key": "t_1FgoPJAxb1Ft3gOgtZ",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:291"
+    ]
+  },
+  "恢复自动步进后体积/body不累积": {
+    "key": "t_OMGe3qQAOrs9qtki",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:302"
+    ]
+  },
+  "恢复步进后空槽全部回收": {
+    "key": "t_zVlT9WgDzOegk7l5",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:303"
+    ]
+  },
+  "测试持有旧 userdata，不靠 GC": {
+    "key": "t_bd1loNcpbpH3HXlZ",
+    "locations": [
+      "ruins/tests/TimeLifecycleTest.lua:304"
+    ]
+  },
+  "遗迹场景完成初始化": {
+    "key": "t_HqtZcMW2HeeGOqZU",
+    "locations": [
+      "ruins/tests/MemoryBudgetTest.lua:5"
+    ]
+  },
+  "遗迹初始化越过 StartSceneGC 并创建场景及角色": {
+    "key": "t_s7v1Katts0oEkDgh",
+    "locations": [
+      "ruins/tests/GCTimingTest.lua:10"
+    ]
+  },
+  "真实静态 Time 绑定返回毫秒数": {
+    "key": "t_VTAypDfDVf7VmlgD",
+    "locations": [
+      "ruins/tests/GCTimingTest.lua:12"
+    ]
+  },
+  "禁用场景 GC 调度": {
+    "key": "t_w6Qb95Tbwc2Kewar",
+    "locations": [
+      "ruins/tests/GCTimingTest.lua:21"
+    ]
+  },
+  "重新启用场景 GC 调度": {
+    "key": "t_5N0QVhCp5Al4t8EH",
+    "locations": [
+      "ruins/tests/GCTimingTest.lua:28"
+    ]
+  },
+  "持续帧更新后场景及战斗系统仍存活": {
+    "key": "t_IVHBCTPbIOAN62rd",
+    "locations": [
+      "ruins/tests/GCTimingTest.lua:34"
+    ]
+  },
+  "战斗音效在真实计时下完成逐帧预加载": {
+    "key": "t_yWOfvHVpy5vje7AR",
+    "locations": [
+      "ruins/tests/GCTimingTest.lua:37"
+    ]
+  },
+  "阶梯回接覆盖完整地形三角面": {
+    "key": "t_yuN1kjydynGQYUl7",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:11"
+    ]
+  },
+  "台面两端夹紧": {
+    "key": "t_TkVoHm0TTdPHjiVD",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:12"
+    ]
+  },
+  "每级恰为0.5米，不靠扩大步高": {
+    "key": "t_ElDp9OPKEdoHu1Hc",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:17"
+    ]
+  },
+  "粗网格不叠在可见台阶上": {
+    "key": "t_NJ5kEq33NQCKj4uN",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:20"
+    ]
+  },
+  "通道边缘和中央的台面高度相同": {
+    "key": "t_x1fpEyWdwuGIbZH3",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:22"
+    ]
+  },
+  "底踏步与龙庭齐平": {
+    "key": "t_17e6SUyf717Wh7DVY7",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:25"
+    ]
+  },
+  "末踏面与内环齐平": {
+    "key": "t_fl73q3iifKe2Y8VG",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:26"
+    ]
+  },
+  "回接前最后一个Terrain顶点在石阶下": {
+    "key": "t_FEU1fTFBFQQsUvuN",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:28"
+    ]
+  },
+  "Terrain在体积末端才回接到6米": {
+    "key": "t_RK2qSZk2QtH4Pcjg",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:29"
+    ]
+  },
+  "LOD末端三角过渡不穿出平踏面": {
+    "key": "t_VA9BIEPVUjgQMRdf",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:39"
+    ]
+  },
+  "扶墙外缘半格不留下侵入通道的粗网格": {
+    "key": "t_E6PEk0HjDu9qsIcT",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:43"
+    ]
+  },
+  "龙庭地砖边缘没有同高Terrain": {
+    "key": "t_148Ki4qWY13hYwhAO0",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:45"
+    ]
+  },
+  "r22平台未扩建或抬高": {
+    "key": "t_g9vEiaSxg2oktwDh",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:47"
+    ]
+  },
+  "引导砖及台缘离面高度低于步高且彼此不同高": {
+    "key": "t_DtWFAfAIE5lr7A80",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:49"
+    ]
+  },
+  "踏面和扶墙只有南北两个Volume": {
+    "key": "t_nEBrM0snmisnX9i3",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:67"
+    ]
+  },
+  "保留0.55步高并启用内部边接触剔除": {
+    "key": "t_GRafaFyqGYhDvwD4",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:70"
+    ]
+  },
+  "踏面内部只有一份实体，含首末级/侧缘": {
+    "key": "t_Rl3RHv68RsSmTK8Y",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:81"
+    ]
+  },
+  "真实Grid踏面高度与解析台面相符": {
+    "key": "t_RGnijHwWR9h7VOxu",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:84"
+    ]
+  },
+  "真实角色不跳跃走完南北阶梯及起终点/侧缘": {
+    "key": "t_17X7xw6d117eXWi3WD",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:120"
+    ]
+  },
+  "台阶接触查询未超预算": {
+    "key": "t_VqOSAY9fVKme6ZKf",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:121"
+    ]
+  },
+  "上下楼终点不悬空或陷脚": {
+    "key": "t_jQquXS4Yj0NyE4no",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:123"
+    ]
+  },
+  "不能自动爬过扶墙": {
+    "key": "t_JgUxDu3zJZOOPckP",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:133"
+    ]
+  },
+  "西塔壁仍需悬石谜题，不能靠自动步高爬上": {
+    "key": "t_H8QtkcO7HFXfjcYX",
+    "locations": [
+      "ruins/tests/StairGeometryTest.lua:139"
+    ]
+  },
+  "同一实心物件六面均可锁定 {0} {1},{2}": {
+    "key": "t_27J0dCBO2JYcgIJM",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:35"
+    ]
+  },
+  "浅角测试射线确实命中物件 slope={0} face={1}": {
+    "key": "t_1Gy2d8t5l1H5RtkVeN",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:51"
+    ]
+  },
+  "微小法向分量入格不丢失原生正确命中 slope={0} face={1}": {
+    "key": "t_oI7eRA9doB0lBDJn",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:59"
+    ]
+  },
+  "棱角同时入射正确取格 {0},{1},{2}": {
+    "key": "t_LOOnEehhLae4sqON",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:74"
+    ]
+  },
+  "正式形状六面可选 {0} yaw={1} axis={2} sign={3}": {
+    "key": "t_nMUvcoJinrnuLRFs",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:139"
+    ]
+  },
+  "正式悬石多角度命中与独立实心格一致 {0} h={1}": {
+    "key": "t_BiBGs8fTBHPnhXLN",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:201"
+    ]
+  },
+  "外侧平行擦过不产生实心命中": {
+    "key": "t_1Gnl7b1yd1HEWWE3D7",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:83"
+    ]
+  },
+  "逐格复核距离上限恰好触及实心表面": {
+    "key": "t_1DBZF2NAb1DNobButL",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:170"
+    ]
+  },
+  "内部整数格面负向归前一实心格": {
+    "key": "t_11oHf9Sg212F3Lwpm8",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:176"
+    ]
+  },
+  "内部整数格面正向不误选身后实心格": {
+    "key": "t_hUxAE4hRhNXqn0TP",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:177"
+    ]
+  },
+  "实心可操作物件正确锁定": {
+    "key": "t_vDC27uHCv0wNucs4",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:207"
+    ]
+  },
+  "时之物件显示选择时钟": {
+    "key": "t_NG3xRsSnNgWeGTrH",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:209"
+    ]
+  },
+  "准星轻微擦边可辅助锁定无遮挡物件": {
+    "key": "t_aispmzkdaI78xRrp",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:221"
+    ]
+  },
+  "动态碰撞凸包空隙不抢走可见目标": {
+    "key": "t_AVcgI19CA0JcQPYC",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:230"
+    ]
+  },
+  "相机与角色之间的近物件不会被跳过": {
+    "key": "t_1893Fd9y018GA8qMK6",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:239"
+    ]
+  },
+  "零距离误报修复后仍命中同一体积前方实心墙": {
+    "key": "t_sAHozpS4ryL0YJAQ",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:262"
+    ]
+  },
+  "逐格校验保留正确墙面法线": {
+    "key": "t_DMid1spbDYfBZrMD",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:263"
+    ]
+  },
+  "空气包围盒不再阻止后方真实物件锁定": {
+    "key": "t_SAQDVOBrSbBv0k6f",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:266"
+    ]
+  },
+  "斜射同一空块内的实心墙不穿透": {
+    "key": "t_4zgfN96H4U56mJOt",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:269"
+    ]
+  },
+  "不可隔墙锁定时之物件": {
+    "key": "t_yqRbus5Yyxqxm5cw",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:281"
+    ]
+  },
+  "墙遮挡时不显示目标时钟": {
+    "key": "t_5hlTw0b96D4CvWVJ",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:283"
+    ]
+  },
+  "普通可破坏体素正确识别": {
+    "key": "t_1Bev1Gry91B9cFRMHv",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:293"
+    ]
+  },
+  "普通可破坏物件也显示时钟": {
+    "key": "t_1ARk7tMoP1Ax37DNrz",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:295"
+    ]
+  },
+  "邻近断桥": {
+    "key": "t_XFOIqRMeXgA4KBZq",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:299"
+    ]
+  },
+  "准星命中普通碎石时不换目标回溯附近断桥": {
+    "key": "t_8LsCAhqk8Y7ZvGqG",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:308"
+    ]
+  },
+  "直接选中的时之物件仍可回溯": {
+    "key": "t_LYYWnoswLR8vBslg",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:310"
+    ]
+  },
+  "生成真实碎块": {
+    "key": "t_ztoiJPIN10P7jL13d",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:314"
+    ]
+  },
+  "冻结碎块仍可锁定所属物件": {
+    "key": "t_57k7e7xo5YCsSkTS",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:325"
+    ]
+  },
+  "无碰撞的回溯碎块仍可被准星识别": {
+    "key": "t_kv4kb0Y0lQgBzGDu",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:328"
+    ]
+  },
+  "瞄准测试不留下存活体积": {
+    "key": "t_aoHyGqucaIgEIPFU",
+    "locations": [
+      "ruins/tests/TargetingTest.lua:333"
+    ]
+  },
+  "北殿台阶能走上台基 x={0}": {
+    "key": "t_XVSERNMLXO2x5YaN",
+    "locations": [
+      "ruins/tests/TerrainSnagTest.lua:137"
+    ]
+  },
+  "覆盖足够多的行走路线": {
+    "key": "t_cV10WkFAcNbjmIac",
+    "locations": [
+      "ruins/tests/TerrainSnagTest.lua:152"
+    ]
+  },
+  "岛面行走无卡脚点（允许直顶树角/倒柱）": {
+    "key": "t_7Pjqbhuu6u82eKnm",
+    "locations": [
+      "ruins/tests/TerrainSnagTest.lua:154"
+    ]
+  },
+  "受控南门相机实际命中碎石": {
+    "key": "t_qfVGO3TRqmus8oEJ",
+    "locations": [
+      "ruins/tests/GateViewTest.lua:30"
+    ]
+  },
+  "受控南门目标时钟实际启用": {
+    "key": "t_wJDStceiwVAI3hvC",
+    "locations": [
+      "ruins/tests/GateViewTest.lua:31"
+    ]
+  },
+  "回溯粒子按秒预算，fps={0}": {
+    "key": "t_esl1jQddf0AYymhn",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:72"
+    ]
+  },
+  "不创建跟随头顶的环境浮光": {
+    "key": "t_VF9ZoItfVkSNlp7R",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:8"
+    ]
+  },
+  "保留独立手部粒子与掌心灯光": {
+    "key": "t_fwzmmj9sgSbcygKA",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:10"
+    ]
+  },
+  "粒子池满时容量守恒": {
+    "key": "t_QLOZGWs5QmALAeiJ",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:18"
+    ]
+  },
+  "最后死亡帧关闭所有公告板": {
+    "key": "t_18Qas5qG617zp4IZWW",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:22"
+    ]
+  },
+  "空池与重复清理不分配或重复归还": {
+    "key": "t_1AB2ZaIzP19z5dbr3l",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:25"
+    ]
+  },
+  "重新填满后索引唯一且不会超容量": {
+    "key": "t_g8ydqFLLgGOHj069",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:29"
+    ]
+  },
+  "世界粒子满池只提交48个顶点": {
+    "key": "t_qJJwgeampsrFjonS",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:37"
+    ]
+  },
+  "父节点位移与非均匀缩放不改变粒子米制尺寸": {
+    "key": "t_54CKf6OE5Uf1e96q",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:40"
+    ]
+  },
+  "世界粒子最后死亡帧立即隐藏并回收": {
+    "key": "t_18PWmzIJe17z44Iep6",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:42"
+    ]
+  },
+  "世界粒子重复清理不重复归还": {
+    "key": "t_Y8VYF1HGY15uMGym",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:44"
+    ]
+  },
+  "闲置碎屑池不创建模型": {
+    "key": "t_TOsF4Bn6TpL01bGc",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:48"
+    ]
+  },
+  "碎屑死亡和重复清理容量守恒": {
+    "key": "t_ysdn1BAwyzkgNjBY",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:51"
+    ]
+  },
+  "重复回溯不增加单物件发射器": {
+    "key": "t_HImaVUwnH6XCDP3P",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:73"
+    ]
+  },
+  "长卡顿丢弃发射欠账": {
+    "key": "t_Ejf1nRSuEXPfmgFC",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:77"
+    ]
+  },
+  "卡顿后没有追赶爆发": {
+    "key": "t_sVYmT8FZshVb1GIh",
+    "locations": [
+      "ruins/tests/EffectsTest.lua:80"
+    ]
+  },
+  "黎明": {
+    "key": "t_nWZQalU2niW1WgGO",
+    "locations": [
+      "dragon/DragonDebugUI.lua:80",
+      "ruins/DayNight.lua:132"
+    ]
+  },
+  "白昼": {
+    "key": "t_Ct279bTTClcaTRCX",
+    "locations": [
+      "ruins/DayNight.lua:133"
+    ]
+  },
+  "黄昏": {
+    "key": "t_syJAvPAptTcGSPE1",
+    "locations": [
+      "dragon/DragonDebugUI.lua:80",
+      "ruins/DayNight.lua:134"
+    ]
+  },
+  "夜晚": {
+    "key": "t_1FRgZXLh41FxIQQley",
+    "locations": [
+      "dragon/DragonDebugUI.lua:80",
+      "ruins/DayNight.lua:135"
+    ]
+  },
+  "伐木": {
+    "key": "t_1ChlmgGq81CaMQpbT0",
+    "locations": [
+      "ruins/RuinsResources.lua:14"
+    ]
+  },
+  "采矿": {
+    "key": "t_rsfMVCWcs4cFbSDk",
+    "locations": [
+      "ruins/RuinsResources.lua:14"
+    ]
+  },
+  "采石": {
+    "key": "t_Ug3f6M7vVBMMFTd3",
+    "locations": [
+      "ruins/RuinsResources.lua:14"
+    ]
+  },
+  "拾取": {
+    "key": "t_O5vQoH4hNtyXrMV3",
+    "locations": [
+      "ruins/RuinsResources.lua:190"
+    ]
+  },
+  "{0}无法被打碎": {
+    "key": "t_nVm8nuw6ni1UQUS8",
+    "locations": [
+      "ruins/TimeSpells.lua:79"
+    ]
+  },
+  "{0}完好无损": {
+    "key": "t_dU2u5m6wduVxBtDQ",
+    "locations": [
+      "ruins/TimeSpells.lua:159"
+    ]
+  },
+  "左键：打碎时之物件 / 碎石（按住蓄力扩大破坏范围）": {
+    "key": "t_8E41YmRS8jfnLQfM",
+    "locations": [
+      "ruins/TimeSpells.lua:63"
+    ]
+  },
+  "没有目标": {
+    "key": "t_15b9V9VK415n61XIzS",
+    "locations": [
+      "ruins/TimeSpells.lua:65"
+    ]
+  },
+  "它已经碎得不能再碎了": {
+    "key": "t_uwSR3Eo1vNDxCcvf",
+    "locations": [
+      "ruins/TimeSpells.lua:100"
+    ]
+  },
+  "太坚硬了": {
+    "key": "t_hoZAjABXiJs9Txqj",
+    "locations": [
+      "ruins/TimeSpells.lua:111"
+    ]
+  },
+  "古石太坚硬，只有带时之印记的物件和碎石能被打碎": {
+    "key": "t_1Cxfz2Uxb1DTHiPXVt",
+    "locations": [
+      "ruins/TimeSpells.lua:114"
+    ]
+  },
+  "E：定格范围内的时之碎块 10 秒（可以踩上去）": {
+    "key": "t_SdkvpiUaS8Rx75cY",
+    "locations": [
+      "ruins/TimeSpells.lua:120"
+    ]
+  },
+  "附近没有正在坠落的时之碎块": {
+    "key": "t_D0j29bACCVQGStWQ",
+    "locations": [
+      "ruins/TimeSpells.lua:140"
+    ]
+  },
+  "Q：让时之物件沿时间倒流，重组为原样": {
+    "key": "t_gsWSt5fygl6u7fIC",
+    "locations": [
+      "ruins/TimeSpells.lua:147"
+    ]
+  },
+  "回溯只对带「时之印记」的物件生效": {
+    "key": "t_EnRNlCHqEbUjzpEm",
+    "locations": [
+      "ruins/TimeSpells.lua:153"
+    ]
+  },
+  "它无法回溯": {
+    "key": "t_SqkIX5R2THDJvbDe",
+    "locations": [
+      "ruins/TimeSpells.lua:157"
+    ]
+  },
+  "顶撞、跃扑。它收根时向侧面移开。": {
+    "key": "t_3g9kEqOV3FgyiDbJ",
+    "locations": [
+      "ruins/TrainingStation.lua:9"
+    ]
+  },
+  "前钩交剪、张鞘射丝。侧移躲开丝线。": {
+    "key": "t_xPoqa78VxvQKcpfF",
+    "locations": [
+      "ruins/TrainingStation.lua:10"
+    ]
+  },
+  "重拳横扫、砸地震波。跳过扩散的地环。": {
+    "key": "t_qbtTbKkxqnqN8097",
+    "locations": [
+      "ruins/TrainingStation.lua:11"
+    ]
+  },
+  "晶弹、锁向光束。双臂合拢时横移。": {
+    "key": "t_Az6djLnIAmrG0zja",
+    "locations": [
+      "ruins/TrainingStation.lua:12"
+    ]
+  },
+  "钟针横扫、闪移时环。避开环边。": {
+    "key": "t_dChTUfLhcmEQXMoh",
+    "locations": [
+      "ruins/TrainingStation.lua:13"
+    ]
+  },
+  "训练木桩": {
+    "key": "t_1IO016Oh1iqehhqj",
+    "locations": [
+      "ruins/TrainingStation.lua:132"
+    ]
+  },
+  "训练木桩  [F]": {
+    "key": "t_P5VlMIATPaoqvTTn",
+    "locations": [
+      "ruins/TrainingStation.lua:132"
+    ]
+  },
+  "选择训练对手": {
+    "key": "t_H1UqKRLvHDResZOz",
+    "locations": [
+      "ruins/TrainingStation.lua:174"
+    ]
+  },
+  "清场": {
+    "key": "t_dg4IuoxRdYexAklb",
+    "locations": [
+      "ruins/TrainingStation.lua:178"
+    ]
+  },
+  "关闭  [Esc]": {
+    "key": "t_iL1gFLCdiqKPFQkL",
+    "locations": [
+      "ruins/TrainingStation.lua:179"
+    ]
+  },
+  "时之碑 · {0}": {
+    "key": "t_QGab398hQhMKppav",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:510"
+    ]
+  },
+  "断桥": {
+    "key": "t_wx5I4jiFx9KtSayn",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:289"
+    ]
+  },
+  "悬石": {
+    "key": "t_AXVGTWldA6jZWnwp",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:390"
+    ]
+  },
+  "一": {
+    "key": "t_TKeWKTOJSp34Vnwj",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:510"
+    ]
+  },
+  "二": {
+    "key": "t_14XxQYAE214M0Ubuge",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:510"
+    ]
+  },
+  "三": {
+    "key": "t_1FInERSK41Es1VDxaQ",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:510"
+    ]
+  },
+  "四": {
+    "key": "t_17RmGA2Ev17sFH0yzX",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:510"
+    ]
+  },
+  "碑身被封印——需要先取得「时之钥」": {
+    "key": "t_1216Hmhl211tgyA60g",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:511"
+    ]
+  },
+  "时之瓮": {
+    "key": "t_hxjZH5d6i9gSyjuY",
+    "locations": [
+      "ruins/RuinsPuzzles.lua:555"
+    ]
+  },
+  "   B 让龙{0}": {
+    "key": "t_tjjCAZwctvyneTHw",
+    "locations": [
+      "dragon/DragonRide.lua:465"
+    ]
+  },
+  "WASD 移动   Space 跳跃   Shift 奔跑   靠近龙按 F 骑乘{0}": {
+    "key": "t_XLOfIiOTXXdwug5n",
+    "locations": [
+      "dragon/DragonRide.lua:466"
+    ]
+  },
+  "骑乘中：W 前进  A/D 转向  S 刹车  Shift 空中冲刺  Space 起飞/上升  C 下降  L 降落  G 滑翔  F 落稳后下龙{0}": {
+    "key": "t_46EAgH3n3tyrKWFR",
+    "locations": [
+      "dragon/DragonRide.lua:476"
+    ]
+  },
+  "点【降落】后可施放大招": {
+    "key": "t_EXJsbk22EjGm7png",
+    "locations": [
+      "dragon/DragonRide.lua:316"
+    ]
+  },
+  "大招需落地施放：按 L 降落": {
+    "key": "t_S1PuYykORaxFsNIM",
+    "locations": [
+      "dragon/DragonRide.lua:316"
+    ]
+  },
+  "大招正在准备或收招": {
+    "key": "t_5Igc6GZ05PnSWFdg",
+    "locations": [
+      "dragon/DragonRide.lua:316"
+    ]
+  },
+  "按 F 骑上龙背": {
+    "key": "t_Ra7rnYjxS5jgK7aF",
+    "locations": [
+      "dragon/DragonRide.lua:458"
+    ]
+  },
+  "幼龙还太小，骑不了——它会一直跟着你": {
+    "key": "t_1Fp06p2541FhtGGFRo",
+    "locations": [
+      "dragon/DragonRide.lua:461"
+    ]
+  },
+  "霜焰吐息": {
+    "key": "t_1Fqxx03Jl1FjYb7BUl",
+    "locations": [
+      "dragon/DragonBreath.lua:62",
+      "dragon/DragonBreathClassic.lua:63"
+    ]
+  },
+  "星陨龙息": {
+    "key": "t_zCWPD6bQzi8G8jUA",
+    "locations": [
+      "dragon/DragonBreath.lua:77",
+      "dragon/DragonBreathClassic.lua:78"
+    ]
+  },
+  "吐息": {
+    "key": "t_PUVMWb9XOzCJGPo1",
+    "locations": [
+      "dragon/DragonBreath.lua:101",
+      "dragon/DragonBreathClassic.lua:98"
+    ]
+  },
+  "旋转 {0}": {
+    "key": "t_OfYCa2aROYRgbBwP",
+    "locations": [
+      "dragon/DragonDebugUI.lua:146"
+    ]
+  },
+  "龙息 · {0}（B）": {
+    "key": "t_MK20FShyM7mOs9XQ",
+    "locations": [
+      "dragon/DragonDebugUI.lua:168"
+    ]
+  },
+  "龙息特效：{0}（V 切换）": {
+    "key": "t_1HUvvXn4W1HcLGh0Fi",
+    "locations": [
+      "dragon/DragonDebugUI.lua:170"
+    ]
+  },
+  "时间 / 昼夜": {
+    "key": "t_aHYRZhbDai1VESOr",
+    "locations": [
+      "dragon/DragonDebugUI.lua:76"
+    ]
+  },
+  "时刻": {
+    "key": "t_Nj7IHx5dNDVVtNBr",
+    "locations": [
+      "dragon/DragonDebugUI.lua:78"
+    ]
+  },
+  "正午": {
+    "key": "t_obwmsGkYp7FYXK20",
+    "locations": [
+      "dragon/DragonDebugUI.lua:80"
+    ]
+  },
+  "固定白天（停在 12:00）": {
+    "key": "t_uW0yGmm3uOuN2LdB",
+    "locations": [
+      "dragon/DragonDebugUI.lua:81"
+    ]
+  },
+  "暂停时间（停在当前时刻）": {
+    "key": "t_A1bq6LkhAXDeajGj",
+    "locations": [
+      "dragon/DragonDebugUI.lua:84"
+    ]
+  },
+  "待机 / 收翼": {
+    "key": "t_bZHlARO4c4tFFKmA",
+    "locations": [
+      "dragon/DragonDebugUI.lua:108"
+    ]
+  },
+  "行走": {
+    "key": "t_E2IfqCXEE9iCwEXO",
+    "locations": [
+      "dragon/DragonAnimationController.lua:373",
+      "dragon/DragonDebugUI.lua:108"
+    ]
+  },
+  "左转 90°": {
+    "key": "t_I72sMVZAIceMRx2o",
+    "locations": [
+      "dragon/DragonDebugUI.lua:108"
+    ]
+  },
+  "右转 90°": {
+    "key": "t_dxSerzlOdS9qwh0O",
+    "locations": [
+      "dragon/DragonDebugUI.lua:108"
+    ]
+  },
+  "展翼": {
+    "key": "t_9l1bmnvT9dukne7Z",
+    "locations": [
+      "dragon/DragonAnimationController.lua:373",
+      "dragon/DragonDebugUI.lua:109"
+    ]
+  },
+  "咆哮": {
+    "key": "t_5xTi6Be85q48laf0",
+    "locations": [
+      "dragon/DragonAnimationController.lua:374",
+      "dragon/DragonDebugUI.lua:109"
+    ]
+  },
+  "起飞": {
+    "key": "t_RXREvtiTRyCg1Hdz",
+    "locations": [
+      "dragon/DragonAnimationController.lua:373",
+      "dragon/DragonDebugUI.lua:109"
+    ]
+  },
+  "飞行": {
+    "key": "t_15YZ8bSEe15zKXoEpK",
+    "locations": [
+      "dragon/DragonAnimationController.lua:374",
+      "dragon/DragonDebugUI.lua:109"
+    ]
+  },
+  "滑翔": {
+    "key": "t_Au9fpTiwB1GEDMPU",
+    "locations": [
+      "dragon/DragonAnimationController.lua:374",
+      "dragon/DragonDebugUI.lua:110"
+    ]
+  },
+  "降落": {
+    "key": "t_ewQauXc1ekAx77L1",
+    "locations": [
+      "dragon/DragonAnimationController.lua:374",
+      "dragon/DragonDebugUI.lua:110"
+    ]
+  },
+  "播放中": {
+    "key": "t_mTilwb8XmMJAIz3v",
+    "locations": [
+      "dragon/DragonDebugUI.lua:121",
+      "dragon/DragonDebugUI.lua:177"
+    ]
+  },
+  "体素巨龙 · 动画测试": {
+    "key": "t_1BIcud6Uv1BUsThOhD",
+    "locations": [
+      "dragon/DragonDebugUI.lua:154"
+    ]
+  },
+  "型号": {
+    "key": "t_6PUkFuQx6bkO3Lq9",
+    "locations": [
+      "dragon/DragonDebugUI.lua:161"
+    ]
+  },
+  "小号：宠物幼龙，不能骑，会跟着诺米  中号：原版巨龙  大号：古龙体型，趾爪可动": {
+    "key": "t_15cncaXp415p30s55M",
+    "locations": [
+      "dragon/DragonDebugUI.lua:164"
+    ]
+  },
+  "动作状态": {
+    "key": "t_V3nA5m71UrqE7tQ9",
+    "locations": [
+      "dragon/DragonDebugUI.lua:165"
+    ]
+  },
+  "▶ 完整演示序列": {
+    "key": "t_oy5PHV6xolq3njgv",
+    "locations": [
+      "dragon/DragonDebugUI.lua:167"
+    ]
+  },
+  "龙息（仅中号 / 大号）": {
+    "key": "t_JLLoWv6yIq2ir81G",
+    "locations": [
+      "dragon/DragonDebugUI.lua:168"
+    ]
+  },
+  "柔光经典版": {
+    "key": "t_13BJLxvUb13NZ2SZ6N",
+    "locations": [
+      "dragon/DragonDebugUI.lua:170"
+    ]
+  },
+  "体素像素版": {
+    "key": "t_o3hNGuiToZIrLoYx",
+    "locations": [
+      "dragon/DragonDebugUI.lua:170"
+    ]
+  },
+  "播放控制": {
+    "key": "t_sDXgRqTfrhvpWDWn",
+    "locations": [
+      "dragon/DragonDebugUI.lua:173"
+    ]
+  },
+  "暂停 / 继续": {
+    "key": "t_m0EsHIH7lZlvOikJ",
+    "locations": [
+      "dragon/DragonDebugUI.lua:175"
+    ]
+  },
+  "已暂停": {
+    "key": "t_xnSpC2sdxMh65hPl",
+    "locations": [
+      "dragon/DragonDebugUI.lua:177"
+    ]
+  },
+  "单步": {
+    "key": "t_UGBVfptcUNakZJWA",
+    "locations": [
+      "dragon/DragonDebugUI.lua:179"
+    ]
+  },
+  "已暂停（单步）": {
+    "key": "t_Hl0ErlhcHsPa9Dkc",
+    "locations": [
+      "dragon/DragonDebugUI.lua:182"
+    ]
+  },
+  "播放速度": {
+    "key": "t_CmU5UbjLCttQdHsT",
+    "locations": [
+      "dragon/DragonDebugUI.lua:186"
+    ]
+  },
+  "步行速度": {
+    "key": "t_C15NblriCRr6pHfQ",
+    "locations": [
+      "dragon/DragonDebugUI.lua:187"
+    ]
+  },
+  "振翅频率": {
+    "key": "t_LpZSsy9jLKGljIYT",
+    "locations": [
+      "dragon/DragonDebugUI.lua:188"
+    ]
+  },
+  "动作幅度": {
+    "key": "t_dmLvEKELdaP1ZPJ5",
+    "locations": [
+      "dragon/DragonDebugUI.lua:189"
+    ]
+  },
+  "飞行速度": {
+    "key": "t_11lxzmpsh12HH0v2sr",
+    "locations": [
+      "dragon/DragonDebugUI.lua:190"
+    ]
+  },
+  "转身速度": {
+    "key": "t_z5tHRop7yaHSpBND",
+    "locations": [
+      "dragon/DragonDebugUI.lua:191"
+    ]
+  },
+  "显示": {
+    "key": "t_14tqVZ4kb15P9UQTeF",
+    "locations": [
+      "dragon/DragonDebugUI.lua:193"
+    ]
+  },
+  "骨架 / 关节": {
+    "key": "t_rmKNWOVhsCnM6ZLz",
+    "locations": [
+      "dragon/DragonDebugUI.lua:195"
+    ]
+  },
+  "碰撞 / 命中区": {
+    "key": "t_3Eg7N7Ty3kHrUvLA",
+    "locations": [
+      "dragon/DragonDebugUI.lua:196"
+    ]
+  },
+  "翼膜控制网": {
+    "key": "t_dezq24LudXaX9dDo",
+    "locations": [
+      "dragon/DragonDebugUI.lua:197"
+    ]
+  },
+  "相机跟随": {
+    "key": "t_1TSVqVN21armavR4",
+    "locations": [
+      "dragon/DragonDebugUI.lua:198"
+    ]
+  },
+  "落足点": {
+    "key": "t_gWxsNuPMgxjgiB1K",
+    "locations": [
+      "dragon/DragonDebugUI.lua:199"
+    ]
+  },
+  "诺米（体型对比）": {
+    "key": "t_MZlTcQXFN54HiiiV",
+    "locations": [
+      "dragon/DragonDebugUI.lua:200"
+    ]
+  },
+  "玩法模式（诺米骑龙）": {
+    "key": "t_opfhqvO8p1v1ChKg",
+    "locations": [
+      "dragon/DragonDebugUI.lua:201"
+    ]
+  },
+  "部位独立测试": {
+    "key": "t_1A8iidOwW1A1JU7Yve",
+    "locations": [
+      "dragon/DragonDebugUI.lua:204"
+    ]
+  },
+  "全部部位": {
+    "key": "t_X5kcr5ayWa98mBgQ",
+    "locations": [
+      "dragon/DragonDebugUI.lua:207"
+    ]
+  },
+  "只动翅膀": {
+    "key": "t_OLjlQLXrNq7z4WjV",
+    "locations": [
+      "dragon/DragonDebugUI.lua:207"
+    ]
+  },
+  "只动头颈": {
+    "key": "t_G1EnKXsXFtpBibhD",
+    "locations": [
+      "dragon/DragonDebugUI.lua:208"
+    ]
+  },
+  "只动四肢": {
+    "key": "t_pyuvwhkcqPNz2oNg",
+    "locations": [
+      "dragon/DragonDebugUI.lua:208"
+    ]
+  },
+  "只动尾巴": {
+    "key": "t_tqmYyP4Otxt7kUaM",
+    "locations": [
+      "dragon/DragonDebugUI.lua:209"
+    ]
+  },
+  "关节测试模式（纯 FK，冻结状态机）": {
+    "key": "t_uNKqjwy0uZa7nHVi",
+    "locations": [
+      "dragon/DragonDebugUI.lua:215"
+    ]
+  },
+  "启用关节测试": {
+    "key": "t_IlUSE6tYJGnB3BPS",
+    "locations": [
+      "dragon/DragonDebugUI.lua:216"
+    ]
+  },
+  "归零": {
+    "key": "t_cswddt7Od5C26ROW",
+    "locations": [
+      "dragon/DragonDebugUI.lua:226"
+    ]
+  },
+  "键盘": {
+    "key": "t_q6fo270gqE5MwrvI",
+    "locations": [
+      "dragon/DragonDebugUI.lua:231"
+    ]
+  },
+  "【玩法模式】WASD 移动诺米  Space 跳  Shift 奔跑  靠近龙按 F 骑乘（骑乘时 W 前进 A/D 转向 S 刹车 Shift 空中冲刺 Space 起飞/上升 C 下降 L 降落 G 滑翔 F 下龙）\n【调试模式】W/S 加减速  A/D 转向  Q/E 原地转身  Space 起飞/爬升  C 下降\n": {
+    "key": "t_uexNJLBauShlE3iq",
+    "locations": [
+      "dragon/DragonDebugUI.lua:233"
+    ]
+  },
+  "G 滑翔  L 降落  R 咆哮  B 龙息  V 龙息特效版本  T 展翼/收翼  P 暂停  N 单步\n": {
+    "key": "t_CfrlRJQJmkb0zC",
+    "locations": [
+      "dragon/DragonDebugUI.lua:234"
+    ]
+  },
+  "鼠标右键/左键拖动旋转  滚轮缩放  中键或 Shift+左键平移\n1/2/3/4 正/侧/背/斜视角  F 跟随": {
+    "key": "t_uc8274KEuV1TCBps",
+    "locations": [
+      "dragon/DragonDebugUI.lua:235"
+    ]
+  },
+  "正在生成 {0} …": {
+    "key": "t_r65x4bNNrbhTXSfv",
+    "locations": [
+      "dragon/DragonTest.lua:423"
+    ]
+  },
+  "骑乘巨龙": {
+    "key": "t_NdOtRBnSN7nPx8Qe",
+    "locations": [
+      "dragon/DragonTest.lua:264"
+    ]
+  },
+  "中号 · 巨龙": {
+    "key": "t_LtaGy4T5MKM0BZjF",
+    "locations": [
+      "dragon/DragonSpec.lua:18"
+    ]
+  },
+  "待机": {
+    "key": "t_wO0v24H7wGbM5eSd",
+    "locations": [
+      "dragon/DragonAnimationController.lua:373"
+    ]
+  },
+  "转身": {
+    "key": "t_1D9rqMfWE1DHH6zwNU",
+    "locations": [
+      "dragon/DragonAnimationController.lua:373"
+    ]
+  },
+  "状态: %s   混合: %s\n速度 %.1f m/s  偏航 %.0f°  高度 %.1f m  坡度 %.0f°  步频 %.2f Hz  IK %.0f%%  展翼 %.0f%%": {
+    "key": "t_WmcIkL31WfVUSuXl",
+    "locations": [
+      "dragon/DragonAnimationController.lua:1213"
+    ]
+  },
+  "小号 · 幼龙": {
+    "key": "t_D7jAsOamDdKgoEsk",
+    "locations": [
+      "dragon/DragonVariants.lua:253"
+    ]
+  },
+  "大号 · 古龙": {
+    "key": "t_fDpfircqfjRBTiV4",
+    "locations": [
+      "dragon/DragonVariants.lua:302"
+    ]
+  }
+}
