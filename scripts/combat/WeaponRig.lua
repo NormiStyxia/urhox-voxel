@@ -83,6 +83,8 @@ local Store=require("combat.WeaponStore")
 ---@field imageKey string
 ---@field trailEnabled boolean
 ---@field disposed boolean
+---@field swordVfx SwordVfx? nil when the voxel shader is unavailable
+---@field pixelSwordFx boolean
 ---@field visualState string
 ---@field motion table
 ---@field layers table

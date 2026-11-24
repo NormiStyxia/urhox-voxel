@@ -540,7 +540,14 @@ function N:SmoothSteps(dt)
     offset=offset*math.exp(-dt/(grounded and STEP_SMOOTH_TIME or .03))
     if math.abs(offset)<.002 then offset=0 end
     self.stepOffset=offset
-    self.nomi.root.position=Vector3(0,offset,0)
+    -- 大阶梯的隐形斜坡架在前沿上方，脚下真实踏面低 0~0.25m；平滑下沉到踏面附近，
+    -- 剩下的小起伏读作逐级迈步。
+    local sink=0
+    if grounded and not (Terrain.home and Terrain.home.Contains(p.x,p.z)) and Terrain.InStair(p.x,p.z) then
+        sink=Clamp(Terrain.StairY(p.z)-p.y,-Terrain.STAIR_RISE,0)
+    end
+    self.stairSink=(self.stairSink or 0)+(sink-(self.stairSink or 0))*(1-math.exp(-dt/.1))
+    self.nomi.root.position=Vector3(0,offset+self.stairSink,0)
 end
 
 function N:Animate(dt, casting)

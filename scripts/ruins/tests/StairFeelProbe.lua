@@ -62,6 +62,8 @@ local function Probe(game)
         Reset(); walker.radius, walker.supportRadius = .25, .2; Both("radius25")
         Reset(); walker.stepHeight = .3; Both("step30")
         Reset(); walker.enhancedInternalEdgeRemoval = false; Both("noEdge")
+        Reset(); walker.enhancedInternalEdgeRemoval = false; walker.supportRadius = .12; Both("noEdge+s12")
+        Reset(); walker.enhancedInternalEdgeRemoval = false; Both("noEdge+upY", 4.2 * .5)
         -- 隐形斜坡：踏面中线 y=(d-20.5)*0.5，北侧；只让 walker 忽略石阶体积。
         local stairs = Build.stairVolumes
         local saved = {}
@@ -82,6 +84,29 @@ local function Probe(game)
         Reset(); walker.collisionMask = cc.collisionMask & ~8; walker.stepHeight = .3; Both("ramp+s30")
         ramp:GetNode():Remove()
         for i, v in ipairs(stairs) do v.collisionLayer, v.collisionMask = saved[i][1], saved[i][2] end
+        -- 前沿上方斜坡：石阶照常碰撞，斜坡面 y=(d-20.25)*0.5+0.01 架在所有前沿棱上方。
+        local function Above(lift)
+            local top2 = Vector3(0, 3 + lift, 26.25)
+            local c2 = top2 - up * .5
+            local o2 = Vector3(-.125, -3, 26.125)
+            local r2 = world:CreateVolume(1, 1, 1, .25, o2)
+            r2:GetGrid():FillBox(0, 0, 0, 0, 0, 0, true)
+            world:FinalizeVolume(r2)
+            r2:SetCollisionBox(Vector3(7, 1, L), c2 - (o2 + Vector3(.125, .125, .125)), rot)
+            return r2
+        end
+        local r2 = Above(.01)
+        Reset(); Both("above")
+        for _, x in ipairs({ -2.9, 2.9 }) do
+            Settle(Vector3(x, .1, 19.5))
+            for i = 1, 300 do walker.desiredVelocity = Vector3(0, 0, 4.2); world:Update(1 / 60, 1) end
+            print(string.format("StairFeel above lane=%.1f end=%s", x, tostring(node.worldPosition)))
+        end
+        -- 扶墙仍挡：从斜坡中段横向冲墙
+        Settle(Vector3(2.9, 2.6, 25.25))
+        for i = 1, 90 do walker.desiredVelocity = Vector3(4.2, 0, 0); world:Update(1 / 60, 1) end
+        print("StairFeel above wall=" .. tostring(node.worldPosition))
+        r2:GetNode():Remove()
     end)
     node:Remove()
     cc.enabled, world.updateEnabled = wasEnabled, auto

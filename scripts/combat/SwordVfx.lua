@@ -361,7 +361,8 @@ function V:Contact(pos,strong)
         end
     end
     for r=1,strong and 3 or 2 do
-        for _,cell in ipairs(DIAMONDS[r]) do
+        local ring=DIAMONDS[r] or {}
+        for _,cell in ipairs(ring) do
             world:Add('hit',HIT_RING,.03+(r-1)*.045,x+cell[1]*PITCH,y+cell[2]*PITCH,z+cell[3]*PITCH,PITCH*FILL*.8)
         end
     end

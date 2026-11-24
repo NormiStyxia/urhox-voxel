@@ -8,7 +8,6 @@ local function Check(ok, message)
 end
 
 local function Structure()
-    print("StairGeometryTest: rise=" .. tostring(Terrain.STAIR_RISE) .. " y21=" .. Terrain.StairY(21))
     Check(Terrain.STAIR_JOIN == 33.5, "阶梯回接覆盖完整地形三角面")
     Check(Terrain.StairY(0) == 0 and Terrain.StairY(100) == 6, "台面两端夹紧")
     for _, sign in ipairs({ -1, 1 }) do
@@ -66,6 +65,7 @@ local function Actual(game)
     ---@type VoxelVolume[]
     local stairs = Build.stairVolumes
     Check(#stairs == 2, "踏面和扶墙只有南北两个Volume")
+    Check(#Build.stairRamps == 2, "南北各一条隐形斜坡碰撞")
     local cc = game.nomiCtl.cc
     Check(math.abs(cc.stepHeight - .55) < .00001 and cc.enhancedInternalEdgeRemoval,
         "保留0.55步高并启用内部边接触剔除")
@@ -134,6 +134,8 @@ local function Actual(game)
         Check(not exceeded, "台阶接触查询未超预算")
         Check(math.abs(node.worldPosition.y - (ascending and 6 or 0)) < .15,
             "上下楼终点不悬空或陷脚")
+        Check(minSpeed > 4.2 * .6 and slowFrames == 0, "上下楼全程不被台阶棱角刹停（隐形斜坡）")
+        Check(maxPop < .1, "上下楼没有单帧竖直猛抬/猛落")
     end
     local ok, err = pcall(function()
         for _, sign in ipairs({-1, 1}) do
