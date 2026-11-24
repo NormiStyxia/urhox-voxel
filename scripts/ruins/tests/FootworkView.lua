@@ -53,7 +53,10 @@ V.atFrame(8, function()
         end
         -- 第一刀开始后角色朝向已定：相机放在它的右侧，之后固定不动
         if frame == 59 then
-            local p, d = nomi.node.worldPosition, nomi.node.worldDirection
+            -- 模型容器的朝向才是攻击朝向（战斗朝向转的是它，不是物理节点）
+            local p = nomi.node.worldPosition
+            local d = nomi.nomi.root.worldRotation * Vector3(0, 0, 1)
+            d = Vector3(d.x, 0, d.z):Normalized()
             local right = Vector3(d.z, 0, -d.x)
             eyeAt = { p + right * 4.6 + d * 1.0 + Vector3(0, 0.6, 0), p + d * 1.0 + Vector3(0, 0.62, 0) }
         end
