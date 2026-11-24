@@ -57,6 +57,11 @@ local VIEWS = {
         { name = "house_aerial", stage = 3, hour = 15, pos = Vector3(HX + 16, HB + 15, -24), look = Vector3(HX - 3, HB + 4, 6) },
         { name = "house_stair", stage = 3, hour = 15, pos = Vector3(HX + 9, HB + 7, 23), look = Vector3(HX - 3, HB + 5, 13) },
     },
+    terrace = {
+        { name = "house_terrace_door", stage = 3, hour = 14, pos = Vector3(HX - 2.2, HB + 11.6, 8.2), look = Vector3(HX - 7, HB + 11, 11) },
+        { name = "house_stair_top", stage = 3, hour = 14, pos = Vector3(HX - 2, HB + 13.5, 21), look = Vector3(HX - 7.5, HB + 10, 16) },
+        { name = "house_stair_corner", stage = 3, hour = 14, pos = Vector3(HX + 4.5, HB + 9.5, 21), look = Vector3(HX, HB + 6, 16) },
+    },
     house = {
         { name = "house_aerial", stage = 3, hour = 15, pos = Vector3(HX + 16, HB + 15, -24), look = Vector3(HX - 3, HB + 4, 6) },
         { name = "house_front", stage = 3, hour = 15, pos = Vector3(HX - 8.5, HB + 4, -12), look = Vector3(HX - 8.5, HB + 6, 10) },

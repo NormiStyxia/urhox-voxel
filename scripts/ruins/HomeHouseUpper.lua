@@ -75,6 +75,8 @@ for _,z in ipairs({8.75,13.25}) do window('third',SPLIT,z,1,0,F3+.5,1.25,1.5) en
 -- The east knee wall occupies 0.375 m of the corner; leave 1.25 m of
 -- clear floor width beside it for the player's capsule and turning room.
 local terraceDoor={x0=SPLIT-1.625,x1=SPLIT-.125,z=Z1,bottom=F3+.25,top=F3+3.0}
+-- The terrace is entered from the attic through its east knee wall, between the two side lights.
+local sideDoor={z0=CZ-.75,z1=CZ+.75,bottom=F3+.25,top=F3+2.75}
 
 -- All window details are written in a local tangent/outward basis. The opening is
 -- recessed two cells behind the wall, with a clear reveal and glazing bars.
@@ -328,9 +330,18 @@ local function westAttic(b)
     end
     for _,x in ipairs({x0,x1}) do
         b:Box(x-.0625,F3,Z0+.0625,x+.0625,F3+.125,Z1-.0625,woodZ)
-        for _,z in ipairs({Z0+.0625,CZ,Z1-.0625}) do b:Box(x-.0625,F3,z-.0625,x+.0625,KNEE,z+.0625,woodY) end
+        -- The east wall's middle post becomes the terrace door frame instead.
+        for _,z in ipairs(x==x1 and {Z0+.0625,Z1-.0625} or {Z0+.0625,CZ,Z1-.0625}) do
+            b:Box(x-.0625,F3,z-.0625,x+.0625,KNEE,z+.0625,woodY)
+        end
     end
     for _,w in ipairs(Upper.Windows) do if w.group=='third' then drawWindow(b,w) end end
+    -- Terrace door: the attic floor and terrace paving both finish at F3+.25, so the
+    -- threshold is flush; the frame stands proud of the wall on the terrace side.
+    local d=sideDoor
+    b:Carve(x1-.375,d.bottom,d.z0,x1,d.top,d.z1)
+    for _,z in ipairs({d.z0-.125,d.z1}) do b:Box(x1-.375,F3,z,x1+.0625,d.top+.125,z+.125,woodY) end
+    b:Box(x1-.375,d.top,d.z0-.125,x1+.0625,d.top+.125,d.z1+.125,woodX)
     -- Rear gable entry: the upper landing arrives directly at this tall door.
     b:Carve(terraceDoor.x0,terraceDoor.bottom,Z1-.375,terraceDoor.x1,terraceDoor.top,Z1)
     b:Box(terraceDoor.x0-.125,terraceDoor.bottom,Z1-.375,terraceDoor.x0,terraceDoor.top+.125,Z1+.0625,woodY)
@@ -491,8 +502,20 @@ local function outerStair(b)
     b:Shape(endX-1.65,.55,back1-.1,lane0+.1,landB+1.35,back1+.1,function(x,y)
         if dist(x,y,endX-.05,landB+1.0,lane0+.05,landA+1.0)<=rail then return woodX end
     end)
-    b:Box(lane1-.1,landA+.95,Z1,lane1+.2,landA+1.05,back1+.1,woodX)
-    b:Box(endX-1.65,landB+.95,back1-.1,endX+.1,landB+1.05,back1+.1,woodX)
+    -- Landings are guarded on every open edge: a posted rail at the same height as
+    -- the flight rails, so the corner turn and the top landing are fully enclosed.
+    local function guard(ax,az,bx,bz,y)
+        b:Box(min(ax,bx)-.1,y+.95,min(az,bz)-.1,max(ax,bx)+.1,y+1.05,max(az,bz)+.1,woodX)
+        local n=max(1,ceil(max(abs(bx-ax),abs(bz-az))/.5))
+        for i=0,n do
+            local x,z=ax+(bx-ax)*i/n,az+(bz-az)*i/n
+            b:Box(x-.0625,y,z-.0625,x+.0625,y+.95,z+.0625,woodY)
+        end
+    end
+    guard(lane1+.1,Z1+.0625,lane1+.1,back1,landA)
+    guard(lane0,back1,lane1+.1,back1,landA)
+    guard(landingX0+.125,back1,endX,back1,landB)
+    guard(landingX0+.125,Z1+.0625,landingX0+.125,back1,landB)
     for i=0,nA,2 do
         local z=startZ+i*TREAD
         b:Box(lane1-.0625,i*RISE+.35,z-.0625,lane1+.0625,i*RISE+1.0,z+.0625,woodY)
