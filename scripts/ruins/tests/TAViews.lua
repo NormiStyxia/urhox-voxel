@@ -58,6 +58,8 @@ local VIEWS = {
         { name = "house_stair", stage = 3, hour = 15, pos = Vector3(HX + 9, HB + 7, 23), look = Vector3(HX - 3, HB + 5, 13) },
     },
     terrace = {
+        { name = "house_terrace_deck", stage = 3, hour = 13, pos = Vector3(HX - 5.2, HB + 12.6, 8.4), look = Vector3(HX - 2.2, HB + 10.4, 12.2) },
+        { name = "home_court_paving", stage = 3, hour = 13, pos = Vector3(HX + 9, HB + 3.6, -1.5), look = Vector3(HX + 12.5, HB + 1.75, 3.5) },
         { name = "house_terrace_door", stage = 3, hour = 14, pos = Vector3(HX - 2.2, HB + 11.6, 8.2), look = Vector3(HX - 7, HB + 11, 11) },
         { name = "house_stair_top", stage = 3, hour = 14, pos = Vector3(HX - 4, HB + 15, 22.5), look = Vector3(HX - 7.5, HB + 9.8, 16) },
         { name = "house_stair_corner", stage = 3, hour = 14, pos = Vector3(HX + 4, HB + 10, 21), look = Vector3(HX + 0.2, HB + 5.8, 16), hideTrees = true },

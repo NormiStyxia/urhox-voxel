@@ -6,7 +6,7 @@
 -- terrace with a stone balustrade, reached by a glazed door from the west attic.
 -- Build stage 2 shows only the full-width second storey under one long roof.
 local P = require('ruins.RuinsPalette').P
-local Upper = { Windows = {} }
+local Upper = { Windows = {}, Planters = {} }
 
 -- Shared footprint. The ground floor (HomeIsland) builds its walls on the same box.
 local X0, X1, Z0, Z1 = -16, -1, 7, 15
@@ -378,42 +378,73 @@ local function westBalcony(b)
     end
 end
 
--- East terrace on the second storey: stone deck, balusters, pedestals and planters.
+-- East terrace on the second storey: stone deck, pots and a planter box.
+-- Foliage is not voxels here: Upper.Planters lists the shrubs HomeIsland grows with HomeTrees.
 local function terrace(b)
     local x0,x1=SPLIT,X1
     b:Box(x0,F3,Z0-.25,x1+.25,F3+.125,Z1+.25,P.HOME_COPING)
     b:Box(x0,F3+.125,Z0,x1,F3+.25,Z1,P.HOME_PAVING)
-    local top=F3+1.25
-    local function rail(a0,a1,fixed,alongX)
+    -- Potted bay trees and a planter keep clear of the path from the stair to the door.
+    for i,c in ipairs({{x0+.875,Z0+.875},{x1-.875,Z1-.875}}) do
+        local x,z=c[1],c[2]
+        b:Box(x-.3125,F3+.25,z-.3125,x+.3125,F3+.75,z+.3125,P.HOME_PLINTH)
+        b:Box(x-.1875,F3+.625,z-.1875,x+.1875,F3+.75,z+.1875,P.DIRT_B)
+        b:Box(x-.0625,F3+.75,z-.0625,x+.0625,F3+1.25,z+.0625,P.BARK)
+        Upper.Planters[#Upper.Planters+1]={kind='ball',x=x,y=F3+1.05,z=z,r=.42,seed=411+i*29}
+    end
+    b:Box(x1-.75,F3+.25,CZ-1.0,x1-.25,F3+.625,CZ+1.0,oakX)
+    b:Box(x1-.6875,F3+.5,CZ-.9375,x1-.3125,F3+.625,CZ+.9375,P.DIRT_B)
+    Upper.Planters[#Upper.Planters+1]={kind='hedge',x=x1-.5,y=F3+.6,z=CZ,r=.27,length=1.7,seed=503}
+end
+
+-- Stone balustrade on a 1/16 m grid (side view of one bay, heights above the deck):
+--   1.31  _#_        finial        pedestal: 9-cell base, 7-cell shaft with a
+--   1.25 #####  ===========  cap   sunk panel on each face, stepped cap
+--   1.00 |###|  -=========-  bed
+--        |# #|   # # # # #         baluster rows (cells wide), foot to head:
+--        |# #|   # # # # #         3 1 3 3 3 1 1 1 1 3 1 3  = vase, shaft, collar
+--   0.12 #####  -=========-  foot
+-- Everything is centred half a cell off the old rail line so odd widths stay symmetric.
+local function terraceRails(b)
+    local u=detailStep
+    local base,top=F3+.25,F3+1.25
+    local c=u/2
+    local profile={3,1,3,3,3,1,1,1,1,3,1,3}
+    local function rail(a0,a1,fixed,alongX,ends)
         local function box(u0,y0,u1,y1,d0,d1,mat)
             if alongX then b:Box(u0,y0,fixed+d0,u1,y1,fixed+d1,mat) else b:Box(fixed+d0,y0,u0,fixed+d1,y1,u1,mat) end
         end
-        box(a0,F3+.25,a1,F3+.375,-.25,.25,P.HOME_PLINTH)
-        for u=a0+.25,a1-.25,.375 do box(u,F3+.375,u+.125,top-.125,-.0625,.0625,P.HOME_COPING) end
-        box(a0,top-.125,a1,top,-.1875,.1875,P.HOME_COPING)
+        box(a0,base,a1,base+u,c-.21875,c+.21875,P.HOME_PLINTH)
+        box(a0,base+u,a1,base+.125,c-.15625,c+.15625,P.HOME_PLINTH)
+        for s=a0+.25,a1-.25,.375 do
+            for row,w in ipairs(profile) do
+                local y=base+.125+(row-1)*u
+                local half=w==3 and .09375 or .03125
+                box(s+.09375-half,y,s+.09375+half,y+u,c-half,c+half,P.HOME_COPING)
+            end
+        end
+        box(a0,top-.125,a1,top-u,c-.15625,c+.15625,P.HOME_COPING)
+        box(a0,top-u,a1,top,c-.21875,c+.21875,P.HOME_COPING)
         local n=math.max(1,floor((a1-a0)/2+.5))
-        for i=0,n do
-            local u=a0+(a1-a0)*i/n
-            box(u-.1875,F3+.25,u+.1875,top+.125,-.1875,.1875,P.HOME_PLINTH)
-            box(u-.25,top+.125,u+.25,top+.25,-.25,.25,P.HOME_COPING)
+        for i=(ends and 0 or 1),(ends and n or n-1) do
+            local m=floor((a0+(a1-a0)*i/n)/u)*u+c
+            local function sq(half,y0,y1,mat) box(m-half,y0,m+half,y1,c-half,c+half,mat) end
+            sq(.28125,base,base+.125,P.HOME_PLINTH)
+            sq(.21875,base+.125,top+u,P.HOME_PLINTH)
+            box(m-.09375,base+.25,m+.09375,top-.125,c-.21875,c-.15625,false)
+            box(m-.09375,base+.25,m+.09375,top-.125,c+.15625,c+.21875,false)
+            box(m-.21875,base+.25,m-.15625,top-.125,c-.09375,c+.09375,false)
+            box(m+.15625,base+.25,m+.21875,top-.125,c-.09375,c+.09375,false)
+            sq(.28125,top+u,top+.1875,P.HOME_COPING)
+            sq(.21875,top+.1875,top+.25,P.HOME_COPING)
+            sq(.09375,top+.25,top+.3125,P.HOME_COPING)
         end
     end
-    rail(x0+.25,x1,Z0+.0625,true)
+    rail(SPLIT+.25,X1-.0625,Z0+.0625,true,true)
     -- The rear rail stops short of the attic wall: the outer stair lands there.
-    rail(STAIR_GAP,x1,Z1-.0625,true)
-    rail(Z0+.25,Z1-.25,x1-.0625,false)
-    -- Potted bay trees and a planter keep clear of the path from the stair to the door.
-    for _,c in ipairs({{x0+.875,Z0+.875},{x1-.875,Z1-.875}}) do
-        local x,z=c[1],c[2]
-        b:Box(x-.3125,F3+.25,z-.3125,x+.3125,F3+.75,z+.3125,P.HOME_PLINTH)
-        b:Box(x-.0625,F3+.75,z-.0625,x+.0625,F3+1.25,z+.0625,P.BARK)
-        b:Box(x-.375,F3+1.25,z-.375,x+.375,F3+1.875,z+.375,P.LEAF_A)
-        b:Box(x-.25,F3+1.875,z-.25,x+.25,F3+2.125,z+.25,P.LEAF_C)
-    end
-    b:Box(x1-.75,F3+.25,CZ-1.0,x1-.25,F3+.625,CZ+1.0,oakX)
-    for z=CZ-.875,CZ+.75,.25 do
-        b:Box(x1-.6875,F3+.625,z,x1-.3125,F3+.8125,z+.1875,(floor(z*4)%3==1) and P.LEAF_A or P.LEAF_C)
-    end
+    rail(STAIR_GAP,X1-.0625,Z1-.0625,true,true)
+    -- The east rail dies into the two corner pedestals of the rails above.
+    rail(Z0+.0625,Z1-.0625,X1-.0625,false,false)
 end
 
 -- Hoist on the east gable, hanging just under the terrace deck.
@@ -542,8 +573,12 @@ function Upper.Build(brush,finish)
     westAttic(attic)
     finish('third',attic,{masonry='homeWindows',windowLamps=windowLamps.third})
     local deck=brush({SPLIT,F3,Z0-.5},{X1+.5,F3+2.25,Z1+.5},step)
+    Upper.Planters={}
     terrace(deck)
     finish('terrace',deck,{masonry='homeWindows'})
+    local rails=brush({SPLIT,F3+.125,Z0-.5},{X1+.5,F3+1.75,Z1+.5},detailStep)
+    terraceRails(rails)
+    finish('terrace',rails,{masonry='homeWindows'})
     local hoist=brush({-1.5,5.25+HOIST_Y,7.5},{2.25,F3,9.5},step)
     eastHoist(hoist)
     finish('terrace',hoist,{masonry='homeWindows'})
