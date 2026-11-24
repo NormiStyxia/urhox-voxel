@@ -13,7 +13,7 @@ local session
 local HELD_KEYS={KEY_W,KEY_A,KEY_S,KEY_D,KEY_SHIFT,KEY_SPACE,KEY_1,KEY_2,KEY_3,KEY_E,KEY_R,KEY_Q,KEY_F,KEY_T,KEY_TAB,KEY_C,KEY_B,KEY_G,KEY_L,KEY_ESCAPE}
 local function Clamp(n,lo,hi) return math.min(hi,math.max(n,lo)) end
 local function Safe(callbacks)
-    if CombatState.Engaged() or (CombatState.HasAggro and CombatState.HasAggro()) then return false end
+    if CombatState.Engaged() then return false end
     if callbacks.canOpen then return callbacks.canOpen()==true end
     local controller=callbacks.rig and callbacks.rig.controller
     if not controller or not controller.cc or not controller.cc.onGround or not controller.Position then return false end

@@ -556,7 +556,7 @@ local function CombatHasAggro()
 end
 local function CanOpenForge()
     if Training.blocked() or (M.housePanel and M.housePanel.open) then return false end
-    if WorldMap.IsOpen() or not nomi_ or not OnFoot() or CombatState.Engaged() or CombatHasAggro()
+    if WorldMap.IsOpen() or not nomi_ or not OnFoot() or CombatState.Engaged()
         or combatMoves_.dead or voidInputBlocked or SettingsMenu.IsBlocked() or animPreview_.index>0 then return false end
     local p=nomi_:Position()
     if M.region=="home" then return nomi_.cc.onGround and HomeIsland.NearForge(p) end
@@ -565,9 +565,9 @@ end
 local function OpenForge()
     if weaponGesture_ then weaponGesture_:ForceClose('forge') end
     if not CanOpenForge() then
-        print(('Forge: refused reason=blocked mode=%s onGround=%s combat=%s aggro=%s dead=%s'):format(
+        print(('Forge: refused reason=blocked mode=%s onGround=%s aggro=%s dead=%s'):format(
             tostring(M.ride and M.ride.mode),tostring(nomi_ and nomi_.cc.onGround),tostring(CombatState.Engaged()),
-            tostring(CombatHasAggro()),tostring(combatMoves_.dead)))
+            tostring(combatMoves_.dead)))
         caster_:Say(CombatState.Engaged() and '战斗中无法锻造' or (M.region=='home' and '走近屋前的锻造炉' or '请在安全地面、脱离警戒后锻造'),1.2); return
     end
     -- Bind the exact live module's read-only getter; no package.loaded key or
@@ -921,7 +921,7 @@ local function StartCombat()
 end
 local function TravelToRegion(region)
     if not OnFoot() then return false,'先下龙，再启程' end
-    if CombatHasAggro() or CombatState.Engaged() or combatMoves_.dead then return false,'脱离战斗后可启程' end
+    if CombatState.Engaged() or combatMoves_.dead then return false,'脱离战斗后可启程' end
     if voidInputBlocked or not nomi_.cc.onGround then return false,'请先回到地面' end
     local destination,yaw
     if region=='home' then
@@ -1001,7 +1001,7 @@ end
 local function CanOpenWeaponBag()
     return OnFoot() and not Training.blocked() and nomi_.cc.onGround and not combatMoves_.dead
         and input.focus and not input.minimized
-        and not CombatState.Engaged() and not CombatHasAggro() and not voidInputBlocked and not M.debugOn
+        and not CombatState.Engaged() and not voidInputBlocked and not M.debugOn
         and not WorldMap.IsOpen() and not ForgePanel.IsOpen() and not WeaponWheel.IsBlocked()
         and not (M.housePanel and M.housePanel.open) and animPreview_.index==0
 end
@@ -1018,7 +1018,7 @@ local function AttachTouchControls()
         touchState.breathActive=M.stream and M.stream.active
         touchState.skillLeft=math.max(0,(M.weaponSkillReadyAt or 0)-time_)
         touchState.noSpells=not CombatState.CanUseTime()
-        touchState.readyFlash,touchState.aggro=CombatState.ReadyFlash(),CombatHasAggro()
+        touchState.readyFlash,touchState.aggro=CombatState.ReadyFlash(),CombatState.Engaged()
         touchState.unifiedSelection=true
         touchState.combat,touchState.weapon=CombatState.InCombat(),CombatState.GetWeapon()
         touchState.combatCharge=combatMoves_ and combatMoves_.charge or 0

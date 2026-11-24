@@ -40,7 +40,7 @@ local M={region='ruins',SPAWN=spawn,ride={mode='free',wander={}},dragonAwake=tru
 local env=setmetatable({M=M,HomeIsland=homePort,Terrain=terrain,WorldMap=map,PixelDraw=draw,
    CombatSettings=require('ruins.GameSettings'),
    HUD={root=root},RenderBudget={Apply=noop},TouchControls={Cancel=noop},pointer={SetBlocked=noop,Resume=noop,Release=noop},drag={},
-   nomi_=ctl,CombatHasAggro=function()gateChecks=gateChecks+1;return enemy end,CombatState={Engaged=function()return false end},
+   nomi_=ctl,CombatState={Engaged=function()gateChecks=gateChecks+1;return enemy end},
    RefreshObjective=noop, combatArrows_={Clear=function()clears=clears+1 end},animPreview_={index=0},combatMoves_={},
    ForgePanel={IsOpen=function()return false end},SettingsMenu={IsBlocked=function()return false end},WeaponWheel={IsBlocked=function()return false end},TouchInput={IsEnabled=function()return false end}},{__index=_G})
 KEY_M,KEY_RETURN,KEY_RIGHT,KEY_LEFT,KEY_ESCAPE=77,13,39,37,27

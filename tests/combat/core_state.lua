@@ -1,4 +1,4 @@
--- Lua 5.4 offline; no runtime or rendering. Stub enemies report aggro heartbeats.
+-- Lua 5.4 offline; weapon presentation and the scene's live aggro query.
 package.path='scripts/?.lua;'..package.path
 local State=require('combat.CombatState')
 local calls,cancelled={},{}
@@ -67,25 +67,32 @@ eq(#logs,48)
 State.Update(1);State.Log('same','same');eq(#logs,49)
 print('PASS bounded event logs: actual state changes only, duplicate guard and 48 lines/sec ceiling')
 
--- Armed (weapon selected) is not Engaged (fight): exploration systems follow Engaged.
 do
-    local aggro=false
-    State.Configure({rig=rig,cancel=function() end,explicitSelection=true,aggro=function() return aggro end})
+    local file=assert(io.open('scripts/ruins/RuinsScene.lua'))
+    local source=file:read('*a');file:close()
+    local sceneQuery=assert(source:match('(local function CombatHasAggro%(%).-\nend)'))
+    local first={active=true,aggro=false,dead=false}
+    local second={active=true,aggro=false,dead=false}
+    local enemies={first,second}
+    local query=assert(load(sceneQuery..'\nreturn CombatHasAggro','live scene aggro','t',
+        setmetatable({CombatEnemies=function() return enemies end},{__index=_G})))()
+    State.Configure({rig=rig,explicitSelection=true,aggro=query})
     eq(State.Armed(),false);eq(State.Engaged(),false)
+    first.aggro=true
+    eq(State.GetSelection(),'time');eq(State.Engaged(),true)
+    State.Update(60);eq(State.Engaged(),true)
     eq(State.Enter('loadout'),true)
-    eq(State.Armed(),true);eq(State.InCombat(),true);eq(State.Engaged(),false)
-    State.Update(60);eq(State.Armed(),true);eq(State.Engaged(),false) -- explicit selection never auto-sheaths, never engages
-    aggro=true;eq(State.Engaged(),true);aggro=false;eq(State.Engaged(),false)
-    eq(State.Activity(true),true);eq(State.Engaged(),true) -- accepted attack engages
-    State.SetBusy(false)
-    State.Update(5.9);eq(State.Engaged(),true)
-    State.Update(.2);eq(State.Engaged(),false);eq(State.Armed(),true)
-    State.OnPlayerHit();eq(State.Engaged(),true)
-    State.Update(6.1);eq(State.Engaged(),false)
-    State.OnEnemyAggro('x');eq(State.Engaged(),true)
-    State.Exit('loadout');eq(State.Armed(),false);eq(State.Engaged(),false)
-    State.OnEnemyAggro('x');eq(State.Engaged(),false,'unarmed aggro does not engage a weapon state')
-    State.MarkEngaged();eq(State.Engaged(),false,'engagement requires an armed state')
+    eq(State.Armed(),true);eq(State.Engaged(),true)
+    second.aggro=true; first.dead=true
+    eq(State.Engaged(),true)
+    second.aggro=false -- leaves its pursuit range
+    eq(State.Engaged(),false);eq(State.Armed(),true)
+    eq(State.Activity(true),true);eq(State.Engaged(),false)
+    State.OnPlayerHit();eq(State.Engaged(),false)
+    second.aggro=true;State.OnEnemyAggro('second')
+    State.Exit('loadout');eq(State.Armed(),false);eq(State.Engaged(),true)
+    second.active=false
+    eq(State.Engaged(),false)
     State.Stop()
 end
-print('PASS armed vs engaged: explicit selection stays armed without engagement; attack/hit/aggro engage for 6s; unarmed never engaged')
+print('PASS live enemy aggro: engage with catalyst, persist across loadout, exit on last death/leash/deactivation')
