@@ -85,7 +85,7 @@ local HIT_RING={{t=0,s=1,c=WHITE},{t=.045,s=1,c=ICE},{t=.09,s=.72,c=BLUE},{t=.13
 ---@type SwordVfxStep[]
 local WAVE={{t=0,s=1,c=WHITE,h=1},{t=.05,s=1,c=ICE,h=.62},{t=.10,s=.8,c=BLUE,h=.3},{t=.15,s=.6,c=DEEP,h=.14},{t=.19}}
 ---@type SwordVfxStep[]
-local CHARGE_RING={{t=0,s=.6,c=DEEP,o=4},{t=.07,s=.75,c=BLUE,o=3},{t=.14,s=.9,c=ICE,o=2},{t=.21,s=1,c=WHITE,o=1},{t=.27}}
+local CHARGE_RING={{t=0,s=.7,c=BLUE,o=4},{t=.07,s=.8,c=BLUE,o=3},{t=.14,s=.9,c=ICE,o=2},{t=.21,s=1,c=WHITE,o=1},{t=.27}}
 ---@type SwordVfxStep[]
 local CHARGE_BURST={{t=0,s=1,c=WHITE,o=1},{t=.05,s=1,c=ICE,o=2},{t=.10,s=.8,c=BLUE,o=3},{t=.15,s=.6,c=DEEP,o=4},{t=.20}}
 
@@ -442,8 +442,8 @@ end
 
 local function Ring(self,steps,delay,height)
     for _,cell in ipairs(SQUARE) do
-        local item=self.blade:Add('charge',steps,delay,0,height,0,PITCH*.62)
-        item.dx,item.dz=cell[1]*PITCH*.62,cell[2]*PITCH*.62
+        local item=self.blade:Add('charge',steps,delay,0,height,0,PITCH*.8)
+        item.dx,item.dz=cell[1]*PITCH,cell[2]*PITCH
     end
     self.blade:Present()
 end

@@ -6,7 +6,8 @@ local frame = 0
 local ATTACKS = { [40] = true, [64] = true, [88] = true }
 local SHOTS = {}
 for _, f in ipairs({ 72, 74, 76, 78, 80, 84, 88, 104, 106, 108, 112, 116,
-    131, 133, 135, 138, 141, 146, 149, 152, 155, 158, 162, 170, 174, 178, 181, 184, 187 }) do SHOTS[f] = true end
+    131, 133, 135, 138, 141, 146, 149, 152, 155, 158, 162, 175, 185, 195, 205, 215, 225, 235, 244,
+    247, 249, 251, 253, 255, 258, 261, 265 }) do SHOTS[f] = true end
 local pending = nil
 V.atFrame(8, function()
     local game = _G["RUINS"]
@@ -32,22 +33,19 @@ V.atFrame(8, function()
             controls.allowed = true
             controls.attack = ATTACKS[frame] == true
             controls.attackTap = ATTACKS[frame] == true
+            controls.heavy = frame >= 165 and frame < 245
         end
         local rig = self.rig
         local fx = rig.swordVfx
         if fx then
             local position, forward = self.o.position(), self.o.forward()
-            local pivot = rig.entries.sword.pivot
-            local root, tip = pivot:LocalToWorld(rig.bladeRoot), pivot:LocalToWorld(rig.bladeTip)
-            if frame == 130 then fx:Contact(position + forward * 1.3 + Vector3(0, 1.0, 0), true) end
+            local right = Vector3.UP:CrossProduct(forward)
+            if frame == 130 then fx:Contact(position + forward * .6 + right * 1.1 + Vector3(0, 1.2, 0), true) end
             if frame == 145 then fx:GroundWave(position, forward) end
-            if frame >= 165 and frame < 180 then fx:Charge(root, tip, (frame - 165) / 15, dt) end
-            if frame == 180 then fx:ChargeBurst(root, tip) end
-            if frame >= 180 then fx:PlaceBlade(root, tip) end
         end
         if ATTACKS[frame] or SHOTS[frame] then
-            print(string.format("SwordFxView: frame %d clip=%s combo=%s visual=%s arc=%d hit=%d wave=%d charge=%d free=%d",
-                frame, tostring(self.clip), tostring(self.combo), tostring(rig.visualActive),
+            print(string.format("SwordFxView: frame %d clip=%s charge=%s visual=%s arc=%d hit=%d wave=%d charge=%d free=%d",
+                frame, tostring(self.clip), tostring(rig.visualCharge), tostring(rig.visualActive),
                 fx and fx.world:Count("arc") or -1, fx and fx.world:Count("hit") or -1, fx and fx.world:Count("wave") or -1,
                 fx and fx.blade:Count("charge") or -1, fx and #fx.world.free or -1))
         end
