@@ -1,6 +1,6 @@
 -- Quarry stone, built in horizontal courses. +X is the colossus's right hand.
 local RockColossus = {}
-local SIZE = 0.08
+local SIZE = 0.10
 local STONE, CUT, JOINT, MOSS, GOLD, CRYSTAL = 1, 2, 3, 4, 5, 6
 
 -- Coordinates are small signed integers. The offset keeps all three fields positive.
@@ -69,6 +69,12 @@ local function torso()
     course(p, 22, 22, -4, 3, 3, 6, 1, CUT)
     course(p, 16, 23, -6, 5, -6, -3, 1, STONE)
     course(p, 24, 24, -5, 4, -5, -3, 1, CUT)
+    -- Raised dorsal buttresses flank the carved central shield.
+    for _, x in ipairs({-7,5}) do
+        course(p, 19,22,x,x+1,-7,-4,1,CUT)
+        course(p, 23,25,x,x+1,-8,-4,1,STONE)
+        course(p, 26,27,x,x+1,-7,-5,1,CUT)
+    end
     engrave(p, -3, 20, 1, {'######','#....#','#..#.#','...#..'})
     engrave(p, -4, 22, -1, {'#######','#......','#.####.','#....#.','######.'})
     return p
@@ -89,13 +95,14 @@ end
 
 local function leg(right)
     local mid = right and 6 or -7
-    local p = part(right and 'leg_r' or 'leg_l', mid + 0.5, 10, 0)
+    local p = part(right and 'leg_r' or 'leg_l', mid + 0.5, 13, 0)
     course(p, 0, 1, mid-3, mid+3, -2, 5, 1, STONE)
     course(p, 2, 2, mid-3, mid+3, -2, 5, 1, CUT)
     course(p, 3, 3, mid-2, mid+2, -2, 2, 1, JOINT)
     course(p, 4, 5, mid-3, mid+3, -2, 4, 2, CUT)
     course(p, 6, 6, mid-3, mid+3, -2, 3, 2, STONE)
-    course(p, 7, 8, mid-2, mid+2, -2, 2, 1, JOINT)
+    course(p, 7, 9, mid-2, mid+2, -2, 2, 1, JOINT)
+    course(p, 10, 11, mid-3, mid+2, -2, 2, 1, STONE)
     return p
 end
 
@@ -115,6 +122,11 @@ local function arm(right)
     slab(23,25,9,18,-5,4,2,STONE)
     slab(26,27,8,17,-4,4,2,CUT)
     slab(28,28,9,16,-3,3,2,STONE)
+    -- Back-swept shoulder lames with a raised upper blade.
+    slab(24,25,13,19,-6,-2,2,STONE)
+    slab(26,27,12,19,-7,-2,2,CUT)
+    slab(28,29,12,18,-7,-3,2,STONE)
+    slab(30,30,13,17,-6,-4,1,CUT)
     -- Turf follows the ledge around the back and hangs in unequal tongues.
     slab(28,29,9,15,-3,2,2,MOSS)
     slab(27,28,14,17,-3,0,1,MOSS)
@@ -150,6 +162,9 @@ local function heavyFist()
     course(p, 2,3,16,24,1,8,2,STONE)
     course(p, 1,1,17,23,2,7,1,JOINT)
     course(p, 4,9,16,22,4,8,1,CUT)
+    course(p, 4,7,20,25,3,8,2,STONE)
+    course(p, 3,5,17,19,6,9,1,CUT)
+    course(p, 5,7,20,23,6,9,1,CUT)
     -- A second cut plane catches side light across the outside knuckles.
     course(p, 4,6,22,24,1,7,1,CUT)
     course(p, 7,8,21,23,0,6,1,CUT)
@@ -178,38 +193,20 @@ end
 
 -- Internal ties join the stair-stepped skins through voxel faces at the bevels.
 local ties = {
-    torso = {
-        {-7,22,-4}, {-6,16,3}, {-5,13,1}, {-4,13,-2}, {-4,13,2}, {1,18,5},
-        {2,16,5}, {3,14,-3}, {3,22,-5}, {4,14,-2}, {4,14,2}, {4,16,4},
-        {5,12,1}, {5,14,1}, {6,16,2}, {6,24,2}, {7,22,-3},
-    },
-    head = {
-        {-4,28,2}, {-3,26,-2}, {2,31,1}, {3,26,-1}, {4,29,2}, {4,30,1},
-    },
-    leg_r = {
-        {5,6,2}, {7,4,2}, {8,6,1},
-    },
-    leg_l = {
-        {-8,6,2}, {-6,4,2}, {-5,6,1},
-    },
-    upper_arm_r = {
-        {11,28,2}, {12,21,1}, {13,21,-3}, {13,21,2}, {17,18,-2}, {17,21,-2},
-        {17,23,2},
-    },
-    upper_arm_l = {
-        {-18,21,1}, {-17,22,-3}, {-17,23,3}, {-14,21,-3}, {-14,21,2}, {-13,21,1},
-        {-13,23,-3}, {-10,27,1},
-    },
-    fist_r = {
-        {16,10,-1}, {17,3,6}, {18,2,2}, {20,12,0}, {21,7,7}, {21,10,0},
-        {22,6,7}, {23,2,3}, {23,6,3}, {23,6,5},
-    },
-    fist_l = {
-        {-18,7,2},
-    },
-    crystal = {
-        {14,32,3}, {15,33,3},
-    },
+    torso={{-7,22,-2}, {-6,16,3}, {-4,13,0}, {-4,13,2}, {1,18,5}, {2,16,5},
+        {3,14,-1}, {3,22,-3}, {4,14,2}, {5,12,1}, {5,14,0}, {5,18,4},
+        {6,16,2}, {6,24,2}, {7,22,-1}},
+    head={{2,29,-1}, {2,31,0}, {4,29,2}, {4,30,1}},
+    leg_r={{5,6,2}, {7,4,2}, {7,6,2}},
+    leg_l={{-8,6,2}, {-6,4,2}, {-6,6,2}},
+    upper_arm_r={{11,28,2}, {12,21,1}, {13,19,1}, {13,21,-1}, {13,29,-3}, {16,21,2},
+        {17,18,0}, {17,23,-1}, {17,23,2}, {17,29,-3}, {18,27,-3}},
+    upper_arm_l={{-18,21,1}, {-18,23,-1}, {-18,27,-4}, {-18,29,-3}, {-17,23,3}, {-14,19,0},
+        {-14,21,-1}, {-14,21,2}, {-14,29,-3}, {-13,21,1}, {-10,27,1}},
+    fist_r={{17,2,3}, {18,3,8}, {20,7,7}, {22,4,1}, {22,4,7}, {23,2,6},
+        {23,3,3}, {23,6,3}},
+    fist_l={},
+    crystal={{14,32,3}, {15,33,3}},
 }
 
 function RockColossus.Build()
@@ -221,16 +218,29 @@ function RockColossus.Build()
     -- Each rigid plate keeps its closed skin, including surfaces inside joints.
     -- Sort by coordinate to give callers a stable cell order across builds.
     for _, p in ipairs(parts) do
+        local compact={}
+        for _,cell in pairs(p.grid) do
+            local z=cell[3]
+            if z~=-1 and z~=-2 then
+                if z< -2 then cell[3]=z+2 end
+                compact[key(cell[1],cell[2],cell[3])]=cell
+            end
+        end
+        p.grid=compact
         for k, cell in pairs(p.grid) do
             if not (p.grid[k-1] and p.grid[k+1] and p.grid[k-128] and p.grid[k+128]
                 and p.grid[k-16384] and p.grid[k+16384]) then
                 p.cells[#p.cells+1] = cell
             end
         end
-        for _, tie in ipairs(ties[p.id]) do
+        for _, tie in ipairs(ties[p.id] or {}) do
             p.cells[#p.cells+1] = p.grid[key(tie[1], tie[2], tie[3])]
         end
         table.sort(p.cells, function(a, b) return key(a[1],a[2],a[3]) < key(b[1],b[2],b[3]) end)
+        if p.id~='leg_l' and p.id~='leg_r' then
+            p.pivot[2]=p.pivot[2]+3*SIZE
+            for _,cell in ipairs(p.cells) do cell[2]=cell[2]+3 end
+        end
         p.grid = nil
     end
     return { size = SIZE, parts = parts, palette = {

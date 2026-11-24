@@ -1,26 +1,31 @@
 local Base = require('combat.enemies.EnemyBase')
+local Fault=require('combat.enemies.actors.RockColossusFault')
 local S = Base.State
 local Colossus = setmetatable({}, {__index = Base})
 Colossus.__index = Colossus
 
 local sweep = {name='quarry_sweep', telegraph=.78, duration=.40, recover=.82,
-    range=2.25, cosine=.5, warning='fan', damage=15, poise=13}
-local slam = {name='quarry_slam', telegraph=1.12, duration=.62, recover=1.05,
-    range=3.6, jumpable=true, warning='ring', damage=21, poise=20}
+    range=2.85, cosine=.5, warning='fan', damage=15, poise=13}
+local slam = {name='quarry_fault', telegraph=1.12, duration=1.42, recover=1.05,
+    range=6.25, pillarCount=Fault.COUNT, warning='line', damage=21, poise=20}
 local SWEEP_START, SWEEP_END = .10, .24
-local IMPACT, WAVE_END = .16, .52
+local IMPACT=Fault.IMPACT
 -- Base.CanDamage pads ranges by the player capsule. The marker is its outer limit.
 local CAPSULE = .32
 
 Colossus.Config = {kind='rock_colossus', model='RockColossus', enemy='beast', name='岩甲巨兽',
-    hp=110, radius=.82, height=2.65, speed=1.55, aggro=11, leash=26,
-    attackDistance=sweep.range, defaultPart='torso', attacks={sweep,slam}, voxelSize=.08, sculpt={},
+    hp=300, radius=.90, height=3.8, speed=1.55, aggro=11, leash=26,
+    attackDistance=sweep.range, defaultPart='torso', attacks={sweep,slam}, voxelSize=.10, sculpt={},
     parts={
-        {id='torso', material='stone', y=1.48, radius=.81},
-        {id='head', material='stone', y=2.23, z=.06, radius=.40},
-        {id='crystal', material='core', x=1.12, y=2.45, z=.24, radius=.26, weak=true},
-        {id='fist_r', material='stone', x=1.50, y=.62, z=.27, radius=.54},
-        {id='fist_l', material='stone', x=-1.46, y=.84, radius=.35},
+        {id='torso', material='stone', x=0,y=2.04,z=.15,radius=.76},
+        {id='head', material='stone', x=0,y=3.16,z=.18,radius=.43},
+        {id='crystal', material='core', x=1.45,y=3.49,z=.42,radius=.25,weak=true,weakMultiplier=1.85},
+        {id='fist_r', material='armor', x=1.98,y=1.02,z=.47,radius=.57},
+        {id='fist_l', material='stone', x=-1.75,y=1.30,z=.23,radius=.33},
+        {id='upper_arm_r',material='armor',x=1.48,y=2.90,z=.12,radius=.44},
+        {id='upper_arm_l',material='armor',x=-1.48,y=2.90,z=.12,radius=.44},
+        {id='leg_r',material='stone',x=.65,y=.59,z=.25,radius=.34},
+        {id='leg_l',material='stone',x=-.65,y=.59,z=.25,radius=.34},
     }}
 
 local function ramp(t, start, finish)
@@ -35,8 +40,8 @@ end
 -- with the same Y-X swing so they stay seated while the right arm rises overhead.
 local function shoulder(id, p, pitch, yaw, lift)
     local dx, dy, dz = 0, 0, 0
-    if id == 'fist_r' then dx,dy,dz = .60,-.72,.08
-    elseif id == 'crystal' then dx,dy,dz = .32,.32,.16 end
+    if id == 'fist_r' then dx,dy,dz = .75,-.90,.10
+    elseif id == 'crystal' then dx,dy,dz = .40,.40,.20 end
     local a,b = math.rad(pitch), math.rad(yaw)
     local ca,sa,cb,sb = math.cos(a),math.sin(a),math.cos(b),math.sin(b)
     local y,z = dy*ca-dz*sa, dy*sa+dz*ca
@@ -47,15 +52,15 @@ end
 -- Final y offsets put the rotated stones on the floor. The quartz stays on
 -- its broken shoulder while the torso falls, then drops off and lands last.
 local fallen = { -- release, land, travel XYZ, pitch
-    torso       ={.28,.67,  0,   -.48,-.38,-90},
-    head        ={.39,.78, -.33,-1.68,-.94,-90},
-    leg_l       ={.08,.36, -.12,-.32, .10, 90},
-    leg_r       ={.10,.39,  .13,-.32, .09, 90},
-    upper_arm_l ={.34,.71, -.57,-1.52,-.24,-90},
-    fist_l      ={.32,.65, -.40, -.88, .23, 90},
-    upper_arm_r ={.40,.81,  .60,-1.52,-.26,-90},
-    fist_r      ={.37,.68,  .45, -.56, .26, 90},
-    crystal     ={.73,1.04, .91,-1.92,-.37, 90},
+    torso       ={.28,.67,  0,   -1.00,-.38,-90},
+    head        ={.39,.78, -.33,-2.60,-.94,-90},
+    leg_l       ={.08,.36, -.12,-.70, .10, 90},
+    leg_r       ={.10,.39,  .13,-.70, .09, 90},
+    upper_arm_l ={.34,.71, -.57,-2.20,-.24,-90},
+    fist_l      ={.32,.65, -.40, -1.40, .23, 90},
+    upper_arm_r ={.40,.81,  .60,-2.20,-.26,-90},
+    fist_r      ={.37,.68,  .45, -.90, .26, 90},
+    crystal     ={.73,1.04, .91,-2.70,-.37, 90},
 }
 local function deathPose(id,p,t)
     local frame=fallen[id]
@@ -85,7 +90,7 @@ function Colossus.Config.posePart(enemy,id,p)
         local ready=wind*(1-stroke)*hold
         local follow=stroke*hold
         if enemy.attack==slam then
-            if right then shoulder(id,p,-151*ready-17*follow,-12*ready,-.207*follow)
+            if right then shoulder(id,p,-151*ready-17*follow,-12*ready,-.561*follow)
             elseif id=='torso' or id=='head' then p.pitch=-12*ready+20*follow; p.y=.08*ready-.19*follow
             elseif legs then p.pitch=9*follow; p.z=.06*follow
             else p.pitch=-19*ready-31*follow; p.z=.15*follow end
@@ -111,16 +116,25 @@ end
 
 function Colossus.New(scene,world,terrain,combat,position,id)
     local self=setmetatable(Base.Create(scene,world,terrain,combat,Colossus.Config,position,id),Colossus)
+    self.fault=Fault.New(scene)
     self.shapePose={}
+    self.chips={kind='phase',material='stone',dir=Vector3.UP,normal=Vector3.UP}
     self.dust={kind='dust', material='stone', dir=Vector3.UP, normal=Vector3.UP, tier='light'}
     return self
 end
 
--- Match the two large-displacement archery targets to the arm's posed sockets.
-local movingPivots={fist_r={1.32,1.20,.08}, crystal={1.04,2.24,.16}}
+-- Carry the archery spheres through the same part and body transforms as the model.
+local movingPivots={fist_r={1.65,1.80,.10}, crystal={1.30,3.10,.20}, fist_l={-1.65,1.80,.10},
+    upper_arm_l={-.90,2.70,0},upper_arm_r={.90,2.70,0},torso={0,1.50,0},head={0,2.8,0},
+    leg_r={.65,1.3,0},leg_l={-.65,1.3,0}}
 function Colossus:SyncShapes()
     Base.SyncShapes(self)
     if not self.active or self.dead then return end
+    local recoil=math.max(0,1-self.reaction.recoilAge/.12)
+    local roll=math.rad(self.poseRoll)
+    local pitch=math.rad(self.posePitch+self.reaction.bodyPitch*recoil)
+    local yaw=math.rad(self.reaction.bodyYaw*recoil)
+    local cr,sr,cp,sp,cy,sy=math.cos(roll),math.sin(roll),math.cos(pitch),math.sin(pitch),math.cos(yaw),math.sin(yaw)
     for _,h in ipairs(self.hurtShapes) do
         local pivot=movingPivots[h.id]
         if pivot then
@@ -135,8 +149,11 @@ function Colossus:SyncShapes()
             local ly=pivot[2]+p.y+y*math.cos(pitch)-dz*math.sin(pitch)
             local lx=pivot[1]+p.x+x*math.cos(yaw)+z*math.sin(yaw)
             local lz=pivot[3]+p.z+z*math.cos(yaw)-x*math.sin(yaw)
-            h.center=Vector3(self.position.x+lx*self.fz+lz*self.fx,self.position.y+self.poseY+ly,
-                self.position.z-lx*self.fx+lz*self.fz)
+            lx,ly=lx*cr-ly*sr,lx*sr+ly*cr
+            ly,lz=ly*cp-lz*sp,ly*sp+lz*cp
+            lx,lz=lx*cy+lz*sy+self.posePivot*sr,lz*cy-lx*sy
+            h.center=Vector3(self.position.x+lx*self.fz+lz*self.fx,
+                self.position.y+self.poseY+ly+self.posePivot*(1-cr), self.position.z-lx*self.fx+lz*self.fz)
         end
     end
 end
@@ -149,7 +166,7 @@ function Colossus:Chase(dt,target,distance)
 end
 
 function Colossus:BeginAttack()
-    self.wavePassed,self.impacted=false,false
+    self.impacted=false
 end
 
 function Colossus:AttackStep(dt,target)
@@ -160,32 +177,51 @@ function Colossus:AttackStep(dt,target)
         end
         return
     end
-    if t+1e-8<IMPACT then return end
-    if not self.impacted then
+    if not self.fault.active then return end
+    if t>=IMPACT and not self.impacted then
         self.impacted=true
         self:EmitEvent('stagger_land'); self:EmitEvent('camera_shake')
-        self.dust.pos=Vector3(self.position.x+self.fz*1.60+self.fx*.70,self.position.y+.03,
-            self.position.z-self.fx*1.60+self.fz*.70)
-        self.particles:Emit(self,self.dust)
     end
-    -- Use the shared, prebuilt warning mesh as the moving wave. Sampling the
-    -- annulus swept this tick also covers coarse updates without a second hit.
-    local outer=slam.range*ramp(t,IMPACT,WAVE_END)
-    local inner=slam.range*ramp(t-dt,IMPACT,WAVE_END)
-    self.warning.visible,self.warning.step,self.warning.radius=t<=WAVE_END,6,outer
-    if self.wavePassed or t-dt>=WAVE_END then return end
-    local dx,dz=target.x-self.position.x,target.z-self.position.z
-    local d=math.sqrt(dx*dx+dz*dz)
-    if d>=inner-.0001 and d<=outer+.0001 then
-        self.wavePassed=true
-        self:DamagePlayer(target,slam.range-CAPSULE,nil,true)
+    self.fault:Step(self,t,dt,target)
+end
+
+function Colossus:DamageScale(info,part)
+    if (info.kind=='arrow' or info.kind=='crystal') and part.spec.material=='armor' then return .55 end
+    return 1
+end
+
+function Colossus:UpdatePose()
+    Base.UpdatePose(self)
+    if self.attack==slam and self.state==S.TELEGRAPH then
+        -- The actor owns a full-size, ground-conforming marker for this attack.
+        self.warning.kind='fault_strip'
+        self.fault:Brush(self.warning.progress)
     end
 end
 
+function Colossus:SetState(state)
+    if self.fault and self.fault.active and state~=S.ATTACK and state~=S.TELEGRAPH then
+        self:ClearExtras()
+    end
+    local changed=Base.SetState(self,state)
+    if changed and state==S.TELEGRAPH and self.attack==slam then
+        self.directionLocked=true
+        self.fault:Lock(self)
+    end
+    return changed
+end
+
 function Colossus:ClearExtras()
-    self.wavePassed,self.impacted=true,false
+    self.impacted=false
+    if self.fault then self.fault:Clear() end
+    if self.particles then self.particles:ClearOwner(self) end
     self.warning.visible=false
     if self.dead then self.poseY,self.posePitch,self.poseRoll=0,0,0 end
+end
+
+function Colossus:Destroy()
+    Base.Destroy(self)
+    if self.fault then self.fault:Destroy();self.fault=nil end
 end
 
 function Colossus:SetActive(active)
