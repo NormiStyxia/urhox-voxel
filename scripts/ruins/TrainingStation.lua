@@ -128,8 +128,8 @@ function Station:SetNear(near)
     end
     if show and not self.prompt then
         local safe=UI.GetSafeAreaInsets()
-        local prompt=UI.Button{id='training_station_open',position='absolute',right=16+safe.right,top='35%',
-            text=Touch.IsEnabled() and '训练木桩' or '训练木桩  [F]',fontSize=15,height=46,minWidth=118,
+        local prompt=UI.Button{id='training_station_open',position='absolute',right=20+safe.right,bottom=128+safe.bottom,
+            text=Touch.IsEnabled() and '训练木桩' or '训练木桩  [F]',fontSize=15,height=46,minWidth=150,
             backgroundColor=ink,fontColor=parchment,borderWidth=1,borderColor=brass,
             onClick=function() self:Interact() end}
         root:AddChild(prompt); self.promptRoot,self.prompt=root,prompt
