@@ -88,6 +88,9 @@ function M.New(scene, world, spawn, spawnYaw)
     -- 非默认 mask 启用双向过滤，让飞行台阶的 mask=0 真正不阻挡角色。
     cc.collisionMask = 0xffffffff & ~2
     self.cc = cc
+    self.baseGravityFactor = cc.gravityFactor or 1
+    self.playerTimeScale = 1
+    self.timeSlowGravityDebt = 0
     self.yaw = spawnYaw or 0
     self.camYaw = spawnYaw or 0
     self.camPitch = 12
@@ -125,6 +128,31 @@ end
 function N:Camera() return self.cam:GetCamera() end
 function N:CameraNode() return self.cam:GetNode() end
 function N:Position() return self.node.worldPosition end
+
+-- Apply the local TimeWraith field to the real character controller. Horizontal
+-- speed and attack clocks consume the same value through their frame options.
+-- Gravity uses the controller's native factor, with a small debt correction on
+-- exit so a half-gravity frame cannot leave a stale vertical velocity behind.
+function N:SetPlayerTimeScale(scale,dt)
+    scale=math.max(.5,math.min(1,tonumber(scale) or 1))
+    dt=math.max(0,tonumber(dt) or 0)
+    local previous=self.playerTimeScale or 1
+    if previous<1 and scale>=1 and self.timeSlowGravityDebt>0
+        and self.cc and type(self.cc.GetLinearVelocity)=='function'
+        and type(self.cc.SetLinearVelocity)=='function' then
+        local velocity=self.cc:GetLinearVelocity()
+        self.cc:SetLinearVelocity(Vector3(velocity.x,velocity.y-self.timeSlowGravityDebt,velocity.z))
+    end
+    if previous<1 and scale>=1 then self.timeSlowGravityDebt=0 end
+    self.playerTimeScale=scale
+    if self.cc then self.cc.gravityFactor=self.baseGravityFactor*scale end
+    if scale<1 and self.cc and not self.cc.onGround then
+        self.timeSlowGravityDebt=self.timeSlowGravityDebt+9.81*(1-scale)*dt
+    elseif self.cc and self.cc.onGround then
+        self.timeSlowGravityDebt=0
+    end
+    return scale
+end
 
 -- 右手掌心位置；与骨骼动画和角色世界变换保持一致。
 function N:HandPos()
@@ -206,6 +234,8 @@ end
 
 -- 移动输入（f, r ∈ [-1,1]）
 function N:Move(dt, f, r, run, jump, aiming, combat)
+    local requestedScale=combat and combat.playerTimeScale or 1
+    if requestedScale~=(self.playerTimeScale or 1) then self:SetPlayerTimeScale(requestedScale,dt) end
     if self:UpdateSafety(dt) then self:ResetJump(); return end
     local cc = self.cc
     local rad = math.rad(self.camYaw)
@@ -217,7 +247,10 @@ function N:Move(dt, f, r, run, jump, aiming, combat)
     if moving then dir = dir:Normalized() end
     local runSpeed=(combat and combat.fast) and SPRINT or RUN
     local target = moving and ((run and not aiming) and runSpeed or (aiming and WALK * 0.6 or WALK)) or 0
-    if combat then target=moving and ((run and not aiming and (combat.scale or 1)==1) and runSpeed or (combat.baseSpeed or 5))*(combat.scale or 1) or 0 end
+    if combat then
+        target=moving and ((run and not aiming and (combat.scale or 1)==1) and runSpeed or (combat.baseSpeed or 5))
+            *(combat.scale or 1)*(self.playerTimeScale or 1) or 0
+    end
     local onGround = cc.onGround
     local want = dir * target * moveAmount
     -- Brake promptly on release or reversal, with softer acceleration from rest.

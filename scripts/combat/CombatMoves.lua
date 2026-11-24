@@ -10,6 +10,9 @@ local COMBO=Data.Combo
 local function IsMeleeAttack(id)
     return id and (id:match('^sword_light_[1-5]$') or id=='sword_heavy_release')
 end
+local function IsPlayerAttack(id)
+    return IsMeleeAttack(id) or id=='bow_draw' or id=='bow_hold' or id=='bow_release'
+end
 ---@class PlayerCombatMoves
 ---@field o table
 ---@field anim table Animation port (real CombatAnim or offline event stub).
@@ -692,6 +695,7 @@ function C:Update(dt,controls)
     else self.suspended=false end
     if self.blocked and not controls.attack and not controls.heavy then self.blocked=false end
     local canInput=controls.allowed and not self.blocked and not self.dead and self.state.InCombat()
+    local playerTimeScale=math.max(.5,math.min(1,controls.playerTimeScale or 1))
     if canInput and controls.jump and controls.onGround~=false then self:JumpCancel() end
     if canInput and self.cancelOpen and ((controls.axis and controls.axis:LengthSquared()>.18*.18) or controls.sprintIntent) then
         self:RecoveryCancel('move')
@@ -709,7 +713,9 @@ function C:Update(dt,controls)
         end
         self:ConsumeBuffer(controls.axis)
         if self.clip=='bow_hold' or self.clip=='bow_draw' then
-            self.drawElapsed=self.drawElapsed+dt
+            -- The draw clock shares the slowed animation clock, so full
+            -- draw, release, and the emitted arrow remain phase-aligned.
+            self.drawElapsed=self.drawElapsed+dt*playerTimeScale
             local drawDuration=1 -- fixed full-draw time; not a per-weapon stat
             self.charge=self.drawElapsed+1e-9>=drawDuration and 1 or self.drawElapsed/drawDuration
             self.power=(self.charge*self.charge+2*self.charge)/3
@@ -728,6 +734,7 @@ function C:Update(dt,controls)
     self.lastAttack,self.lastHeavy=attack,heavy
     self.hitstop=math.max(0,self.hitstop-dt)
     self.motionChecked=false
+    if IsPlayerAttack(self.clip) then animDt=animDt*playerTimeScale end
     local stepDt=animDt
     local moveDir=self.moveDir or self.o.forward() --[[@as Vector3]]
     -- Sound timing derives from the authored active boundary, not a hit table.
