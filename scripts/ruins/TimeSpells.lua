@@ -19,6 +19,7 @@ local VoxelFX = require("dragon.VoxelFX")
 local VoxelDamage = require("ruins.VoxelDamage")
 local Hit = require("combat.Hit")
 local Catalog = require("combat.WeaponCatalog")
+local ImpactFX = require("combat.WeaponImpactFX")
 
 local M = {}
 M.CHARGE_SECONDS = 1.4
@@ -67,6 +68,9 @@ M.SPELLS = {
             local stats=ctx.catalystStats and ctx.catalystStats()
             local terrainRadius=M.ShatterRadius(charge)*(stats and stats.terrainRadius or 1)
             local level = (charge >= 1.0) and 3 or ((charge >= 0.5) and 2 or 1)
+            if charge >= 1 and not aim.enemy and (obj or aim.volume) then
+                ImpactFX.Play(ctx.scene, 'shatter', aim.pos, aim.normal, terrainRadius)
+            end
             local hitCount=SpellAOE(ctx,aim.pos,M.ShatterRadius(charge),{
                 dmg=(stats and stats.attack or 8)*(1+.5*charge)*Catalog.Passive(stats and stats.passive,{shatter=true}),poise=stats and stats.poise or 3,armorBreak=0,pos=aim.pos,dir=aim.dir,
                 material='core',tier='light',kind='time_shatter',clip='time_shatter',

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ParticleSystem version="2" maxPoolSize="12">
+    <Parameters>
+        <Parameter name="Count" paramType="Scalar" scalar="1"/>
+        <Parameter name="Life" paramType="Scalar" scalar=".3"/>
+        <Parameter name="Size" paramType="Vector" vector="1 1 1"/>
+        <Parameter name="Tint" paramType="Vector" vector="1 1 1"/>
+    </Parameters>
+    <Emitter emitterName="Chips">
+        <Required material="Effects/WeaponImpact/Chip.material" useLocalSpace="false" screenAlignment="Square" emitterDuration="0.06" emitterLoops="1"/>
+        <Spawn>
+            <Rate type="Constant" constant="0"/>
+            <BurstScale type="ParticleParameter" parameterName="Count" paramMode="Direct"/>
+            <BurstList>
+                <Burst count="1" time="0"/>
+            </BurstList>
+        </Spawn>
+        <TypeDataMesh mesh="Models/Box.mdl" castShadows="false"/>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="ParticleParameter" parameterName="Life" paramMode="Direct"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="ParticleParameter" parameterName="Size" paramModes="Direct Direct Direct"/>
+            </Module>
+            <Module type="Velocity">
+                <StartVelocity type="Uniform" min="-1.35 1.4 -1.35" max="1.35 3.6 1.35"/>
+            </Module>
+            <Module type="Acceleration" alwaysInWorldSpace="true">
+                <Acceleration type="Constant" constant="0 -8 0"/>
+            </Module>
+            <Module type="MeshRotation">
+                <StartRotation type="Uniform" min="0 0 0" max="180 180 180"/>
+            </Module>
+            <Module type="MeshRotationRate">
+                <StartRotationRate type="Uniform" min="-180 -220 -160" max="180 220 160"/>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ParticleParameter" parameterName="Tint" paramModes="Direct Direct Direct"/>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="1"/>
+                    <Point inVal="0.55" outVal="1"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+        </Modules>
+    </Emitter>
+</ParticleSystem>

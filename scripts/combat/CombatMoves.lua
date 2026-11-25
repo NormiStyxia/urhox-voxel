@@ -447,6 +447,7 @@ function C:Feedback(enemy,info,result,weak,arrow)
     if not result.hit then return end
     self.eventWrite=self.eventWrite%#self.eventPool+1
     local e=self.eventPool[self.eventWrite]
+    e.attackKind=info.kind
     e.swingId=info.swingId or ('sword:'..self.swingSerial)
     e.weapon=arrow and (info.kind=='crystal' and 'crystal' or 'bow') or 'sword'
     e.tier=arrow and (ARROW_TIERS[info.tier] or 'arrow_weak') or (info.heavy and 'heavy' or (COMBO[info.combo] or COMBO[1]).tier)

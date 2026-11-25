@@ -9,6 +9,7 @@ local WardenVisual=require("combat.WardenSwordVisual")
 local HunterVisual=require("combat.HunterBowVisual")
 local SilverVisual=require("combat.SilverBowVisual")
 local BowChargeFx=require("combat.BowChargeFx")
+local ImpactFX=require("combat.WeaponImpactFX")
 local Catalog=require("combat.WeaponCatalog")
 local Store=require("combat.WeaponStore")
 
@@ -653,6 +654,9 @@ function Rig:HitImpulse(event)
     self.hitAngle=math.max(self.hitAngle,strong and 1.5 or .8)
     self.hitSign=event.combo==2 and 1 or -1
     self.wingGlow=1
+    if event.attackKind=='sword' and self.trailEnabled and self.entries.sword.mesh.blueprint.config.modelId=='wing' then
+        ImpactFX.Sword(self.scene,event)
+    end
     if self.trailEnabled and self.swordVfx then self.swordVfx:Contact(event.pos,strong or event.critical or event.killed) end
     self:UpdateHitImpulse() -- AfterPose runs after Rig.Update; show on contact frame.
     return true

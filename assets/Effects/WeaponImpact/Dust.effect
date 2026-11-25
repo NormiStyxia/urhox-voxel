@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ParticleSystem version="2" maxPoolSize="12">
+    <Parameters>
+        <Parameter name="Count" paramType="Scalar" scalar="1"/>
+        <Parameter name="Life" paramType="Scalar" scalar=".3"/>
+        <Parameter name="Size" paramType="Vector" vector="1 1 1"/>
+        <Parameter name="Tint" paramType="Vector" vector="1 1 1"/>
+    </Parameters>
+    <Emitter emitterName="Dust">
+        <Required material="Effects/Forge/Smoke.material" useLocalSpace="false" screenAlignment="Square" emitterDuration="0.06" emitterLoops="1"/>
+        <Spawn>
+            <Rate type="Constant" constant="0"/>
+            <BurstScale type="ParticleParameter" parameterName="Count" paramMode="Direct"/>
+            <BurstList>
+                <Burst count="1" time="0"/>
+            </BurstList>
+        </Spawn>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="ParticleParameter" parameterName="Life" paramMode="Direct"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="ParticleParameter" parameterName="Size" paramModes="Direct Direct Direct"/>
+            </Module>
+            <Module type="Velocity">
+                <StartVelocity type="Uniform" min="-.38 .22 -.38" max=".38 .75 .38"/>
+            </Module>
+            <Module type="Acceleration" alwaysInWorldSpace="true">
+                <Acceleration type="Constant" constant="0 -3.0 0"/>
+            </Module>
+            <Module type="SizeMultiplyLife">
+                <LifeMultiplier type="ConstantCurve">
+                    <Point inVal="0" outVal="0.3 0.3 0.3"/>
+                    <Point inVal="0.65" outVal="1 1 1"/>
+                    <Point inVal="1" outVal="1.15 1.15 1.15"/>
+                </LifeMultiplier>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ParticleParameter" parameterName="Tint" paramModes="Direct Direct Direct"/>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="0.3"/>
+                    <Point inVal="0.3" outVal="0.60"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+        </Modules>
+    </Emitter>
+</ParticleSystem>

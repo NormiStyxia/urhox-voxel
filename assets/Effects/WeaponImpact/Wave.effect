@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ParticleSystem version="2" maxPoolSize="12">
+    <Parameters>
+        <Parameter name="Count" paramType="Scalar" scalar="1"/>
+        <Parameter name="Life" paramType="Scalar" scalar=".3"/>
+        <Parameter name="Size" paramType="Vector" vector="1 1 1"/>
+        <Parameter name="Tint" paramType="Vector" vector="1 1 1"/>
+    </Parameters>
+    <Emitter emitterName="Wave">
+        <Required material="Effects/WeaponImpact/Ring.material" useLocalSpace="true" screenAlignment="Square" emitterDuration="0.06" emitterLoops="1"/>
+        <Spawn>
+            <Rate type="Constant" constant="0"/>
+            <BurstScale type="ParticleParameter" parameterName="Count" paramMode="Direct"/>
+            <BurstList>
+                <Burst count="1" time="0"/>
+            </BurstList>
+        </Spawn>
+        <TypeDataMesh mesh="Models/Plane.mdl" castShadows="false"/>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="ParticleParameter" parameterName="Life" paramMode="Direct"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="ParticleParameter" parameterName="Size" paramModes="Direct Direct Direct"/>
+            </Module>
+            <Module type="SizeMultiplyLife">
+                <LifeMultiplier type="ConstantCurve">
+                    <Point inVal="0" outVal="0.12 0.12 0.12"/>
+                    <Point inVal="0.7" outVal="1 1 1"/>
+                    <Point inVal="1" outVal="1 1 1"/>
+                </LifeMultiplier>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ParticleParameter" parameterName="Tint" paramModes="Direct Direct Direct"/>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="0.8"/>
+                    <Point inVal="0.7" outVal="0.75"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+        </Modules>
+    </Emitter>
+</ParticleSystem>

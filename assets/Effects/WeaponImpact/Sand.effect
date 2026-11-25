@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ParticleSystem version="2" maxPoolSize="12">
+    <Parameters>
+        <Parameter name="Count" paramType="Scalar" scalar="1"/>
+        <Parameter name="Life" paramType="Scalar" scalar=".3"/>
+        <Parameter name="Size" paramType="Vector" vector="1 1 1"/>
+        <Parameter name="Tint" paramType="Vector" vector="1 1 1"/>
+        <Parameter name="Radius" paramType="Scalar" scalar="1"/>
+    </Parameters>
+    <Emitter emitterName="Sand">
+        <Required material="Effects/Forge/Spark.material" useLocalSpace="true" screenAlignment="Square" emitterDuration="0.06" emitterLoops="1"/>
+        <Spawn>
+            <Rate type="Constant" constant="0"/>
+            <BurstScale type="ParticleParameter" parameterName="Count" paramMode="Direct"/>
+            <BurstList>
+                <Burst count="1" time="0"/>
+            </BurstList>
+        </Spawn>
+        <Modules>
+            <Module type="Lifetime">
+                <Lifetime type="ParticleParameter" parameterName="Life" paramMode="Direct"/>
+            </Module>
+            <Module type="Size">
+                <StartSize type="ParticleParameter" parameterName="Size" paramModes="Direct Direct Direct"/>
+            </Module>
+            <Module type="LocationPrimitiveCylinder" heightAxis="Y">
+                <StartRadius type="ParticleParameter" parameterName="Radius" paramMode="Direct"/>
+                <StartHeight type="Constant" constant="0.04"/>
+            </Module>
+            <Module type="Velocity">
+                <StartVelocity type="Uniform" min="0 .45 0" max="0 1.9 0"/>
+            </Module>
+            <Module type="Acceleration" alwaysInWorldSpace="true">
+                <Acceleration type="Constant" constant="0 -4.6 0"/>
+            </Module>
+            <Module type="ColorOverLife">
+                <ColorOverLife type="ParticleParameter" parameterName="Tint" paramModes="Direct Direct Direct"/>
+                <AlphaOverLife type="ConstantCurve">
+                    <Point inVal="0" outVal="1"/>
+                    <Point inVal="0.55" outVal="1"/>
+                    <Point inVal="1" outVal="0"/>
+                </AlphaOverLife>
+            </Module>
+        </Modules>
+    </Emitter>
+</ParticleSystem>

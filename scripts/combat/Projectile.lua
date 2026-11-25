@@ -1,6 +1,7 @@
 -- Fixed twelve-slot arrow pool. Swept contact is ordered against world geometry.
 local Hit=require('combat.Hit')
 local Catalog=require('combat.WeaponCatalog')
+local ImpactFX=require('combat.WeaponImpactFX')
 ---@class CombatProjectilePool
 ---@field opts table
 ---@field pool table[]
@@ -61,6 +62,7 @@ function P:Fire(origin,dir,charge,stats,tip,modelId)
     -- Captured at release so an arrow keeps its launch bow's colour through
     -- flight, even when the player changes weapon before impact.
     p.modelId=modelId or stats.modelId or 'field'
+    p.impactFX=p.modelId=='field' or p.modelId=='thorn'
     p.passive=stats.passive
     p.tier=full and 'full' or (charge>=.5 and 'mid' or 'weak')
     p.pierce,p.kind=math.max(0,stats.pierce or 0),(stats.crystalRadius or 0)>0 and 'crystal' or 'arrow'
@@ -126,6 +128,7 @@ function P:Step(p,dt)
             local result=Hit.Apply(enemy,info)
             if result.hit then
                 p.hit[enemy]=true
+                if p.impactFX then ImpactFX.ArrowTarget(self.opts.scene,info,result,contact.shape.weak) end
                 -- Enemy owns weak/armor/down scaling. Use the resolved hit, but
                 -- keep p.damage unchanged so a piercing arrow cannot compound it.
                 p.crystalDamage=(result.damage or p.damage)*p.crystalDamageMultiplier
@@ -157,6 +160,9 @@ function P:Step(p,dt)
         p.vel=impactVel
         p.pos=p.pos+(nextPos-p.pos)*wall
         p.embedded,p.age=true,0
+        if self.opts.scene and p.impactFX and worldHit and worldHit.hit and worldHit.volume then
+            ImpactFX.Play(self.opts.scene,'arrowStone',p.pos,worldHit.normal)
+        end
         local destroyed=false
         if self.opts.wallHit then
             local impact=p.wallImpact
