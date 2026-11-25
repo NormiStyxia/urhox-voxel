@@ -624,12 +624,13 @@ function Resources.interact(target)
     elseif message then CombatHUD.Say(message,1.7) end
 end
 
-function Resources.present(cameraNode)
+function Resources.present(cameraNode,dt)
     if Resources.live and time_>=(Resources.nextRefreshAt or 0) then
         Resources.nextRefreshAt=time_+1
         Resources.live:Refresh()
     end
     local target=Resources.nearest()
+    if Resources.live then Resources.live:Update(dt,target) end
     if not target then Resources.prompt.Clear(); return end
     local offset=target.source=='drop' and .45 or 1.15
     Resources.prompt.Set(target,Resources.catalog.ById[target.itemId],target.verb,
@@ -864,7 +865,7 @@ local function StartCombat()
     combatEnvironment_=EnvironmentDamage.New({world=world_,cast=CombatCast,timeObject=Puzzles.FindByVolume,
         feedback=CombatFeedback,trace=CombatEnvironmentTrace})
     bowArrowTrailFx_=BowArrowTrailFx.New(scene_)
-    combatArrows_=Projectile.New({enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,audio=combatAudioPort,
+    combatArrows_=Projectile.New({scene=scene_,enemies=CombatEnemies,cast=CombatCast,log=CombatState.Log,audio=combatAudioPort,
         hit=function(...) combatMoves_:Feedback(...) end,wallHit=CombatArrowEnvironment,
         draw=function(p,visible)
             local entry=arrowNodes_[p.index]
@@ -1168,6 +1169,7 @@ function M.Start()
         prepareCast = function(aim) nomi_:PrepareCast(aim) end }) -- 同帧转身与抬手
     combatRig_=WeaponRig.New(scene_,world_,nomi_)
     Resources.live=Resources.world.New(scene_,world_,{training=M.trainingMode,cast=CombatCast,trees=Build.trees,
+        fx=require('ruins.RuinsResourceFX').New(scene_),
         wasClaimed=function(key,kind)
             local progress=combatRig_.config.progress
             if kind then return progress.trainingClaims[kind] end
@@ -2449,7 +2451,7 @@ function Ruins_HandlePostUpdate(eventType, eventData)
     Safe('Puzzles.Presentation',Puzzles.UpdatePresentation,dt)
     Safe('FX.Sigils',M.sigils.Update,M.sigils,dt,aim,nomi_:HandPos(),nomi_:CameraNode(),caster_,Spells.ShatterRadius(caster_.charge),not M.mounted and not M.debugOn and CombatState.CanUseTime(),CombatState.GetSelection()=='time')
     if combatMoves_ then Safe('HUD.Update',UpdateCombatHUD,cn,dt) end
-    Safe('HUD.Material',Resources.present,cn)
+    Safe('HUD.Material',Resources.present,cn,dt)
     nomi_:EndQueryScope()
     if combatMoves_ and weaponGesture_ then Safe('WeaponSelect.Anchor',weaponGesture_.Update,weaponGesture_,dt,nomi_:Camera()) end
     Safe('FX.MotesB',fx_.motesB.Draw,fx_.motesB); Safe('FX.MotesG',fx_.motesG.Draw,fx_.motesG)

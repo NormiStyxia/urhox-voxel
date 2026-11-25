@@ -330,6 +330,14 @@ local function tree(base,stock)
     log(g,0,.18,.12,.10,.108,.36,C.ribbon,C.ribbon)
 end
 
+local function crystalShell(stock)
+    polyGem(stock,-.02,.52,.10,.26,.30,.24,.35,C.blue,5)
+    crystal(stock,0,.38,-.08,1.34,.27,.10,.04,C.blue,1)
+    crystal(stock,-.38,.32,.12,.92,.20,-.26,.10,C.ice,2)
+    crystal(stock,.36,.30,-.14,.98,.21,.26,-.08,C.blue,3)
+    crystal(stock,.18,.29,.25,.62,.15,.14,.20,C.ice,4)
+end
+
 local function mine(base,stock,core)
     if base then
         -- Craggy fractured slate-basalt host rock (no flat hexagonal plugs).
@@ -345,11 +353,7 @@ local function mine(base,stock,core)
     if not stock then return end
     -- Central polyhedral gem heart (matching ClockCatalyst's orb facet layout) +
     -- staggered diamond-cut crystal spires with inner cores.
-    polyGem(stock,-.02,.52,.10,.26,.30,.24,.35,C.blue,5)
-    crystal(stock,0,.38,-.08,1.34,.27,.10,.04,C.blue,1)
-    crystal(stock,-.38,.32,.12,.92,.20,-.26,.10,C.ice,2)
-    crystal(stock,.36,.30,-.14,.98,.21,.26,-.08,C.blue,3)
-    crystal(stock,.18,.29,.25,.62,.15,.14,.20,C.ice,4)
+    crystalShell(stock)
     polyGem(core,-.02,.50,.10,.15,.19,.14,.35,C.jade,6)
     crystal(core,0,.42,-.08,1.04,.13,.08,.03,C.jade,1)
     crystal(core,-.38,.35,.12,.68,.09,-.20,.07,C.blue,2)
@@ -401,7 +405,23 @@ local function buildStock(root,id,mats)
     solid(marker,4,0,0,0,{{y,.012,.012},{y+.12*r/.085,r,r},{y+.24*r/.085,.012,.012}},
         id=='crystal_ore' and C.ice or C.honey)
     marker:Commit()
-    return canopy
+    local pulse
+    if id=='crystal_ore' then
+        -- Only the selected site's shell is enabled, so every site can share the veil material.
+        if not mats.veinGlow then
+            local glow=Material:new()
+            glow:SetTechnique(0,cache:GetResource('Technique','Techniques/PBR/PBRNoTextureAlpha.xml'))
+            glow:SetShaderParameter('MatEmissiveColor',Variant(Color(.36,.80,1)))
+            glow:SetShaderParameter('Roughness',Variant(.32))
+            glow.renderOrder=200
+            mats.veinGlow=glow
+        end
+        pulse=mesh(canopy,'VeinPulse',mats.veinGlow,false)
+        crystalShell(pulse)
+        pulse:Commit()
+        pulse.enabled=false
+    end
+    return canopy,pulse
 end
 
 function M.Site(root,id,mats,spent)

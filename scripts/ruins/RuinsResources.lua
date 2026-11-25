@@ -125,7 +125,7 @@ local function registerSite(self,site,itemId,count,pos,tree,faceDx,faceDz)
     node.position=pos
     if faceDx and faceDz then orient(node,faceDx,faceDz) end
     local item={id=key,key=key,source='site',itemId=itemId,count=count,position=pos,node=node,spent=spent,tree=tree}
-    item.stock=Models.Site(node,itemId,self.materials,spent)
+    item.stock,item.pulse=Models.Site(node,itemId,self.materials,spent)
     if spent then item.remains=Models.Harvested(node,itemId,self.materials) end
     if not tree then
         item.baseCollider=collider(self.world,pos,4,1,0)
@@ -184,7 +184,8 @@ function R.New(scene,world,options)
     options=options or {}
     local self=setmetatable({root=scene:CreateChild('RuinsResources'),world=world,
         training=options.training==true,cast=options.cast,wasClaimed=options.wasClaimed,
-        materials=Models.Materials(),entries={},receipts={},nextId=0},R)
+        materials=Models.Materials(),entries={},receipts={},nextId=0,pulseClock=0},R)
+    self.fx=options.fx
     for _,def in ipairs(Catalog.Sites) do addSite(self,def) end
     if type(options.trees)=='table' then
         for _,tree in ipairs(options.trees) do addTreeSite(self,tree) end
@@ -244,7 +245,7 @@ end
 local function inRange(item,feet)
     if item.spent or item.busy or math.abs(feet.y-item.position.y)>1.25 then return end
     local dist=squareDistance(item.position,feet)
-    local radius=item.source=='site' and 2.55 or 2.25
+    local radius=item.source=='site' and (item.itemId=='crystal_ore' and 3.5 or 2.55) or 2.25
     if dist<=radius*radius then return dist end
 end
 
@@ -257,6 +258,25 @@ function R:Nearest(feet)
         end
     end
     if best then return target(best,distance) end
+end
+
+-- Use the same visible, reachable target as the F prompt.
+function R:Update(dt,focus)
+    if self.fx then self.fx:Update(dt) end
+    local item=focus and self.entries[focus.id]
+    local pulse=item and item.pulse
+    if pulse~=self.activePulse then
+        if self.activePulse then self.activePulse.enabled=false end
+        self.activePulse=pulse
+        self.pulseClock=0
+    end
+    if pulse then
+        self.pulseClock=self.pulseClock+dt
+        local phase=.5-.5*math.cos(self.pulseClock*3.2)
+        local alpha=(.10+.18*phase)*math.min(1,self.pulseClock/.16)
+        self.materials.veinGlow:SetShaderParameter('MatDiffColor',Variant(Color(.64,.86,1,alpha)))
+        pulse.enabled=true
+    end
 end
 
 function R:Claim(id,feet,grant)
@@ -275,11 +295,16 @@ function R:Claim(id,feet,grant)
         item.node:Remove()
     else
         item.spent=true
+        if item.pulse==self.activePulse then self.activePulse=nil end
         item.stock:Remove()
         item.stock=nil
+        item.pulse=nil
         if item.tree then item.remains=Models.Harvested(item.node,item.itemId,self.materials) end
         if item.upperCollider then self.world:RemoveVolume(item.upperCollider) end
         item.upperCollider=nil
+        if item.itemId=='crystal_ore' and self.fx then
+            self.fx:Break(item.position+Vector3(0,1.15,0))
+        end
     end
     return true,message
 end
@@ -297,7 +322,7 @@ function R:Refresh()
             self.receipts[item.key]=nil
             item.spent=false
             if item.remains then item.remains:Remove(); item.remains=nil end
-            item.stock=Models.Restock(item.node,item.itemId,self.materials)
+            item.stock,item.pulse=Models.Restock(item.node,item.itemId,self.materials)
             if not item.tree and not item.upperCollider then
                 item.upperCollider=collider(self.world,item.position,3,2,.25)
             end
@@ -308,12 +333,13 @@ function R:Refresh()
 end
 
 function R:Destroy()
+    if self.fx then self.fx:Destroy(); self.fx=nil end
     for _,item in pairs(self.entries) do
         if item.upperCollider then self.world:RemoveVolume(item.upperCollider) end
         if item.baseCollider then self.world:RemoveVolume(item.baseCollider) end
     end
     if self.root then self.root:Remove() end
-    self.root,self.world,self.materials=nil,nil,nil
+    self.root,self.world,self.materials,self.activePulse=nil,nil,nil,nil
     self.entries,self.receipts={},{}
 end
 return R

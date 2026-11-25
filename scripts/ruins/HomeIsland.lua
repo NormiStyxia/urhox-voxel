@@ -6,6 +6,7 @@ local P = require('ruins.RuinsPalette').P
 local Upper = require('ruins.HomeHouseUpper')
 local WarmLights = require('ruins.WarmLights')
 local HomeWarmLayout = require('ruins.HomeWarmLayout')
+local HomeRewindFX = require('ruins.HomeRewindFX')
 -- House footprint shared with the upper storeys; the hall now runs back to z=15.
 local HOUSE = Upper.Footprint
 ---@class HomeIsland
@@ -245,17 +246,22 @@ end
 local houseStage=0
 local houseParts
 local houseReady=false
+local rewindFX
 local function inStage(p,n) return n>=p.first and n<=p.last end
-local function enableHousePart(p,on)
-    if p.on==on then return end
-    if p.volume then
-        -- Jolt uses the live filters; IsCollidable alone only governs adoption on load.
+local function setHouseVisual(p,on)
+    if p.visible~=on then p.node:SetDeepEnabled(on);p.visible=on end
+end
+local function setHouseCollision(p,on)
+    if p.volume and p.on~=on then
         p.volume.collisionMask=on and p.mask or 0
         p.volume.collisionLayer=on and p.layer or 0
     end
-    -- Glass panes are children too: SetEnabled alone leaves descendants visible.
-    p.node:SetDeepEnabled(on)
     p.on=on
+end
+local function enableHousePart(p,on)
+    setHouseCollision(p,on)
+    p.reveal=on and 1 or 0
+    setHouseVisual(p,on)
 end
 local function occupiesPart(p,pos,r,height)
     if not pos or not p.brush or p.mask==0 then return false end
@@ -275,21 +281,34 @@ function H.SetHouseStage(stage)
     if type(stage)~='number' or stage%1~=0 or stage<0 or stage>3 then return false,'无效房屋阶段' end
     if stage==houseStage then return true end
     if houseParts and not houseReady then return false,'请等待家园展开' end
+    local changes={}
     if houseReady then
         local walker,dragonBounds
         if H.GetHouseOccupants then walker,dragonBounds=H.GetHouseOccupants() end
         for _,p in ipairs(houseParts) do
-            if p.on~=inStage(p,stage) then
+            local target=inStage(p,stage)
+            if p.on~=target then
                 local blocked=occupiesPart(p,walker,.5,1.85)
                 for _,bounds in ipairs(dragonBounds or {}) do
                     if occupiesPart(p,bounds.base,bounds.radius,bounds.height) then blocked=true;break end
                 end
                 if blocked then return false,'请先离开即将变化的墙、楼板或屋顶' end
             end
+            if p.reveal~=(target and 1 or 0) then changes[#changes+1]=p end
         end
     end
+    local ascending=stage>houseStage
     houseStage=stage
-    for _,p in ipairs(houseParts or {}) do enableHousePart(p,inStage(p,stage)) end
+    -- All occupancy checks have passed. Commit collision filters before the
+    -- next physics tick, including a reversal before the first visual frame.
+    for _,p in ipairs(houseParts or {}) do
+        setHouseCollision(p,inStage(p,stage))
+    end
+    if rewindFX then
+        rewindFX:Begin(changes,ascending,setHouseVisual)
+    else
+        for _,p in ipairs(changes) do enableHousePart(p,p.on) end
+    end
     H.RefreshWindowLights(stage)
     return true
 end
@@ -384,6 +403,7 @@ function H.SetWindowLightingActive(on,quality)
 end
 
 function H.Stop()
+    if rewindFX then rewindFX:Stop();rewindFX=nil end
     houseParts,houseReady=nil,false
     H.ReleaseReflection()
     H.poolBounds=nil
@@ -451,6 +471,7 @@ local function linearChannel(srgb)
 end
 
 function H.Update(dt,feet,dn)
+    if rewindFX then rewindFX:Update(dt) end
     if H.spring then updateWater(dt,feet) end
     if H.warm then
         H.warm:SetStage(houseStage)
@@ -1319,7 +1340,8 @@ local function house(world,scene)
         if not v then return end
         local node=v:GetNode()
         node.name=options.nodeName or ('HomeHouse-'..name)
-        local entry={volume=v,node=node,brush=part,first=first,last=last,mask=v.collisionMask,layer=v.collisionLayer}
+        local entry={volume=v,node=node,brush=part,masonry=true,first=first,last=last,mask=v.collisionMask,layer=v.collisionLayer}
+        if rewindFX then HomeRewindFX.Measure(entry) end
         houseParts[#houseParts+1]=entry
         enableHousePart(entry,inStage(entry,houseStage))
         if options.windowLamps and scene then H.RegisterWindowLamps(scene,options.windowLamps,first,last) end
@@ -1340,7 +1362,7 @@ local function house(world,scene)
         for _,p in ipairs(Upper.Planters) do
             foliage.Shrub(planters,H.x+p.x,H.base+p.y,H.z+p.z,p)
         end
-        local entry={node=planters,first=3,last=3}
+        local entry={node=planters,first=3,last=3,anchor=Upper.Planters[1]}
         houseParts[#houseParts+1]=entry
         enableHousePart(entry,inStage(entry,houseStage))
     end
@@ -1602,6 +1624,8 @@ local function groundContact()
     GroundContact.SetRegion('b',image,H.x-35,H.z+28,2,base,unit)
 end
 function H.Build(world,scene,dayNight)
+    if rewindFX then rewindFX:Stop() end
+    rewindFX=HomeRewindFX.New(scene,Vector3(H.x,H.base,H.z),world)
     for _,entry in ipairs({
         -- Deep walnut frame, warm mid-tone trim, and a muted blue-grey pane.
         {oak,.31,.18,.10,.72,0,.36}, {amber,.46,.25,.11,.68,0,.38},
@@ -1625,8 +1649,9 @@ function H.Build(world,scene,dayNight)
     light.color=Color(1,.53,.21); light.range=5.5; light.brightness=.78
     H.hearth=light
     local flames=cache:GetResource('CascadeParticleSystem','Effects/Forge/ForgeFire.effect')
-    if flames then
-        CascadeParticle.SpawnEmitterAttached(flames,scene,Vector3(H.x+FORGE.x,H.base+.8,H.z+FORGE.z+1.3),Quaternion(),Vector3.ONE,false)
+    local cascadeParticle=rawget(_G,'CascadeParticle')
+    if flames and cascadeParticle then
+        cascadeParticle.SpawnEmitterAttached(flames,scene,Vector3(H.x+FORGE.x,H.base+.8,H.z+FORGE.z+1.3),Quaternion(),Vector3.ONE,false)
     end
     buildForgeFlame(scene)
     -- 夜间暖光：池边路灯、壁灯、室内吊灯、露台灯盏、柱台蜡烛与火盆
@@ -1650,6 +1675,7 @@ function H.BeginBuild(world,scene,dayNight)
         if self.cancelled then return end
         self.cancelled=true
         thread=nil
+        H.Stop()
         for i=world:GetVolumeCount()-1,0,-1 do
             local v=world:GetVolume(i)
             if v and self.ids[v:GetVolumeId()] then
@@ -1659,7 +1685,6 @@ function H.BeginBuild(world,scene,dayNight)
                 if node then node:Dispose() end
             end
         end
-        H.Stop()
         self.root:Remove()
     end
     function job:Step()
