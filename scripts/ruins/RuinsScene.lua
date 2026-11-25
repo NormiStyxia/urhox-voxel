@@ -625,12 +625,9 @@ function Resources.interact(target)
 end
 
 function Resources.present(cameraNode)
-    if Resources.live then
-        if M.dayNight then Resources.live:SetNight(M.dayNight.nightK or 0) end
-        if time_>=(Resources.nextRefreshAt or 0) then
-            Resources.nextRefreshAt=time_+1
-            Resources.live:Refresh()
-        end
+    if Resources.live and time_>=(Resources.nextRefreshAt or 0) then
+        Resources.nextRefreshAt=time_+1
+        Resources.live:Refresh()
     end
     local target=Resources.nearest()
     if not target then Resources.prompt.Clear(); return end

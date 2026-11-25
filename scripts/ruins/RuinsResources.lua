@@ -285,7 +285,12 @@ function R:Claim(id,feet,grant)
 end
 
 function R:Refresh()
-    if not self.wasClaimed or not self.root then return 0 end
+    if not self.root then return 0 end
+    local ruins=rawget(_G,'RUINS')
+    if ruins and ruins.world==self.world and ruins.dayNight then
+        Models.SetNight(self.materials,ruins.dayNight.nightK)
+    end
+    if not self.wasClaimed then return 0 end
     local restored=0
     for _,item in pairs(self.entries) do
         if item.source=='site' and item.spent and not self.wasClaimed(item.key,nil) then
@@ -300,10 +305,6 @@ function R:Refresh()
         end
     end
     return restored
-end
-
-function R:SetNight(nightK)
-    if self.materials then Models.SetNight(self.materials,nightK) end
 end
 
 function R:Destroy()
