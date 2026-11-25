@@ -2,6 +2,10 @@
 // The residual channel is indigo leather. UV.x=.35 marks inset steel or stone.
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
+// Night readability (driven by WeaponRig from DayNight): at 1 a weak share of
+// the albedo is self-lit and a cool rim traces the silhouette, so the weapon
+// stays visible in the dark without glowing; existing glow is damped to match.
+uniform float night_fill = 0.0;
 uniform vec4 primary_color : source_color = vec4(0.84, 0.89, 0.96, 1.0);
 uniform vec4 secondary_color : source_color = vec4(0.72, 0.78, 0.86, 1.0);
 uniform vec4 grip_color : source_color = vec4(0.15, 0.25, 0.43, 1.0);
@@ -63,4 +67,12 @@ void fragment() {
     ALBEDO = clamp((base + (metal_return + rim) * (1.0 - 0.72 * contact)) * linear_shade
                  + MAIN_LIGHT_COLOR * glint * highlight_strength * (1.0 - contact), 0.0, 1.0);
     EMISSION = vec3(0.0);
+    {
+        vec3 nf_n = normalize(NORMAL);
+        vec3 nf_v = normalize(CAMERA_POSITION_WORLD - VERTEX);
+        float nf_rim = pow(1.0 - clamp(dot(nf_n, nf_v), 0.0, 1.0), 3.0);
+        vec3 nf_base = max(ALBEDO, vec3(0.04));
+        EMISSION = EMISSION * (1.0 - 0.45 * night_fill)
+                 + night_fill * (nf_base * 0.16 + mix(nf_base, vec3(0.55, 0.65, 0.85), 0.5) * nf_rim * 0.22);
+    }
 }

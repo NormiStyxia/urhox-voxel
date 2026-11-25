@@ -66,17 +66,11 @@ end
 -- Logical gamepad action port; binding selection belongs to the controller
 -- adapter. No unverified PS/Xbox button number is silently assumed.
 function M.SetGamepadRun(down) padHeld=down==true end
--- Three gaits: walk, run (default, free), sprint (held, drains stamina).
--- sprintKey: Shift held. walkMode: keyboard walk/run toggle (Ctrl) is on.
--- The touch stick decides walk/run by its depth while it is being pushed;
--- the on-screen run button and the gamepad action are the sprint input.
-function M.SampleRun(out,sprintKey,walkMode)
-    local sprint=sprintKey==true or M.Down('run') or padHeld
-    local stick=M.enabled and (forward~=0 or right~=0)
-    local run
-    if stick then run=M.Down('runIntent') else run=walkMode~=true end
-    out.sprintIntent=sprint
-    out.runIntent=sprint or run
+-- Two gaits: run (always, free) and sprint (held, drains stamina).
+-- sprintKey: Shift held; the on-screen run button and the gamepad action also sprint.
+function M.SampleRun(out,sprintKey)
+    out.sprintIntent=sprintKey==true or M.Down('run') or padHeld
+    out.runIntent=true
     out.inputRevision=M.revision
     return out
 end

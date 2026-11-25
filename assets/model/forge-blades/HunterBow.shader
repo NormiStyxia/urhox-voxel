@@ -1,5 +1,9 @@
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
+// Night readability (driven by WeaponRig from DayNight): at 1 a weak share of
+// the albedo is self-lit and a cool rim traces the silhouette, so the weapon
+// stays visible in the dark without glowing; existing glow is damped to match.
+uniform float night_fill = 0.0;
 // Binary RGB selects wood, bone, or cord. The remaining channel is leather.
 // Alpha is a continuous growth coordinate across the swept cross-section.
 uniform vec4 wood_color : source_color = vec4(0.385,0.267,0.220,1.0);
@@ -59,4 +63,12 @@ void fragment() {
     METALLIC = 0.0;
     SPECULAR = 0.21*w.r+0.32*w.g+0.14*leather+0.09*cord;
     EMISSION = vec3(0.0);
+    {
+        vec3 nf_n = normalize(NORMAL);
+        vec3 nf_v = normalize(CAMERA_POSITION_WORLD - VERTEX);
+        float nf_rim = pow(1.0 - clamp(dot(nf_n, nf_v), 0.0, 1.0), 3.0);
+        vec3 nf_base = max(ALBEDO, vec3(0.04));
+        EMISSION = EMISSION * (1.0 - 0.45 * night_fill)
+                 + night_fill * (nf_base * 0.16 + mix(nf_base, vec3(0.55, 0.65, 0.85), 0.5) * nf_rim * 0.22);
+    }
 }

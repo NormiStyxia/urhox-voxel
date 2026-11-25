@@ -21,6 +21,8 @@
 ---@field armed number
 ---@field useTimer number
 ---@field handSocketPositions table<string, Vector3>|nil
+---@field material Material|nil 方块版角色的独立材质（体素版为 nil）
+---@field sceneLight number
 local M = {}
 ---@type number|nil 截图验证用的强制移动速度
 M.debugMoveSpeed = nil
@@ -195,9 +197,13 @@ function M.Create(parent, data)
     if material == nil then
         print("BlockCharacter: material not found: " .. MATERIAL)
     else
+        -- 每个角色一份材质：昼夜光照参数逐实例写入，不改共享资源
+        material = material:Clone("NomiBlock")
         local texture = cache:GetResource("Texture2D", "Textures/Characters/nomi.png")
         if texture ~= nil then material:SetSurfaceTexture("albedo_map", texture) end
     end
+    self.material = material
+    self.sceneLight = -1
 
     local pivots = {}
     for _, b in ipairs(data.bones) do
@@ -235,6 +241,17 @@ function M.Create(parent, data)
     end
     print(string.format("BlockCharacter: built %d bones, %d cubes, %d faces", #data.bones, cubes, faces))
     return self
+end
+
+--- 昼夜对角色的影响：1 = 白天原样（Blockbench 视口色），0 = 深夜（自发光降到保底、
+--- 冷色调，同时接受真实点光）。只在变化超过 1/64 时写材质参数。
+---@param k number
+function M:SetSceneLight(k)
+    if not self.material then return end
+    k = math.floor(math.max(0, math.min(1, k)) * 64 + .5) / 64
+    if k == self.sceneLight then return end
+    self.sceneLight = k
+    self.material:SetShaderParameter("scene_light", Variant(k))
 end
 
 -- 体素 quad 方向 → FaceCorners 的面名（体素数据已是 UrhoX 坐标，不需要翻 z）
@@ -489,22 +506,20 @@ local function ClipChannel(clip, name, channel, time, fallback, yaw)
     return M.SampleAnimationChannel(track and track[channel], time, fallback, yaw)
 end
 
--- One normalized foot cycle drives every body/cloth/hair channel. Walk and run
--- have matching left/right phase; never restart a limb or secondary track.
+-- One normalized foot cycle drives every body/cloth/hair channel. Moving is
+-- always the run clip (no walk gait); idle blends into it by speed.
 function M:UpdateImportedLocomotion(dt, s, speed, k)
     local clips = self.animations
     local moving = s.onGround and Clamp((speed - 0.12) / 0.68, 0.0, 1.0) or 0.0
     self.bbMotion = Lerp(self.bbMotion, moving, k)
-    self.bbRun = Lerp(self.bbRun, Clamp((speed - 4.2) / 3.0, 0.0, 1.0), k)
-    -- Distance-driven cadence: exactly the source 1s walk at 4.2m/s and
-    -- .6667s run at 7.2m/s, with no walking-in-place while blocked.
-    local stride = Lerp(4.2 * clips.walk.length, 7.2 * clips.run.length, self.bbRun)
+    -- Distance-driven cadence: the source .6667s run covers 7.2m; slower
+    -- (aiming) runs slow the cycle down instead of sliding the feet.
+    local stride = 7.2 * clips.run.length
     if moving > 0 then self.bbCycle = (self.bbCycle + dt * speed / stride) % 1 end
     self.phase = self.bbCycle * math.pi * 2
     local idleT = self.time % clips.idle.length
-    local walkT, runT = self.bbCycle * clips.walk.length, self.bbCycle * clips.run.length
-    local idleW = 1 - self.bbMotion
-    local walkW, runW = self.bbMotion * (1 - self.bbRun), self.bbMotion * self.bbRun
+    local runT = self.bbCycle * clips.run.length
+    local idleW, runW = 1 - self.bbMotion, self.bbMotion
     local yaw = s.headYaw or 0
     for _, bone in ipairs(self.bindBones) do
         local name = bone.name
@@ -514,10 +529,8 @@ function M:UpdateImportedLocomotion(dt, s, speed, k)
         for _, channel in ipairs(ANIMATION_CHANNELS) do
             local fallback = channel == "scale" and 1 or 0
             local ix, iy, iz = ClipChannel(clips.idle, name, channel, idleT, fallback, yaw)
-            local wx, wy, wz = ClipChannel(clips.walk, name, channel, walkT, fallback, yaw)
             local rx, ry, rz = ClipChannel(clips.run, name, channel, runT, fallback, yaw)
-            local x, y, z = ix * idleW + wx * walkW + rx * runW,
-                iy * idleW + wy * walkW + ry * runW, iz * idleW + wz * walkW + rz * runW
+            local x, y, z = ix * idleW + rx * runW, iy * idleW + ry * runW, iz * idleW + rz * runW
             if channel == "rotation" then
                 -- BB adds animated Euler angles to bind Euler angles BEFORE
                 -- composing ZYX. bindQuaternion * deltaQuaternion is different.

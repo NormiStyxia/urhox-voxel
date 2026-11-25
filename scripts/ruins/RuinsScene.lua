@@ -32,6 +32,8 @@ local TouchInput = require("ui.TouchInput")
 local TouchControls = require("ui.TouchControls")
 local HomeIsland = require("ruins.HomeIsland")
 local HomeTrees = require("ruins.HomeTrees")
+local RuinsWarmLayout = require("ruins.RuinsWarmLayout")
+local WarmLights = require("ruins.WarmLights")
 local WorldMap = require("ui.WorldMap")
 local PixelDraw = require("ui.PixelDraw")
 local lastRuinsLanding,homeJob
@@ -44,6 +46,7 @@ local CombatMoves = require('combat.CombatMoves')
 local SwingPerf=require('combat.SwingPerf')
 local FootLocomotion=require('ruins.FootLocomotion')
 local ClothInertia=require('combat.ClothInertia')
+local FootPlant=require('combat.FootPlant')
 local foot_
 local combatControls,combatMoveOptions={},{}
 local CombatAnim = require('combat.CombatAnim')
@@ -91,6 +94,8 @@ local combatMoves_,combatAnim_,combatArrows_,combatEnemies_
 local bowArrowTrailFx_
 ---@type ClothInertia?
 local clothInertia_
+---@type FootPlant|nil
+local footPlant_
 local combatParticles_
 local hitParticleOwner_={position=Vector3.ZERO,radius=0,age=0,config={height=0,hover=0}}
 local combatLookScale_=1
@@ -735,6 +740,8 @@ local function StartCombat()
     combatCamera_=CombatCamera.New()
     combatAnim_=CombatAnim.New(nomi_.nomi,nomi_.node,{bowRig=combatRig_})
     clothInertia_=ClothInertia.New(nomi_.nomi)
+    footPlant_=FootPlant.New(nomi_.nomi,combatAnim_)
+    M.footPlant=footPlant_
     local bowFireHits,bowFirePool={},{}
     for i=1,64 do bowFirePool[i]={} end
     combatMoves_=CombatMoves.New({anim=combatAnim_,rig=combatRig_,state=CombatState,
@@ -1141,6 +1148,7 @@ function M.Start()
     Terrain.Build(world_, scene_)
     Build.Build(world_, scene_)
     M.atmosphere:SetPillarLayout(Build,Terrain.RING_Y) -- intact/broken layout now known
+    M.warm = RuinsWarmLayout.Build(scene_, world_) -- 外环草地上的夜间篝火
     Puzzles.Build(world_, scene_)
     -- 碎石堆独立材质也要接收霜冻等全局材质参数
     if Puzzles.gateMaterial ~= nil then M.surfaceMaterials.gateRubble = Puzzles.gateMaterial; GroundContact.Register(Puzzles.gateMaterial) end
@@ -1751,9 +1759,6 @@ local function HandleSpells(dt, aim)
     caster_:HandleCharge(held,aim,true)
 end
 
--- Keyboard walk/run toggle (Ctrl). Default is run; Shift is the faster sprint.
-M.walkMode=false
-
 function Ruins_HandleSceneUpdate(eventType, eventData)
     -- 角色意图在物理步进之前写入（见 voxel-physics.md 铁规 1）
     local dt = eventData["TimeStep"]:GetFloat()
@@ -1773,10 +1778,6 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
     nomi_:SetPlayerTimeScale(playerTimeScale,dt)
     nomi_:MeasureMotion(dt)
     local allowed=GameplayInputAllowed()
-    if allowed and not combatInputBlocked and (Press(KEY_LCTRL) or Press(KEY_RCTRL) or Press(KEY_CTRL)) then
-        M.walkMode=not M.walkMode
-        CombatHUD.Say(M.walkMode and '步行' or '奔跑',1.0)
-    end
     local f = (Down(KEY_W) and 1 or 0) - (Down(KEY_S) and 1 or 0)
     local r = (Down(KEY_D) and 1 or 0) - (Down(KEY_A) and 1 or 0)
     local tf,tr=TouchInput.MoveAxis()
@@ -1800,9 +1801,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
             if keyHeld==nil then keyHeld=input:GetKeyDown(KEY_SHIFT) end
             local keyPress=input:GetKeyPress(KEY_SHIFT)
             if M.fakePress and M.fakePress[KEY_SHIFT] then keyPress=true;M.fakePress[KEY_SHIFT]=nil end
-            TouchInput.SampleRun(controls,keyHeld,M.walkMode)
-            -- Charging / casting slows to a walk unless the sprint key is held.
-            if (caster_.charging or caster_.castAnim>0) and not controls.sprintIntent then controls.runIntent=false end
+            TouchInput.SampleRun(controls,keyHeld)
             controls.cancelled=(keyHeld or keyPress) and input:GetKeyDown(KEY_F9) -- debug chord consumes gesture first
             controls.axis=axis
             controls.jump=allowed and not combatInputBlocked and Press(KEY_SPACE)
@@ -1849,7 +1848,7 @@ function Ruins_HandleSceneUpdate(eventType, eventData)
         end
     end
     if not allowed or animPreview_.index>0 then nomi_:Move(dt,0,0,false,false,false,{scale=0}); return end
-    nomi_:Move(dt, f, r, false, Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0,
+    nomi_:Move(dt, f, r, true, Press(KEY_SPACE), caster_.charging or caster_.castAnim > 0,
         {playerTimeScale=playerTimeScale})
 end
 
@@ -2164,6 +2163,8 @@ function Ruins_HandleUpdate(eventType, eventData)
         Safe('Animation.BowParameters',UpdateCombatAnimationParams)
     end
     if combatAnim_ and (CombatState.InCombat() or combatMoves_.dead or combatMoves_.clip~=nil or (foot_ and foot_.weight>0) or animPreview_.index>0) then Safe('Animation.Apply',combatAnim_.Apply,combatAnim_) end
+    -- 剑普攻的步法改写腿和胯，必须在布料 / 武器读姿势之前（没有带步法的招式时它什么都不做）
+    if footPlant_ and OnFoot() and animPreview_.index==0 then Safe('Animation.FootPlant',footPlant_.Apply,footPlant_,dt) end
     if foot_ and OnFoot() then
         local preview=animPreview_.index>0 and CombatAnim.DebugList()[animPreview_.index].id
         Safe('Locomotion.Ground',nomi_.GroundFeet,nomi_,foot_,dt,
@@ -2205,6 +2206,17 @@ function Ruins_HandleUpdate(eventType, eventData)
     end
     -- 法阵灯：苏醒后常亮；夜里本来就有一点微光
     M.courtLight.brightness = 2.2 * M.runeK + 0.6 * (dn.nightK or 0)
+    -- 角色与手中武器跟随昼夜：白天原色，夜里降低自发光并接受篝火 / 灯光
+    local night=WarmLights.NightLevel(dn)
+    if nomi_.nomi.SetSceneLight then nomi_.nomi:SetSceneLight(1-night) end
+    if combatRig_ and combatRig_.SetSceneLight then combatRig_:SetSceneLight(1-night) end
+    if M.warm then
+        -- 篝火点光预算随画质档：高 7 / 中 5 / 低 3（超出的只保留火焰）
+        local tier=CombatSettings.GetProfile().quality
+        local budget=tier=='low' and 3 or (tier=='medium' and 5 or 7)
+        if budget~=M.warm.lightBudget then M.warm:SetLightBudget(budget) end
+        M.warm:Update(dt,dn)
+    end
     -- 草：诺米 / 龙脚下压开
     local playerFeet=nomi_:Position() -- VoxelCharacterController syncs the root to the foot of the capsule.
     Terrain.SetInteractor(0, playerFeet, 0.6)
@@ -2468,6 +2480,7 @@ function M.Stop()
     if homeJob then homeJob:Cancel();homeJob=nil end
     HomeTrees.Stop()
     HomeIsland.Stop(); HomeIsland.GetHouseOccupants=nil; Terrain.home=nil; lastRuinsLanding=nil
+    if M.warm then M.warm:Release(false); M.warm=nil end
     SettingsMenu.Stop()
     PerformanceHUD.Stop()
     CombatState.Stop()
@@ -2521,10 +2534,11 @@ function M.Stop()
     if scene_ then scene_:Clear() end
     scene_,world_,nomi_,caster_,fx_=nil,nil,nil,nil,nil
     clothInertia_=nil
+    footPlant_=nil
     sleepBase.valid=false
     for _,key in ipairs({'scene','world','puzzles','nomiCtl','caster','fx','rig','ctrl','ride','breath',
         'dragonWorld','nomi','nomiNode','stream','sigils','atmosphere','surfaceMaterials',
-        'sun','zone','courtLight','combat','foot','dayNight','aim'}) do M[key]=nil end
+        'sun','zone','courtLight','combat','foot','footPlant','dayNight','aim'}) do M[key]=nil end
     if rawget(_G,'RUINS')==M then rawset(_G,'RUINS',nil) end
 end
 

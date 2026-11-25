@@ -4,6 +4,10 @@
 // No screen sampling, alpha blending, axial white stripe or tiled facet noise.
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
+// Night readability (driven by WeaponRig from DayNight): at 1 a weak share of
+// the albedo is self-lit and a cool rim traces the silhouette, so the weapon
+// stays visible in the dark without glowing; existing glow is damped to match.
+uniform float night_fill = 0.0;
 uniform vec4 primary_color : source_color = vec4(0.885, 0.911, 0.928, 1.0);
 uniform vec4 secondary_color : source_color = vec4(0.878, 0.698, 0.325, 1.0);
 uniform vec4 accent_color : source_color = vec4(0.236, 0.538, 0.855, 1.0);
@@ -130,4 +134,12 @@ void fragment() {
     vec3 flow_light = bright_tone * max(flow_strength, 0.0) * ((1.0 - gem_m) * sweep * sweep_gain * 0.16 + gem_m * gem_pulse);
     vec3 faint_body = stone_body * max(crystal_glow, 0.0) + mid_tone * max(core_glow, 0.0) * mix(0.035, 0.065, gem_m);
     EMISSION = metal_light + blade_light + cw * (surface_light + flow_light + faint_body);
+    {
+        vec3 nf_n = normalize(NORMAL);
+        vec3 nf_v = normalize(CAMERA_POSITION_WORLD - VERTEX);
+        float nf_rim = pow(1.0 - clamp(dot(nf_n, nf_v), 0.0, 1.0), 3.0);
+        vec3 nf_base = max(ALBEDO, vec3(0.04));
+        EMISSION = EMISSION * (1.0 - 0.45 * night_fill)
+                 + night_fill * (nf_base * 0.16 + mix(nf_base, vec3(0.55, 0.65, 0.85), 0.5) * nf_rim * 0.22);
+    }
 }

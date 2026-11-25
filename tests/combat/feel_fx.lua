@@ -95,9 +95,10 @@ do
  r:BeginSlash(nil,true);assert(r.swordVfx.kind=='cross')
  r:SetTrail(false)
  r:ImpactFx(Vector3.ZERO,Vector3.FORWARD)
- assert(r.swordVfx.world:Count('wave')>0,'ground impact remains with decorative trails disabled')
- for _,item in ipairs(r.swordVfx.world.items) do assert(item.pz>-.9,'finisher remains forward-centred') end
- r:StopCombatVisual();assert(r.swordVfx.world:Count()==0)
+ assert(r.swordVfx:Count('wave')==2,'ground impact remains with decorative trails disabled')
+ for _,item in ipairs(r.swordVfx.items) do assert(item.pz==.65 and item.az==1,'finisher remains forward-centred') end
+ r:StopCombatVisual();assert(r.swordVfx:Count('wave')==2,'a cancelled move leaves what is already in the air')
+ r:SetPose('hidden');assert(r.swordVfx:Count()==0,'teardown clears it')
  r:Dispose()
 end
 print('PASS fixed 30 impact/24 arc/12 ghost slots, forward ground strike, 360 coverage, lifetime/geometry budget, no hot vectors/nodes')

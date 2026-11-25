@@ -777,7 +777,8 @@ end
 
 function Rig:StopCombatVisual()
     BowChargeFx.Stop(self.bowChargeFx)
-    if self.swordVfx then self.swordVfx:Clear() end
+    -- A cancelled move ends the stroke; what is already in the air fades on its own.
+    if self.swordVfx then self.swordVfx:Stop() end
     self:ClearTrail()
     self.hitAt,self.hitStop,self.hitWhite,self.hitAngle=-math.huge,0,0,0
     self.hitGroup,self.contactArc=nil,false
@@ -861,6 +862,7 @@ function Rig:SetActive(weapon)
     self:RetireCurrent()
     if not self.retiring.weapon then self:HideWeapon(self.active) end
     self:StopCombatVisual();self:SetBowDraw(0)
+    if self.swordVfx then self.swordVfx:Clear() end
     self.active,self.config.active=weapon,weapon
     self.transition=nil
     self.visualState,self.hangReady='hidden',false
@@ -883,13 +885,17 @@ function Rig:SetPose(pose)
     if pose=='hidden' then self:CancelRetiring() end
     if self.pose==pose then
         -- Reasserting hidden is a teardown boundary, even during a dissolve.
-        if pose=='hidden' then self:StopCombatVisual() end
+        if pose=='hidden' then
+            self:StopCombatVisual()
+            if self.swordVfx then self.swordVfx:Clear() end
+        end
         return true
     end
     for i=#self.events,1,-1 do self.events[i]=nil end -- a redirected flight owns a new arrival
     local previous=self.pose
     self.pose=pose
     self:StopCombatVisual()
+    if pose=='hidden' and self.swordVfx then self.swordVfx:Clear() end
     self:SetBowDraw(0)
     if pose=='hidden' then
         self:BeginMotion('dissolve',HIDE_TIME)
@@ -1276,9 +1282,6 @@ end
 function Rig:SampleBlade(entry)
     local root=entry.pivot:LocalToWorld(self.bladeRoot)
     local tip=entry.pivot:LocalToWorld(self.bladeTip)
-    if self.visualActive and self.trailEnabled and self.swordVfx then
-        self.swordVfx:Sample(root,tip)
-    end
     local previousRoot,previousTip=self.previousRoot,self.previousTip
     local distance=self.sampleValid and math.max(Distance(root,previousRoot),Distance(tip,previousTip)) or 0
     local bend=(tip.x-root.x)*(previousTip.x-previousRoot.x)
@@ -1541,6 +1544,10 @@ function Rig:UpdateCore(dt)
     end
     if self.pose~='hand' or self.attached~='hand' or entry.mesh.alpha<1 then self:ClearTrail();self.tailLeft=0;return end
     if self.active~='sword' then self:ClearTrail();self.tailLeft=0;return end
+    -- Fed every frame the sword is held: the stroke connects from last frame's blade.
+    if self.swordVfx then
+        self.swordVfx:Sample(entry.pivot:LocalToWorld(self.bladeRoot),entry.pivot:LocalToWorld(self.bladeTip))
+    end
     if self.visualActive or self.tailLeft>0 then
         if self.visualActive then self:SampleBlade(entry) end
         self:DrawBands();if self.trailEnabled then self:UpdateImages(entry,dt) end
@@ -1740,6 +1747,39 @@ function Rig:Update(dt)
     self:UpdateCore(dt)
     self:SyncWing(dt)
     self:SyncThorn(dt)
+    self:ApplyNightFill()
+end
+
+--- 夜间武器可读性：k=1 白天原样，k=0 深夜。只写带 night_fill 参数的武器 Surface Shader
+--- （剑、弓的手持与背挂模型）；体素后备武器和特效材质没有这个 uniform，写入被忽略。
+--- 参数量化到 1/32；换武器 / 重建会换材质，所以强度不变时也每 30 帧补写一次。
+---@param k number
+function Rig:SetSceneLight(k)
+    local fill=math.floor((1-math.max(0,math.min(1,k)))*32+.5)/32
+    self.nightFillTarget=fill
+end
+
+function Rig:ApplyNightFill()
+    local fill=self.nightFillTarget
+    if fill==nil then return end
+    self.nightFillTick=(self.nightFillTick or 0)+1
+    -- 强度不变时每 30 帧补写一次，覆盖新换上 / 重建的武器材质
+    if fill==self.nightFill and self.nightFillTick<30 then return end
+    self.nightFillTick=0
+    self.nightFill=fill
+    local value=Variant(fill)
+    local roots={}
+    for _,entry in pairs(self.entries or {}) do if entry.pivot then roots[#roots+1]=entry.pivot end end
+    for _,socket in pairs(self.sockets or {}) do roots[#roots+1]=socket end
+    for _,root in ipairs(roots) do
+        for _,c in ipairs(root:GetComponents('CustomGeometry',true)) do
+            local d=c --[[@as CustomGeometry]]
+            for i=0,d.numGeometries-1 do
+                local m=d:GetMaterial(i)
+                if m then m:SetShaderParameter('night_fill',value) end
+            end
+        end
+    end
 end
 
 function Rig:Dispose()

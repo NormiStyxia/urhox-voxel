@@ -4,6 +4,10 @@
 // Opaque on purpose: crystal depth is faked from the cut normals + a glowing core, no screen sampling.
 shader_type spatial;
 render_mode shading_model_pbr, cull_back;
+// Night readability (driven by WeaponRig from DayNight): at 1 a weak share of
+// the albedo is self-lit and a cool rim traces the silhouette, so the weapon
+// stays visible in the dark without glowing; existing glow is damped to match.
+uniform float night_fill = 0.0;
 uniform vec4 wood_color : source_color = vec4(0.045, 0.040, 0.058, 1.0);
 uniform vec4 petal_base : source_color = vec4(0.93, 0.50, 0.86, 1.0);
 uniform vec4 petal_tip : source_color = vec4(1.00, 0.95, 1.00, 1.0);
@@ -86,4 +90,12 @@ void fragment() {
               + vec3(1.0) * pow(rl, 70.0) * 0.9 * crystal_m
               + string_color.rgb * string_m * string_glow * (0.85 + 0.15 * sin(TIME * 3.0 + obj_pos.y * 9.0));
     EMISSION = emit;
+    {
+        vec3 nf_n = normalize(NORMAL);
+        vec3 nf_v = normalize(CAMERA_POSITION_WORLD - VERTEX);
+        float nf_rim = pow(1.0 - clamp(dot(nf_n, nf_v), 0.0, 1.0), 3.0);
+        vec3 nf_base = max(ALBEDO, vec3(0.04));
+        EMISSION = EMISSION * (1.0 - 0.45 * night_fill)
+                 + night_fill * (nf_base * 0.16 + mix(nf_base, vec3(0.55, 0.65, 0.85), 0.5) * nf_rim * 0.22);
+    }
 }
