@@ -1,0 +1,2892 @@
+[
+  {
+    "name": "Root",
+    "path": "Root",
+    "origin": [
+      0,
+      0,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "cube_count": 0,
+    "children": [
+      {
+        "name": "MAllBody",
+        "path": "Root/MAllBody",
+        "origin": [
+          0,
+          19.32857,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "cube_count": 0,
+        "children": [
+          {
+            "name": "AllBody",
+            "path": "Root/MAllBody/AllBody",
+            "origin": [
+              0,
+              19.32857,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "cube_count": 0,
+            "children": [
+              {
+                "name": "UpBody",
+                "path": "Root/MAllBody/AllBody/UpBody",
+                "origin": [
+                  0,
+                  19.32857,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "cube_count": 0,
+                "children": [
+                  {
+                    "name": "UpperBody",
+                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody",
+                    "origin": [
+                      0,
+                      19.32857,
+                      0
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "cube_count": 3,
+                    "children": [
+                      {
+                        "name": "AllHead",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead",
+                        "origin": [
+                          0,
+                          26.75,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": [
+                          {
+                            "name": "MHead",
+                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead",
+                            "origin": [
+                              0,
+                              26.75,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": [
+                              {
+                                "name": "Head",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head",
+                                "origin": [
+                                  0,
+                                  26.03409,
+                                  0
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 0,
+                                "children": [
+                                  {
+                                    "name": "Face",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face",
+                                    "origin": [
+                                      0,
+                                      29.37014,
+                                      -3
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 20,
+                                    "children": [
+                                      {
+                                        "name": "Eyes",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes",
+                                        "origin": [
+                                          0,
+                                          29.37014,
+                                          -3
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 0,
+                                        "children": [
+                                          {
+                                            "name": "Eyebrow",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyebrow",
+                                            "origin": [
+                                              -0.8925,
+                                              55.44785,
+                                              -1.725
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 0,
+                                            "children": [
+                                              {
+                                                "name": "RightEyebrow",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyebrow/RightEyebrow",
+                                                "origin": [
+                                                  1.55125,
+                                                  55.2226,
+                                                  -1.895
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 0,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "LeftEyebrow",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyebrow/LeftEyebrow",
+                                                "origin": [
+                                                  -3.33625,
+                                                  55.2226,
+                                                  -1.895
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 0,
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "name": "Eyelid",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid",
+                                            "origin": [
+                                              -0.8925,
+                                              54.02127,
+                                              -1.78875
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 0,
+                                            "children": [
+                                              {
+                                                "name": "RightEyelid",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid/RightEyelid",
+                                                "origin": [
+                                                  2.18,
+                                                  30.14477,
+                                                  -4.11
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 4,
+                                                "children": [
+                                                  {
+                                                    "name": "RightEyesBase",
+                                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid/RightEyelid/RightEyesBase",
+                                                    "origin": [
+                                                      2.14813,
+                                                      30.62977,
+                                                      -4.12063
+                                                    ],
+                                                    "rotation": [
+                                                      0,
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "cube_count": 0,
+                                                    "children": [
+                                                      {
+                                                        "name": "RightPupil",
+                                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid/RightEyelid/RightEyesBase/RightPupil",
+                                                        "origin": [
+                                                          2.18,
+                                                          30.62977,
+                                                          -4.1525
+                                                        ],
+                                                        "rotation": [
+                                                          0,
+                                                          0,
+                                                          0
+                                                        ],
+                                                        "cube_count": 1,
+                                                        "children": []
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "name": "LeftEyelid",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid/LeftEyelid",
+                                                "origin": [
+                                                  -2.18,
+                                                  30.14477,
+                                                  -4.11
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 4,
+                                                "children": [
+                                                  {
+                                                    "name": "LeftEyesBase",
+                                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid/LeftEyelid/LeftEyesBase",
+                                                    "origin": [
+                                                      -2.20125,
+                                                      30.62977,
+                                                      -4.12063
+                                                    ],
+                                                    "rotation": [
+                                                      0,
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "cube_count": 0,
+                                                    "children": [
+                                                      {
+                                                        "name": "LeftPupil",
+                                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Face/Eyes/Eyelid/LeftEyelid/LeftEyesBase/LeftPupil",
+                                                        "origin": [
+                                                          -2.18,
+                                                          30.62977,
+                                                          -4.1525
+                                                        ],
+                                                        "rotation": [
+                                                          0,
+                                                          0,
+                                                          0
+                                                        ],
+                                                        "cube_count": 1,
+                                                        "children": []
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "name": "ViewLocator",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/ViewLocator",
+                                    "origin": [
+                                      0,
+                                      29.37014,
+                                      -3
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 0,
+                                    "children": []
+                                  },
+                                  {
+                                    "name": "Hair",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair",
+                                    "origin": [
+                                      0.12566,
+                                      30.4721,
+                                      0.35848
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 0,
+                                    "children": [
+                                      {
+                                        "name": "front_h1",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/front_h1",
+                                        "origin": [
+                                          0,
+                                          33.12062,
+                                          -3.57
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 16,
+                                        "children": [
+                                          {
+                                            "name": "FringeOverlay",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/front_h1/FringeOverlay",
+                                            "origin": [
+                                              0,
+                                              34.02614,
+                                              0
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 3,
+                                            "children": []
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "corner_h1",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/corner_h1",
+                                        "origin": [
+                                          3.72075,
+                                          29.35938,
+                                          -2.4359
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 6,
+                                        "children": []
+                                      },
+                                      {
+                                        "name": "FLongHair",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/FLongHair",
+                                        "origin": [
+                                          0,
+                                          34.8,
+                                          3.45
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 9,
+                                        "children": [
+                                          {
+                                            "name": "MLongHair",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/FLongHair/MLongHair",
+                                            "origin": [
+                                              0,
+                                              30,
+                                              4.3
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 10,
+                                            "children": [
+                                              {
+                                                "name": "LongHair",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/FLongHair/MLongHair/LongHair",
+                                                "origin": [
+                                                  0,
+                                                  26.7,
+                                                  4.8
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 4,
+                                                "children": [
+                                                  {
+                                                    "name": "hl_side",
+                                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/FLongHair/MLongHair/LongHair/hl_side",
+                                                    "origin": [
+                                                      0,
+                                                      26.3,
+                                                      3.9
+                                                    ],
+                                                    "rotation": [
+                                                      0,
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "cube_count": 4,
+                                                    "children": []
+                                                  },
+                                                  {
+                                                    "name": "hl_m",
+                                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/FLongHair/MLongHair/LongHair/hl_m",
+                                                    "origin": [
+                                                      0,
+                                                      23.7,
+                                                      5.3
+                                                    ],
+                                                    "rotation": [
+                                                      0,
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "cube_count": 6,
+                                                    "children": []
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "Ribbon",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/Ribbon",
+                                        "origin": [
+                                          4.0375,
+                                          30.64712,
+                                          3.06
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 12,
+                                        "children": []
+                                      },
+                                      {
+                                        "name": "BaseHair",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/BaseHair",
+                                        "origin": [
+                                          0,
+                                          34.02614,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 6,
+                                        "children": []
+                                      },
+                                      {
+                                        "name": "OuterHair",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/Hair/OuterHair",
+                                        "origin": [
+                                          0,
+                                          34.02614,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 14,
+                                        "children": []
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "name": "LeftShoulderLocator",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/LeftShoulderLocator",
+                                    "origin": [
+                                      -2.55,
+                                      35.35162,
+                                      0
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 0,
+                                    "children": []
+                                  },
+                                  {
+                                    "name": "RightShoulderLocator",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/AllHead/MHead/Head/RightShoulderLocator",
+                                    "origin": [
+                                      2.55,
+                                      35.35162,
+                                      0
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 0,
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Arm",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm",
+                        "origin": [
+                          0,
+                          25.79545,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": [
+                          {
+                            "name": "LeftArm",
+                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm",
+                            "origin": [
+                              -3.65884,
+                              25.24864,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              -13
+                            ],
+                            "cube_count": 1,
+                            "children": [
+                              {
+                                "name": "LeftForeArm",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftForeArm",
+                                "origin": [
+                                  -5.54021,
+                                  21.55684,
+                                  0
+                                ],
+                                "rotation": [
+                                  -4,
+                                  0,
+                                  -2.5
+                                ],
+                                "cube_count": 1,
+                                "children": [
+                                  {
+                                    "name": "LeftHand",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftForeArm/LeftHand",
+                                    "origin": [
+                                      -6.92059,
+                                      17.4619,
+                                      0
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 1,
+                                    "children": [
+                                      {
+                                        "name": "LeftHandLocator",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftForeArm/LeftHand/LeftHandLocator",
+                                        "origin": [
+                                          -7.30886,
+                                          16.24857,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 0,
+                                        "children": []
+                                      },
+                                      {
+                                        "name": "SheathLocator",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftForeArm/LeftHand/SheathLocator",
+                                        "origin": [
+                                          -4.39,
+                                          17.9419,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 0,
+                                        "children": []
+                                      },
+                                      {
+                                        "name": "LeftWaistLocator",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftForeArm/LeftHand/LeftWaistLocator",
+                                        "origin": [
+                                          -4.39,
+                                          17.9419,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 0,
+                                        "children": []
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "name": "LeftForeArmCoat",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftForeArm/LeftForeArmCoat",
+                                    "origin": [
+                                      -5.54021,
+                                      21.55684,
+                                      0
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 4,
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "LeftArmCoat",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/LeftArm/LeftArmCoat",
+                                "origin": [
+                                  -3.65884,
+                                  25.24864,
+                                  0
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 1,
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "name": "RightArm",
+                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm",
+                            "origin": [
+                              3.65884,
+                              25.24864,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              13
+                            ],
+                            "cube_count": 1,
+                            "children": [
+                              {
+                                "name": "RightForeArm",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm/RightForeArm",
+                                "origin": [
+                                  5.54021,
+                                  21.55684,
+                                  0
+                                ],
+                                "rotation": [
+                                  -4,
+                                  0,
+                                  2.5
+                                ],
+                                "cube_count": 1,
+                                "children": [
+                                  {
+                                    "name": "RightHand",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm/RightForeArm/RightHand",
+                                    "origin": [
+                                      6.92059,
+                                      17.4619,
+                                      0
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 1,
+                                    "children": [
+                                      {
+                                        "name": "RightHandLocator",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm/RightForeArm/RightHand/RightHandLocator",
+                                        "origin": [
+                                          7.30886,
+                                          16.24857,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 0,
+                                        "children": []
+                                      },
+                                      {
+                                        "name": "BladeLocator",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm/RightForeArm/RightHand/BladeLocator",
+                                        "origin": [
+                                          4.39,
+                                          17.9419,
+                                          0
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 0,
+                                        "children": []
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "name": "RightForeArmCoat",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm/RightForeArm/RightForeArmCoat",
+                                    "origin": [
+                                      5.54021,
+                                      21.55684,
+                                      0
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 4,
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "RightArmCoat",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Arm/RightArm/RightArmCoat",
+                                "origin": [
+                                  3.65884,
+                                  25.24864,
+                                  0
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 1,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Jacket",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket",
+                        "origin": [
+                          0,
+                          24.98947,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": [
+                          {
+                            "name": "CoatShell",
+                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell",
+                            "origin": [
+                              0,
+                              24.39737,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 17,
+                            "children": [
+                              {
+                                "name": "NomiOvercoat",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat",
+                                "origin": [
+                                  0,
+                                  19.38,
+                                  0.25
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 0,
+                                "children": [
+                                  {
+                                    "name": "NomiCoatLeft",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft",
+                                    "origin": [
+                                      -3.48,
+                                      19.4,
+                                      0.2
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 4,
+                                    "children": [
+                                      {
+                                        "name": "NomiCoatL0Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL0Hip",
+                                        "origin": [
+                                          -3.23493,
+                                          18.42344,
+                                          -2.03248
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatL0Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL0Hip/NomiCoatL0Hem",
+                                            "origin": [
+                                              -4.19625,
+                                              13.51254,
+                                              -2.66946
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatL0Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL0Hip/NomiCoatL0Hem/NomiCoatL0Tat0",
+                                                "origin": [
+                                                  -3.63456,
+                                                  9.51208,
+                                                  -3.58816
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL0Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL0Hip/NomiCoatL0Hem/NomiCoatL0Tat1",
+                                                "origin": [
+                                                  -4.82056,
+                                                  9.51208,
+                                                  -2.6712
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL0Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL0Hip/NomiCoatL0Hem/NomiCoatL0Tat2",
+                                                "origin": [
+                                                  -5.71007,
+                                                  9.51208,
+                                                  -1.98348
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "NomiCoatL1Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL1Hip",
+                                        "origin": [
+                                          -4.26927,
+                                          18.44911,
+                                          -0.48476
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatL1Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL1Hip/NomiCoatL1Hem",
+                                            "origin": [
+                                              -5.52987,
+                                              13.52479,
+                                              -0.63408
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatL1Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL1Hip/NomiCoatL1Hem/NomiCoatL1Tat0",
+                                                "origin": [
+                                                  -5.67592,
+                                                  9.32426,
+                                                  -1.93786
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL1Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL1Hip/NomiCoatL1Hem/NomiCoatL1Tat1",
+                                                "origin": [
+                                                  -6.00409,
+                                                  9.32426,
+                                                  -0.495
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL1Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL1Hip/NomiCoatL1Hem/NomiCoatL1Tat2",
+                                                "origin": [
+                                                  -6.28414,
+                                                  9.32426,
+                                                  0.73623
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "NomiCoatL2Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL2Hip",
+                                        "origin": [
+                                          -3.70279,
+                                          18.44537,
+                                          1.52737
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatL2Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL2Hip/NomiCoatL2Hem",
+                                            "origin": [
+                                              -4.79682,
+                                              13.52428,
+                                              1.99854
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatL2Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL2Hip/NomiCoatL2Hem/NomiCoatL2Tat0",
+                                                "origin": [
+                                                  -6.1793,
+                                                  9.7238,
+                                                  0.92114
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL2Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL2Hip/NomiCoatL2Hem/NomiCoatL2Tat1",
+                                                "origin": [
+                                                  -5.26694,
+                                                  9.7238,
+                                                  2.0209
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL2Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL2Hip/NomiCoatL2Hem/NomiCoatL2Tat2",
+                                                "origin": [
+                                                  -4.24053,
+                                                  9.7238,
+                                                  3.25813
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "NomiCoatL3Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL3Hip",
+                                        "origin": [
+                                          -1.47857,
+                                          18.42878,
+                                          2.77686
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatL3Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL3Hip/NomiCoatL3Hem",
+                                            "origin": [
+                                              -1.91773,
+                                              13.51777,
+                                              3.64381
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatL3Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL3Hip/NomiCoatL3Hem/NomiCoatL3Tat0",
+                                                "origin": [
+                                                  -3.83009,
+                                                  10.51731,
+                                                  3.44495
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL3Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL3Hip/NomiCoatL3Hem/NomiCoatL3Tat1",
+                                                "origin": [
+                                                  -2.14874,
+                                                  10.51731,
+                                                  3.88191
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatL3Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatLeft/NomiCoatL3Hip/NomiCoatL3Hem/NomiCoatL3Tat2",
+                                                "origin": [
+                                                  -0.36549,
+                                                  10.51731,
+                                                  4.34536
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "name": "NomiCoatRight",
+                                    "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight",
+                                    "origin": [
+                                      3.48,
+                                      19.4,
+                                      0.2
+                                    ],
+                                    "rotation": [
+                                      0,
+                                      0,
+                                      0
+                                    ],
+                                    "cube_count": 4,
+                                    "children": [
+                                      {
+                                        "name": "NomiCoatR0Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR0Hip",
+                                        "origin": [
+                                          3.23493,
+                                          18.42344,
+                                          -2.03248
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatR0Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR0Hip/NomiCoatR0Hem",
+                                            "origin": [
+                                              4.19619,
+                                              13.51212,
+                                              -2.66966
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatR0Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR0Hip/NomiCoatR0Hem/NomiCoatR0Tat0",
+                                                "origin": [
+                                                  5.35991,
+                                                  9.1117,
+                                                  -2.28206
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR0Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR0Hip/NomiCoatR0Hem/NomiCoatR0Tat1",
+                                                "origin": [
+                                                  4.09537,
+                                                  9.1117,
+                                                  -3.26031
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR0Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR0Hip/NomiCoatR0Hem/NomiCoatR0Tat2",
+                                                "origin": [
+                                                  3.29201,
+                                                  9.1117,
+                                                  -3.88179
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "NomiCoatR1Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR1Hip",
+                                        "origin": [
+                                          4.26927,
+                                          18.44911,
+                                          -0.48476
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatR1Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR1Hip/NomiCoatR1Hem",
+                                            "origin": [
+                                              5.53077,
+                                              13.52359,
+                                              -0.63434
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatR1Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR1Hip/NomiCoatR1Hem/NomiCoatR1Tat0",
+                                                "origin": [
+                                                  6.30339,
+                                                  8.72312,
+                                                  0.66287
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR1Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR1Hip/NomiCoatR1Hem/NomiCoatR1Tat1",
+                                                "origin": [
+                                                  5.99537,
+                                                  8.72312,
+                                                  -0.69255
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR1Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR1Hip/NomiCoatR1Hem/NomiCoatR1Tat2",
+                                                "origin": [
+                                                  5.68735,
+                                                  8.72312,
+                                                  -2.04798
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "NomiCoatR2Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR2Hip",
+                                        "origin": [
+                                          3.70279,
+                                          18.44537,
+                                          1.52737
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatR2Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR2Hip/NomiCoatR2Hem",
+                                            "origin": [
+                                              4.79743,
+                                              13.52298,
+                                              1.99929
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 1,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatR2Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR2Hip/NomiCoatR2Hem/NomiCoatR2Tat0",
+                                                "origin": [
+                                                  4.17992,
+                                                  9.12255,
+                                                  3.38531
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR2Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR2Hip/NomiCoatR2Hem/NomiCoatR2Tat1",
+                                                "origin": [
+                                                  5.06865,
+                                                  9.12255,
+                                                  2.31308
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR2Tat2",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR2Hip/NomiCoatR2Hem/NomiCoatR2Tat2",
+                                                "origin": [
+                                                  5.78537,
+                                                  9.12255,
+                                                  1.44838
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR2Tat3",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR2Hip/NomiCoatR2Hem/NomiCoatR2Tat3",
+                                                "origin": [
+                                                  6.38741,
+                                                  9.12255,
+                                                  0.72203
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "name": "NomiCoatR3Hip",
+                                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR3Hip",
+                                        "origin": [
+                                          1.47857,
+                                          18.42878,
+                                          2.77686
+                                        ],
+                                        "rotation": [
+                                          0,
+                                          0,
+                                          0
+                                        ],
+                                        "cube_count": 1,
+                                        "children": [
+                                          {
+                                            "name": "NomiCoatR3Hem",
+                                            "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR3Hip/NomiCoatR3Hem",
+                                            "origin": [
+                                              1.91799,
+                                              13.51919,
+                                              3.64368
+                                            ],
+                                            "rotation": [
+                                              0,
+                                              0,
+                                              0
+                                            ],
+                                            "cube_count": 2,
+                                            "children": [
+                                              {
+                                                "name": "NomiCoatR3Tat0",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR3Hip/NomiCoatR3Hem/NomiCoatR3Tat0",
+                                                "origin": [
+                                                  0.36274,
+                                                  11.01865,
+                                                  4.31772
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              },
+                                              {
+                                                "name": "NomiCoatR3Tat1",
+                                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiOvercoat/NomiCoatRight/NomiCoatR3Hip/NomiCoatR3Hem/NomiCoatR3Tat1",
+                                                "origin": [
+                                                  3.65981,
+                                                  11.01865,
+                                                  3.46149
+                                                ],
+                                                "rotation": [
+                                                  0,
+                                                  0,
+                                                  0
+                                                ],
+                                                "cube_count": 1,
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "NomiHood",
+                                "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Jacket/CoatShell/NomiHood",
+                                "origin": [
+                                  0,
+                                  25.7,
+                                  2.85
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 16,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Collar",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Collar",
+                        "origin": [
+                          0,
+                          25.79545,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 16,
+                        "children": []
+                      },
+                      {
+                        "name": "ElytraLocator",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/ElytraLocator",
+                        "origin": [
+                          0,
+                          25.79545,
+                          2
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": []
+                      },
+                      {
+                        "name": "BackpackLocator",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/BackpackLocator",
+                        "origin": [
+                          0,
+                          24.98947,
+                          2
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": []
+                      },
+                      {
+                        "name": "FittedTop",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/FittedTop",
+                        "origin": [
+                          0,
+                          22.62105,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 3,
+                        "children": []
+                      },
+                      {
+                        "name": "Breast",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/Breast",
+                        "origin": [
+                          0.01063,
+                          24.89699,
+                          -1.83459
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": []
+                      },
+                      {
+                        "name": "RifleLocator",
+                        "path": "Root/MAllBody/AllBody/UpBody/UpperBody/RifleLocator",
+                        "origin": [
+                          0,
+                          22.48289,
+                          1.955
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "name": "PistolLocator",
+                    "path": "Root/MAllBody/AllBody/UpBody/PistolLocator",
+                    "origin": [
+                      3.4,
+                      22.21447,
+                      -1.36
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "cube_count": 0,
+                    "children": []
+                  },
+                  {
+                    "name": "RightWaistLocator",
+                    "path": "Root/MAllBody/AllBody/UpBody/RightWaistLocator",
+                    "origin": [
+                      3.4,
+                      21.04013,
+                      0
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "cube_count": 0,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "DownBody",
+                "path": "Root/MAllBody/AllBody/DownBody",
+                "origin": [
+                  0,
+                  19.32857,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "cube_count": 0,
+                "children": [
+                  {
+                    "name": "Leg",
+                    "path": "Root/MAllBody/AllBody/DownBody/Leg",
+                    "origin": [
+                      0,
+                      18.09048,
+                      0
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "cube_count": 0,
+                    "children": [
+                      {
+                        "name": "LeftLeg",
+                        "path": "Root/MAllBody/AllBody/DownBody/Leg/LeftLeg",
+                        "origin": [
+                          -1.85,
+                          18.3381,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          -1.13
+                        ],
+                        "cube_count": 4,
+                        "children": [
+                          {
+                            "name": "LeftLowerLeg",
+                            "path": "Root/MAllBody/AllBody/DownBody/Leg/LeftLeg/LeftLowerLeg",
+                            "origin": [
+                              -1.87,
+                              9.1816,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0.7
+                            ],
+                            "cube_count": 7,
+                            "children": [
+                              {
+                                "name": "LeftFoot",
+                                "path": "Root/MAllBody/AllBody/DownBody/Leg/LeftLeg/LeftLowerLeg/LeftFoot",
+                                "origin": [
+                                  -1.87,
+                                  2.67667,
+                                  0.02
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 4,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "name": "RightLeg",
+                        "path": "Root/MAllBody/AllBody/DownBody/Leg/RightLeg",
+                        "origin": [
+                          1.85,
+                          18.3381,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          1.13
+                        ],
+                        "cube_count": 4,
+                        "children": [
+                          {
+                            "name": "RightLowerLeg",
+                            "path": "Root/MAllBody/AllBody/DownBody/Leg/RightLeg/RightLowerLeg",
+                            "origin": [
+                              1.87,
+                              9.1816,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              -0.7
+                            ],
+                            "cube_count": 7,
+                            "children": [
+                              {
+                                "name": "RightFoot",
+                                "path": "Root/MAllBody/AllBody/DownBody/Leg/RightLeg/RightLowerLeg/RightFoot",
+                                "origin": [
+                                  1.87,
+                                  2.67667,
+                                  0.02
+                                ],
+                                "rotation": [
+                                  0,
+                                  0,
+                                  0
+                                ],
+                                "cube_count": 4,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "NomiWaistFollow",
+                    "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow",
+                    "origin": [
+                      0,
+                      19.32857,
+                      0
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "cube_count": 2,
+                    "children": [
+                      {
+                        "name": "Skirt",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt",
+                        "origin": [
+                          0,
+                          19.32857,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 2,
+                        "children": [
+                          {
+                            "name": "LeftSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/LeftSkirt",
+                            "origin": [
+                              -3.18,
+                              19.26667,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "RightSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/RightSkirt",
+                            "origin": [
+                              3.18,
+                              19.26667,
+                              0
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "FrontSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/FrontSkirt",
+                            "origin": [
+                              0,
+                              19.26667,
+                              -1.8
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "BackSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/BackSkirt",
+                            "origin": [
+                              0,
+                              19.26667,
+                              1.8
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "LeftApronSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/LeftApronSkirt",
+                            "origin": [
+                              -1.55,
+                              19.20476,
+                              -1.8
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "LeftFrontGussetSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/LeftFrontGussetSkirt",
+                            "origin": [
+                              -3.82,
+                              19.20476,
+                              -1.53
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "LeftTrainSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/LeftTrainSkirt",
+                            "origin": [
+                              -1.55,
+                              19.20476,
+                              1.8
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "LeftBackGussetSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/LeftBackGussetSkirt",
+                            "origin": [
+                              -3.82,
+                              19.20476,
+                              1.53
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "RightApronSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/RightApronSkirt",
+                            "origin": [
+                              1.55,
+                              19.20476,
+                              -1.8
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "RightFrontGussetSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/RightFrontGussetSkirt",
+                            "origin": [
+                              3.82,
+                              19.20476,
+                              -1.53
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "RightTrainSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/RightTrainSkirt",
+                            "origin": [
+                              1.55,
+                              19.20476,
+                              1.8
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          },
+                          {
+                            "name": "RightBackGussetSkirt",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/Skirt/RightBackGussetSkirt",
+                            "origin": [
+                              3.82,
+                              19.20476,
+                              1.53
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 0,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "name": "NomiUniformBell",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell",
+                        "origin": [
+                          0,
+                          19.15,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "cube_count": 0,
+                        "children": [
+                          {
+                            "name": "NomiPleatSwing0_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing0_0",
+                            "origin": [
+                              0.59322,
+                              17.62163,
+                              -2.50982
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing0_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing0_1",
+                            "origin": [
+                              1.46087,
+                              17.62272,
+                              -2.14957
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing1_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing1_0",
+                            "origin": [
+                              2.38937,
+                              17.62451,
+                              -1.97482
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing1_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing1_1",
+                            "origin": [
+                              2.91415,
+                              17.62646,
+                              -1.38539
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing2_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing2_0",
+                            "origin": [
+                              3.54452,
+                              17.62809,
+                              -0.91092
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing2_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing2_1",
+                            "origin": [
+                              3.58632,
+                              17.62896,
+                              -0.25049
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing3_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing3_0",
+                            "origin": [
+                              3.75031,
+                              17.62886,
+                              0.39662
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing3_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing3_1",
+                            "origin": [
+                              3.29836,
+                              17.62783,
+                              0.95138
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing4_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing4_0",
+                            "origin": [
+                              2.952,
+                              17.6261,
+                              1.59811
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing4_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing4_1",
+                            "origin": [
+                              2.1269,
+                              17.62414,
+                              1.89881
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing5_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing5_0",
+                            "origin": [
+                              1.3623,
+                              17.62245,
+                              2.37185
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing5_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing5_1",
+                            "origin": [
+                              0.38469,
+                              17.62153,
+                              2.33762
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing6_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing6_0",
+                            "origin": [
+                              -0.59322,
+                              17.62163,
+                              2.50982
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing6_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing6_1",
+                            "origin": [
+                              -1.46087,
+                              17.62272,
+                              2.14957
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing7_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing7_0",
+                            "origin": [
+                              -2.38937,
+                              17.62451,
+                              1.97482
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing7_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing7_1",
+                            "origin": [
+                              -2.91415,
+                              17.62646,
+                              1.38539
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing8_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing8_0",
+                            "origin": [
+                              -3.54452,
+                              17.62809,
+                              0.91092
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing8_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing8_1",
+                            "origin": [
+                              -3.58632,
+                              17.62896,
+                              0.25049
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing9_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing9_0",
+                            "origin": [
+                              -3.75031,
+                              17.62886,
+                              -0.39662
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing9_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing9_1",
+                            "origin": [
+                              -3.29836,
+                              17.62783,
+                              -0.95138
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing10_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing10_0",
+                            "origin": [
+                              -2.952,
+                              17.6261,
+                              -1.59811
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing10_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing10_1",
+                            "origin": [
+                              -2.1269,
+                              17.62414,
+                              -1.89881
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing11_0",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing11_0",
+                            "origin": [
+                              -1.3623,
+                              17.62245,
+                              -2.37185
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          },
+                          {
+                            "name": "NomiPleatSwing11_1",
+                            "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiUniformBell/NomiPleatSwing11_1",
+                            "origin": [
+                              -0.38469,
+                              17.62153,
+                              -2.33762
+                            ],
+                            "rotation": [
+                              0,
+                              0,
+                              0
+                            ],
+                            "cube_count": 4,
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "name": "NomiPleatRoot0",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot0",
+                        "origin": [
+                          0.45476,
+                          19.49672,
+                          -1.75711
+                        ],
+                        "rotation": [
+                          24.34306,
+                          -10.94066,
+                          -0.40095
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot1",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot1",
+                        "origin": [
+                          1.10512,
+                          19.49666,
+                          -1.46856
+                        ],
+                        "rotation": [
+                          21.57384,
+                          -5.62363,
+                          9.22398
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot2",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot2",
+                        "origin": [
+                          1.8321,
+                          19.49657,
+                          -1.38284
+                        ],
+                        "rotation": [
+                          22.94991,
+                          -35.87622,
+                          3.68095
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot3",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot3",
+                        "origin": [
+                          2.20518,
+                          19.49646,
+                          -0.94675
+                        ],
+                        "rotation": [
+                          15.27073,
+                          -27.69495,
+                          14.76286
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot4",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot4",
+                        "origin": [
+                          2.71859,
+                          19.49637,
+                          -0.63801
+                        ],
+                        "rotation": [
+                          25.19608,
+                          -70.18569,
+                          1.35564
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot5",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot5",
+                        "origin": [
+                          2.71438,
+                          19.49632,
+                          -0.17121
+                        ],
+                        "rotation": [
+                          4.33601,
+                          -56.39352,
+                          22.82286
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot6",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot6",
+                        "origin": [
+                          2.8766,
+                          19.49633,
+                          0.27781
+                        ],
+                        "rotation": [
+                          -170.51392,
+                          -67.63953,
+                          -162.28259
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot7",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot7",
+                        "origin": [
+                          2.4962,
+                          19.49638,
+                          0.65022
+                        ],
+                        "rotation": [
+                          -120.86739,
+                          -79.29217,
+                          145.8835
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot8",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot8",
+                        "origin": [
+                          2.26377,
+                          19.49648,
+                          1.11918
+                        ],
+                        "rotation": [
+                          -161.93932,
+                          -34.80136,
+                          -169.11848
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot9",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot9",
+                        "origin": [
+                          1.60915,
+                          19.49659,
+                          1.29738
+                        ],
+                        "rotation": [
+                          -153.67092,
+                          -43.47235,
+                          177.62003
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot10",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot10",
+                        "origin": [
+                          1.0444,
+                          19.49668,
+                          1.66061
+                        ],
+                        "rotation": [
+                          -157.13625,
+                          -10.83577,
+                          -174.27182
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot11",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot11",
+                        "origin": [
+                          0.29099,
+                          19.49673,
+                          1.59689
+                        ],
+                        "rotation": [
+                          -155.41224,
+                          -16.30029,
+                          175.73239
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot12",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot12",
+                        "origin": [
+                          -0.45476,
+                          19.49672,
+                          1.75711
+                        ],
+                        "rotation": [
+                          -155.65694,
+                          10.94066,
+                          -179.59905
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot13",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot13",
+                        "origin": [
+                          -1.10512,
+                          19.49666,
+                          1.46856
+                        ],
+                        "rotation": [
+                          -158.42616,
+                          5.62363,
+                          170.77602
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot14",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot14",
+                        "origin": [
+                          -1.8321,
+                          19.49657,
+                          1.38284
+                        ],
+                        "rotation": [
+                          -157.05009,
+                          35.87622,
+                          176.31905
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot15",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot15",
+                        "origin": [
+                          -2.20518,
+                          19.49646,
+                          0.94675
+                        ],
+                        "rotation": [
+                          -164.72927,
+                          27.69495,
+                          165.23714
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot16",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot16",
+                        "origin": [
+                          -2.71859,
+                          19.49637,
+                          0.63801
+                        ],
+                        "rotation": [
+                          -154.80392,
+                          70.18569,
+                          178.64436
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot17",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot17",
+                        "origin": [
+                          -2.71438,
+                          19.49632,
+                          0.17121
+                        ],
+                        "rotation": [
+                          -175.66399,
+                          56.39352,
+                          157.17714
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot18",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot18",
+                        "origin": [
+                          -2.8766,
+                          19.49633,
+                          -0.27781
+                        ],
+                        "rotation": [
+                          9.48608,
+                          67.63953,
+                          -17.71741
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot19",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot19",
+                        "origin": [
+                          -2.4962,
+                          19.49638,
+                          -0.65022
+                        ],
+                        "rotation": [
+                          59.13261,
+                          79.29217,
+                          34.1165
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot20",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot20",
+                        "origin": [
+                          -2.26377,
+                          19.49648,
+                          -1.11918
+                        ],
+                        "rotation": [
+                          18.06068,
+                          34.80136,
+                          -10.88152
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot21",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot21",
+                        "origin": [
+                          -1.60915,
+                          19.49659,
+                          -1.29738
+                        ],
+                        "rotation": [
+                          26.32908,
+                          43.47235,
+                          2.37997
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot22",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot22",
+                        "origin": [
+                          -1.0444,
+                          19.49668,
+                          -1.66061
+                        ],
+                        "rotation": [
+                          22.86375,
+                          10.83577,
+                          -5.72818
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      },
+                      {
+                        "name": "NomiPleatRoot23",
+                        "path": "Root/MAllBody/AllBody/DownBody/NomiWaistFollow/NomiPleatRoot23",
+                        "origin": [
+                          -0.29099,
+                          19.49673,
+                          -1.59689
+                        ],
+                        "rotation": [
+                          24.58776,
+                          16.30029,
+                          4.26761
+                        ],
+                        "cube_count": 1,
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "molang",
+        "path": "Root/molang",
+        "origin": [
+          0,
+          -0.28957,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "cube_count": 0,
+        "children": []
+      }
+    ]
+  }
+]
